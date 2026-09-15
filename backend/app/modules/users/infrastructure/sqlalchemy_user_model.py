@@ -20,7 +20,13 @@ class UserORM(Base):
         UUIDType(binary=False), primary_key=True, default=uuid.uuid4
     )
     email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
-    nickname: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    # Both null until the naming (``docs/adr/0171`` §2). The unique constraint
+    # on the nickname admits any number of nulls, on Postgres and SQLite alike,
+    # which is exactly the reading wanted: two unnamed accounts share nothing.
+    name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    nickname: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     authority: Mapped[str] = mapped_column(
         String(32), nullable=False, default="USER", server_default="USER"

@@ -78,7 +78,7 @@ from app.modules.challenges.domain.ports import (
     CourtOrigin,
     OpenChallengeQuery,
     OriginSearchQuery,
-    PlayerHandles,
+    PlayerNames,
 )
 from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 
@@ -91,7 +91,7 @@ class FillSeats(AChallengeOfYours):
         self,
         *,
         challenges: ChallengeRepository,
-        handles: PlayerHandles,
+        names: PlayerNames,
         open_challenges: OpenChallengeQuery,
         origins: OriginSearchQuery,
         safety: CourtSafety,
@@ -100,7 +100,7 @@ class FillSeats(AChallengeOfYours):
         clock: Clock,
     ) -> None:
         super().__init__(
-            challenges=challenges, handles=handles, uow=uow, clock=clock
+            challenges=challenges, names=names, uow=uow, clock=clock
         )
         self._origins = origins
         self._games = games

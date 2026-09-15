@@ -538,7 +538,7 @@ async def test_a_seat_is_never_filled_below_the_floor_to_complete_a_four(
     body = (await world.lineup(client, searcher["token"])).json()
 
     cards = {
-        row["player_id"]: row["player_card"]["nickname"]
+        row["player_id"]: row["player_card"]["name"]
         for row in body["candidates"]
     }
     seated = {

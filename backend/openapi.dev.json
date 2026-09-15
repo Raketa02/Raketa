@@ -42,16 +42,36 @@
             "title": "Email",
             "description": "What the console types into `/auth/login`"
           },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole name, as every player surface says it. `null` for an account registered and never named, which no seed run leaves behind. What the account is *for* \u2014 the state it was named for \u2014 is read off the address, not the name: the roster reads meaning off the address rather than out of the seed catalog."
+          },
           "nickname": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Nickname",
-            "description": "The whole handle. On a seeded account it is also what the account is *for* \u2014 the state it was named for \u2014 which is why this roster reads meaning off the address rather than out of the seed catalog."
+            "description": "The handle, drawn as `@nickname` on a record and the You tab only. `null` exactly when `name` is: the naming is one act carrying both."
           }
         },
         "type": "object",
         "required": [
           "player_id",
           "email",
+          "name",
           "nickname"
         ],
         "title": "RosterAccount",

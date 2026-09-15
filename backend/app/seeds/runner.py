@@ -148,7 +148,11 @@ from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import AssessmentNotFound
 from app.modules.rating.domain.ids import PlayerId, assessment_stream_id
 from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
-from app.modules.users.application.commands import RegisterUserCommand
+from app.modules.users.application.commands import (
+    NameUserCommand,
+    RegisterUserCommand,
+)
+from app.modules.users.application.name_user import NameUser
 from app.modules.users.application.register_user import RegisterUser
 from app.modules.users.domain.ports import UserRepository
 from app.seeds.catalog import (
@@ -284,6 +288,7 @@ class _UseCases:
     profiles: PlayerProfileRepository
     declarations: PlayIntentDeclarationRepository
     register: RegisterUser
+    name: NameUser
     create: CreateAssessment
     submit: SubmitAnswer
     complete: CompleteAssessment
@@ -333,6 +338,9 @@ def _build(
             uow=uow,
             clock=clock,
             events=events,
+        ),
+        name=NameUser(
+            users=users, event_store=event_store, uow=uow, clock=clock, events=events
         ),
         create=CreateAssessment(
             engine=engine,
@@ -428,7 +436,7 @@ async def _seed_account(
         photos=photos,
     )
     player_id, registered = await _ensure_registered(
-        use_cases, email=account.email, nickname=account.nickname
+        use_cases, email=account.email, name=account.name, nickname=account.nickname
     )
     scenarios = tuple(
         [
@@ -460,33 +468,45 @@ def _clock_for(account: SeedAccount, now: Instant) -> Clock:
 
 
 async def _ensure_registered(
-    use_cases: _UseCases, *, email: str, nickname: str
+    use_cases: _UseCases, *, email: str, name: str, nickname: str
 ) -> tuple[UUID, bool]:
-    """Register this address, or find the account already at it.
+    """Register this address and name the account, or find the one already there.
 
-    Takes the two values rather than an account, because a named account and a
+    Takes the values rather than an account, because a named account and a
     cohort member are the same registration: both are an address derived from a
-    name, and two copies of this function would be two places for *is it already
-    there* to be answered differently.
+    handle, and two copies of this function would be two places for *is it
+    already there* to be answered differently.
+
+    **Two acts, as a player performs them** (``docs/adr/0171`` §2): sign-up is
+    credentials only and the naming is its own use case, so a seeded account
+    has the two events a real one has. The naming is asked on every run — it
+    is the act's own idempotence that makes a second run write nothing, an
+    unchanged re-naming recording no event — so a pool that dealt an account a
+    different name is corrected rather than left as the first run wrote it.
     """
 
     existing = await use_cases.users.get_by_email(email)
-    if existing is not None:
-        return existing.id, False
-
-    user = await use_cases.register.execute(
-        RegisterUserCommand(
-            email=email,
-            nickname=nickname,
-            password=SEED_PASSWORD,
-            # A seeded account attests like any other, because it is registered
-            # through the aggregate rather than around it (``docs/adr/0029``).
-            # The claim is the fixture's, made on behalf of a player who does
-            # not exist, and it never leaves a developer's machine.
-            adult_attested=True,
+    if existing is None:
+        user = await use_cases.register.execute(
+            RegisterUserCommand(
+                email=email,
+                password=SEED_PASSWORD,
+                # A seeded account attests like any other, because it is
+                # registered through the aggregate rather than around it
+                # (``docs/adr/0029``). The claim is the fixture's, made on behalf
+                # of a player who does not exist, and it never leaves a
+                # developer's machine.
+                adult_attested=True,
+            )
         )
+        player_id, registered = user.id, True
+    else:
+        player_id, registered = existing.id, False
+
+    await use_cases.name.execute(
+        NameUserCommand(user_id=player_id, name=name, nickname=nickname)
     )
-    return user.id, True
+    return player_id, registered
 
 
 async def _ensure_profile(
@@ -839,7 +859,7 @@ async def _seed_member(
         photos=photos,
     )
     player_id, registered = await _ensure_registered(
-        use_cases, email=member.email, nickname=member.nickname
+        use_cases, email=member.email, name=member.name, nickname=member.nickname
     )
     rated = tuple(
         [

@@ -149,7 +149,7 @@ async def _a_search(
                     concerns=(),
                     distance_km=3,
                     card=RecordedCard(
-                        nickname="someone",
+                        name="someone",
                         photo_id=None,
                         review=None,
                         area_code="LDN-CENTRAL",

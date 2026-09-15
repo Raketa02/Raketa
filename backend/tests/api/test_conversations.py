@@ -432,7 +432,7 @@ async def a_room_somebody_left(client, session_factory, a_room):
 
 
 def _faces(people: list[dict]) -> dict[str, str | None]:
-    return {person["player_id"]: person["nickname"] for person in people}
+    return {person["player_id"]: person["name"] for person in people}
 
 
 async def test_the_room_names_the_person_who_left_beside_the_members(

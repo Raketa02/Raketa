@@ -8,9 +8,19 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class UserRegistered:
+    """An account opened — with credentials, and **unnamed**.
+
+    Carries no nickname since ``docs/adr/0171`` §2: sign-up is email, password
+    and the Adult attestation, and the name and nickname arrive together in
+    :class:`UserNamed`. The contract stays ``users.user_registered`` / v1
+    because a version exists to tell two stored shapes apart and only one will
+    ever be stored — only ``local`` runs, its store is disposable and a reset
+    seed is the migration. The day a store outlives a change like this, the
+    version is the first thing that has to move.
+    """
+
     user_id: UUID
     email: str
-    nickname: str
     password_hash: str
     authority: str
     is_admin: bool
@@ -33,6 +43,21 @@ class UserRegistered:
     # downstream asks how old, and the candidate index fails its build if a date
     # ever appears.
     adult_attested: Optional[bool] = None
+
+
+@dataclass(frozen=True)
+class UserNamed:
+    """The naming — one act, both values (``docs/adr/0171`` §2).
+
+    A **Name** and a **Nickname** together, because they are asked under one
+    title and a later change is the same act: the fold keeps the latest. There
+    is no event for one without the other.
+    """
+
+    user_id: UUID
+    name: str
+    nickname: str
+    occurred_at: datetime
 
 
 @dataclass(frozen=True)

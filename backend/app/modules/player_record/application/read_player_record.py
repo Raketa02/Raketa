@@ -94,7 +94,7 @@ async def assemble_record(
 
     **It refuses when the platform cannot describe the person**, and it refuses
     in the one shape this context refuses in — an id nobody has been issued, a
-    handle that cannot be read and a profile that was never committed are one
+    name that cannot be read and a profile that was never committed are one
     answer here, because they have one remedy and separating them would answer
     *is this id real* about a stranger.
 
@@ -212,7 +212,7 @@ class ReadPlayerRecord:
     ) -> PlayerRecord:
         """**Gate first, and everything else afterwards.**
 
-        The order is the decision: a read that fetched a stranger's handle,
+        The order is the decision: a read that fetched a stranger's name,
         photograph and area and *then* refused would have performed the lookup
         the admission rule exists to prevent, and would have paid for it besides.
 

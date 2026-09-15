@@ -53,7 +53,7 @@ from app.modules.challenges.application.challenge_of_yours import AChallengeOfYo
 from app.modules.challenges.application.commands import WithdrawChallengeCommand
 from app.modules.challenges.application.read_challenges import StandingChallenge
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
-from app.modules.challenges.domain.ports import ChallengeRepository, PlayerHandles
+from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
 
 
 @final
@@ -65,12 +65,12 @@ class WithdrawChallenge(AChallengeOfYours):
         self,
         *,
         challenges: ChallengeRepository,
-        handles: PlayerHandles,
+        names: PlayerNames,
         uow: UnitOfWork,
         clock: Clock,
         planned_games: PlannedGameHandover,
     ) -> None:
-        super().__init__(challenges=challenges, handles=handles, uow=uow, clock=clock)
+        super().__init__(challenges=challenges, names=names, uow=uow, clock=clock)
         self._planned_games = planned_games
 
     async def execute(self, command: WithdrawChallengeCommand) -> StandingChallenge:

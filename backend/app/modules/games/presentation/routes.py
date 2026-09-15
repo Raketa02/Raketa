@@ -16,7 +16,7 @@ lives; here it is read as `standing: CALLED_OFF` with `called_off_at` beside it
 **The pairing is read beside the game and never on it** (``docs/adr/0161``).
 ``GameSchema`` carries no forecast and never will; what the game screen draws
 is computed when asked, for the reader, for as long as the game has not
-happened — and the seat on the list still carries a handle and nothing else.
+happened — and the seat on the list still carries a name and nothing else.
 
 **There is no route called confirm.** A result is confirmed when a clock passes,
 and a clock is nobody's request. Silence confirming is not an endpoint that goes
@@ -226,7 +226,7 @@ async def read_games(
     description=(
         "**The game screen's forecast, split, stakes and Levels, computed when "
         "you ask.** Nothing here is stored on the game, and nothing on "
-        "`GET /games` changes: a seat there still carries a handle and nothing "
+        "`GET /games` changes: a seat there still carries a name and nothing "
         "else.\n\n"
         "**Read in your direction.** `split.gap` is your side's strength minus "
         "theirs, and `at_stake` is what a counted result would do to *your* "
@@ -359,11 +359,11 @@ def _score(payload: ScoreSchema) -> Score:
 def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
     """One game as its own court is allowed to see it.
 
-    The occupants carry **a handle and nothing else** (``docs/adr/0141``). A
+    The occupants carry **a name and nothing else** (``docs/adr/0141``). A
     card, a Level and an area belong to a search's answer, where a gate decided
     they may be shown; a game is a record of an evening, and a screen that
     re-published somebody's profile off the back of it would be a directory with
-    extra steps. A handle is not that: it is what these four people already knew
+    extra steps. A name is not that: it is what these four people already knew
     about each other by the time they were on a court together, and without it
     the screens name *sides* — which leaves a result agreed with nobody and three
     padel games in a week told apart by nothing but how long ago they were
@@ -372,7 +372,7 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
     **Nothing here is re-gated against who is reading.** The four fail-closed
     gates decide who may be *introduced*, and an evening you were both at is not
     an introduction; ``docs/adr/0095`` §7 already settled that a block is
-    forward-looking and does not reach into a game already agreed. A handle that
+    forward-looking and does not reach into a game already agreed. A name that
     vanished from a row would also be the trace §8 says neither party ever sees.
     """
 
@@ -402,10 +402,10 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
             SeatingSchema(
                 side=seating.side,
                 player_id=seating.player_id,
-                nickname=(
+                name=(
                     None
                     if seating.player_id is None
-                    else one.handles.get(seating.player_id)
+                    else one.names.get(seating.player_id)
                 ),
             )
             for seating in game.line_up.seatings

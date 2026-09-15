@@ -290,7 +290,7 @@ _ANSWER_REFUSALS: dict[int | str, dict[str, Any]] = {
         "Fit here is genuinely yours.\n\n"
         "**The card block is drawn while the arrangement is being decided and "
         "at no other time.** A challenge that ended draws its arrangement and "
-        "the handles alone, and so does the seat of somebody who declined or "
+        "the names alone, and so does the seat of somebody who declined or "
         "lapsed inside one that is still open: they have left, and that person "
         "is a stranger to you again.\n\n"
         "**Answering is never gated on any of it.** If the pairing cannot be "
@@ -720,14 +720,14 @@ async def leave_game(
 def _challenge(one: StandingChallenge) -> ChallengeSchema:
     """One challenge as its court is allowed to see it.
 
-    **The occupants carry a handle and nothing else** (``docs/adr/0143`` §7). A
+    **The occupants carry a name and nothing else** (``docs/adr/0143`` §7). A
     Level, a band, an area and a photograph are what a *card* carries, and a card
     is as-of-now: it belongs on the detail read, where the arrangement is still
     being decided and the person reading is doing what a searcher does. A list
     that drew one would be a directory with extra steps, priced over somebody's
     whole history of being asked.
 
-    A handle passes ``docs/adr/0141`` §1's test instead: it is what these people
+    A name passes ``docs/adr/0141`` §1's test instead: it is what these people
     were already calling each other, and nothing a gate decided somebody may see.
     """
 
@@ -747,10 +747,10 @@ def _challenge(one: StandingChallenge) -> ChallengeSchema:
                 player_id=seat.player_id,
                 answer=seat.answer,
                 answer_by=seat.answer_by,
-                nickname=(
+                name=(
                     None
                     if seat.player_id is None
-                    else one.handles.get(seat.player_id)
+                    else one.names.get(seat.player_id)
                 ),
             )
             for seat in challenge.seats
@@ -807,8 +807,8 @@ def _detailed_seat(
         "player_id": seat.player_id,
         "answer": seat.answer,
         "answer_by": seat.answer_by,
-        "nickname": (
-            None if seat.player_id is None else one.handles.get(seat.player_id)
+        "name": (
+            None if seat.player_id is None else one.names.get(seat.player_id)
         ),
     }
     if seat.player_id is None or seat.player_id == reader_id:
@@ -831,7 +831,7 @@ def _seat_card(card: CourtCard) -> dict[str, Any]:
     """
 
     person: dict[str, Any] = {
-        "nickname": card.person.nickname,
+        "name": card.person.name,
         "area_code": card.person.area_code,
         "level": card.person.level,
         "band": card.person.band,

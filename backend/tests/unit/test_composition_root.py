@@ -196,7 +196,6 @@ async def test_a_registration_runs_through_the_factories_alone(session_factory):
         user = await register.execute(
             RegisterUserCommand(
                 email="composed@example.test",
-                nickname="composed",
                 password="hunter22!",
                 adult_attested=True,
             )

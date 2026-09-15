@@ -265,9 +265,9 @@ async def test_a_challenge_becomes_a_game_and_the_game_moves_both_levels(
     theirs = next(
         seat for seat in detail["seats"] if seat["player_id"] == str(sender["id"])
     )
-    assert theirs["nickname"] == sender["name"]
+    assert theirs["name"] == sender["name"]
     assert "pairing_absence" not in detail
-    assert theirs["card"]["person"]["nickname"] == sender["name"], (
+    assert theirs["card"]["person"]["name"] == sender["name"], (
         "an invitee reads who asked them, and the pairing is recomputed in "
         "their own direction (`docs/adr/0143`)"
     )

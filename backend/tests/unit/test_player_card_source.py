@@ -40,6 +40,7 @@ from app.modules.player_profile.domain.photos import (
 from app.modules.player_profile.domain.profile import PlayerProfile
 from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
+from app.modules.users.domain.ports import Naming
 from datetime import datetime, timezone
 
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
@@ -56,20 +57,24 @@ ON_COURT = [0.9] * 5 + [0.1] * 8
 OFF_COURT = [0.1] * 5 + [0.9] * 8
 
 
-class Nicknames:
-    """``users``, answering the one question the matcher asks it."""
+class Names:
+    """``users``, answering the one question the matcher asks it.
+
+    Answers the pair the port promises — the nickname is a lowercase twin of the
+    name here — because the adapter under test is what leaves the handle behind.
+    """
 
     def __init__(self, by_id: Mapping[UUID, str]) -> None:
         self._by_id = dict(by_id)
         self.asked: list[Collection[UUID]] = []
 
-    async def find_nicknames_of(
+    async def find_namings_of(
         self, user_ids: Collection[UUID]
-    ) -> Mapping[UUID, str]:
+    ) -> Mapping[UUID, Naming]:
         self.asked.append(list(user_ids))
         return {
-            user_id: nickname
-            for user_id, nickname in self._by_id.items()
+            user_id: Naming(name=name, nickname=name.lower())
+            for user_id, name in self._by_id.items()
             if user_id in set(user_ids)
         }
 
@@ -119,11 +124,11 @@ def scored(similarities: list[float]) -> PhotoReviewVerdict:
 def source(
     storage: InMemoryPhotoStorage,
     *,
-    nicknames: Mapping[UUID, str],
+    names: Mapping[UUID, str],
     photos: Mapping[UUID, Sequence[UUID]],
 ) -> PlayerCardIdentities:
     return PlayerCardIdentities(
-        users=Nicknames(nicknames),  # type: ignore[arg-type]
+        users=Names(names),  # type: ignore[arg-type]
         profiles=Profiles(photos),  # type: ignore[arg-type]
         photos=storage,
     )
@@ -145,7 +150,7 @@ async def test_a_scored_photo_carries_its_verdict_onto_the_card(
     photo_id = store_photo(storage, owner_id=ALICE, verdict=scored(similarities))
 
     cards = await source(
-        storage, nicknames={ALICE: "ali"}, photos={ALICE: [photo_id]}
+        storage, names={ALICE: "ali"}, photos={ALICE: [photo_id]}
     ).identities_for([ALICE])
 
     assert cards[ALICE].photo_id == photo_id
@@ -168,7 +173,7 @@ async def test_a_photo_nobody_could_check_carries_no_verdict(
     )
 
     cards = await source(
-        storage, nicknames={ALICE: "ali"}, photos={ALICE: [photo_id]}
+        storage, names={ALICE: "ali"}, photos={ALICE: [photo_id]}
     ).identities_for([ALICE])
 
     assert cards[ALICE].photo_id == photo_id
@@ -188,7 +193,7 @@ async def test_the_pass_through_eras_allowed_draws_no_shield() -> None:
     )
 
     cards = await source(
-        storage, nicknames={ALICE: "ali"}, photos={ALICE: [photo_id]}
+        storage, names={ALICE: "ali"}, photos={ALICE: [photo_id]}
     ).identities_for([ALICE])
 
     assert cards[ALICE].review is None
@@ -204,7 +209,7 @@ async def test_the_verdict_asked_for_is_the_photo_the_card_draws() -> None:
     second = store_photo(storage, owner_id=ALICE, verdict=scored(OFF_COURT))
 
     cards = await source(
-        storage, nicknames={ALICE: "ali"}, photos={ALICE: [shown, second]}
+        storage, names={ALICE: "ali"}, photos={ALICE: [shown, second]}
     ).identities_for([ALICE])
 
     assert cards[ALICE].review is PhotoReviewDecision.ALLOWED
@@ -224,7 +229,7 @@ async def test_a_player_with_no_photo_costs_no_round_trip() -> None:
     storage = InMemoryPhotoStorage()
 
     cards = await source(
-        storage, nicknames={ALICE: "ali"}, photos={ALICE: []}
+        storage, names={ALICE: "ali"}, photos={ALICE: []}
     ).identities_for([ALICE])
 
     assert cards[ALICE].photo_id is None
@@ -271,7 +276,7 @@ async def test_the_shortlists_verdicts_are_asked_for_together() -> None:
 
     cards = await source(
         storage,
-        nicknames={ALICE: "ali", BRUNO: "bru"},
+        names={ALICE: "ali", BRUNO: "bru"},
         photos={ALICE: [hers], BRUNO: [theirs]},
     ).identities_for([ALICE, BRUNO])
 
@@ -286,7 +291,7 @@ async def test_one_ask_per_row_that_has_a_photograph() -> None:
 
     cards = await source(
         storage,
-        nicknames={ALICE: "ali", BRUNO: "bru"},
+        names={ALICE: "ali", BRUNO: "bru"},
         photos={ALICE: [hers], BRUNO: []},
     ).identities_for([ALICE, BRUNO])
 
@@ -297,7 +302,7 @@ async def test_one_ask_per_row_that_has_a_photograph() -> None:
 async def test_an_empty_shortlist_asks_nobody_anything() -> None:
     storage = InMemoryPhotoStorage()
 
-    assert await source(storage, nicknames={}, photos={}).identities_for([]) == {}
+    assert await source(storage, names={}, photos={}).identities_for([]) == {}
     assert storage.decision_reads == []
 
 
@@ -312,7 +317,7 @@ async def test_a_player_users_has_never_heard_of_gets_no_card() -> None:
     storage = InMemoryPhotoStorage()
 
     cards = await source(
-        storage, nicknames={ALICE: "ali"}, photos={ALICE: [], BRUNO: []}
+        storage, names={ALICE: "ali"}, photos={ALICE: [], BRUNO: []}
     ).identities_for([ALICE, BRUNO])
 
     assert set(cards) == {ALICE}
@@ -322,7 +327,7 @@ async def test_a_player_with_no_committed_profile_draws_the_poster() -> None:
     storage = InMemoryPhotoStorage()
 
     cards = await source(
-        storage, nicknames={ALICE: "ali"}, photos={}
+        storage, names={ALICE: "ali"}, photos={}
     ).identities_for([ALICE])
 
     assert cards[ALICE].photo_id is None

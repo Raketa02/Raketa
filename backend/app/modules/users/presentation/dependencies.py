@@ -16,6 +16,8 @@ from app.api.dependencies import (
 )
 from app.core.security import bearer_scheme
 from app.modules.users.application.get_current_user import GetCurrentUser
+from app.modules.users.application.name_user import NameUser
+from app.modules.users.application.read_naming import ReadNaming
 from app.modules.users.application.register_user import RegisterUser
 from app.modules.users.application.resolve_current_user import (
     AuthenticatedSession,
@@ -43,6 +45,28 @@ def get_register_user(
 
 
 RegisterUserDep = Annotated[RegisterUser, Depends(get_register_user)]
+
+
+def get_name_user(
+    users: UserRepositoryDep,
+    event_store: DomainEventStoreDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+    events: EventPublisherDep,
+) -> NameUser:
+    return NameUser(
+        users=users, event_store=event_store, uow=uow, clock=clock, events=events
+    )
+
+
+NameUserDep = Annotated[NameUser, Depends(get_name_user)]
+
+
+def get_read_naming(event_store: DomainEventStoreDep) -> ReadNaming:
+    return ReadNaming(event_store=event_store)
+
+
+ReadNamingDep = Annotated[ReadNaming, Depends(get_read_naming)]
 
 
 def get_current_user_use_case(

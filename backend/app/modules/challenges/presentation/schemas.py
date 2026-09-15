@@ -196,17 +196,19 @@ class SeatSchema(BaseModel):
             "challenge born from a mutual yes."
         ),
     )
-    nickname: str | None = Field(
+    name: str | None = Field(
         default=None,
         description=(
-            "The whole handle, and **nothing may derive a familiar form from "
+            "The whole name, and **nothing may derive a familiar form from "
             "it** — every sentence naming somebody uses all of it or names "
-            "nobody (``docs/adr/0107``).\n\n"
+            "nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the nickname, "
+            "which is a handle drawn on a record and said nowhere.\n\n"
             "``null`` on a seat nobody was put in, and ``null`` where ``users`` "
-            "no longer has the account. The seat stays either way: a seat with "
-            "no handle is still a position on the court, and the screen has a "
-            "side to name instead.\n\n"
-            "**A handle is the whole of what a challenge borrows about a "
+            "no longer has the account — never for an unnamed player, whom the "
+            "entry gate holds at the naming step. The seat stays either way: a "
+            "seat with no name is still a position on the court, and the screen "
+            "has a side to name instead.\n\n"
+            "**A name is the whole of what a challenge borrows about a "
             "person here.** A Level, a band, an area and a photograph are a "
             "card's, and a card is drawn on the detail read alone."
         ),
@@ -368,12 +370,13 @@ class CourtPersonSchema(BaseModel):
     deck, which is the wrong way round.
     """
 
-    nickname: str = Field(
+    name: str = Field(
         ...,
         description=(
-            "The whole handle. There is no name in this platform and **nothing "
-            "may derive a familiar form from it** — every sentence naming "
-            "somebody uses the whole handle or names nobody."
+            "The whole name, and **nothing may derive a familiar form from it** "
+            "— every sentence naming somebody uses the whole name or names "
+            "nobody (``docs/adr/0171``). Never the nickname: a handle is drawn "
+            "on a record and said nowhere."
         ),
     )
     photo_id: UUID = Field(
@@ -593,7 +596,7 @@ class DetailSeatSchema(SeatSchema):
     **The card is per seat as well as per challenge** (``docs/adr/0143`` §8).
     Somebody who declined or lapsed inside a still-open court gets none: the pair
     releases the moment a seat leaves, and *that person is a stranger to you once
-    more.* Their seat stays and keeps its handle, because the standing sentences
+    more.* Their seat stays and keeps its name, because the standing sentences
     name them.
 
     **Your own seat never carries one either.** A pairing with yourself is not a
@@ -633,7 +636,7 @@ class ChallengeDetailResponse(BaseModel):
     **The card block is drawn while the arrangement is being decided and at no
     other time** (``docs/adr/0143`` §8) — one rule stated on the two standings
     that draw one, so a standing added later is silent by default. `DECLINED` and
-    `LAPSED` draw the arrangement and the handles alone; `ON` draws neither,
+    `LAPSED` draw the arrangement and the names alone; `ON` draws neither,
     because the game's own screen owns it the moment a game exists.
 
     **Nothing here is re-gated against who is reading** (§2). The four
@@ -645,7 +648,7 @@ class ChallengeDetailResponse(BaseModel):
     amendment, on [#394](https://github.com/Raketa02/Raketa/issues/394)). The card
     block is a **decision aid**, so a reader with no answer left to give is drawn
     none — which settles what the block is *for* rather than who may read a
-    challenge. They still get the arrangement, every seat and every handle, and
+    challenge. They still get the arrangement, every seat and every name, and
     the buttons are drawn from the standing as they always were.
     """
 

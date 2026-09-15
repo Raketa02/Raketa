@@ -68,9 +68,9 @@ from app.bootstrap.composition import (
     build_play_intent_declaration_repository,
     build_photo_storage,
     build_player_card_source,
-    build_challenge_handles,
+    build_challenge_names,
     build_court_pairing_query_over,
-    build_player_handles,
+    build_player_names,
     build_player_record_source,
     build_player_profile_repository,
     build_player_score_query,
@@ -329,11 +329,11 @@ async def read_paths(
     games = build_game_repository(
         session=session, event_store=event_store, events=events
     )
-    handles = build_player_handles(session)
-    # ``challenges`` declares its own handles port and may not sign ``games``'
+    names = build_player_names(session)
+    # ``challenges`` declares its own names port and may not sign ``games``'
     # (``docs/adr/0143`` §7), so the seed holds both adapters exactly as a
     # request does.
-    court_handles = build_challenge_handles(session)
+    court_names = build_challenge_names(session)
     history = build_match_history_query(session)
     ruleset = build_ruleset()
     engine = build_match_fit_engine()
@@ -438,21 +438,21 @@ async def read_paths(
         ),
         accept=AcceptSeat(
             challenges=challenges,
-            handles=court_handles,
+            names=court_names,
             uow=uow,
             clock=clock,
             planned_games=build_planned_game_handover(session),
             games=build_seatable_game_query(session),
         ),
         decline=DeclineSeat(
-            challenges=challenges, handles=court_handles, uow=uow, clock=clock
+            challenges=challenges, names=court_names, uow=uow, clock=clock
         ),
         # **The send's three extra reads, built the same way here as there**, so
         # a fill and a send cannot come to two answers about who may share a
         # court — which is the whole of what a fill re-verifies.
         fill=FillSeats(
             challenges=challenges,
-            handles=court_handles,
+            names=court_names,
             open_challenges=build_open_challenge_query(session),
             origins=build_origin_search_query(session),
             safety=build_court_safety(session),
@@ -462,25 +462,25 @@ async def read_paths(
         ),
         withdraw=WithdrawChallenge(
             challenges=challenges,
-            handles=court_handles,
+            names=court_names,
             uow=uow,
             clock=clock,
             planned_games=build_planned_game_handover(session),
         ),
-        state_result=StateResult(games=games, handles=handles, uow=uow, clock=clock),
-        accept_result=AcceptResult(games=games, handles=handles, uow=uow, clock=clock),
+        state_result=StateResult(games=games, names=names, uow=uow, clock=clock),
+        accept_result=AcceptResult(games=games, names=names, uow=uow, clock=clock),
         read_games=ReadGames(
-            games=build_game_directory(session), handles=handles, clock=clock
+            games=build_game_directory(session), names=names, clock=clock
         ),
         read_plans=build_read_plans(session, clock=clock),
         read_challenges=ReadChallenges(
             directory=build_challenge_directory(session),
-            handles=court_handles,
+            names=court_names,
             clock=clock,
         ),
         read_challenge=ReadChallenge(
             challenges=challenges,
-            handles=court_handles,
+            names=court_names,
             # **The run's own workbench**, not a second one over the same
             # session — which is what the stores above say about themselves and
             # is truer of this one, since it holds four of them. It also carries

@@ -433,12 +433,22 @@ class PlayerRecordResponse(BaseModel):
             "route when a client asks about itself."
         ),
     )
+    name: str = Field(
+        ...,
+        description=(
+            "The whole name, and **nothing may derive a familiar form from it** "
+            "— every sentence naming somebody uses the whole name or names "
+            "nobody (``docs/adr/0171``). The title of the sheet."
+        ),
+    )
     nickname: str = Field(
         ...,
         description=(
-            "The whole handle. There is no name in this platform and **nothing "
-            "may derive a familiar form from it** — every sentence naming "
-            "somebody uses the whole handle or names nobody."
+            "Their handle, drawn as `@nickname` under the name. **The record and "
+            "the You tab are the only two places it is drawn** — never on a row, "
+            "a card, a sentence, a sheet, a toast, a seat label or a spoken "
+            "name — because two people may share a name and this is the screen "
+            "a friend tells them apart on."
         ),
     )
     photo_id: UUID = Field(
@@ -627,6 +637,7 @@ class PlayerRecordResponse(BaseModel):
         identity = record.identity
         fields: dict[str, Any] = {
             "is_self": record.is_self,
+            "name": identity.name,
             "nickname": identity.nickname,
             "area_code": identity.area_code,
             "social_tags": list(identity.social_tags),

@@ -146,9 +146,9 @@ async def test_an_invitee_reads_who_is_asking_and_what_the_platform_makes_of_it(
     body = response.json()
     assert "pairing_absence" not in body
     organiser = _seat_of(body, searcher["id"])
-    assert organiser["nickname"] == "searcher"
+    assert organiser["name"] == "searcher"
     card = organiser["card"]
-    assert card["person"]["nickname"] == "searcher"
+    assert card["person"]["name"] == "searcher"
     assert card["person"]["range"]["low"] <= card["person"]["level"]
     assert card["pairing"]["terms"]
     assert 0 <= card["pairing"]["forecast"]["pct"] <= 100
@@ -201,7 +201,7 @@ async def test_the_list_gains_a_handle_on_every_seat_and_nothing_else(
 
     (one,) = listed.json()["challenges"]
     seats = one["seats"]
-    assert {seat["nickname"] for seat in seats if seat["player_id"]} == {
+    assert {seat["name"] for seat in seats if seat["player_id"]} == {
         "searcher",
         "ana",
         "bo",
@@ -250,7 +250,7 @@ async def test_a_challenge_that_ended_draws_the_arrangement_and_the_handles_alon
     """The pair releases when a seat leaves, and a card is as-of-now.
 
     A live card of a stranger on a screen reopenable for ever is a directory with
-    extra steps. **The handles stay**, because the standing's own sentence names
+    extra steps. **The names stay**, because the standing's own sentence names
     them.
     """
 
@@ -266,7 +266,7 @@ async def test_a_challenge_that_ended_draws_the_arrangement_and_the_handles_alon
     assert body["standing"] == "DECLINED"
     assert "pairing_absence" not in body
     assert all("card" not in seat for seat in body["seats"])
-    assert _seat_of(body, searcher["id"])["nickname"] == "searcher"
+    assert _seat_of(body, searcher["id"])["name"] == "searcher"
 
 
 async def test_a_seat_that_left_a_still_open_court_draws_no_card_and_the_others_do(
@@ -293,7 +293,7 @@ async def test_a_seat_that_left_a_still_open_court_draws_no_card_and_the_others_
     assert body["standing"] == "LINE_UP_INCOMPLETE"
     left = _seat_of(body, people["bo"]["id"])
     assert left["answer"] == "DECLINED"
-    assert left["nickname"] == "bo"
+    assert left["name"] == "bo"
     assert "card" not in left
     assert "card" in _seat_of(body, searcher["id"])
     assert "card" in _seat_of(body, people["cy"]["id"])
@@ -350,11 +350,11 @@ async def test_the_reader_who_left_keeps_the_arrangement_and_every_handle(
     body = (await _detail(client, people["bo"]["token"], challenge_id)).json()
 
     assert len(body["seats"]) == 4
-    assert _seat_of(body, searcher["id"])["nickname"] == "searcher"
-    assert _seat_of(body, people["ana"]["id"])["nickname"] == "ana"
+    assert _seat_of(body, searcher["id"])["name"] == "searcher"
+    assert _seat_of(body, people["ana"]["id"])["name"] == "ana"
     mine = _seat_of(body, people["bo"]["id"])
     assert mine["answer"] == "DECLINED"
-    assert mine["nickname"] == "bo"
+    assert mine["name"] == "bo"
 
 
 async def test_a_reader_who_left_an_awaiting_court_is_drawn_none_either(
@@ -409,7 +409,7 @@ async def test_a_reader_with_nothing_declared_still_answers_their_challenge(
     assert body["standing"] == "AWAITING_ANSWERS"
     assert body["pairing_absence"] == "NOTHING_TO_COMPUTE"
     assert all("card" not in seat for seat in body["seats"])
-    assert _seat_of(body, searcher["id"])["nickname"] == "searcher"
+    assert _seat_of(body, searcher["id"])["name"] == "searcher"
     assert accepted["standing"] in {"AWAITING_ANSWERS", "LINE_UP_INCOMPLETE"}
 
 
@@ -434,7 +434,7 @@ async def test_a_matcher_this_process_cannot_reach_is_a_code_and_not_a_failure(
     body = response.json()
     assert body["pairing_absence"] == "COULD_NOT_BE_READ"
     assert all("card" not in seat for seat in body["seats"])
-    assert _seat_of(body, searcher["id"])["nickname"] == "searcher"
+    assert _seat_of(body, searcher["id"])["name"] == "searcher"
 
 
 async def test_a_stranger_is_told_the_challenge_does_not_exist(

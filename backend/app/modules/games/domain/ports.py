@@ -41,16 +41,16 @@ port a search already holds is one somebody eventually calls inside that walk, s
 it answers about one player, in a type only the surface that opens one person at
 a time is handed.
 
-**``PlayerHandles`` is the one port here this context consumes rather than
+**``PlayerNames`` is the one port here this context consumes rather than
 offers**, and it is a single field wide on purpose. A game says who was on the
-court, and until it carried a handle it said so in ids — which left the screens
+court, and until it carried a name it said so in ids — which left the screens
 naming *sides* and a result agreed with nobody
 (``docs/adr/0141``). What it does **not** borrow is a card: a Level, a band, an
 area and a run of form are what a searcher reads to decide about a game that
 might happen, and this is the record of one that did.
 
 **``CourtPairing`` is the second port consumed here, and it is read *beside* the
-game rather than on it** (``docs/adr/0161``). The seat still carries the handle
+game rather than on it** (``docs/adr/0161``). The seat still carries the name
 and nothing else; what this port answers — the forecast, the split, what is at
 stake, each seat's Level — is computed for the reader when the screen is opened,
 for as long as the game has not happened, and is stored nowhere. It is declared
@@ -572,13 +572,15 @@ class GameDirectory(Protocol):
 
 
 @runtime_checkable
-class PlayerHandles(Protocol):
+class PlayerNames(Protocol):
     """What the people on a court are called. **The one thing this context
     borrows about a person, and the whole of it.**
 
     A game is a record of an evening, and ``docs/adr/0141`` fixes what a record
-    may say about the people in it: the handle they chose, and nothing that
-    changes with who is looking or with when you ask. So there is one method here
+    may say about the people in it: the **name** they gave, and nothing that
+    changes with who is looking or with when you ask. The name and not the
+    nickname (``docs/adr/0171`` §4) — the nickname is a handle, drawn on a
+    record and their own You tab and said nowhere. So there is one method here
     and there is nowhere on it for a Level, an area or a photograph to arrive
     later — a card is what a *search* attaches, where a gate decided the person
     may be shown at all.
@@ -588,16 +590,17 @@ class PlayerHandles(Protocol):
     at most sixteen people rather than sixteen questions.
     """
 
-    async def handles_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
-        """Each of these players' handle, as one set read.
+    async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        """Each of these players' name, as one set read.
 
         **A player absent from the answer keeps their seat.** A card with no
-        nickname is not a card and the shortlist drops that row; a *seat* with no
-        nickname is still a person who was on the court, and dropping it would
-        publish a three-person doubles game. The handle goes ``None`` on the
+        name is not a card and the shortlist drops that row; a *seat* with no
+        name is still a person who was on the court, and dropping it would
+        publish a three-person doubles game. The name goes ``None`` on the
         wire, the screen says the side, and the game is unchanged — which is the
         same fall-back a Play court already draws for a seat whose row the record
-        can no longer describe.
+        can no longer describe. A null there never means *unnamed*: the gate
+        holds an unnamed account at the naming step (``docs/adr/0171`` §4).
         """
         ...
 
@@ -943,7 +946,7 @@ __all__ = [
     "OpponentVariety",
     "OpponentVarietyQuery",
     "PlayedOutcome",
-    "PlayerHandles",
+    "PlayerNames",
     "PlayedTally",
     "ResultAnswering",
     "SeatChange",

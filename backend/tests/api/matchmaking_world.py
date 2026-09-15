@@ -96,7 +96,14 @@ SHARED_SLOTS = ("2:EVENING", "6:MORNING")
 
 
 async def register(client, name: str) -> tuple[UUID, str]:
-    """Sign one player up and in. Returns their id and a bearer token."""
+    """Sign one player up, in, and name them. Returns their id and a bearer token.
+
+    The naming is the player's own act after sign-up (``docs/adr/0171`` §2),
+    and every surface a search reaches names a player by it — so a fixture that
+    stopped here would be a population the gate never lets onto a court. The
+    one word is used for the name and the nickname alike, so an assertion
+    reading a seat's ``name`` finds what the test registered.
+    """
 
     signup = await client.post(
         "/api/v1/users",
@@ -104,7 +111,6 @@ async def register(client, name: str) -> tuple[UUID, str]:
             "email": f"{name}@example.com",
             "password1": "hunter22!",
             "password2": "hunter22!",
-            "nickname": name,
             "adult_attested": True,
         },
     )
@@ -114,7 +120,14 @@ async def register(client, name: str) -> tuple[UUID, str]:
         json={"email": f"{name}@example.com", "password": "hunter22!"},
     )
     assert login.status_code == 200, login.text
-    return UUID(signup.json()["id"]), login.json()["access_token"]
+    token = login.json()["access_token"]
+    named = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": name, "nickname": name},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert named.status_code == 200, named.text
+    return UUID(signup.json()["id"]), token
 
 
 def auth(token: str) -> dict[str, str]:

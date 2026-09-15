@@ -73,7 +73,7 @@ async def test_a_search_returns_a_ranked_shortlist_carrying_its_whole_working(
             assert term["contribution"] == pytest.approx(
                 term["weight"] * term["value"]
             )
-        assert candidate["player_card"]["nickname"]
+        assert candidate["player_card"]["name"]
         assert "degraded_terms" in candidate
         assert "modifiers" in candidate
         assert "liveness_reasons" in candidate

@@ -5,6 +5,7 @@ import logging
 from app.application.events import DeliveryContext
 from app.modules.users.domain.events import (
     UserDisabled,
+    UserNamed,
     UserPromotedToAdmin,
     UserRegistered,
 )
@@ -27,6 +28,28 @@ class LogUserRegistered:
             extra={
                 "user_id": str(event.user_id),
                 "email": event.email,
+                "occurred_at": event.occurred_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogUserNamed:
+    """Audit-trail handler for the naming (``docs/adr/0171`` §2).
+
+    A subscriber exists because an event with none fails delivery and is retried
+    for ever; nothing else reacts to a player being named — every read that says
+    a name reads it live off ``users``, so a corrected name fixes the whole
+    backlog without anybody being told.
+    """
+
+    async def __call__(self, event: UserNamed, context: DeliveryContext) -> None:
+        logger.info(
+            "user.named",
+            extra={
+                "user_id": str(event.user_id),
+                "name": event.name,
                 "nickname": event.nickname,
                 "occurred_at": event.occurred_at.isoformat(),
                 "event_id": str(context.event_id),

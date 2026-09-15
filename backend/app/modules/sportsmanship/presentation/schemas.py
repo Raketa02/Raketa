@@ -77,7 +77,7 @@ class OpenCardSchema(BaseModel):
         ...,
         description="The game this card is about. Post the answer to "
         "`/api/v1/sportsmanship/{game_id}`, and join it against `/api/v1/games` "
-        "for the handles, the sport and the date.",
+        "for the names, the sport and the date.",
     )
     players: list[UUID] = Field(
         ...,

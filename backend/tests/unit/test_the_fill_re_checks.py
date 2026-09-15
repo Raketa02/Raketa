@@ -79,9 +79,9 @@ class FrozenClock:
 
 
 class StubHandles:
-    """A nickname per seat. The reply is the redraw and this is the redraw's half."""
+    """A name per seat. The reply is the redraw and this is the redraw's half."""
 
-    async def handles_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+    async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
         return {
             player_id: f"p{position}"
             for position, player_id in enumerate(player_ids)
@@ -144,7 +144,7 @@ class NoGameYet:
 def _fill(session, *, origins=None, safety=None) -> FillSeats:
     return FillSeats(
         challenges=_repository(session),
-        handles=StubHandles(),
+        names=StubHandles(),
         open_challenges=build_open_challenge_query(session),
         origins=origins or StubOrigins(known={SEARCH}),
         safety=safety or a_safe_court(COURT),

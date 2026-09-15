@@ -1,7 +1,7 @@
 """``SettledCourts`` over ``games``' directory. **The translation lives here.**
 
 The adapter is in the *consumer's* infrastructure, which is the shape ``games``
-itself takes for ``PlayerHandles``: a provider publishes what it knows about its
+itself takes for ``PlayerNames``: a provider publishes what it knows about its
 own subject and the context that wants it narrower does the narrowing, so a
 question about sportsmanship does not become a method on somebody else's port.
 

@@ -584,7 +584,7 @@ def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
     """
 
     fields: dict[str, Any] = {
-        "nickname": card.nickname,
+        "name": card.name,
         "area_code": card.area_code,
         "social_tags": list(card.social_tags),
         "level": card.level,

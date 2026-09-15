@@ -101,7 +101,7 @@ class SeatingSchema(BaseModel):
     its place — so a four with one seat open is still a four and the client
     folds *Needs a player* from it. Nothing on the wire names that rung.
 
-    **A handle, and nothing else about them** (``docs/adr/0141``). A Level, a
+    **A name, and nothing else about them** (``docs/adr/0141``). A Level, a
     band, an area and a run of form are what a *searcher* reads to decide about a
     game that might happen, and a gate decided they may see them; this is the
     record of a game that did, and it re-publishes nobody's profile off the back
@@ -120,14 +120,16 @@ class SeatingSchema(BaseModel):
             "**Always present** — a seat is never dropped."
         ),
     )
-    nickname: str | None = Field(
+    name: str | None = Field(
         default=None,
         description=(
-            "The whole handle, and **nothing may derive a familiar form from "
+            "The whole name, and **nothing may derive a familiar form from "
             "it** — every sentence naming somebody uses all of it or names "
-            "nobody (``docs/adr/0107``).\n\n"
+            "nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the "
+            "nickname: a handle is drawn on a record and said nowhere.\n\n"
             "``null`` where ``users`` no longer has this account, and on an "
-            "open seat. The seat stays: dropping it would publish a "
+            "open seat — never for an unnamed player, whom the entry gate holds "
+            "at the naming step. The seat stays: dropping it would publish a "
             "three-person doubles game, and the screen has a side to name "
             "instead."
         ),
@@ -357,7 +359,7 @@ class GamePairingSeatSchema(BaseModel):
     """One seat on the court and the Level of the person in it.
 
     **This is not a card**, and it is not the seat on `GET /games` either — that
-    one carries a handle and nothing else (``docs/adr/0141``), and it is
+    one carries a name and nothing else (``docs/adr/0141``), and it is
     untouched. What is here is the four figures a record's skill panel and a
     player card already publish, read beside the game for as long as the game
     has not happened.
@@ -452,7 +454,7 @@ class GamePairingResponse(BaseModel):
     **Read beside the game and stored nowhere.** Everything here is as-of-now
     and means what a card means *because this game has not happened*; the route
     refuses once it has. Nothing on `GET /games` changes: a seat there still
-    carries a handle and nothing else.
+    carries a name and nothing else.
 
     **Three blocks, and each is omitted on its own ground.** `forecast` and
     `split` go together — one computation — and are omitted when the pairing

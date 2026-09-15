@@ -52,7 +52,7 @@ class _Challenges:
 
 
 class _Handles:
-    async def handles_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+    async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
         return {player_id: str(player_id)[:4] for player_id in player_ids}
 
 
@@ -139,7 +139,7 @@ def _leave(challenge: Challenge, games: _Games, *, now: Instant) -> LeaveGame:
     challenge.pull_events()
     return LeaveGame(
         challenges=challenges,
-        handles=_Handles(),
+        names=_Handles(),
         safety=a_safe_court([ORGANISER, ALICE, BOB, CAROL]),
         games=_SeatsMayChange(),
         uow=CountingUnitOfWork(),

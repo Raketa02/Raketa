@@ -237,6 +237,5 @@ def valid_signup_payload():
         "email": "alice@example.com",
         "password1": "hunter22!",
         "password2": "hunter22!",
-        "nickname": "alice",
         "adult_attested": True,
     }

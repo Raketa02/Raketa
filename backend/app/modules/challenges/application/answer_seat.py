@@ -58,7 +58,7 @@ from app.modules.challenges.application.seat_change import (
 )
 from app.modules.challenges.application.read_challenges import StandingChallenge
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
-from app.modules.challenges.domain.ports import ChallengeRepository, PlayerHandles
+from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
 from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 from app.modules.challenges.domain.standing import Standing
 
@@ -77,14 +77,14 @@ class AcceptSeat(AChallengeOfYours):
         self,
         *,
         challenges: ChallengeRepository,
-        handles: PlayerHandles,
+        names: PlayerNames,
         uow: UnitOfWork,
         clock: Clock,
         planned_games: PlannedGameHandover,
         games: SeatableGameQuery,
     ) -> None:
         super().__init__(
-            challenges=challenges, handles=handles, uow=uow, clock=clock
+            challenges=challenges, names=names, uow=uow, clock=clock
         )
         self._planned_games = planned_games
         self._games = games

@@ -41,7 +41,6 @@ async def a_player(client, name: str = "surface") -> tuple[UUID, dict[str, str]]
             "email": f"{name}@example.com",
             "password1": "hunter22!",
             "password2": "hunter22!",
-            "nickname": name,
             "adult_attested": True,
         },
     )
@@ -85,7 +84,6 @@ async def a_signed_in_player(client, name: str) -> dict[str, str]:
             "email": f"{name}@example.com",
             "password1": "hunter22!",
             "password2": "hunter22!",
-            "nickname": name,
             "adult_attested": True,
         },
     )

@@ -36,7 +36,7 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_block_query,
-    build_challenge_handles,
+    build_challenge_names,
     build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
@@ -271,7 +271,7 @@ async def test_leaving_a_completed_four_reopens_the_seat_and_the_game_survives(
         assert len(game["seats"]) == 4, "an open seat is a seat"
         (open_seat,) = [seat for seat in game["seats"] if seat["player_id"] is None]
         assert open_seat["side"] == "B"
-        assert open_seat["nickname"] is None
+        assert open_seat["name"] is None
     assert await _games(client, people["cy"]["token"]) == [], (
         "the leaver is not on the court, so the game is not theirs to list"
     )
@@ -465,7 +465,7 @@ def _hold_everybody(client) -> None:
             challenges=build_challenge_repository(
                 event_store=event_store, events=events
             ),
-            handles=build_challenge_handles(db),
+            names=build_challenge_names(db),
             safety=CourtSafety(
                 blocks=build_block_query(db),
                 holds=world.HoldingEverybody(),

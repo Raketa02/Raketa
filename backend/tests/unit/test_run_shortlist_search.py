@@ -390,7 +390,7 @@ class Cards:
         self, player_ids: Collection[UUID]
     ) -> Mapping[UUID, CardIdentity]:
         return {
-            player_id: CardIdentity(nickname=f"p{index}", photo_id=None, review=None)
+            player_id: CardIdentity(name=f"p{index}", photo_id=None, review=None)
             for index, player_id in enumerate(player_ids)
             if self.known is None or player_id in self.known
         }
@@ -825,7 +825,7 @@ async def test_a_row_whose_card_cannot_be_assembled_is_dropped_before_the_record
     """So that ``n_returned`` and the number of ``RETURNED`` rows written agree —
     which is the whole of what makes ``n_returned`` a redaction detector later.
 
-    A card with no nickname is not a card, so the row is dropped rather than
+    A card with no name is not a card, so the row is dropped rather than
     shown blank.
     """
 

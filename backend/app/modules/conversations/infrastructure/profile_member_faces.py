@@ -1,7 +1,9 @@
-"""``MemberFaces`` — a handle from ``users``, a face from the Player profile.
+"""``MemberFaces`` — a name from ``users``, a face from the Player profile.
 
 **It reads each provider's own port and never their table or their bucket.** The
-nickname comes from ``users``, which owns what an account is called; the photo id
+name comes from ``users``, which owns what an account is called — and the
+nickname it answers beside it is left here, because a handle is drawn on a record
+and said nowhere (``docs/adr/0171`` §4); the photo id
 comes from the profile, which owns which photograph a person leads with; and the
 link is signed by ``PhotoStorage``, which owns where the bytes live. A key
 template written here would make this context a second implementation of that,
@@ -22,7 +24,7 @@ are folded through the request's own session, which is not safe to use
 concurrently, so they are read one after another; the signatures share nothing and
 are pure computation, so they are not round trips to serialise in the first place.
 
-**A player ``users`` cannot name keeps their membership**, with ``nickname``
+**A player ``users`` cannot name keeps their membership**, with ``name``
 ``None`` on the way out — the opposite of a shortlist, which drops a row it
 cannot name, and ``games``' rule verbatim: dropping one would draw a
 three-person doubles court.
@@ -64,11 +66,12 @@ class ProfileMemberFaces:
         if not wanted:
             return {}
 
-        nicknames = await self._users.find_nicknames_of(wanted)
+        namings = await self._users.find_namings_of(wanted)
         photos = {player_id: await self._first_photo(player_id) for player_id in wanted}
 
         faces: dict[UUID, MemberFace] = {}
         for player_id in wanted:
+            naming = namings.get(player_id)
             photo_id = photos[player_id]
             url = (
                 None
@@ -80,7 +83,7 @@ class ProfileMemberFaces:
             )
             faces[player_id] = MemberFace(
                 player_id=player_id,
-                nickname=nicknames.get(player_id),
+                name=None if naming is None else naming.name,
                 photo_id=None if url is None else photo_id,
                 photo_url=url,
             )

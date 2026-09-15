@@ -3,6 +3,20 @@ from sqlalchemy import select
 
 from app.infrastructure.events.event_store_model import EventStoreORM
 
+NAMING = {"name": "Alice Liddell", "nickname": "alice"}
+
+
+async def _signed_in(client, payload) -> dict[str, str]:
+    """Sign this payload up and in; the bearer header for what follows."""
+
+    assert (await client.post("/api/v1/users", json=payload)).status_code == 201
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": payload["email"], "password": payload["password1"]},
+    )
+    assert login.status_code == 200, login.text
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
 
 @pytest.mark.asyncio
 async def test_signup_success(client, valid_signup_payload):
@@ -10,10 +24,179 @@ async def test_signup_success(client, valid_signup_payload):
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert body["email"] == valid_signup_payload["email"]
-    assert body["nickname"] == valid_signup_payload["nickname"]
     assert body["authority"] == "USER"
     assert body["is_admin"] is False
     assert "password" not in body and "password_hash" not in body
+    # Credentials only: a fresh account is unnamed (``docs/adr/0171`` §2).
+    assert body["name"] is None
+    assert body["nickname"] is None
+
+
+@pytest.mark.asyncio
+async def test_signup_carrying_a_nickname_is_malformed(client, valid_signup_payload):
+    """The nickname left the payload, and a body that still sends one is a body
+    no shipped client sends — refused with the validation envelope rather than
+    quietly ignored, so the client ticket cannot keep the field by accident."""
+
+    resp = await client.post(
+        "/api/v1/users", json={**valid_signup_payload, "nickname": "alice"}
+    )
+
+    assert resp.status_code == 422, resp.text
+
+
+@pytest.mark.asyncio
+async def test_me_reads_no_name_until_the_naming(client, valid_signup_payload):
+    """The entry gate's first destination reads ``name`` (``docs/adr/0171`` §3)."""
+
+    headers = await _signed_in(client, valid_signup_payload)
+
+    me = await client.get("/api/v1/users/me", headers=headers)
+
+    assert me.status_code == 200, me.text
+    assert me.json()["name"] is None
+    assert me.json()["nickname"] is None
+
+
+@pytest.mark.asyncio
+async def test_the_naming_is_admitted_and_me_reads_both(client, valid_signup_payload):
+    headers = await _signed_in(client, valid_signup_payload)
+
+    named = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": "  Alice   Liddell ", "nickname": "alice"},
+        headers=headers,
+    )
+
+    assert named.status_code == 200, named.text
+    assert named.json()["name"] == "Alice Liddell"
+    assert named.json()["nickname"] == "alice"
+    me = await client.get("/api/v1/users/me", headers=headers)
+    assert me.json()["name"] == "Alice Liddell"
+    assert me.json()["nickname"] == "alice"
+
+
+@pytest.mark.asyncio
+async def test_the_naming_requires_auth(client):
+    resp = await client.put("/api/v1/users/me/name", json=NAMING)
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_the_naming_is_repeatable(client, valid_signup_payload):
+    """A later change is the same act, and keeping your own nickname is admitted."""
+
+    headers = await _signed_in(client, valid_signup_payload)
+    assert (
+        await client.put("/api/v1/users/me/name", json=NAMING, headers=headers)
+    ).status_code == 200
+
+    again = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": "Alice", "nickname": "alice"},
+        headers=headers,
+    )
+    assert again.status_code == 200, again.text
+    assert again.json()["name"] == "Alice"
+    assert again.json()["nickname"] == "alice"
+
+    unchanged = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": "Alice", "nickname": "alice"},
+        headers=headers,
+    )
+    assert unchanged.status_code == 200, unchanged.text
+
+
+@pytest.mark.asyncio
+async def test_another_players_nickname_is_refused_with_the_conflict(
+    client, valid_signup_payload
+):
+    alice = await _signed_in(client, valid_signup_payload)
+    assert (
+        await client.put("/api/v1/users/me/name", json=NAMING, headers=alice)
+    ).status_code == 200
+    bob = await _signed_in(client, {**valid_signup_payload, "email": "bob@example.com"})
+
+    resp = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": "Bob", "nickname": "alice"},
+        headers=bob,
+    )
+
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["code"] == "nickname_already_taken"
+    assert resp.json()["details"] == {"field": "nickname"}
+    # Nothing was written for the refused half either: the act is one event.
+    me = await client.get("/api/v1/users/me", headers=bob)
+    assert me.json()["name"] is None
+
+
+@pytest.mark.asyncio
+async def test_two_players_may_share_a_name(client, valid_signup_payload):
+    """A name is never unique (``docs/adr/0171`` §1); the handle is what tells
+    two Alices apart, on the record."""
+
+    alice = await _signed_in(client, valid_signup_payload)
+    other = await _signed_in(
+        client, {**valid_signup_payload, "email": "alice2@example.com"}
+    )
+
+    first = await client.put("/api/v1/users/me/name", json=NAMING, headers=alice)
+    second = await client.put(
+        "/api/v1/users/me/name",
+        json={**NAMING, "nickname": "alice_l"},
+        headers=other,
+    )
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    assert first.json()["name"] == second.json()["name"] == "Alice Liddell"
+
+
+@pytest.mark.asyncio
+async def test_the_naming_refuses_a_malformed_name_or_nickname(
+    client, valid_signup_payload
+):
+    headers = await _signed_in(client, valid_signup_payload)
+
+    for body in (
+        {"name": "A", "nickname": "alice"},
+        {"name": "x" * 65, "nickname": "alice"},
+        {"name": "Alice", "nickname": "ali ce"},
+        {"name": "Alice", "nickname": "a"},
+        {"name": "Alice"},
+        {"nickname": "alice"},
+    ):
+        resp = await client.put("/api/v1/users/me/name", json=body, headers=headers)
+        assert resp.status_code == 422, (body, resp.text)
+
+
+@pytest.mark.asyncio
+async def test_the_naming_is_one_event_on_the_stream(
+    client, valid_signup_payload, session_factory
+):
+    headers = await _signed_in(client, valid_signup_payload)
+    assert (
+        await client.put("/api/v1/users/me/name", json=NAMING, headers=headers)
+    ).status_code == 200
+
+    async with session_factory() as session:
+        payloads = (
+            (
+                await session.execute(
+                    select(EventStoreORM.payload).where(
+                        EventStoreORM.event_type == "users.user_named"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    assert len(payloads) == 1
+    assert payloads[0]["name"] == "Alice Liddell"
+    assert payloads[0]["nickname"] == "alice"
 
 
 @pytest.mark.asyncio
@@ -127,20 +310,9 @@ async def test_signup_duplicate_email(client, valid_signup_payload):
     assert (
         await client.post("/api/v1/users", json=valid_signup_payload)
     ).status_code == 201
-    dup = {**valid_signup_payload, "nickname": "alice2"}
-    resp = await client.post("/api/v1/users", json=dup)
+    resp = await client.post("/api/v1/users", json=valid_signup_payload)
     assert resp.status_code == 409
     assert resp.json()["code"] == "email_already_registered"
-
-
-@pytest.mark.asyncio
-async def test_signup_duplicate_nickname(client, valid_signup_payload):
-    assert (
-        await client.post("/api/v1/users", json=valid_signup_payload)
-    ).status_code == 201
-    dup = {**valid_signup_payload, "email": "alice2@example.com"}
-    resp = await client.post("/api/v1/users", json=dup)
-    assert resp.status_code == 409
 
 
 @pytest.mark.asyncio

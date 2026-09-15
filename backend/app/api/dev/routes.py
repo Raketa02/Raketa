@@ -128,12 +128,21 @@ class RosterAccount(BaseModel):
         ),
     )
     email: str = Field(..., description="What the console types into `/auth/login`")
-    nickname: str = Field(
+    name: str | None = Field(
         ...,
         description=(
-            "The whole handle. On a seeded account it is also what the account "
-            "is *for* — the state it was named for — which is why this roster "
-            "reads meaning off the address rather than out of the seed catalog."
+            "The whole name, as every player surface says it. `null` for an "
+            "account registered and never named, which no seed run leaves "
+            "behind. What the account is *for* — the state it was named for — is "
+            "read off the address, not the name: the roster reads meaning off "
+            "the address rather than out of the seed catalog."
+        ),
+    )
+    nickname: str | None = Field(
+        ...,
+        description=(
+            "The handle, drawn as `@nickname` on a record and the You tab only. "
+            "`null` exactly when `name` is: the naming is one act carrying both."
         ),
     )
 
@@ -173,14 +182,19 @@ dev_api_router = APIRouter(prefix="/dev", tags=["dev"])
 )
 async def read_roster(db: DbSession) -> RosterResponse:
     rows = await db.execute(
-        select(UserORM.id, UserORM.email, UserORM.nickname)
+        select(UserORM.id, UserORM.email, UserORM.name, UserORM.nickname)
         .where(seed_accounts_only())
         .order_by(UserORM.email)
     )
     return RosterResponse(
         password=SEED_PASSWORD,
         accounts=[
-            RosterAccount(player_id=row.id, email=row.email, nickname=row.nickname)
+            RosterAccount(
+                player_id=row.id,
+                email=row.email,
+                name=row.name,
+                nickname=row.nickname,
+            )
             for row in rows
         ],
     )

@@ -32,7 +32,7 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_challenge_directory,
-    build_challenge_handles,
+    build_challenge_names,
     build_challenge_repository,
     build_court_pairing_query,
     build_court_safety,
@@ -90,7 +90,7 @@ SendChallengeDep = Annotated[SendChallenge, Depends(get_send_challenge)]
 def get_read_challenges(db: DbSession, clock: ClockDep) -> ReadChallenges:
     return ReadChallenges(
         directory=build_challenge_directory(db),
-        handles=build_challenge_handles(db),
+        names=build_challenge_names(db),
         clock=clock,
     )
 
@@ -136,7 +136,7 @@ def get_read_challenge(
     challenges: ChallengeRepositoryDep,
     pairings: Annotated[CourtPairingQuery, Depends(get_court_pairing_query)],
 ) -> ReadChallenge:
-    """The detail read — the arrangement, the handles and the card block.
+    """The detail read — the arrangement, the names and the card block.
 
     It holds the aggregate repository the answers hold, because the screen and
     the acts on it read one challenge the same way; and it holds the pairing
@@ -146,7 +146,7 @@ def get_read_challenge(
 
     return ReadChallenge(
         challenges=challenges,
-        handles=build_challenge_handles(db),
+        names=build_challenge_names(db),
         pairings=pairings,
         clock=clock,
     )
@@ -182,7 +182,7 @@ def get_accept_seat(
 
     return AcceptSeat(
         challenges=challenges,
-        handles=build_challenge_handles(db),
+        names=build_challenge_names(db),
         uow=uow,
         clock=clock,
         planned_games=build_planned_game_handover(db),
@@ -201,7 +201,7 @@ def get_decline_seat(
 ) -> DeclineSeat:
     return DeclineSeat(
         challenges=challenges,
-        handles=build_challenge_handles(db),
+        names=build_challenge_names(db),
         uow=uow,
         clock=clock,
     )
@@ -227,7 +227,7 @@ def get_withdraw_challenge(
 
     return WithdrawChallenge(
         challenges=challenges,
-        handles=build_challenge_handles(db),
+        names=build_challenge_names(db),
         uow=uow,
         clock=clock,
         planned_games=build_planned_game_handover(db),
@@ -255,7 +255,7 @@ def get_leave_game(
 
     return LeaveGame(
         challenges=challenges,
-        handles=build_challenge_handles(db),
+        names=build_challenge_names(db),
         safety=build_court_safety(db),
         games=games,
         uow=uow,
@@ -287,7 +287,7 @@ def get_fill_seats(
 
     return FillSeats(
         challenges=challenges,
-        handles=build_challenge_handles(db),
+        names=build_challenge_names(db),
         open_challenges=build_open_challenge_query(db),
         origins=build_origin_search_query(db),
         safety=build_court_safety(db),

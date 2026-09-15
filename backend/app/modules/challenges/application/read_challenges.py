@@ -20,7 +20,7 @@ standing on every row.
 rule the client re-reads this, because an open game of the organiser's was always
 theirs to read — so naming the pair here costs nothing the refusal was protecting.
 
-**The handles are read once too, and for a whole list** (``docs/adr/0143`` §7).
+**The names are read once too, and for a whole list** (``docs/adr/0143`` §7).
 Everybody on any of these courts is one question, asked about the union — not one
 per seat and not one per challenge. It is the **only** thing this read borrows
 about a person: a Level, an area and a photograph are a card's, and a card is
@@ -35,7 +35,7 @@ from uuid import UUID
 
 from app.kernel import Clock, Instant, instant
 from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.ports import ChallengeDirectory, PlayerHandles
+from app.modules.challenges.domain.ports import ChallengeDirectory, PlayerNames
 from app.modules.challenges.domain.standing import Standing
 
 
@@ -63,13 +63,13 @@ class StandingChallenge:
     ``GameListResponse``'s field for ``GameListResponse``'s reason, one context
     over (``docs/adr/0143`` §7).
 
-    **The handles travel with it for the opposite reason**: they are folded
+    **The names travel with it for the opposite reason**: they are folded
     against nothing. They are the one thing on a challenge that is not derived
     from the seats and the clock, and they ride here rather than being fetched in
     the presentation layer because a route that awaited anything would be a route
     that could await it once per seat.
 
-    ``handles`` is keyed by player id and a seat may be missing from it — an
+    ``names`` is keyed by player id and a seat may be missing from it — an
     account ``users`` no longer has. That is a ``null`` on the wire and a side on
     the screen, never a dropped seat.
 
@@ -81,7 +81,7 @@ class StandingChallenge:
     challenge: Challenge
     standing: Standing
     read_at: Instant
-    handles: Mapping[UUID, str]
+    names: Mapping[UUID, str]
 
     @property
     def ended_at(self) -> Instant | None:
@@ -115,13 +115,13 @@ class StandingChallenge:
 
     @classmethod
     def folded(
-        cls, challenge: Challenge, *, now: Instant, handles: Mapping[UUID, str]
+        cls, challenge: Challenge, *, now: Instant, names: Mapping[UUID, str]
     ) -> "StandingChallenge":
         return cls(
             challenge=challenge,
             standing=challenge.standing_at(now),
             read_at=now,
-            handles=handles,
+            names=names,
         )
 
 
@@ -133,11 +133,11 @@ class ReadChallenges:
         self,
         *,
         directory: ChallengeDirectory,
-        handles: PlayerHandles,
+        names: PlayerNames,
         clock: Clock,
     ) -> None:
         self._directory = directory
-        self._handles = handles
+        self._names = names
         self._clock = clock
 
     async def execute(
@@ -149,7 +149,7 @@ class ReadChallenges:
         empty list still has to say *when*: a client's countdowns are folded
         against it and there would otherwise be no row to read it off.
 
-        **One handle read for the whole list**, over the union of the courts: a
+        **One name read for the whole list**, over the union of the courts: a
         player who holds a seat in three of your challenges is asked about once,
         however many challenges there are. A list of none still asks — about
         nobody, which the adapter answers without a round trip.
@@ -163,7 +163,7 @@ class ReadChallenges:
 
         now = instant(self._clock.now())
         found = await self._directory.seating(command.reader_id)
-        handles = await self._handles.handles_of(
+        names = await self._names.names_of(
             sorted(
                 {
                     seat.player_id
@@ -174,6 +174,6 @@ class ReadChallenges:
             )
         )
         return now, tuple(
-            StandingChallenge.folded(challenge, now=now, handles=handles)
+            StandingChallenge.folded(challenge, now=now, names=names)
             for challenge in found
         )

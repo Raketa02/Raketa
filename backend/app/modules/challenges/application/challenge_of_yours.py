@@ -10,7 +10,7 @@ whether a stranger's challenge id is real, one probe at a time.
 was recorded at**, so an accept that completed a four and the ``ON`` it produced
 are one reading and not two.
 
-**The reply is the redraw** (#327), and the handles are read *after* the commit,
+**The reply is the redraw** (#327), and the names are read *after* the commit,
 because they are the one thing on the answer that is not part of it.
 
 Answering a seat and withdrawing a challenge are different acts on different
@@ -32,7 +32,7 @@ from app.kernel import Clock, Instant
 from app.modules.challenges.application.read_challenges import StandingChallenge
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.errors import NoChallengeOfYoursHasThatId
-from app.modules.challenges.domain.ports import ChallengeRepository, PlayerHandles
+from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
 from app.modules.challenges.domain.standing import Standing
 
 logger = logging.getLogger(__name__)
@@ -45,12 +45,12 @@ class AChallengeOfYours:
         self,
         *,
         challenges: ChallengeRepository,
-        handles: PlayerHandles,
+        names: PlayerNames,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._challenges = challenges
-        self._handles = handles
+        self._names = names
         self._uow = uow
         self._clock = clock
 
@@ -90,7 +90,7 @@ class AChallengeOfYours:
     ) -> StandingChallenge:
         """The court as it now stands — **the reply is the redraw** (#327).
 
-        The handles are read **after** the commit, because they are the one thing
+        The names are read **after** the commit, because they are the one thing
         on the answer that is not part of it: a name that could not be looked up
         must not roll back somebody's yes.
 
@@ -98,16 +98,16 @@ class AChallengeOfYours:
         from here. The act is already committed at this line, so an exception
         would hand the player a failure for something that succeeded — and *the
         reply is the redraw* means they would do it again, into a seat that has
-        already been answered or a challenge that has already ended. A handle
+        already been answered or a challenge that has already ended. A name
         nobody could look up is the same absence as an account ``users`` no
         longer has: ``null`` on the wire, the seat intact, and the screen naming
         a side instead.
         """
 
         await self._uow.commit()
-        handles: Mapping[UUID, str] = {}
+        names: Mapping[UUID, str] = {}
         try:
-            handles = await self._handles.handles_of(
+            names = await self._names.names_of(
                 sorted(
                     seat.player_id
                     for seat in challenge.seats
@@ -116,9 +116,9 @@ class AChallengeOfYours:
             )
         except Exception:
             logger.warning(
-                "the court's handles could not be read after an act on it",
+                "the court's names could not be read after an act on it",
                 exc_info=True,
             )
         return StandingChallenge(
-            challenge=challenge, standing=standing, read_at=at, handles=handles
+            challenge=challenge, standing=standing, read_at=at, names=names
         )

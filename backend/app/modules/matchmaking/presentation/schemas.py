@@ -591,12 +591,13 @@ class PlayerCardSchema(BaseModel):
     here.
     """
 
-    nickname: str = Field(
+    name: str = Field(
         ...,
         description=(
-            "The whole handle. There is no name in this platform and **nothing "
-            "may derive a familiar form from it** — every sentence naming "
-            "somebody uses the whole handle or names nobody."
+            "The whole name, and **nothing may derive a familiar form from it** "
+            "— every sentence naming somebody uses the whole name or names "
+            "nobody (``docs/adr/0171``). Never the nickname: a handle is drawn "
+            "on a record and their own You tab, and said nowhere."
         ),
     )
     photo_id: UUID = Field(

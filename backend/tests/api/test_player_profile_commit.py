@@ -22,14 +22,12 @@ ALICE = {
     "email": "alice.profile@example.com",
     "password1": "hunter22!",
     "password2": "hunter22!",
-    "nickname": "alice-profile",
     "adult_attested": True,
 }
 BOB = {
     "email": "bob.profile@example.com",
     "password1": "hunter22!",
     "password2": "hunter22!",
-    "nickname": "bob-profile",
     "adult_attested": True,
 }
 

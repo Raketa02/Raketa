@@ -631,19 +631,26 @@ Rules to preserve:
   moment each became final
   ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
   It has **two inward ports**, and the first is a single field wide:
-  `PlayerHandles` puts a **nickname** on a seat and nothing else about the person in it
-  ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A card is
+  `PlayerNames` puts a **name** on a seat and nothing else about the person in it
+  ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md); the name and
+  never the nickname since
+  [ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md),
+  which is also why the port stopped being called `PlayerHandles` — a **handle** is now the
+  nickname's word, drawn as `@…` on a record and the You tab and said nowhere). A card is
   what a *searcher* reads to decide about a game that might happen, so a Level, an area or a run
-  of form on a record of an evening would be an as-of-now fact stapled to the past; the handle is
+  of form on a record of an evening would be an as-of-now fact stapled to the past; the name is
   what four people already knew about each other by the time they were on a court together, and
   without it the screens named **sides** — a result agreed with nobody, and three padel games in
   a week told apart by nothing but how long ago they were arranged. **The court is the whole of
   the permission and nothing is re-gated against the reader**: the four fail-closed gates decide
   who may be *introduced*, ADR-0095 §7 already settled that a block does not reach into a game
-  already agreed, and a handle that vanished from a row would be §8's trace. It is **one set read
-  per response** over the union of every court in the answer, and a handle `users` cannot answer
+  already agreed, and a name that vanished from a row would be §8's trace. It is **one set read
+  per response** over the union of every court in the answer, and a name `users` cannot answer
   for is `null` with the seat kept — the opposite of the shortlist, which drops a row it cannot
-  name.
+  name. A null there never means *unnamed*: sign-up creates an account with credentials only
+  and **the naming** (`PUT /api/v1/users/me/name`, one event carrying name and nickname,
+  repeatable) is onboarding's first step, so the entry gate holds an unnamed account there and
+  `GET /users/me` is the one read where `name` and `nickname` may be null.
   **The second inward port is `CourtPairing`, and it is read *beside* the game and never on it**
   ([ADR-0161](../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)).
   `GET /games/{game_id}/pairing` answers the forecast, the split, what is at stake and each
@@ -663,7 +670,7 @@ Rules to preserve:
   from `rating`'s **published** read (`RatedPlayerQuery.published_for`), never from the index.
   **Two providers stand behind the one port and fail on their own**: a process with no index
   draws no forecast and still names every Level and prices the court. `GET /games` is
-  untouched: a seat there still carries a handle and nothing else.
+  untouched: a seat there still carries a name and nothing else.
 - **A room is opened by the first acceptance, and it is told by contexts that do not know
   it exists** ([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md),
   [ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
@@ -692,7 +699,7 @@ Rules to preserve:
   the game live either way), one rule read against two records, and a stored roster would be
   the copy that decides who may read the messages. **Two shapes ride one stream and no sentence is
   ever stored**: a Message is content, a system line is a code and its values, and `values`
-  never repeats what membership already says, so a corrected handle fixes the whole backlog —
+  never repeats what membership already says, so a corrected name fixes the whole backlog —
   and **the read resolves a face for everybody the page names, not only for the roster**
   (ADR-0148 §4 as amended, #408): the person a `SEAT_LEFT` line is about was never a member
   — a *no* is not an accepted seat — so each of the three reads carries `people`: the roster
@@ -959,7 +966,7 @@ Rules to preserve:
   id and the people on it, and an open card is by definition one nobody has answered.
   It borrows one thing,
   `SettledCourts` over `games`' directory, whose adapter lives in **this** context the way
-  `PlayerHandles`' lives in `games`; *settled* there is narrowed to **played and over**,
+  `PlayerNames`' lives in `games`; *settled* there is narrowed to **played and over**,
   because a ghost has nobody to rate and an unscored game very much does. **The card's two
   clocks are domain and neither is configuration** (`domain/window.py`): it opens the day
   after the game — an answer given ten minutes after losing badly is not the answer wanted —

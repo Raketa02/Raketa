@@ -217,8 +217,8 @@ class Typing:
     history.
 
     **It carries the people and not a name**, exactly as every system line does:
-    the client fills handles from the membership it is already holding, so a
-    corrected nickname fixes the indicator for free and no display text is ever
+    the client fills names from the membership it is already holding, so a
+    corrected name fixes the indicator for free and no display text is ever
     frozen onto the wire.
 
     **A list, because a group chat has more than one possible typist** — and the

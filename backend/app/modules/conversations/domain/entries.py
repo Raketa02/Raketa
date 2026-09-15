@@ -17,7 +17,7 @@ row.
 
 **``values`` never repeats what a read resolves.** The line carries ``actor_id``
 and the client fills ``{name}`` from the people the response resolved at read
-time, so a corrected handle reaches the whole backlog for free. That rule is what
+time, so a corrected name reaches the whole backlog for free. That rule is what
 keeps ``values`` down to *the count of seats asked*, *which way somebody left*
 and *what a slot was set to* — the three facts a face read genuinely cannot
 supply.

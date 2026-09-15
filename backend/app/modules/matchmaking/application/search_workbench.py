@@ -169,7 +169,7 @@ class AnsweredCandidate:
     def recorded_card(self) -> RecordedCard:
         """The card as it was shown, from the sources that assembled it.
 
-        The nickname, the photo id and that photo's on-court verdict come from
+        The name, the photo id and that photo's on-court verdict come from
         ``users``, the Player profile and the photo store through
         :class:`PlayerCardSource`; the area, the tags, the Level and its band are
         already on the index row, because those are facts a player changes about
@@ -198,7 +198,7 @@ class AnsweredCandidate:
 
         indexed = self.scored.generated.row
         return RecordedCard(
-            nickname=self.card.nickname,
+            name=self.card.name,
             photo_id=self.card.photo_id,
             review=self.card.review,
             area_code=self.scored.fenced.area_code,
@@ -678,7 +678,7 @@ class SearchWorkbench:
         # every read the *context* binds. A stood-down term is a search with one
         # fewer term in it; a stood-down card block would publish *the platform
         # has watched nothing of these twenty people*, which is a claim. An
-        # outage refuses here, exactly as an unreadable nickname does.
+        # outage refuses here, exactly as an unreadable name does.
         scores = await self._player_scores.readings_for(wanted)
         rows: list[AnsweredCandidate] = []
         for row in returned:
@@ -745,7 +745,7 @@ class SearchWorkbench:
 
         The card, the at-stake block and the distance are recorded beside the
         breakdown because none of the three can be reconstructed later: a
-        nickname changes, a Level moves, a player leaves an area, and a Level
+        name changes, a Level moves, a player leaves an area, and a Level
         delta is priced against ratings that keep moving. A read-back that
         re-read them would answer a different search and call it the same one
         (``docs/adr/0109``).

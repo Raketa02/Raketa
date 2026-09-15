@@ -61,7 +61,7 @@ from app.modules.challenges.application.seat_change import (
 )
 from app.modules.challenges.domain.errors import NoChallengeOfYoursHasThatId
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
-from app.modules.challenges.domain.ports import ChallengeRepository, PlayerHandles
+from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
 from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 from app.shared.domain.errors import AccountHeld
 
@@ -75,14 +75,14 @@ class LeaveGame(AChallengeOfYours):
         self,
         *,
         challenges: ChallengeRepository,
-        handles: PlayerHandles,
+        names: PlayerNames,
         safety: CourtSafety,
         games: SeatableGameQuery,
         uow: UnitOfWork,
         clock: Clock,
         planned_games: PlannedGameHandover,
     ) -> None:
-        super().__init__(challenges=challenges, handles=handles, uow=uow, clock=clock)
+        super().__init__(challenges=challenges, names=names, uow=uow, clock=clock)
         self._safety = safety
         self._games = games
         self._planned_games = planned_games

@@ -1,8 +1,9 @@
-"""``PlayerHandles`` over the port ``users`` already publishes.
+"""``PlayerNames`` over the port ``users`` already publishes.
 
 **A second copy of ``games``' adapter of the same name, deliberately.** The two
 contexts declare the same port and neither may import the other, so the file that
-translates *what is this account called* into *what do I print on this seat* is
+translates *what is this account called* — a name and a nickname together — into
+*what do I print on this seat* — the **name** alone (``docs/adr/0171`` §4) — is
 written once per context. What that buys is that ``users`` may grow a second
 reason to answer nothing — an erasure, a suspension — without either context's
 wire shape changing, and that neither context is reading the other's port to get
@@ -27,13 +28,14 @@ from app.modules.users.domain.ports import UserRepository
 
 
 @final
-class UsersHandles:
+class UsersNames:
     """What ``users`` calls each of these accounts."""
 
     def __init__(self, users: UserRepository) -> None:
         self._users = users
 
-    async def handles_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+    async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
         if not player_ids:
             return {}
-        return await self._users.find_nicknames_of(player_ids)
+        namings = await self._users.find_namings_of(player_ids)
+        return {player_id: naming.name for player_id, naming in namings.items()}
