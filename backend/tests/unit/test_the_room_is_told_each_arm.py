@@ -30,6 +30,7 @@ import pytest
 from app.application.events import DeliveryContext
 from app.kernel import Sport
 from app.modules.challenges.domain.events import (
+    ChallengeCalledOff,
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
     ChallengeWithdrawn,
@@ -429,6 +430,40 @@ async def test_a_call_off_for_a_game_with_no_room_does_nothing(rooms):
     await tell(called_off, _delivery())
     await tell(called_off, _delivery())
 
+    assert rooms.by_id == {}
+
+
+async def test_the_courts_own_call_off_destroys_the_room_on_the_withdrawals_arm(
+    rooms, nudges
+):
+    """``docs/adr/0172`` §6 — the challenge's ``called_off`` is subscribed beside
+    its ``withdrawn``: the same arm, found through the challenge, no line, no
+    nudge. Both events are written in one transaction with the game's own end,
+    so whichever arrives first finds the room and the other finds nothing —
+    and on ADR-0163 §6's ghost path the game is not told at all, so this is
+    the telling that destroys a room whose game is a ghost."""
+
+    tell = _teller(rooms, _Games(game_for=CHALLENGE), nudges=nudges)
+    await tell(
+        SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW),
+        _delivery(),
+    )
+    assert rooms.only.game_id == GAME
+    called_off = ChallengeCalledOff(
+        challenge_id=CHALLENGE, called_by=ANA, occurred_at=_at(5)
+    )
+
+    await tell(called_off, _delivery())
+
+    assert rooms.by_id == {}
+    assert nudges.published == []
+
+    # The game's own end, arriving second, finds nothing — and a redelivery of
+    # the court's finds nothing either.
+    await tell(
+        GameCalledOff(game_id=GAME, called_by=ANA, occurred_at=_at(5)), _delivery()
+    )
+    await tell(called_off, _delivery())
     assert rooms.by_id == {}
 
 

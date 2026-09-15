@@ -36,6 +36,7 @@ from app.bootstrap.composition import (
     build_challenge_repository,
     build_court_pairing_query,
     build_court_safety,
+    build_game_of_court_query,
     build_open_challenge_query,
     build_origin_search_query,
     build_planned_game_handover,
@@ -48,6 +49,7 @@ from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
 from app.modules.challenges.application.withdraw_challenge import WithdrawChallenge
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
 from app.modules.challenges.domain.ports import (
     ChallengeRepository,
     CourtPairingQuery,
@@ -87,10 +89,25 @@ def get_send_challenge(
 SendChallengeDep = Annotated[SendChallenge, Depends(get_send_challenge)]
 
 
-def get_read_challenges(db: DbSession, clock: ClockDep) -> ReadChallenges:
+def get_game_of_court_query(db: DbSession) -> GameOfCourtQuery:
+    """*Which of these courts have a game, and which game?* — read off ``games``,
+    per request (``docs/adr/0172`` §4). Declared once and held by the list read
+    and every act that redraws a court, so the row and the redraw cannot come
+    to two wirings of it."""
+
+    return build_game_of_court_query(db)
+
+
+GameOfCourtQueryDep = Annotated[GameOfCourtQuery, Depends(get_game_of_court_query)]
+
+
+def get_read_challenges(
+    db: DbSession, clock: ClockDep, court_games: GameOfCourtQueryDep
+) -> ReadChallenges:
     return ReadChallenges(
         directory=build_challenge_directory(db),
         names=build_challenge_names(db),
+        court_games=court_games,
         clock=clock,
     )
 
@@ -170,6 +187,7 @@ def get_accept_seat(
     uow: UnitOfWorkDep,
     challenges: ChallengeRepositoryDep,
     games: SeatableGameQueryDep,
+    court_games: GameOfCourtQueryDep,
 ) -> AcceptSeat:
     """The accept, and the one thing it asks somebody else to do.
 
@@ -183,6 +201,7 @@ def get_accept_seat(
     return AcceptSeat(
         challenges=challenges,
         names=build_challenge_names(db),
+        court_games=court_games,
         uow=uow,
         clock=clock,
         planned_games=build_planned_game_handover(db),
@@ -198,10 +217,12 @@ def get_decline_seat(
     clock: ClockDep,
     uow: UnitOfWorkDep,
     challenges: ChallengeRepositoryDep,
+    court_games: GameOfCourtQueryDep,
 ) -> DeclineSeat:
     return DeclineSeat(
         challenges=challenges,
         names=build_challenge_names(db),
+        court_games=court_games,
         uow=uow,
         clock=clock,
     )
@@ -215,19 +236,22 @@ def get_withdraw_challenge(
     clock: ClockDep,
     uow: UnitOfWorkDep,
     challenges: ChallengeRepositoryDep,
+    court_games: GameOfCourtQueryDep,
 ) -> WithdrawChallenge:
-    """The withdraw: the decline's four collaborators, and the hand-over.
+    """The withdraw: the decline's collaborators, and the hand-over.
 
-    **The hand-over is here because a withdraw can reach a game now**
-    (``docs/adr/0163``): a court that has been a game is withdrawn through this
-    route and the game is called off in the same transaction. It is the same
-    seam the accept and the departure hold, built the same way, so the three
-    acts that tell the game cannot come to two wirings of it.
+    **The hand-over is here because the route reaches a game**
+    (``docs/adr/0163``, ``docs/adr/0172`` §1): a court that has been a game is
+    called off through this route and the game is called off in the same
+    transaction. It is the same seam the accept and the departure hold, built
+    the same way, so the three acts that tell the game cannot come to two
+    wirings of it.
     """
 
     return WithdrawChallenge(
         challenges=challenges,
         names=build_challenge_names(db),
+        court_games=court_games,
         uow=uow,
         clock=clock,
         planned_games=build_planned_game_handover(db),
@@ -243,6 +267,7 @@ def get_leave_game(
     uow: UnitOfWorkDep,
     challenges: ChallengeRepositoryDep,
     games: SeatableGameQueryDep,
+    court_games: GameOfCourtQueryDep,
 ) -> LeaveGame:
     """The departure: an act on one challenge, and the game is told.
 
@@ -256,6 +281,7 @@ def get_leave_game(
     return LeaveGame(
         challenges=challenges,
         names=build_challenge_names(db),
+        court_games=court_games,
         safety=build_court_safety(db),
         games=games,
         uow=uow,
@@ -273,6 +299,7 @@ def get_fill_seats(
     uow: UnitOfWorkDep,
     challenges: ChallengeRepositoryDep,
     games: SeatableGameQueryDep,
+    court_games: GameOfCourtQueryDep,
 ) -> FillSeats:
     """The fill: an act on one challenge, holding the send's three extra reads.
 
@@ -288,6 +315,7 @@ def get_fill_seats(
     return FillSeats(
         challenges=challenges,
         names=build_challenge_names(db),
+        court_games=court_games,
         open_challenges=build_open_challenge_query(db),
         origins=build_origin_search_query(db),
         safety=build_court_safety(db),

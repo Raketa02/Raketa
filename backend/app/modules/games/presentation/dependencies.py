@@ -32,6 +32,7 @@ from app.bootstrap.composition import (
     build_player_names,
 )
 from app.modules.games.application.answer_result import AcceptResult, StateResult
+from app.modules.games.application.dismiss_game import DismissGame
 from app.modules.games.application.read_game_pairing import ReadGamePairing
 from app.modules.games.application.read_games import ReadGames
 from app.modules.games.domain.ports import (
@@ -96,6 +97,20 @@ def get_accept_result(
 
 
 AcceptResultDep = Annotated[AcceptResult, Depends(get_accept_result)]
+
+
+def get_dismiss_game(
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    games: GameRepositoryDep,
+) -> DismissGame:
+    """The dismissal: the result acts' repository and unit of work, and no
+    names — it answers nothing, so there is nobody to name."""
+
+    return DismissGame(games=games, uow=uow, clock=clock)
+
+
+DismissGameDep = Annotated[DismissGame, Depends(get_dismiss_game)]
 
 
 def get_court_pairing(

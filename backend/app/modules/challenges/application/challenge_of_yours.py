@@ -11,7 +11,11 @@ was recorded at**, so an accept that completed a four and the ``ON`` it produced
 are one reading and not two.
 
 **The reply is the redraw** (#327), and the names are read *after* the commit,
-because they are the one thing on the answer that is not part of it.
+because they are the one thing on the answer that is not part of it. **The game
+the court became is read before it** (``docs/adr/0172`` §4): it is asked of the
+store the act just wrote to, in the act's own transaction, so an outage there
+has already rolled the act back — and a redraw that could not say whether the
+court has been a game would draw the wrong sheet.
 
 Answering a seat and withdrawing a challenge are different acts on different
 subjects — one is about your own seat and the other ends everybody's — and they
@@ -29,9 +33,14 @@ from uuid import UUID
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, Instant
-from app.modules.challenges.application.read_challenges import StandingChallenge
+from app.modules.challenges.application.read_challenges import (
+    StandingChallenge,
+    been_a_game,
+    game_of,
+)
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.errors import NoChallengeOfYoursHasThatId
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
 from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
 from app.modules.challenges.domain.standing import Standing
 
@@ -46,11 +55,13 @@ class AChallengeOfYours:
         *,
         challenges: ChallengeRepository,
         names: PlayerNames,
+        court_games: GameOfCourtQuery,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._challenges = challenges
         self._names = names
+        self._court_games = court_games
         self._uow = uow
         self._clock = clock
 
@@ -102,8 +113,17 @@ class AChallengeOfYours:
         nobody could look up is the same absence as an account ``users`` no
         longer has: ``null`` on the wire, the seat intact, and the screen naming
         a side instead.
+
+        **The game is read before the commit, and only where the fold says
+        there is one.** It is the same store the act wrote to — the hand-over
+        appends to it in this transaction, and the rows are flushed — so an
+        outage there is one that has already refused the act; and a court the
+        fold says has been a game with no game behind it is a broken store,
+        refused rather than drawn as *never a game*.
         """
 
+        games = await self._court_games.games_of(been_a_game([challenge]))
+        game_id = game_of(challenge, games)
         await self._uow.commit()
         names: Mapping[UUID, str] = {}
         try:
@@ -120,5 +140,9 @@ class AChallengeOfYours:
                 exc_info=True,
             )
         return StandingChallenge(
-            challenge=challenge, standing=standing, read_at=at, names=names
+            challenge=challenge,
+            standing=standing,
+            read_at=at,
+            names=names,
+            game_id=game_id,
         )

@@ -192,7 +192,8 @@ class ArrangingCourt(Protocol):
         self, challenge_ids: Collection[UUID], *, now: Instant
     ) -> frozenset[UUID]:
         """Which of these challenges are **over** at this instant — ``DECLINED``,
-        ``LAPSED`` or ``WITHDRAWN`` — as ``challenges`` folds it. **One call.**
+        ``LAPSED``, ``WITHDRAWN`` or ``CALLED_OFF`` — as ``challenges`` folds
+        it. **One call.**
 
         ``now`` travels with the question because a lapse is a deadline passing
         and is true before any sweep has recorded it; a reader between the two

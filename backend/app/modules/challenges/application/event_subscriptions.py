@@ -3,7 +3,7 @@
 A name here is a **published contract** and outlives every Python class it maps
 to: renaming ``ChallengeSent`` must never change what is already in the store.
 
-**Eight names, on one aggregate.** The prefix is the context's, which is what
+**Nine names, on one aggregate.** The prefix is the context's, which is what
 makes a name a statement about *what happened* rather than about which class
 wrote it.
 
@@ -27,13 +27,16 @@ omission to be filled in by whoever needs one; the standing is derived from the
 seats and the clock, and a durable name announcing a conclusion would be a second
 place for it to be true — the one a subscriber would believe.
 
-**``challenges.withdrawn`` is the one that does say a challenge ended, and it is
-allowed to** (``docs/adr/0142`` §3): a withdrawal is a decision a person took and
-no arrangement of the seats reaches it, so the name is the only place the fact is
-true rather than a second one. It is also the first name here a **subscriber**
-will want: the conversation the first acceptance opened has to be destroyed, and
-the context that owns conversations will hear it here rather than being called
-from the use case.
+**``challenges.withdrawn`` is one of the two that do say a challenge ended, and
+it is allowed to** (``docs/adr/0142`` §3): a withdrawal is a decision a person
+took and no arrangement of the seats reaches it, so the name is the only place
+the fact is true rather than a second one. It is also the first name here a
+**subscriber** will want: the conversation the first acceptance opened has to be
+destroyed, and the context that owns conversations will hear it here rather than
+being called from the use case. **``challenges.called_off`` is the ninth and the
+second** (``docs/adr/0172`` §1): a court that has been a game ending with its
+game, written by the two acts that call the game off in the transaction that
+tells it, and subscribed by the room beside the withdrawal.
 
 **``challenges.seat_left`` is the eighth** (``docs/adr/0162``): somebody leaving
 a game they had agreed to. It is about a seat and carries a player, so it is not
@@ -46,6 +49,7 @@ from __future__ import annotations
 from app.application.events import EventCatalog, EventDispatcher
 from app.modules.challenges.application.handlers import LogChallengeEvent
 from app.modules.challenges.domain.events import (
+    ChallengeCalledOff,
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
     ChallengeWithdrawn,
@@ -68,6 +72,7 @@ _CONTRACTS = (
     (SeatLeft, "challenges.seat_left"),
     (SeatsInvited, "challenges.seats_invited"),
     (ChallengeWithdrawn, "challenges.withdrawn"),
+    (ChallengeCalledOff, "challenges.called_off"),
 )
 
 

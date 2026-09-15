@@ -1,6 +1,7 @@
-"""*End it.* The one act on a challenge that is nobody's seat — two acts, in
+"""*End it.* The one route on a challenge that is nobody's seat — two acts, in
 fact, told apart by whether the court has been a game (``docs/adr/0165``
-§4–§5), and one event.
+§4–§5), and since ``docs/adr/0172`` §1 two events: which act a court gets is
+the fold's to say (``has_become_a_game``), here, and never the client's.
 
 **On a court that was never a game it is *Remove the challenge*.** The
 organiser's, and admitted exactly while nobody besides the organiser holds an
@@ -15,13 +16,16 @@ falsifier.
 
 **On a court that has been a game it is *Call it off*, and it is the exit that
 reaches the game** (``docs/adr/0163``). A reopened court is
-``LINE_UP_INCOMPLETE`` again once somebody left it, and the withdraw is
-admitted there for **any player on the court** — the organiser's seat buys
-nothing, and there is no fallback to wait for. The game it became is **called
-off** in this transaction, on the port the departure already uses: the
-``WITHDRAWN`` on the challenge and the end on the game commit together or
-neither does, for the reason the opening and the departure run inline — the
-player who taps is told by a screen that cannot yet show it otherwise.
+``LINE_UP_INCOMPLETE`` again once somebody left it, and the act is admitted
+there for **any player on the court** — the organiser's seat buys nothing, and
+there is no fallback to wait for. **It records the court's own ending,
+``CALLED_OFF`` with the presser named, and never a withdrawal**
+(``docs/adr/0172`` §1): ``WITHDRAWN`` is *Remove the challenge*'s alone. The
+game it became is **called off** in this transaction, on the port the
+departure already uses: the ``CALLED_OFF`` on the challenge and the end on the
+game commit together or neither does, for the reason the opening and the
+departure run inline — the player who taps is told by a screen that cannot
+yet show it otherwise.
 
 **Whole-challenge, irreversible, and whose act it is decided in the
 aggregate.** Every one of those is the aggregate's to enforce and none of them
@@ -35,12 +39,14 @@ there is nothing downstream of an arrangement that never became one. The
 conversation this challenge opened, where one exists — there is none before
 anybody has answered, and there may be one the organiser is alone in again —
 is destroyed by the context that owns conversations, which subscribes to
-``challenges.withdrawn`` rather than being called from this line; it does so
-whether or not the room already holds its game. **No moment guard**,
-deliberately (``docs/adr/0163`` §6): that guard stops a no-show vacating a seat
-to block a result, and on a court with a seat open there is no result to block.
-A court whose game has already ended by its clock is withdrawn all the same,
-and the other side leaves the ghost standing.
+``challenges.withdrawn`` and ``challenges.called_off`` rather than being called
+from this line; it does so whether or not the room already holds its game.
+**No moment guard**, deliberately (``docs/adr/0163`` §6): that guard stops a
+no-show vacating a seat to block a result, and on a court with a seat open
+there is no result to block. A court whose game has already ended by its clock
+is called off all the same — the challenge is ``CALLED_OFF`` with the presser
+on its record — and the other side leaves the ghost standing
+(``docs/adr/0172`` §4).
 """
 
 from __future__ import annotations
@@ -52,6 +58,7 @@ from app.kernel import Clock, instant
 from app.modules.challenges.application.challenge_of_yours import AChallengeOfYours
 from app.modules.challenges.application.commands import WithdrawChallengeCommand
 from app.modules.challenges.application.read_challenges import StandingChallenge
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
 
@@ -66,11 +73,18 @@ class WithdrawChallenge(AChallengeOfYours):
         *,
         challenges: ChallengeRepository,
         names: PlayerNames,
+        court_games: GameOfCourtQuery,
         uow: UnitOfWork,
         clock: Clock,
         planned_games: PlannedGameHandover,
     ) -> None:
-        super().__init__(challenges=challenges, names=names, uow=uow, clock=clock)
+        super().__init__(
+            challenges=challenges,
+            names=names,
+            court_games=court_games,
+            uow=uow,
+            clock=clock,
+        )
         self._planned_games = planned_games
 
     async def execute(self, command: WithdrawChallengeCommand) -> StandingChallenge:
@@ -87,10 +101,17 @@ class WithdrawChallenge(AChallengeOfYours):
 
         at = instant(self._clock.now())
         challenge = await self._yours(command.challenge_id, command.player_id)
-        challenge.withdraw(command.player_id, occurred_at=at)
+        # **Which act a court gets is the fold's to say** (``docs/adr/0172``
+        # §1), here and never on the client: a court that has been a game is
+        # called off, and one that never was is removed.
+        been_a_game = challenge.has_become_a_game()
+        if been_a_game:
+            challenge.call_off(command.player_id, occurred_at=at)
+        else:
+            challenge.withdraw(command.player_id, occurred_at=at)
         standing = await self._written(challenge, at)
-        if challenge.has_become_a_game():
-            # **The game is told in this transaction**, so the ``WITHDRAWN`` on
+        if been_a_game:
+            # **The game is told in this transaction**, so the ``CALLED_OFF`` on
             # the challenge and the end on the game commit together or neither
             # does. A court that never became a game hands over nothing.
             await self._planned_games.call_off(

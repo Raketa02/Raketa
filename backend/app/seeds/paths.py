@@ -60,6 +60,7 @@ from app.bootstrap.composition import (
     build_match_fit_engine,
     build_match_history_query,
     build_mutual_challenge_minting,
+    build_game_of_court_query,
     build_open_challenge_query,
     build_origin_search_query,
     build_planned_game_handover,
@@ -97,6 +98,7 @@ from app.modules.challenges.application.commands import (
     SendChallengeCommand,
 )
 from app.modules.challenges.application.fill_seats import FillSeats
+from app.modules.challenges.application.leave_game import LeaveGame
 from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
@@ -184,6 +186,14 @@ class ReadPaths:
     #: same reason the two answers are: a state a screen has to draw is reached
     #: through the use case a request runs, never written into the log.
     withdraw: WithdrawChallenge
+    #: *Leave the game* — the one act that takes a yes back (``docs/adr/0165``),
+    #: and since ``docs/adr/0172`` §1 the one that ends a court that has been a
+    #: game: the departure that leaves one player on it records ``CALLED_OFF``
+    #: and calls the game off in the same act. Here because that ending — the
+    #: seventh standing, and the *Called off* card it draws — is reached by no
+    #: other act, and a state a screen has to draw is reached through the use
+    #: case a request runs.
+    leave: LeaveGame
     #: *Fill the seats* — the send's shape minus the mint (``docs/adr/0150``).
     #: Here because a court that has been **grown** is a state no other act
     #: reaches: the room learns ``SEATS_INVITED`` from a fill and from nothing
@@ -334,6 +344,7 @@ async def read_paths(
     # (``docs/adr/0143`` §7), so the seed holds both adapters exactly as a
     # request does.
     court_names = build_challenge_names(session)
+    court_games = build_game_of_court_query(session)
     history = build_match_history_query(session)
     ruleset = build_ruleset()
     engine = build_match_fit_engine()
@@ -439,13 +450,18 @@ async def read_paths(
         accept=AcceptSeat(
             challenges=challenges,
             names=court_names,
+            court_games=court_games,
             uow=uow,
             clock=clock,
             planned_games=build_planned_game_handover(session),
             games=build_seatable_game_query(session),
         ),
         decline=DeclineSeat(
-            challenges=challenges, names=court_names, uow=uow, clock=clock
+            challenges=challenges,
+            names=court_names,
+            court_games=court_games,
+            uow=uow,
+            clock=clock,
         ),
         # **The send's three extra reads, built the same way here as there**, so
         # a fill and a send cannot come to two answers about who may share a
@@ -453,6 +469,7 @@ async def read_paths(
         fill=FillSeats(
             challenges=challenges,
             names=court_names,
+            court_games=court_games,
             open_challenges=build_open_challenge_query(session),
             origins=build_origin_search_query(session),
             safety=build_court_safety(session),
@@ -463,6 +480,22 @@ async def read_paths(
         withdraw=WithdrawChallenge(
             challenges=challenges,
             names=court_names,
+            court_games=court_games,
+            uow=uow,
+            clock=clock,
+            planned_games=build_planned_game_handover(session),
+        ),
+        # **The accept's hand-over and the accept's moment guard**, built the
+        # same way, because a departure is the accept's mirror — a seat moving
+        # on a court that has been a game, told to the game in the same
+        # transaction — and the court's safety gates, because a departure
+        # writes a line into a room other people are in.
+        leave=LeaveGame(
+            challenges=challenges,
+            names=court_names,
+            court_games=court_games,
+            safety=build_court_safety(session),
+            games=build_seatable_game_query(session),
             uow=uow,
             clock=clock,
             planned_games=build_planned_game_handover(session),
@@ -476,6 +509,7 @@ async def read_paths(
         read_challenges=ReadChallenges(
             directory=build_challenge_directory(session),
             names=court_names,
+            court_games=court_games,
             clock=clock,
         ),
         read_challenge=ReadChallenge(

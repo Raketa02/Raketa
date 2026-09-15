@@ -25,16 +25,24 @@ Everybody on any of these courts is one question, asked about the union — not 
 per seat and not one per challenge. It is the **only** thing this read borrows
 about a person: a Level, an area and a photograph are a card's, and a card is
 drawn on the detail read alone, where the arrangement is still being decided.
+
+**And the games are read once, for the courts the fold says have been one**
+(``docs/adr/0172`` §4). ``game_id`` is the one fact this read lacked — what lets
+a Chats row and the leaver's sheet tell a court that has been a game from one
+that has not — and it is read from ``games`` rather than recorded, asked about
+the been-a-game subset only, so a list with none costs nothing and ``null`` is
+the fold's answer rather than the other context's.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping, final
+from typing import Iterable, Mapping, final
 from uuid import UUID
 
-from app.kernel import Clock, Instant, instant
+from app.kernel import Clock, Instant, instant, invariant
 from app.modules.challenges.domain.challenge import Challenge
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
 from app.modules.challenges.domain.ports import ChallengeDirectory, PlayerNames
 from app.modules.challenges.domain.standing import Standing
 
@@ -73,6 +81,13 @@ class StandingChallenge:
     account ``users`` no longer has. That is a ``null`` on the wire and a side on
     the screen, never a dropped seat.
 
+    ``game_id`` is the game this court became, and ``None`` exactly when the
+    fold says its line-up never completed (``docs/adr/0172`` §4) — the same id
+    through a re-seat and through the ending. It is a field rather than a
+    property because it is read from another context, and it rides here for
+    the names' reason: the reply is the redraw, and a redraw that could not
+    say whether the court has been a game would draw the wrong sheet.
+
     One type, used by the read and by both answers, because a challenge and its
     standing are one answer whether the caller just changed something or only
     asked.
@@ -82,6 +97,7 @@ class StandingChallenge:
     standing: Standing
     read_at: Instant
     names: Mapping[UUID, str]
+    game_id: UUID | None
 
     @property
     def ended_at(self) -> Instant | None:
@@ -113,16 +129,60 @@ class StandingChallenge:
 
         return self.challenge.ended_at(self.read_at)
 
+    @property
+    def ended_by(self) -> UUID | None:
+        """Whose act ended it, or ``None`` because it has not ended
+        (``docs/adr/0172`` §3) — the same fold's third half, derived here for
+        ``ended_at``'s reason: it is a fold of exactly ``challenge`` and
+        ``read_at``, so a caller cannot pass one folded against a different
+        instant from the standing beside it.
+        """
+
+        return self.challenge.ended_by(self.read_at)
+
     @classmethod
     def folded(
-        cls, challenge: Challenge, *, now: Instant, names: Mapping[UUID, str]
+        cls,
+        challenge: Challenge,
+        *,
+        now: Instant,
+        names: Mapping[UUID, str],
+        games: Mapping[UUID, UUID],
     ) -> "StandingChallenge":
         return cls(
             challenge=challenge,
             standing=challenge.standing_at(now),
             read_at=now,
             names=names,
+            game_id=game_of(challenge, games),
         )
+
+
+def game_of(challenge: Challenge, games: Mapping[UUID, UUID]) -> UUID | None:
+    """The game this court became, off the answer ``games`` gave — or ``None``
+    because the fold says its line-up never completed.
+
+    **The fold decides whether to ask, and the answer decides nothing about
+    that.** A court that has been a game with no game behind it is a broken
+    store rather than a state — the opening runs in the acceptance's own
+    transaction — and it raises rather than answering ``null``, which would
+    make one absence mean two things.
+    """
+
+    if not challenge.has_become_a_game():
+        return None
+    return invariant(
+        games.get(challenge.id),
+        f"a court that has been a game, with no game behind it: {challenge.id}",
+    )
+
+
+def been_a_game(challenges: Iterable[Challenge]) -> list[UUID]:
+    """The ids of the courts the fold says have been a game, sorted — the only
+    ones ``games`` is asked about, and never a set's iteration order
+    (``docs/adr/0105`` §1)."""
+
+    return sorted(one.id for one in challenges if one.has_become_a_game())
 
 
 @final
@@ -134,10 +194,12 @@ class ReadChallenges:
         *,
         directory: ChallengeDirectory,
         names: PlayerNames,
+        court_games: GameOfCourtQuery,
         clock: Clock,
     ) -> None:
         self._directory = directory
         self._names = names
+        self._court_games = court_games
         self._clock = clock
 
     async def execute(
@@ -159,6 +221,9 @@ class ReadChallenges:
         the order — the answer is a mapping keyed by id — and the rule is stated
         on the collection rather than on what happens to be observable, because
         that is what changes silently.
+
+        **One game read for the whole list too**, over the courts the fold says
+        have been a game and no others (``docs/adr/0172`` §4).
         """
 
         now = instant(self._clock.now())
@@ -173,7 +238,8 @@ class ReadChallenges:
                 }
             )
         )
+        games = await self._court_games.games_of(been_a_game(found))
         return now, tuple(
-            StandingChallenge.folded(challenge, now=now, names=names)
+            StandingChallenge.folded(challenge, now=now, names=names, games=games)
             for challenge in found
         )

@@ -4,9 +4,9 @@ other way round from membership.
 A room with a game ends on the game's clock, which is a fold over the room's own
 stream (``domain/lifetime.py``): the entry window closing, or a grace after *we
 played*. A room without a game **has ended exactly when its challenge is over**
-(``docs/adr/0164`` §6) — ``DECLINED``, ``LAPSED``, ``WITHDRAWN`` — which is a fact
-about somebody else's record, asked of the port the room already reads its
-membership from and never folded here. What selects the record is the room's
+(``docs/adr/0164`` §6) — ``DECLINED``, ``LAPSED``, ``WITHDRAWN``, ``CALLED_OFF`` —
+which is a fact about somebody else's record, asked of the port the room already
+reads its membership from and never folded here. What selects the record is the room's
 own nullable ``game_id``, exactly as it selects membership's.
 
 **Derived on every read, never stored, and never swept into a fact of its own.**

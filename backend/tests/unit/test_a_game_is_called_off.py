@@ -2,10 +2,15 @@
 
 **A game with a seat open can be called off**, and nothing else can. ``call_off``
 writes ``GameCalledOff``; the standing reads it **first**, as ``challenges`` reads
-``withdrawn_at``; it is an end — settled, and refusing every act — and it is
-**neither played nor a ghost**. Driven on the aggregate and on the use case the
-withdraw hands over to, with a hand-written repository, because what is under test
-is *what the record does* rather than anything about a database.
+its recorded conclusion; it is an end — settled, and refusing every act — and it
+is **neither played nor a ghost**. Driven on the aggregate and on the use case
+the call-off hands over to, with a hand-written repository, because what is
+under test is *what the record does* rather than anything about a database.
+
+**And the end says who, and its card can be cleared** (``docs/adr/0172`` §4–§5).
+``called_off_by`` is folded off the event's ``called_by``, the field ADR-0163 §4
+kept for this day; ``dismiss`` is the reader's own act on a called-off game,
+recorded once per player and read by the rail alone.
 """
 
 from __future__ import annotations
@@ -17,15 +22,20 @@ import pytest
 
 from app.kernel import InvariantViolated, Sport, instant
 from app.modules.games.application.call_off_game import CallOffGame
-from app.modules.games.application.commands import CallOffGameCommand
+from app.modules.games.application.commands import (
+    CallOffGameCommand,
+    DismissGameCommand,
+)
+from app.modules.games.application.dismiss_game import DismissGame
 from app.modules.games.domain.errors import (
+    GameIsNotCalledOff,
     NotAGameToCallOff,
     TheGameIsNotOpenToSeating,
     TheGameWasCalledOff,
     TheResultIsSettled,
     YouWereNotOnThisCourt,
 )
-from app.modules.games.domain.events import GameCalledOff
+from app.modules.games.domain.events import GameCalledOff, GameDismissed
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
@@ -33,6 +43,7 @@ from app.modules.games.domain.standing import PLAYED, SETTLED, GameStanding
 from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.modules.player_profile.domain.availability import Window
 from app.shared.ids import new_uuid
+from tests.unit.fake_event_store import CountingUnitOfWork, FrozenClock
 
 ANA, BO, CY, DEE, EVE = (new_uuid() for _ in range(5))
 PLANNED_AT = instant(datetime(2026, 9, 12, 18, 0, tzinfo=timezone.utc))
@@ -86,6 +97,7 @@ def test_a_game_with_a_seat_open_is_called_off_and_that_is_its_end():
     game.call_off(by=ANA, occurred_at=at(2))
 
     assert game.called_off_at == at(2)
+    assert game.called_off_by == ANA, "the field ADR-0163 §4 kept for this day"
     assert game.standing_at(at(2)) is GameStanding.CALLED_OFF
     assert game.standing_at(at(24 * 365)) is GameStanding.CALLED_OFF, (
         "a decision, not a deadline: a year of clock moves nothing"
@@ -122,9 +134,22 @@ def test_the_whole_life_replays_into_itself():
     rebuilt = Game.from_history(events)
 
     assert rebuilt.called_off_at == at(2)
+    assert rebuilt.called_off_by == BO
     assert rebuilt.standing_at(at(3)) is GameStanding.CALLED_OFF
     assert rebuilt.version == 3
     assert not rebuilt.line_up.is_complete, "the open seat is still on the record"
+
+
+def test_a_game_that_was_not_called_off_names_nobody():
+    game = _a_reopened_game()
+    assert game.called_off_by is None
+
+    ghost = _a_reopened_game()
+    past_the_window = instant(
+        PLANNED_AT + PLAN_HORIZON + ENTRY_GRACE + timedelta(hours=1)
+    )
+    assert ghost.standing_at(past_the_window) is GameStanding.NEVER_PLAYED
+    assert ghost.called_off_by is None
 
 
 # ---------------------------------------------------------------------------
@@ -280,32 +305,32 @@ async def test_a_game_that_has_already_ended_by_its_clock_is_stepped_over():
     assert ghost.called_off_at is None
 
 
-async def test_a_game_already_called_off_is_stepped_over_and_keeps_its_end():
-    """``docs/adr/0165`` §3 — a departure calls a game off with the challenge
-    still standing ``LINE_UP_INCOMPLETE``, so a withdraw can reach a game that
-    is already ``CALLED_OFF``. It is the ghost's case again: the withdraw is
-    about the challenge, and the end the game reached — with the departure's
-    instant and actor on it — stays the end it is."""
+async def test_a_game_already_called_off_is_not_reached_by_a_second_call_off():
+    """``docs/adr/0172`` §1 — the departure that calls a game off now records
+    the court's ending too, so the challenge is over and *Call it off* meets
+    ``challenge_is_over`` before any hand-over. A second call-off reaching a
+    game already called off is therefore a broken precondition rather than a
+    state, and the aggregate's own refusal fires: the leniency here is one
+    standing wide, the ghost's, and no wider."""
 
     game = _a_reopened_game()
     game.call_off(by=CY, occurred_at=at(2))
     games = _Remembering(game)
 
-    await CallOffGame(games=games).execute(
-        CallOffGameCommand(challenge_id=game.challenge_id, called_by=ANA),
-        occurred_at=at(3),
-    )
-
-    assert game.standing_at(at(3)) is GameStanding.CALLED_OFF
+    with pytest.raises(NotAGameToCallOff):
+        await CallOffGame(games=games).execute(
+            CallOffGameCommand(challenge_id=game.challenge_id, called_by=ANA),
+            occurred_at=at(3),
+        )
     assert game.called_off_at == at(2), "the first end stands"
-    assert game.version == 3, "nothing was appended"
+    assert game.called_off_by == CY
 
 
-async def test_only_the_two_ends_a_reopened_court_can_reach_are_stepped_over():
-    """The leniency is two standings wide and no wider: a played game has a
+async def test_only_the_ghost_is_stepped_over():
+    """The leniency is one standing wide and no wider: a played game has a
     whole court, and a whole court is a challenge that is ``ON``, which the
-    withdraw refuses — so a played game here is a broken precondition, and the
-    aggregate's refusal fires and rolls the withdrawal back."""
+    call-off refuses — so a played game here is a broken precondition, and the
+    aggregate's refusal fires and rolls the act back."""
 
     game = _a_game()
     game.state_result(by=ANA, score=_score(), occurred_at=at(1))
@@ -323,4 +348,107 @@ async def test_a_call_off_for_a_challenge_with_no_game_is_a_broken_precondition(
         await CallOffGame(games=_Remembering()).execute(
             CallOffGameCommand(challenge_id=new_uuid(), called_by=ANA),
             occurred_at=at(1),
+        )
+
+
+# ---------------------------------------------------------------------------
+# The dismissal — a per-player act, derived on every read (ADR-0172 §5)
+# ---------------------------------------------------------------------------
+
+
+def test_a_player_on_the_court_dismisses_a_called_off_game_once():
+    """Recorded once per player on the game's stream; a second dismissal by
+    the same player writes nothing and answers as done, on *writes nothing
+    twice*. Nothing about the game's standing moves."""
+
+    game = _a_reopened_game()
+    game.call_off(by=ANA, occurred_at=at(2))
+    game.pull_events()
+
+    game.dismiss(by=BO, occurred_at=at(3))
+    game.dismiss(by=BO, occurred_at=at(4))
+    game.dismiss(by=ANA, occurred_at=at(5))
+
+    events = game.pull_events()
+    assert [type(event) for event in events] == [GameDismissed, GameDismissed]
+    assert [(event.dismissed_by, event.occurred_at) for event in events] == [
+        (BO, at(3)),
+        (ANA, at(5)),
+    ]
+    assert game.dismissed == {BO, ANA}
+    assert game.standing_at(at(6)) is GameStanding.CALLED_OFF
+    assert Game.from_history(
+        [*_a_reopened_game_events(), *events]
+    ).dismissed == {BO, ANA}
+
+
+def _a_reopened_game_events():
+    game = _a_reopened_game()
+    game.call_off(by=ANA, occurred_at=at(2))
+    return game.pull_events()
+
+
+def test_a_dismissal_is_admitted_on_a_called_off_game_and_on_no_other_standing():
+    """Refused with its own code on every other standing — awaiting its
+    entry, a ghost, played and argued, confirmed — because the other endings'
+    cards carry a score or a strand's verdict and are the record for the day
+    they stay; this one carries nothing the row does not."""
+
+    awaiting = _a_reopened_game()
+    with pytest.raises(GameIsNotCalledOff):
+        awaiting.dismiss(by=ANA, occurred_at=at(2))
+
+    ghost = _a_reopened_game()
+    past_the_window = instant(
+        PLANNED_AT + PLAN_HORIZON + ENTRY_GRACE + timedelta(hours=1)
+    )
+    with pytest.raises(GameIsNotCalledOff):
+        ghost.dismiss(by=ANA, occurred_at=past_the_window)
+
+    played = _a_game()
+    played.state_result(by=ANA, score=_score(), occurred_at=at(1))
+    with pytest.raises(GameIsNotCalledOff):
+        played.dismiss(by=CY, occurred_at=at(2))
+    with pytest.raises(GameIsNotCalledOff):
+        played.dismiss(by=CY, occurred_at=at(24 * 8))
+    assert played.dismissed == frozenset()
+
+
+def test_only_somebody_on_the_court_may_dismiss_and_the_leaver_is_not():
+    """Admitted for a player the rail would show the card to — on the court —
+    and answered as a stranger is answered for anybody else. The leaver whose
+    departure called it off has been vacated: the card is not on their rail,
+    and neither is the act theirs."""
+
+    game = _a_reopened_game()
+    game.call_off(by=CY, occurred_at=at(2))
+
+    with pytest.raises(YouWereNotOnThisCourt):
+        game.dismiss(by=EVE, occurred_at=at(3))
+    with pytest.raises(YouWereNotOnThisCourt):
+        game.dismiss(by=CY, occurred_at=at(3))
+    game.dismiss(by=ANA, occurred_at=at(3))
+    assert game.dismissed == {ANA}
+
+
+async def test_the_use_case_records_the_dismissal_and_a_stranger_is_refused():
+    game = _a_reopened_game()
+    game.call_off(by=ANA, occurred_at=at(2))
+    games = _Remembering(game)
+    uow = CountingUnitOfWork()
+
+    def dismiss(hours: int) -> DismissGame:
+        return DismissGame(games=games, uow=uow, clock=FrozenClock(at(hours)))
+
+    await dismiss(3).execute(DismissGameCommand(game_id=game.id, player_id=BO))
+    await dismiss(4).execute(DismissGameCommand(game_id=game.id, player_id=BO))
+
+    assert game.dismissed == {BO}
+    assert game.version == 4, "one dismissal appended, the second wrote nothing"
+    assert uow.commits == 2, "answered as done both times"
+    with pytest.raises(YouWereNotOnThisCourt):
+        await dismiss(5).execute(DismissGameCommand(game_id=game.id, player_id=EVE))
+    with pytest.raises(YouWereNotOnThisCourt):
+        await dismiss(5).execute(
+            DismissGameCommand(game_id=new_uuid(), player_id=BO)
         )

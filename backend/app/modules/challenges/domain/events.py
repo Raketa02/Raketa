@@ -1,4 +1,4 @@
-"""The Challenges context's domain events — **eight, and one of them a conclusion**.
+"""The Challenges context's domain events — **nine, and two of them conclusions**.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a sport, a mode and a window as their codes, a
@@ -41,15 +41,24 @@ standing has exactly one place to be true (``standing.py``), and an event
 announcing a conclusion the fold already reaches would become the second — and it
 would be the one that got believed.
 
-**One withdrawal, and it is that rule's first and only exemption**
-(``docs/adr/0142`` §3). ``ChallengeWithdrawn`` announces a conclusion, and it is
-allowed to because **no arrangement of the seats reaches it**: every other
-standing is a reading of the seats and the clock, and this one is a decision a
-person took, with nothing in the seats to fold it out of. So the event is not a
-second place for the fact to be true — it is the only place, and the fold reads
-it exactly as it reads an acceptance. That is the whole of the test any future
-candidate has to pass, and ``tests/unit/test_challenge_aggregate.py`` runs it
-over this module rather than leaving it as prose.
+**One withdrawal, and it is that rule's first exemption** (``docs/adr/0142``
+§3). ``ChallengeWithdrawn`` announces a conclusion, and it is allowed to because
+**no arrangement of the seats reaches it**: every other standing is a reading of
+the seats and the clock, and this one is a decision a person took, with nothing
+in the seats to fold it out of. So the event is not a second place for the fact
+to be true — it is the only place, and the fold reads it exactly as it reads an
+acceptance. That is the whole of the test any future candidate has to pass, and
+``tests/unit/test_challenge_aggregate.py`` runs it over this module rather than
+leaving it as prose.
+
+**One call-off, and it is the second exemption, passed in writing**
+(``docs/adr/0172`` §1). ``ChallengeCalledOff`` announces that the game this
+court became is called off — the fourth end, seen from the court — and the seats
+cannot reach it: they can reach *deserted* on a court that has been a game, and
+a court deserted by a fill's newcomer saying no is a game with a seat to fill,
+not a called-off one. Which of the two a deserted court is, only the act that
+took it knows, so the event is the fact's only home. The guards in the test
+above name the pair and no more.
 
 **Every seating event carries the seats, and that is what makes the log
 queryable.** A challenge's stream id is minted rather than derived from the
@@ -187,28 +196,56 @@ class SeatLeft:
 
 @dataclass(frozen=True)
 class ChallengeWithdrawn:
-    """The organiser removed a challenge nobody else had joined — or a player on
-    a court that has been a game called it off (``docs/adr/0165`` §4–§5).
+    """The organiser removed a challenge nobody else had joined
+    (``docs/adr/0165`` §4) — *Remove the challenge*, and that act alone since
+    ``docs/adr/0172`` §1 took *Call it off* to an event of its own.
 
-    **The one event here that is not about a seat**, which is exactly what makes
-    it the exemption rather than a breach: a fact about a seat is a fact the fold
+    **An event that is not about a seat**, which is exactly what makes it an
+    exemption rather than a breach: a fact about a seat is a fact the fold
     already has, and this one is not in the seats anywhere.
 
-    It carries **no player**, and that is not an omission. On a court that was
-    never a game only the organiser may withdraw, the organiser's seat is on the
-    stream from the opening event, and a second copy of *who* would be a second
-    place for it to be true — the failure ``SeatLapsed`` avoids by carrying the
-    one player a whole-court event could not otherwise name. On a court that
-    has been a game the act is any player's on it (``docs/adr/0165`` §5), and
-    there the actor is on the **game's** record, ``GameCalledOff.called_by``,
-    written in the same transaction; the one path where nobody records it — a
-    court whose game had already ended by its clock — is costed in
-    ``docs/adr/0163``. Whole-challenge and irreversible: there is no
-    ``ChallengeReopened`` beside this, because re-asking the same people is a
-    **new** challenge with fresh deadlines and its own ``answered`` set.
+    It carries **no player**, and that is not an omission. Only the organiser
+    may remove a challenge, the organiser's seat is on the stream from the
+    opening event, and a second copy of *who* would be a second place for it to
+    be true — the failure ``SeatLapsed`` avoids by carrying the one player a
+    whole-court event could not otherwise name. The fold names the organiser as
+    the one whose act ended it off that seat. Whole-challenge and irreversible:
+    there is no ``ChallengeReopened`` beside this, because re-asking the same
+    people is a **new** challenge with fresh deadlines and its own ``answered``
+    set.
     """
 
     challenge_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ChallengeCalledOff:
+    """The game this court became was called off, and the court ended with it
+    (``docs/adr/0172`` §1).
+
+    Written by the two acts that call a game off and by nothing else, in the
+    same transaction as the hand-over to ``games``: the **departure** that
+    leaves one player on a game — ``called_by`` the leaver — and *Call it off*
+    on a reopened court, any player's on it — ``called_by`` the presser. The
+    seat, the court's ending and the game's end commit together or none of them
+    does.
+
+    **The second event here that is not about a seat**, and the second
+    exemption: a whole-court conclusion with an actor, which is why its field is
+    ``called_by`` — as on ``GameCalledOff`` — and not ``player_id``, the name a
+    seat's answer carries. It carries the actor because, unlike the withdrawal,
+    the act is not the organiser's by construction and no seat on the stream
+    says whose it was: the presser is still seated among others, and the
+    leaver's ``SeatLeft`` is one of several.
+
+    Whole-challenge and irreversible, as the withdrawal is: there is no fill, no
+    acceptance and no re-seat from it, and re-asking the same people is a
+    **new** challenge.
+    """
+
+    challenge_id: UUID
+    called_by: UUID
     occurred_at: datetime
 
 

@@ -7,12 +7,13 @@ shape here in which a withheld seat, a gate or a reason could arrive: a refused
 send answers with a code and an empty body, and the client re-reads the two
 sources it already owns.
 
-**The standing is derived and travels as a code.** ``Standing`` is six values and
-the words for them are the client's (``docs/adr/0022``). Five of them are a fold
-of the seats against the moment the list was read; ``WITHDRAWN`` is the one a
-recorded decision puts there, because no arrangement of the seats reaches it
-(``docs/adr/0142``). Either way it is **not** on the aggregate, in the store, or
-anywhere a second copy could go stale.
+**The standing is derived and travels as a code.** ``Standing`` is seven values
+and the words for them are the client's (``docs/adr/0022``). Five of them are a
+fold of the seats against the moment the list was read; ``WITHDRAWN`` and
+``CALLED_OFF`` are the two a recorded decision puts there, because no
+arrangement of the seats reaches either (``docs/adr/0142``, ``docs/adr/0172``).
+Either way it is **not** on the aggregate, in the store, or anywhere a second
+copy could go stale.
 
 **A seat carries its own deadline and no standing of its own.** Whether it is
 waiting, lapsed or open is read off ``answer`` and ``answer_by`` against the
@@ -24,8 +25,9 @@ matchmaking surface's own distinction applied deliberately rather than by
 default: *``null`` means the field applies and the answer is a measured nothing.*
 An empty seat has no occupant, a seat nobody has answered has no answer, the
 organiser's seat has no deadline, a mutual-born challenge was proposed from no
-grid and a challenge that still stands has not ended — five measured nothings,
-and not five absences.
+grid, a challenge that still stands has not ended and was ended by nobody, and a
+court whose line-up never completed has no game — seven measured nothings, and
+not seven absences.
 """
 
 from __future__ import annotations
@@ -277,12 +279,49 @@ class ChallengeSchema(BaseModel):
             "left. Nothing records when somebody said no, so it is bounded by "
             "the tighter of the two facts that are recorded: that seat's own "
             "deadline, and the last thing that happened to the challenge.\n\n"
-            "So `LAPSED` and `WITHDRAWN` are always exact, and `DECLINED` is "
-            "exact whenever the seat that left **last** was one that ran out — "
+            "So `LAPSED`, `WITHDRAWN` and `CALLED_OFF` are always exact, and "
+            "`DECLINED` is exact whenever the seat that left **last** was one "
+            "that ran out — "
             "which a mixed court often is — and a bound otherwise. The bound is "
             "late rather than early, which is the safe direction for a shelf "
             "life: a row that outstays it is news gone stale, and one retired "
-            "early is somebody never learning a seat reopened."
+            "early is somebody never learning a seat reopened.\n\n"
+            "**`CALLED_OFF` is exact too**: the act's own instant, a departure's "
+            "or a press's (`docs/adr/0172` §2)."
+        ),
+    )
+    ended_by: UUID | None = Field(
+        default=None,
+        description=(
+            "The player whose act ended this challenge (`docs/adr/0172` §3). "
+            "``null`` on the three standings that are not endings, and that is "
+            "the whole of what the absence means.\n\n"
+            "**Always the occupant of one of the court's seats**, never a "
+            "second copy of a name — the face and the name a row draws are that "
+            "seat's. Which seat, by standing:\n\n"
+            "- `CALLED_OFF` — the last leaver, or whoever pressed *Call it "
+            "off*; told apart by their seat, which reads `LEFT` for a leaver "
+            "and `ACCEPTED` for a presser.\n"
+            "- `WITHDRAWN` — the organiser.\n"
+            "- `DECLINED` — the seat whose *no* or departure completed the "
+            "desertion: a seat that `LEFT` or `DECLINED`, never one that ran "
+            "out, because a no outranks silence. Between two nos dated alike, "
+            "court order.\n"
+            "- `LAPSED` — the seat whose window was the last to run out.\n\n"
+            "Read from the same per-seat instants `ended_at` is made from, so "
+            "the name and the date cannot come from two clocks."
+        ),
+    )
+    game_id: UUID | None = Field(
+        default=None,
+        description=(
+            "The game this court became, and ``null`` until its line-up first "
+            "completed — the same id ever after, through a re-seat and through "
+            "the ending (`docs/adr/0172` §4). What lets a row and the leaver's "
+            "sheet tell a court that has been a game from one that has not: "
+            "leaving the last other player on one *calls the game off*, and on "
+            "one that has not it *closes the court*. Read from `games` and "
+            "never recorded on the challenge."
         ),
     )
     seats: list[SeatSchema] = Field(

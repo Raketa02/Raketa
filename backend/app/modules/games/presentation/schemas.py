@@ -6,7 +6,9 @@ Three rules decide everything below.
 the words for them are the client's (``docs/adr/0022``). It is on the response
 because it is a fold of the record against the moment the list was read — and it
 is **not** on the aggregate, in the store, or anywhere a second copy could go
-stale.
+stale. **The one thing a reader's own act changes about this list is which games
+are in it** (``docs/adr/0172`` §5): a called-off game the reader has dismissed is
+left off their rail, derived on every read, and nothing about the game moves.
 
 **Every deadline is a moment the backend computed**, never a duration and never a
 rule the client applies. A phone renders *how long you have* by subtracting from
@@ -132,6 +134,32 @@ class SeatingSchema(BaseModel):
             "at the naming step. The seat stays: dropping it would publish a "
             "three-person doubles game, and the screen has a side to name "
             "instead."
+        ),
+    )
+
+
+class CalledOffBySchema(BaseModel):
+    """Who called the game off, and what they are called (``docs/adr/0172`` §4).
+
+    **The name is carried because the court cannot supply it**: the leaver whose
+    departure called the game off has been **vacated** — their seat is drawn
+    `player_id: null` — so the seats alone could not name them. It is the same
+    name a seat carries, read in the same set read, and it is `null` for the
+    same reason a seat's is: an account `users` no longer answers for.
+
+    **A departure is told from a press by whether this player still holds a
+    seat on the game.** The presser does; the leaver's seat is open. No second
+    field says which — the record already does.
+    """
+
+    player_id: UUID
+    name: str | None = Field(
+        default=None,
+        description=(
+            "The whole name, and **nothing may derive a familiar form from "
+            "it** (``docs/adr/0107``, ``docs/adr/0171``). ``null`` where "
+            "``users`` no longer has the account — never for an unnamed "
+            "player, whom the entry gate holds at the naming step."
         ),
     )
 
@@ -265,8 +293,17 @@ class GameSchema(BaseModel):
             "(``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; "
             "then the act's own instant, which is what the ending card is "
             "shelved from — a day later, as `played_at` and `entry_closes_at` "
-            "already shelve the other endings. **Nobody is named**: the room "
-            "is gone and the card says *Called off*."
+            "already shelve the other endings. Who is `called_off_by`."
+        ),
+    )
+    called_off_by: CalledOffBySchema | None = Field(
+        default=None,
+        description=(
+            "The player who called it off, and their name (``docs/adr/0172`` "
+            "§4). ``null`` on every standing but `CALLED_OFF`. The last leaver, "
+            "whose seat is drawn open — or whoever pressed *Call it off*, who "
+            "still holds one; which of the two is read off the seats, and the "
+            "game screen's heading is keyed on it."
         ),
     )
     seats: list[SeatingSchema] = Field(

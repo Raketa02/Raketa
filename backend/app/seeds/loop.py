@@ -20,9 +20,11 @@ claim: **every state the loop's five screens draw is in this database**
   an arrangement old enough to have ghosted. Nor had anything reached the day of
   its own game — a *planning* card whose day row reads *Today* rather than a
   weekday (``docs/adr/0166``), which needs a plan agreed for the day it is read on.
-- **The six challenge standings, on both sides.** Five were somewhere in the
+- **The seven challenge standings, on both sides.** Five were somewhere in the
   eleven or the inboxes already; ``LAPSED`` was reachable only by *waiting*, which
-  a fixture cannot do, so it is written on a clock three days old.
+  a fixture cannot do, so it is written on a clock three days old; and
+  ``CALLED_OFF`` (``docs/adr/0172``) is reached by the one act that records it —
+  the departure that leaves one player on a game — on the *called-off* rail game.
 - **The room's eight system-line codes.** Four come from the Plan — three slot
   writes and the **lock**, which is an act rather than a slot and comes from the
   one arranged plan declared agreed (``docs/adr/0155``).
@@ -86,6 +88,7 @@ from app.kernel import Instant, Sport
 from app.modules.challenges.application.commands import (
     AnswerSeatCommand,
     FillSeatsCommand,
+    LeaveGameCommand,
     SeatChoice,
 )
 from app.modules.challenges.application.read_challenge import ReadChallengeCommand
@@ -187,10 +190,27 @@ class RailGame:
     played_hours_ago: int | None = None
     #: Whether the other side agreed with the score.
     answered: bool = False
+    #: When the opponent **left**, or ``None`` for a game nobody has left. In
+    #: singles the departure leaves one player on the court, so it ends the
+    #: court with its game (``docs/adr/0172`` §1): the challenge reads
+    #: ``CALLED_OFF`` naming the leaver, and the game draws *Called off* with
+    #: ``called_off_by`` naming them, for a day from that instant.
+    left_hours_ago: int | None = None
 
     def __post_init__(self) -> None:
         if not 0 <= self.slots <= SLOTS:
             raise ValueError(f"a plan at {self.slots} of {SLOTS} slots")
+        if self.left_hours_ago is not None and (
+            self.played_hours_ago is not None
+            or self.left_hours_ago > self.arranged_hours_ago
+            or len(self.side_b) != 1
+        ):
+            raise ValueError(
+                f"'{self.card}' is left {self.left_hours_ago}h ago: a departure "
+                f"is admitted only on a game nobody has entered, after it was "
+                f"arranged ({self.arranged_hours_ago}h ago), and it ends the "
+                f"court only when it leaves one player on it — singles."
+            )
         if self.answered and self.played_hours_ago is None:
             raise ValueError(
                 f"'{self.card}' agrees a score nobody stated: an acceptance is "
@@ -216,7 +236,7 @@ class RailGame:
         return self.side_a + self.side_b
 
 
-#: The five games this layer arranges — one per card no other layer draws, and one
+#: The six games this layer arranges — one per card no other layer draws, and one
 #: for the day of the game, which no other layer's plan names.
 #:
 #: **Tennis singles throughout, organised by the member the played history and the
@@ -287,6 +307,23 @@ RAIL_GAMES: tuple[RailGame, ...] = (
         arranged_hours_ago=8 * A_DAY + 2,
         side_a=("cohort-d-01",),
         side_b=("cohort-c-03",),
+    ),
+    # *Called off*: the opponent said yes and, an hour later, left — which in
+    # singles leaves one player on the court, so the court ends with its game
+    # (``docs/adr/0172`` §1). The one game here whose ending is an **act** and
+    # not a clock, and the one challenge in this database that reads
+    # ``CALLED_OFF``: the challenge screen's seventh standing, on both sides —
+    # the organiser left alone, and the leaver, who can still open the court
+    # they walked out of. A place is agreed so the card has a slot to keep, and
+    # no day, so no agreed moment stands in the departure's way.
+    RailGame(
+        card="called-off",
+        sport=Sport.TENNIS.value,
+        arranged_hours_ago=3,
+        side_a=("cohort-d-01",),
+        side_b=("cohort-d-04",),
+        slots=1,
+        left_hours_ago=2,
     ),
 )
 
@@ -442,7 +479,7 @@ async def write_the_loop(
     now: Instant,
     cohort: Cohort = COHORT,
 ) -> WrittenLoop:
-    """Arrange the five games, send the two courts, and fill the half-built one.
+    """Arrange the six games, send the two courts, and fill the half-built one.
 
     The tail is ticked first for the reason every layer that runs a search ticks
     it: a search reads the candidate index, and the index has not seen everything
@@ -493,6 +530,11 @@ async def write_the_loop(
                             if declared.played_hours_ago is None
                             else await paths_at(declared.played_hours_ago)
                         ),
+                        left=(
+                            None
+                            if declared.left_hours_ago is None
+                            else await paths_at(declared.left_hours_ago)
+                        ),
                         now=now,
                         tell=lambda: _tell_the_rooms(session, session_factory),
                     )
@@ -529,14 +571,17 @@ async def _write_one_game(
     *,
     arranged: ReadPaths,
     played: ReadPaths | None,
+    left: ReadPaths | None,
     now: Instant,
     tell: Told,
 ) -> str:
-    """One game, arranged at its own instant, planned at it, and entered at another.
+    """One game, arranged at its own instant, planned at it, and entered — or
+    left — at another.
 
     **Two clocks and they are two facts.** The court was sent and answered when it
-    was arranged; the score was stated when they had played. A row that used one
-    for both would be a game whose result was entered before the evening.
+    was arranged; the score was stated when they had played, or the seat was left
+    when somebody walked out. A row that used one for both would be a game whose
+    result was entered before the evening.
 
     The probe comes before the search, exactly as it does for a played game and
     for the lesson ``pairs.py`` paid for: once a court has been sent the pair is
@@ -566,19 +611,31 @@ async def _write_one_game(
     # luck.
     await tell()
 
-    agreed = await _agree_what_this_card_needs(
-        session,
-        declared,
-        cohort,
-        paths=arranged,
-        challenge_id=standing.challenge_id,
-        at=hours_before(now, declared.arranged_hours_ago).now(),
+    # **A called-off game's plan is history**, so the slot its card keeps was
+    # written on the run that arranged it and a second run leaves it be: the
+    # plan write is the one act here a previous run's ending refuses.
+    agreed = (
+        "the plan is history, its slot kept"
+        if standing.called_off_at is not None
+        else await _agree_what_this_card_needs(
+            session,
+            declared,
+            cohort,
+            paths=arranged,
+            challenge_id=standing.challenge_id,
+            at=hours_before(now, declared.arranged_hours_ago).now(),
+        )
     )
     entered = (
         "nobody has entered a result"
         if played is None
         else await _enter_what_this_card_needs(played, declared, standing, cohort)
     )
+    if left is not None:
+        # **After the plan and before the end.** A called-off game's plan is
+        # history, so the slot the card keeps has to be written first; and the
+        # departure is the ending, so it is the last act on this court.
+        entered = await _leave_what_this_card_needs(left, declared, standing, cohort)
     return (
         f"{declared.card} · {sport.value.lower()} · {declared.organiser} against "
         f"{' & '.join(declared.side_b)} · {built} "
@@ -662,6 +719,39 @@ async def _enter_what_this_card_needs(
         )
         acts.append("agreed from across the net")
     return ", ".join(acts) if acts else "result already entered"
+
+
+async def _leave_what_this_card_needs(
+    paths: ReadPaths, declared: RailGame, standing: Game, cohort: Cohort
+) -> str:
+    """*I am out* — the opponent leaves, and in singles that ends the court.
+
+    Asked off the record rather than off a standing, as the entry is: a game
+    already called off is one a previous run left, and a second departure would
+    meet *the challenge is over*. The departure runs through the use case the
+    button behind it runs, so what it writes is what a phone would have written
+    — the seat, the court's ending and the game's end in one transaction
+    (``docs/adr/0172`` §1) — and the room is destroyed when the outbox is next
+    drained.
+    """
+
+    if standing.called_off_at is not None:
+        return "already called off"
+    leaver = player_of(paths, cohort, declared.side_b[0])
+    answered = await paths.leave.execute(
+        LeaveGameCommand(challenge_id=standing.challenge_id, player_id=leaver)
+    )
+    if answered.standing is not Standing.CALLED_OFF:
+        raise LoopStateMissing(
+            f"'{declared.side_b[0]}' left '{declared.card}' and the court reads "
+            f"{answered.standing.value} rather than {Standing.CALLED_OFF.value}. "
+            f"A departure that leaves one player on a game ends the court with "
+            f"it, so a singles court somebody left cannot still be arranging."
+        )
+    return (
+        f"{declared.side_b[0]} left {declared.left_hours_ago}h ago, and the court "
+        f"ended with its game"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1048,13 +1138,15 @@ async def assert_the_loop(
 
 #: Every card the Now rail can draw, **and what reaches each one**. The names are
 #: the client's own (``features/plans/domain/gameCard.ts``), and the two absences
-#: at the bottom are stated here because a fixture that quietly reached six of
-#: eight would read as having reached eight.
+#: at the bottom are stated here because a fixture that quietly reached seven of
+#: nine would read as having reached nine.
 #:
 #: - ``planning`` and ``game-on`` come from ``app/seeds/plans.py``'s four
 #:   arranged games — the slot counts walk the card from empty to complete — and
 #:   ``planning`` once more from this layer, on the day of its game;
-#: - the four others in :data:`RAIL_GAMES` come from this layer;
+#: - the five others in :data:`RAIL_GAMES` come from this layer, ``called-off``
+#:   among them since ``docs/adr/0172``: the fourth end, an act rather than a
+#:   fold, shelved from its own instant;
 #: - ``uncounted`` is a **state without a card**, and the arithmetic says so: a
 #:   game is unscored only once **both** sides' proposal windows have closed, and
 #:   a window is a day long — so the earliest unscored instant is a day after the
@@ -1076,6 +1168,7 @@ THE_RAIL_DRAWS: tuple[str, ...] = (
     "confirm",
     "counted",
     "never-played",
+    "called-off",
 )
 
 #: The state whose card the shelf life forbids, and the standing that reaches it.
@@ -1220,6 +1313,7 @@ def _the_card_this_game_draws(
             GameStanding.CONFIRMED: "counted",
             GameStanding.UNSCORED: "uncounted",
             GameStanding.NEVER_PLAYED: "never-played",
+            GameStanding.CALLED_OFF: "called-off",
         }[standing]
     if plan is not None and plan.agreed_point is not None and plan.agreed_point <= now:
         return "needs-result"
@@ -1232,32 +1326,35 @@ def _on_the_rail(game: Game, standing: GameStanding, now: Instant) -> bool:
     """Whether this game still has a card at all.
 
     The client's ``belongsOnTheRail``: a live game always, and an ended one for a
-    day after the last instant its own record dates — the entry window closing for
-    a ghost, and the entry itself for a game somebody played.
+    day after the last instant its own record dates — the act's own instant for
+    a game called off, the entry window closing for a ghost, and the entry
+    itself for a game somebody played, read in that order because the three are
+    exclusive on the record.
     """
 
     if standing in (GameStanding.AWAITING_ENTRY, GameStanding.AWAITING_ANSWER):
         return True
-    ended = game.played_at or entry_closes_at(game.planned_at)
+    ended = game.called_off_at or game.played_at or entry_closes_at(game.planned_at)
     return now - ended < AN_ENDED_CARD_LASTS
 
 
 # ---------------------------------------------------------------------------
-# The challenge screen: six standings, and a side each
+# The challenge screen: seven standings, and a side each
 # ---------------------------------------------------------------------------
 
 
 async def _refuse_a_standing_only_one_side_can_read(
     paths: ReadPaths,
 ) -> list[str]:
-    """*Each of the six standings has a challenge both of its sides can open.*
+    """*Each of the seven standings has a challenge both of its sides can open.*
 
     **The screen is keyed on the standing and the side, and the side is derived**
     — from whether the reader holds the organiser's seat, one list, one code, and
     nothing on the wire carrying a side (``the-loop-screens.md`` §2.1). So an arm
-    is reachable only if **both** readings of its standing are: twelve arms over
-    six standings, and a fixture that reached the organiser's half of each would
-    leave six screens undeveloped.
+    is reachable only if **both** readings of its standing are: fourteen arms over
+    seven standings, and a fixture that reached the organiser's half of each would
+    leave seven screens undeveloped. ``CALLED_OFF``'s two are the organiser left
+    alone and the leaver, who can still open the court they walked out of.
 
     Both readings are proved through the **detail read**, which is the screen's
     own and the expensive one — a whole scoring pass per open (``docs/adr/0143``).
@@ -1315,9 +1412,9 @@ async def _one_standing_from_both_sides(
         f"opened on either side. The challenges this fixture sends are the eleven "
         f"relationships (`app/seeds/relationships.py`), the two half-built courts "
         f"and the withdrawn one (`app/seeds/pairs.py`), the games "
-        f"(`app/seeds/games.py`, `app/seeds/plans.py`, `RAIL_GAMES`), and the two "
-        f"courts sent for their ends (`THE_COURT_NOBODY_ANSWERED`, "
-        f"`THE_COURT_SOMEBODY_LEFT`)."
+        f"(`app/seeds/games.py`, `app/seeds/plans.py`, `RAIL_GAMES` — the "
+        f"called-off one among them), and the two courts sent for their ends "
+        f"(`THE_COURT_NOBODY_ANSWERED`, `THE_COURT_SOMEBODY_LEFT`)."
     )
 
 

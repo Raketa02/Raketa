@@ -1,19 +1,22 @@
-"""Calling a game off — the withdraw grown to a reopened court, and *Called off*
-the fourth end (``docs/adr/0163``), for **any player on the court**
-(``docs/adr/0165`` §5).
+"""Calling a game off — the withdrawal route grown to a reopened court, and
+*Called off* the fourth end (``docs/adr/0163``), for **any player on the court**
+(``docs/adr/0165`` §5) — recording the court's own ending, ``CALLED_OFF`` with
+the presser named, and never a withdrawal (``docs/adr/0172`` §1).
 
-**The first test is the whole of #411's fourth rule.** The organiser withdraws a
-four somebody left: the challenge reads ``WITHDRAWN``, the game the others read
-is ``CALLED_OFF`` with the instant on it and its window gone, the room is
-destroyed, the plan and the pairing are history, and a score is refused.
+**The first test is the whole of #411's fourth rule.** The organiser calls off a
+four somebody left: the challenge reads ``CALLED_OFF`` with ``ended_by`` the
+organiser, the game the others read is ``CALLED_OFF`` with the instant and the
+presser on it and its window gone, the room is destroyed, the plan and the
+pairing are history, and a score is refused.
 
 Everything after it is what the record decided: that any player on the court
 holds the act and somebody off it does not; that a full court has no such exit;
 that a court that never became a game is *removed* by its organiser and never
 called off, and not once somebody has joined; that the pair is released; that in
-singles the departure itself calls the game off and the withdraw that follows
-steps over that end (``docs/adr/0165`` §3); and that a court whose window has
-already closed is withdrawn with the ghost left standing.
+singles the departure itself ends the court and calls the game off, so the
+withdrawal route that follows meets *the challenge is over* (``docs/adr/0165``
+§3, ``docs/adr/0172`` §1); and that a court whose window has already closed is
+called off with the ghost left standing and the presser on the record.
 """
 
 from __future__ import annotations
@@ -86,11 +89,12 @@ async def test_the_organiser_calls_off_a_reopened_four_and_that_is_the_games_end
     """**The thing 0162 refused for a day.** One of the four leaves, and the
     organiser calls the game off.
 
-    The challenge is ``WITHDRAWN`` with the seats as they were; every remaining
-    member reads the same game as ``CALLED_OFF`` with the act's instant on it and
-    no entry window; the leaver still does not hold it; the room is destroyed in
-    the act, though it already held its game; the plan and the pairing are
-    history; and a score is refused with the end it met.
+    The challenge is ``CALLED_OFF`` — never ``WITHDRAWN`` — with the seats as
+    they were and ``ended_by`` the presser, still seated; every remaining member
+    reads the same game as ``CALLED_OFF`` with the act's instant and
+    ``called_off_by`` on it and no entry window; the leaver still does not hold
+    it; the room is destroyed in the act, though it already held its game; the
+    plan and the pairing are history; and a score is refused with the end it met.
     """
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
@@ -114,15 +118,25 @@ async def test_the_organiser_calls_off_a_reopened_four_and_that_is_the_games_end
 
     assert withdrawn.status_code == 200, withdrawn.text
     court = withdrawn.json()
-    assert court["standing"] == "WITHDRAWN"
+    assert court["standing"] == "CALLED_OFF"
+    assert court["ended_at"] is not None
+    assert court["ended_by"] == str(searcher["id"])
+    assert court["game_id"] == before["game_id"]
     assert [seat["answer"] for seat in court["seats"]].count("ACCEPTED") == 3
     assert [seat["answer"] for seat in court["seats"]].count("LEFT") == 1
+    assert (await client.get(
+        f"/api/v1/challenges/{challenge_id}", headers=world.auth(people["bo"]["token"])
+    )).json()["standing"] == "CALLED_OFF"
 
     for who in (searcher, people["ana"], people["bo"]):
         game = await _the_game(client, who["token"], challenge_id)
         assert game["game_id"] == before["game_id"]
         assert game["standing"] == "CALLED_OFF"
         assert game["called_off_at"] is not None
+        assert game["called_off_by"] == {
+            "player_id": str(searcher["id"]),
+            "name": "searcher",
+        }, "the presser, who still holds a seat"
         assert game["entry_closes_at"] is None, "the window no longer matters"
         assert game["played_at"] is None and game["score"] is None
         assert [seat["player_id"] for seat in game["seats"]].count(None) == 1, (
@@ -218,7 +232,8 @@ async def test_any_player_on_the_court_may_call_it_off_and_somebody_off_it_may_n
     assert off_the_court.json()["code"] == "withdraw_is_the_organisers"
     called_off = await _withdraw(client, people["ana"]["token"], organiser_in)
     assert called_off.status_code == 200, called_off.text
-    assert called_off.json()["standing"] == "WITHDRAWN"
+    assert called_off.json()["standing"] == "CALLED_OFF"
+    assert called_off.json()["ended_by"] == str(people["ana"]["id"]), "the presser"
     assert called_off.json()["organiser_id"] == str(searcher["id"]), (
         "the organiser is a fact about who sent it, and it does not move"
     )
@@ -226,6 +241,7 @@ async def test_any_player_on_the_court_may_call_it_off_and_somebody_off_it_may_n
         game = await _the_game(client, who["token"], organiser_in)
         assert game["game_id"] == before["game_id"]
         assert game["standing"] == "CALLED_OFF"
+        assert game["called_off_by"]["player_id"] == str(people["ana"]["id"])
     await world.deliver_the_outbox(session_factory)
     for who in (searcher, people["ana"], people["bo"]):
         assert await _rooms(client, who["token"]) == []
@@ -246,10 +262,12 @@ async def test_any_player_on_the_court_may_call_it_off_and_somebody_off_it_may_n
     assert not_on_it.json()["code"] == "withdraw_is_the_organisers"
     called_off = await _withdraw(client, people["bo"]["token"], organiser_out)
     assert called_off.status_code == 200, called_off.text
+    assert called_off.json()["standing"] == "CALLED_OFF"
+    assert called_off.json()["ended_by"] == str(people["bo"]["id"])
     for who in (people["ana"], people["bo"], people["dee"]):
-        assert (await _the_game(client, who["token"], organiser_out))["standing"] == (
-            "CALLED_OFF"
-        )
+        game = await _the_game(client, who["token"], organiser_out)
+        assert game["standing"] == "CALLED_OFF"
+        assert game["called_off_by"]["player_id"] == str(people["bo"]["id"])
 
 
 async def test_a_newcomer_still_deciding_on_the_open_seat_may_not_call_it_off(
@@ -381,15 +399,15 @@ async def test_the_pair_may_challenge_each_other_again_afterwards(
     assert released.status_code == 201, released.text
 
 
-async def test_in_singles_the_withdraw_after_the_departures_call_off_steps_over_it(
+async def test_in_singles_the_departure_ends_the_court_and_nothing_follows_it(
     client, session_factory, candidate_source, clock
 ):
     """**#411 rule 9 reversed** (``docs/adr/0165`` §3) — a two whose opponent
     leaves is over by the departure, with no act from the remaining player.
-    The challenge still stands ``LINE_UP_INCOMPLETE`` with nobody to fill the
-    seat for, and its exit is still the withdraw: admitted, ending the
-    challenge, with the game keeping the end the departure gave it — no second
-    ``GameCalledOff`` — exactly as a ghost is stepped over."""
+    The challenge is ``CALLED_OFF`` naming the leaver (``docs/adr/0172`` §1),
+    so the withdrawal route meets *the challenge is over* as every act on an
+    ended court does: no second ``GameCalledOff``, and the end the departure
+    gave the game — dated and named — stands."""
 
     sender = await _a_player(client, "juno")
     invitee = await _a_player(client, "milo")
@@ -400,23 +418,26 @@ async def test_in_singles_the_withdraw_after_the_departures_call_off_steps_over_
     before = await _the_game(client, sender["token"], challenge_id)
     left = await _leave(client, invitee["token"], challenge_id)
     assert left.status_code == 200, left.text
-    assert left.json()["standing"] == "LINE_UP_INCOMPLETE"
+    assert left.json()["standing"] == "CALLED_OFF"
+    assert left.json()["ended_by"] == str(invitee["id"])
     called_off = await _the_game(client, sender["token"], challenge_id)
     assert called_off["standing"] == "CALLED_OFF"
+    assert called_off["called_off_by"]["player_id"] == str(invitee["id"])
     assert [seat["player_id"] for seat in called_off["seats"]] == [
         str(sender["id"]),
         None,
     ]
     assert await _games(client, invitee["token"]) == []
 
-    withdrawn = await _withdraw(client, sender["token"], challenge_id)
+    refused = await _withdraw(client, sender["token"], challenge_id)
 
-    assert withdrawn.status_code == 200, withdrawn.text
-    assert withdrawn.json()["standing"] == "WITHDRAWN"
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "challenge_is_over"
     after = await _the_game(client, sender["token"], challenge_id)
     assert after["game_id"] == before["game_id"]
     assert after["standing"] == "CALLED_OFF"
     assert after["called_off_at"] == called_off["called_off_at"], "the first end stands"
+    assert after["called_off_by"] == called_off["called_off_by"]
     assert await _game_stream(session_factory, before["game_id"]) == [
         "games.planned",
         "games.seat_vacated",
@@ -424,13 +445,12 @@ async def test_in_singles_the_withdraw_after_the_departures_call_off_steps_over_
     ]
 
 
-async def test_in_singles_the_opponent_may_withdraw_once_the_organiser_left(
+async def test_in_singles_the_organisers_departure_ends_it_for_the_opponent_too(
     client, session_factory, candidate_source, clock
 ):
     """Organiser-blind on a game: the organiser's departure leaves the opponent
-    alone and calls the game off. The opponent is on the court and so holds
-    the exit (``docs/adr/0165`` §5), and the withdraw ends the challenge, the
-    game keeping its end."""
+    alone, ends the court naming the organiser and calls the game off. The
+    opponent is on the court and still holds nothing to end — it has ended."""
 
     sender = await _a_player(client, "juno")
     invitee = await _a_player(client, "milo")
@@ -438,15 +458,18 @@ async def test_in_singles_the_opponent_may_withdraw_once_the_organiser_left(
     challenge_id = await _a_singles_game(
         client, session_factory, candidate_source, sender, invitee
     )
-    assert (await _leave(client, sender["token"], challenge_id)).status_code == 200
+    left = await _leave(client, sender["token"], challenge_id)
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "CALLED_OFF"
+    assert left.json()["ended_by"] == str(sender["id"])
     assert (await _the_game(client, invitee["token"], challenge_id))["standing"] == (
         "CALLED_OFF"
     )
 
-    withdrawn = await _withdraw(client, invitee["token"], challenge_id)
+    refused = await _withdraw(client, invitee["token"], challenge_id)
 
-    assert withdrawn.status_code == 200, withdrawn.text
-    assert withdrawn.json()["standing"] == "WITHDRAWN"
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "challenge_is_over"
     assert (await _the_game(client, invitee["token"], challenge_id))["standing"] == (
         "CALLED_OFF"
     )
@@ -460,10 +483,13 @@ async def test_in_singles_the_opponent_may_withdraw_once_the_organiser_left(
 async def test_a_court_whose_window_has_closed_is_withdrawn_and_the_ghost_stands(
     client, session_factory, candidate_source, searcher, clock
 ):
-    """``docs/adr/0163`` §6 — the one leniency. Nobody filled the seat and the
-    window closed: the game is a ghost, charged already, and the challenge
-    still holds its pair. The withdraw is the court's only exit, so it is
-    admitted; the game is not un-ghosted, and the pair is released."""
+    """``docs/adr/0163`` §6 — the one leniency, and ``docs/adr/0172`` §4's
+    closing of its costed gap. Nobody filled the seat and the window closed:
+    the game is a ghost, charged already, and the challenge still holds its
+    pair. *Call it off* is the court's only exit, so it is admitted — the
+    challenge is ``CALLED_OFF`` with the presser on its record, where nothing
+    recorded the actor before — the game is not un-ghosted, and the pair is
+    released. The two readings jar and are each true of their own record."""
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
@@ -501,10 +527,12 @@ async def test_a_court_whose_window_has_closed_is_withdrawn_and_the_ghost_stands
     withdrawn = await _withdraw(client, searcher["token"], challenge_id)
 
     assert withdrawn.status_code == 200, withdrawn.text
-    assert withdrawn.json()["standing"] == "WITHDRAWN"
+    assert withdrawn.json()["standing"] == "CALLED_OFF"
+    assert withdrawn.json()["ended_by"] == str(searcher["id"]), "the actor is recorded"
     after = await _the_game(client, searcher["token"], challenge_id)
     assert after["standing"] == "NEVER_PLAYED", "a ghost is not un-ghosted"
     assert after["called_off_at"] is None
+    assert after["called_off_by"] is None
     assert after["entry_closes_at"] is not None
     assert await _game_stream(session_factory, before["game_id"]) == [
         "games.planned",
@@ -514,7 +542,7 @@ async def test_a_court_whose_window_has_closed_is_withdrawn_and_the_ghost_stands
         f"/api/v1/challenges/{challenge_id}", headers=world.auth(people["ana"]["token"])
     )
     assert detail.status_code == 200, detail.text
-    assert detail.json()["standing"] == "WITHDRAWN"
+    assert detail.json()["standing"] == "CALLED_OFF"
     released = await client.post(
         "/api/v1/challenges",
         json={"search_id": search_id, "court": court},

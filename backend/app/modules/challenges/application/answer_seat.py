@@ -57,6 +57,7 @@ from app.modules.challenges.application.seat_change import (
     refuse_a_court_closed_to_seating,
 )
 from app.modules.challenges.application.read_challenges import StandingChallenge
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
 from app.modules.challenges.domain.seatable_game import SeatableGameQuery
@@ -78,13 +79,18 @@ class AcceptSeat(AChallengeOfYours):
         *,
         challenges: ChallengeRepository,
         names: PlayerNames,
+        court_games: GameOfCourtQuery,
         uow: UnitOfWork,
         clock: Clock,
         planned_games: PlannedGameHandover,
         games: SeatableGameQuery,
     ) -> None:
         super().__init__(
-            challenges=challenges, names=names, uow=uow, clock=clock
+            challenges=challenges,
+            names=names,
+            court_games=court_games,
+            uow=uow,
+            clock=clock,
         )
         self._planned_games = planned_games
         self._games = games

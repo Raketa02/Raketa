@@ -9,24 +9,26 @@ reads have nothing to say about one.
 ``settled_game.py`` and ``seatable_game.py`` beside it are the other seams that
 left ``ports.py``, and for the neighbouring reason — they are reads, but about a
 **game**, which is the one thing here this context does not know the shape of.
-The three are one arrow (``challenges -> games``) written three times: this one
-hands an arrangement over, hands a departure over and hands a withdrawal over,
-one asks whether anything more will happen to what came of it, and one asks
-whether its seats may still change.
+The four are one arrow (``challenges -> games``) written four times: this one
+hands an arrangement over, hands a departure over and hands a call-off over,
+one asks whether anything more will happen to what came of it, one asks
+whether its seats may still change, and ``game_of_court.py`` asks which game a
+court became.
 
 **It fires at the instant a line-up completes, again at the instant somebody
 leaves the game it became** (``docs/adr/0162``), **again at the instant a
-court that has been a game is withdrawn** (``docs/adr/0163``), **and again
-when a departure leaves one player on the court** (``docs/adr/0165`` §3),
-which calls the game off on the same sentence the withdrawal uses. The first
+court that has been a game is called off** (``docs/adr/0163``,
+``docs/adr/0172`` §1), **and again when a departure leaves one player on the
+court** (``docs/adr/0165`` §3), which calls the game off on the same sentence
+*Call it off* uses — each recording the court's own ending beside it. The first
 hand-over used to be the only one — *every seat accepted, nobody left to answer,
 and the membership settled for good* — and the membership is no longer settled
 for good: a player may leave a game that has not happened, the seat opens on
 both records, and the **next** completed line-up hands over a re-seat of the same
 game rather than the opening of another. Which of the two a completion is, is
 the other side's to say: this context hands over the court and learns back an
-id, or nothing. And a reopened court's exit is the withdraw, which reaches the
-game: it is **called off**, the fourth end, in the withdrawal's own transaction.
+id, or nothing. And a reopened court's exit is *Call it off*, which reaches the
+game: it is **called off**, the fourth end, in the act's own transaction.
 
 **Inline, in the transaction of the act**, and not through the outbox.
 ``docs/adr/0003`` is this repository's convention for side effects and is right
@@ -53,8 +55,8 @@ from app.kernel import Instant, Sport
 @runtime_checkable
 class PlannedGameHandover(Protocol):
     """*Everybody accepted — there is now a game they might play.* And:
-    *somebody left — that seat on it is open.* And: *this court is withdrawn —
-    the game it became is called off.*
+    *somebody left — that seat on it is open.* And: *this court is called off —
+    the game it became is called off with it.*
 
     Signed by an adapter that calls the ``games`` commands, wired in the
     composition root with every other choice of implementation. The two contexts
@@ -114,17 +116,18 @@ class PlannedGameHandover(Protocol):
         """This court has been ended with a seat open, and it had become a game.
         **That game is called off.**
 
-        Called only on a court that has been a game, on two occasions. After
-        the aggregate has recorded a withdrawal and decided whose act it is —
-        ``by`` is a player on the court (``docs/adr/0165`` §5), and it is the
-        one record of the actor: ``ChallengeWithdrawn`` carries no player. And
-        after a departure that left one player on the
-        court with nobody deciding (``docs/adr/0165`` §3), right after
-        :meth:`vacate_seat` for the same person — ``by`` is the leaver, whose
-        departure is what ended it. The other side reads no moment guard for
-        this; what it decides on its own is that **a game already ended stays
-        the end it is** (``docs/adr/0163`` §6) — a ghost is not un-ghosted, a
-        game a departure called off is not called off twice, and the withdraw
-        still ends the challenge. It does **not** commit.
+        Called only on a court that has been a game, on two occasions, and on
+        each the challenge has already recorded the court's own ending
+        (``docs/adr/0172`` §1). After the aggregate has recorded *Call it off*
+        and decided whose act it is — ``by`` is a player on the court
+        (``docs/adr/0165`` §5), the same actor ``ChallengeCalledOff`` names.
+        And after a departure that left one player on the court with nobody
+        deciding (``docs/adr/0165`` §3), right after :meth:`vacate_seat` for
+        the same person — ``by`` is the leaver, whose departure is what ended
+        it. The other side reads no moment guard for this; what it decides on
+        its own is that **a game already ended by its clock stays the end it
+        is** (``docs/adr/0163`` §6) — a ghost is not un-ghosted, and the act
+        still ends the challenge with the presser on its record. It does
+        **not** commit.
         """
         ...

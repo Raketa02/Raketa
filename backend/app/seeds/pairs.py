@@ -1140,12 +1140,13 @@ def _refuse_a_search_that_showed_nobody(
 async def _remove_a_court_nobody_answered(paths: ReadPaths, *, cohort: Cohort) -> str:
     """One cohort member removes a padel court they sent before anybody answered.
 
-    **`WITHDRAWN` is the only standing this database cannot reach by waiting.**
-    The other five arrive from the seats and the clock — a send is awaiting, an
+    **`WITHDRAWN` is one of two standings this database cannot reach by
+    waiting.** Five arrive from the seats and the clock — a send is awaiting, an
     acceptance is on, a decline or a silent day is an ending — so every one of
     them is somewhere in the eleven or the inboxes already. This one is a
     decision a person took, and the only way a screen ever sees it is if
-    somebody takes it.
+    somebody takes it; the other, `CALLED_OFF`, is a departure's
+    (``docs/adr/0172``) and is taken on the loop layer's called-off game.
 
     **Before anybody answers, because that is where the act now lives**
     (``docs/adr/0165`` §4). A court somebody has joined is nobody's to end for

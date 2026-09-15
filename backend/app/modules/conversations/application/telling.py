@@ -31,10 +31,15 @@ written (``docs/adr/0155``).
    reason is now true: the destruction is ``docs/adr/0153``'s and is built. And
    ``GameCalledOff`` is refused for the same reason and does the same thing
    (``docs/adr/0165`` §3): a departure that leaves one player on a game calls it
-   off with no withdrawal beside it, so the game's own end is the **second**
-   telling here whose whole effect is that the room stops existing. Where both
-   arrive — a withdrawal that calls a game off — whichever is delivered first
-   destroys the room and the other finds nothing to do.
+   off, so the game's own end is the **second** telling here whose whole effect
+   is that the room stops existing. ``ChallengeCalledOff`` is the **third**
+   (``docs/adr/0172`` §6), the court's own ending, subscribed on the
+   withdrawal's arm: both acts that call a game off write it in one transaction
+   with the game's end, so whichever is delivered first destroys the room and
+   the other finds nothing to do — and on ADR-0163 §6's ghost path, where the
+   game is not told, it is the one that destroys a room the sweep has not
+   reached. ``GameDismissed`` reaches the room **not at all**: a card is
+   dismissed only on a called-off game, and there is no room by then.
 
    **``PlanLocked`` is what that test looks like from the other side.** No
    arrangement of the three slots reaches *these people have agreed* — nobody
@@ -47,20 +52,20 @@ written (``docs/adr/0155``).
    in one place.
 
 **A refused line is not a refused telling**, and here that is load-bearing
-three times. ``GamePlanned`` still reaches the room and draws nothing, because
+four times. ``GamePlanned`` still reaches the room and draws nothing, because
 ``GamePlayed`` names a game and nothing else and the room's own end is derived
 from ``GamePlanned``'s moment (``docs/adr/0153`` §2); dropping the delivery
-because nothing renders would drop the anchor with it. ``ChallengeWithdrawn``
-and ``GameCalledOff`` draw nothing and arrive for a stronger reason still — each
-is what **destroys** the room, so a refusal read as *do not deliver this* would
-leave every withdrawn court, and every game a departure called off, a readable
-room for ever.
+because nothing renders would drop the anchor with it. ``ChallengeWithdrawn``,
+``ChallengeCalledOff`` and ``GameCalledOff`` draw nothing and arrive for a
+stronger reason still — each is what **destroys** the room, so a refusal read
+as *do not deliver this* would leave every withdrawn court, and every game
+called off, a readable room for ever.
 
 **On the count.** ``the-words.md`` §23.1 is headed *the six events that publish
-nothing* and its own table names **ten** of them, four of which it groups on
-one row as *the result argument*. The table below is the events, one row each, so
-it is ten; the discrepancy is in the source and is left visible rather than
-resolved by dropping rows to make a number come out.
+nothing* and its own table names **thirteen** of them, four of which it groups
+on one row as *the result argument*. The table below is the events, one row
+each, so it is thirteen; the discrepancy is in the source and is left visible
+rather than resolved by dropping rows to make a number come out.
 
 **A departure is one code told by three events** (``docs/adr/0162``): a no, a
 silence, and now somebody leaving a game they had agreed to. The two events
@@ -75,6 +80,7 @@ from dataclasses import dataclass
 from typing import final
 
 from app.modules.challenges.domain.events import (
+    ChallengeCalledOff,
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
     ChallengeWithdrawn,
@@ -88,6 +94,7 @@ from app.kernel import invariant
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
     GameCalledOff,
+    GameDismissed,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -212,6 +219,20 @@ TELLINGS: tuple[Telling, ...] = (
         ),
     ),
     Telling(
+        event=ChallengeCalledOff,
+        line=None,
+        reaches_the_room=True,
+        why_nothing=(
+            "the court's own ending **destroys** the room in the same act, on "
+            "the withdrawal's arm (`docs/adr/0172` §6): nobody is left to read "
+            "a line, and the news is on the challenge row and the card. It is "
+            "written in one transaction with the game's end, so whichever of "
+            "the two is delivered first destroys the room and the other finds "
+            "nothing — and on the ghost path, where the game is not told, this "
+            "is the telling that destroys"
+        ),
+    ),
+    Telling(
         event=SeatVacated,
         line=None,
         reaches_the_room=False,
@@ -240,6 +261,16 @@ TELLINGS: tuple[Telling, ...] = (
             "challenge screen and the card. It reaches the room because a "
             "departure can call a game off with no withdrawal beside it "
             "(`docs/adr/0165` §3), and then this is the telling that destroys"
+        ),
+    ),
+    Telling(
+        event=GameDismissed,
+        line=None,
+        reaches_the_room=False,
+        why_nothing=(
+            "a card is dismissed only on a called-off game, and there is no "
+            "room by then (`docs/adr/0172` §6) — the reader's own act, and "
+            "nobody else's fact"
         ),
     ),
     Telling(

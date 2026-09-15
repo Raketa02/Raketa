@@ -74,7 +74,8 @@ class ChallengesArrangingCourt:
     async def over_among(
         self, challenge_ids: Collection[UUID], *, now: Instant
     ) -> frozenset[UUID]:
-        """Which of these have ended — ``DECLINED``, ``LAPSED`` or ``WITHDRAWN``.
+        """Which of these have ended — ``DECLINED``, ``LAPSED``, ``WITHDRAWN``
+        or ``CALLED_OFF``.
 
         **One fold per challenge, and it is the same fold every other reader of
         a challenge performs**: a lapse is true here the instant a window passes,

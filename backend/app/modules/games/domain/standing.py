@@ -62,9 +62,10 @@ class GameStanding(str, Enum):
     #: value here that no reading of the record reaches** (``docs/adr/0163``):
     #: nobody said they played and no window closed, so it can reuse none of the
     #: three ends above. It arrives on the fold from ``GameCalledOff`` and from
-    #: nowhere else — told by the challenge's withdraw, in its transaction. **An
-    #: end, and neither an evening nor a ghost**: a ghost is silence, this was
-    #: an act, and it is in no tally.
+    #: nowhere else — told by the challenge in the transaction of the act that
+    #: called the court off, and it says who (``docs/adr/0172`` §4). **An end,
+    #: and neither an evening nor a ghost**: a ghost is silence, this was an
+    #: act, and it is in no tally.
     CALLED_OFF = "CALLED_OFF"
 
 

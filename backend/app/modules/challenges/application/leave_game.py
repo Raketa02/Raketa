@@ -32,17 +32,19 @@ one after it would disclose.
 4. **The record**: the aggregate refuses an ended court and a seat that is not an
    accepted one of the caller's, and writes ``SeatLeft``.
 5. **The hand-over, where there is a game** — the seat opens on it — **and the
-   ending rule, asked here rather than folded** (``docs/adr/0165`` §3). Before a
-   game the fold reaches the ending itself: one player left with nobody
-   deciding is ``DECLINED``, and the room ends with its challenge. On a game the
-   fold does not end the court (``docs/adr/0162`` §2), so this asks
-   ``is_deserted_at`` after recording the departure and, when it fires, hands
-   ``call_off`` over on the same port — the seat vacated first, then the end,
-   so the record reads in the order it happened — with ``called_by`` the
-   leaver, whose departure is what ended it. The game is ``CALLED_OFF``, and the
-   room is destroyed as for any call-off, told by the game's own end. Singles
-   included: an opponent who leaves calls the game off, and doubles fill down to
-   two before the last one alone ends it.
+   ending, where the departure recorded one** (``docs/adr/0165`` §3,
+   ``docs/adr/0172`` §1). Before a game the fold reaches the ending itself: one
+   player left with nobody deciding is ``DECLINED``, and the room ends with its
+   challenge. On a game the fold does not end the court by its seats
+   (``docs/adr/0162`` §2), so the aggregate asks the rule itself as it records
+   the departure and, when it fires, writes the court's own ending beside the
+   seat — ``CALLED_OFF``, ``called_by`` the leaver; this reads that standing
+   and hands ``call_off`` over on the same port — the seat vacated first, then
+   the end, so the record reads in the order it happened. The seat, the court's
+   ending and the game's end commit together or none of them does. The game is
+   ``CALLED_OFF`` naming the leaver, and the room is destroyed as for any
+   call-off, told by either end. Singles included: an opponent who leaves calls
+   the game off, and doubles fill down to two before the last one alone ends it.
 6. **The commit and the redraw.**
 """
 
@@ -60,29 +62,39 @@ from app.modules.challenges.application.seat_change import (
     refuse_a_court_closed_to_seating,
 )
 from app.modules.challenges.domain.errors import NoChallengeOfYoursHasThatId
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
 from app.modules.challenges.domain.seatable_game import SeatableGameQuery
+from app.modules.challenges.domain.standing import Standing
 from app.shared.domain.errors import AccountHeld
 
 
 @final
 class LeaveGame(AChallengeOfYours):
     """One person leaves a court they had agreed to. **Their seat reopens** — and
-    where they were the last but one on a game, the game is called off."""
+    where they were the last but one on a game, the court ends and the game is
+    called off with it."""
 
     def __init__(
         self,
         *,
         challenges: ChallengeRepository,
         names: PlayerNames,
+        court_games: GameOfCourtQuery,
         safety: CourtSafety,
         games: SeatableGameQuery,
         uow: UnitOfWork,
         clock: Clock,
         planned_games: PlannedGameHandover,
     ) -> None:
-        super().__init__(challenges=challenges, names=names, uow=uow, clock=clock)
+        super().__init__(
+            challenges=challenges,
+            names=names,
+            court_games=court_games,
+            uow=uow,
+            clock=clock,
+        )
         self._safety = safety
         self._games = games
         self._planned_games = planned_games
@@ -108,12 +120,14 @@ class LeaveGame(AChallengeOfYours):
             await self._planned_games.vacate_seat(
                 challenge_id=challenge.id, player_id=command.player_id, occurred_at=at
             )
-            if challenge.is_deserted_at(at):
-                # **The departure that leaves one player on the court ends
-                # it** (``docs/adr/0165`` §3), and only the challenge can say
+            if standing is Standing.CALLED_OFF:
+                # **The departure that leaves one player on the court ended
+                # it** (``docs/adr/0165`` §3), and only the challenge could say
                 # so — the game's line-up cannot tell an open seat from one
-                # that is asked. The seat first, then the end, so the record
-                # reads in the order it happened.
+                # that is asked — so the aggregate recorded the court's ending
+                # beside the seat (``docs/adr/0172`` §1) and the game is told
+                # here. The seat first, then the end, so the record reads in
+                # the order it happened.
                 await self._planned_games.call_off(
                     challenge_id=challenge.id, by=command.player_id, occurred_at=at
                 )

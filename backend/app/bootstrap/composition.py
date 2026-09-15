@@ -68,9 +68,13 @@ from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 from app.modules.challenges.domain.settled_game import SettledGameQuery
+from app.modules.challenges.infrastructure.games_game_of_court import (
+    GamesGameOfCourt,
+)
 from app.modules.challenges.infrastructure.games_planned_game import (
     GamesPlannedGame,
 )
@@ -1201,6 +1205,27 @@ def build_seatable_game_query(
     """The read half of the departure's seam, in ``challenges``' own words:
     the adapter translates ``games``' published answer and decides nothing."""
     return GamesSeatableGame(build_seatable_court(session, runtime=runtime))
+
+
+def build_game_of_court_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> GameOfCourtQuery:
+    """*Which of these courts have a game, and which game?* — the challenge
+    read's fourth question on the arrow ``challenges -> games``
+    (``docs/adr/0172`` §4), wired the way the settled read is and for its
+    reason: the join is the repository's, nothing is written through it, and a
+    second reading repository inside one unit of work is safe because the
+    hand-over's is the only writer.
+    """
+    return GamesGameOfCourt(
+        build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
 
 
 def build_settled_game_query(

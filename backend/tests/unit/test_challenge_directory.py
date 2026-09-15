@@ -102,12 +102,21 @@ class RecordingHandles:
         }
 
 
+class NoCourtHasAGame:
+    """``GameOfCourtQuery`` for courts none of which has completed: the fold
+    never asks about one, and this answers nobody if it did."""
+
+    async def games_of(self, challenge_ids):
+        return {}
+
+
 def _reading(
     session, *, now: Instant, names: RecordingHandles | None = None
 ) -> ReadChallenges:
     return ReadChallenges(
         directory=build_challenge_directory(session),
         names=names or RecordingHandles(),
+        court_games=NoCourtHasAGame(),
         clock=FrozenClock(now),
     )
 

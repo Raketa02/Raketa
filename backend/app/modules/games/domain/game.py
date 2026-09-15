@@ -22,12 +22,18 @@ with an open seat is still awaiting its entry. What an open seat changes is who
 may act, and that a result is refused until the seat is filled.
 
 **And a court with a seat open can be called off** (``docs/adr/0163``). ``call_off``
-is the third act told by ``challenges`` — in the transaction of the withdrawal,
-or of the departure that left one player on the court (``docs/adr/0165`` §3) —
+is the third act told by ``challenges`` — in the transaction of *Call it off*,
+or of the departure that left one player on the court (``docs/adr/0165`` §3),
+each of which records the court's own ending beside it (``docs/adr/0172`` §1) —
 and the only act here that announces an end: ``CALLED_OFF`` is the fourth end, a
-decision a person took, folded off ``GameCalledOff`` and read before the clock.
-It is neither an evening nor a ghost, and every read that counts either leaves
-it out.
+decision a person took, folded off ``GameCalledOff`` and read before the clock,
+**and it says who** (``called_off_by``, ``docs/adr/0172`` §4). It is neither an
+evening nor a ghost, and every read that counts either leaves it out.
+
+**A called-off game's card can be cleared, per player** (``docs/adr/0172`` §5).
+``dismiss`` is the reader's own act — the first act here that is not about the
+game as a whole — recorded once per player and folded into a set the rail's
+read subtracts its reader from. Nothing else folds it.
 
 **One aggregate per game and never one per player.** Whether you won is a
 property of the game and of which side you were on; a per-player record would be
@@ -54,6 +60,7 @@ from app.modules.games.domain.answering import (
 from app.modules.games.domain.errors import (
     AcceptingYourOwnSidesResult,
     AResultMustCarryAScore,
+    GameIsNotCalledOff,
     NobodyHasProposedAResult,
     NotAGameToCallOff,
     TheCourtHasAnOpenSeat,
@@ -68,6 +75,7 @@ from app.modules.games.domain.errors import (
 )
 from app.modules.games.domain.events import (
     GameCalledOff,
+    GameDismissed,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -121,9 +129,21 @@ class Game:
     #: thing about a game that is not a reading of the record and the clock**
     #: (``docs/adr/0163``) — a decision somebody took, folded off
     #: ``GameCalledOff`` and read by ``standing_at`` before anything else, in
-    #: ``Challenge.withdrawn_at``'s exact shape and for its reason: an instant
-    #: rather than a flag, because the client shelves the ending card from it.
+    #: the shape of the challenge's recorded conclusion and for its reason: an
+    #: instant rather than a flag, because the client shelves the ending card
+    #: from it.
     called_off_at: Instant | None
+    #: Who called it off, or ``None`` because nobody has — folded off the same
+    #: event's ``called_by``, the field ``docs/adr/0163`` §4 kept for the day a
+    #: design wanted the name, which is ``docs/adr/0172`` §4. The presser, who
+    #: still holds a seat; or the leaver, whose seat is the open one — which is
+    #: how a departure is told from a press with no second field.
+    called_off_by: UUID | None
+    #: Everybody who has cleared this game's card from their own rail
+    #: (``docs/adr/0172`` §5), folded off ``GameDismissed``. Read by the rail's
+    #: fold, which subtracts its reader, and by nothing else; once per player,
+    #: which is what makes a second dismissal write nothing.
+    dismissed: frozenset[UUID]
     #: Whose leaving opened the seats that are open now. Folded off
     #: ``SeatVacated`` and emptied by a re-seat — a re-seat is a whole court,
     #: and nobody's departure is still on it. **It exists for one act**: the
@@ -263,6 +283,31 @@ class Game:
         self._record_that(
             GameCalledOff(
                 game_id=self.game_id, called_by=by, occurred_at=occurred_at
+            )
+        )
+
+    def dismiss(self, *, by: UUID, occurred_at: Instant) -> None:
+        """One player clears this game's card from their own rail
+        (``docs/adr/0172`` §5). **Their act, and nobody else's fact.**
+
+        Admitted for a player the rail would show the card to — on the court,
+        which is the one rule every act here shares, and answered as a
+        stranger is answered for anybody else: the leaver whose departure
+        called it off has been vacated, so the card is not theirs to clear —
+        and only on a game that is ``CALLED_OFF``, refused with its own code on
+        every other standing, because the other endings' cards are the record
+        for the day they stay. **Once per player**: a second dismissal writes
+        nothing and answers as done, so a retry is not a second event.
+        """
+
+        self._side_of(by)
+        if self.standing_at(occurred_at) is not GameStanding.CALLED_OFF:
+            raise GameIsNotCalledOff()
+        if by in self.dismissed:
+            return
+        self._record_that(
+            GameDismissed(
+                game_id=self.game_id, dismissed_by=by, occurred_at=occurred_at
             )
         )
 
@@ -539,6 +584,8 @@ class Game:
         game.window = None
         game.played_at = None
         game.called_off_at = None
+        game.called_off_by = None
+        game.dismissed = frozenset()
         game.departed = frozenset()
         game.proposals = {}
         game.acceptance = None
@@ -568,6 +615,9 @@ class Game:
             self.departed = frozenset()
         elif isinstance(event, GameCalledOff):
             self.called_off_at = instant(event.occurred_at)
+            self.called_off_by = event.called_by
+        elif isinstance(event, GameDismissed):
+            self.dismissed |= {event.dismissed_by}
         elif isinstance(event, GamePlayed):
             self.played_at = instant(event.occurred_at)
         elif isinstance(event, (ResultProposed, ResultCorrected, ResultCountered)):

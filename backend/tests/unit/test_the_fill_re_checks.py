@@ -133,18 +133,24 @@ async def _a_half_built_court(session) -> Challenge:
 
 
 class NoGameYet:
-    """``SeatableGameQuery`` for a court that was never a game — which is every
-    court in this file. The fill asks it only on a court that has been one, so
-    this is never reached and says so if it is."""
+    """``SeatableGameQuery`` and ``GameOfCourtQuery`` for a court that was never
+    a game — which is every court in this file. The fill asks the moment guard
+    only on a court that has been one, so that is never reached and says so if
+    it is; the redraw asks which game the court became about no court at all."""
 
     async def line_up_change_on(self, challenge_id, *, now):
         raise AssertionError("a court that was never a game asked the moment guard")
+
+    async def games_of(self, challenge_ids):
+        assert not challenge_ids, "a court that was never a game asked for its game"
+        return {}
 
 
 def _fill(session, *, origins=None, safety=None) -> FillSeats:
     return FillSeats(
         challenges=_repository(session),
         names=StubHandles(),
+        court_games=NoGameYet(),
         open_challenges=build_open_challenge_query(session),
         origins=origins or StubOrigins(known={SEARCH}),
         safety=safety or a_safe_court(COURT),

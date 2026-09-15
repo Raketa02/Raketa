@@ -2264,7 +2264,7 @@
           "challenges"
         ],
         "summary": "Remove the challenge, or call the game off",
-        "description": "**Two acts on one route, and which one this is turns on whether the court has been a game.**\n\n**Remove the challenge** \u2014 on a court that was never a game. The organiser's, and admitted exactly while **nobody besides the organiser holds an accepted seat**: before anybody has answered, and again once everybody who joined has left \u2014 whatever seats are still deciding. The moment somebody has joined it is refused: a court somebody has joined is nobody's to end for the others, so from then on the organiser leaves it like anybody else, and it is over by itself when at most one player is on it and nobody is still deciding. The invitees' challenges read `WITHDRAWN` and offer no answer \u2014 a yes or a no on a removed challenge is refused with `challenge_is_over` \u2014 and an invitation whose day was still running is neither answered nor unanswered: it leaves the record that prices silence, and the lapse loop writes nothing for it.\n\n**Call it off** \u2014 on a court that has been a game and lost somebody. The court is half built again, and this is how the game is called off: the challenge is withdrawn exactly as below, and the game it became reaches its fourth end, `CALLED_OFF`, in the same act \u2014 its plan is history, its pairing is history, and it is neither an evening nor a game that never happened, so nothing anybody is measured on moves. **Any player on the court**, the organiser or not, and only while a seat is open with nobody deciding on it: a full court that will not play lets its window lapse into `NEVER_PLAYED`, as it always has. A court whose game's window has already closed is withdrawn all the same, and the game stays the ghost it already is.\n\n**Whole-challenge, and it never removes one person.** A withdraw ends the arrangement for everybody on it, and taking one person out of a court that still stands is refused here as it is everywhere else.\n\n**Irreversible.** There is no route back. Asking the same people again is a **new** challenge, with fresh deadlines and its own record of who has answered \u2014 which is what it actually is. That a removal can be followed by a resend to the same person, on a fresh clock, is a named and accepted risk with its falsifier written down.\n\n**What this releases is the people on the court.** A send holds its pairs for as long as an answer is owed, and a reopened court holds its pair until it is re-seated or called off; this is that exit. Somebody who let their day run out needed none: their seat reopened and the open-challenge rule released them with it.\n\n**A noun and not a verb**, because what this creates is the withdrawal \u2014 the one thing in this context that a fold of the seats could never produce. The conversation is destroyed in the act where one exists: there is none before anybody has answered, and there may be one the organiser is alone in again.",
+        "description": "**Two acts on one route, and which one this is turns on whether the court has been a game.**\n\n**Remove the challenge** \u2014 on a court that was never a game. The organiser's, and admitted exactly while **nobody besides the organiser holds an accepted seat**: before anybody has answered, and again once everybody who joined has left \u2014 whatever seats are still deciding. The moment somebody has joined it is refused: a court somebody has joined is nobody's to end for the others, so from then on the organiser leaves it like anybody else, and it is over by itself when at most one player is on it and nobody is still deciding. The invitees' challenges read `WITHDRAWN` and offer no answer \u2014 a yes or a no on a removed challenge is refused with `challenge_is_over` \u2014 and an invitation whose day was still running is neither answered nor unanswered: it leaves the record that prices silence, and the lapse loop writes nothing for it.\n\n**Call it off** \u2014 on a court that has been a game and lost somebody. The court is half built again, and this is how the game is called off: the challenge records its own ending, `CALLED_OFF` with `ended_by` you \u2014 **never `WITHDRAWN`**, which is *Remove the challenge*'s alone \u2014 and the game it became reaches its fourth end, `CALLED_OFF` with `called_off_by` you, in the same act: its plan is history, its pairing is history, and it is neither an evening nor a game that never happened, so nothing anybody is measured on moves. **Any player on the court**, the organiser or not, and only while a seat is open with nobody deciding on it: a full court that will not play lets its window lapse into `NEVER_PLAYED`, as it always has. A court whose game's window has already closed is called off all the same, with you on its record, and the game stays the ghost it already is. A court whose game a departure already called off is over, and this meets `challenge_is_over`.\n\n**Whole-challenge, and it never removes one person.** A withdraw ends the arrangement for everybody on it, and taking one person out of a court that still stands is refused here as it is everywhere else.\n\n**Irreversible.** There is no route back. Asking the same people again is a **new** challenge, with fresh deadlines and its own record of who has answered \u2014 which is what it actually is. That a removal can be followed by a resend to the same person, on a fresh clock, is a named and accepted risk with its falsifier written down.\n\n**What this releases is the people on the court.** A send holds its pairs for as long as an answer is owed, and a reopened court holds its pair until it is re-seated or called off; this is that exit. Somebody who let their day run out needed none: their seat reopened and the open-challenge rule released them with it.\n\n**A noun and not a verb**, because what this creates is the ending \u2014 the withdrawal, or the court's call-off \u2014 which are the two things in this context that a fold of the seats could never produce. The conversation is destroyed in the act where one exists: there is none before anybody has answered, there may be one the organiser is alone in again, and a court that has been a game has one.",
         "operationId": "withdraw_challenge_api_v1_challenges__challenge_id__withdrawal_post",
         "security": [
           {
@@ -2285,7 +2285,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The challenge is over, and it is returned as it now stands at `WITHDRAWN`, with every seat exactly as it was \u2014 a seat still awaiting an answer keeps its question and its deadline, and the standing is read before either.",
+            "description": "The challenge is over, and it is returned as it now stands \u2014 `WITHDRAWN` on a court that was never a game, `CALLED_OFF` on one that has been, `ended_by` naming you either way \u2014 with every seat exactly as it was: a seat still awaiting an answer keeps its question and its deadline, and the standing is read before either.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2343,7 +2343,7 @@
           "challenges"
         ],
         "summary": "Leave the game",
-        "description": "**You are out of a court you had agreed to** \u2014 a game, or a court that is not whole yet. Your seat reopens on the challenge; where the court had become a game, that game survives with your seat drawn empty, and the people still on it keep what they agreed \u2014 the plan, the room, the record. Anyone still on the court may fill your seat the way a half-built court is filled, and the newcomer's yes re-seats the **same** game.\n\n**Any player on the court, the organiser included**, while the court stands \u2014 and, on a game, while it is awaiting its entry and its agreed moment is ahead or no moment is agreed yet. Once the moment has passed, leaving means nothing and is refused; a court that is not a game has no moment to guard.\n\n**A court is over when at most one player is on it and no seat is awaiting an answer**, and the organiser is a player in that rule. Before a game the challenge ends by itself \u2014 as `DECLINED`, because a departure is a no \u2014 and its room with it. On a game, the departure that leaves one player on it **calls the game off** in this request: `GET /games` reads `CALLED_OFF`, the room is gone, and the challenge stands with nobody to fill the seat for. Singles included: an opponent who leaves calls the game off.\n\n**You are out of this court's own pool for as long as it stands.** Nobody is asked twice on one challenge; being asked again is a **new** challenge. Every other search reaches you at once \u2014 the pair rule released you the moment you left.\n\n**The others are told**: the room draws *{name} left \u2014 that seat is open again*, and your own list and inbox no longer hold the game or the room.\n\n**Two people may leave**, and two seats may be open. Nothing here prices a departure yet \u2014 it is recorded, with its moment, and that is all.\n\n**A noun and not a verb**, like the withdrawal: what this creates is the departure.",
+        "description": "**You are out of a court you had agreed to** \u2014 a game, or a court that is not whole yet. Your seat reopens on the challenge; where the court had become a game, that game survives with your seat drawn empty, and the people still on it keep what they agreed \u2014 the plan, the room, the record. Anyone still on the court may fill your seat the way a half-built court is filled, and the newcomer's yes re-seats the **same** game.\n\n**Any player on the court, the organiser included**, while the court stands \u2014 and, on a game, while it is awaiting its entry and its agreed moment is ahead or no moment is agreed yet. Once the moment has passed, leaving means nothing and is refused; a court that is not a game has no moment to guard.\n\n**A court is over when at most one player is on it and no seat is awaiting an answer**, and the organiser is a player in that rule. Before a game the challenge ends by itself \u2014 as `DECLINED`, because a departure is a no \u2014 and its room with it. On a game, the departure that leaves one player on it **ends the court with its game** in this request: the challenge reads `CALLED_OFF` naming you, `GET /games` reads `CALLED_OFF` naming you, and the room is gone. Singles included: an opponent who leaves calls the game off \u2014 for the person they leave, too.\n\n**You are out of this court's own pool for as long as it stands.** Nobody is asked twice on one challenge; being asked again is a **new** challenge. Every other search reaches you at once \u2014 the pair rule released you the moment you left.\n\n**The others are told**: the room draws *{name} left \u2014 that seat is open again*, and your own list and inbox no longer hold the game or the room.\n\n**Two people may leave**, and two seats may be open. Nothing here prices a departure yet \u2014 it is recorded, with its moment, and that is all.\n\n**A noun and not a verb**, like the withdrawal: what this creates is the departure.",
         "operationId": "leave_game_api_v1_challenges__challenge_id__departure_post",
         "security": [
           {
@@ -2364,7 +2364,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in \u2014 on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; and `DECLINED` where you were the last but one on a court that was never a game and nobody is deciding \u2014 **a court is over when at most one player is on it and no seat is awaiting an answer**, and a departure is a no. On a game the challenge stands and the **game** is called off instead, in this same request: `GET /games` reads it `CALLED_OFF`, and the room is gone.",
+            "description": "Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in \u2014 on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; `DECLINED` where you were the last but one on a court that was never a game and nobody is deciding \u2014 **a court is over when at most one player is on it and no seat is awaiting an answer**, and a departure is a no; and `CALLED_OFF` where you were the last but one on a court that has been a game: the court ends with its game, `ended_by` you, and the game is called off in this same request \u2014 `GET /games` reads it `CALLED_OFF` with `called_off_by` you, and the room is gone.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2850,7 +2850,7 @@
           "games"
         ],
         "summary": "Your games",
-        "description": "**Arranged, played and finished in one list.** A game awaiting an entry, one awaiting an answer and one that never happened are one thing at three moments of its life.\n\n**The standing is derived, never stored.** It is folded from the record and the clock at the moment you asked, so a game whose entry window ran out reads as never played whether or not anything has swept it \u2014 nothing sweeps it, because there is nothing for a sweep to correct.\n\n**`read_at` is the instant every standing and deadline here was folded against.** Render your countdowns from it, so they cannot disagree with the standing beside them.",
+        "description": "**Arranged, played and finished in one list.** A game awaiting an entry, one awaiting an answer and one that never happened are one thing at three moments of its life.\n\n**The standing is derived, never stored.** It is folded from the record and the clock at the moment you asked, so a game whose entry window ran out reads as never played whether or not anything has swept it \u2014 nothing sweeps it, because there is nothing for a sweep to correct.\n\n**`read_at` is the instant every standing and deadline here was folded against.** Render your countdowns from it, so they cannot disagree with the standing beside them.\n\n**A called-off game you have dismissed is not here** (`POST /games/{id}/dismissal`), on this device and every other \u2014 the dismissal is recorded on the game, once, and subtracted on every read.",
         "operationId": "read_games_api_v1_games_get",
         "responses": {
           "200": {
@@ -3077,6 +3077,68 @@
           },
           "409": {
             "description": "Everything above, plus:\n\n`nobody_has_proposed_a_result` \u2014 there is nothing from the other side to accept.\n\n`accepting_your_own_sides_result` \u2014 **only the other side can accept**, because a teammate agreeing with a teammate proves nothing.\n\n`the_result_is_already_accepted` \u2014 your side has already agreed to this one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/dismissal": {
+      "post": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Remove this card",
+        "description": "**Clear a called-off game's card from your own rail** (`docs/adr/0172` \u00a75). Yours alone: nobody else's rail moves, the game and its record are untouched, and the challenge's row and the screen behind it keep the news for their day. It is instant and there is no undo \u2014 a mis-tap loses the card and nothing else, which is why there is no sheet.\n\n**Recorded on the game, once per player**, so the card is gone on your other phone and after a reinstall; `GET /games` subtracts it on every read rather than keeping a list.\n\n**Only on a game that is `CALLED_OFF`**, and only for somebody on its court \u2014 the presser, or the players the leaver left; the leaver's seat is open and the card was never on their rail.\n\n**A noun and not a verb**, like the departure: what this creates is the dismissal, and it answers nothing because the thing a redraw would draw is the thing you removed.",
+        "operationId": "dismiss_game_api_v1_games__game_id__dismissal_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The card is cleared from your rail \u2014 on this device and every other \u2014 and nothing else moves. A second press answers the same and writes nothing."
+          },
+          "403": {
+            "description": "`you_were_not_on_this_court` \u2014 no game of **yours** has that id. One code for two cases \u2014 it does not exist, or you did not play in it \u2014 because separating them would answer *is this id real* about four strangers' evening.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`game_is_not_called_off` \u2014 only a called-off game's card can be cleared. The other endings' cards carry a score or a strand's verdict and are the record for the day they stay; a live game's card is the game.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4098,6 +4160,33 @@
         "title": "BlockSurface",
         "description": "The four surfaces of `search-telemetry.md` \u00a72, as a block records them."
       },
+      "CalledOffBySchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole name, and **nothing may derive a familiar form from it** (``docs/adr/0107``, ``docs/adr/0171``). ``null`` where ``users`` no longer has the account \u2014 never for an unnamed player, whom the entry gate holds at the naming step."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id"
+        ],
+        "title": "CalledOffBySchema",
+        "description": "Who called the game off, and what they are called (``docs/adr/0172`` \u00a74).\n\n**The name is carried because the court cannot supply it**: the leaver whose\ndeparture called the game off has been **vacated** \u2014 their seat is drawn\n`player_id: null` \u2014 so the seats alone could not name them. It is the same\nname a seat carries, read in the same set read, and it is `null` for the\nsame reason a seat's is: an account `users` no longer answers for.\n\n**A departure is told from a press by whether this player still holds a\nseat on the game.** The presser does; the leaver's seat is open. No second\nfield says which \u2014 the record already does."
+      },
       "CandidateSchema": {
         "properties": {
           "withheld": {
@@ -4349,7 +4438,33 @@
               }
             ],
             "title": "Ended At",
-            "description": "When this challenge ended. ``null`` on the three standings that are not endings, and that is the whole of what the absence means: *this challenge has not ended*.\n\n**It is what a shelf life is subtracted from** \u2014 an ended row keeps its place for a day and then goes, which is `read_at` minus this and nothing else. **Not `read_at`**, which means the opposite: the instant every standing and deadline here was folded against.\n\n**The ending is the last departure, not the ending's own name.** A refusal outranks silence whatever order the two arrived in, so a `DECLINED` court may have gone on standing for days after the no \u2014 until the last seat still deciding ran out. This is when that happened.\n\n**A departure is dated exactly unless it was a decline**, and that is the whole of the precision here:\n\n- **A lapse is exact.** It *is* a deadline passing, so the instant is on the seat already and no sweep needs to have run.\n- **A withdrawal is exact.** A decision somebody took, carrying its own moment.\n- **A decline is an upper bound**, at or before which that person left. Nothing records when somebody said no, so it is bounded by the tighter of the two facts that are recorded: that seat's own deadline, and the last thing that happened to the challenge.\n\nSo `LAPSED` and `WITHDRAWN` are always exact, and `DECLINED` is exact whenever the seat that left **last** was one that ran out \u2014 which a mixed court often is \u2014 and a bound otherwise. The bound is late rather than early, which is the safe direction for a shelf life: a row that outstays it is news gone stale, and one retired early is somebody never learning a seat reopened."
+            "description": "When this challenge ended. ``null`` on the three standings that are not endings, and that is the whole of what the absence means: *this challenge has not ended*.\n\n**It is what a shelf life is subtracted from** \u2014 an ended row keeps its place for a day and then goes, which is `read_at` minus this and nothing else. **Not `read_at`**, which means the opposite: the instant every standing and deadline here was folded against.\n\n**The ending is the last departure, not the ending's own name.** A refusal outranks silence whatever order the two arrived in, so a `DECLINED` court may have gone on standing for days after the no \u2014 until the last seat still deciding ran out. This is when that happened.\n\n**A departure is dated exactly unless it was a decline**, and that is the whole of the precision here:\n\n- **A lapse is exact.** It *is* a deadline passing, so the instant is on the seat already and no sweep needs to have run.\n- **A withdrawal is exact.** A decision somebody took, carrying its own moment.\n- **A decline is an upper bound**, at or before which that person left. Nothing records when somebody said no, so it is bounded by the tighter of the two facts that are recorded: that seat's own deadline, and the last thing that happened to the challenge.\n\nSo `LAPSED`, `WITHDRAWN` and `CALLED_OFF` are always exact, and `DECLINED` is exact whenever the seat that left **last** was one that ran out \u2014 which a mixed court often is \u2014 and a bound otherwise. The bound is late rather than early, which is the safe direction for a shelf life: a row that outstays it is news gone stale, and one retired early is somebody never learning a seat reopened.\n\n**`CALLED_OFF` is exact too**: the act's own instant, a departure's or a press's (`docs/adr/0172` \u00a72)."
+          },
+          "ended_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended By",
+            "description": "The player whose act ended this challenge (`docs/adr/0172` \u00a73). ``null`` on the three standings that are not endings, and that is the whole of what the absence means.\n\n**Always the occupant of one of the court's seats**, never a second copy of a name \u2014 the face and the name a row draws are that seat's. Which seat, by standing:\n\n- `CALLED_OFF` \u2014 the last leaver, or whoever pressed *Call it off*; told apart by their seat, which reads `LEFT` for a leaver and `ACCEPTED` for a presser.\n- `WITHDRAWN` \u2014 the organiser.\n- `DECLINED` \u2014 the seat whose *no* or departure completed the desertion: a seat that `LEFT` or `DECLINED`, never one that ran out, because a no outranks silence. Between two nos dated alike, court order.\n- `LAPSED` \u2014 the seat whose window was the last to run out.\n\nRead from the same per-seat instants `ended_at` is made from, so the name and the date cannot come from two clocks."
+          },
+          "game_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Id",
+            "description": "The game this court became, and ``null`` until its line-up first completed \u2014 the same id ever after, through a re-seat and through the ending (`docs/adr/0172` \u00a74). What lets a row and the leaver's sheet tell a court that has been a game from one that has not: leaving the last other player on one *calls the game off*, and on one that has not it *closes the court*. Read from `games` and never recorded on the challenge."
           },
           "seats": {
             "items": {
@@ -6255,7 +6370,18 @@
               }
             ],
             "title": "Called Off At",
-            "description": "When somebody called it off, while a seat was open (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from \u2014 a day later, as `played_at` and `entry_closes_at` already shelve the other endings. **Nobody is named**: the room is gone and the card says *Called off*."
+            "description": "When somebody called it off, while a seat was open (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from \u2014 a day later, as `played_at` and `entry_closes_at` already shelve the other endings. Who is `called_off_by`."
+          },
+          "called_off_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalledOffBySchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The player who called it off, and their name (``docs/adr/0172`` \u00a74). ``null`` on every standing but `CALLED_OFF`. The last leaver, whose seat is drawn open \u2014 or whoever pressed *Call it off*, who still holds one; which of the two is read off the seats, and the game screen's heading is keyed on it."
           },
           "seats": {
             "items": {
@@ -9349,10 +9475,11 @@
           "LINE_UP_INCOMPLETE",
           "DECLINED",
           "LAPSED",
-          "WITHDRAWN"
+          "WITHDRAWN",
+          "CALLED_OFF"
         ],
         "title": "Standing",
-        "description": "The six standings, as codes. A client's words are the client's own."
+        "description": "The seven standings, as codes. A client's words are the client's own."
       },
       "StandingProposalSchema": {
         "properties": {
