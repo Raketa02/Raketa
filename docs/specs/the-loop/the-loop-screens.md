@@ -57,8 +57,8 @@ map adds nine routes and two fields, across four contexts.
 | `GET /api/v1/challenges` | unchanged shape, **plus `read_at` at the envelope and `nickname` on `SeatSchema`** | [ADR-0143](../../adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md) §9 |
 | **`GET /api/v1/challenges/{challenge_id}`** | one challenge richly — the arrangement, the person and the pairing, recomputed for the reader | ADR-0143 |
 | **`POST /api/v1/challenges/{challenge_id}/seats`** | the send's shape minus the mint, `{search_id, court}` | [ADR-0150](../../adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) §6 |
-| **`POST /api/v1/challenges/{challenge_id}/withdrawal`** | the challenge as it now stands, `WITHDRAWN` | [ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md) |
-| **`POST /api/v1/challenges/{challenge_id}/departure`** | the challenge as it now stands, `LINE_UP_INCOMPLETE` with the caller's seat `LEFT`; the game keeps its id with that seat `player_id: null` | [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) |
+| **`POST /api/v1/challenges/{challenge_id}/withdrawal`** | the challenge as it now stands, `WITHDRAWN` — or, on a court that has been a game, **`CALLED_OFF`** with `ended_by` the presser ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1) | [ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md) |
+| **`POST /api/v1/challenges/{challenge_id}/departure`** | the challenge as it now stands, `LINE_UP_INCOMPLETE` with the caller's seat `LEFT`; the game keeps its id with that seat `player_id: null` — or, when the caller was the last other player on a game, **`CALLED_OFF`** with `ended_by` the caller and the game called off ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1) | [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) |
 | `POST /api/v1/lineups` | grows one optional **`completing_challenge_id`**; `sport`, `mode` and `locked_seats` are **refused** beside it | ADR-0150 §2 |
 | **`GET /api/v1/conversations`** | `read_at` + rows: members with handles and photos, sport, `last_entry`, `conversation_id`, `challenge_id`, nullable `game_id` | [ADR-0148](../../adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md) |
 | **`GET /api/v1/conversations/{id}`** | its own `read_at`, the header **and** the newest page — one fold | ADR-0148 |
@@ -67,6 +67,9 @@ map adds nine routes and two fields, across four contexts.
 | **`GET /api/v1/conversations/{id}/stream`** | `text/event-stream`; the frame is `{v, conversation_id, last_seq}` and nothing else | [ADR-0147](../../adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md) |
 | **`GET /api/v1/plans`** | one row per **court you may plan**, written or not, keyed by `challenge_id` and carrying the horizon anchor. **No `read_at`** | ADR-0148, [ADR-0164](../../adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) |
 | **`PUT /api/v1/plans/{challenge_id}/place` · `/day` · `/hour` · `/lock`** | one route per slot, because ADR-0144 has three events; the lock is ADR-0155's act, refused while the court is not whole | ADR-0148, ADR-0164 |
+| `GET /api/v1/challenges` · `/{challenge_id}` | grow **`ended_by`** (the player whose act ended it, on every ending) and **`game_id`** (null until the line-up first completed) | [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §3–§4 |
+| `GET /api/v1/games` | grows **`called_off_by`** — the player and their name — on a `CALLED_OFF` game, and **omits a game its reader has dismissed** | [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §4–§5 |
+| **`POST /api/v1/games/{game_id}/dismissal`** | the reader's own: the game leaves their rail; admitted on `CALLED_OFF`, refused on every other standing with `game_is_not_called_off` | [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §5 |
 
 **Two reads for the Chats tab, never one**, and **two reads plus a client-side join for Now** —
 ADR-0148's own costs, restated here because a build session reading only this file would otherwise
@@ -168,6 +171,24 @@ filling is news, and once the chat for that court is over — by the clock, or b
 it — it is news to nobody. So the row goes with the reader's own *Leave the chat*, and, for the
 others, with a room that ended before the row's day did — which only a same-evening game does.
 
+**A court that has been a game ends with its game, and its row keeps its day like any ending**
+(amended 2026-09-15, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1–§2, §7). `CALLED_OFF` is the seventh standing — the departure that
+leaves one player on a game, or *Call it off* — dated exactly by `ended_at` and shelved a day from
+it. **The rule that dropped the row of a court ended by somebody else's departure is retired**: it
+existed for one day because the only sentence §13 could say of that court was *? said no*, and
+`the-words.md` §13 now has the sentence — *{name} left — nobody else is coming* — so the row stays
+and says it. What still leaves at once is the reader's **own** act: their own *no*, their own
+*left*, their own removal. The presser's own row — *You called the game off* — is not one of those
+and stays its day, because the court behind it, every seat with what each person did, is theirs to
+read too.
+
+**The face is who the sentence names — one rule for the whole shelf** ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §7). An ended row
+draws the face and the name of `ended_by`, the player the wire says ended it, and no other. A
+filling court still names the people still on it (#429's rule, unchanged). So a doubles *said no*
+row goes from three faces to one and the tap answers *which court*; the faces that left one by one
+never come back on the row that ends it; and an ended row is never blank — the two failures the
+alternatives kept one of each, on the mock this was decided on.
+
 **The instant it is subtracted from is on the wire, and one standing here is not on the list**
 ([#388](https://github.com/Raketa02/Raketa/issues/388), [#395](https://github.com/Raketa02/Raketa/issues/395)).
 `ChallengeSchema.ended_at` dates the three standings the contract calls endings — exactly for a
@@ -187,8 +208,9 @@ than a rule ([ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its
 
 ### 1.2 The challenge row
 
-**Face or faces · the whole handle or handles · the sport · one line · the stripe.** Fully
-clickable, 44pt minimum, opening `/chats/challenge/[challengeId]`.
+**Face or faces · the whole handle or handles · the sport · one line · the stripe — or, on a
+`CALLED_OFF` row, the tag.** Fully clickable, 44pt minimum, opening
+`/chats/challenge/[challengeId]`.
 
 **The face is a photograph or a generated poster, and there is no monogram.** #338 §5 refused the
 avatar outright: `CandidatePhoto` already is the photograph-or-poster switch, a poster is **a fact
@@ -229,6 +251,20 @@ because the sentence carries the fact.
   wrong*, which is exactly what a live answer window is.
 - **No stripe on the organiser's row.** The clock is live but it is not yours to clear, and the
   stripe marks what the badge counts.
+
+**The `Called off` tag is drawn on exactly the rows whose standing is `CALLED_OFF`** (amended
+2026-09-15, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §7): the kit's `Tag` in its **`bad`** variant — red on red-soft — at the row's
+trailing edge, where a live row carries its stripe. It carries the state word the Now card carries,
+in the colour meaning picks: every other row on this list is a live court or a court that ended
+quietly, and this is the one that ended badly for the person reading it. **The stripe's rule is
+untouched** — the tag and the stripe never share a row, because a `CALLED_OFF` row has no clock of
+anybody's — and no other ending wears a tag. Look *A* on the mock; a quiet tag, a recessed ground
+and a red sentence were the alternatives.
+
+**An ended row's tap opens the challenge screen drawn as an ended court** ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §7): the row's
+sentence, the court with every seat and what each person did — *You · in*, *left*, *said no*,
+*called it off* — and **no arm** at all: no fill, no chat door, no leave, no remove. Nothing on it is
+an act the server would refuse. §2.1 has the arm.
 
 **The organiser's row swipes left to reveal *Remove the challenge*, while nobody has joined**
 ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
@@ -312,8 +348,8 @@ inside it would be swallowed.
 
 ## 2. The challenge screen
 
-`/chats/challenge/[challengeId]`. **A state-keyed surface over the five challenge standings and the
-sixth ADR-0142 added — never a `GameStanding`.** A challenge with no acceptance has no `game_id` to
+`/chats/challenge/[challengeId]`. **A state-keyed surface over the five challenge standings, the
+sixth ADR-0142 added and the seventh ADR-0172 added — never a `GameStanding`.** A challenge with no acceptance has no `game_id` to
 key a screen on, which is why there are two state-keyed surfaces and not one
 ([#324](https://github.com/Raketa02/Raketa/issues/324) §2). Decision 7 is untouched: both of *its*
 doors are game doors.
@@ -334,6 +370,7 @@ nothing on the wire carries a side.
 | `DECLINED` · both | §13 *{name} said no…* / *You said no* | no | none |
 | `LAPSED` · both | §13 *{name}'s day ran out…* / *Your day ran out* | no | none |
 | `WITHDRAWN` · both | §13 *You withdrew this* / *{name} withdrew this — that court is closed* | no | none |
+| **`CALLED_OFF`** · both, and `DECLINED` ended by a departure | §13's ended-row sentence keyed by `ended_by`'s seat — *{name} left* · *{name} called the game off* · *You called the game off* · *{name} left — nobody else is coming* — over **the court with every seat and what each person did** (*You · in*, *left*, *said no*, *called it off*) — the ended court, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §7 | no | **none** — no fill, no chat door, no leave, no remove |
 | `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | **Open the chat** *(the door, below)* |
 | `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat** · **Leave the game** *(this read cannot tell a reopened court from one that was never a game, so it draws the same door — §2.5)*. **Call it off** *(any player on the court — ADR-0165 §5)* is the **game screen's** (§5.1), not this arm's — #428, §2.5 |
 | `LINE_UP_INCOMPLETE` · reader who **left the game** | §13's two sentences for a reader who left, read as *You left* | no | none |
@@ -569,7 +606,7 @@ others ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-
 | **⚡ Fill the seats** | any live member | runs the fill and **pushes a builder holding a full court and a fresh search** |
 | **Open the chat** | any live member | `/chats/conversation/[conversationId]` |
 | **Leave the game** | any live member, on a court that was never a game | `POST …/departure` — the seat opens; the same sheet the Chats list's swipe opens (ADR-0165 §6, `the-words.md` §22.10). On a game the control is the game screen's, as #411 rule 8 has it — but the challenge read carries no fact for whether a court has been a game, so #427 draws this on every filling court the reader is on with somebody, and on one that has been a game the moment guard is told in words on the sheet rather than by hiding a control the read cannot see the moment for. **From the Chats list the same swipe reveals *Leave the chat* instead once the game is behind the reader** — [ADR-0168](../../adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md) §5, §1.3 — a member's own exit from the room that moves no seat |
-| **Call it off** | on a court that has been a game: **any player on the court** (ADR-0165 §5) | the withdraw's route and the withdraw's sheet, reworded — `the-words.md` §22.9; the game is called off in the act. **The control is the game screen's** (§5.1): this read carries no fact for whether a court has been a game — the row above — so #428 draws no end act on this arm at all, and the game's own screen, reached from Now, is where it is called off |
+| **Call it off** | on a court that has been a game: **any player on the court** (ADR-0165 §5) | the withdraw's route and the withdraw's sheet, reworded — `the-words.md` §22.9; the game is called off in the act and the challenge reads `CALLED_OFF`, not `WITHDRAWN` ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1). **The control is the game screen's** (§5.1): this read carries no fact for whether a court has been a game — the row above — so #428 draws no end act on this arm at all, and the game's own screen, reached from Now, is where it is called off |
 
 **⚡ is the entry point, and items 1 and 2 of that ticket had one answer.** Pressing it is *Find a
 game*'s own shape — press, the search runs, the builder arrives with a court on it — which
@@ -642,7 +679,9 @@ same swipe a conversation row answers with *Leave the game* (ADR-0165 §6). It d
 conversation where one exists (ADR-0142), so it is the second irreversible act in this app that
 reaches other people — and it takes the shape the first one already has. On a court that has been
 a game the same route is **Call it off**, and it is any player's
-([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), ADR-0165 §5).
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), ADR-0165 §5) — and it
+records the court's own ending, `CALLED_OFF` with `ended_by` the presser, rather than a withdrawal
+([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1), so the others' rows read *{name} called the game off* and never *withdrew this*.
 
 **A sheet, on `SH.propose`'s exact shape**: a real modal (9.1) with `accessibilityViewIsModal`,
 hidden siblings and Android back; a title naming the **moment** rather than the act, so the act is
@@ -1213,7 +1252,19 @@ below only as what each slot replaced.
 | **Slots** | Three rows in the app's own order — **where · day · hour** (`slots.ts` is the one place that order lives) — each a 3pt bar, a label (`WHERE` / `DAY` / `TIME`) and a value. **A settled slot draws its value big and white with a bright bar; an unsettled one draws `Not agreed yet` small and grey with a dim bar.** The card fills with brightness as the plan does. WHERE is `placeWithoutTheCourt`, one line, tail-ellipsised, spoken whole; DAY is the weekday whole and **the date beside it** — `Sunday` `9 Aug` — which §5.4 #6 refused and the design reinstates; TIME is `plan.hour`, mono, and nothing else — no duration exists. *Replaces*: the figure, the line and the gloss (§4.3) |
 | **Line** | One small line under the slots, kept so no card loses a fact it drew before: ***Needs result*'s window** — `{duration} left`, folded from `entry_closes_at` against `read_at`, obeying nothing — and **the endings' standing**, `gameStandingLine`'s own sentence. Nothing on the three plan-led rungs: the slots are their whole account |
 | **Court** | 7.12 at `card` **88**, measured against the mock at 1×, beside the slots. **Each seat is the person's photograph** where the room has one and the generated poster otherwise; **three letters under every seat, yours included** — the `volt` ring is the only *this is you* mark, so the `you` caption went. No sport caption on the ground: the sport is the word in the header |
-| **Footer** | **The wide door** — the next thing to do, and its wording changes with the stage: `Finish the plan` on Planning, `Open` on Game on, `We played` on Needs result, `Confirm the result` on the argument, and **none on an ending** — in the card's accent, `volt` on Planning and mint on everything else, over 7.7's `marginTop: auto` with no hairline. **The bubble** beside it opens the room, only where there is one. *Replaces*: the named door over a hairline, and the ✉ |
+| **Footer** | **The wide door** — the next thing to do, and its wording changes with the stage: `Finish the plan` on Planning, `Open` on Game on, `We played` on Needs result, `Confirm the result` on the argument, and **none on an ending — but one** (below) — in the card's accent, `volt` on Planning and mint on everything else, over 7.7's `marginTop: auto` with no hairline. **The bubble** beside it opens the room, only where there is one. *Replaces*: the named door over a hairline, and the ✉ |
+
+**The `Called off` card names nobody under its slots and offers two things** (amended 2026-09-15,
+[ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §5, §8). In the action row where a live card has its wide door: **`What happened?`** — the
+on-dark fill, the tag's own quiet colour, not the accent — opening the game screen, whose heading
+says what happened and whose body names the person (§5.1); and beside it, where the bubble sits on
+a live card, **a square button with the Feather trash glyph**, spoken **`Remove this card`**, that
+**dismisses** the card — `POST /games/{id}/dismissal`, the reader's own act, admitted on a
+`CALLED_OFF` game and refused on every other standing — so the card leaves the rail on the reply,
+at once, for good, and on every device, because the server omits a dismissed game from that
+reader's `GET /games`. **No sheet**: the act removes a card and not a fact — the challenge row and
+the screen behind it keep the news for their day, and nobody else's rail moves. Pending, never
+optimistic, as every write in this feature. The trash is on this card and on no other ending's.
 
 **The card body is not pressable.** The two buttons are the only doors, which reverses §5.2's *the
 card body goes wherever the button goes*: there is nothing left for a body door to agree or
@@ -1269,10 +1320,12 @@ one: a dashed outline, no plus, no caption, no ring.
 
 **Called off** ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), built by
 [#419](https://github.com/Raketa02/Raketa/issues/419)) is the fourth ending on the same shell: the
-tag `Called off` with the quiet hairline dot, the line `Called off` under the slots, no door, and
-**shelved a day from `called_off_at`** — read before the window and the entry, because
-`entry_closes_at` is `null` on it and `played_at` never is. Nobody is named: the room went with
-the act.
+tag `Called off` with the quiet hairline dot, and **shelved a day from `called_off_at`** — read
+before the window and the entry, because `entry_closes_at` is `null` on it and `played_at` never
+is. **Nothing under the slots, and two buttons where a live card has its door** (amended
+2026-09-15, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §8; it read *the line `Called off` under the slots, no door — nobody is named: the
+room went with the act* until then): the card names nobody, *What happened?* opens the screen
+that does, and the trash clears the card — §4.2.
 
 **What survives is the override and the citation.** *Needs result* keeps its window because a
 passed agreement makes the unfilled slots irrelevant and the entry window is the only live fact
@@ -1323,7 +1376,7 @@ the same game depending which day they tap it.
 | **Counted** | the agreed score, the outcome, the worth line | none |
 | **Uncounted** | *an evening, not evidence* | none |
 | **Never played** | *It never happened* | none |
-| **Called off** | *It was called off* over the line *Called off*, and the ghost's own body — *Nobody is marked for that* — with no plan, no doors and no act on the court; drawn as *Never played* is ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) | none |
+| **Called off** | **the ending block, keyed by how it ended** (amended 2026-09-15, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §8; it read *It was called off* and named nobody until then): heading **`The game was called off for lack of players`** with a body naming the leaver — *{name} left, so the singles game is called off…* / *{name} was the last to leave, so the doubles game is called off…* — or heading **`{name} called the game off`** (the reader's own: `You called the game off`) with *Nobody is marked for it — not you, not any of the others.*; a departure told from a press by whether `called_off_by` still holds a seat on the game. `the-words.md` §22.9 has the sentences. No plan editing, no doors and no act on the court; drawn as *Never played* is ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) | none |
 
 **The plan-lead layout, since [#414](https://github.com/Raketa02/Raketa/issues/414)** — the two
 rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
@@ -1430,7 +1483,10 @@ with the first; **[#413](https://github.com/Raketa02/Raketa/issues/413) reversed
 round — the body is not a door at all**, and the two buttons on the card are the only doors. The
 consequence is stated rather than hidden: **an ending's card offers nothing and opens nothing**,
 and the room behind it is destroyed (ADR-0153), so a finished game's screen is not reachable from
-the rail — the card is the record for the day it stays.
+the rail — the card is the record for the day it stays. **One ending is the exception since
+2026-09-15** ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §8): the *Called off* card offers *What happened?*, a door to the game screen,
+and the trash — because that card carries nothing the row does not, and the explanation is a
+sentence the card must not carry.
 
 | # | Card | From | Button | Lands on |
 | --- | --- | --- | --- | --- |
@@ -1448,7 +1504,8 @@ the rail — the card is the record for the day it stays.
 | 14 | **Counted** | Now card | — | nowhere — no door, and the body is not one |
 | 16 | **Uncounted** | Now card | — | nowhere |
 | — | **Never played** | Now card | — | nowhere |
-| — | **Called off** | Now card | — | nowhere — shelved a day from `called_off_at`, which `GameSchema` carries beside `played_at` for exactly this; `entry_closes_at` is `null` on it, so a card that read the window would stay eight days ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) |
+| — | **Called off** | Now card | `What happened?` — the on-dark fill | `/games/[gameId]`, the Called off arm — the ending block naming who ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §8). Shelved a day from `called_off_at`, which `GameSchema` carries beside `played_at` for exactly this; `entry_closes_at` is `null` on it, so a card that read the window would stay eight days ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) |
+| — | **Called off** | Now card | the trash — `Remove this card` | nowhere: **it writes** — `POST /games/{id}/dismissal`, then the card leaves the rail on the reply; no sheet ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §5) |
 | — | every live card | Now card | the bubble | `/chats/conversation/[conversationId]` |
 | — | the conversation | Details | — | `/chats/conversation/[id]/details`, the arm the standing derives |
 | — | **Planning** · **Game on** | the game screen | `Open the chat` — `dark`, `lg`, full width | `/chats/conversation/[conversationId]` — the join, failing soft |

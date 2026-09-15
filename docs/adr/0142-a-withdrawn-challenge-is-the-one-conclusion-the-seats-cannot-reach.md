@@ -7,6 +7,12 @@
   **§1's *whether a pair with an unplayed game may arrange a second one is not decided here*
   decided for the deck only, 2026-09-14, by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §6** — a thirty-day cool-off after a shared
   court; the shortlist keeps §1's release.
+  **§3's *one exemption* — and the title's *the one conclusion* — narrowed 2026-09-15 by
+  [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1**: there are two. A court that has been a game ends
+  with its game, and `challenges.called_off` announces *the game this court became is called
+  off*, which no arrangement of the seats reaches either. §3's test stands word for word and is
+  what the second passed; the guard that kept the count to one now names the pair. §4's `ENDED`
+  is four.
 - **Date:** 2026-09-07
 - **Extends [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)**, which cites
   `challenges`' *nothing announces a conclusion the seats already imply* and applies it to a
@@ -118,6 +124,14 @@ place, and the fold reads it exactly as it reads an acceptance. The exemption is
 narrow and self-policing: *an event may announce a conclusion only when no arrangement of the
 seats could reach it.* Nothing else in this context qualifies today, and any future candidate has
 to pass that test in writing.
+
+> **One did, on 2026-09-15:
+> [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1.**
+> `ChallengeCalledOff` announces that the game a court became is called off — the seats can reach
+> *deserted* and cannot reach that, because a court deserted by a fill's newcomer's *no* is not
+> called off — so it is the fact's only home too. The test above is unchanged and was passed in
+> writing; *nothing else qualifies* was true for eight days, and the test that keeps the count
+> honest now asserts two named values rather than one.
 
 `challenges.withdrawn` joins the durable name list at version 1.
 
