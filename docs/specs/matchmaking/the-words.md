@@ -585,8 +585,9 @@ than about a person, and which row wears it is
 [`the-play-screens.md`](the-play-screens.md) §4.1's rule. It is *Best match* and not *Best fit*:
 the sort chip beside it reads *Best fit*, and one screen saying the same two words for an
 ordering and for a row would have a reader hunting for the connection. Where both would fall on
-one card, the volt one wins, *because it's the stronger fact* — so a card that draws the coral
-tag is one no admitting code fired on.
+one card, the volt one wins, *because it's the stronger fact* — and so does the plain *You said
+yes*, a fact about a person over a fact about a list — so a card that draws the coral tag is one
+no admitting code fired on and nobody the reader said yes to.
 
 **The volt tag also carries a border, and the order of the two is the rule.** The lifted card
 takes a green outline in `voltStroke`, bound to *the tag being drawn* rather than to

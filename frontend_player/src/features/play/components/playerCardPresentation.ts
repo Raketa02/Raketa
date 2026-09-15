@@ -373,47 +373,80 @@ export function stakeClauses(stake: AtStake): readonly string[] {
  * ([#309](https://github.com/Raketa02/Raketa/issues/309)). That decision turned the volt tag
  * into a sentence under the name because *"a full sentence does not go where a two-word tag
  * went"* — which was the right reading of the sentence it had been given, and the wrong
- * conclusion: the two-word form was always available, and it is `INTEREST_RECEIVED`'s.
+ * conclusion: the two-word form was always available, and it is `INTEREST_RECEIVED`'s. The
+ * social card drew that sentence under its own head until
+ * [ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8 put the same two-word tag in its place — **both tags on both card styles**.
  *
- * ## Two facts, two colours, and only one of them is drawn
+ * ## Three facts, three colours, and only one of them is drawn
  *
+ * - **Wants to play you** — volt, on somebody the engine admitted because they had already
+ *   said yes. It is a statement about **a decision somebody else made**.
+ * - **You said yes** — `base`, the plain status pill, on somebody in the reader's own outgoing
+ *   list for the sport on screen. It is a statement about **a decision the reader made**, and
+ *   it is deliberately not volt: volt is *they want you*
+ *   ([6.4](../../../../docs/design-system.md#64-tag)), the green border travels with that word
+ *   alone, and two facts in one colour would be a reader looking for the difference.
  * - **Best match** — coral, the app's one accent, on the row with the highest Fit. It is a
  *   statement about **where somebody sits in the list this player is reading**.
- * - **Wants to play you** — volt, on somebody the engine admitted because they had already
- *   said yes. It is a statement about **a decision somebody else made**, and that is why it
- *   **replaces** the coral one where both would fall on the same card rather than sitting
- *   beside it: the designs' *"because it's the stronger fact"*, and two tags on one handle is
- *   a row whose width depends on how lucky the reader got.
  *
- * **Neither is a new field.** The volt one is `inclusionReason === 'INTEREST_LIFT'` — the
- * admitting code, per [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md)
+ * **A fact about a person outranks a fact about a list**, which is why either interest tag
+ * **replaces** the coral one where both would fall on the same card rather than sitting beside
+ * it: the designs' *"because it's the stronger fact"*, and two tags on one handle is a row
+ * whose width depends on how lucky the reader got. **Both interest facts true is a mutual**,
+ * and a mutual is not on the list; should one ever be, *Wants to play you* wins — the other
+ * person's decision is the one the reader did not already know.
+ *
+ * **None of the three is a new field.** The volt one is `inclusionReason === 'INTEREST_LIFT'`
+ * — the admitting code, per [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md)
  * §10's *"the tag is bound to the admitting code"* — and its **words are its liveness twin's**,
  * reached through `livenessLine` rather than re-typed, because §10's claim is that the two
- * codes are *two facts with one tag*. The coral one is `bestMatch`, which this file does not
- * decide: **which row wears it is the ordering rule's**
- * ([#310](https://github.com/Raketa02/Raketa/issues/310)), and a card that worked it out for
- * itself would be a component reading a list it cannot see.
+ * codes are *two facts with one tag*. The plain one is `saidYesTo` over the reader's own
+ * `GET /interest` outgoing list (`domain/outgoingInterest`), no code and no nudge. The coral
+ * one is `bestMatch`, which this file does not decide: **which row wears it is the ordering
+ * rule's** ([#310](https://github.com/Raketa02/Raketa/issues/310)), and a card that worked it
+ * out for itself would be a component reading a list it cannot see.
  *
- * **There is no third tag and no default.** Most people on a list are neither, and a tag
- * drawn for them would be a word meaning *nothing in particular* — which is
+ * **There is no fourth tag and no default.** Most people on a list are none of the three, and
+ * a tag drawn for them would be a word meaning *nothing in particular* — which is
  * [1.2](../../../../docs/design-system.md#12-one-accent-used-sparingly) read on the one row
  * that repeats twenty times.
  */
+/**
+ * Which fact a tag is — so a caller binds a consequence to the **fact** and never to the colour.
+ * The green border is `wants-to-play-you`'s, and a card reading `variant === 'volt'` would draw
+ * it on whatever else was ever made volt.
+ */
+export type CandidateTagKind = 'wants-to-play-you' | 'you-said-yes' | 'best-match';
+
 export interface CandidateTag {
+  readonly kind: CandidateTagKind;
   readonly label: string;
-  /** `hot` is the coral tag and `volt` is the fill — 6.4's own variant names. */
-  readonly variant: 'hot' | 'volt';
+  /** `hot` is the coral tag, `volt` the fill, `base` the plain pill — 6.4's own variant names. */
+  readonly variant: 'hot' | 'volt' | 'base';
 }
 
 export function candidateTag(facts: {
   /** A union of one, and it **admits**. Omitted where nothing lifted them. */
   readonly inclusionReason?: InclusionReason;
+  /** The reader's own list's answer — `saidYesTo` — never this card's. */
+  readonly saidYes: boolean;
   /** The ordering rule's answer, never this card's. */
   readonly bestMatch: boolean;
 }): CandidateTag | undefined {
-  const admitted = facts.inclusionReason;
-  if (admitted !== undefined) return { label: INCLUSION_TAG_WORD[admitted], variant: 'volt' };
-  return facts.bestMatch ? { label: BEST_MATCH_WORD, variant: 'hot' } : undefined;
+  const kind = tagKind(facts);
+  return kind === undefined ? undefined : { kind, ...CANDIDATE_TAG[kind] };
+}
+
+/** The precedence, and nothing else: the strong fact wins — see the note above. */
+function tagKind(facts: {
+  readonly inclusionReason?: InclusionReason;
+  readonly saidYes: boolean;
+  readonly bestMatch: boolean;
+}): CandidateTagKind | undefined {
+  if (facts.inclusionReason !== undefined) return 'wants-to-play-you';
+  if (facts.saidYes) return 'you-said-yes';
+  return facts.bestMatch ? 'best-match' : undefined;
 }
 
 /**
@@ -435,6 +468,16 @@ const INCLUSION_TAG_WORD: Readonly<Record<InclusionReason, string>> = {
 };
 
 /**
+ * The plain tag's three words — **the reader's own act, on the other person's card.**
+ *
+ * *You said yes* and not *You want to play them*: the deck's answer is *Let's play*, a yes, and
+ * the tag names the act the reader remembers making. Exported for the suites that assert what
+ * a row says, so a reworded tag is one red build rather than a string hunted through five
+ * files.
+ */
+export const YOU_SAID_YES_WORD = 'You said yes';
+
+/**
  * The coral tag's two words.
  *
  * *Best match* and not *Best fit*: [#310](https://github.com/Raketa02/Raketa/issues/310) makes
@@ -443,3 +486,13 @@ const INCLUSION_TAG_WORD: Readonly<Record<InclusionReason, string>> = {
  * number in the pill; this is the row that has the most of it.
  */
 const BEST_MATCH_WORD = 'Best match';
+
+/**
+ * Each tag's words and colour, **keyed by the kind** — so a fourth kind does not compile
+ * without both, and the colour is a function of the fact rather than a literal at a call site.
+ */
+const CANDIDATE_TAG: Readonly<Record<CandidateTagKind, Omit<CandidateTag, 'kind'>>> = {
+  'wants-to-play-you': { label: INCLUSION_TAG_WORD.INTEREST_LIFT, variant: 'volt' },
+  'you-said-yes': { label: YOU_SAID_YES_WORD, variant: 'base' },
+  'best-match': { label: BEST_MATCH_WORD, variant: 'hot' },
+};

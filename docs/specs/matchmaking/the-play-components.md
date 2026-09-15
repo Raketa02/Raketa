@@ -135,9 +135,12 @@ row became an **identity row** with a tag where the fit pill was, and its three 
 elements collapsed into **one band**. So it no longer shares a head with the other two:
 `CardHead` stayed theirs, and `PhotoPanel`, `IdentityRow` and `HeadToHeadBand` are the
 competitive card's. Configuring one head to draw either a pill or a tag on the name line, and
-either a sentence or nothing beneath it, takes **two flags to say which** — which is this
-section's own `surface === …` arriving one component down. The kit is what the three still
-share, not what they are made to share.
+either a tag or nothing beneath it, takes **two flags to say which** — which is this section's
+own `surface === …` arriving one component down. The kit is what the three still share, not
+what they are made to share. (The slot beneath `CardHead`'s name line held *They already said
+yes to you* as a sentence until [ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+§8 put the two-word tag there instead — both interest tags on both list cards, and the head's
+two-line shape unchanged.)
 
 **And 2026-09-09 widened it once more: the competitive card argues nothing.** Its reason lines
 and its concern line are gone, so `ReasonLine` is the other two cards' component now. Every
@@ -164,7 +167,7 @@ features/play/components/candidate/
   PhotoPanel.tsx  IdentityRow.tsx  HeadToHeadBand.tsx   competitive only
   SocialTagRow.tsx  RecordBlocks.tsx  StakeBoxes.tsx    competitive only
   StatBox.tsx                the box those last two are made of  ← 7.13, 7.14
-  CardHead.tsx               social · deck
+  CardHead.tsx               social · the challenge screen's card
   FactRow.tsx  TagRow.tsx  ReasonLine.tsx
 ```
 

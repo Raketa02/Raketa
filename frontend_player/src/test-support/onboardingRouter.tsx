@@ -426,6 +426,37 @@ export function stubInterest(
   transport.on('GET', '/api/v1/interest', () => json(served));
 }
 
+/**
+ * One yes of the reader's own, as `GET /interest` lists it under `outgoing` — the row *You said
+ * yes* and the challenge screen's invitee's line are drawn from (ADR-0169 §8).
+ *
+ * The two dates are the server's and no suite reads them, so they are fixed here rather than
+ * spelled per test.
+ */
+export function outgoingYes(
+  playerId: string,
+  sport: Wire['Sport'],
+): Wire['OutgoingInterestSchema'] {
+  return {
+    player_id: playerId,
+    sport,
+    at: '2026-08-30T18:00:00Z',
+    expires_at: '2026-09-20T18:00:00Z',
+  };
+}
+
+/** The reader's own yeses, as the server would list them — who, per sport. Nothing else served. */
+export function stubOutgoingYeses(
+  transport: Transport,
+  ...yeses: readonly (readonly [playerId: string, sport: Wire['Sport']])[]
+) {
+  stubInterest(transport, {
+    outgoing: yeses.map(([playerId, sport]) => outgoingYes(playerId, sport)),
+    mutual: [],
+    outstanding: [],
+  });
+}
+
 export const GAMES_PATH = '/api/v1/games';
 
 /**

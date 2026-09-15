@@ -141,12 +141,12 @@ import { yesWithheld, yesesToGive } from '../domain/yesBudget';
 import {
   useDeal,
   useDeckProgress,
-  useOutstandingInterest,
   useResetDeck,
   useSayNo,
   useSayYes,
   type DeckQuestion,
 } from '../hooks/useDeck';
+import { useOutstandingInterest } from '../hooks/useInterest';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
 

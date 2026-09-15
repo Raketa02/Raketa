@@ -93,11 +93,11 @@ import {
   type AnsweredCard,
   type DeckDeal,
 } from '../domain/deckHand';
+import { outgoingAfterYes } from '../domain/outgoingInterest';
 import { dealDeck, type DeckAsk, type DeckOutcome } from '../use-cases/dealDeck';
-import { readOutstandingInterest } from '../use-cases/readOutstandingInterest';
 import { resetDeck } from '../use-cases/resetDeck';
 import { sayNo, sayYes, type CardAnswer, type InterestExpressed } from '../use-cases/answerCard';
-import type { OutstandingInterest } from '../mappers/interestMappers';
+import type { MyInterest } from '../mappers/interestMappers';
 
 import { RANKED_LIST_QUERY_OPTIONS, searchKeys, type DealtUnder } from './searchKeys';
 
@@ -239,18 +239,21 @@ function holdsHand(held: HeldDeal, searchId: string): boolean {
 }
 
 /**
- * *Let's play* — the outstanding-yes count, updated from the tap's own answer, **the chip's
- * count when a liker's yes comes back mutual**, and **the yes screen, when the answer is a
- * mutual naming a chat.**
+ * *Let's play* — the outstanding-yes count and the reader's own list, updated from the tap's
+ * own answer, **the chip's count when a liker's yes comes back mutual**, and **the yes screen,
+ * when the answer is a mutual naming a chat.**
  *
  * `ExpressedInterestResponse` carries where the sport stands **after** this tap, so the number
  * the counter's *N yeses to give* subtracts moves without a second round trip: Part 7's *"prefer
  * response-driven updates; don't immediately refetch what you were just handed"*. It is a patch
  * of one sport rather than a whole entry, because the read answers for all four and the tap
- * knows about one.
+ * knows about one. **The reply says how the outgoing list moved too** — one-sided, and the
+ * person is on it; mutual, and they are not — so the builder's *You said yes* is true the moment
+ * the player crosses to Play, and the rule is `outgoingAfterYes`'s rather than this hook's
+ * (ADR-0169 §8).
  *
- * **Nothing is invalidated.** A yes changes exactly one number and the response is that
- * number; asking the server again for what it has just said would be the refetch this rule
+ * **Nothing is invalidated.** A yes changes exactly one number and one list, and the response
+ * says both; asking the server again for what it has just said would be the refetch this rule
  * exists to refuse, on the one read in the tab that is already allowed to move on its own.
  *
  * **And nothing is seeded.** Where the read has not landed, the updater returns `undefined`
@@ -295,8 +298,13 @@ export function useSayYes() {
   return useMutation<InterestExpressed, AppError, CardAnswer>({
     mutationFn: sayYes,
     onSuccess: ({ outstanding, mutual, challengeId }, answer) => {
-      client.setQueryData<OutstandingInterest>(searchKeys.interest(), (held) =>
-        held === undefined ? undefined : { ...held, ...outstanding },
+      client.setQueryData<MyInterest>(searchKeys.interest(), (held) =>
+        held === undefined
+          ? undefined
+          : {
+              standing: { ...held.standing, ...outstanding },
+              outgoing: outgoingAfterYes(held.outgoing, answer, mutual),
+            },
       );
 
       if (mutual) {
@@ -345,21 +353,5 @@ export function useResetDeck(question: DeckQuestion | undefined) {
         exact: true,
       });
     },
-  });
-}
-
-/**
- * **Where every sport stands against its cap** — the count, the cap and the life of a yes,
- * which the counter subtracts and the ending prints.
- *
- * On the app's ordinary defaults — 30 s stale, refetching on focus — which is the deliberate
- * exception to *nothing in Play background-refetches*. That rule is about **orderings**: a
- * pool that reorders under a finger is the harm, and a count has no order to lose. This is the
- * one number in the tab that should move while somebody is looking at it.
- */
-export function useOutstandingInterest() {
-  return useQuery<OutstandingInterest, AppError>({
-    queryKey: searchKeys.interest(),
-    queryFn: ({ signal }) => readOutstandingInterest({ signal }),
   });
 }

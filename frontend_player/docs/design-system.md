@@ -822,9 +822,11 @@ Selected → `borderColor: ink`.
 
 **Marked → `borderColor: voltStroke`, and it is the one border of the three that is not about the
 control.** Pressed and selected are things the reader has done to the card; a **marked** card
-carries a standing fact about whoever is drawn on it — today, the one row on the pool whose
-handle says _Wants to play you_ ([#310](https://github.com/Raketa02/Raketa/issues/310)). Three
-rules come with it:
+carries a standing fact about whoever is drawn on it — today, the row on the pool whose card says
+_Wants to play you_, on either card style ([#310](https://github.com/Raketa02/Raketa/issues/310),
+[ADR-0169](../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). It is
+bound to that word and never to the reader's own _You said yes_, a plain tag: volt is _they want
+you_, and a border on the reader's act would spend its meaning. Three rules come with it:
 
 - **It stays 1pt.** The designs draw 2. A border is drawn _inside_ the box in React Native, so
   a second point moves every child of the card by one — a re-layout that only the marked rows in

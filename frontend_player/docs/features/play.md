@@ -64,7 +64,8 @@ is a **photo panel** with an identity row beside it and **one head-to-head band*
 components rather than one with a `surface` prop** — a single card would carry `surface === …`
 at nine sites, which is the sixty-line conditional the split exists to prevent. Under them sit
 `CandidatePhoto` (the photo-or-poster switch, one component at three sizes, its radius 33 % of
-its own box), `FactRow` and `ReasonLine`; `CardHead` is the social and deck cards' alone, and
+its own box), `FactRow` and `ReasonLine`; `CardHead` is the social card's (and, through Play's surface, the
+challenge screen's card's), and
 the competitive card's `PhotoPanel`, `IdentityRow` and `HeadToHeadBand` are the three parts
 [#309](https://github.com/Raketa02/Raketa/issues/309) split off it rather than adding two flags
 to say which head to draw. **Each reads no global state**, taking `(candidate, envelope)` plus
@@ -87,10 +88,20 @@ _never colour alone_ binds the sighted half too. `CandidatePhoto` draws the mint
 `courtPosterFor` from `shared/ui` rather than copying the hash: one player id, one poster,
 forever. **Only the deck card floats** — #219 B3's argument is about a
 card that translates and rotates out under a thumb, and a row in a scrolling list does neither,
-so the pool draws one shape twice. **The volt tag is a tag again on the competitive card and a
-sentence on the other two**, which is #231's open decision #14 reversed where the identity row
-has a slot beside the handle for one: it is bound to `INTEREST_LIFT` either way, and the tag
-takes its liveness twin's two words because the two codes are one tag. **The panel prints the
+so the pool draws one shape twice. **The two interest tags are tags on both list cards**
+([ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8):
+_Wants to play you_ is bound to `INTEREST_LIFT` and takes its liveness twin's two words because
+the two codes are one tag — #231's open decision #14 reversed first on the competitive card,
+whose identity row has a slot beside the handle, and then on the social card, whose `CardHead`
+draws the tag under the name line where the sentence _They already said yes to you_ used to
+stand — and _You said yes_ is the reader's own act, a plain `base` tag off their own outgoing
+list (`saidYesTo` over `useOutgoingInterest`, the deck's read), no code and no nudge. At most one
+tag on a card: either interest tag over the coral one, because a fact about a person outranks a
+fact about a list, and _Wants to play you_ over _You said yes_ should both ever be true — which is
+a mutual, and a mutual is not on the list. The deck card draws neither. **Neither tag reaches the
+card's spoken name** — the same booking the coral one has carried since #309: the body's merged
+name is the identifying facts and the argument, and a tag clause is a gap named here rather than
+a clause invented — see `IdentityRow`'s note. **The panel prints the
 Level twice on purpose** — hugely over the photograph and again on the right of the band — and
 what makes that legible is the system's second pinned scrim: a photograph is a ground nobody
 chose, so `photoScrim` collapses it to its worst case, pure white, at a ratio `textOnMedia.test.ts`
@@ -154,11 +165,13 @@ stays one on the other two — and §5's _the competitive card can never run out
 re-checked in the test rather than re-read, because the surviving set is one term smaller.
 
 **The card's border is coral never and green once**: a coral outline on every card is
-5.1's pressed state made permanent and stays refused, while the lifted card takes 5.1's new
+5.1's pressed state made permanent and stays refused, while the lifted card takes 5.1's
 **marked** state in `voltStroke` — volt's meaning at a stroke's ratio, because volt itself is
 1,25:1 on `surface` and would be no border at all. It is bound to **the tag being drawn** rather
-than to `inclusion_reason`, so the outline can never appear on a handle saying something else,
-and Part 13 is discharged by the word either way. Every ratio is derived in `Tag.test.tsx`.
+than to `inclusion_reason` — to the tag's _kind_ and never its colour, so _You said yes_ draws no
+outline — and it goes where the tag goes, which since ADR-0169 §8 is both list cards. The outline
+can never appear on a handle saying something else, and Part 13 is discharged by the word either
+way. Every ratio is derived in `Tag.test.tsx`.
 
 **The court is one drawn object and two feature components.** `Court` (7.12) takes a Sport and
 a box, draws the ground, the chrome and the seat **positions**, and **takes children in seat
@@ -513,23 +526,28 @@ second time. The seat-impact line and the _Evenest_ chip are out of scope with i
 never a filter**: it hides nobody below 90, and that is written down because a coral pill at ✦ ≥
 90 is a threshold somebody eventually applies to the list.
 
-**Two things reorder or mark the list without touching a number, and a pin is not the `+12`.**
-Somebody with a live yes towards the searcher is **pinned to the top of the served order**,
-whatever they scored — and drops into their honest place the moment any chip is tapped, tag and
-green border travelling with them. That is the distinction `poolOrder`'s module note exists to
-keep: a bonus is arithmetic on a published figure, changes what _best_ means silently and
-survives every re-sort; a pin changes a **position**, prints the number it was served, says why
-on the card it moved, and releases. Beside it, the coral **best match** tag goes on the highest
-✦ on screen — one card or none — and it is keyed to **the ordering in force** rather than to a
-tapped chip, because `BEST_FIT` is withheld exactly when the served order already is fit order
-and most searches therefore have no chip to have tapped. It is hidden under the three orderings
-that are about something other than the number, and where both tags fall on one card the green
-one wins, which is `candidateTag`'s rule and not the ordering's. **A for-fun pool draws no _best
-match_** — the tag sits in the competitive card's identity row and the social card has no slot
-beside the handle for one — and those rows are still pinned and still explained. The pin releases
-under _Best fit_ as well as the other three, which is the ticket's _default order **only**_
-followed to its cost: the chip the row adds back as **the way back** returns fit order without
-the pin, and the alternative is a pin that survives a sort, which is what makes a bonus a bonus.
+**Nothing on this side reorders the list, and two tags mark it — a yes informs; it never takes
+over** ([ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+§8). Somebody with a live yes towards the searcher is drawn **where the server placed them** —
+the engine's `+14` on their rank key already puts them earlier than their Fit alone would, never
+above a genuinely better pairing — tagged _Wants to play you_ with the green border, and the tag
+travels with them under every chip. The **pin** that used to force them to the top of the served
+order is gone with its tests: it touched no number, which was the whole of why it was not the
+`+12` #231 struck, and it still put a 51 above thirty people at 80 on a list about who fits.
+`poolOrder`'s module note keeps both refusals — the bonus's and the pin's — in writing, and
+`orderPool` hands the served order back untouched. Somebody the reader said yes to is tagged _You
+said yes_ and moved nowhere: the pool holds the same `GET /interest` the deck holds
+(`useOutgoingInterest`, one cache entry, `select`ed two ways) and asks `saidYesTo` one row at a
+time in the search's sport; the list moves on a deck tap's **own reply** (`outgoingAfterYes`), so
+a builder opened straight after a swipe already carries the tag. Beside them, the coral **best
+match** tag goes on the highest ✦ on screen — one card or none — and it is keyed to **the
+ordering in force** rather than to a tapped chip, because `BEST_FIT` is withheld exactly when
+the served order already is fit order and most searches therefore have no chip to have tapped.
+It is hidden under the three orderings that are about something other than the number, and
+where it and either interest tag fall on one card the interest tag wins, which is
+`candidateTag`'s rule and not the ordering's. **A for-fun pool draws no _best match_** — the tag
+sits in the competitive card's identity row and the social card has no slot beside the handle
+for one — and draws both interest tags, as tags, under the name.
 
 **The pool is where the running forecast is read, and where `provisional` is a sentence.** The
 word under the tinted number is §B9's **balance** word, because Part 13 forbids colour alone

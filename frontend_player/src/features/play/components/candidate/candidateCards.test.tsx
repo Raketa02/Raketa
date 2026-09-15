@@ -33,6 +33,8 @@ import type { Term } from '../../domain/vocabulary';
 import { toCandidate } from '../../mappers/candidateMappers';
 import type { Wire } from '@/test-support/transport';
 
+import { YOU_SAID_YES_WORD } from '../playerCardPresentation';
+
 import { COMPETITIVE_CARD_DRAWS, CandidateCard } from './CandidateCard';
 import { CandidateCardSocial, SOCIAL_CARD_DRAWS } from './CandidateCardSocial';
 import { DeckCard } from './DeckCard';
@@ -187,7 +189,12 @@ const SPORT_NAME = 'Tennis';
 const SINGLES = courtSeatCount('tennis');
 const DOUBLES = courtSeatCount('padel');
 
-function drawCompetitive(over: Partial<Candidate> = {}, bestMatch = false, seats = SINGLES) {
+function drawCompetitive(
+  over: Partial<Candidate> = {},
+  bestMatch = false,
+  seats = SINGLES,
+  saidYes = false,
+) {
   render(
     <CandidateCard
       candidate={candidate(over)}
@@ -198,6 +205,7 @@ function drawCompetitive(over: Partial<Candidate> = {}, bestMatch = false, seats
       onAction={noop}
       onWhyFit={noop}
       bestMatch={bestMatch}
+      saidYes={saidYes}
     />,
   );
 }
@@ -223,7 +231,7 @@ function without(term: Term): readonly ScoredTerm[] {
   return TERMS.filter((row) => row.term !== term);
 }
 
-function drawSocial(over: Partial<Candidate> = {}) {
+function drawSocial(over: Partial<Candidate> = {}, saidYes = false) {
   render(
     <CandidateCardSocial
       candidate={candidate(over)}
@@ -231,6 +239,7 @@ function drawSocial(over: Partial<Candidate> = {}) {
       action="CHALLENGE"
       onAction={noop}
       onWhyFit={noop}
+      saidYes={saidYes}
     />,
   );
 }
@@ -461,14 +470,21 @@ describe('each card’s drawn set', () => {
   });
 });
 
-describe('the volt tag', () => {
-  it('is a sentence on the social card, which #309 did not touch', () => {
+/**
+ * **The two interest tags, on both card styles** — *Wants to play you* bound to the admitting
+ * code, *You said yes* to the reader's own list, and at most one of the three tags on a card
+ * ([ADR-0169](../../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8).
+ */
+describe('the interest tags', () => {
+  it('is two words on the social card too, in place of the sentence it used to draw', () => {
     drawSocial();
-    expect(screen.queryByText('They already said yes to you')).toBeNull();
+    expect(screen.queryByText('Wants to play you')).toBeNull();
     screen.unmount();
 
     drawSocial({ inclusionReason: 'INTEREST_LIFT' });
-    expect(screen.getByText('They already said yes to you')).toBeTruthy();
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText('They already said yes to you')).toBeNull();
   });
 
   it('is two words beside the handle on the competitive card, which #309 reversed', () => {
@@ -481,17 +497,39 @@ describe('the volt tag', () => {
     expect(screen.queryByText('They already said yes to you')).toBeNull();
   });
 
-  it('replaces the coral tag where both would fall on the same card', () => {
-    drawCompetitive({ inclusionReason: 'INTEREST_LIFT' }, true);
+  it('says You said yes on both cards for somebody in the reader’s own list', () => {
+    drawCompetitive({}, false, SINGLES, true);
+    expect(screen.getByText(YOU_SAID_YES_WORD)).toBeTruthy();
+    screen.unmount();
+
+    drawSocial({}, true);
+    expect(screen.getByText(YOU_SAID_YES_WORD)).toBeTruthy();
+  });
+
+  it('draws Wants to play you and not You said yes should both ever be true', () => {
+    // Both true is a mutual, and a mutual is not on the list — but the precedence is stated.
+    drawCompetitive({ inclusionReason: 'INTEREST_LIFT' }, false, SINGLES, true);
 
     expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText(YOU_SAID_YES_WORD)).toBeNull();
+  });
+
+  it('replaces the coral tag where either interest tag would fall on the same card', () => {
+    drawCompetitive({ inclusionReason: 'INTEREST_LIFT' }, true);
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText('Best match')).toBeNull();
+    screen.unmount();
+
+    drawCompetitive({}, true, SINGLES, true);
+    expect(screen.getByText(YOU_SAID_YES_WORD)).toBeTruthy();
     expect(screen.queryByText('Best match')).toBeNull();
   });
 
-  it('leaves the handle bare where neither fact is true', () => {
+  it('leaves the handle bare where none of the facts is true', () => {
     drawCompetitive();
 
     expect(screen.queryByText('Wants to play you')).toBeNull();
+    expect(screen.queryByText(YOU_SAID_YES_WORD)).toBeNull();
     expect(screen.queryByText('Best match')).toBeNull();
   });
 
@@ -508,7 +546,9 @@ describe('the volt tag', () => {
  * It is bound to **the tag that is drawn** rather than to `inclusionReason` beneath it, so the
  * one card whose handle says *Wants to play you* is the one card outlined — the two cannot come
  * apart on a card wearing the coral tag, and Part 13's *never colour alone* is discharged by the
- * word rather than by the outline ([#310](https://github.com/Raketa02/Raketa/issues/310)).
+ * word rather than by the outline ([#310](https://github.com/Raketa02/Raketa/issues/310)). It
+ * travels with **that word alone**: *You said yes* is a plain tag, and a border on it would be
+ * volt's meaning spent on the reader's own act.
  */
 describe('the border on a lifted card', () => {
   it('is voltStroke where the volt tag is, and volt is nowhere near it', () => {
@@ -525,11 +565,17 @@ describe('the border on a lifted card', () => {
     expect(surface().borderColor).toBe(theme.color.line);
   });
 
-  it('is not drawn on the social card, which #309 left alone and says it in a sentence', () => {
-    drawSocial({ inclusionReason: 'INTEREST_LIFT' });
+  it('is the ordinary card border under You said yes, which is the reader’s act and not theirs', () => {
+    drawCompetitive({}, false, SINGLES, true);
 
     expect(surface().borderColor).toBe(theme.color.line);
-    expect(screen.getByText('They already said yes to you')).toBeTruthy();
+  });
+
+  it('travels with the tag onto the social card, now that the social card draws the tag', () => {
+    drawSocial({ inclusionReason: 'INTEREST_LIFT' });
+
+    expect(surface().borderColor).toBe(theme.color.voltStroke);
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
   });
 });
 

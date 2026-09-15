@@ -66,6 +66,8 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
+import { searchKeys } from '../hooks/searchKeys';
+import type { MyInterest } from '../mappers/interestMappers';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession } from '../store/playSession.store';
 
@@ -1027,6 +1029,32 @@ describe('the counter', () => {
     await screen.findByLabelText(MAREK_CARD);
 
     expect(await screen.findByText(deckCounter({ left: 8 }))).toBeTruthy();
+  });
+
+  /**
+   * The same reply moves the reader's own list, which is what *You said yes* on the builder's
+   * cards and the challenge screen is drawn from (ADR-0169 §8) — so a builder opened straight
+   * after a swipe tags the person without a second read, and a mutual is never on it.
+   */
+  it('puts a one-sided yes on the reader’s own list off the reply, and leaves a mutual off it', async () => {
+    transport.on('POST', DECK, () => json(THREE_CARDS));
+    transport.on('POST', INTEREST, () => json(expressed(false, 9), 201));
+    await openDeck();
+    await screen.findByText(deckCounter({ left: 8, give: 12 }));
+
+    fireEvent.press(screen.getByLabelText("Let's play, Marek Z."));
+    await screen.findByText(deckCounter({ left: 7, give: 11 }));
+    expect(queryClient.getQueryData<MyInterest>(searchKeys.interest())?.outgoing).toEqual({
+      padel: [MAREK],
+    });
+
+    transport.on('POST', INTEREST, () => json(expressed(true, 9), 201));
+    fireEvent.press(screen.getByLabelText("Let's play, Ana K."));
+    await waitFor(() => expect(toasts()).toEqual([mutualToast('Ana K.')]));
+    expect(queryClient.getQueryData<MyInterest>(searchKeys.interest())?.outgoing).toEqual({
+      padel: [MAREK],
+    });
+    expect(transport.requestsTo('GET', INTEREST)).toHaveLength(1);
   });
 });
 

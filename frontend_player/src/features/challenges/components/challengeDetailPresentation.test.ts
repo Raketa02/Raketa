@@ -23,6 +23,7 @@ import {
   identityRow,
   pairingAbsenceLine,
   removeRefusalMessage,
+  saidYesOnPlayersLine,
 } from './challengeDetailPresentation';
 import { LEAVE_REFUSED } from './leaveGamePresentation';
 
@@ -133,6 +134,17 @@ describe('a pairing that could not be computed', () => {
     for (const absence of PAIRING_ABSENCES) {
       expect(pairingAbsenceLine(absence, 'Padel').toLowerCase()).not.toContain("can't answer");
     }
+  });
+});
+
+describe('the invitee’s line', () => {
+  /**
+   * *An invitation a swipe produced says so* (ADR-0169 §8): the reader's own act, named with the
+   * organiser's whole handle and the tab the act was on — and nothing about why the engine
+   * picked them, which ADR-0143 still refuses to tell an invitee.
+   */
+  it('names the organiser and the tab, and is about the reader’s own yes', () => {
+    expect(saidYesOnPlayersLine('ewa.m')).toBe('You said yes to ewa.m on Players');
   });
 });
 

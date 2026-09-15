@@ -368,6 +368,22 @@ export { BuilderScreen, type BuilderScreenProps } from './components/BuilderScre
  */
 export { useFillChallengeSeats } from './hooks/useBuilder';
 export type { CompletingChallenge } from './domain/lineup';
+
+/**
+ * **Whom the reader has said yes to** — the deck's read, and the rule that asks it one person at
+ * a time — widened to the challenge screen
+ * ([ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8).
+ *
+ * The invitee's line — *You said yes to Karol on Players* — is drawn when the organiser is in the
+ * reader's outgoing list for the challenge's sport, and that list is this feature's: a deck yes
+ * is `POST /interest`, its read is `GET /interest`, and `challenges` holding a second query over
+ * the same route would be two cache entries for one answer. The hook crosses rather than the
+ * map, so the one entry is shared with the pool and moves on a tap's own reply; the rule
+ * crosses with it so `sport` and `playerId` are compared in one place.
+ */
+export { useOutgoingInterest } from './hooks/useInterest';
+export { saidYesTo } from './domain/outgoingInterest';
 export {
   parseBuilderRouteParams,
   parsePoolRouteParams,

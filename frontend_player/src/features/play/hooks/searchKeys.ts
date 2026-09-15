@@ -224,15 +224,17 @@ export const searchKeys = {
   forecast: (searchId: string, players: readonly SeatedPlayerId[]) =>
     [...searchKeys.forecasts(), searchId, [...players].sort()] as const,
   /**
-   * **Your outstanding yeses, per sport** — the figure the deck's ending sentence counts.
+   * **Your own yeses** — where each sport stands, which the deck's counter subtracts, and who
+   * they went to, which the pool's cards and the challenge screen look a person up in.
    *
    * The one key here that is not a search's, and it joins this factory rather than starting a
    * second file for the reason stated above: `searchKeys` is named for the record because
-   * every Play surface reads a search, and one count is not a second feature's worth of keys.
+   * every Play surface reads a search, and one read is not a second feature's worth of keys.
    *
    * It fed the segment's `Match me · 3` as well until that number was struck for reading as a
-   * count of waiting cards; what is left is one reader, on the deck, and the read stays exactly
-   * as it was — a yes moves it, and the sentence it is printed in is what makes it answerable.
+   * count of waiting cards. Three readers now — the deck, the pool and, through Play's surface,
+   * the challenge screen — over **one entry**, `select`ed two ways (`hooks/useInterest.ts`), and
+   * the read stays exactly as it was: a yes moves it, on its own reply (ADR-0169 §8).
    *
    * **It is deliberately not under `RANKED_LIST_QUERY_OPTIONS`.** It is a number rather than
    * an ordering, so nothing reorders under a finger when it moves — and it is the one figure

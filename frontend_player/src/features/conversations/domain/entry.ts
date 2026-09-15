@@ -17,11 +17,12 @@
  * **The gaplessness is the server's promise and nothing here depends on it**: no reader infers
  * loss from a gap, so there is no rule in this file about one.
  *
- * ## Eight codes, and the two the values decide
+ * ## Nine codes, the two the values decide, and the one a room is born with
  *
  * The sentences are [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §23 and
  * live in `components/conversationPresentation.ts`; what is here is the vocabulary and the
- * narrowing. Two of the eight are a code **plus** a value, and one is a code and nothing else:
+ * narrowing. Two of the nine are a code **plus** a value, one is a code and nothing else, and
+ * one names nobody at all:
  *
  * - **A seat leaving is one code with the answer as a value.** *That seat is open again* is the
  *   same news each way, so the facts stay apart in `values.departure` rather than in a second
@@ -40,6 +41,13 @@
  *   and the first thing to disagree with the slot line above it after a later move. There is no
  *   unlocked code — the lock freezes nothing, and a slot moved afterwards keeps it and writes its
  *   own line.
+ * - **`SIDE_FORMED` is the one line a room is *born* with, and only a doubles room**
+ *   ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ *   §8). Two yeses that met in a doubles sport seat both people on one side with a whole side
+ *   still to fill, and this says so at `seq` 1. It carries no values and **no actor** — it is
+ *   about both people on the side and names neither — so `actorId` is absent on it by the wire's
+ *   own promise, and the sentence never reaches for one. A singles mutual's room carries no such
+ *   line; the client draws what the stream holds and infers nothing from the sport.
  *
  * ## The day is a calendar date, and that is what makes it zone-free
  *
@@ -58,7 +66,7 @@
 import { platformDay, weekdayOf } from '@/shared/date/platformZone';
 import type { Weekday } from '@/shared/vocabulary/week';
 
-/** The eight a system line can be. §23, and a code outside them is one this build cannot read. */
+/** The nine a system line can be. §23, and a code outside them is one this build cannot read. */
 export const SYSTEM_LINE_CODES = [
   'SEAT_ACCEPTED',
   'SEATS_INVITED',
@@ -68,6 +76,7 @@ export const SYSTEM_LINE_CODES = [
   'DAY_RECORDED',
   'HOUR_RECORDED',
   'PLAN_LOCKED',
+  'SIDE_FORMED',
 ] as const;
 
 export type SystemLineCode = (typeof SYSTEM_LINE_CODES)[number];

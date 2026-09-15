@@ -21,13 +21,15 @@ import {
 } from './entry';
 
 describe('the code', () => {
-  it('reads all eight, and nothing else', () => {
+  it('reads all nine, and nothing else', () => {
     for (const code of SYSTEM_LINE_CODES) {
       expect(toSystemLineCode(code)).toBe(code);
     }
 
-    expect(SYSTEM_LINE_CODES).toHaveLength(8);
+    expect(SYSTEM_LINE_CODES).toHaveLength(9);
     expect(toSystemLineCode('PLAN_LOCKED')).toBe('PLAN_LOCKED');
+    // The one line a room is born with, and only a doubles room (ADR-0169 §8).
+    expect(toSystemLineCode('SIDE_FORMED')).toBe('SIDE_FORMED');
     expect(toSystemLineCode('GAME_ON')).toBeUndefined();
     expect(toSystemLineCode('PLAN_UNLOCKED')).toBeUndefined();
     expect(toSystemLineCode('')).toBeUndefined();

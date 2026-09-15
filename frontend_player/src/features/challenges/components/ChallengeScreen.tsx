@@ -108,6 +108,19 @@
  * about one person* — so it is the screen's line and not the card's, and a doubles court states
  * it once instead of three times. What is genuinely per pairing stays on the card: the Fit, the
  * distance, the reasons, the concern and what is at stake.
+ *
+ * ## An invitation a swipe produced says so, under the organiser's card
+ *
+ * *You said yes to Karol on Players* — one line, drawn exactly when the organiser is in the
+ * reader's own outgoing list for this challenge's sport
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8). It is the reader's **own act** and nothing else: ADR-0143's refusal to tell an invitee
+ * *why the engine picked them* is untouched, because Ania saying yes to Karol is a fact she
+ * already holds. The list is Play's read (`useOutgoingInterest`, the deck's own query, through
+ * Play's surface) and the rule is Play's (`saidYesTo`); nothing here waits for it — the card is
+ * drawn without the line until the list lands and gains it without moving. Under the organiser's
+ * card and no other seat's, so a doubles court with a card per person carries it once; the
+ * organiser never reads it about themselves, because nobody is in their own outgoing list.
  */
 
 import { useState } from 'react';
@@ -119,7 +132,9 @@ import {
   balanceReading,
   forecastAssumption,
   forecastHeading,
+  saidYesTo,
   useFillChallengeSeats,
+  useOutgoingInterest,
 } from '@/features/play/types';
 import { CONVERSATION_ROUTE, OPEN_THE_CHAT, useChatDoor } from '@/features/conversations/types';
 import { sportLabel } from '@/features/onboarding/types';
@@ -129,10 +144,12 @@ import { offlineMessage, recoveryMessage, type AppError } from '@/shared/errors'
 
 import { useIsOnline } from '@/shared/lib/platform';
 import { durationLeft } from '@/shared/formatting/durations';
+import { playerName } from '@/shared/formatting/playerName';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import { Button, Note, theme } from '@/shared/ui';
 
 import { actRefusal } from '../domain/actRefusal';
+import { seatName } from '../domain/challenge';
 import { fillRoute, yesRoute } from '../schemas/routeParams';
 import {
   acceptedPlayers,
@@ -154,6 +171,7 @@ import {
   NOT_THIS_TIME,
   NO_CHALLENGE_HERE,
   pairingAbsenceLine,
+  saidYesOnPlayersLine,
 } from './challengeDetailPresentation';
 import {
   CHALLENGE_SCREEN_TITLE,
@@ -227,6 +245,14 @@ function Arrangement({
    * (ADR-0167 §1), and this door is the one drawn on every later visit.
    */
   const chat = useChatDoor(detail.challengeId);
+
+  /**
+   * **An invitation a swipe produced says so** (ADR-0169 §8): the reader's own outgoing yeses,
+   * for the one line under the organiser's card. Read and never waited for — the card is drawn
+   * without the line until the list lands, and gains it without moving.
+   */
+  const outgoing = useOutgoingInterest();
+  const saidYesToOrganiser = saidYesTo(outgoing.data, detail.sport, detail.organiserId);
 
   /**
    * Which of the two is in flight, so the pressed control is the one that goes busy.
@@ -600,6 +626,15 @@ function Arrangement({
                     card={seat.card}
                     seats={detail.seats.length}
                   />,
+                  /* Under the organiser's card and no other: the line is about the reader's
+                     yes to the person who asked, and a doubles court draws a card per seat. */
+                  ...(saidYesToOrganiser && seat.playerId === detail.organiserId
+                    ? [
+                        <Text key={`seat-${at}-said-yes`} style={s.line}>
+                          {saidYesOnPlayersLine(playerName(seatName(seat)))}
+                        </Text>,
+                      ]
+                    : []),
                 ],
           )
         : null}

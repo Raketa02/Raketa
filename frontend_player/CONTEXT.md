@@ -543,22 +543,40 @@ draws it.
   _Best fit_ is withheld precisely when the returned order already is best-fit order, so a row
   drawn from the server's list alone would make _Closest_ a one-way door. _Avoid_: a hardcoded
   row of four, which is three-quarters a lie today; deriving offerability from the rows.
-- **The pin** — the pool's one reordering that is **not** a comparator: somebody with a live yes
-  towards the searcher (`inclusion_reason == INTEREST_LIFT`) sits first **in the served order
-  only**, whatever they scored, and drops into their honest place the moment any chip is tapped.
-  It is **not** the `+12` #231 struck, and the falsifier is the printed number — a bonus is
-  arithmetic on a published figure, changes what _best_ means silently and survives every
-  re-sort, where a pin changes a **position**, prints the number the wire served, names itself
-  on the card it moved, and releases. _Avoid_: calling it a boost or a bonus; adding anything to
-  `fit` on this side.
+- ~~**The pin**~~ — **struck**
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). It
+  was the pool's one reordering that was not a comparator: somebody with a live yes towards the
+  searcher sat first in the served order only, whatever they scored, and released on any chip.
+  It touched no number — which was why it was not the `+12` #231 struck, and that refusal still
+  stands — and it still put a 51 above thirty people at 80 on a list about who fits. _A yes
+  informs; it never takes over_: the engine's `+14` nudge on the liker's rank key is where they
+  sit, and the served order is the order. _Avoid_: lifting anybody client-side for any reason;
+  adding anything to `fit` on this side; reading the **[interest tags](#the-play-tab)** as a
+  position.
+- **Interest tags** — the two tags a yes between the reader and the person on a card earns,
+  drawn on **both** list cards — beside the handle on the competitive card's identity row, under
+  the name on the social card's `CardHead` where its sentence used to be — and never on the deck
+  card (ADR-0169 §8). **Wants to play you** is volt, bound to the row's admitting code
+  (`inclusion_reason == INTEREST_LIFT`) and worded by its liveness twin, and the
+  **[marked card](#glossary--design-system-terms)**'s green border travels with that word alone.
+  **You said yes** is `base`, the plain pill, on somebody in the reader's **own** `GET /interest`
+  outgoing list for the sport on screen — `saidYesTo`, client-side, no code and no nudge — and it
+  is deliberately not volt, because volt is _they want you_. At most one tag on a card: either
+  interest tag over the coral **best match**, because a fact about a person outranks a fact
+  about a list; both interest facts true is a mutual and a mutual is not on the list, and should
+  one ever be, _Wants to play you_ wins. The read is the deck's, held once and `select`ed two
+  ways (`useOutstandingInterest`, `useOutgoingInterest`), and a deck tap moves the list on its
+  own reply. _Avoid_: "liked you" / "you liked them"; a third tag for _nothing in particular_;
+  a border on _You said yes_; drawing the outgoing list as a list anywhere.
 - **Best match tag** — the coral tag on the row with the **highest ✦ on screen** — one card or
   none, the server-first row on a tie. It is keyed to **the ordering in force** rather than to a
   tapped chip, because _Best fit_ is withheld exactly when the served order already is fit
   order; it is hidden under _Closest_, _Evenest_ and _Most reliable_; and where it and the
-  **[interest tag](#glossary--design-system-terms)** fall on one card the interest tag replaces
-  it. It is the competitive card's alone, because that is the card with a tag slot beside the
-  handle. _Avoid_: handing it to the runner-up when the top row is taken; reading _Best fit_ as
-  a threshold — it is a **sort**, and it hides nobody.
+  **[interest tags](#the-play-tab)** fall on one card the interest tag replaces it. It is the
+  competitive card's alone, because that is the card with a tag slot beside the handle; the
+  social card draws the two interest tags and no _best match_. _Avoid_: handing it to the
+  runner-up when the top row is taken; reading _Best fit_ as a threshold — it is a **sort**, and
+  it hides nobody.
 - **Pending seat replacement** — **the seat the pool was opened against**, held route-locally
   and discharged by the first add: where that seat is occupied the add is a **replacement**, and
   the screen names whom it replaces before it happens. It **needs no clearing rule**, because
@@ -582,6 +600,9 @@ draws it.
   struck because a number in that position reads as _how many cards are waiting_. The prototype
   counted people who had waved at _you_; that count exists now, as **want to play you**, and it
   is a different number on a different envelope.
+  The same read carries **who** the yeses went to, as ids per sport and nothing else, for the
+  **[interest tags](#the-play-tab)** and the challenge screen's invitee's line; the mutual list
+  stops at the mapper.
   _Avoid_: "Match me count" — the segment is gone, and carried no number while it stood;
   "unread", "inbox" and "badge" —
   there is no inbox and the bar carries no badge;
@@ -719,6 +740,20 @@ what this client had to invent to draw the room
   server's, and the phone's clock is the value the whole feature refuses. _Avoid_: "pending
   message" (the send is the one act here that is _not_ pending), and giving one a `seq` — the
   sequence is the server's and inventing a place in it is a claim, not a placeholder.
+- **The side line** — _You two are a side. Fill the seats to find your opponents._, the one
+  system line a room is **born** with, and only a doubles room: `SIDE_FORMED` at `seq` 1, the
+  ninth code, drawn as the other eight are
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). It
+  names nobody — its `actor_id` is `null`, it is about both people on the side and addressed to
+  them — and which rooms carry it is the server's; the client infers nothing from the sport.
+  _Avoid_: "welcome message", "Matched!" in the room (the yes screen's word, never the stream's);
+  drawing it for a tennis mutual.
+- **The invitee's line** — _You said yes to {name} on Players_, one line under the organiser's
+  card on the challenge screen, drawn exactly when the organiser is in the reader's own outgoing
+  list for the challenge's sport (ADR-0169 §8). Client-side off the deck's read, the reader's
+  **own act**, and nothing about why the engine picked them, which ADR-0143 still refuses to say.
+  _Avoid_: "they matched you" — a challenge is not a mutual; drawing it under any seat but the
+  organiser's.
 - **The platform day** — which calendar day an instant falls on **in `Europe/Warsaw`**, the one
   zone this platform arranges in. It is what the **day separator** is computed from, and the
   reason is one sentence: a device zone would put two people in one room on two different days.
@@ -1173,8 +1208,9 @@ comment and a commit message all use the same word.
   control**: pressed (`coral`) and selected (`ink`) are things the reader has done to the card,
   where **marked** (`voltStroke`, 1pt) is a standing fact about whoever is drawn on it. The
   press still wins over it, it announces nothing, and it is **never the only cue** — a caller
-  that draws it also draws the word. Today its one caller is the competitive candidate card,
-  bound to the tag being drawn rather than to the code beneath it.
+  that draws it also draws the word. Its callers are the two list cards, bound to the _Wants to
+  play you_ tag being drawn — the tag's kind, never its colour or the code beneath it — so the
+  reader's own _You said yes_, a plain tag, draws no outline (ADR-0169 §8).
 - **Eyebrow vs form label** — an **eyebrow** labels a region you are _reading_; a **form
   label** labels a control you are about to _operate_. Not interchangeable.
 - **Slot square** — the day / time / hour / range selectors, sharing a four-state

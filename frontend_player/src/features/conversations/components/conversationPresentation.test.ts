@@ -47,7 +47,7 @@ function said(over: Partial<SystemLine> = {}): string {
   return systemLineSentence(line(over), MEMBERS, 'one-line');
 }
 
-describe('the eight sentences', () => {
+describe('the nine sentences', () => {
   it('names an acceptance, an invitation and a game that was played', () => {
     expect(said({ code: 'SEAT_ACCEPTED' })).toBe('tomek.p is in');
     expect(said({ code: 'SEATS_INVITED', values: { count: '2' } })).toBe('tomek.p asked 2 more');
@@ -92,6 +92,20 @@ describe('the eight sentences', () => {
     );
   });
 
+  /**
+   * The one line a room is *born* with, and only a doubles room: two yeses that met in a doubles
+   * sport seat both people on one side with a whole side still to fill
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §8). It names nobody — it is about both people on the side — so the sentence is whole with
+   * no actor and no value, and an actor the wire happens to send is not read.
+   */
+  it('says the two are a side, naming nobody and quoting nothing', () => {
+    const side = 'You two are a side. Fill the seats to find your opponents.';
+
+    expect(said({ code: 'SIDE_FORMED', actorId: undefined })).toBe(side);
+    expect(said({ code: 'SIDE_FORMED', values: { value: 'x' } })).toBe(side);
+  });
+
   /** There is no *Game on* line: a derived standing is never announced. */
   it('says nothing anywhere about the line-up being complete', () => {
     const everything = [
@@ -103,6 +117,7 @@ describe('the eight sentences', () => {
       'DAY_RECORDED',
       'HOUR_RECORDED',
       'PLAN_LOCKED',
+      'SIDE_FORMED',
     ] as const;
 
     for (const code of everything) {
