@@ -21,10 +21,13 @@
  * mock has none. Then the wash, and on it: the **name** in the card's one ~24pt role beside the
  * existing **Fit pill**; the **meta line** — *In your area · 2 km · around this week*, each
  * clause only where it is true; the **intro** in quotes, where they wrote one; up to six
- * **tags**, the shared ones first and volt with *· you too*; **four tiles**, always four, with a
- * dash where a number is absent; and the **hint line**. **No** *They already said yes to you*
- * and **no** *Wants to play you* tag: the liker is unmarked and placed by the nudge (§4), and
- * the count of them is the chip's.
+ * **tags**, the shared ones first and volt with *· you too*; and **three tiles**, always three,
+ * with a dash where a number is absent. **No** *They already said yes to you* and **no** *Wants
+ * to play you* tag: the liker is unmarked and placed by the nudge (§4), and the count of them is
+ * the chip's. **No hint line** under the tiles either, since 2026-09-15: the mock's *Drag the
+ * card, or use the buttons · long-press for the full record* was a sentence of instructions on
+ * every card, and the three buttons under the stage — the **i** among them — are the paths it
+ * named, standing where a first-time thumb finds them.
  *
  * ## The wash is a ramp, and its worst case is stated at the name
  *
@@ -64,7 +67,6 @@ import { FitPill, OnCourtMark, PlayerPhoto, SocialTagRow, theme } from '@/shared
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Term } from '../../domain/vocabulary';
-import { DECK_HINT_LINE } from '../deckCardPresentation';
 
 import { DeckTileRow } from './DeckTile';
 import { deckCardFacts } from './deckCardFacts';
@@ -168,8 +170,6 @@ export function DeckCard({ candidate, envelope, sportName, onLongPress, bodyRef 
         <SocialTagRow row={facts.tags} onDark />
 
         <DeckTileRow tiles={facts.tiles} />
-
-        <Text style={s.hint}>{DECK_HINT_LINE}</Text>
       </View>
     </>
   );
@@ -258,12 +258,6 @@ const s = StyleSheet.create({
   intro: {
     ...theme.type.rlLabel,
     color: theme.color.surface,
-    ...theme.shadow.textOnMedia,
-  },
-  hint: {
-    ...theme.type.tiny,
-    color: theme.color.onDarkTiny,
-    textAlign: 'center',
     ...theme.shadow.textOnMedia,
   },
 });

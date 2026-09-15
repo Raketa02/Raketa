@@ -1,5 +1,5 @@
 /**
- * The deck card's two readings of the Social tag overlap — **shared first**, and **a count**.
+ * The deck card's one reading of the Social tag overlap — **shared first**.
  *
  * `socialTagOverlap` answers *which of their tags the reader also chose* off the engine's own
  * `matched[]`, and it keeps the person's order by default: on the competitive card the row is
@@ -12,14 +12,12 @@
  * applied by `socialTagOverlap` **before its cap** when asked for it, rather than sorted in a
  * component after the cap has already chosen.
  *
- * The count is the *Shared tags* tile's, and it keeps the overlap's three spellings of absence
- * apart in the one register a tile has: **nought is a claim** — compared, nothing matched — and
- * *we do not know* is a dash. A tile printing `0` for an unread comparison would be the card
- * making a claim out of its own ignorance, which is `socialTagOverlap`'s third spelling arriving
- * through a number.
+ * There was a second reading, a **count** for a *Shared tags* tile under the row. The tile went
+ * on 2026-09-15 — the row it counted is directly above it, leading with the shared ones — and
+ * the count went with it; the overlap's three spellings of absence stay the row's own.
  */
 
-import type { SharedTag, SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
+import type { SharedTag } from '@/shared/vocabulary/socialTagOverlap';
 
 /**
  * The marked tags with the shared ones first, and the rest in the person's own order.
@@ -30,17 +28,4 @@ import type { SharedTag, SocialTagOverlap } from '@/shared/vocabulary/socialTagO
  */
 export function sharedFirst(tags: readonly SharedTag[]): readonly SharedTag[] {
   return [...tags.filter((tag) => tag.shared), ...tags.filter((tag) => !tag.shared)];
-}
-
-/** How many tags the two share — or `undefined` where the platform does not know. */
-export function sharedTagCount(row: SocialTagOverlap): number | undefined {
-  switch (row.kind) {
-    case 'shared':
-      return row.tags.filter((tag) => tag.shared).length;
-    case 'none-in-common':
-      return 0;
-    case 'unknown':
-    case 'hidden':
-      return undefined;
-  }
 }

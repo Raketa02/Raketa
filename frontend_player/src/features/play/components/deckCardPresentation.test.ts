@@ -1,15 +1,12 @@
 /**
  * The deck card's own copy, held to the decisions in it: the third clause is a liveness code's
- * existing words and is drawn only on the code, the tiles are always four with a dash and never a
- * nought for an absence, the intro is the person's line inside the card's marks, and the 🎾 is a
- * mark and not a word.
+ * existing words and is drawn only on the code, the tiles are always three with a dash and never
+ * a nought for an absence, and the intro is the person's line inside the card's marks.
  */
 
 import { livenessLine } from './livenessPresentation';
 import {
-  ACCEPT_GLYPH,
   AROUND_THIS_WEEK_CLAUSE,
-  DECK_HINT_LINE,
   NO_VALUE,
   deckMetaLine,
   deckTileClauses,
@@ -68,59 +65,50 @@ describe('the intro', () => {
   });
 });
 
-describe('the four tiles', () => {
+describe('the three tiles', () => {
   it('prints every figure in its own format, in one order', () => {
     expect(
-      deckTiles({ balancePct: 72.4, playerScore: 88, sharedSlots: 9, sharedTags: 1 }).map(
-        (tile) => [tile.label, tile.value],
-      ),
+      deckTiles({ balancePct: 72.4, playerScore: 88, sharedSlots: 9 }).map((tile) => [
+        tile.label,
+        tile.value,
+      ]),
     ).toEqual([
       ['Balance', '72%'],
       ['Reliability', '88'],
       ['Overlap', '9 slots'],
-      ['Shared tags', '1'],
     ]);
+  });
+
+  /** The row of tags above the tiles already leads with the shared ones; a count of them went. */
+  it('has no Shared tags tile', () => {
+    expect(deckTiles({}).map((tile) => tile.label)).not.toContain('Shared tags');
   });
 
   it('counts one slot without an s', () => {
     expect(deckTiles({ sharedSlots: 1 })[2]?.value).toBe('1 slot');
   });
 
-  /** The row stays four: an absent number is a dash in place, never a missing tile. */
-  it('is always four, with a dash where a number is absent', () => {
+  /** The row stays three: an absent number is a dash in place, never a missing tile. */
+  it('is always three, with a dash where a number is absent', () => {
     const tiles = deckTiles({});
 
-    expect(tiles).toHaveLength(4);
-    expect(tiles.map((tile) => tile.value)).toEqual([NO_VALUE, NO_VALUE, NO_VALUE, NO_VALUE]);
+    expect(tiles).toHaveLength(3);
+    expect(tiles.map((tile) => tile.value)).toEqual([NO_VALUE, NO_VALUE, NO_VALUE]);
     expect(NO_VALUE).toBe('—');
   });
 
   /** A nought is a figure and a dash is not: a measured zero prints, an absence does not. */
   it('prints a measured nought rather than a dash', () => {
-    const tiles = deckTiles({ sharedSlots: 0, sharedTags: 0 });
+    const tiles = deckTiles({ sharedSlots: 0, playerScore: 0 });
 
     expect(tiles[2]?.value).toBe('0 slots');
-    expect(tiles[3]?.value).toBe('0');
+    expect(tiles[1]?.value).toBe('0');
   });
 
   it('speaks the tiles that have a figure and skips the dashes', () => {
-    expect(deckTileClauses(deckTiles({ balancePct: 72, sharedTags: 2 }))).toEqual([
+    expect(deckTileClauses(deckTiles({ balancePct: 72, sharedSlots: 2 }))).toEqual([
       'Balance 72%',
-      'Shared tags 2',
+      'Overlap 2 slots',
     ]);
-  });
-});
-
-describe('the hint line', () => {
-  it('names the drag, the buttons and the long press, in the mock’s words', () => {
-    expect(DECK_HINT_LINE).toBe(
-      'Drag the card, or use the buttons · long-press for the full record',
-    );
-  });
-});
-
-describe('the yes button’s mark', () => {
-  it('is the 🎾 alone, with no word for a screen reader to read out', () => {
-    expect(ACCEPT_GLYPH).toBe('🎾');
   });
 });

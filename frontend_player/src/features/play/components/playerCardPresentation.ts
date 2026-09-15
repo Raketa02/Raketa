@@ -204,7 +204,7 @@ export const CANDIDATE_ACTION_WORD: Readonly<Record<CandidateAction, string>> = 
  * The deck's two answers, as words.
  *
  * They are the **stamps'** words now rather than two buttons' labels: the deck's buttons draw
- * marks — Feather's ✕, the 🎾 (`ACCEPT_GLYPH`, drawn and never spoken) — and the words appear
+ * marks — Feather's ✕, the drawn tennis ball (`DeckBall`, never spoken) — and the words appear
  * on the card under the thumb as the drag reveals them (ADR-0169 §3). `deckAnswerLabels`
  * composes the spoken names from the same two, so a stamp and the name a listener hears cannot
  * drift apart.

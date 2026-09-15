@@ -19,7 +19,8 @@ import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Evidence, ScoredTerm } from '../../domain/evidence';
 import type { Term } from '../../domain/vocabulary';
 import { deckAnswerLabels } from '../accessibilityPresentation';
-import { ACCEPT_GLYPH, DECK_HINT_LINE, NO_VALUE } from '../deckCardPresentation';
+import { BALL_PATHS, BALL_STROKE } from '../DeckBall';
+import { NO_VALUE } from '../deckCardPresentation';
 import { DeckAnswers } from '../DeckAnswers';
 import { livenessLine, inclusionLine } from '../livenessPresentation';
 
@@ -156,7 +157,7 @@ const styleOf = (text: ReturnType<typeof screen.getByText>): TextStyle =>
   Object.assign({}, ...([text.props.style].flat(3) as TextStyle[]));
 
 describe('what the deck card draws, in the mock’s order', () => {
-  it('draws the level, the sport, the mark, the name, the meta line, the intro, the tags, four tiles and the hint', () => {
+  it('draws the level, the sport, the mark, the name, the meta line, the intro, the tags and three tiles', () => {
     draw();
 
     const texts = textsInOrder();
@@ -175,14 +176,20 @@ describe('what the deck card draws, in the mock’s order', () => {
       '88',
       'Overlap',
       '9 slots',
-      'Shared tags',
-      '1',
-      DECK_HINT_LINE,
     ];
     const seen = order.map((line) => texts.indexOf(line));
 
     expect(seen.every((at) => at >= 0)).toBe(true);
     expect([...seen].sort((a, b) => a - b)).toEqual(seen);
+  });
+
+  /** The tag row above the tiles already leads with the shared ones, and the hint was instructions. */
+  it('draws no Shared tags tile and no hint line under the tiles', () => {
+    draw();
+
+    expect(screen.queryByText('Shared tags')).toBeNull();
+    expect(screen.queryByText(/Drag the card|long-press/)).toBeNull();
+    expect(textsInOrder().at(-1)).toBe('9 slots');
   });
 
   it('prints the level in the existing 40pt figure and the name in the card’s own role', () => {
@@ -279,8 +286,8 @@ describe('the tags', () => {
   });
 });
 
-describe('the four tiles', () => {
-  it('prints a dash for an absent number and keeps the row at four', () => {
+describe('the three tiles', () => {
+  it('prints a dash for an absent number and keeps the row at three', () => {
     draw(
       { terms: TERMS.filter((row) => row.term !== 'PREDICTED_BALANCE') },
       { playerScore: undefined },
@@ -290,7 +297,7 @@ describe('the four tiles', () => {
     expect(screen.getByText('Balance')).toBeTruthy();
     expect(screen.getByText('Reliability')).toBeTruthy();
     expect(screen.getByText('9 slots')).toBeTruthy();
-    // The dashes say nothing to a listener; the two figures do.
+    // The dashes say nothing to a listener; the one figure does.
     expect(spokenBody()).not.toContain('Balance');
     expect(spokenBody()).toContain('Overlap 9 slots');
   });
@@ -300,7 +307,8 @@ describe('the four tiles', () => {
 
     expect(spokenBody()).toContain('Balance 72%');
     expect(spokenBody()).toContain('Reliability 88');
-    expect(spokenBody()).toContain('Shared tags 1');
+    expect(spokenBody()).toContain('Overlap 9 slots');
+    expect(spokenBody()).not.toContain('Shared tags');
   });
 });
 
@@ -354,7 +362,7 @@ describe('the one element', () => {
 });
 
 describe('the three buttons under the stage', () => {
-  it('are named for the person, and the 🎾 stays out of the spoken name', () => {
+  it('are named for the person, and the ball stays out of the spoken name', () => {
     render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} />);
 
     const labels = deckAnswerLabels('Filip N.');
@@ -362,8 +370,39 @@ describe('the three buttons under the stage', () => {
     expect(screen.getByRole('button', { name: labels.accept })).toBeTruthy();
     expect(screen.getByRole('button', { name: labels.record })).toBeTruthy();
     expect(labels.record).toBe('Filip N.’s record');
-    expect(labels.accept).not.toMatch(/🎾/);
-    expect(screen.getByText(ACCEPT_GLYPH, { includeHiddenElements: true })).toBeTruthy();
+    expect(labels.accept).not.toMatch(/🎾|ball/);
+    expect(screen.queryByText('🎾', { includeHiddenElements: true })).toBeNull();
+  });
+
+  /** A drawing and not an emoji: the platform's ball was its own colours, and clipped above. */
+  it('draw the yes’s ball as a white outline with its two seams, in one stroke weight', () => {
+    render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} />);
+
+    const drawn = screen.UNSAFE_getAllByType(Path).map((path) => path.props);
+    const ball = Object.values(BALL_PATHS).map((d) => drawn.find((path) => path.d === d));
+
+    expect(ball).toHaveLength(3);
+    expect(ball.every((path) => path !== undefined)).toBe(true);
+    expect(new Set(ball.map((path) => path?.stroke))).toEqual(new Set([BALL_STROKE]));
+    expect(new Set(ball.map((path) => path?.strokeWidth)).size).toBe(1);
+    expect(ball.every((path) => path?.fill === 'none')).toBe(true);
+    expect(BALL_STROKE).toBe(theme.color.surface);
+  });
+
+  /** The seams are arcs of the ball's own circle, and each begins and ends on it. */
+  it('draw seams that meet the ball’s outline', () => {
+    const numbers = (d: string) => d.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    const [x0, y0, r] = numbers(BALL_PATHS.ball);
+    const centre = { x: (x0 ?? 0) + (r ?? 0), y: y0 ?? 0 };
+    const onTheBall = (x: number, y: number) =>
+      Math.abs(Math.hypot(x - centre.x, y - centre.y) - (r ?? 0)) < 0.02;
+
+    for (const seam of [BALL_PATHS.leftSeam, BALL_PATHS.rightSeam]) {
+      const [sx, sy, sr, , , , , ex, ey] = numbers(seam);
+      expect(sr).toBe(r);
+      expect(onTheBall(sx ?? 0, sy ?? 0)).toBe(true);
+      expect(onTheBall(ex ?? 0, ey ?? 0)).toBe(true);
+    }
   });
 
   it('are circles at the mock’s three sizes, the yes the largest', () => {

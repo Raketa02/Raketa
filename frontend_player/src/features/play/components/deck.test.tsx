@@ -1184,7 +1184,7 @@ describe('the record', () => {
     expect(await screen.findByRole('button', { name: fitRowLabel(78) })).toBeTruthy();
   });
 
-  it('opens the same sheet on a long press, which is what the hint line says', async () => {
+  it('opens the same sheet on a long press — the i’s twin, with no hint line to say so', async () => {
     await openDeck();
     fireEvent(await screen.findByLabelText(MAREK_CARD), 'longPress');
 

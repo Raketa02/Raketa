@@ -6,14 +6,14 @@
  * against the rows drawn, and speaks the card in §20.3's order with the argument last. The deck
  * card draws no argument
  * ([ADR-0169](../../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
- * §7) — the level, the mark, the name, the meta line, the Fit, the intro, the tags and four
+ * §7) — the level, the mark, the name, the meta line, the Fit, the intro, the tags and three
  * tiles are the whole card — so its facts are a different set read once, and its spoken name is
  * composed from the same values that are drawn. Read twice — once for the body and once for the
  * label — the two could disagree without anything failing.
  *
  * **It holds no words and no rules.** The words are `deckCardPresentation`'s and
- * `playerCardPresentation`'s; the rules are `domain/onCourtMark`'s, `domain/socialTagOverlap`'s
- * and `domain/deckTags`'. What is here is the wiring between them.
+ * `playerCardPresentation`'s; the rules are `domain/onCourtMark`'s and `domain/socialTagOverlap`'s
+ * (which applies `domain/deckTags`' order). What is here is the wiring between them.
  */
 
 import { playerName } from '@/shared/formatting/playerName';
@@ -21,7 +21,6 @@ import { ON_COURT_CLAUSE } from '@/shared/ui';
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
-import { sharedTagCount } from '../../domain/deckTags';
 import { wearsOnCourtMark } from '../../domain/onCourtMark';
 import { socialTagOverlap } from '../../domain/socialTagOverlap';
 import { deckCardLabel } from '../accessibilityPresentation';
@@ -48,7 +47,7 @@ export interface DeckCardFacts {
   readonly intro: string | undefined;
   /** The Social tag overlap with the shared tags first. */
   readonly tags: SocialTagOverlap;
-  /** Always four. */
+  /** Always three. */
   readonly tiles: readonly DeckTile[];
   /** The card body's spoken name. */
   readonly label: string;
@@ -73,7 +72,6 @@ export function deckCardFacts(candidate: Candidate, envelope: SearchEnvelope): D
     balancePct: evidenceOf(candidate, 'predicted_balance')?.pct,
     playerScore: candidate.card.playerScore,
     sharedSlots: evidenceOf(candidate, 'availability_overlap')?.sharedCount,
-    sharedTags: sharedTagCount(tags),
   });
 
   return {

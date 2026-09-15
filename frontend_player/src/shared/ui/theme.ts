@@ -703,13 +703,18 @@ const size = {
    *  than stops; `tilt` is the most a card turns under the thumb, reached at twice the commit
    *  distance and measured off the two swipe mocks. */
   deckSwipe: { commit: 95, intent: SWIPE_INTENT, flight: 480, tilt: 12 },
-  /** THE DECK'S THREE ROUND BUTTONS — ✕, i, 🎾 — measured off the mock at 1×: 54, 42 and 66.
-   *  Circles rather than 6.1's 10pt rectangle, through `Button`'s `pill` shape (4.2 as amended:
-   *  the third user, fenced to this row); the i is under 6.5's 44 and takes `hit.btn`. The
-   *  sizes say which of the three is which — the yes is the largest and coral, the pass a
+  /** THE DECK'S THREE ROUND BUTTONS — ✕, i, the ball — measured off the mock at 1×: 54, 42 and
+   *  66. Circles rather than 6.1's 10pt rectangle, through `Button`'s `pill` shape (4.2 as
+   *  amended: the third user, fenced to this row); the i is under 6.5's 44 and takes `hit.btn`.
+   *  The sizes say which of the three is which — the yes is the largest and coral, the pass a
    *  step smaller and white, the record smallest — which is the 1:2 ratio the two named
-   *  buttons used to carry, read as diameters. */
-  deckAnswer: { pass: 54, record: 42, accept: 66 },
+   *  buttons used to carry, read as diameters.
+   *
+   *  `ball` is the yes's mark's box: the tennis ball is DRAWN (`DeckBall.tsx`) since 2026-09-15,
+   *  where it was the 🎾 as text at `num.levelLarge`'s 26 — and clipped above, because an
+   *  emoji is taller than a line box the height of its font size. 26 is that footprint kept,
+   *  so the disc's proportion is still the mock's; not a new number. */
+  deckAnswer: { pass: 54, record: 42, accept: 66, ball: 26 },
   /** THE ON-COURT MARK'S TICK — a small vector check before the words, everywhere the mark is
    *  drawn (ADR-0169 §7, 7.15 as amended). NOT 6.8's 12 × 12: that box beside *ON COURT* at
    *  `type.tag` does not fit a 74pt panel (`onCourtMarkFit.test.ts`). The tick is sized as a

@@ -93,8 +93,8 @@ describe('the stamps', () => {
     expect(STAMP_WORDS.no).toBe('Not today');
   });
 
-  it('carry no glyph — the 🎾 is the button’s mark and never a word', () => {
-    expect(STAMP_WORDS.yes).not.toMatch(/🎾/);
+  it('carry no glyph — the ball is the button’s drawn mark and never a word', () => {
+    expect(STAMP_WORDS.yes).not.toMatch(/🎾|ball/);
   });
 });
 

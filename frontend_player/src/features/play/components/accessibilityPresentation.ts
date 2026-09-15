@@ -365,8 +365,9 @@ export interface DeckAnswerLabels {
 /**
  * `Not today, Marek` · `Let's play, Marek`.
  *
- * The 🎾 is hidden, per §E6 — *"otherwise it announces as 'tennis ball let's play'"* — and,
- * like the ✦, it is hidden by never entering the sentence rather than by a rule about glyphs.
+ * The ball is hidden, per §E6 — *"otherwise it announces as 'tennis ball let's play'"* — and,
+ * like the ✦, it is hidden by never entering the sentence rather than by a rule about glyphs:
+ * it is a drawing with no words in it (`DeckBall`).
  *
  * **There is no gesture to announce.** [#231](https://github.com/Raketa02/Raketa/issues/231)
  * §3 decided UI Open decision #9 against a swipe, so the deck's contract is two named buttons

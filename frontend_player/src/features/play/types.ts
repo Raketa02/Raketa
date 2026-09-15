@@ -507,13 +507,7 @@ export {
   seenEverybodyLine,
   wantToPlayYouChip,
 } from './components/deckPresentation';
-export {
-  ACCEPT_GLYPH,
-  DECK_HINT_LINE,
-  deckMetaLine,
-  deckTiles,
-  quotedIntro,
-} from './components/deckCardPresentation';
+export { deckMetaLine, deckTiles, quotedIntro } from './components/deckCardPresentation';
 export { poolDescription } from './components/searchPresentation';
 export {
   cardsLeft,

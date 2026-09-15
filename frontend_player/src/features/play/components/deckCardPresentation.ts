@@ -1,7 +1,7 @@
 /**
  * Everything the **deck card** says that the other two cards do not — the meta line's third
- * clause, the quoted intro, the four tiles, the hint line, the three buttons' visible marks,
- * and the spoken clauses a listener gets for the tiles.
+ * clause, the quoted intro, the three tiles, and the spoken clauses a listener gets for the
+ * tiles.
  *
  * §1's mechanism throughout — code → message, never message → message — and nothing here is a
  * template inlined in a component. The card's *shared* words stay where they were: the level
@@ -19,13 +19,19 @@
  * the reason list, lower-cased because it sits mid-line after a middle dot; the test holds the
  * two equal so a re-wording of one moves the other.
  *
- * ## Four tiles, always four, and a dash where a number is absent
+ * ## Three tiles, always three, and a dash where a number is absent
  *
- * *Balance · Reliability · Overlap · Shared tags* — the forecast, the Player Score, the shared
- * slots and the shared-tag count. A tile whose number is absent — the term stood down, the person
- * unwatched, the tags uncompared — prints **`—`** and the row stays four (§7): a row of three
- * would move the other three and say nothing about the fourth. The spoken clauses skip the dash,
- * because *Balance, dash* tells a listener nothing the drawn row does not already decline to.
+ * *Balance · Reliability · Overlap* — the forecast, the Player Score and the shared slots. A tile
+ * whose number is absent — the term stood down, the person unwatched — prints **`—`** and the row
+ * stays three (§7): a row of two would move the other two and say nothing about the third. The
+ * spoken clauses skip the dash, because *Balance, dash* tells a listener nothing the drawn row
+ * does not already decline to.
+ *
+ * §7 drew a fourth, *Shared tags*, counting the row of tags just above it. It went on
+ * 2026-09-15: the tag row already leads with the shared ones in volt and *· you too*, so the count
+ * was a number restating what the eye had just read, and a tile of the four that could say
+ * nothing the card had not said. The card keeps its three spellings of absence on the row
+ * itself (`socialTagOverlap`).
  *
  * *Reliability* and not *Player Score*, on the record sheet's own argument: beside a Level and a
  * Fit, *Score* is a fourth number a reader can take for a rating, and *reliability* is the one
@@ -86,17 +92,16 @@ export function quotedIntro(intro: string): string {
 /** What a tile prints where its number is absent. */
 export const NO_VALUE = '—';
 
-/** The four tiles, in the order they are drawn. */
-export type DeckTileKey = 'balance' | 'reliability' | 'overlap' | 'sharedTags';
+/** The three tiles, in the order they are drawn. */
+export type DeckTileKey = 'balance' | 'reliability' | 'overlap';
 
 export const DECK_TILE_LABEL = {
   balance: 'Balance',
   reliability: 'Reliability',
   overlap: 'Overlap',
-  sharedTags: 'Shared tags',
 } as const satisfies Readonly<Record<DeckTileKey, string>>;
 
-/** The four numbers, each **omitted** where the platform has none — never a nought for absent. */
+/** The three numbers, each **omitted** where the platform has none — never a nought for absent. */
 export interface DeckTileFacts {
   /** The forecast, `predicted_balance.pct` — absent where the term stood down. */
   readonly balancePct?: number;
@@ -104,8 +109,6 @@ export interface DeckTileFacts {
   readonly playerScore?: number;
   /** `availability_overlap.shared_count` — absent where the term stood down. */
   readonly sharedSlots?: number;
-  /** How many tags the two share — absent where the comparison was not made. */
-  readonly sharedTags?: number;
 }
 
 export interface DeckTile {
@@ -117,13 +120,12 @@ export interface DeckTile {
   readonly present: boolean;
 }
 
-/** Always four, in one order. */
+/** Always three, in one order. */
 export function deckTiles(facts: DeckTileFacts): readonly DeckTile[] {
   return [
     tile('balance', facts.balancePct, formatPercent),
     tile('reliability', facts.playerScore, String),
     tile('overlap', facts.sharedSlots, (slots) => counted(slots, 'slot', 'slots')),
-    tile('sharedTags', facts.sharedTags, String),
   ];
 }
 
@@ -144,20 +146,3 @@ function tile(
 export function deckTileClauses(tiles: readonly DeckTile[]): readonly string[] {
   return tiles.filter((t) => t.present).map((t) => `${t.label} ${t.value}`);
 }
-
-/**
- * The hint under the tiles — the mock's, and it names the two paths and the long press.
- *
- * Both halves are load-bearing: the drag is never the only path (§20.5's rule kept in its other
- * half), and the long press is what opens the record — the reading a card cannot fit.
- */
-export const DECK_HINT_LINE = 'Drag the card, or use the buttons · long-press for the full record';
-
-/**
- * The 🎾 — the yes button's visible mark, drawn and never spoken.
- *
- * The glyph is in the visible mark alone — `deckAnswerLabels` composes the spoken name without
- * it, per §E6: *"otherwise it announces as 'tennis ball let's play'"*. It is the same split the
- * fit pill's ✦ takes. The ✕ is Feather's and the *i* is a letter, so neither has a word here.
- */
-export const ACCEPT_GLYPH = '🎾';

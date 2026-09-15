@@ -1,12 +1,12 @@
 /**
- * The deck's three round buttons under the stage — **✕, i, 🎾** — the path that is never
+ * The deck's three round buttons under the stage — **✕, i, the ball** — the path that is never
  * removed ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
  * §3).
  *
  * The drag is the cheap path and these are the accessible one: VoiceOver and TalkBack consume
  * a drag before the stage sees it, so the buttons are how a listener answers, and §20.5's rule
- * is kept in its other half — *the drag is never the only path*. ✕ passes, 🎾 says yes, and **i**
- * opens the record sheet, which the long press on the card opens too.
+ * is kept in its other half — *the drag is never the only path*. ✕ passes, the ball says yes,
+ * and **i** opens the record sheet, which the long press on the card opens too.
  *
  * ## Circles, at the mock's three sizes
  *
@@ -25,10 +25,12 @@
  *
  * **Marks, not words.** The ✕ is Feather's `x` — the family the bar draws
  * ([ADR-0135](../../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)) —
- * the **i** is the information mark's own serif letter (5.4), and the 🎾 is the emoji the deck's
- * yes has always drawn. None of the three is spoken: each button carries the name
- * `deckAnswerLabels` composes for the person on the card, so a listener hears *Let's play,
- * Marek Z.* and never *tennis ball*.
+ * the **i** is the information mark's own serif letter (5.4), and the ball is **drawn**
+ * (`DeckBall`): a white outline with its two seams, at Feather's proportion, on the coral. It was the
+ * 🎾 emoji as text until 2026-09-15, which the platform substituted in its own colours and clipped
+ * at the top. None of the three is spoken: each button carries the name `deckAnswerLabels`
+ * composes for the person on the card, so a listener hears *Let's play, Marek Z.* and never
+ * *tennis ball*.
  *
  * **Coral on the yes, and only there.** §1.2's list is closed at six and the primary button is
  * on it; the yes is the deck's primary act and takes `primary`'s fill and press. The pass and
@@ -42,7 +44,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@/shared/ui';
 
 import { deckAnswerLabels } from './accessibilityPresentation';
-import { ACCEPT_GLYPH } from './deckCardPresentation';
+import { DeckBall } from './DeckBall';
 
 export interface DeckAnswersProps {
   /** §15's `playerName()` — the whole handle of the person on the card, for the three names. */
@@ -125,9 +127,7 @@ export function DeckAnswers({
           answering ? s.blocked : undefined,
         ]}
       >
-        <Text style={s.ball} accessibilityElementsHidden importantForAccessibility="no">
-          {ACCEPT_GLYPH}
-        </Text>
+        <DeckBall />
       </Pressable>
     </View>
   );
@@ -170,6 +170,4 @@ const s = StyleSheet.create({
     fontStyle: 'italic',
     color: theme.color.ink,
   },
-  // The emoji at the figure's size, so it fills the disc as the mock's does.
-  ball: { ...theme.num.levelLarge },
 });

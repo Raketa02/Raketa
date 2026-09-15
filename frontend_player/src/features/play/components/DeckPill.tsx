@@ -18,6 +18,12 @@
  * **Both announce as text.** A listener reaches the chip after the toggle and the counter after
  * the card, each a sentence about a number — and the chip is not drawn at all at nought, so
  * there is never an empty pill to land on.
+ *
+ * **Where it sits is its bed's decision, not the pill's.** The header's right slot pins the chip
+ * to the right and the counter's box centres it over the card's foot; the pill hugs its words in
+ * either. It carried an `alignSelf: 'flex-start'` of its own until 2026-09-15, and a child's
+ * `alignSelf` outranks its parent's `alignItems` — so the counter sat at the card's left edge
+ * while its box said *centre*.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -48,7 +54,6 @@ const s = StyleSheet.create({
     paddingHorizontal: theme.space.md,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
   },
   words: { ...theme.type.btn },
 });

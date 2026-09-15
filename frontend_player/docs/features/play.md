@@ -746,8 +746,8 @@ counter and a chip, two endings and Show them again**
 Filip's photograph edge to edge under a wash rising from the bottom — _2,60 · PADEL_ top-left in
 the existing 40pt figure, _✓ on court_ top-right, his name in the card's one 24pt role beside the
 existing Fit pill, _In your area · 2 km · around this week_, his intro in quotes, four tags of
-which the shared one leads in volt with _· you too_, four tiles, a hint line, and _8 left · 12
-yeses to give_ floating over the card's foot, with two real cards behind. **`DeckCard` is
+which the shared one leads in volt with _· you too_, three tiles, and _8 left · 12 yeses to
+give_ floating over the card's foot, with two real cards behind. **`DeckCard` is
 rewritten and makes no case**: no reason line, no concern, no _They already said yes to you_ and
 no _Wants to play you_ tag — the liker is unmarked and placed by the nudge (§4), and the count of
 them is the chip's. `deckCardFacts` reads the card once for both registers and
@@ -758,9 +758,9 @@ none (ADR-0170; the field crosses now, mapped and omitted where absent — and
 [#445](https://github.com/Raketa02/Raketa/issues/445) holds the shortlist and pool cards to
 never drawing it, drawn or spoken, whatever the card carries), the tags are
 `socialTagOverlap` re-ordered **shared first** by `domain/deckTags` so the volt one is never cut
-off, and the tiles are always four — _Balance_ from `predicted_balance.pct`, _Reliability_ the
-Player Score, _Overlap_ the shared-slot count, _Shared tags_ the count — with a dash where a
-number is absent, spoken only where it is not. The wash, the name role, the stamps, the pill
+off, and the tiles are always three — _Balance_ from `predicted_balance.pct`, _Reliability_ the
+Player Score, _Overlap_ the shared-slot count — with a dash where a number is absent, spoken only
+where it is not. The wash, the name role, the stamps, the pill
 radius, the three round buttons, the tiles and the tick are Part 16 rows and `theme.ts` values
 in the same commit, each fenced _for the deck card only_ except the tick, which changes the
 mark's drawing wherever `OnCourtMark` is drawn (`_shared.md`). **The intro is set upright**: the
@@ -798,6 +798,31 @@ retire**; `passedToast` and `interestToast` survive only as the spoken result of
 verbatim; a mutual naming a challenge is the yes screen as before, pushed by the mutation.
 `yesOutcome` decides between the three off the reply's own shape. `DECK_FOOTER` retires: the hint
 line on the card names the drag, the buttons and the long press.
+
+**The card says less, the counter sits where its box said, and the yes is a drawn ball**
+(2026-09-15, the author's look at the deck on a device). Four things off the first build.
+**The _Shared tags_ tile goes**, and the row is three: the tag row directly above it already leads
+with the shared ones in volt and _· you too_, so the count was a number restating what the eye
+had just read — `deckTiles` returns three, `sharedTagCount` and its three spellings of absence
+retire with the tile (the row keeps them), and the fourth key leaves the union so a tile with no
+words cannot come back by accident. **The hint line goes**: _Drag the card, or use the buttons ·
+long-press for the full record_ was a sentence of instructions on every card, and the three
+buttons under the stage — the **i** among them — are the paths it named, standing where a
+first-time thumb finds them; `DECK_HINT_LINE` leaves the public surface. **The counter is
+centred over the card's foot**, which its box always said (`alignItems: 'center'`) and the pill
+overrode: `DeckPill` carried an `alignSelf: 'flex-start'` of its own, and a child's `alignSelf`
+outranks its parent's `alignItems`, so the counter hugged the card's left edge — the pill now
+hugs its words and lets its bed place it, the header's right slot pinning the chip right as
+before. **The yes's mark is drawn** (`DeckBall`): the 🎾 was an emoji as text, whatever the
+platform substitutes in its own greens, and **clipped at the top** because a line box the height
+of the font size is shorter than an emoji — the one of the four seen on the device before the
+author asked. It is now a white outline with its two seams, computed in `Star.tsx`'s way, at
+Feather's proportion (2 in a 24 box) so it is as heavy for its size as the ✕, on 6.1 `primary`'s
+own white-on-`coralInk`; not volt for a tennis ball's sake, because colour is picked by meaning
+and never by appearance. Its box is `size.deckAnswer.ball`, the 26 the emoji had, so the disc's
+proportion is still the mock's. `deckCard.test.tsx` holds the seams to the ball's own circle.
+The ADR's §7 still reads _four tiles_ and _🎾_; it is the record of what was decided then, and
+this paragraph is the record of what changed.
 
 **The counter is true and the chip names nobody.** _{left} left · {give} yeses to give_ is
 `cardsLeft` — `pool.remaining`, which the envelope carries on a deal only, plus the cards

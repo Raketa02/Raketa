@@ -631,9 +631,9 @@ draws it.
   full at the threshold (95pt) where a release commits the answer in the drag's direction
   (ADR-0169 §3). They are **feedback and never controls**: hidden from assistive technology,
   unspoken, and their words are the two buttons' own (`STAMP_WORDS`), so what a drag reveals and
-  what a listener hears cannot drift. The three round buttons under the stage — ✕, i, 🎾 — are
-  the path that is never removed. _Avoid_: "swipe buttons"; a stamp that is pressable; a stamp
-  without its button.
+  what a listener hears cannot drift. The three round buttons under the stage — ✕, i and a
+  drawn tennis ball — are the path that is never removed. _Avoid_: "swipe buttons"; a stamp
+  that is pressable; a stamp without its button.
 
 ### The result argument
 
