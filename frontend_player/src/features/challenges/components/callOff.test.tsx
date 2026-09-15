@@ -21,7 +21,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
-import { IT_WAS_CALLED_OFF } from '@/features/games/types';
+import { IT_WAS_CALLED_OFF, calledTheGameOff } from '@/features/games/types';
 import { AppError, offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -178,18 +178,27 @@ const PASSED = plan({
   agreed_point: '2026-09-11T16:00:00Z',
 });
 
-/** What the route says back: the challenge as it now stands, withdrawn. */
+/**
+ * What the route says back on a court that has been a game: the court's own ending, `CALLED_OFF`
+ * with `ended_by` the presser — never `WITHDRAWN` (ADR-0172 §1).
+ */
 const WITHDRAWN: Wire['ChallengeSchema'] = row({
-  standing: 'WITHDRAWN',
+  standing: 'CALLED_OFF',
   ended_at: '2026-09-12T09:05:00Z',
+  ended_by: ME,
+  game_id: GAME,
 });
 
-/** The game once the act has landed and the list has been re-read: the fourth end, dated. */
+/** The game once the act has landed and the list has been re-read: the fourth end, dated, and who. */
 const CALLED_OFF = game({
   standing: 'CALLED_OFF',
   entry_closes_at: null,
   called_off_at: '2026-09-12T09:05:00Z',
+  called_off_by: { player_id: ME, name: 'me_' },
 });
+
+/** The presser's own heading on the re-fold (ADR-0172 §8) — and never the nameless one. */
+const YOU_CALLED_IT_OFF = calledTheGameOff({ kind: 'you' });
 
 const refusal = (code: string): AppError =>
   new AppError('conflict', 'business-conflict', 'test failure', { code });
@@ -297,7 +306,7 @@ describe('who may call it off', () => {
     expect(await screen.findByRole('button', { name: CALL_IT_OFF })).toBeTruthy();
     await callItOff();
 
-    expect(await screen.findByText(IT_WAS_CALLED_OFF)).toBeTruthy();
+    expect(await screen.findByText(YOU_CALLED_IT_OFF)).toBeTruthy();
     expect(transport.requestsTo('POST', WITHDRAWAL_PATH)).toHaveLength(1);
   });
 
@@ -424,7 +433,7 @@ describe('the call-off', () => {
 
     stubGames(transport, [CALLED_OFF], READ_AT);
     answer();
-    await screen.findByText(IT_WAS_CALLED_OFF);
+    await screen.findByText(YOU_CALLED_IT_OFF);
   });
 
   /**
@@ -444,7 +453,8 @@ describe('the call-off', () => {
 
     await callItOff();
 
-    expect(await screen.findByText(IT_WAS_CALLED_OFF)).toBeTruthy();
+    expect(await screen.findByText(YOU_CALLED_IT_OFF)).toBeTruthy();
+    expect(screen.queryByText(IT_WAS_CALLED_OFF)).toBeNull();
     expect(screen).toHavePathname(`/games/${GAME}`);
     await waitFor(() => {
       expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(games);

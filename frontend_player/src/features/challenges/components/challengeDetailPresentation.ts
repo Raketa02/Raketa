@@ -58,8 +58,9 @@
 import type { AtStake } from '@/features/play/types';
 import { PLAYER_SCORE_BLOCK, levelRow, metaLine, stakeClauses } from '@/features/play/types';
 import type { AppError } from '@/shared/errors';
+import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 
-import type { CourtPerson, PairingAbsence } from '../domain/challengeDetail';
+import type { CourtPerson, PairingAbsence, SeatWord } from '../domain/challengeDetail';
 
 import { challengeErrorMessage } from './challengeErrorMessage';
 import { THIS_ONE_IS_OVER } from './leaveGamePresentation';
@@ -183,6 +184,41 @@ export const REMOVE_REFUSED: Readonly<Record<string, string>> = {
 export function removeRefusalMessage(error: AppError): string {
   const own = error.code === undefined ? undefined : REMOVE_REFUSED[error.code];
   return own ?? challengeErrorMessage(error);
+}
+
+// ---------------------------------------------------------------------------
+// The ended court
+// ---------------------------------------------------------------------------
+
+/**
+ * **The heading over the seats of an ended court** — the region a reader is reading, in the
+ * `eyebrow` role ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7). *The court*, because that is the glossary's word for the seats and the people in them,
+ * and the sentence above it has already said what happened to it.
+ */
+export const THE_COURT_HEADING = 'The court';
+
+/**
+ * **What each person on an ended court did, one word each** — keyed by the domain's code as a
+ * `Record`, so a sixth thing a seat can have done fails to compile here rather than drawing a
+ * seat with nothing after its name. *Called it off* is the button's word in the past tense and
+ * *left* is the departure's — one word for each act, the same word the row uses.
+ */
+export const SEAT_WORD: Readonly<Record<SeatWord, string>> = {
+  in: 'in',
+  left: 'left',
+  'said-no': 'said no',
+  'ran-out': 'day ran out',
+  'called-it-off': 'called it off',
+};
+
+/**
+ * `You · in` · `Javier Fabregat · left` · `Oscar Bertran · called it off` — one seat of the ended
+ * court, drawn and spoken alike: a middot between a name and one word is a join the ear can take
+ * as a pause, and the reader's own seat says *You* rather than their name back to them.
+ */
+export function seatDidLine(who: NamedPlayer, did: SeatWord): string {
+  return `${playerName(who)} · ${SEAT_WORD[did]}`;
 }
 
 /** What a Player Score is out of, spelled rather than assumed — and spoken, never drawn. */

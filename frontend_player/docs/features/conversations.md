@@ -259,3 +259,15 @@ against the worker that writes the room; and, honestly, because the screen is pu
 yes lands and the router harness runs every pending timer on that push, a bound armed at mount had
 fired before the screen could be looked at under test and never on a phone. On a warm phone the two
 instants are a few hundred milliseconds apart.
+
+**Nothing changes in the room when a court is called off, and the row's sheet says what the
+leaving does** ([#454](https://github.com/Raketa02/Raketa/issues/454),
+[ADR-0172](../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+§6, §9). The room is destroyed on a call-off as it was — the _left_ line is still written first,
+into a room the next delivery removes, and nobody reads it — and this feature draws nothing new:
+what the people left behind read is the challenge row and the Now card. The one thing that moved
+on a conversation row is the sheet behind the door the shell composes onto it: `DepartureDoor`,
+`features/challenges`', now reads the court's row off that feature's list and says _Leaving now
+calls the game off — for {name} too. Your chat goes with it._ where the reader is the last other
+player on a game, and _closes this court for {name}_ where the court never became one. The row
+hands it the same `challengeId` it always did and learns nothing about the line.

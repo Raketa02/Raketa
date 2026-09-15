@@ -376,12 +376,14 @@ function toSocialTagId(tag: string): SocialTagId | undefined {
 }
 
 /**
- * **What an answer route said back** — the standing and the court, and nothing this screen
- * already holds.
+ * **What an answer route said back** — the standing, the court, and the ending where the act
+ * was one; nothing this screen already holds.
  *
  * `ChallengeSchema` is the *list's* shape, so it carries no cards; that is not a loss, because
  * `redrawnFrom` keeps the ones the screen is holding and the rule drops them when the standing
- * moves past the two that draw a block (ADR-0143 §8).
+ * moves past the two that draw a block (ADR-0143 §8). It does carry `ended_at`, `ended_by` and
+ * `game_id` (ADR-0172 §3–§4), and the row redrawn from a reply needs all three: the shelf is
+ * measured from the first, the sentence names the second, and the sheet reads the third.
  *
  * The sport is **not** re-read. A challenge whose sport this build cannot name never reached the
  * screen at all — `toChallengeDetail` refused it — so narrowing it a second time here could only
@@ -392,6 +394,9 @@ export function toAnsweredChallenge(answered: ChallengeSchema): AnsweredChalleng
 
   return {
     ...(standing === undefined ? {} : { standing }),
+    ...(answered.ended_at == null ? {} : { endedAt: answered.ended_at }),
+    ...(answered.ended_by == null ? {} : { endedBy: answered.ended_by }),
+    ...(answered.game_id == null ? {} : { gameId: answered.game_id }),
     seats: answered.seats.map(toListSeat),
   };
 }

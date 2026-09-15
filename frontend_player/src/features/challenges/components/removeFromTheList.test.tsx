@@ -413,6 +413,7 @@ describe('a refused removal', () => {
             ...MY_SEND_ROW,
             standing: 'DECLINED',
             ended_at: READ_AT,
+            ended_by: TOMEK,
             seats: [
               { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
               { side: 'A', player_id: TOMEK, answer: 'DECLINED', name: 'tomek.p' },
@@ -438,8 +439,9 @@ describe('a refused removal', () => {
     fireEvent.press(screen.getByRole('button', { name: REMOVE_SHEET_CLOSE_LABEL }));
 
     await waitFor(() => expect(mySendIfListed()).toBeNull());
-    // The ended row is still news to the organiser — a no of somebody else's — and reveals nothing.
-    const ended = await screen.findByLabelText(/^tomek\.p and ola\.k, Padel, tomek\.p said no/);
+    // The ended row is still news to the organiser — a no of somebody else's — and reveals
+    // nothing; it names the one person the sentence is about (ADR-0172 §7).
+    const ended = await screen.findByLabelText(/^tomek\.p, Padel, tomek\.p said no/);
     expect(swipe(ended, -REVEAL)).toBe(false);
   });
 

@@ -243,3 +243,22 @@ is gone — the decision and its reasons are recorded in [`plans.md`](plans.md),
 beneath _Open the chat_, and on the grid only once the agreed point has passed. Nothing in this
 feature changed but the sentence: `EntryLead` is still derived from the card's door, _We played_
 is still offered on every entry arm, and the two-arm docstrings now name one score-led rung.
+
+**Who called it off, the ending block, and the card's dismissal**
+([#454](https://github.com/Raketa02/Raketa/issues/454), [ADR-0172](../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+§4–§5, §8). `called_off_by` is mapped onto `Game.calledOffBy` — the id and the whole name, because
+the leaver's seat is vacated and the court cannot supply it — and the `called-off` arm of
+`ResultArgument` gains `ending`: who (`you` for the reader's own press), **how** — a departure is
+told from a press by whether that player still holds a seat, and no second field says which — and
+the court's format. `resultTitle` and `resultBody` write §8's table from it: _The game was called
+off for lack of players_ over _{name} left, so the singles game is called off…_ or _{name} was
+the last to leave, so the doubles game is called off…_; _{name} called the game off_ (_You called
+the game off_) over the ghost's own body. `IT_WAS_CALLED_OFF` stands for a reply that names nobody,
+which the wire promises not to send. The standing line and the card's gloss stay the one word,
+_Called off_. **The dismissal** is this feature's act — `POST /games/{id}/dismissal`, a `204`,
+`dismissGame`, `useDismissGame` — and the one write here whose reply is written into the list:
+`GET /games` omits a game its reader has dismissed, so a list without it is the next read's
+answer one round trip early, then the list is re-read; a refusal re-reads and says nothing, because
+the fold the re-read lands on is the answer. `RemoveCard` is the control — Feather `trash-2`,
+spoken _Remove this card_, on `ChatDoor`'s shape — exported for `features/plans`' card and drawn
+nowhere else. **Not seen on a device.**

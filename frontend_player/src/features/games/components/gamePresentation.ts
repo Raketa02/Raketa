@@ -74,7 +74,12 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import type { Game, GameSeat } from '../domain/game';
 import type { PairingSeat } from '../domain/pairing';
 import { sidesForReader } from '../domain/pairing';
-import { othersOn, resultArgument, type ResultArgument } from '../domain/resultArgument';
+import {
+  othersOn,
+  resultArgument,
+  type CalledOffEnding,
+  type ResultArgument,
+} from '../domain/resultArgument';
 import type { ScoreKey, ScoreProblem } from '../domain/score';
 import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
 
@@ -203,8 +208,8 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
     case 'never-played':
       return 'Nobody said this one happened before the window closed, so nothing was recorded.';
     case 'called-off':
-      // The gloss, on the card and under the title alike. It names nobody, because
-      // `called_off_by` is on no wire and the room that would have said who is gone (ADR-0163).
+      // The gloss on the card's tag and the standing line alike — one word for this ending
+      // everywhere (ADR-0172 §8). Who and how are the heading's and the body's, not this line's.
       return 'Called off';
     case 'ours-stands':
       return `Your side's score is on the table. If nobody answers within ${durationLeft(argument.proposal.answerBy, readAt)}, it stands.`;
@@ -237,11 +242,61 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
 }
 
 /**
- * **The fourth end's title** (ADR-0163, #419 §3) — a constant beside the fold that returns it,
- * because the suite that walks *Call it off* one feature over asserts the screen re-folds into
- * this arm and may not spell it: a literal there is a red build for the ticket that rewords it.
+ * **The fourth end's title where the wire named nobody** (ADR-0163, #419 §3) — a constant beside
+ * the fold that returns it, because the suite that walks *Call it off* one feature over asserts
+ * the screen re-folds into this arm and may not spell it: a literal there is a red build for the
+ * ticket that rewords it. Since ADR-0172 §4 the wire names who, and the headings below are the
+ * ones drawn; this one stands for a reply that breaks that promise.
  */
 export const IT_WAS_CALLED_OFF = 'It was called off';
+
+/**
+ * **The ghost's body** — nothing anybody is measured on moves (ADR-0163 §3) — said of a game that
+ * never happened and of a call-off the wire named nobody for, so it is named once for the two.
+ */
+const NOBODY_IS_MARKED_FOR_THAT = 'Nobody is marked for that. Not you, not any of the others.';
+
+/**
+ * **The ending block's two headings** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §8): a departure is a shortage and the heading says so without a name — the body names who
+ * left — and a press is an act one person took, so the heading names them, *You* for the
+ * reader's own, and is not dressed as a shortage. Exported for the suite that walks *Call it off*
+ * from `features/challenges` and asserts the re-fold, as `IT_WAS_CALLED_OFF` is.
+ */
+export const CALLED_OFF_FOR_LACK_OF_PLAYERS = 'The game was called off for lack of players';
+
+export function calledTheGameOff(by: NamedPlayer): string {
+  return `${playerName(by)} called the game off`;
+}
+
+/**
+ * **The trash's spoken name** — the one control on a called-off card besides *What happened?*,
+ * a glyph with its word spoken ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §8). *This card* and not *this game*: the act removes a card and nothing else, and the name
+ * says exactly that much.
+ */
+export const REMOVE_THIS_CARD = 'Remove this card';
+
+/** The ending's heading, keyed by how it ended — and the old title where the wire said nothing. */
+function calledOffTitle(ending: CalledOffEnding | undefined): string {
+  if (ending === undefined) return IT_WAS_CALLED_OFF;
+  return ending.how === 'departure' ? CALLED_OFF_FOR_LACK_OF_PLAYERS : calledTheGameOff(ending.by);
+}
+
+/**
+ * The ending's body: a departure names who left and says the shape of the game it ended, and
+ * the press says the ghost's own fact about the strands — the same fact about the same people
+ * (ADR-0163 §3), because a call-off is neither an evening nor a game that never happened.
+ */
+function calledOffBody(ending: CalledOffEnding | undefined): string {
+  if (ending === undefined) return NOBODY_IS_MARKED_FOR_THAT;
+  if (ending.how === 'press') return 'Nobody is marked for it — not you, not any of the others.';
+
+  const name = playerName(ending.by);
+  return ending.format === 'singles'
+    ? `${name} left, so the singles game is called off. Nobody is marked for it — not you, not them.`
+    : `${name} was the last to leave, so the doubles game is called off. Nobody is marked for it — not you, not any of them.`;
+}
 
 /**
  * The screen's own title — **variant C's, unchanged**, plus the three states the prototype's
@@ -258,7 +313,7 @@ export function resultTitle(argument: ResultArgument): string {
     case 'never-played':
       return 'It never happened';
     case 'called-off':
-      return IT_WAS_CALLED_OFF;
+      return calledOffTitle(argument.ending);
     case 'ours-stands':
       return 'Sent — waiting';
     case 'theirs-stands':
@@ -357,11 +412,12 @@ export function resultBody(argument: ResultArgument): string | undefined {
       // paperwork about a game the platform already knows about — it *is* the record.
       return 'Putting a score in is what records that this game happened. There is nothing else behind it — no booking, no calendar.';
     case 'never-played':
+      return NOBODY_IS_MARKED_FOR_THAT;
     // The fourth end is drawn as the ghost is (#419 §3): neither an evening nor a game that never
-    // happened, so nothing anybody is measured on moves (ADR-0163) — and the sentence is the
-    // ghost's own, because it is the same fact about the same people.
+    // happened, so nothing anybody is measured on moves (ADR-0163) — and the body says the
+    // ghost's own fact, naming the person where a departure ended it (ADR-0172 §8).
     case 'called-off':
-      return 'Nobody is marked for that. Not you, not any of the others.';
+      return calledOffBody(argument.ending);
     case 'ours-stands':
       return 'You can change what you entered until they answer, and it does not use your side’s one turn up. If they put something else up instead, only an acceptance settles it.';
     case 'theirs-stands':

@@ -52,6 +52,7 @@ import {
   LEAVE_THE_GAME,
   LEAVING,
   leaveRefusalMessage,
+  leavingEndsLine,
 } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
@@ -308,6 +309,79 @@ describe('the sheet', () => {
     expect(squashRoom().props.accessibilityActions).toEqual([
       expect.objectContaining({ label: LEAVE_THE_GAME }),
     ]);
+  });
+});
+
+/**
+ * **The sheet says what the leaving does** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §9): where the reader is the only other accepted seat and nobody is deciding, *Leaving now
+ * calls the game off — for {name} too* on a court that has been a game and *Leaving now closes
+ * this court for {name}* on one that never was — read off the row the list holds, and today's
+ * line everywhere else, which is the case above.
+ */
+describe('what the sheet says the leaving does', () => {
+  const GAME = 'aaaaaaaa-0000-4000-8000-00000000000a';
+
+  const KUBA = 'dddddddd-0000-4000-8000-000000000004';
+
+  /**
+   * Tomek and I, alone on a court with nobody deciding — a doubles game two people have walked
+   * out of, or a court that never became one where the others said no.
+   */
+  const twoOfUs = (gameId: string | null): Wire['ChallengeSchema'] => ({
+    ...PADEL_CHALLENGE,
+    standing: 'LINE_UP_INCOMPLETE',
+    game_id: gameId,
+    seats: [
+      { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+      { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+      { side: 'B', player_id: OLA, answer: gameId === null ? 'DECLINED' : 'LEFT', name: 'ola.k' },
+      gameId === null
+        ? { side: 'B', player_id: null, answer: null, name: null }
+        : { side: 'B', player_id: KUBA, answer: 'LEFT', name: 'kuba.z' },
+    ],
+  });
+
+  async function openChatsWith(court: Wire['ChallengeSchema']) {
+    stubConversations(transport, [{ ...PADEL_ROOM, game_id: court.game_id ?? null }, SQUASH_ROOM]);
+    stubChallenges(transport, [court], READ_AT);
+    await launchSignedIn();
+
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    await screen.findByLabelText(/^tomek\.p, Padel$/);
+    await screen.findByLabelText(/^tomek\.p, Padel, You/);
+  }
+
+  it('says the leaving calls the game off, for the one left, on a court that has been a game', async () => {
+    await openChatsWith(twoOfUs(GAME));
+
+    await revealAndPress();
+
+    expect(await screen.findByText(LEAVE_SHEET_TITLE)).toBeTruthy();
+    expect(
+      screen.getByText(
+        leavingEndsLine({ court: 'a-game', theOneLeft: { kind: 'player', name: 'tomek.p' } }),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(LEAVE_FROM_THE_LIST_BODY)).toBeNull();
+  });
+
+  it('says the leaving closes the court for the one left, on a court that never became a game', async () => {
+    await openChatsWith(twoOfUs(null));
+
+    await revealAndPress();
+
+    expect(await screen.findByText(LEAVE_SHEET_TITLE)).toBeTruthy();
+    expect(
+      screen.getByText(
+        leavingEndsLine({
+          court: 'never-a-game',
+          theOneLeft: { kind: 'player', name: 'tomek.p' },
+        }),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(LEAVE_FROM_THE_LIST_BODY)).toBeNull();
   });
 });
 

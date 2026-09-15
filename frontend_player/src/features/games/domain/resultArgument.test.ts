@@ -126,6 +126,54 @@ describe('before anybody has said it happened', () => {
     expect(argument).toEqual({ kind: 'called-off' });
     expect(actsOffered(argument)).toEqual([]);
   });
+
+  /**
+   * **A departure is told from a press by whether `called_off_by` still holds a seat**
+   * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §4, §8): the presser does, the leaver's seat is open. No second field says which.
+   */
+  it('says who called it off and how — a departure, whose seat is open, or a press', () => {
+    const leaverGone = game({
+      standing: 'CALLED_OFF',
+      seats: [{ side: 'A', playerId: ME, name: 'me_' }, { side: 'B' }],
+      calledOffBy: { playerId: OPPONENT, name: 'tomek.p' },
+    });
+    const pressed = game({
+      standing: 'CALLED_OFF',
+      seats: [
+        { side: 'A', playerId: ME, name: 'me_' },
+        { side: 'A', playerId: PARTNER, name: 'kasia_w' },
+        { side: 'B', playerId: OPPONENT, name: 'tomek.p' },
+        { side: 'B' },
+      ],
+      calledOffBy: { playerId: OPPONENT, name: 'tomek.p' },
+    });
+
+    expect(resultArgument(leaverGone, ME)).toEqual({
+      kind: 'called-off',
+      ending: { by: { kind: 'player', name: 'tomek.p' }, how: 'departure', format: 'singles' },
+    });
+    expect(resultArgument(pressed, ME)).toEqual({
+      kind: 'called-off',
+      ending: { by: { kind: 'player', name: 'tomek.p' }, how: 'press', format: 'doubles' },
+    });
+    expect(resultArgument({ ...pressed, calledOffBy: { playerId: ME, name: 'me_' } }, ME)).toEqual({
+      kind: 'called-off',
+      ending: { by: { kind: 'you' }, how: 'press', format: 'doubles' },
+    });
+  });
+
+  it('names nobody by name where users has lost the account', () => {
+    const nameless = game({
+      standing: 'CALLED_OFF',
+      seats: [{ side: 'A', playerId: ME, name: 'me_' }, { side: 'B' }],
+      calledOffBy: { playerId: OPPONENT },
+    });
+
+    expect(resultArgument(nameless, ME)).toMatchObject({
+      ending: { by: { kind: 'unknown' }, how: 'departure' },
+    });
+  });
 });
 
 describe('one score on the table', () => {

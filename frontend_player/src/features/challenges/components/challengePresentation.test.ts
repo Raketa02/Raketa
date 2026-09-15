@@ -34,25 +34,41 @@ import {
 /** The other player, as a person rather than as a string — ADR-0107's rule, held by a type. */
 const SOMEBODY: NamedPlayer = { kind: 'player', name: 'niepokonany' };
 
-/** One of each standing, with whatever its sentence quotes. */
-function facts(side: ChallengeSide): readonly StandingFacts[] {
+/** An ending somebody else's act closed, as its sentence quotes it. */
+const BY_SOMEBODY = { endedBy: SOMEBODY, byADeparture: false } as const;
+
+/** The reader's own act, on the ending it closed. */
+const BY_ME = { endedBy: { kind: 'you' }, byADeparture: false } as const;
+
+/** One of each live standing, with whatever its sentence quotes. */
+function liveFacts(side: ChallengeSide): readonly StandingFacts[] {
   return [
     { side, standing: 'AWAITING_ANSWERS', awaiting: 3 },
     { side, standing: 'ON' },
     { side, standing: 'LINE_UP_INCOMPLETE', accepted: 2, open: 1 },
-    { side, standing: 'DECLINED', player: SOMEBODY },
-    { side, standing: 'LAPSED', player: SOMEBODY },
-    { side, standing: 'WITHDRAWN', player: SOMEBODY },
+  ];
+}
+
+/** One of each ending, keyed by whose act it was rather than by side (ADR-0172 §7). */
+function endedFacts(by: typeof BY_SOMEBODY | typeof BY_ME): readonly StandingFacts[] {
+  return [
+    { side: 'organiser', standing: 'DECLINED', ...by },
+    { side: 'organiser', standing: 'LAPSED', ...by },
+    { side: 'organiser', standing: 'WITHDRAWN', ...by },
+    { side: 'organiser', standing: 'CALLED_OFF', ...by },
   ];
 }
 
 describe('one standing, two sides', () => {
-  it('says something different to each of them, for every code', () => {
-    const organiser = facts('organiser').map(standingLine);
-    const invitee = facts('invitee').map(standingLine);
+  it('says something different to each side on the live codes, and to each actor on the endings', () => {
+    const organiser = liveFacts('organiser').map(standingLine);
+    const invitee = liveFacts('invitee').map(standingLine);
+    const theirs = endedFacts(BY_SOMEBODY).map(standingLine);
+    const mine = endedFacts(BY_ME).map(standingLine);
 
-    expect(organiser).toHaveLength(STANDINGS.length);
+    expect(organiser.length + theirs.length).toBe(STANDINGS.length);
     for (const [index, line] of organiser.entries()) expect(line).not.toBe(invitee[index]);
+    for (const [index, line] of theirs.entries()) expect(line).not.toBe(mine[index]);
   });
 
   it('asks the organiser to wait and tells an invitee they are the wait', () => {
@@ -184,18 +200,18 @@ describe('a half-answered line-up is not a waiting room', () => {
 
 describe('a lapse is not a decline', () => {
   it('says a day ran out and that nobody said no', () => {
-    expect(standingLine({ side: 'organiser', standing: 'LAPSED', player: SOMEBODY })).toBe(
+    expect(standingLine({ side: 'organiser', standing: 'LAPSED', ...BY_SOMEBODY })).toBe(
       "niepokonany's day ran out — that seat is open again",
     );
-    expect(standingLine({ side: 'invitee', standing: 'LAPSED', player: SOMEBODY })).toBe(
-      'Your day ran out',
-    );
+    expect(
+      standingLine({ side: 'invitee', standing: 'LAPSED', ...BY_ME, ownAnswer: 'LAPSED' }),
+    ).toBe('Your day ran out');
   });
 
   it('keeps the two words apart', () => {
     const lapsed = [
-      standingLine({ side: 'organiser', standing: 'LAPSED', player: SOMEBODY }),
-      standingLine({ side: 'invitee', standing: 'LAPSED', player: SOMEBODY }),
+      standingLine({ side: 'organiser', standing: 'LAPSED', ...BY_SOMEBODY }),
+      standingLine({ side: 'invitee', standing: 'LAPSED', ...BY_ME, ownAnswer: 'LAPSED' }),
     ];
 
     for (const line of lapsed) expect(line).not.toMatch(/said no|declin|refus/i);
@@ -205,10 +221,105 @@ describe('a lapse is not a decline', () => {
     const line = standingLine({
       side: 'organiser',
       standing: 'DECLINED',
-      player: { kind: 'player', name: 'niepokonanywojownik42' },
+      endedBy: { kind: 'player', name: 'niepokonanywojownik42' },
+      byADeparture: false,
     });
 
     expect(line).toMatch(/^niepokonanywojownik42 said no/);
+  });
+});
+
+/**
+ * **The ended rows, keyed by the standing and by `ended_by`'s own seat**
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7, `the-words.md` §13's second table). One rule for every ending on the shelf: the sentence
+ * names whose act ended the court, a seat that `LEFT` reads *left*, and the reader's own act
+ * reads *You*.
+ */
+describe('an ended row names whose act ended it', () => {
+  const left = { endedBy: SOMEBODY, byADeparture: true } as const;
+
+  it('says who left, on a court that has been a game', () => {
+    expect(standingLine({ side: 'organiser', standing: 'CALLED_OFF', ...left })).toBe(
+      'niepokonany left',
+    );
+  });
+
+  it('says who called the game off, and *You* where it was the reader', () => {
+    expect(standingLine({ side: 'invitee', standing: 'CALLED_OFF', ...BY_SOMEBODY })).toBe(
+      'niepokonany called the game off',
+    );
+    expect(standingLine({ side: 'invitee', standing: 'CALLED_OFF', ...BY_ME })).toBe(
+      'You called the game off',
+    );
+  });
+
+  it('says who left and that nobody else is coming, on a court that never became a game', () => {
+    expect(standingLine({ side: 'organiser', standing: 'DECLINED', ...left })).toBe(
+      'niepokonany left — nobody else is coming',
+    );
+  });
+
+  it('says who said no, naming ended_by, and *You said no* to the one who did', () => {
+    expect(standingLine({ side: 'organiser', standing: 'DECLINED', ...BY_SOMEBODY })).toBe(
+      'niepokonany said no — that seat is open again',
+    );
+    expect(
+      standingLine({ side: 'invitee', standing: 'DECLINED', ...BY_ME, ownAnswer: 'DECLINED' }),
+    ).toBe('You said no');
+  });
+
+  /**
+   * §13's invitee column, first: a reader whose own seat gave up is told what they did, whoever's
+   * act closed the court after it — *You said no* over another no, *Your day ran out* over a
+   * departure, never the other person's sentence.
+   */
+  it('reads the reader’s own seat first on the two folded endings', () => {
+    expect(
+      standingLine({ side: 'invitee', standing: 'DECLINED', ...left, ownAnswer: 'LAPSED' }),
+    ).toBe('Your day ran out');
+    expect(
+      standingLine({
+        side: 'invitee',
+        standing: 'DECLINED',
+        ...BY_SOMEBODY,
+        ownAnswer: 'DECLINED',
+      }),
+    ).toBe('You said no');
+    expect(
+      standingLine({ side: 'invitee', standing: 'DECLINED', ...BY_ME, ownAnswer: 'LEFT' }),
+    ).toBe('You left');
+  });
+
+  /** The last leaver's own row is gone; a stale route reads their own act back, as every own act does. */
+  it('says *You left* to the last leaver of a called-off game', () => {
+    expect(
+      standingLine({
+        side: 'invitee',
+        standing: 'CALLED_OFF',
+        endedBy: { kind: 'you' },
+        byADeparture: true,
+        ownAnswer: 'LEFT',
+      }),
+    ).toBe('You left');
+  });
+
+  /** *Called off* is the one word for this ending everywhere, and *cancel* is nowhere. */
+  it('never says cancel', () => {
+    for (const facts of [...endedFacts(BY_SOMEBODY), ...endedFacts(BY_ME)]) {
+      expect(standingLine(facts)).not.toMatch(/cancel/i);
+    }
+  });
+
+  it('names nobody by name where the wire named nobody', () => {
+    expect(
+      standingLine({
+        side: 'organiser',
+        standing: 'CALLED_OFF',
+        endedBy: { kind: 'unknown' },
+        byADeparture: true,
+      }),
+    ).toBe('? left');
   });
 });
 
@@ -314,26 +425,26 @@ describe('an invitee who has left a challenge that has not', () => {
 
 describe('a withdrawal is neither a decline nor a lapse', () => {
   it('names the act with the record’s own word, and says what it closed', () => {
-    expect(standingLine({ side: 'organiser', standing: 'WITHDRAWN', player: SOMEBODY })).toBe(
+    expect(standingLine({ side: 'organiser', standing: 'WITHDRAWN', ...BY_ME })).toBe(
       'You withdrew this',
     );
-    expect(standingLine({ side: 'invitee', standing: 'WITHDRAWN', player: SOMEBODY })).toBe(
+    expect(standingLine({ side: 'invitee', standing: 'WITHDRAWN', ...BY_SOMEBODY })).toBe(
       'niepokonany withdrew this — that court is closed',
     );
   });
 
-  it('borrows neither the plan’s word nor the platform’s', () => {
-    for (const side of ['organiser', 'invitee'] as const) {
-      const line = standingLine({ side, standing: 'WITHDRAWN', player: SOMEBODY });
+  it('borrows neither the game’s word nor the platform’s', () => {
+    for (const by of [BY_ME, BY_SOMEBODY]) {
+      const line = standingLine({ side: 'organiser', standing: 'WITHDRAWN', ...by });
       expect(line).not.toMatch(/cancel|called? off|stood down|stand down/i);
     }
   });
 
-  it('tells an invitee who never answered the same as one who accepted', () => {
+  it('tells an invitee who never answered the same as one who accepted, or lapsed', () => {
     // Separating them would say who else was on the court.
-    expect(standingLine({ side: 'invitee', standing: 'WITHDRAWN', player: SOMEBODY })).toBe(
-      standingLine({ side: 'invitee', standing: 'WITHDRAWN', player: SOMEBODY }),
-    );
+    expect(
+      standingLine({ side: 'invitee', standing: 'WITHDRAWN', ...BY_SOMEBODY, ownAnswer: 'LAPSED' }),
+    ).toBe(standingLine({ side: 'invitee', standing: 'WITHDRAWN', ...BY_SOMEBODY }));
   });
 });
 

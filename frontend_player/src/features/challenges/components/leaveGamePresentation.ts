@@ -30,6 +30,9 @@
  */
 
 import type { AppError } from '@/shared/errors';
+import { playerName } from '@/shared/formatting/playerName';
+
+import type { LeavingEnds } from '../domain/challenge';
 
 import { challengeErrorMessage } from './challengeErrorMessage';
 
@@ -85,6 +88,47 @@ export const LEAVE_SHEET_CLOSE_LABEL = 'Stay in';
  */
 export const LEAVE_FROM_THE_LIST_BODY =
   "Your seat opens for someone else and you'll leave the chat.";
+
+/**
+ * **The line the sheet says instead, when the leaving would end the court** — the reader is the
+ * only other accepted seat and no seat is awaiting, read off the row the list holds
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §9). Which of the two it is, `game_id` decides: on a game the departure **calls the game off**
+ * — for the one person left, too, which is the whole reason the line exists — and on a court that
+ * never became one it **closes the court** for them. Both keep the list line's second fact, the
+ * chat, because on either the room goes with the act. `{name}` is the whole name (ADR-0171), and
+ * `?` where `users` has lost them.
+ *
+ * On the game screen's own sheet this line **replaces** the first of its three — *The others keep
+ * the game and can fill your seat* is false of a leaving that calls it off — and the other two
+ * stand, because they are still true.
+ */
+export function leavingEndsLine(ends: LeavingEnds): string {
+  const name = playerName(ends.theOneLeft);
+
+  return ends.court === 'a-game'
+    ? `Leaving now calls the game off — for ${name} too. Your chat goes with it.`
+    : `Leaving now closes this court for ${name}. Your chat goes with it.`;
+}
+
+/**
+ * **What the list's sheet says** — the ending line where the leaving would end the court, and
+ * today's line otherwise. One function, so the door and the screen behind it cannot disagree.
+ */
+export function leaveFromTheListBody(ends: LeavingEnds | undefined): readonly string[] {
+  return [ends === undefined ? LEAVE_FROM_THE_LIST_BODY : leavingEndsLine(ends)];
+}
+
+/**
+ * **What the game screen's sheet says** — its three lines, with the first replaced by the ending
+ * line where the leaving would call the game off. See {@link leavingEndsLine} for why it
+ * replaces rather than precedes.
+ */
+export function leaveThisGameBody(ends: LeavingEnds | undefined): readonly string[] {
+  if (ends === undefined) return LEAVE_SHEET_BODY;
+  const [, ...stillTrue] = LEAVE_SHEET_BODY;
+  return [leavingEndsLine(ends), ...stillTrue];
+}
 
 /**
  * *This one is already over* — `challenge_is_over`'s sentence, **named once** because two sheets

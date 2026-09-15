@@ -19,6 +19,7 @@ import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
+import { REMOVE_THIS_CARD } from '@/features/games/types';
 import { NOW_COPY } from '@/features/shell/types';
 import { SEAT_NAME_LETTERS, endPlaySession } from '@/features/play/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -26,6 +27,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
 import { FILL_THE_SEAT } from '@/shared/vocabulary/theActsWords';
 import {
+  GAMES_PATH,
   GATE_USER,
   launchSignedIn,
   stubConversations,
@@ -36,12 +38,26 @@ import {
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
 import { setDeviceZone } from '@/test-support/deviceZone';
-import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import {
+  errorResponse,
+  installTransport,
+  json,
+  noContent,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 
 import { GAME_CARD_NAMES } from '../domain/gameCard';
 import { PLAN_SLOTS } from '../domain/slots';
 
-import { ACCENT, CARD_TAG, FINISH_THE_PLAN, doorLabel, gamesHeading } from './nowPresentation';
+import {
+  ACCENT,
+  CARD_TAG,
+  FINISH_THE_PLAN,
+  WHAT_HAPPENED,
+  doorLabel,
+  gamesHeading,
+} from './nowPresentation';
 import { NOT_AGREED_YET, SLOT_EYEBROW, TODAY } from './planPresentation';
 
 const ME = GATE_USER.id;
@@ -507,14 +523,16 @@ describe('every other name, on the same shell', () => {
       /^Nobody said this one happened before the window closed/,
     ],
     [
+      // No line under the slots: the tag is the whole of what the card says (ADR-0172 §8).
       'called-off',
       game({
         standing: 'CALLED_OFF',
         entry_closes_at: null,
         called_off_at: '2026-09-12T08:00:00Z',
+        called_off_by: { player_id: TOMEK, name: 'tomek.p' },
       }),
       undefined,
-      'Called off',
+      undefined,
     ],
   ] as const)('%s draws its tag, its door and its line', async (name, served, agreed, line) => {
     await landOnNow({ games: [served], plans: agreed === undefined ? [] : [agreed] });
@@ -533,9 +551,7 @@ describe('every other name, on the same shell', () => {
       expect(screen.getByRole('button', { name: verb })).toBeTruthy();
     }
 
-    // `getAll`, because on *Called off* the line is the tag's word again: the gloss the ticket
-    // fixes is the standing's one word, and the tag is the card's name.
-    if (line !== undefined) expect(screen.getAllByText(line).length).toBeGreaterThan(0);
+    if (line !== undefined) expect(screen.getByText(line)).toBeTruthy();
   });
 });
 
@@ -770,25 +786,98 @@ describe('how long an ending keeps its card', () => {
   /**
    * **The fourth end is shelved from the act** (ADR-0163, #419 §3): `entry_closes_at` is `null`
    * on it, so the card reads `called_off_at` — a day, as the other endings get — and the tag's
-   * dot is the quiet hairline, with no door under it.
+   * dot is the quiet hairline.
    */
   const calledOff = (at: string) =>
-    game({ standing: 'CALLED_OFF', entry_closes_at: null, called_off_at: at });
+    game({
+      standing: 'CALLED_OFF',
+      entry_closes_at: null,
+      called_off_at: at,
+      called_off_by: { player_id: TOMEK, name: 'tomek.p' },
+    });
 
-  it('keeps a called-off game for a day, with its tag and no door', async () => {
+  it('keeps a called-off game for a day, with its tag', async () => {
     await landOnNow({ games: [calledOff('2026-09-11T10:00:00Z')] });
 
     expect(await screen.findByText(gamesHeading(1))).toBeTruthy();
-    expect(screen.getAllByText(CARD_TAG['called-off']!).length).toBeGreaterThan(0);
-    for (const verb of GAME_CARD_NAMES.map(doorLabel)) {
-      if (verb !== undefined) expect(screen.queryByRole('button', { name: verb })).toBeNull();
-    }
+    expect(screen.getByText(CARD_TAG['called-off']!)).toBeTruthy();
   });
 
   it('and then the called-off card leaves too', async () => {
     await landOnNow({ games: [calledOff('2026-09-11T08:00:00Z')] });
 
     expect(await screen.findByText(gamesHeading(0))).toBeTruthy();
+  });
+});
+
+/**
+ * **The called-off card offers two things and names nobody**
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §5, §8): no line under the slots, *What happened?* opening the game screen, and the trash —
+ * spoken *Remove this card* — which sends the dismissal and takes the card off the rail on the
+ * reply, with no sheet and before any re-read.
+ */
+describe('the called-off card', () => {
+  const DISMISSAL_PATH = `${GAMES_PATH}/${GAME}/dismissal`;
+  const calledOff = game({
+    standing: 'CALLED_OFF',
+    entry_closes_at: null,
+    called_off_at: '2026-09-11T10:00:00Z',
+    called_off_by: { player_id: TOMEK, name: 'tomek.p' },
+    seats: [
+      { side: 'A', player_id: ME, name: 'me_' },
+      { side: 'B', player_id: null, name: null },
+    ],
+  });
+
+  it('draws What happened? and the trash, and no line under the slots', async () => {
+    await landOnNow({ games: [calledOff], room: false });
+
+    expect(await screen.findByRole('button', { name: WHAT_HAPPENED })).toBeTruthy();
+    expect(screen.getByRole('button', { name: REMOVE_THIS_CARD })).toBeTruthy();
+    expect(screen.queryByLabelText(OPEN_THE_CHAT)).toBeNull();
+    // The tag once, in the header — and nowhere else: the line under the slots is gone.
+    expect(screen.getAllByText(CARD_TAG['called-off']!)).toHaveLength(1);
+    expect(screen.queryByText('tomek.p')).toBeNull();
+  });
+
+  it('opens the game screen from What happened?', async () => {
+    await landOnNow({ games: [calledOff], room: false });
+
+    fireEvent.press(await screen.findByRole('button', { name: WHAT_HAPPENED }));
+    await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
+  });
+
+  it('sends the dismissal from the trash, and the card leaves the rail on the reply', async () => {
+    await landOnNow({ games: [calledOff], room: false });
+    const trash = await screen.findByRole('button', { name: REMOVE_THIS_CARD });
+    transport.on('POST', DISMISSAL_PATH, () => noContent());
+    // The list is held open after the act, so the card that goes went on the reply and not on
+    // a server that was asked again.
+    const held = new Promise<Response>(() => undefined);
+    transport.on('GET', GAMES_PATH, () => held);
+
+    fireEvent.press(trash);
+
+    await waitFor(() => expect(screen.queryByText(CARD_TAG['called-off']!)).toBeNull());
+    expect(await screen.findByText(gamesHeading(0))).toBeTruthy();
+    expect(transport.requestsTo('POST', DISMISSAL_PATH)).toHaveLength(1);
+    expect(screen.queryByText(/before you|are you sure/i)).toBeNull();
+  });
+
+  /** A refusal is a re-read and no words: the fold the re-read lands on is the answer. */
+  it('re-reads the rail when the dismissal is refused, and the card stays', async () => {
+    await landOnNow({ games: [calledOff], room: false });
+    transport.on('POST', DISMISSAL_PATH, () => errorResponse(409, 'game_is_not_called_off'));
+    const before = transport.requestsTo('GET', GAMES_PATH).length;
+
+    fireEvent.press(await screen.findByRole('button', { name: REMOVE_THIS_CARD }));
+
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(before),
+    );
+    expect(screen.getByText(CARD_TAG['called-off']!)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 

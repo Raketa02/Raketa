@@ -82,7 +82,7 @@ export { useChallengesWaiting } from './hooks/useChallenges';
  * **The screen a row opens, and the two answers on it** — mounted by
  * `/chats/challenge/[challengeId]` ([#361](https://github.com/Raketa02/Raketa/issues/361)).
  *
- * A state-keyed surface over the six standings and two sides. Everything under it stays
+ * A state-keyed surface over the seven standings and two sides. Everything under it stays
  * internal: the read, the answer, the fold they are both keyed on and the words the screen
  * writes are this feature's, and the only things a route needs are the screen and the check on
  * the id it hands over.

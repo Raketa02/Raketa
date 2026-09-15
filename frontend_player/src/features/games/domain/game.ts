@@ -168,6 +168,13 @@ export interface Acceptance {
   readonly settlesAt: string;
 }
 
+/** The player whose act called the game off. See {@link Game.calledOffBy}. */
+export interface CalledOffBy {
+  readonly playerId: string;
+  /** The whole name. Absent where `users` no longer has the account. */
+  readonly name?: string;
+}
+
 export interface Game {
   readonly gameId: string;
   readonly challengeId: string;
@@ -198,9 +205,19 @@ export interface Game {
    * When somebody called it off, while a seat was open
    * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). Present
    * exactly on `CALLED_OFF`: the act's own instant, which is what the ending card is shelved from.
-   * **Nobody is named** — the room is gone with the act, and the card says *Called off*.
+   * Who is {@link calledOffBy}.
    */
   readonly calledOffAt?: string;
+  /**
+   * **Who called it off, and what they are called** — present exactly on `CALLED_OFF`
+   * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §4), the field ADR-0163 §4 kept for the day a design wanted the name. The last leaver, whose
+   * seat is drawn open — or whoever pressed *Call it off*, who still holds one; **which of the two
+   * is read off the seats**, and the game screen's heading is keyed on it. The name is carried
+   * because the leaver's seat is vacated and the court cannot supply it; absent where `users` no
+   * longer has the account, which draws `?` as a seat's does.
+   */
+  readonly calledOffBy?: CalledOffBy;
   /** The agreed score. Absent until something settles on one. */
   readonly score?: Score;
   /** Win or loss **for you**, and absent for every standing but a confirmed one. */

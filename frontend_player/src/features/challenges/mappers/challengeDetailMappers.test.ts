@@ -138,4 +138,33 @@ describe("what an answer's reply carries", () => {
       ],
     });
   });
+
+  /**
+   * **And the ending, where the act was one** — the withdrawal's and the departure's replies say
+   * when, who and which game (ADR-0172 §3–§4), and the row redrawn from them reads *You called
+   * the game off* on the reply rather than a round trip later.
+   */
+  it('carries the ending — when, who, and the game — where the reply names one', () => {
+    const answered = toAnsweredChallenge({
+      challenge_id: 'c1',
+      sport: 'SQUASH',
+      organiser_id: EWA,
+      standing: 'CALLED_OFF',
+      opened_at: '2026-09-08T08:00:00Z',
+      ended_at: '2026-09-08T10:00:00Z',
+      ended_by: ME,
+      game_id: 'g1',
+      seats: [
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { side: 'B', player_id: ME, answer: 'ACCEPTED' },
+      ],
+    });
+
+    expect(answered).toMatchObject({
+      standing: 'CALLED_OFF',
+      endedAt: '2026-09-08T10:00:00Z',
+      endedBy: ME,
+      gameId: 'g1',
+    });
+  });
 });

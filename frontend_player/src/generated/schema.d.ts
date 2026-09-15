@@ -941,7 +941,7 @@ export interface paths {
          *
          *     **Remove the challenge** — on a court that was never a game. The organiser's, and admitted exactly while **nobody besides the organiser holds an accepted seat**: before anybody has answered, and again once everybody who joined has left — whatever seats are still deciding. The moment somebody has joined it is refused: a court somebody has joined is nobody's to end for the others, so from then on the organiser leaves it like anybody else, and it is over by itself when at most one player is on it and nobody is still deciding. The invitees' challenges read `WITHDRAWN` and offer no answer — a yes or a no on a removed challenge is refused with `challenge_is_over` — and an invitation whose day was still running is neither answered nor unanswered: it leaves the record that prices silence, and the lapse loop writes nothing for it.
          *
-         *     **Call it off** — on a court that has been a game and lost somebody. The court is half built again, and this is how the game is called off: the challenge is withdrawn exactly as below, and the game it became reaches its fourth end, `CALLED_OFF`, in the same act — its plan is history, its pairing is history, and it is neither an evening nor a game that never happened, so nothing anybody is measured on moves. **Any player on the court**, the organiser or not, and only while a seat is open with nobody deciding on it: a full court that will not play lets its window lapse into `NEVER_PLAYED`, as it always has. A court whose game's window has already closed is withdrawn all the same, and the game stays the ghost it already is.
+         *     **Call it off** — on a court that has been a game and lost somebody. The court is half built again, and this is how the game is called off: the challenge records its own ending, `CALLED_OFF` with `ended_by` you — **never `WITHDRAWN`**, which is *Remove the challenge*'s alone — and the game it became reaches its fourth end, `CALLED_OFF` with `called_off_by` you, in the same act: its plan is history, its pairing is history, and it is neither an evening nor a game that never happened, so nothing anybody is measured on moves. **Any player on the court**, the organiser or not, and only while a seat is open with nobody deciding on it: a full court that will not play lets its window lapse into `NEVER_PLAYED`, as it always has. A court whose game's window has already closed is called off all the same, with you on its record, and the game stays the ghost it already is. A court whose game a departure already called off is over, and this meets `challenge_is_over`.
          *
          *     **Whole-challenge, and it never removes one person.** A withdraw ends the arrangement for everybody on it, and taking one person out of a court that still stands is refused here as it is everywhere else.
          *
@@ -949,7 +949,7 @@ export interface paths {
          *
          *     **What this releases is the people on the court.** A send holds its pairs for as long as an answer is owed, and a reopened court holds its pair until it is re-seated or called off; this is that exit. Somebody who let their day run out needed none: their seat reopened and the open-challenge rule released them with it.
          *
-         *     **A noun and not a verb**, because what this creates is the withdrawal — the one thing in this context that a fold of the seats could never produce. The conversation is destroyed in the act where one exists: there is none before anybody has answered, and there may be one the organiser is alone in again.
+         *     **A noun and not a verb**, because what this creates is the ending — the withdrawal, or the court's call-off — which are the two things in this context that a fold of the seats could never produce. The conversation is destroyed in the act where one exists: there is none before anybody has answered, there may be one the organiser is alone in again, and a court that has been a game has one.
          */
         post: operations["withdraw_challenge_api_v1_challenges__challenge_id__withdrawal_post"];
         delete?: never;
@@ -973,7 +973,7 @@ export interface paths {
          *
          *     **Any player on the court, the organiser included**, while the court stands — and, on a game, while it is awaiting its entry and its agreed moment is ahead or no moment is agreed yet. Once the moment has passed, leaving means nothing and is refused; a court that is not a game has no moment to guard.
          *
-         *     **A court is over when at most one player is on it and no seat is awaiting an answer**, and the organiser is a player in that rule. Before a game the challenge ends by itself — as `DECLINED`, because a departure is a no — and its room with it. On a game, the departure that leaves one player on it **calls the game off** in this request: `GET /games` reads `CALLED_OFF`, the room is gone, and the challenge stands with nobody to fill the seat for. Singles included: an opponent who leaves calls the game off.
+         *     **A court is over when at most one player is on it and no seat is awaiting an answer**, and the organiser is a player in that rule. Before a game the challenge ends by itself — as `DECLINED`, because a departure is a no — and its room with it. On a game, the departure that leaves one player on it **ends the court with its game** in this request: the challenge reads `CALLED_OFF` naming you, `GET /games` reads `CALLED_OFF` naming you, and the room is gone. Singles included: an opponent who leaves calls the game off — for the person they leave, too.
          *
          *     **You are out of this court's own pool for as long as it stands.** Nobody is asked twice on one challenge; being asked again is a **new** challenge. Every other search reaches you at once — the pair rule released you the moment you left.
          *
@@ -1172,6 +1172,8 @@ export interface paths {
          *     **The standing is derived, never stored.** It is folded from the record and the clock at the moment you asked, so a game whose entry window ran out reads as never played whether or not anything has swept it — nothing sweeps it, because there is nothing for a sweep to correct.
          *
          *     **`read_at` is the instant every standing and deadline here was folded against.** Render your countdowns from it, so they cannot disagree with the standing beside them.
+         *
+         *     **A called-off game you have dismissed is not here** (`POST /games/{id}/dismissal`), on this device and every other — the dismissal is recorded on the game, once, and subtracted on every read.
          */
         get: operations["read_games_api_v1_games_get"];
         put?: never;
@@ -1254,6 +1256,32 @@ export interface paths {
          *     **Saying nothing does the same thing**, a day later. Accepting is how you make it true sooner, and it is never how you avoid a penalty — there is none.
          */
         post: operations["accept_result_api_v1_games__game_id__result_acceptance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/dismissal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove this card
+         * @description **Clear a called-off game's card from your own rail** (`docs/adr/0172` §5). Yours alone: nobody else's rail moves, the game and its record are untouched, and the challenge's row and the screen behind it keep the news for their day. It is instant and there is no undo — a mis-tap loses the card and nothing else, which is why there is no sheet.
+         *
+         *     **Recorded on the game, once per player**, so the card is gone on your other phone and after a reinstall; `GET /games` subtracts it on every read rather than keeping a list.
+         *
+         *     **Only on a game that is `CALLED_OFF`**, and only for somebody on its court — the presser, or the players the leaver left; the leaver's seat is open and the card was never on their rail.
+         *
+         *     **A noun and not a verb**, like the departure: what this creates is the dismissal, and it answers nothing because the thing a redraw would draw is the thing you removed.
+         */
+        post: operations["dismiss_game_api_v1_games__game_id__dismissal_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1787,6 +1815,32 @@ export interface components {
          */
         BlockSurface: "SHORTLIST" | "LINEUP" | "FILL_SEATS" | "DECK";
         /**
+         * CalledOffBySchema
+         * @description Who called the game off, and what they are called (``docs/adr/0172`` §4).
+         *
+         *     **The name is carried because the court cannot supply it**: the leaver whose
+         *     departure called the game off has been **vacated** — their seat is drawn
+         *     `player_id: null` — so the seats alone could not name them. It is the same
+         *     name a seat carries, read in the same set read, and it is `null` for the
+         *     same reason a seat's is: an account `users` no longer answers for.
+         *
+         *     **A departure is told from a press by whether this player still holds a
+         *     seat on the game.** The presser does; the leaver's seat is open. No second
+         *     field says which — the record already does.
+         */
+        CalledOffBySchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description The whole name, and **nothing may derive a familiar form from it** (``docs/adr/0107``, ``docs/adr/0171``). ``null`` where ``users`` no longer has the account — never for an unnamed player, whom the entry gate holds at the naming step.
+             */
+            name?: string | null;
+        };
+        /**
          * CandidateSchema
          * @description One row of the shortlist: the pairing, and the person.
          *
@@ -1995,9 +2049,30 @@ export interface components {
              *     - **A withdrawal is exact.** A decision somebody took, carrying its own moment.
              *     - **A decline is an upper bound**, at or before which that person left. Nothing records when somebody said no, so it is bounded by the tighter of the two facts that are recorded: that seat's own deadline, and the last thing that happened to the challenge.
              *
-             *     So `LAPSED` and `WITHDRAWN` are always exact, and `DECLINED` is exact whenever the seat that left **last** was one that ran out — which a mixed court often is — and a bound otherwise. The bound is late rather than early, which is the safe direction for a shelf life: a row that outstays it is news gone stale, and one retired early is somebody never learning a seat reopened.
+             *     So `LAPSED`, `WITHDRAWN` and `CALLED_OFF` are always exact, and `DECLINED` is exact whenever the seat that left **last** was one that ran out — which a mixed court often is — and a bound otherwise. The bound is late rather than early, which is the safe direction for a shelf life: a row that outstays it is news gone stale, and one retired early is somebody never learning a seat reopened.
+             *
+             *     **`CALLED_OFF` is exact too**: the act's own instant, a departure's or a press's (`docs/adr/0172` §2).
              */
             ended_at?: string | null;
+            /**
+             * Ended By
+             * @description The player whose act ended this challenge (`docs/adr/0172` §3). ``null`` on the three standings that are not endings, and that is the whole of what the absence means.
+             *
+             *     **Always the occupant of one of the court's seats**, never a second copy of a name — the face and the name a row draws are that seat's. Which seat, by standing:
+             *
+             *     - `CALLED_OFF` — the last leaver, or whoever pressed *Call it off*; told apart by their seat, which reads `LEFT` for a leaver and `ACCEPTED` for a presser.
+             *     - `WITHDRAWN` — the organiser.
+             *     - `DECLINED` — the seat whose *no* or departure completed the desertion: a seat that `LEFT` or `DECLINED`, never one that ran out, because a no outranks silence. Between two nos dated alike, court order.
+             *     - `LAPSED` — the seat whose window was the last to run out.
+             *
+             *     Read from the same per-seat instants `ended_at` is made from, so the name and the date cannot come from two clocks.
+             */
+            ended_by?: string | null;
+            /**
+             * Game Id
+             * @description The game this court became, and ``null`` until its line-up first completed — the same id ever after, through a re-seat and through the ending (`docs/adr/0172` §4). What lets a row and the leaver's sheet tell a court that has been a game from one that has not: leaving the last other player on one *calls the game off*, and on one that has not it *closes the court*. Read from `games` and never recorded on the challenge.
+             */
+            game_id?: string | null;
             /**
              * Seats
              * @description The court in its fixed order — every **A** seat, then every **B**. Empty seats are in the list, because which side is short is part of what a court is: an A-side full with a B-side short is a different court from the reverse.
@@ -3512,9 +3587,11 @@ export interface components {
             entry_closes_at?: string | null;
             /**
              * Called Off At
-             * @description When somebody called it off, while a seat was open (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from — a day later, as `played_at` and `entry_closes_at` already shelve the other endings. **Nobody is named**: the room is gone and the card says *Called off*.
+             * @description When somebody called it off, while a seat was open (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from — a day later, as `played_at` and `entry_closes_at` already shelve the other endings. Who is `called_off_by`.
              */
             called_off_at?: string | null;
+            /** @description The player who called it off, and their name (``docs/adr/0172`` §4). ``null`` on every standing but `CALLED_OFF`. The last leaver, whose seat is drawn open — or whoever pressed *Call it off*, who still holds one; which of the two is read off the seats, and the game screen's heading is keyed on it. */
+            called_off_by?: components["schemas"]["CalledOffBySchema"] | null;
             /**
              * Seats
              * @description The court, in the order the challenge handed it over
@@ -6267,10 +6344,10 @@ export interface components {
         };
         /**
          * Standing
-         * @description The six standings, as codes. A client's words are the client's own.
+         * @description The seven standings, as codes. A client's words are the client's own.
          * @enum {string}
          */
-        Standing: "AWAITING_ANSWERS" | "ON" | "LINE_UP_INCOMPLETE" | "DECLINED" | "LAPSED" | "WITHDRAWN";
+        Standing: "AWAITING_ANSWERS" | "ON" | "LINE_UP_INCOMPLETE" | "DECLINED" | "LAPSED" | "WITHDRAWN" | "CALLED_OFF";
         /**
          * StandingProposalSchema
          * @description One side's score, on the table and not yet settled on.
@@ -8522,7 +8599,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The challenge is over, and it is returned as it now stands at `WITHDRAWN`, with every seat exactly as it was — a seat still awaiting an answer keeps its question and its deadline, and the standing is read before either. */
+            /** @description The challenge is over, and it is returned as it now stands — `WITHDRAWN` on a court that was never a game, `CALLED_OFF` on one that has been, `ended_by` naming you either way — with every seat exactly as it was: a seat still awaiting an answer keeps its question and its deadline, and the standing is read before either. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8586,7 +8663,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in — on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; and `DECLINED` where you were the last but one on a court that was never a game and nobody is deciding — **a court is over when at most one player is on it and no seat is awaiting an answer**, and a departure is a no. On a game the challenge stands and the **game** is called off instead, in this same request: `GET /games` reads it `CALLED_OFF`, and the room is gone. */
+            /** @description Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in — on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; `DECLINED` where you were the last but one on a court that was never a game and nobody is deciding — **a court is over when at most one player is on it and no seat is awaiting an answer**, and a departure is a no; and `CALLED_OFF` where you were the last but one on a court that has been a game: the court ends with its game, `ended_by` you, and the game is called off in this same request — `GET /games` reads it `CALLED_OFF` with `called_off_by` you, and the room is gone. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9113,6 +9190,53 @@ export interface operations {
              *
              *     `the_result_is_already_accepted` — your side has already agreed to this one.
              */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_game_api_v1_games__game_id__dismissal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The card is cleared from your rail — on this device and every other — and nothing else moves. A second press answers the same and writes nothing. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `you_were_not_on_this_court` — no game of **yours** has that id. One code for two cases — it does not exist, or you did not play in it — because separating them would answer *is this id real* about four strangers' evening. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `game_is_not_called_off` — only a called-off game's card can be cleared. The other endings' cards carry a score or a strand's verdict and are the record for the day they stay; a live game's card is the game. */
             409: {
                 headers: {
                     [name: string]: unknown;

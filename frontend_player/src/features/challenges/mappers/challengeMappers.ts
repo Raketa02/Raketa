@@ -151,6 +151,8 @@ export function toChallenges(response: ChallengeListResponse): readonly Challeng
         sport,
         openedAt: one.opened_at,
         ...(one.ended_at == null ? {} : { endedAt: one.ended_at }),
+        ...(one.ended_by == null ? {} : { endedBy: one.ended_by }),
+        ...(one.game_id == null ? {} : { gameId: one.game_id }),
         readAt: response.read_at,
         seats: one.seats.map(toSeat),
       },

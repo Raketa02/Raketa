@@ -32,9 +32,10 @@
  * the drawn button is no longer hidden because it is no longer the sighted half of something else.
  *
  * **The wide door is the next thing to do** and its word changes with the stage — `Finish the
- * plan` on Planning, `Open` · `We played` · `Confirm the result` on the others, and none on an
- * ending — while its destination is the standing's, as it always was: `GAME_ROUTE`, and the
- * screen behind it lands on the arm the standing derives. **One door is a different door**
+ * plan` on Planning, `Open` · `We played` · `Confirm the result` on the others, `What happened?`
+ * on the called-off card and none on the other endings — while its destination is the
+ * standing's, as it always was: `GAME_ROUTE`, and the screen behind it lands on the arm the
+ * standing derives. **One door is a different door**
  * ([#419](https://github.com/Raketa02/Raketa/issues/419)): *Fill the seat* on *Needs a player*
  * runs the challenge screen's fill and lands in the builder, and it is `features/challenges`'
  * `FillTheSeat` drawn in the door's place with the card's accent and the door's width, rather
@@ -56,6 +57,16 @@
  * between three slots and the door that finishes them would cut the card in two — so the row
  * itself takes the margin. The card takes the height the row gives it and the footer falls to the
  * bottom of it; nothing here measures anything.
+ *
+ * ## The called-off card offers two things, and names nobody
+ *
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §8.) No line under the slots — the tag is the whole of what the card says — and in the action
+ * row: **What happened?**, the on-dark fill opening the game screen, whose heading says who; and
+ * beside it, where a live card has its bubble, the **trash** — `features/games`' `RemoveCard`,
+ * composed here as `FillTheSeat` is — which clears the card from Now at once, on the reply, with
+ * no sheet, and re-reads the rail itself on a refusal. There is no bubble to displace: an ending
+ * destroys the room, and the join fails soft.
  */
 
 import { router } from 'expo-router';
@@ -63,11 +74,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { FillTheSeat } from '@/features/challenges/types';
 import { CONVERSATION_ROUTE } from '@/features/conversations/types';
-import { GAME_ROUTE, seatedOthers, type Game } from '@/features/games/types';
+import { GAME_ROUTE, RemoveCard, seatedOthers, type Game } from '@/features/games/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { Button, DarkCard, Tag, theme } from '@/shared/ui';
 
-import { doorOf, gameCardName } from '../domain/gameCard';
+import { doorOf, gameCardName, mayBeCleared } from '../domain/gameCard';
 import { momentHasPassed } from '../domain/ladder';
 import { PLAN_SLOTS, type Plan } from '../domain/slots';
 
@@ -139,6 +150,8 @@ export function GameCard({
   const fill = doorOf(name) === 'fill';
   const fillOffered = fill && !momentHasPassed(plan, game.readAt);
   const wideDoor = verb !== undefined && (!fill || fillOffered);
+  /** The trash, on the one card that carries it (ADR-0172 §5) — in the bubble's place. */
+  const trash = mayBeCleared(name);
 
   return (
     <DarkCard style={[s.card, width === undefined ? undefined : { width }]}>
@@ -181,7 +194,7 @@ export function GameCard({
         {line === undefined ? null : <Text style={s.line}>{line}</Text>}
       </View>
 
-      {!doors || (!wideDoor && conversationId === undefined) ? null : (
+      {!doors || (!wideDoor && conversationId === undefined && !trash) ? null : (
         <View style={s.footer}>
           {!wideDoor ? null : fill ? (
             <FillTheSeat
@@ -197,7 +210,9 @@ export function GameCard({
             <Button label={verb} variant={accent.button} size="lg" onPress={open} style={s.door} />
           )}
 
-          {conversationId === undefined ? null : (
+          {trash ? (
+            <RemoveCard gameId={game.gameId} />
+          ) : conversationId === undefined ? null : (
             <ChatDoor
               onPress={() =>
                 router.push({ pathname: CONVERSATION_ROUTE, params: { conversationId } })

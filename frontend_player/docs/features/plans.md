@@ -387,3 +387,17 @@ transcriptions of the ladder (`app/seeds/loop.py`, `tests/api/test_the_loop.py`)
 with the client — the seed's _Today_ fixture now reaches Planning on the day of its game, which is
 the card this record is about. Nothing on the wire moved. No device has drawn the row; it is asked
 for a look.
+
+**The called-off card offers two things and names nobody**
+([#454](https://github.com/Raketa02/Raketa/issues/454), [ADR-0172](../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+§5, §8). `DOOR['called-off']` is `open` — _What happened?_ (`WHAT_HAPPENED`) in the on-dark fill,
+the tag's own quiet colour, opening the game screen whose heading says who — and `cardLine` says
+nothing under its slots, because the tag is the whole of what the card says. Beside the door, where
+a live card has its bubble, the **trash**: `features/games`' `RemoveCard`, composed here as
+`FillTheSeat` is, on the one card `mayBeCleared` names — a `Record` over `GameCardName`, so
+widening the trash to _Never played_, _Counted_ or _Uncounted_ is a row and a decision, which the
+record names out of scope. The card leaves the rail on the dismissal's reply and no sheet stands in
+front of it; a refusal is that hook's own re-read of the rail and says nothing — unlike the fill,
+the act lives beside the list it touches, so the card hands it no `onReRead`. `ACCENT['called-off']`
+is the one row whose button is not `settled`: a green door under a red tag would be a card whose
+colours disagreed about it. **Not seen on a device** — the action row is asked for a look.

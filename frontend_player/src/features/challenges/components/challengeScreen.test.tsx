@@ -44,14 +44,17 @@ import {
 
 import { standingLine, yourAnswerWindowLine } from './challengePresentation';
 import {
+  FILL_THE_SEATS,
   IM_IN,
   NOT_THIS_TIME,
   REMOVE_SHEET_BODY,
   REMOVE_SHEET_CLOSE_LABEL,
   REMOVE_SHEET_TITLE,
   REMOVE_THE_CHALLENGE,
+  THE_COURT_HEADING,
   pairingAbsenceLine,
   removeRefusalMessage,
+  seatDidLine,
 } from './challengeDetailPresentation';
 import { LEAVE_FROM_THE_LIST_BODY, LEAVE_THE_GAME } from './leaveGamePresentation';
 
@@ -69,11 +72,17 @@ function at(hours: number): string {
 const DETAIL_PATH = `${CHALLENGES_PATH}/${CHALLENGE_ID}`;
 
 /**
- * Whom the organiser's sentence would name. The **invitee's** sentences for these two standings
- * name nobody — *You said no*, *Your day ran out* — so this is the payload the fold requires and
- * the words never reach.
+ * An ending of the reader's own — their no, their lapse — as the fold quotes it: `ended_by` is
+ * them, and the sentence is §13's invitee column, *You said no* · *Your day ran out*.
  */
-const EWA_NAMED = { kind: 'player', name: 'ewa.m' } as const;
+const myOwn = (standing: 'DECLINED' | 'LAPSED', ownAnswer: 'DECLINED' | 'LAPSED') =>
+  ({
+    side: 'invitee',
+    standing,
+    endedBy: { kind: 'you' },
+    byADeparture: false,
+    ownAnswer,
+  }) as const;
 
 /** Enough of a rating for the entry gate to let the app through — this suite is not about it. */
 const PADEL_RATING: Wire['RatingResponse'] = {
@@ -238,11 +247,7 @@ describe('the arms', () => {
       }),
     );
 
-    expect(
-      await screen.findByText(
-        standingLine({ side: 'invitee', standing: 'DECLINED', player: EWA_NAMED }),
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(standingLine(myOwn('DECLINED', 'DECLINED')))).toBeTruthy();
     expect(screen.queryByLabelText(/^ewa\.m\. Match score/)).toBeNull();
   });
 
@@ -359,11 +364,7 @@ describe('the two answers', () => {
 
     fireEvent.press(await screen.findByRole('button', { name: NOT_THIS_TIME }));
 
-    expect(
-      await screen.findByText(
-        standingLine({ side: 'invitee', standing: 'DECLINED', player: EWA_NAMED }),
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(standingLine(myOwn('DECLINED', 'DECLINED')))).toBeTruthy();
     expect(screen.queryByRole('button', { name: IM_IN })).toBeNull();
   });
 
@@ -391,11 +392,7 @@ describe('the two answers', () => {
 
     fireEvent.press(await screen.findByRole('button', { name: IM_IN }));
 
-    expect(
-      await screen.findByText(
-        standingLine({ side: 'invitee', standing: 'LAPSED', player: EWA_NAMED }),
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(standingLine(myOwn('LAPSED', 'LAPSED')))).toBeTruthy();
   });
 });
 
@@ -444,6 +441,149 @@ describe('the arms with nothing to press', () => {
     expect(await screen.findByText(standingLine({ side: 'invitee', standing: 'ON' }))).toBeTruthy();
     expect(screen.queryByRole('button', { name: IM_IN })).toBeNull();
     expect(screen.queryByLabelText(/^ewa\.m\. Match score/)).toBeNull();
+  });
+});
+
+/**
+ * **The ended court** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7): the row's tap lands on the sentence, every seat's word, and nothing to press — no fill, no
+ * chat door, no leave, no remove. `ended_by` is the row's, because the detail read does not carry
+ * it, and it is what tells the presser's *called it off* from the reader's *in*.
+ */
+describe('the ended court', () => {
+  const TOMEK = 'cccccccc-0000-4000-8000-000000000003';
+  const OLA = 'dddddddd-0000-4000-8000-000000000004';
+  const GAME = 'aaaaaaaa-0000-4000-8000-00000000000a';
+  const ROOM = 'eeeeeeee-0000-4000-8000-000000000005';
+
+  const seats = (
+    court: readonly (readonly [string, string, Wire['SeatSchema']['answer']])[],
+  ): Wire['DetailSeatSchema'][] =>
+    court.map(([player_id, name, answer], at) => ({
+      side: at < court.length / 2 ? 'A' : 'B',
+      player_id,
+      name,
+      answer,
+    }));
+
+  /** Ewa's doubles: Tomek pressed *Call it off* after Ola left; I was in, and still am on the record. */
+  const OSCAR_PRESSED = seats([
+    [EWA, 'ewa.m', 'ACCEPTED'],
+    [ME, 'me_', 'ACCEPTED'],
+    [TOMEK, 'tomek.p', 'ACCEPTED'],
+    [OLA, 'ola.k', 'LEFT'],
+  ]);
+
+  /** The same court as the list holds it — and the list is where `ended_by` and `game_id` are. */
+  async function openTheEndedCourt(
+    standing: 'CALLED_OFF' | 'DECLINED',
+    court: readonly Wire['DetailSeatSchema'][],
+    endedBy: string,
+  ) {
+    const listed = row({
+      sport: 'PADEL',
+      standing,
+      ended_at: at(-1),
+      ended_by: endedBy,
+      game_id: standing === 'CALLED_OFF' ? GAME : null,
+      seats: court.map(({ card: _card, ...seat }) => seat),
+    });
+    // A room the list still holds for a beat: the door is the fold's to withhold, not the list's.
+    stubConversations(transport, [
+      {
+        conversation_id: ROOM,
+        challenge_id: CHALLENGE_ID,
+        game_id: standing === 'CALLED_OFF' ? GAME : null,
+        sport: 'PADEL',
+        members: [
+          { player_id: EWA, name: 'ewa.m' },
+          { player_id: ME, name: 'me_' },
+        ],
+        people: [
+          { player_id: EWA, name: 'ewa.m' },
+          { player_id: ME, name: 'me_' },
+        ],
+        last_entry: null,
+      },
+    ]);
+    stubChallenges(transport, [listed], READ_AT);
+    transport.on('GET', DETAIL_PATH, () =>
+      json(detail({ sport: 'PADEL', standing, seats: [...court] })),
+    );
+
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+
+    fireEvent.press(await screen.findByLabelText(/^tomek\.p, Padel/));
+    await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
+  }
+
+  it('lands from the row on the sentence, every seat’s word, and nothing to press', async () => {
+    await openTheEndedCourt('CALLED_OFF', OSCAR_PRESSED, TOMEK);
+
+    expect(
+      await screen.findByText(
+        standingLine({
+          side: 'invitee',
+          standing: 'CALLED_OFF',
+          endedBy: { kind: 'player', name: 'tomek.p' },
+          byADeparture: false,
+        }),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(THE_COURT_HEADING)).toBeTruthy();
+    expect(
+      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'ewa.m' }, 'in')),
+    ).toBeTruthy();
+    expect(screen.getByLabelText(seatDidLine({ kind: 'you' }, 'in'))).toBeTruthy();
+    expect(
+      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'tomek.p' }, 'called-it-off')),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'ola.k' }, 'left')),
+    ).toBeTruthy();
+
+    for (const name of [FILL_THE_SEATS, OPEN_THE_CHAT, LEAVE_THE_GAME, REMOVE_THE_CHALLENGE]) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
+    expect(screen.queryByLabelText(/Match score/)).toBeNull();
+  });
+
+  it('draws a court that never became a game and ended on a departure the same way', async () => {
+    await openTheEndedCourt(
+      'DECLINED',
+      seats([
+        [EWA, 'ewa.m', 'DECLINED'],
+        [ME, 'me_', 'ACCEPTED'],
+        [TOMEK, 'tomek.p', 'LEFT'],
+        [OLA, 'ola.k', 'LAPSED'],
+      ]),
+      TOMEK,
+    );
+
+    expect(
+      await screen.findByText(
+        standingLine({
+          side: 'invitee',
+          standing: 'DECLINED',
+          endedBy: { kind: 'player', name: 'tomek.p' },
+          byADeparture: true,
+        }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'ewa.m' }, 'said-no')),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'ola.k' }, 'ran-out')),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'tomek.p' }, 'left')),
+    ).toBeTruthy();
+    for (const name of [FILL_THE_SEATS, OPEN_THE_CHAT, LEAVE_THE_GAME, REMOVE_THE_CHALLENGE]) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
   });
 });
 
@@ -602,11 +742,7 @@ describe('the door on later visits', () => {
 
     fireEvent.press(await screen.findByRole('button', { name: NOT_THIS_TIME }));
 
-    expect(
-      await screen.findByText(
-        standingLine({ side: 'invitee', standing: 'DECLINED', player: EWA_NAMED }),
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(standingLine(myOwn('DECLINED', 'DECLINED')))).toBeTruthy();
     expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`);
   });
 

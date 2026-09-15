@@ -12,7 +12,7 @@
  * is the deck's to change and the rules are not.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { AppError } from '@/shared/errors';
 
@@ -55,6 +55,7 @@ import {
   submitLabel,
 } from './gamePresentation';
 import { gameErrorMessage } from './gameErrorMessage';
+import { gameKeys } from '../hooks/gameKeys';
 
 const GAME_ID = '8f14e45f-ceea-467a-9dd1-4bd9c39d4a58';
 const CHALLENGE_ID = 'cccccccc-0000-4000-8000-000000000003';
@@ -603,6 +604,85 @@ describe('the ends', () => {
     expect(screen.queryByText(/Leave this game|Call it off|Fill the seat/)).toBeNull();
     expect(screen.queryByText(/The plan/)).toBeNull();
     expect(transport.requestsTo('GET', `${GAMES_PATH}/${GAME_ID}/pairing`)).toEqual([]);
+  });
+
+  /**
+   * **The ending block, keyed by how it ended** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §8): a departure is told from a press by whether `called_off_by` still holds a seat, and the
+   * heading and body follow — the shortage and who left on a singles and on a doubles, the
+   * presser's name on the button's, and *You* where the reader pressed it.
+   */
+  describe('the called-off ending block', () => {
+    const PARTNER = 'cccccccc-0000-4000-8000-000000000004';
+    const tomek = { kind: 'player', name: THEIR_HANDLE } as const;
+    const calledOff = (
+      seats: Wire['GameSchema']['seats'],
+      by: Wire['CalledOffBySchema'],
+    ): Wire['GameSchema'] =>
+      game({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+        called_off_by: by,
+        seats,
+      });
+
+    it('says a singles game was called off for lack of players, and that the opponent left', async () => {
+      await openGame(
+        calledOff(
+          [
+            { side: 'A', player_id: ME, name: 'me_' },
+            { side: 'B', player_id: null, name: null },
+          ],
+          { player_id: OPPONENT, name: THEIR_HANDLE },
+        ),
+      );
+
+      const ending = { by: tomek, how: 'departure', format: 'singles' } as const;
+      expect(screen.getByText(resultTitle({ kind: 'called-off', ending }))).toBeTruthy();
+      expect(screen.getByText(resultBody({ kind: 'called-off', ending })!)).toBeTruthy();
+      expect(screen.getByText(standingLine({ kind: 'called-off' }, READ_AT))).toBeTruthy();
+    });
+
+    it('says a doubles game was called off for lack of players, and who was the last to leave', async () => {
+      await openGame(
+        calledOff(
+          [
+            { side: 'A', player_id: ME, name: 'me_' },
+            { side: 'A', player_id: null, name: null },
+            { side: 'B', player_id: null, name: null },
+            { side: 'B', player_id: null, name: null },
+          ],
+          { player_id: OPPONENT, name: THEIR_HANDLE },
+        ),
+      );
+
+      const ending = { by: tomek, how: 'departure', format: 'doubles' } as const;
+      expect(screen.getByText(resultTitle({ kind: 'called-off', ending }))).toBeTruthy();
+      expect(screen.getByText(resultBody({ kind: 'called-off', ending })!)).toBeTruthy();
+    });
+
+    it('names the presser in the heading where the button ended it, and You for the reader', async () => {
+      const court: Wire['GameSchema']['seats'] = [
+        { side: 'A', player_id: ME, name: 'me_' },
+        { side: 'A', player_id: PARTNER, name: 'kasia_w' },
+        { side: 'B', player_id: OPPONENT, name: THEIR_HANDLE },
+        { side: 'B', player_id: null, name: null },
+      ];
+      await openGame(calledOff(court, { player_id: OPPONENT, name: THEIR_HANDLE }));
+
+      const theirs = { by: tomek, how: 'press', format: 'doubles' } as const;
+      expect(screen.getByText(resultTitle({ kind: 'called-off', ending: theirs }))).toBeTruthy();
+      expect(screen.getByText(resultBody({ kind: 'called-off', ending: theirs })!)).toBeTruthy();
+
+      stubGames(transport, [calledOff(court, { player_id: ME, name: 'me_' })], READ_AT);
+      await act(() => queryClient.invalidateQueries({ queryKey: gameKeys.list() }));
+
+      const mine = { by: { kind: 'you' }, how: 'press', format: 'doubles' } as const;
+      expect(
+        await screen.findByText(resultTitle({ kind: 'called-off', ending: mine })),
+      ).toBeTruthy();
+    });
   });
 
   it('draws a confirmed result with both sides named, and nothing to press', async () => {

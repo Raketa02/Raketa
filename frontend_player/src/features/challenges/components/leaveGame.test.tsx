@@ -32,6 +32,7 @@ import {
   stubConversation,
   stubConversations,
   stubEntries,
+  stubChallenges,
   stubGames,
   stubGate,
   stubPairing,
@@ -53,6 +54,7 @@ import {
   LEAVE_THE_GAME,
   LEAVE_THIS_GAME,
   LEAVING,
+  leavingEndsLine,
 } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
@@ -292,6 +294,48 @@ describe('the sheet', () => {
     await waitFor(() => expect(screen.queryByText(LEAVE_SHEET_TITLE)).toBeNull());
     expect(transport.requestsTo('POST', DEPARTURE_PATH)).toEqual([]);
     expect(screen.getByRole('button', { name: LEAVE_THIS_GAME })).toBeTruthy();
+  });
+
+  /**
+   * **The leaver is told what their leaving does** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §9): on a singles game the reader is the only other seat, so the sheet's first line says the
+   * leaving calls the game off — for the opponent too — in place of *the others keep the game*,
+   * which would be false; the other two lines stand.
+   */
+  it('says the leaving calls the game off for the opponent, when the reader is the last other seat', async () => {
+    stubChallenges(
+      transport,
+      [
+        {
+          challenge_id: CHALLENGE,
+          organiser_id: TOMEK,
+          standing: 'ON',
+          sport: 'PADEL',
+          opened_at: '2026-09-07T09:00:00Z',
+          ended_at: null,
+          ended_by: null,
+          game_id: GAME,
+          seats: [
+            { side: 'A', player_id: TOMEK, name: 'tomek.p', answer: 'ACCEPTED', answer_by: null },
+            { side: 'B', player_id: ME, name: 'me_', answer: 'ACCEPTED', answer_by: null },
+          ],
+        },
+      ],
+      READ_AT,
+    );
+    await openFromNow();
+
+    fireEvent.press(await screen.findByRole('button', { name: LEAVE_THIS_GAME }));
+
+    expect(await screen.findByText(LEAVE_SHEET_TITLE)).toBeTruthy();
+    const [survives, ...stillTrue] = LEAVE_SHEET_BODY;
+    expect(
+      screen.getByText(
+        leavingEndsLine({ court: 'a-game', theOneLeft: { kind: 'player', name: 'tomek.p' } }),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(survives)).toBeNull();
+    for (const line of stillTrue) expect(screen.getByText(line)).toBeTruthy();
   });
 });
 

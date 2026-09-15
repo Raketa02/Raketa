@@ -6,7 +6,7 @@
  * | `useChallenge` | `GET /challenges/{id}` — the arrangement, the people and the pairing |
  * | `useAnswerSeat` | `POST …/accept` and `…/decline` — **pending, never optimistic** |
  * | `useInviteSeats` | `POST …/seats` — ⚡'s send, from the builder this screen pushes |
- * | `useWithdrawChallenge` | `POST …/withdrawal` — ***Remove the challenge***, the organiser's while nobody has joined; **on a court that has been a game, *Call it off*, any player's, and the game is called off in the act** (ADR-0165 §4–§5) |
+ * | `useWithdrawChallenge` | `POST …/withdrawal` — ***Remove the challenge***, the organiser's while nobody has joined; **on a court that has been a game, *Call it off*, any player's: the court reads `CALLED_OFF` with `ended_by` the presser and the game is called off in the act** (ADR-0165 §4–§5, ADR-0172 §1) |
  * | `useLeaveGame` | `POST …/departure` — any player's: from the **game** screen while the moment is ahead, and from a **Chats** row or the challenge screen before the court is whole (#427) |
  * | `useReReadCourtLists` | what a **refused** departure re-reads, once its words have been read — the two lists a court is drawn on |
  *
@@ -192,20 +192,24 @@ export function useInviteSeats() {
 
 /**
  * **The withdrawal** — ***Remove the challenge*** from the organiser's Chats row and the challenge
- * screen while nobody has joined, and ***Call it off*** on the game screen, which is the same act
- * on the same route on a court that has been a game
+ * screen while nobody has joined, and ***Call it off*** on the game screen, which is the same
+ * route on a court that has been a game and a different ending
  * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md),
  * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
- * §4–§5).
+ * §4–§5, [ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §1): `WITHDRAWN` on a court that was never a game, `CALLED_OFF` with `ended_by` the presser on
+ * one that has been, and which act a court gets is the fold's to say on the server, never this
+ * client's.
  *
- * Pending, never optimistic: the route returns the challenge as it now stands at `WITHDRAWN`, so
- * the screen redraws from the reply exactly as the two answers do, and `redrawnFrom` drops the
- * card block by ADR-0143 §8's rule rather than by a round trip.
+ * Pending, never optimistic: the route returns the challenge as it now stands, so the screen
+ * redraws from the reply exactly as the two answers do, and `redrawnFrom` drops the card block by
+ * ADR-0143 §8's rule rather than by a round trip.
  *
  * **The reply is written into the challenge list too** ([#428](https://github.com/Raketa02/Raketa/issues/428)),
  * on `useLeaveGame`'s line: the inbox drops an own removal at once (`belongsOnTheInbox`), so the
  * organiser's row is gone the moment the reply lands and not a round trip later — and on a
- * call-off the row reads the server's own `WITHDRAWN` a beat early, which the re-read confirms.
+ * call-off the presser's row reads *You called the game off* under its tag on the reply, with
+ * `ended_by` and `game_id` carried by `rowRedrawnFrom`, which the re-read confirms.
  *
  * **The conversation is gone, not delisted**, so the Chats list is **invalidated rather than
  * patched** ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)):
@@ -253,7 +257,9 @@ export function useWithdrawChallenge() {
  * row, and on the challenge screen before the court is whole
  * ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md),
  * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
- * §1, §6).
+ * §1, §6). Where the leaver was the last other player on a game, the reply reads `CALLED_OFF`
+ * with `ended_by` the leaver (ADR-0172 §1) — the court ended with its game — and the row written
+ * from it goes at once as every own *left* does.
  *
  * The act lands on the challenge — that is where the seat reopens — and it is reached from the
  * game, which carries its `challengeId`, from a room, which carries it too, and from the challenge

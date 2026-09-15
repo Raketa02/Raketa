@@ -36,7 +36,12 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { CHALLENGES_HEADING, standingLine, yourAnswerWindowLine } from './challengePresentation';
+import {
+  CALLED_OFF_TAG,
+  CHALLENGES_HEADING,
+  standingLine,
+  yourAnswerWindowLine,
+} from './challengePresentation';
 
 const ME = GATE_USER.id;
 const EWA = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -172,6 +177,7 @@ describe('what the section holds', () => {
     const justDeclined = mySend({
       standing: 'DECLINED',
       ended_at: at(-1),
+      ended_by: TOMEK,
       seats: [
         { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
         { side: 'B', player_id: TOMEK, answer: 'DECLINED', answer_by: at(-1), name: 'tomek.p' },
@@ -186,7 +192,8 @@ describe('what the section holds', () => {
           standingLine({
             side: 'organiser',
             standing: 'DECLINED',
-            player: { kind: 'player', name: 'tomek.p' },
+            endedBy: { kind: 'player', name: 'tomek.p' },
+            byADeparture: false,
           }),
         ),
       ),
@@ -349,16 +356,18 @@ describe('the row', () => {
   });
 
   /**
-   * **And a court that ended on somebody leaving it, with me the one left, has no row at all**
-   * ([#429](https://github.com/Raketa02/Raketa/issues/429)): B took the yes back after C and D
-   * said no, so the court is over (`DECLINED` — a departure is a no) with nobody committed to it
-   * but me. The room the yes opened is where that was told; the row has no news to keep a day.
+   * **A court that ended on somebody leaving it, with me the one left, keeps its row and says
+   * who** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §7): the departure-drop rule — a row that vanished because the only sentence would have
+   * read *? said no* — is retired, and the row reads *{name} left — nobody else is coming* under
+   * the leaver's face for its day.
    */
-  it('drops a court that ended on somebody leaving, with me the one left on it', async () => {
+  it('keeps a court that ended on somebody leaving, with me the one left, and names them', async () => {
     const theyAllWent = mySend({
       sport: 'PADEL',
       standing: 'DECLINED',
       ended_at: at(-1),
+      ended_by: TOMEK,
       seats: [
         { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
         { side: 'A', player_id: TOMEK, answer: 'LEFT', answer_by: at(20), name: 'tomek.p' },
@@ -369,8 +378,17 @@ describe('the row', () => {
 
     await openChats([theyAllWent]);
 
-    expect(await screen.findByText(CHATS_COPY.emptyChallenges)).toBeTruthy();
-    expect(screen.queryByLabelText(/tomek\.p/)).toBeNull();
+    const row = await screen.findByLabelText(/^tomek\.p, Padel/);
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'DECLINED',
+        endedBy: { kind: 'player', name: 'tomek.p' },
+        byADeparture: true,
+      }),
+    );
+    expect(row.props.accessibilityLabel).not.toContain('ewa.m');
+    expect(screen.queryByText(CALLED_OFF_TAG)).toBeNull();
   });
 
   /** A name is not shortenable, so the list gives way by dropping whole names. */
@@ -396,6 +414,217 @@ describe('the row', () => {
 
     expect(row).toBeTruthy();
     expect(await screen.findByText('ewa.magdalena.wisniewska +2')).toBeTruthy();
+  });
+});
+
+/**
+ * **The ended rows, walked one by one** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7): each draws `ended_by`'s face and name under the sentence keyed by that person's seat, the
+ * `Called off` tag is on `CALLED_OFF` rows and on no other, a doubles *said no* row draws one face
+ * rather than three, and the clock stripe's rule is untouched by any of it.
+ */
+describe('an ended row names whose act ended it', () => {
+  const ended = (over: Partial<Wire['ChallengeSchema']>) =>
+    mySend({ sport: 'PADEL', ended_at: at(-1), ...over });
+
+  const NAMED_TOMEK = { kind: 'player', name: 'tomek.p' } as const;
+
+  /** The row named after one person: their name in the handles, and nobody else's anywhere on it. */
+  async function theRowNaming(name: string) {
+    const row = await screen.findByLabelText(new RegExp(`^${name.replace('.', '\\.')}, Padel`));
+    expect(screen.getByText(name)).toBeTruthy();
+    expect(screen.queryByText(/\+\d/)).toBeNull();
+    return row;
+  }
+
+  it('names the last leaver under *{name} left*, and wears the tag', async () => {
+    await openChats([
+      ended({
+        standing: 'CALLED_OFF',
+        ended_by: TOMEK,
+        game_id: 'aaaaaaaa-0000-4000-8000-00000000000a',
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: EWA, answer: 'LEFT', name: 'ewa.m' },
+          { side: 'B', player_id: OLA, answer: 'LEFT', name: 'ola.k' },
+          { side: 'B', player_id: TOMEK, answer: 'LEFT', name: 'tomek.p' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'CALLED_OFF',
+        endedBy: NAMED_TOMEK,
+        byADeparture: true,
+      }),
+    );
+    // The faces that left one by one never come back on the row that ends it.
+    expect(row.props.accessibilityLabel).not.toMatch(/ewa\.m|ola\.k/);
+    expect(screen.getByText(CALLED_OFF_TAG)).toBeTruthy();
+    expect(row.props.accessibilityLabel).toMatch(new RegExp(`${CALLED_OFF_TAG}$`));
+  });
+
+  it('names the presser under *{name} called the game off*, and wears the tag', async () => {
+    await openChats([
+      ended({
+        standing: 'CALLED_OFF',
+        ended_by: TOMEK,
+        game_id: 'aaaaaaaa-0000-4000-8000-00000000000a',
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+          { side: 'B', player_id: OLA, answer: 'ACCEPTED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'LEFT', name: 'ewa.m' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'CALLED_OFF',
+        endedBy: NAMED_TOMEK,
+        byADeparture: false,
+      }),
+    );
+    expect(screen.getByText(CALLED_OFF_TAG)).toBeTruthy();
+  });
+
+  /**
+   * **The presser's own row stays its day** and names the people still on the court — a sentence
+   * about the reader's own act names nobody else, and the row is never blank.
+   */
+  it('reads *You called the game off* to the presser, over the faces still on the court', async () => {
+    await openChats([
+      ended({
+        standing: 'CALLED_OFF',
+        ended_by: ME,
+        game_id: 'aaaaaaaa-0000-4000-8000-00000000000a',
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+          { side: 'B', player_id: OLA, answer: 'ACCEPTED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'LEFT', name: 'ewa.m' },
+        ],
+      }),
+    ]);
+
+    const row = await screen.findByLabelText(/^tomek\.p and ola\.k, Padel/);
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'CALLED_OFF',
+        endedBy: { kind: 'you' },
+        byADeparture: false,
+      }),
+    );
+    expect(row.props.accessibilityLabel).not.toMatch(/ewa\.m|me_/);
+    expect(screen.getByText(CALLED_OFF_TAG)).toBeTruthy();
+  });
+
+  it('names the one who left under *{name} left — nobody else is coming*, with no tag', async () => {
+    await openChats([
+      ended({
+        standing: 'DECLINED',
+        ended_by: TOMEK,
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: TOMEK, answer: 'LEFT', name: 'tomek.p' },
+          { side: 'B', player_id: OLA, answer: 'DECLINED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'DECLINED', name: 'ewa.m' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'DECLINED',
+        endedBy: NAMED_TOMEK,
+        byADeparture: true,
+      }),
+    );
+    expect(screen.queryByText(CALLED_OFF_TAG)).toBeNull();
+  });
+
+  /** Today's doubles *said no* row goes from three faces to one: the tap answers *which court*. */
+  it('names the one who said no under *{name} said no*, one face on a doubles court', async () => {
+    await openChats([
+      ended({
+        standing: 'DECLINED',
+        ended_by: TOMEK,
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: OLA, answer: 'DECLINED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'DECLINED', name: 'ewa.m' },
+          { side: 'B', player_id: TOMEK, answer: 'DECLINED', name: 'tomek.p' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'DECLINED',
+        endedBy: NAMED_TOMEK,
+        byADeparture: false,
+      }),
+    );
+    expect(row.props.accessibilityLabel).not.toMatch(/ewa\.m|ola\.k/);
+    expect(screen.queryByText(CALLED_OFF_TAG)).toBeNull();
+  });
+
+  it("names the one whose day ran out last under *{name}'s day ran out*, with no tag", async () => {
+    await openChats([
+      ended({
+        standing: 'LAPSED',
+        ended_by: TOMEK,
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: OLA, answer: 'LAPSED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'LAPSED', name: 'ewa.m' },
+          { side: 'B', player_id: TOMEK, answer: 'LAPSED', name: 'tomek.p' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'LAPSED',
+        endedBy: NAMED_TOMEK,
+        byADeparture: false,
+      }),
+    );
+    expect(screen.queryByText(CALLED_OFF_TAG)).toBeNull();
+  });
+
+  /** The stripe marks a clock of yours, and an ended row has none — the tag and the stripe never share a row. */
+  it('draws no stripe on any ended row, and still one on the row with a clock of mine', async () => {
+    await openChats([
+      challenge(),
+      ended({
+        standing: 'CALLED_OFF',
+        ended_by: TOMEK,
+        game_id: 'aaaaaaaa-0000-4000-8000-00000000000a',
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'B', player_id: TOMEK, answer: 'LEFT', name: 'tomek.p' },
+        ],
+      }),
+    ]);
+
+    await theRowNaming('tomek.p');
+    await screen.findByLabelText(/^ewa\.m, Squash/);
+    expect(stripes()).toHaveLength(1);
+    expect(screen.getByText(CALLED_OFF_TAG)).toBeTruthy();
   });
 });
 

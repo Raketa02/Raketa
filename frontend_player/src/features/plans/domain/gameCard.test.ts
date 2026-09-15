@@ -105,7 +105,7 @@ describe('the door each card carries', () => {
       undefined,
       undefined,
       undefined,
-      undefined,
+      'open',
       undefined,
     ]);
   });
@@ -119,16 +119,19 @@ describe('the door each card carries', () => {
     expect(doorOf('needs-a-player')).not.toBe(doorOf('game-on'));
   });
 
-  it('offers nothing on the four endings and on the gap', () => {
-    for (const name of [
-      'counted',
-      'uncounted',
-      'never-played',
-      'called-off',
-      'unreadable',
-    ] as const) {
+  it('offers nothing on three of the endings and on the gap', () => {
+    for (const name of ['counted', 'uncounted', 'never-played', 'unreadable'] as const) {
       expect(doorOf(name)).toBeUndefined();
     }
+  });
+
+  /**
+   * **The called-off card opens the game screen** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §8): the card names nobody, and *What happened?* is the door to the screen that does. The
+   * same `open` as *Game on*'s; the word differs, and that is `nowPresentation`'s.
+   */
+  it('opens the game from the called-off card, whose screen says what happened', () => {
+    expect(doorOf('called-off')).toBe('open');
   });
 });
 
