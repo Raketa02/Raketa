@@ -39,10 +39,20 @@ export interface ShellScreenProps {
   /**
    * The h1 — **optional since [#414](https://github.com/Raketa02/Raketa/issues/414)**, whose
    * plan lead is the first screen the design draws with an eyebrow and no title. Forwarded, not
-   * designed: `ScreenHeader` makes the eyebrow the heading where there is none.
+   * designed: `ScreenHeader` makes the eyebrow the heading where there is none, and draws no
+   * heading at all where there is neither.
    */
   readonly title?: string;
   readonly eyebrow?: string;
+  /**
+   * The header's two slots — **forwarded, not designed**, like the way back below. The Players
+   * tab is the first shell screen with no title row: its header *is* a *Deck | Radar* toggle in
+   * the lead and a chip in the right slot
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §1), and `ScreenHeader` already had both slots for the conversation and the questionnaire.
+   */
+  readonly lead?: ReactNode;
+  readonly right?: ReactNode;
   /** Pinned below the scroller and above the tab bar. Absent when there is nothing to press. */
   readonly action?: ReactNode;
   /**
@@ -66,10 +76,18 @@ export interface ShellScreenProps {
  * with a way back of its own — a game pushed over the Now tab — is a prop passed through rather
  * than a control designed.
  */
-export function ShellScreen({ title, eyebrow, action, onBack, children }: ShellScreenProps) {
+export function ShellScreen({
+  title,
+  eyebrow,
+  lead,
+  right,
+  action,
+  onBack,
+  children,
+}: ShellScreenProps) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <ScreenHeader title={title} eyebrow={eyebrow} onBack={onBack} />
+      <ScreenHeader title={title} eyebrow={eyebrow} lead={lead} right={right} onBack={onBack} />
 
       <ScrollView contentContainerStyle={s.content}>{children}</ScrollView>
 

@@ -326,6 +326,8 @@ export interface paths {
          *     **The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.
          *
          *     **`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer — there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.
+         *
+         *     **`intro` is optional and fenced at the write.** One line about yourself, at most a hundred characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.
          */
         post: operations["commit_player_profile_api_v1_players_me_profile_post"];
         delete?: never;
@@ -649,7 +651,7 @@ export interface paths {
          *
          *     **Every outgoing row carries its own `expires_at`**, so the screen can show what is still live without knowing the window.
          *
-         *     **`outstanding` carries the count and the cap for every sport**, before you are near either — a cap you cannot see is a refusal you cannot predict. Render these; never hardcode the number.
+         *     **`outstanding` carries the count, the cap and `ttl_days` for every sport**, before you are near either — a cap you cannot see is a refusal you cannot predict, and how long a yes lives is the number the deck's ending prints. Render these; never hardcode the numbers.
          */
         get: operations["read_interest_api_v1_interest_get"];
         put?: never;
@@ -682,22 +684,52 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Match me
+         * Deal the deck
          * @description Deals one batch of cards: one judgement at a time, no mode to pick and no setup.
          *
-         *     **No mode, in either direction.** The deck reads your own declared Play intent for the sport — *no preference* still gives you a working deck — and no mode crosses the wire either way.
+         *     **No mode, in either direction, and no declaration read.** Every deal scores under the same ruler for every viewer — shared tags lead, overlap second, a wide level window — whatever either of you declared, and a player who never declared is dealt without being asked to. On every card `INTENT_ALIGNMENT` is in `degraded_terms` as `NOT_READ_ON_THIS_SURFACE`, which is the surface's doing and says nothing about the person.
          *
-         *     **Send `availability_override` if the player edited their week** on the Play screen, and the deal runs on it; omit it and the grid on the profile is used. It writes nothing: the deal comes back with a `KEEP_THESE_TIMES` prompt, and saving is a separate request the player makes. **A cleared week is a legal value** — unticking every cell deals a deck rather than being refused.
+         *     **Send `availability_override` if the player edited their week**, and the deal runs on it; omit it and the grid on the profile is used. It writes nothing: the deal comes back with a `KEEP_THESE_TIMES` prompt, and saving is a separate request the player makes. **A cleared week is a legal value** — unticking every cell deals a deck rather than being refused.
          *
-         *     **A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin.
+         *     **A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin. `pool.remaining` says how many eligible people are beyond this hand, and drops as hands are dealt.
          *
-         *     **The order is the deck's variety**: people who already said *Let's play* to you, then the liveliest, then the rest. There is no re-sort — `sorts_available` is empty here, because a deck is one card at a time.
+         *     **`pool.want_to_play_you`** says how many people have a live *Let's play* towards you that would be dealt — a count, never a list, and `0` when nobody is waiting. Somebody who said yes to you is dealt **unmarked**: they carry `inclusion_reason: INTEREST_LIFT` and nothing else says so, and they sit where their lift puts them rather than first by rule.
+         *
+         *     **Somebody you already have a court with is not dealt** — a live challenge or game, and for the cool-off after it is behind you, which is a ruleset window (thirty days at release) and never crosses the wire. Find a game still lists them.
+         *
+         *     **The order is the deck's variety**: the people Liveness lifted, the ones who said yes among them, then the rest. There is no re-sort — `sorts_available` is empty here, because a deck is one card at a time.
          *
          *     **No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.
          *
-         *     **Read it back** through `GET /api/v1/searches/{id}`, in this same shape.
+         *     **Read it back** through `GET /api/v1/searches/{id}`, in this same shape, minus the two counts — they are true of the moment the hand was dealt.
          */
         post: operations["deal_the_deck_api_v1_deck_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deck/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Show them again
+         * @description Deals your deck whole again, for one sport.
+         *
+         *     **Three things lift at once, and only for this sport**: every *Not today* you gave, the people you were dealt today, and the cool-off on anybody you have had a court with. The next `POST /deck` deals all of them. What stays: the people you have a live *Let's play* on are still yours to wait on, another sport's deck is untouched, and the record that you once passed on somebody is kept — a card you see again is still one you have seen.
+         *
+         *     **Idempotent.** Pressing it twice in a row is one press.
+         *
+         *     **Nobody is told**, and nothing is returned. The only place a reset shows is your own next deal.
+         */
+        post: operations["show_them_again_api_v1_deck_reset_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1873,7 +1905,7 @@ export interface components {
              */
             challenge_id: string;
             sport: components["schemas"]["Sport"];
-            /** @description The kind of evening it was sent for. ``null`` when the surface it came from has none, and on every challenge born of a mutual yes. */
+            /** @description The kind of evening it was sent for. ``null`` when the surface it came from has none; on a challenge born of a mutual yes, `FOR_FUN` when either of the pair declared *for fun* for the sport and `null` otherwise (ADR-0169 §8). */
             mode?: components["schemas"]["SearchMode"] | null;
             /** @description How soon the week this was proposed for comes round. ``null`` on a mutual-born challenge: no grid was proposed from. */
             window?: components["schemas"]["Window"] | null;
@@ -1944,7 +1976,7 @@ export interface components {
              */
             challenge_id: string;
             sport: components["schemas"]["Sport"];
-            /** @description The kind of evening it was sent for. ``null`` when the surface it came from has none — the deck asks nobody to pick one — and on every challenge born of a mutual yes. */
+            /** @description The kind of evening it was sent for. ``null`` when the surface it came from has none — the deck asks nobody to pick one. **A challenge born of a mutual yes is `FOR_FUN` when either of the pair declared *for fun* for the sport, and `null` otherwise** (ADR-0169 §8) — never `COMPETITIVE`, because two competitive declarers get a counted game by the absence and not by a stamp. */
             mode?: components["schemas"]["SearchMode"] | null;
             /** @description How soon the week this was proposed for comes round. **Derived at send from the grid the search ran on** and never asked for. ``null`` on a mutual-born challenge: no grid was proposed from. */
             window?: components["schemas"]["Window"] | null;
@@ -2018,11 +2050,12 @@ export interface components {
          * CommitPlayerProfileRequest
          * @description Every answer from onboarding's second part, in one body.
          *
-         *     **Photos are the only field with a default**, because holding none is a
-         *     legitimate answer to *add some photos*. Everything else is something this
-         *     request must actually carry — a location, a radius, a tag selection, an
-         *     answer to the proposals question, and **a week with something ticked in it**
-         *     (``docs/adr/0102``).
+         *     **Photos and the intro are the fields with a default**, because holding no
+         *     photograph is a legitimate answer to *add some photos* and writing nothing
+         *     is a legitimate answer to *say it in your own words* (``docs/adr/0170``).
+         *     Everything else is something this request must actually carry — a
+         *     location, a radius, a tag selection, an answer to the proposals question,
+         *     and **a week with something ticked in it** (``docs/adr/0102``).
          *
          *     The week's *floor* is not spelled here, and that is the same decision the tag
          *     selection's is: an empty list passes this schema and is refused by the domain
@@ -2062,6 +2095,15 @@ export interface components {
              * @default ANY
              */
             gender_preference: components["schemas"]["GenderPreference"];
+            /**
+             * Intro
+             * @description One line about yourself — your **intro** — or nothing. Optional: a player who skips the step sends nothing (or `null`, or whitespace, which is the same), and has no intro rather than an empty one.
+             *
+             *     Trimmed, then held to **at most 100 characters** and **one line**, in any language. Refused with `intro_not_admitted` and one coarse `details.reason` — `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle` — so the client can say what to change without the server explaining what it matched. Nothing else is read.
+             *
+             *     **Not editable yet** (ADR-0170 §5): this commit is its only write, with the tags and the photo it sits between. It crosses on the player card and on the record, and this response does not echo it.
+             */
+            intro?: string | null;
         };
         /**
          * ConcernSchema
@@ -2867,13 +2909,20 @@ export interface components {
         };
         /**
          * DegradedReason
-         * @description Whose gap a stood-down term is. **Three values, and one line drawn.**
+         * @description Whose gap a stood-down term is. **Four values, and one line drawn twice.**
          *
          *     ``floor.py`` draws that line to decide a number — *the gate counts
          *     person-specific gaps and never platform-wide absence* — and until now it was
          *     drawn nowhere else, so the one list that crosses the wire held *reliability
          *     is not a thing here yet* and *they have not said what kind of evening they
          *     want* as the same fact, twenty times a search.
+         *
+         *     The fourth value is the line drawn a second time, from the other side: a
+         *     term the **search** declined to read is nobody's gap either — not the
+         *     platform's, which has the provider, and not the person's, who may well have
+         *     declared — and the deck is the surface that does it (``docs/adr/0169`` §2).
+         *     Filing that under either existing code would print a sentence about a person
+         *     that is false of them.
          *
          *     **It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client
          *     writing *"they haven't declared"* off a bare ``Term`` would be an engine rule
@@ -2890,7 +2939,7 @@ export interface components {
          *     because it is the only one of the two a reader can act on.
          * @enum {string}
          */
-        DegradedReason: "NOT_YET_ON_THIS_PLATFORM" | "NOTHING_FROM_YOU" | "NOTHING_FROM_THEM";
+        DegradedReason: "NOT_YET_ON_THIS_PLATFORM" | "NOTHING_FROM_YOU" | "NOTHING_FROM_THEM" | "NOT_READ_ON_THIS_SURFACE";
         /**
          * DegradedTermSchema
          * @description One term that stood down, and **whose gap that is**.
@@ -2919,7 +2968,7 @@ export interface components {
          */
         DegradedTermSchema: {
             term: components["schemas"]["Term"];
-            /** @description Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last deliberately covers every reason a record could not be read, because separating them would publish activity recency. */
+            /** @description Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), theirs (`NOTHING_FROM_THEM`), or the surface's (`NOT_READ_ON_THIS_SURFACE` — the deck reads no intent for anybody, so the term stood down for every card and says nothing about either of you). `NOTHING_FROM_THEM` deliberately covers every reason a record could not be read, because separating them would publish activity recency. */
             reason: components["schemas"]["DegradedReason"];
         };
         /**
@@ -4205,6 +4254,11 @@ export interface components {
              * @description The most you may have in flight for this sport at once. **Read it from here, never hardcode it** — it is ruleset configuration and may move between releases.
              */
             cap: number;
+            /**
+             * Ttl Days
+             * @description How many days a yes you send in this sport stays live before it lapses. **Read it from here, never hardcode it** — it is the same ruleset number that dates every `expires_at`, sent so a screen can say *your yeses stay live for N days* without holding N. Every yes still carries its own `expires_at`; render that for a row, and this for the sentence.
+             */
+            ttl_days: number;
         };
         /**
          * PairingAbsence
@@ -4447,11 +4501,15 @@ export interface components {
         PlayIntentSurface: "RATING_TAIL" | "SEARCH_SWITCH" | "DECK" | "DRIFT_PROMPT" | "PROFILE_SCREEN";
         /**
          * PlayerCardSchema
-         * @description Who this person is, on a card. **A closed list with two permanent gaps.**
+         * @description Who this person is, on a card. **A closed list with one permanent gap.**
          *
-         *     No bio and no free text of any kind, ever; and **no activity recency at any
-         *     granularity** — not a timestamp, not *active today*, not a green dot.
-         *     Liveness reaches a screen the one way it is sanctioned to: as a reason code.
+         *     **No activity recency at any granularity** — not a timestamp, not *active
+         *     today*, not a green dot. Liveness reaches a screen the one way it is
+         *     sanctioned to: as a reason code. The other gap the list was closed with —
+         *     *no bio, and no free-text field of any kind* — was opened by exactly one
+         *     field, `intro`, on the terms that refusal set: its own decision with a
+         *     moderation story attached (``docs/adr/0170``). Still no bio, no paragraph,
+         *     no second field, and no free text that is scored.
          *
          *     **The last three fields are the record block, and every one of them is
          *     omitted rather than nought.** They are what the platform has watched this
@@ -4503,6 +4561,17 @@ export interface components {
              * @description The Social tag ids they hold
              */
             social_tags: string[];
+            /**
+             * Intro
+             * @description One line this player wrote about themselves — their **intro** — verbatim: at most 100 characters, no line breaks, in whatever language they wrote it. **Omitted where they wrote none**, and never an empty string: the intro is optional and a player who skipped has no line, so the card closes up rather than drawing a blank quotation.
+             *
+             *     **A fact about the person, assembled by `player_profile`** — the one field this closed list has gained, under its own admission rule: it is what its subject published, it does not change with who is looking, and it is projected to the candidate index like the tags. It is **never scored**: no term reads it and the scorer's fence refuses the word.
+             *
+             *     **Fenced at the write, not here.** A line carrying a phone number, an email, a URL or an `@handle` was refused before it was stored, so what arrives is a line about a player and not a way to reach one. What it says is theirs; a line you object to is what a block is for.
+             *
+             *     **Drawn on the deck card and the record sheet, and not on Find a game's cards** — those are about the game, and the line is about the person. Never spoken as the player's name and never truncated: the cap is what makes an ellipsis unnecessary.
+             */
+            intro?: string;
             /**
              * Level
              * @description Their Level, as RacketSkill published it
@@ -4718,6 +4787,13 @@ export interface components {
              */
             social_tags: string[];
             /**
+             * Intro
+             * @description One line this player wrote about themselves — their **intro** — verbatim, drawn under the name. **Omitted where they wrote none**, and never an empty string: the intro is optional, and a player who skipped has no line rather than an empty one.
+             *
+             *     The same field the player card carries (`player_card.intro`), read off the profile as it stands rather than off a search record; today the two cannot differ, since the line is written once at onboarding and not editable yet. Fenced at the write against a phone number, an email, a URL or an `@handle`, so what arrives is a line about a player and never a way to reach one. Present on your own record as on anybody else's — it is what strangers read, shown back to you.
+             */
+            intro?: string;
+            /**
              * Sports
              * @description One pill per sport they hold a rating in, **in the sport registry's own order** — the same order every list of sports on this surface takes, so a client never sorts one.
              *
@@ -4837,6 +4913,16 @@ export interface components {
              * @default true
              */
             post_gate: boolean;
+            /**
+             * Remaining
+             * @description **On a deal only.** How many people are eligible for your deck beyond this hand — after every deck exclusion, and not in the cards you were just dealt. It is what lets a counter say *N left* and be true of the whole pool rather than of ten; it drops by a hand as hands are dealt. Omitted on every other surface and on a read-back, where a count about a pool that has moved on would be a number about nothing.
+             */
+            remaining?: number;
+            /**
+             * Want To Play You
+             * @description **On a deal only.** How many people have a live *Let's play* towards you in this sport that would be dealt to you: every gate passed, not passed on by you within the pass window, not cooling off after a court you shared, and not already mutual. Somebody dealt this morning and unanswered still counts — the dealt memory is not applied. **A count and never a list**: nothing on any route names who. `0` is a measured nought, so a chip drawn from it is drawn at one and above.
+             */
+            want_to_play_you?: number;
         };
         /**
          * PredictedBalanceEvidence
@@ -5297,6 +5383,23 @@ export interface components {
          * @enum {string}
          */
         ReliabilityStrand: "SHOWS_UP" | "ANSWERS_CHALLENGES" | "ANSWERS_RESULTS" | "KEEPS_PLANS" | "SETTLES_UP" | "SPORTSMANSHIP";
+        /**
+         * ResetDeckRequest
+         * @description One *Show them again*, for one sport. **Write-only.**
+         *
+         *     Nothing is returned by this route and no route anywhere returns a reset.
+         *
+         *     **The sport is the whole ask.** The button is on a deck and a deck is one
+         *     sport, so a padel reset says nothing about tennis. There is no field for
+         *     *what* to clear: the three things a reset lifts — every pass suppression,
+         *     the day's dealt memory and the cool-off — lift together, and a client that
+         *     could pick would be a client that could clear the cool-off and keep its
+         *     passes, which is not a thing the product offers.
+         */
+        ResetDeckRequest: {
+            /** @description Which sport's deck to deal whole again */
+            sport: components["schemas"]["Sport"];
+        };
         /** ResultResponse */
         ResultResponse: {
             /** Mu */
@@ -6357,7 +6460,9 @@ export interface components {
             seq: number;
             /**
              * Code
-             * @description What happened, as a machine code the client renders a sentence from. Eight: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**.
+             * @description What happened, as a machine code the client renders a sentence from. Nine: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**, and **`SIDE_FORMED`**.
+             *
+             *     **`SIDE_FORMED` is the one line a room is born with, and only a doubles room** (ADR-0169 §8). Two yeses that met in a doubles sport seat both people on one side with a whole side still to fill, and this says so at `seq` 1: *You two are a side. Fill the seats to find your opponents.* A singles mutual's room carries no such line. It names no actor and carries no values.
              *
              *     **A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news each way — and a lapse is still not a decline, which is what `values.departure` keeps apart. Somebody **leaving a game they had agreed to** is the third way, since ADR-0162, and the one whose actor was a member until this very line.
              *
@@ -6376,12 +6481,12 @@ export interface components {
             occurred_at: string;
             /**
              * Actor Id
-             * @description Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** — the handle is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face.
+             * @description Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** — the handle is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face. `null` on `SIDE_FORMED`, which is about both people on the side and names neither.
              */
             actor_id: string | null;
             /**
              * Values
-             * @description What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` — the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and `GAME_PLAYED` carry nothing.
+             * @description What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` — the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED`, `GAME_PLAYED` and `SIDE_FORMED` carry nothing.
              */
             values: {
                 [key: string]: string;
@@ -7177,6 +7282,8 @@ export interface operations {
              *     `proposals_opt_in_not_answered` — the answer was `null`. Ask the question; do not send `false` on the player's behalf.
              *
              *     `too_many_photos` / `duplicate_photo` — the photo list is not one a profile may hold.
+             *
+             *     `intro_not_admitted` — the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.
              */
             400: {
                 headers: {
@@ -7905,9 +8012,9 @@ export interface operations {
             /**
              * @description `sport_not_rated` — you hold no rating for this sport.
              *
-             *     `play_intent_not_declared` — the deck has no mode to read, so it reads your declaration; without one there is nothing at all to go on. **Answering *no preference* is an answer** and gives you a working deck.
-             *
              *     `player_profile_not_committed` — there is no profile to read a radius, a grid or an area from.
+             *
+             *     **Never `play_intent_not_declared`**: the deck reads no declaration, so a player who never made one is dealt without being asked to.
              */
             409: {
                 headers: {
@@ -7933,6 +8040,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    show_them_again_api_v1_deck_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetDeckRequest"];
+            };
+        };
+        responses: {
+            /** @description Cleared. **Nothing is returned** — the next deal is where the difference shows. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `account_held` — this account is under a live hold. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `sport_not_rated` — you hold no rating for this sport, so there is no deck of yours to deal again. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

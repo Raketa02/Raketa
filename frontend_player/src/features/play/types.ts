@@ -324,11 +324,12 @@ export { endPlaySession, usePlaySession } from './store/playSession.store';
 export { FindAGameScreen } from './components/FindAGameScreen';
 
 /**
- * **Match me** — the deck, and the second Play screen.
+ * **Players** — the deck, and the whole of the second tab.
  *
- * Named by `src/app/(app)/(tabs)/play/deck.tsx` and by nothing else. One person at a time, two
- * named buttons and no swipe, and a long press that opens `SH.whyfit`
- * ([#270](https://github.com/Raketa02/Raketa/issues/270)).
+ * Named by `src/app/(app)/(tabs)/players.tsx` and by nothing else. It was *Match me*, the second
+ * Play screen, until [ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1 gave it a column of its own. One person at a time, two named buttons and no swipe, and a
+ * long press that opens `SH.whyfit` ([#270](https://github.com/Raketa02/Raketa/issues/270)).
  */
 export { DeckScreen } from './components/DeckScreen';
 
@@ -444,15 +445,6 @@ export {
 } from './components/builderPresentation';
 
 /**
- * Play's two ways through the tab, as one control.
- *
- * Both screens draw it, and it is **not** the shell's: the count on it is filtered by the
- * sport on screen, and the sport is a Play screen's own fact — which is also why the tab bar
- * carries no badge (`TabBar`).
- */
-export { PlaySegment, type PlaySegmentProps, type PlaySurface } from './components/PlaySegment';
-
-/**
  * What stands between a player and a search, and the words the screen says about it.
  *
  * Exported for the suites that drive the screen through the real route tree: an assertion
@@ -485,8 +477,9 @@ export { findAGameStanding, type FindAGameStanding } from './domain/findAGame';
 export {
   DEAL_AGAIN_LABEL,
   DECK_FOOTER,
-  MATCH_ME_TITLE,
   NOBODY_IN_RANGE_TITLE,
+  PANE_LABEL,
+  RADAR_LINE,
   SEEN_EVERYBODY_TITLE,
   WIDEN_IN_YOU,
   interestToast,

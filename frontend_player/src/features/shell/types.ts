@@ -4,14 +4,12 @@
  * The shell is the app's five tabs and the one stack under them. `src/app/` mounts it and
  * names each route; nothing else outside this folder has needed anything yet.
  *
- * **What is exported is what has a caller**, and `enterPlay` is now one of them: the *Find a
- * game* segment re-enters the tab from inside it, which is **arriving rather than going
- * back**, and the deck is where that segment ships
- * ([#270](https://github.com/Raketa02/Raketa/issues/270)). It is the reset's second entry
- * point rather than a navigation Play could write itself — laying the Play stack down is what
- * *ends a Play session*, and a `router.replace` in another feature would be that definition
- * with one caller quietly outside it. The route table, the reset itself and the placeholder
- * component stay internal; they re-export the day something outside asks for one.
+ * **What is exported is what has a caller.** `enterPlay` was one for as long as the deck lived
+ * under Play: the *Find a game* segment re-entered the tab from inside it, which is **arriving
+ * rather than going back** ([#270](https://github.com/Raketa02/Raketa/issues/270)). The segment
+ * left with the deck's move to its own tab (ADR-0169 §1), and so did the export — the route
+ * table, the reset itself and the placeholder component stay internal too; they re-export the
+ * day something outside asks for one.
  *
  * `ShellScreen` is the one that has stopped being internal: Play's *Find a game* is the second
  * screen to wear 10.1's arrangement, and it is a real screen rather than a placeholder, so the
@@ -30,7 +28,7 @@ export { TabShell } from './components/TabShell';
 export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
 
 /**
- * The two placeholder lines, read outside this feature by one thing: the test harness, which
+ * The one placeholder line, read outside this feature by one thing: the test harness, which
  * asserts *the player is in the app* and needs to know what that looks like now that the landing
  * is the Now tab.
  *
@@ -42,7 +40,7 @@ export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
  */
 export { CHATS_COPY, NOW_COPY, PLACEHOLDER_COPY } from './components/shellCopy';
 
-export { AroundScreen, NowScreen, YouScreen } from './components/tabScreens';
+export { NowScreen, YouScreen } from './components/tabScreens';
 
 /**
  * The Chats tab — **a screen rather than a placeholder**
@@ -55,16 +53,6 @@ export { AroundScreen, NowScreen, YouScreen } from './components/tabScreens';
 export { ChatsScreen } from './components/ChatsScreen';
 
 /**
- * ⚡Play's own door, from inside Play.
- *
- * Called by the *Find a game* half of Play's segment and by nothing else outside this feature.
- * It lays down `[Now, Find a game]` and **ends the Play session on the way**, which is the
- * whole point of routing it through here: a player who was building on the deck's sport and
- * taps back to the search screen has arrived, and arriving is what clears a working copy.
- */
-export { enterPlay } from './components/shellNavigation';
-
-/**
  * Open a flanking tab from a screen inside another one.
  *
  * Two callers. The first is a **link to where a fact lives**: Find a game's standing
@@ -74,13 +62,10 @@ export { enterPlay } from './components/shellNavigation';
  * *Open the chat* after a mutual** ([#434](https://github.com/Raketa02/Raketa/issues/434),
  * ADR-0167 §1): the room has to land as `[Chats list, the room]` and the list is nowhere under
  * the deck, so the screen lays the Chats tab down and pushes the room over it — *from the deck
- * this switches the tab; Play keeps its held deck*. It is the tab bar's own move rather than a
- * second one — the shell has one navigation and every arrival replaces — so a player sent here
- * lands where pressing the column would have put them, and **the Play session ends on the
+ * this switches the tab; Players keeps its held deck*. It is the tab bar's own move rather than
+ * a second one — the shell has one navigation and every arrival replaces — so a player sent
+ * here lands where pressing the column would have put them, and **the Play session ends on the
  * way**, which is what leaving Play has always meant.
- *
- * `enterPlay` stays separately exported rather than folding into this: it is the one door
- * another feature opens *into* Play, and it is two screens deep.
  */
 export { openTab } from './components/shellNavigation';
 

@@ -22,8 +22,8 @@ describe('the read', () => {
       toOutstandingInterest(
         list({
           outstanding: [
-            { sport: 'PADEL', outstanding: 3, cap: 10 },
-            { sport: 'TENNIS', outstanding: 0, cap: 10 },
+            { sport: 'PADEL', outstanding: 3, cap: 10, ttl_days: 21 },
+            { sport: 'TENNIS', outstanding: 0, cap: 10, ttl_days: 21 },
           ],
         }),
       ),
@@ -40,8 +40,8 @@ describe('the read', () => {
       toOutstandingInterest(
         list({
           outstanding: [
-            { sport: 'PADEL', outstanding: 3, cap: 10 },
-            { sport: 'PICKLEBALL' as never, outstanding: 9, cap: 10 },
+            { sport: 'PADEL', outstanding: 3, cap: 10, ttl_days: 21 },
+            { sport: 'PICKLEBALL' as never, outstanding: 9, cap: 10, ttl_days: 21 },
           ],
         }),
       ),
@@ -72,7 +72,9 @@ describe('the tap’s own answer', () => {
    * a second round trip — Part 7's *"don't immediately refetch what you were just handed"*.
    */
   it('is the same shape, for the one sport the tap was about', () => {
-    expect(toOutstandingAfterTap({ sport: 'PADEL', outstanding: 4, cap: 10 })).toEqual({
+    expect(
+      toOutstandingAfterTap({ sport: 'PADEL', outstanding: 4, cap: 10, ttl_days: 21 }),
+    ).toEqual({
       padel: 4,
     });
   });

@@ -1,5 +1,28 @@
 /**
- * **Match me** — one person at a time, yes or no, and nothing else.
+ * **Players** — the deck, one person at a time, yes or no, and the whole of the tab.
+ *
+ * ## A tab of its own, with a toggle for a header
+ *
+ * The deck lived under Play as *Match me*, a segment deep, behind a declaration, and it looked
+ * like a form. It is the second tab now
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1): Players opens on the deck every time — the shell keeps no per-tab history, and the held
+ * deal is what makes that cheap — and **there is no title row**. The header is the *Deck | Radar*
+ * toggle, Deck filled, in the header's lead slot; the right slot is the chip's, and empty until
+ * the count that fills it arrives ([#444](https://github.com/Raketa02/Raketa/issues/444)). The
+ * toggle is **component state and not two routes** — Radar is a pane with one muted line until
+ * it is built (§9), and a route would make it somewhere the tab could open on. Leaving and coming
+ * back lands on Deck, because the screen is remounted and the state is the screen's.
+ *
+ * **Sport chips only when there is a choice.** A player rated in one sport sees the mock
+ * exactly; rated in two or more gets the row under the toggle, reading and writing the same
+ * browsed sport Play's chips do; rated in none sees *Rate a sport first*.
+ *
+ * **No declaration is read, asked for, or needed** (§2). `POST /deck` scores every deal under
+ * one ruler for every viewer, declared or not, so the one-tap interstitial and the standing
+ * line have left this screen: `findAGameStanding`'s *undeclared* is not a state of it any more,
+ * and neither is the declaration in the deal's key. Nobody is asked to declare fun or
+ * competitive on Players.
  *
  * ## Two buttons, and no swipe
  *
@@ -21,8 +44,8 @@
  *
  * The card in flight is **route-local**, which `playSession` refuses to hold by name: *"which
  * card is showing is derived from the dealt list minus the one leaving — never held here"*. So
- * the whole of this screen's memory is two `useState`s — the card on its way out, and
- * whichever card the sheet is open over.
+ * the whole of this screen's memory is three `useState`s — which pane the toggle is on, the
+ * card on its way out, and whichever card the sheet is open over.
  *
  * **The ids answered are not among them, and used to be.** They belong to the deal rather than
  * to the screen, and the deal now outlives the screen (`hooks/useDeck`), so a list held here
@@ -69,12 +92,16 @@
  * lands on a card, so a floor over it would be a screen held in front of an answer that is
  * already there.
  *
- * **A mode.** The deck has none — `SearchEnvelope.mode` is null exactly here — so it reads the
- * player's own declaration, and the interstitial is what makes that readable. Once it *is*
- * declared, `DeclarationStanding` says the same thing at rest: on this screen the durable answer
- * genuinely **is** what the deal runs on, which no other surface in the product can state,
- * because every other one has a mode standing between the two
- * ([#295](https://github.com/Raketa02/Raketa/issues/295)).
+ * **A mode, or a declaration.** The deck has no mode — `SearchEnvelope.mode` is null exactly
+ * here — and since ADR-0169 §2 it reads no declaration either: the deal runs under the fun
+ * ruler for everybody, and the intent term stands down on every card as the surface's own gap.
+ * `DeclarationStanding` said *Dealing … · Change* under the chips for as long as the deck read
+ * one ([#295](https://github.com/Raketa02/Raketa/issues/295)); there is nothing left for it to
+ * state.
+ *
+ * **A week.** The deck was reached from the screen the week is edited on and dealt on the
+ * improvised grid; it is reached from a tab of its own now, the tab press ends the Play session
+ * on the way, and the deal runs on the profile's week (§1). So the screen reads no working copy.
  *
  * **Anywhere for the prompt sheet to send anybody.** A deal raises questions like a search
  * does and the sheet answers them here now
@@ -108,13 +135,12 @@ import { ShellScreen } from '@/features/shell/types';
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { playerName } from '@/shared/formatting/playerName';
 import { showToast } from '@/shared/store/toast.store';
-import { Button, Note, behindOverlay, moveAccessibilityFocus, theme } from '@/shared/ui';
+import { Button, Note, Segment, behindOverlay, moveAccessibilityFocus, theme } from '@/shared/ui';
 
 import type { Candidate } from '../domain/candidate';
 import { deckStanding } from '../domain/deckHand';
-import { findAGameStanding } from '../domain/findAGame';
+import { sportOnScreen } from '../domain/findAGame';
 import { firstUnasked } from '../domain/raisedPrompt';
-import { differsFromProfile } from '../domain/workingWeek';
 import {
   useDeal,
   useDeckProgress,
@@ -127,9 +153,6 @@ import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
 
 import { DeckStage, type DeckExit } from './DeckStage';
-import { DeclarationInterstitial } from './DeclarationInterstitial';
-import { DeclarationStanding } from './DeclarationStanding';
-import { PlaySegment } from './PlaySegment';
 import { PromptSheet } from './PromptSheet';
 import { SportChips } from './SportChips';
 import { DeckCard } from './candidate/DeckCard';
@@ -137,14 +160,16 @@ import {
   DEALING_LABEL,
   DEAL_AGAIN_LABEL,
   DECK_FOOTER,
-  MATCH_ME_TITLE,
   NOBODY_IN_RANGE_TITLE,
   NO_RATED_SPORT_LINE,
+  PANE_LABEL,
+  RADAR_LINE,
   SEEN_EVERYBODY_TITLE,
   WIDEN_IN_YOU,
   outgoingYeses,
   passedToast,
   yesToast,
+  type PlayersPane,
 } from './deckPresentation';
 import { playErrorMessage } from './playErrorMessage';
 import { poolDescription } from './searchPresentation';
@@ -163,12 +188,13 @@ export function DeckScreen() {
 
   const sport = usePlayPreferences((state) => state.sport);
   const chooseSport = usePlayPreferences((state) => state.chooseSport);
-  const week = usePlaySession((state) => state.week);
 
   const yes = useSayYes();
   const no = useSayNo();
   const progress = useDeckProgress();
 
+  /** Which pane the toggle is on. Deck on every mount, which is what *opens on Deck* means. */
+  const [pane, setPane] = useState<PlayersPane>('deck');
   const [leaving, setLeaving] = useState<Leaving | undefined>(undefined);
   const [explaining, setExplaining] = useState<Candidate | undefined>(undefined);
 
@@ -195,8 +221,12 @@ export function DeckScreen() {
 
   const profile = profileSurface.data;
   const rated = useMemo(() => (ratings.data ?? []).map((rating) => rating.sport), [ratings.data]);
-  const standing = findAGameStanding(rated, sport, profile?.playIntents ?? {});
-  const onThisSport = standing.kind === 'no-rated-sport' ? undefined : standing.sport;
+  /**
+   * The sport the deck is on: the one the player chose, or the first they are rated in — and
+   * `undefined` for a player rated in none, which is the screen's one standing short of a deal.
+   * Not `findAGameStanding`: that reads the declaration too, and the deck no longer does.
+   */
+  const onThisSport = sportOnScreen(rated, sport);
   const sportName = onThisSport === undefined ? undefined : sportLabel(onThisSport);
 
   /**
@@ -205,24 +235,19 @@ export function DeckScreen() {
    * Built as a value rather than spelled once in a guard and once in a `disabled`, which is
    * the shape `mayFinish` and Find a game's own ask exist to refuse.
    *
-   * `under` is the half that never reaches the wire: the radius and the declaration are
-   * resolved backend-side, and a deal held without them in its key would answer a widened
-   * radius with the deal that ran before it — which is this screen's own *Widen in You*
-   * advice being ignored by this screen (`hooks/searchKeys`).
+   * `under` is the half that never reaches the wire: the radius is resolved backend-side, and
+   * a deal held without it in its key would answer a widened radius with the deal that ran
+   * before it — which is this screen's own *Widen in You* advice being ignored by this screen
+   * (`hooks/searchKeys`).
    */
   const dealQuestion: DeckQuestion | undefined =
-    standing.kind === 'searchable' && profile !== undefined
+    onThisSport !== undefined && profile !== undefined
       ? {
           ask: {
-            sport: standing.sport,
-            // `undefined` omits the override entirely rather than sending a grid the profile
-            // already holds. A deck reached without passing through Find a game has no working
-            // copy at all, and that is the same ask: run it on my profile's week.
-            sentWeek:
-              week !== undefined && differsFromProfile(week, profile.week) ? week : undefined,
-            quotes: { sportName: sportLabel(standing.sport), profileWeek: profile.week },
+            sport: onThisSport,
+            quotes: { sportName: sportLabel(onThisSport), profileWeek: profile.week },
           },
-          under: { radiusKm: profile.searchRadiusKm, intent: standing.intent },
+          under: { radiusKm: profile.searchRadiusKm },
         }
       : undefined;
 
@@ -363,120 +388,117 @@ export function DeckScreen() {
           hides everything inside the element carrying it, and an overlay rendered in there
           would hide itself along with the screen. */}
       <View style={s.root} {...behindOverlay(explaining !== undefined || asking)}>
-        <ShellScreen title={MATCH_ME_TITLE}>
-          <PlaySegment active="match" />
-
-          {standing.kind === 'no-rated-sport' && ratings.isSuccess ? (
-            <Note>{NO_RATED_SPORT_LINE}</Note>
-          ) : null}
-
-          {standing.kind === 'no-rated-sport' ? null : (
-            <SportChips rated={rated} selected={standing.sport} onChoose={chooseSport} />
-          )}
-
-          {/* **The declaration, standing where the deck can carry it**
-              ([#295](https://github.com/Raketa02/Raketa/issues/295)). There is no segment here
-              for it to sit under, so it sits under the chips — the control it is about on this
-              screen, since choosing a sport is what chooses which declaration is being read.
-
-              `mode={undefined}` is not a gap: a deal carries none, which is why the line has
-              one state here and no drift variant. Everything else about it is Find a game's,
-              including where *Change* goes. */}
-          {standing.kind === 'searchable' && sportName !== undefined ? (
-            <DeclarationStanding
-              sport={standing.sport}
-              sportName={sportName}
-              intent={standing.intent}
-              mode={undefined}
-              declaredOn="DECK"
+        {/* No title row: the toggle is the header, in its lead slot, and the right slot is
+            left for the chip (#444). `flex: 1` on the track is what gives its two segments a
+            width to share — a track sized to its content in a row has none. */}
+        <ShellScreen
+          lead={
+            <Segment
+              selected={pane}
+              options={[
+                { key: 'deck', label: PANE_LABEL.deck },
+                { key: 'radar', label: PANE_LABEL.radar },
+              ]}
+              onSelect={setPane}
+              style={s.toggle}
             />
-          ) : null}
-
-          {/* The same question Find a game asks, because the deck is refused by the same code:
-              it has no mode, so it reads the declaration. */}
-          {standing.kind === 'undeclared' && sportName !== undefined ? (
-            <DeclarationInterstitial
-              sport={standing.sport}
-              sportName={sportName}
-              declaredOn="DECK"
-            />
-          ) : null}
-
-          {readError !== null ? (
-            <Note variant="coral" accessibilityRole="alert">
-              {recoveryMessage(readError)}
-            </Note>
-          ) : null}
-
-          {/* Paused, not failed: `networkMode: 'online'` holds a write rather than refusing
-              it, so an offline player would otherwise watch nothing happen. */}
-          {answerPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
-
-          {/* The failed answer's sentence sits above the card it is about — which is back on
-              screen, because a refusal returns it. */}
-          {answerError !== null ? (
-            <Note variant="coral" accessibilityRole="alert">
-              {playErrorMessage(answerError)}
-            </Note>
-          ) : null}
-
-          {deal.error !== null ? (
-            <View style={s.failure}>
-              <Note variant="coral" accessibilityRole="alert">
-                {playErrorMessage(deal.error)}
-              </Note>
-              <Button label={DEAL_AGAIN_LABEL} variant="secondary" onPress={dealAgain} />
-            </View>
-          ) : null}
-
-          {dealing && !answerPaused ? (
-            <ActivityIndicator accessibilityLabel={DEALING_LABEL} color={theme.color.muted} />
-          ) : null}
-
-          {showing === undefined || dealt === undefined ? null : (
-            <View style={s.deck}>
-              <DeckStage
-                // Keyed by the person, so the arrival runs once per card rather than once per
-                // render, and the ref below always points at what is on screen.
-                key={showing.playerId}
-                leaving={leaving?.playerId === showing.playerId ? leaving.said : undefined}
-                onLeft={() => cardLeft(dealt.envelope.searchId, showing.playerId)}
-              >
-                <DeckCard
-                  candidate={showing}
-                  envelope={dealt.envelope}
-                  bodyRef={body}
-                  answering={leaving !== undefined}
-                  onPass={() => answer('no', showing)}
-                  onAccept={() => answer('yes', showing)}
-                  onWhyFit={() => setExplaining(showing)}
-                />
-              </DeckStage>
-
-              {DECK_FOOTER.map((line) => (
-                <Text key={line} style={s.footer}>
-                  {line}
-                </Text>
-              ))}
-            </View>
-          )}
-
-          {hand === undefined ||
-          hand.kind === 'card' ||
-          hand.kind === 'spent' ||
-          dealt === undefined ||
-          sportName === undefined ? null : (
-            <Note
-              title={hand.kind === 'seen-everybody' ? SEEN_EVERYBODY_TITLE : NOBODY_IN_RANGE_TITLE}
-            >
-              <Text style={s.body}>{poolDescription({ ...dealt.pool, sportName })}</Text>
-              <Text style={s.body}>{outgoingYeses(outstandingHere)}</Text>
-              {/* *Widen in You* survives here and on no other Play surface — and it is gated,
-                  because a player already at their own ceiling cannot give what it asks for. */}
-              {hand.kind === 'nobody-in-range' && !dealt.envelope.radiusClamp ? (
-                <Text style={s.body}>{WIDEN_IN_YOU}</Text>
+          }
+        >
+          {/* The Radar pane: one muted line in a placeholder tab's shape, until it is built. */}
+          {pane === 'radar' ? (
+            <Text style={s.radar}>{RADAR_LINE}</Text>
+          ) : (
+            <>
+              {onThisSport === undefined && ratings.isSuccess ? (
+                <Note>{NO_RATED_SPORT_LINE}</Note>
               ) : null}
-            </Note>
+
+              {/* Only when there is a choice: a player rated in one sport sees the mock
+                  exactly, and the row would be one chip saying what the card already says. */}
+              {onThisSport !== undefined && rated.length >= 2 ? (
+                <SportChips rated={rated} selected={onThisSport} onChoose={chooseSport} />
+              ) : null}
+
+              {readError !== null ? (
+                <Note variant="coral" accessibilityRole="alert">
+                  {recoveryMessage(readError)}
+                </Note>
+              ) : null}
+
+              {/* Paused, not failed: `networkMode: 'online'` holds a write rather than refusing
+                  it, so an offline player would otherwise watch nothing happen. */}
+              {answerPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+
+              {/* The failed answer's sentence sits above the card it is about — which is back on
+                  screen, because a refusal returns it. */}
+              {answerError !== null ? (
+                <Note variant="coral" accessibilityRole="alert">
+                  {playErrorMessage(answerError)}
+                </Note>
+              ) : null}
+
+              {deal.error !== null ? (
+                <View style={s.failure}>
+                  <Note variant="coral" accessibilityRole="alert">
+                    {playErrorMessage(deal.error)}
+                  </Note>
+                  <Button label={DEAL_AGAIN_LABEL} variant="secondary" onPress={dealAgain} />
+                </View>
+              ) : null}
+
+              {dealing && !answerPaused ? (
+                <ActivityIndicator accessibilityLabel={DEALING_LABEL} color={theme.color.muted} />
+              ) : null}
+
+              {showing === undefined || dealt === undefined ? null : (
+                <View style={s.deck}>
+                  <DeckStage
+                    // Keyed by the person, so the arrival runs once per card rather than once per
+                    // render, and the ref below always points at what is on screen.
+                    key={showing.playerId}
+                    leaving={leaving?.playerId === showing.playerId ? leaving.said : undefined}
+                    onLeft={() => cardLeft(dealt.envelope.searchId, showing.playerId)}
+                  >
+                    <DeckCard
+                      candidate={showing}
+                      envelope={dealt.envelope}
+                      bodyRef={body}
+                      answering={leaving !== undefined}
+                      onPass={() => answer('no', showing)}
+                      onAccept={() => answer('yes', showing)}
+                      onWhyFit={() => setExplaining(showing)}
+                    />
+                  </DeckStage>
+
+                  {DECK_FOOTER.map((line) => (
+                    <Text key={line} style={s.footer}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+              {hand === undefined ||
+              hand.kind === 'card' ||
+              hand.kind === 'spent' ||
+              dealt === undefined ||
+              sportName === undefined ? null : (
+                <Note
+                  title={
+                    hand.kind === 'seen-everybody' ? SEEN_EVERYBODY_TITLE : NOBODY_IN_RANGE_TITLE
+                  }
+                >
+                  <Text style={s.body}>{poolDescription({ ...dealt.pool, sportName })}</Text>
+                  <Text style={s.body}>{outgoingYeses(outstandingHere)}</Text>
+                  {/* *Widen in You* survives here and on no other Play surface — and it is
+                      gated, because a player already at their own ceiling cannot give what it
+                      asks for. */}
+                  {hand.kind === 'nobody-in-range' && !dealt.envelope.radiusClamp ? (
+                    <Text style={s.body}>{WIDEN_IN_YOU}</Text>
+                  ) : null}
+                </Note>
+              )}
+            </>
           )}
         </ShellScreen>
       </View>
@@ -523,6 +545,8 @@ export function DeckScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
+  toggle: { flex: 1 },
+  radar: { ...theme.type.tiny, color: theme.color.muted },
   deck: { gap: theme.space.sm, paddingTop: theme.space.xs },
   footer: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
   body: { ...theme.type.tiny, color: theme.color.ink },

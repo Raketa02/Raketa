@@ -11,16 +11,16 @@
  * a **different ten people**: the mechanism that makes *a spent deal deals again* work is the
  * same mechanism that makes an accidental deal spend the pool.
  *
- * Held by the screen, every remount was an accidental deal. Leaving Match me for Find a game
+ * Held by the screen, every remount was an accidental deal. Leaving the deck for another tab
  * and coming back dealt again; so did returning to a sport chip already dealt for, because the
  * only memory of *I have asked this* was a ref that died with the route. A player toggling
  * between two chips emptied their own deck without answering a card, and the deck then told
  * them, truthfully, that they had seen everybody.
  *
- * So the deal is held in Query under `searchKeys.deck(sport, week)` — **the ask, not the
+ * So the deal is held in Query under `searchKeys.deck(sport, under)` — **the ask, not the
  * answer** — which is the one key that can be built *before* the request and therefore the one
  * key under which *already asked* is a fact rather than a ref. What that buys is the whole
- * fix: coming back to a chip and coming back to the screen both find the deal already there.
+ * fix: coming back to a chip and coming back to the tab both find the deal already there.
  *
  * The mutation's posture is kept and now has to be configured rather than inherited:
  * `RANKED_LIST_QUERY_OPTIONS` is `staleTime: Infinity`, `refetchOnWindowFocus: false` and
@@ -83,8 +83,8 @@ export interface HeldDeal extends DeckOutcome {
 }
 
 /**
- * **The whole question a deal answers** — the request, and the two facts the request does not
- * carry because the server resolves them from the player's own profile.
+ * **The whole question a deal answers** — the request, and the one fact the request does not
+ * carry because the server resolves it from the player's own profile.
  *
  * One value rather than two arguments, so the pair cannot drift: they are true together or
  * absent together — the screen has one branch in which a deal may run at all — and a key built
@@ -99,9 +99,10 @@ export interface DeckQuestion {
  * The deal for this question, dealt once and then **found** rather than dealt again.
  *
  * `skipToken` rather than `enabled`, so that *there is nothing to ask* is a fact the types
- * carry: the screen has three standings in which no deal may run — no rated sport, an
- * undeclared sport, and a profile that has not landed — and it hands `undefined` for all
- * three rather than a question with holes in it.
+ * carry: the screen has two standings in which no deal may run — no rated sport, and a
+ * profile that has not landed — and it hands `undefined` for both rather than a question with
+ * holes in it. An undeclared sport was a third until the deck stopped reading declarations
+ * (ADR-0169 §2).
  *
  * Re-dealing is `refetch()`, which is a **new `POST`** and therefore a new `search_id` and a
  * new ten people. That is the player's own act on both paths that reach it: *Deal again* under
@@ -109,7 +110,7 @@ export interface DeckQuestion {
  */
 export function useDeal(question: DeckQuestion | undefined) {
   return useQuery<HeldDeal, AppError>({
-    queryKey: searchKeys.deck(question?.ask.sport, question?.ask.sentWeek, question?.under),
+    queryKey: searchKeys.deck(question?.ask.sport, question?.under),
     queryFn:
       question === undefined
         ? skipToken
@@ -118,9 +119,8 @@ export function useDeal(question: DeckQuestion | undefined) {
     // The last two spellings of the one rule, and the two `staleTime: Infinity` does not give
     // for free. A connection coming back must not mint a deal, and — the one that is easy to
     // miss — **a failed deal must not be re-attempted by the next mount**: `retryOnMount`
-    // defaults to true, so leaving Match me after a refusal and coming back would deal again
-    // with nothing pressed. The retry is *Deal again* under the sentence, on both screens the
-    // player can reach it from.
+    // defaults to true, so leaving Players after a refusal and coming back would deal again
+    // with nothing pressed. The retry is *Deal again* under the sentence.
     refetchOnReconnect: false,
     retryOnMount: false,
   });

@@ -317,7 +317,7 @@ export const POOL_ROUTE = '/play/pool';
  * pushed are one edit apart.
  *
  * Play owns its inner paths — the shell's table holds each tab's **start**, and everything
- * under `/play/…` is this feature's own depth (`PlaySegment`'s `DECK_ROUTE`, same rule).
+ * under `/play/…` is this feature's own depth (`POOL_ROUTE` above, same rule).
  */
 export const BUILDER_ROUTE = '/play/builder';
 
@@ -1000,7 +1000,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           // is opt-in for exactly the screens that can say where it goes. It adds no
           // behaviour: it is the same `back` a swipe performs, on a control a thumb can find
           // without knowing the gesture exists. The session is untouched either way — only
-          // `enterPlay` ends one, and going back is not entering.
+          // the shell's reset ends one, and going back is not entering.
           onBack={router.back}
           action={
             origin === undefined || filling ? undefined : open === 0 ? (

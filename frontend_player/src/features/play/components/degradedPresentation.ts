@@ -21,6 +21,15 @@
  * `NOTHING_FROM_YOU` wins that tie server-side, so a client resolving it again would be a
  * second implementation of one rule.
  *
+ * **The fourth reason is the surface's, and it blames neither of you.** The deck deals
+ * everybody under one ruler and reads no declaration, so the intent term stands down on every
+ * card there as `NOT_READ_ON_THIS_SURFACE`
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §2). Its sentence says the term is not read *here* — the sheet it is drawn in was opened from
+ * the surface that declined — and never that either person left something unsaid, because on
+ * that surface they may well have said it. Only the intent term has such a sentence today; a
+ * term no surface stands down this way keeps the gap in place rather than borrowing one.
+ *
  * ## The one wording that must not drift
  *
  * `RELIABILITY + NOTHING_FROM_THEM` says nothing about *when*. The code swallows three causes
@@ -56,9 +65,14 @@ export const NOT_ON_THIS_PLATFORM_FOOTER =
 interface WhoseGap {
   readonly you: string | null;
   readonly them: string | null;
+  /** The surface's own — the term was not read for anybody here. `null` where none does that. */
+  readonly here: string | null;
 }
 
-const NEVER_STANDS_DOWN: WhoseGap = { you: null, them: null };
+const NEVER_STANDS_DOWN: WhoseGap = { you: null, them: null, here: null };
+
+/** A term whose gap is only ever a person's. */
+const NEVER_BY_A_SURFACE = { here: null } as const;
 
 const DEGRADED: Readonly<Record<Term, WhoseGap>> = {
   LEVEL_FIT: NEVER_STANDS_DOWN,
@@ -66,16 +80,23 @@ const DEGRADED: Readonly<Record<Term, WhoseGap>> = {
   INTENT_ALIGNMENT: {
     you: "You haven't said what kind of evening you're after",
     them: "They haven't said what kind of evening they're after",
+    here: "What kind of evening you're each after isn't read here",
   },
-  RELIABILITY: { you: null, them: 'Nothing on their record yet' },
-  AVAILABILITY_OVERLAP: { you: 'Your week is blank', them: 'Their week is blank' },
+  RELIABILITY: { you: null, them: 'Nothing on their record yet', ...NEVER_BY_A_SURFACE },
+  AVAILABILITY_OVERLAP: {
+    you: 'Your week is blank',
+    them: 'Their week is blank',
+    ...NEVER_BY_A_SURFACE,
+  },
   PLAYING_STYLE: {
     you: "You haven't picked any on-court tags",
     them: "They haven't picked any on-court tags",
+    ...NEVER_BY_A_SURFACE,
   },
   SOCIAL_VIBE: {
     you: "You haven't picked any tags about the evening",
     them: "They haven't picked any tags about the evening",
+    ...NEVER_BY_A_SURFACE,
   },
   DISTANCE: NEVER_STANDS_DOWN,
 };
@@ -94,5 +115,7 @@ export function degradedLine(term: Term, reason: DegradedReason): string | undef
       return DEGRADED[term].you ?? undefined;
     case 'NOTHING_FROM_THEM':
       return DEGRADED[term].them ?? undefined;
+    case 'NOT_READ_ON_THIS_SURFACE':
+      return DEGRADED[term].here ?? undefined;
   }
 }

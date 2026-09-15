@@ -1,24 +1,29 @@
 /**
- * Everything **Match me** says: the segment above it, the two sentences under the card, the
- * two empty states, and the three toasts an answer raises — and the one answer that is a screen
- * rather than a sentence.
+ * Everything **Players** says: the toggle that is its header, the Radar pane's one line, the
+ * two sentences under the card, the two empty states, and the three toasts an answer raises —
+ * and the one answer that is a screen rather than a sentence.
  *
  * §1's mechanism throughout — code → message, never message → message — and nothing here is a
  * template inlined in a component.
  *
- * ## The segment carries the name and no number
+ * ## The header is a toggle, and the toggle carries two names and no number
  *
- * `Match me · 3` was the count of the player's own outstanding yeses, printed on the control
- * that reaches the deck. It is **struck**, because the position it was in is the position a
- * count of *cards waiting* would be in, and that is what it was read as: a number beside a
- * surface that deals one person at a time says how many people are behind that person, and a
- * deal is at most ten cards out of a pool nobody sees the size of — the same *`{n} left`* the
- * deck refused on the card itself (`domain/deckHand`).
+ * The tab has no title row: *Deck | Radar* top-left is the header, Deck filled
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1). It was *Find a game | Match me*, a segment inside Play, and `Match me · 3` on it was the
+ * count of the player's own outstanding yeses — **struck** long before the segment was, because
+ * the position it was in is the position a count of *cards waiting* would be in, and that is
+ * what it was read as: a number beside a surface that deals one person at a time says how many
+ * people are behind that person, and a deal is at most ten cards out of a pool nobody sees the
+ * size of — the same *`{n} left`* the deck refused on the card itself (`domain/deckHand`). The
+ * figure is the sentence the empty state prints, `outgoingYeses` below, where it has room to say
+ * what it counts. *Match me* survives as a word only in *Matched!*, whose fence ADR-0167 §4 drew.
  *
- * The figure is not lost and was never only here: it is the sentence the empty state prints,
- * `outgoingYeses` below, where it has room to say what it counts. `MATCH_ME_TITLE` is now the
- * whole of the segment's half, spoken and drawn alike, which is also why neither has a function
- * any more.
+ * ## The Radar is a pane that says it is not built
+ *
+ * One muted line, in the shape a placeholder tab's line has — what it is, and that it is not
+ * built — because a map needs a location precision the platform does not hold and the Radar is
+ * its own spec (ADR-0169 §9). The toggle is real so that *Try the radar* has somewhere to go.
  *
  * ## The footer is a promise, and both halves of it are load-bearing
  *
@@ -56,8 +61,17 @@ import { type ToastTone } from '@/shared/store/toast.store';
 
 import { counted } from '@/shared/formatting/counted';
 
-/** The screen's title, and the segment's own word for it. */
-export const MATCH_ME_TITLE = 'Match me';
+/** The two panes of the Players tab, as the toggle names them. Deck is the one it opens on. */
+export const PANE_LABEL = {
+  deck: 'Deck',
+  radar: 'Radar',
+} as const satisfies Readonly<Record<PlayersPane, string>>;
+
+/** Which of the two the player is looking at. Component state, never a route (ADR-0169 §1). */
+export type PlayersPane = 'deck' | 'radar';
+
+/** The Radar pane's whole content until it is built. The em dash is an aside, not a colon. */
+export const RADAR_LINE = 'Radar — not built yet';
 
 /**
  * The deck's own version of *no rated sport*.

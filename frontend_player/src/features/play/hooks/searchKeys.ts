@@ -22,11 +22,11 @@
  *
  * A record held only under the id it minted is a record that cannot be *found again*, and a
  * mutation's response is not held at all — it dies with the screen. Both leave the same hole:
- * every remount of Match me, and every return to a chip already dealt, mints another deal, so
+ * every remount of the deck, and every return to a chip already dealt, mints another deal, so
  * a player toggling between Padel and Tennis empties their own deck without answering a card.
- * `deck` below closes it by keying the deal on the **ask** — the sport and the week it was
- * asked on — which is the one key under which *this question has already been answered* is a
- * fact the cache can state.
+ * `deck` below closes it by keying the deal on the **ask** — the sport, under the radius it
+ * was asked on — which is the one key under which *this question has already been answered*
+ * is a fact the cache can state.
  *
  * ## Nothing in Play background-refetches
  *
@@ -76,30 +76,30 @@
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { SeatedPlayerId } from '../domain/lineup';
-import type { PlayIntent } from '../domain/vocabulary';
-import { weekIdentity, type WorkingWeek } from '../domain/workingWeek';
 
 /**
  * **What a deal is run under that the request does not carry.**
  *
- * `POST /deck` sends a sport and — where the player improvised one — a week, and that is the
- * whole body. The answer also turns on two facts the server resolves from the player's own
- * profile: the **radius** it searches inside, and the **declaration** it scores under, because
- * the deck has no mode. Neither is a request field, both change the answer, and so both are in
- * the key — which is `query-and-errors.md`'s rule read literally: *every parameter that changes
- * the response is in the key*.
+ * `POST /deck` sends a sport, and that is the whole body. The answer also turns on one fact
+ * the server resolves from the player's own profile: the **radius** it searches inside. It is
+ * not a request field, it changes the answer, and so it is in the key — which is
+ * `query-and-errors.md`'s rule read literally: *every parameter that changes the response is
+ * in the key*.
  *
- * Leaving them out is not a small imprecision, it is the deck contradicting its own advice.
+ * Leaving it out is not a small imprecision, it is the deck contradicting its own advice.
  * *Widen in You* is the one piece of advice this surface gives, and a deal held on the sport
  * alone would answer a widened radius with the deal that ran before it: the player does exactly
  * what the empty state asked, and the screen says the same thing back for as long as the
  * process lives.
+ *
+ * **The declaration was here, and is not** — the deck dealt on it where a search reads a mode,
+ * until [ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §2 put every deal under one ruler: the deck reads no declaration, so a declaration changes
+ * no deal, and a key that carried it would deal again for a change that changes nothing.
  */
 export interface DealtUnder {
   /** The profile's search radius, in kilometres — the number *Widen in You* points at. */
   readonly radiusKm: number;
-  /** The declared Play intent for this sport: the deck reads it where a search reads a mode. */
-  readonly intent: PlayIntent;
 }
 
 /**
@@ -177,40 +177,31 @@ export const searchKeys = {
   detail: (searchId: string) => [...searchKeys.details(), searchId] as const,
   decks: () => [...searchKeys.all, 'deck'] as const,
   /**
-   * **The deal on Match me, held by the question it answers**: the sport, and the week it was
-   * dealt on.
+   * **The deal on Players, held by the question it answers**: the sport, under the radius.
    *
    * The key is the *ask* rather than the answer, which is what lets the screen tell *I have
    * already asked this* from *I have not asked yet* — the one distinction a mutation cannot
    * make, since its response dies with the component holding it. Coming back to a chip, and
-   * coming back to the screen, are then the same fact about the cache and neither one mints a
+   * coming back to the tab, are then the same fact about the cache and neither one mints a
    * deal.
    *
-   * **The week is in it, and travels as a set.** A grid improvised on Find a game is a
-   * different question and must deal a different deck — otherwise the player's edit is
-   * silently answered by the deal that ran before it. It is `weekIdentity`'s sorted spelling
-   * rather than the list itself, because ticks are kept in press order and a cell ticked and
-   * unticked leaves the same week in a different order (`domain/workingWeek`).
+   * **The radius is in it, though it is not on the request**: `DealtUnder` above carries that
+   * argument. What the key holds is everything that changes the answer, which is a superset of
+   * what travels in the body.
    *
-   * **And the radius and the declaration are in it too**, though neither is on the request:
-   * `DealtUnder` above carries that argument. What the key holds is everything that changes the
-   * answer, which is a superset of what travels in the body.
+   * **The week was in it, and is not.** A grid improvised on Find a game was a different
+   * question for as long as the deck was reached from that screen; it is reached from a tab of
+   * its own now, the tab press ends the Play session on the way, and the deal runs on the
+   * profile's week
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §1). A week in the key would be a parameter nothing can set.
    *
    * **The `search_id` is deliberately not in it.** It is minted *by* the answer, so a key
    * carrying it could never be built before the request that produces it — which is the whole
    * of what has to happen here.
    */
-  deck: (
-    sport: Sport | undefined,
-    sentWeek: WorkingWeek | undefined,
-    under: DealtUnder | undefined,
-  ) =>
-    [
-      ...searchKeys.decks(),
-      sport,
-      sentWeek === undefined ? null : weekIdentity(sentWeek),
-      under ?? null,
-    ] as const,
+  deck: (sport: Sport | undefined, under: DealtUnder | undefined) =>
+    [...searchKeys.decks(), sport, under ?? null] as const,
   forecasts: () => [...searchKeys.all, 'forecast'] as const,
   /**
    * What a four you composed would leave on court, keyed by `(search_id, the set of players)`.

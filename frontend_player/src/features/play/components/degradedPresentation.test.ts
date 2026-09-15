@@ -38,6 +38,37 @@ describe('one code, two sentences', () => {
   });
 });
 
+/**
+ * **The fourth reason is the surface's, and it names nobody's gap** (ADR-0169 §2). The deck
+ * deals everybody under one ruler and reads no declaration, so the intent term stands down on
+ * every card there — filing that under either person's code would print a sentence about a
+ * person that is false of them.
+ */
+describe('a term the surface declined to read', () => {
+  it('says the term is not read here, and blames neither of you', () => {
+    const line = degradedLine('INTENT_ALIGNMENT', 'NOT_READ_ON_THIS_SURFACE') ?? '';
+
+    expect(line).toMatch(/isn't read here/);
+    expect(line).not.toMatch(/haven't|hasn't|they |their /i);
+  });
+
+  it('is a different sentence from either person’s gap on the same term', () => {
+    expect(degradedLine('INTENT_ALIGNMENT', 'NOT_READ_ON_THIS_SURFACE')).not.toBe(
+      degradedLine('INTENT_ALIGNMENT', 'NOTHING_FROM_THEM'),
+    );
+    expect(degradedLine('INTENT_ALIGNMENT', 'NOT_READ_ON_THIS_SURFACE')).not.toBe(
+      degradedLine('INTENT_ALIGNMENT', 'NOTHING_FROM_YOU'),
+    );
+  });
+
+  it('has no sentence for a term no surface stands down this way', () => {
+    // Only the intent term is stood down by a surface today; the rest keep the gap in place
+    // rather than borrow a sentence written about somebody.
+    expect(degradedLine('RELIABILITY', 'NOT_READ_ON_THIS_SURFACE')).toBeUndefined();
+    expect(degradedLine('SOCIAL_VIBE', 'NOT_READ_ON_THIS_SURFACE')).toBeUndefined();
+  });
+});
+
 describe('the platform’s own gap', () => {
   it('is a footer and never a line on a row', () => {
     // Two tiers: otherwise reliability's line prints identically on twenty cards and reads as

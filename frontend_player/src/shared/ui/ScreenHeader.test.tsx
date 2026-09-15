@@ -18,7 +18,7 @@
  */
 
 import { render, screen, within } from '@testing-library/react-native';
-import { StyleSheet, type TextStyle } from 'react-native';
+import { StyleSheet, Text, type TextStyle } from 'react-native';
 
 import { ScreenHeader } from './ScreenHeader';
 import { theme } from './theme';
@@ -78,6 +78,20 @@ describe('a header with no title', () => {
 
     expect(screen.getByRole('header', { name: 'Doubles · Counted' })).toBeTruthy();
     expect(screen.queryByLabelText('Doubles · Counted')).toBeNull();
+  });
+
+  /**
+   * **And with no eyebrow either, there is no heading element at all.** The Players tab's header
+   * is its *Deck | Radar* toggle and nothing written
+   * ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §1), so what fills the row is the lead — and an element carrying a role and no words would be
+   * a stop a listener lands on and hears nothing from.
+   */
+  it('draws no heading where there is nothing to head it with, and the lead is the row', () => {
+    render(<ScreenHeader lead={<Text>Deck</Text>} />);
+
+    expect(screen.queryByRole('header')).toBeNull();
+    expect(screen.getByText('Deck')).toBeTruthy();
   });
 });
 

@@ -1,4 +1,4 @@
-# play — Find a game, Match me, the builder and the pool
+# play — Find a game, the builder, the pool, and the deck on Players
 
 > The design record for `src/features/play/` — what the feature does and the reasons the shape
 > is what it is, one paragraph per decision. Moved out of `CLAUDE.md` on 2026-09-11 so it loads
@@ -305,7 +305,9 @@ the read-back still holds, derived and never stored, with the marked player stil
 forecast and the court stating the fact and never the cause.
 
 **⚡Play's second screen is _Match me_ — one person at a time, two named buttons, and no
-swipe.** The gesture was refused **not on cost** — `RadiusSlider` already drags on the
+swipe** — _the placement is struck by the deck's move to Players; the last paragraphs of this
+record are the decision, and the buttons, the endings and the answer's rules below still stand_.
+The gesture was refused **not on cost** — `RadiusSlider` already drags on the
 built-in `PanResponder` — but because _Show them again_ was struck, leaving `PASS_SUPPRESS` at
 thirty days with nothing that reverses one: a swipe would put the cheapest gesture in the app
 on the most durable act in it. **No `react-native-gesture-handler` and no
@@ -357,8 +359,9 @@ mint one unasked is closed by name — `staleTime`/`gcTime: Infinity`, no refetc
 reconnect, `retry: false` and **`retryOnMount: false`**, that last one because an errored query
 re-fires on the next mount and a refused deal must not be re-attempted by walking away and back.
 
-**Play's two ways through the tab are one control, and the count on it is the segment's.**
-`PlaySegment` is design-system **6.3**, specified since the document was locked and built for
+**Play's two ways through the tab are one control, and the count on it is the segment's** —
+_struck by the deck's move to Players; the last paragraph of this record is the decision_.
+`PlaySegment` was design-system **6.3**, specified since the document was locked and built for
 this; its two halves move in opposite directions and that is the decision — _Find a game_ is
 an **arrival** and calls the shell's reset, where _Match me_ is an ordinary push. The count is
 your **own outstanding yeses**, filtered by the sport on screen so the number labels the deck
@@ -657,3 +660,59 @@ yes** — made in a tunnel, held by `networkMode: 'online'`, answered once the p
 Chats — because the harness runs every pending timer on every navigation, and a reply merely slow
 to arrive across a tab press is timed out by the walk rather than answered late by the server.
 **Not seen on a device** — the author checks the screen against `2_match_from_matchme.png`.
+
+**The deck lives on Players, and Play is Find a game**
+([#443](https://github.com/Raketa02/Raketa/issues/443),
+[ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1).
+_Match me_ was the second Play screen — a segment deep, behind a declaration — and it is the
+whole of the second tab now: `DeckScreen` mounts at `/players`, named by that route file exactly
+as Find a game is by its own, and **moved as it was** — today's card, today's two buttons,
+today's endings and today's footer — so that the card can be replaced on a surface that already
+lives in the right place ([#444](https://github.com/Raketa02/Raketa/issues/444)). What changed is
+the frame around it. **There is no title row**: the _Deck | Radar_ toggle is the header, in
+`ScreenHeader`'s lead slot with the right slot left for the chip, and it is **component state
+and not two routes** — Radar is a pane with one muted line, _Radar — not built yet_, in the
+shape a placeholder tab's line has, because a map needs a location precision the platform does
+not hold and the Radar is its own spec (§9); a route would make it somewhere the tab could open
+on, and Players always opens on Deck. The screen's memory is three `useState`s now: the pane,
+the card leaving and the card the sheet is over. **Sport chips only when there is a choice** —
+`rated.length >= 2` — so a player rated in one sport sees the mock exactly and a player rated in
+none still reads _Rate a sport first_, which the entry gate makes unreachable and `sportOnScreen`
+represents anyway. The toggle in the lead slot takes `flex: 1` so its two segments have a width
+to share; **not seen on a device** — whether that reads as the mock's compact pill is the
+author's to check against `game_card_and_details/players/`.
+
+**No declaration is read, asked for, or needed on the deck, and the intent term's gap is the
+surface's** ([#443](https://github.com/Raketa02/Raketa/issues/443), ADR-0169 §2). `POST /deck`
+scores every deal under the fun ruler for every viewer, so `DeclarationInterstitial` and
+`DeclarationStanding` have left this screen, `findAGameStanding`'s _undeclared_ is not a state of
+it — it reads `sportOnScreen` alone — and the deal's question dropped `intent` from its key:
+`DealtUnder` is the radius and nothing else, because a declaration that changes no deal must not
+deal again. The intent term stands down on every card as `NOT_READ_ON_THIS_SURFACE`, the
+contract's fourth `DegradedReason`, with a sentence of its own in `degradedPresentation` that
+blames neither person — the two features that spell the union both gained the member, so the
+sheet's not-counted block keeps its row rather than drawing an out-of-date gap. The declaration
+components stay for Find a game, with `PlayDeclarationSurface` narrowed to the one Play surface
+that still writes — `DECK` stays in the contract for the events that carry it — and the
+interstitial's gloss stopped naming _Match me_ as a reader: what reads the declaration now is
+somebody else's search, and the court a mutual opens (§8).
+
+**And the deal runs on the profile's week, so the ask carries none**
+([#443](https://github.com/Raketa02/Raketa/issues/443), ADR-0169 §1). The deck was reached from
+the screen the week is edited on and dealt on the working copy; it is reached from a tab of its
+own now, the tab press ends the Play session on the way, and nothing can hand it an improvised
+grid — so `DeckAsk` carries no `sentWeek`, `searchKeys.deck(sport, under)` carries no week, and
+`availability_override` is never sent from here. ADR-0169 §1 states the consequence (_the deal
+runs on the profile's week_) and not the removal; the removal is this record's, on the ground
+that a key parameter nothing can set is a parameter a later session will try to set.
+
+**Play lost its segment, and the tests moved by name**
+([#443](https://github.com/Raketa02/Raketa/issues/443), ADR-0169 §1). `PlaySegment`,
+`/play/deck`, `DECK_ROUTE` and `MATCH_ME_TITLE` are gone; Find a game draws nothing above its
+mode section; `enterPlay` has no caller outside the shell and is no longer on its surface; the
+Play stack is `[Now, Find a game]` and nothing in the app links to a deck route under Play.
+_Match me_ survives as a word only in _Matched!_. In `deck.test.tsx` every `/play/deck` became
+`/players`, the deck is entered through the bar and re-entered by leaving for Play and coming
+back, _the segment_ and _the declaration_ blocks retired, and a _Players, the tab_ block asserts
+the column lit and rootless, Deck on arrival and on return, the Radar pane, the chip row's
+presence rule, and an undeclared player dealt with nothing asked.

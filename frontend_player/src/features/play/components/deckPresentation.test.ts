@@ -13,7 +13,8 @@
 import { poolDescription } from './searchPresentation';
 import {
   DECK_FOOTER,
-  MATCH_ME_TITLE,
+  PANE_LABEL,
+  RADAR_LINE,
   WIDEN_IN_YOU,
   interestToast,
   mutualToast,
@@ -24,6 +25,7 @@ import {
 
 const EVERY_SENTENCE = [
   ...DECK_FOOTER,
+  RADAR_LINE,
   WIDEN_IN_YOU,
   outgoingYeses(0),
   outgoingYeses(3),
@@ -32,15 +34,28 @@ const EVERY_SENTENCE = [
   mutualToast('Marek Z.'),
 ];
 
-describe('the segment', () => {
+describe('the toggle', () => {
   /**
-   * The count is struck, and this is the shape of the refusal: the deck's half of the segment
-   * is a **name**, so there is no function left that could put a number back beside it. The
-   * figure it used to draw is the ending sentence's, which is asserted below.
+   * The count is struck, and this is the shape of the refusal: each half of the toggle is a
+   * **name**, so there is no function left that could put a number back beside it. The figure
+   * the old segment drew is the ending sentence's, which is asserted below.
    */
-  it('is a name and never a number, because the deck publishes no count of cards', () => {
-    expect(MATCH_ME_TITLE).toBe('Match me');
-    expect(MATCH_ME_TITLE).not.toMatch(/\d/);
+  it('names two panes and never a number, because the deck publishes no count of cards', () => {
+    expect(PANE_LABEL).toEqual({ deck: 'Deck', radar: 'Radar' });
+    for (const label of Object.values(PANE_LABEL)) expect(label).not.toMatch(/\d/);
+  });
+
+  it('has no half called Match me — the word survives only in Matched!', () => {
+    expect(Object.values(PANE_LABEL)).not.toContain('Match me');
+  });
+});
+
+describe('the Radar pane', () => {
+  it('says what it is and that it is not built, in a placeholder’s shape', () => {
+    // The em dash is a dash and not a colon on purpose: *not built yet* is an aside about the
+    // app, not a second clause of the sentence about the pane.
+    expect(RADAR_LINE).toBe('Radar — not built yet');
+    expect(RADAR_LINE).not.toMatch(/coming soon/i);
   });
 });
 

@@ -840,13 +840,15 @@ const size = {
    *  inside the level bar, which leaves a bounded multiplier and nothing else. **Derived,
    *  never chosen** — `tabBarLabelCap.test.ts` measures the five shipped labels against the
    *  real Archivo 700 advances in the narrowest phone's column and recomputes it, so a
-   *  sixth tab or a longer word goes red rather than truncating on somebody's phone. */
+   *  sixth tab or a longer word goes red rather than truncating on somebody's phone. It was
+   *  1.7 over *Around* and is 1.6 over *Players*, the longer word that replaced it
+   *  (ADR-0169 §1) — the one step the seventh letter costs. */
   tabBar: {
     /** ADR-0135: Feather `zap`, inside the disc, smaller than the 16pt box the flanks use. */
     bolt: 15,
     ringGap: 2,
     ringStroke: 2,
-    labelMaxScale: 1.7,
+    labelMaxScale: 1.6,
     /** The Chats badge — 10.2, and the one badge the bar carries.
      *
      *  **18, and it is the digit's own box rounded to the grid.** The count is mono and tabular

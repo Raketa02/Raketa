@@ -137,3 +137,20 @@ elsewhere is still a photograph or a poster and nothing over it. `handleInitials
 with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
+
+**The bar's second column is Players, and a header may have no heading**
+([#443](https://github.com/Raketa02/Raketa/issues/443),
+[ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1;
+the decision is [`shell.md`](shell.md)'s, and this is what the primitives changed to carry it).
+`TabBar`'s inventory is still five and still Feather: the second key is `players`, its label
+_Players_ and its glyph `users` — `user` is You's, and `radar` is still not drawn, because the
+Radar is a pane and not a tab. _Players_ is the longest of the five words, so
+`theme.size.tabBar.labelMaxScale` moved from 1.7 to **1.6** — derived, as ever, by
+`tabBarLabelCap.test.ts` from the real Archivo advances, the one step the seventh letter costs —
+and 10.2's glyph table and Part 16 moved with it in the same commit. **`ScreenHeader` draws no
+heading element where it has neither a title nor an eyebrow.** With a title the eyebrow sits
+above; without one the eyebrow is the heading (#414); without either the slots are the header —
+the Players tab's is its _Deck | Radar_ toggle in `lead` and, when the count arrives, a chip in
+`right` — and an element carrying a role and no words would be a stop a listener lands on and
+hears nothing from. `ShellScreen` forwards `lead` and `right` for it, _forwarded, not designed_,
+as it already forwards the way back; 10.3 carries the callout.

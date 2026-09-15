@@ -1,6 +1,6 @@
 /**
- * **Match me**, walked the way a player walks it: the real route tree, the real shell, the
- * real stores and only `fetch` faked.
+ * **Players** — the deck, walked the way a player walks it: the real route tree, the real
+ * shell, the real stores and only `fetch` faked.
  *
  * What is asserted here is the set of decisions a build session could quietly undo. Four of
  * them are refusals, and a refusal is only observable as an absence — which is why they are
@@ -12,8 +12,14 @@
  *   unmeasurable, so the honest ending is the pool and the count of your own yeses.
  * - **A spent deal is not an empty pool**, and the two empty states split on
  *   `players_in_range` — the advice is addressed to the player who can act on it.
- * - **The count on the segment is filtered by the sport on screen**, so the number labels the
- *   deck it sits above.
+ * - **Nobody is asked to declare on Players, and nothing on it says what the deal runs on.**
+ *   Every deal runs under one ruler
+ *   ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ *   §2), so the interstitial and the standing line are absences here.
+ *
+ * And one placement, which the whole suite walks by arriving through the bar: the deck is the
+ * **Players** tab, at `/players`, with a *Deck | Radar* toggle for a header and no route under
+ * Play (ADR-0169 §1).
  */
 
 import { router } from 'expo-router';
@@ -57,16 +63,12 @@ import {
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession } from '../store/playSession.store';
 
-import {
-  declarationLine,
-  declarationOptionLabel,
-  declarationTitle,
-  modeControlLabel,
-} from './findAGamePresentation';
+import { declarationLine, declarationTitle, modeControlLabel } from './findAGamePresentation';
 import {
   DECK_FOOTER,
-  MATCH_ME_TITLE,
   NOBODY_IN_RANGE_TITLE,
+  PANE_LABEL,
+  RADAR_LINE,
   SEEN_EVERYBODY_TITLE,
   WIDEN_IN_YOU,
   interestToast,
@@ -74,6 +76,7 @@ import {
   outgoingYeses,
   passedToast,
 } from './deckPresentation';
+import { SPORT_HEADING } from './SportChips';
 import { playErrorMessage } from './playErrorMessage';
 import { metaLine } from './playerCardPresentation';
 import { promptControls, promptCopy } from './promptPresentation';
@@ -81,7 +84,6 @@ import { poolDescription } from './searchPresentation';
 
 const DECK = '/api/v1/deck';
 const TENNIS_INTENT = '/api/v1/play-intents/TENNIS';
-const PADEL_INTENT = '/api/v1/play-intents/PADEL';
 const INTEREST = '/api/v1/interest';
 const PASSES = '/api/v1/passes';
 const DECLINES = '/api/v1/prompt-declines';
@@ -238,7 +240,7 @@ function expressed(
     },
     mutual,
     challenge_id: challengeId,
-    outstanding: { sport: 'PADEL', outstanding, cap: 10 },
+    outstanding: { sport: 'PADEL', outstanding, cap: 10, ttl_days: 21 },
   };
 }
 
@@ -353,24 +355,27 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** A signed-in player standing on the deck, with the first deal already drawn. */
+/** A signed-in player standing on the deck — the Players tab, one press from anywhere. */
 async function openDeck() {
   await launchSignedIn();
-  fireEvent.press(await screen.findByLabelText('Play'));
-  await waitFor(() => expect(screen).toHavePathname('/play'));
-  // Find a game's grid is the last thing its three reads produce, so its arrival is the
-  // segment being real rather than a control over a half-loaded screen.
-  await screen.findByLabelText('Tuesday evening');
+  fireEvent.press(await screen.findByLabelText('Players'));
+  await waitFor(() => expect(screen).toHavePathname('/players'));
+}
 
-  fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
-  await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+/** Leave for Play and come back, which is how the deck is re-entered now that it is a tab. */
+async function leaveAndReturn() {
+  fireEvent.press(screen.getByLabelText('Play'));
+  await waitFor(() => expect(screen).toHavePathname('/play'));
+  await screen.findByLabelText('Tuesday evening');
+  fireEvent.press(screen.getByLabelText('Players'));
+  await waitFor(() => expect(screen).toHavePathname('/players'));
 }
 
 const dealBodies = () => transport.requestsTo('POST', DECK).map((request) => request.body);
 const toasts = () => useToastQueue.getState().queue.map((toast) => toast.message);
 
 describe('what the deck deals', () => {
-  it('deals on arrival, for the sport Play is on, and draws one person', async () => {
+  it('deals on arrival, for the sport the player is on, and draws one person', async () => {
     await openDeck();
 
     expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
@@ -405,38 +410,26 @@ describe('what the deck deals', () => {
   });
 
   /**
-   * The week is an **ask and never a correction**: a grid improvised on Find a game travels
-   * as `availability_override`, and a grid that still equals the profile's is omitted rather
-   * than sent — *"omit it, never send `null`"*.
+   * **The deal runs on the profile's week, whatever was improvised on Find a game**
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §1). The deck used to be reached from the screen the week is edited on and dealt on the
+   * working copy; it is reached from a tab of its own now, the tab press ends the Play session
+   * on the way, and the ask carries no override at all — *"omit it, never send `null`"*.
    */
-  it('sends the improvised week, and omits it when the grid is the profile’s', async () => {
+  it('deals on the profile’s week, whatever was improvised on Find a game', async () => {
     await launchSignedIn();
     fireEvent.press(await screen.findByLabelText('Play'));
     await screen.findByLabelText('Tuesday evening');
     fireEvent.press(screen.getByLabelText('Monday morning'));
 
-    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
-    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    fireEvent.press(screen.getByLabelText('Players'));
+    await waitFor(() => expect(screen).toHavePathname('/players'));
     await screen.findByLabelText(/^Marek Z\./);
 
-    expect(dealBodies()).toEqual([
-      {
-        sport: 'PADEL',
-        availability_override: [
-          { day: 2, part: 'EVENING' },
-          { day: 6, part: 'MORNING' },
-          { day: 1, part: 'MORNING' },
-        ],
-      },
-    ]);
+    expect(dealBodies()).toEqual([{ sport: 'PADEL' }]);
   });
 
   it('deals again for a sport the player switches to, and only then', async () => {
-    stubProfileSurface(transport, {
-      availability: [{ day: 2, part: 'EVENING' }],
-      search_radius_km: 12,
-      play_intents: { PADEL: 'FOR_FUN', TENNIS: 'COMPETITIVE' },
-    });
     await openDeck();
     await screen.findByLabelText(/^Marek Z\./);
 
@@ -456,11 +449,6 @@ describe('what the deck deals', () => {
    * everybody.
    */
   it('deals once per sport, however often the chips are toggled', async () => {
-    stubProfileSurface(transport, {
-      availability: [{ day: 2, part: 'EVENING' }],
-      search_radius_km: 12,
-      play_intents: { PADEL: 'FOR_FUN', TENNIS: 'COMPETITIVE' },
-    });
     await openDeck();
     await screen.findByLabelText(/^Marek Z\./);
 
@@ -477,16 +465,12 @@ describe('what the deck deals', () => {
     expect(dealBodies()).toEqual([{ sport: 'PADEL' }, { sport: 'TENNIS' }]);
   });
 
-  /** Leaving Match me replaces the stack, so the screen is genuinely re-entered rather than restored. */
-  it('finds the deal it already holds when the player leaves the screen and comes back', async () => {
+  /** Leaving Players replaces the stack, so the screen is genuinely re-entered rather than restored. */
+  it('finds the deal it already holds when the player leaves the tab and comes back', async () => {
     await openDeck();
     await screen.findByLabelText(/^Marek Z\./);
 
-    fireEvent.press(screen.getByLabelText('Find a game'));
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-    await screen.findByLabelText('Tuesday evening');
-    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
-    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    await leaveAndReturn();
 
     expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
     expect(dealBodies()).toEqual([{ sport: 'PADEL' }]);
@@ -511,9 +495,7 @@ describe('what the deck deals', () => {
     fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
     await screen.findByLabelText(/^Ana K\./);
 
-    fireEvent.press(screen.getByLabelText('Find a game'));
-    await screen.findByLabelText('Tuesday evening');
-    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
+    await leaveAndReturn();
 
     expect(await screen.findByLabelText(/^Ana K\./)).toBeTruthy();
     expect(screen.queryByLabelText(/^Marek Z\./)).toBeNull();
@@ -521,62 +503,20 @@ describe('what the deck deals', () => {
   });
 
   /**
-   * **A week is part of the question**, so improvising one is a new ask and deals again. Held
-   * on the sport alone, a grid the player had just edited would be silently answered by the
-   * deal that ran before it.
+   * **A declaration is not part of the question any more.** The deck used to read it where a
+   * search reads a mode, so a sport nobody had declared in opened ADR-0094's interstitial
+   * before the deal could be refused. Every deal runs under one ruler now (ADR-0169 §2): an
+   * undeclared sport deals, and nothing asks what kind of game.
    */
-  it('deals again on an improvised week, because that is a different ask', async () => {
-    await openDeck();
-    await screen.findByLabelText(/^Marek Z\./);
-
-    fireEvent.press(screen.getByLabelText('Find a game'));
-    await screen.findByLabelText('Tuesday evening');
-    fireEvent.press(screen.getByLabelText('Monday morning'));
-    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
-    await screen.findByLabelText(/^Marek Z\./);
-
-    await waitFor(() => expect(dealBodies()).toHaveLength(2));
-    expect(dealBodies()[1]).toHaveProperty('availability_override');
-  });
-
-  /**
-   * The deck has **no mode**, so it reads the declaration — and is refused with
-   * `play_intent_not_declared` without one. ADR-0094's interstitial is therefore opened
-   * knowingly, before the refusal, on this surface exactly as on the search screen.
-   */
-  it('asks what kind of game before dealing a sport nobody has declared in', async () => {
+  it('deals a sport nobody has declared in, and asks nothing first', async () => {
     await openDeck();
     await screen.findByLabelText(/^Marek Z\./);
 
     fireEvent.press(screen.getByLabelText('Tennis'));
 
-    expect(await screen.findByText(declarationTitle('Tennis'))).toBeTruthy();
-    expect(dealBodies()).toHaveLength(1);
-  });
-
-  /**
-   * The surface is the deck's own — [#280](https://github.com/Raketa02/Raketa/issues/280).
-   * The interstitial is one component with two callers, and the field whose whole job is to
-   * say which screen it was is the one thing that must differ between them. It is asserted
-   * from the outside because it is a value with no effect on this screen: nothing here reads
-   * it back, so nothing but this would notice the two callers reporting the same screen.
-   */
-  it('reports the deck as the surface it was declared on', async () => {
-    transport.on('PUT', TENNIS_INTENT, () =>
-      json<Wire['PlayIntentDeclarationResponse']>({ sport: 'TENNIS', intent: 'FOR_FUN' }),
-    );
-    await openDeck();
-    await screen.findByLabelText(/^Marek Z\./);
-    fireEvent.press(screen.getByLabelText('Tennis'));
-    await screen.findByText(declarationTitle('Tennis'));
-
-    fireEvent.press(screen.getByLabelText(declarationOptionLabel('FOR_FUN', 'Tennis')));
-
-    await waitFor(() => expect(transport.requestsTo('PUT', TENNIS_INTENT)).toHaveLength(1));
-    expect(transport.requestsTo('PUT', TENNIS_INTENT)[0]?.body).toEqual({
-      intent: 'FOR_FUN',
-      surface: 'DECK',
-    });
+    await waitFor(() => expect(dealBodies()).toEqual([{ sport: 'PADEL' }, { sport: 'TENNIS' }]));
+    expect(screen.queryByText(declarationTitle('Tennis'))).toBeNull();
+    expect(transport.requestsTo('PUT', TENNIS_INTENT)).toEqual([]);
   });
 
   it('says what a refusal means, and offers the act that failed as the retry', async () => {
@@ -604,15 +544,12 @@ describe('what the deck deals', () => {
    * nothing. Worse than a wasted request if the refusal was a timeout over a deal the server
    * did record, since the pool is then spent twice.
    */
-  it('does not deal again when a screen whose deal was refused is re-entered', async () => {
+  it('does not deal again when a tab whose deal was refused is re-entered', async () => {
     transport.on('POST', DECK, () => errorResponse(503, 'matchmaking_unavailable'));
     await openDeck();
     await screen.findByText(playErrorMessage({ code: 'matchmaking_unavailable' } as never));
 
-    fireEvent.press(screen.getByLabelText('Find a game'));
-    await screen.findByLabelText('Tuesday evening');
-    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
-    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    await leaveAndReturn();
     await screen.findByText(playErrorMessage({ code: 'matchmaking_unavailable' } as never));
 
     expect(dealBodies()).toHaveLength(1);
@@ -678,7 +615,7 @@ describe('yes and no', () => {
     fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
 
     await waitFor(() => expect(toasts()).toEqual([interestToast('Marek Z.')]));
-    expect(screen).toHavePathname('/play/deck');
+    expect(screen).toHavePathname('/players');
   });
 
   /**
@@ -697,7 +634,7 @@ describe('yes and no', () => {
     fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
 
     await waitFor(() => expect(toasts()).toEqual([mutualToast('Marek Z.')]));
-    expect(screen).toHavePathname('/play/deck');
+    expect(screen).toHavePathname('/players');
   });
 
   it('names the person a pass was about', async () => {
@@ -767,14 +704,6 @@ describe('a mutual that named a challenge', () => {
     transport.on('POST', DECK, () => json(TWO_CARDS));
     transport.on('POST', INTEREST, () => json(expressed(true, 3, CHALLENGE), 201));
     transport.on('GET', `${CHALLENGES_PATH}/${CHALLENGE}`, () => json(matched(sport)));
-    if (sport === 'TENNIS') {
-      // Declared in both, so the chip deals rather than asking what kind of game.
-      stubProfileSurface(transport, {
-        availability: [{ day: 2, part: 'EVENING' }],
-        search_radius_km: 12,
-        play_intents: { PADEL: 'FOR_FUN', TENNIS: 'COMPETITIVE' },
-      });
-    }
     await openDeck();
     await screen.findByLabelText(/^Marek Z\./);
     if (sport === 'TENNIS') {
@@ -817,7 +746,7 @@ describe('a mutual that named a challenge', () => {
     await sayYesToMarek('PADEL');
     fireEvent.press(yesScreen().getByRole('button', { name: LATER }));
 
-    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    await waitFor(() => expect(screen).toHavePathname('/players'));
     expect(await screen.findByLabelText(/^Ana K\./)).toBeTruthy();
     expect(screen.queryByLabelText(/^Marek Z\./)).toBeNull();
     // The same deal, found rather than dealt again.
@@ -834,7 +763,7 @@ describe('a mutual that named a challenge', () => {
     });
 
     expect(claimed).toBe(true);
-    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    await waitFor(() => expect(screen).toHavePathname('/players'));
     expect(await screen.findByLabelText(/^Ana K\./)).toBeTruthy();
   });
 
@@ -845,7 +774,7 @@ describe('a mutual that named a challenge', () => {
    * again, finds the deal it dealt on rather than dealing a second one. A tennis mutual is `ON`
    * from birth, so the door waits for the row to carry its game, as the challenge's does.
    */
-  it('opens the room under the Chats tab, back is the Chats list, and Play keeps its held deal', async () => {
+  it('opens the room under the Chats tab, back is the Chats list, and Players keeps its held deal', async () => {
     await sayYesToMarek('TENNIS');
     theRoomIsThere('TENNIS', GAME);
 
@@ -858,12 +787,9 @@ describe('a mutual that named a challenge', () => {
     // The list is the bottom of the stack: no deck, no celebration behind it.
     expect(router.canGoBack()).toBe(false);
 
-    // Play, entered again, holds the deal — the next card is up and nothing was dealt.
-    fireEvent.press(screen.getByLabelText('Play'));
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-    await screen.findByLabelText('Tuesday evening');
-    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
-    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    // Players, entered again, holds the deal — the next card is up and nothing was dealt.
+    fireEvent.press(screen.getByLabelText('Players'));
+    await waitFor(() => expect(screen).toHavePathname('/players'));
     expect(await screen.findByLabelText(/^Ana K\./)).toBeTruthy();
     expect(dealBodies()).toEqual([{ sport: 'PADEL' }, { sport: 'TENNIS' }]);
   });
@@ -942,7 +868,7 @@ describe('the empty deck', () => {
     stubInterest(transport, {
       outgoing: [],
       mutual: [],
-      outstanding: [{ sport: 'PADEL', outstanding: 2, cap: 10 }],
+      outstanding: [{ sport: 'PADEL', outstanding: 2, cap: 10, ttl_days: 21 }],
     });
     await openDeck();
 
@@ -1006,47 +932,16 @@ describe('the empty deck', () => {
 
     expect(await screen.findByText(SEEN_EVERYBODY_TITLE)).toBeTruthy();
   });
-});
-
-describe('the segment', () => {
-  /**
-   * **The count is struck**, and the refusal is only observable as an absence. `Match me · 3`
-   * sat where a count of *cards waiting* would sit and was read as one — which is the number
-   * the deck refuses to publish anywhere, the card included.
-   */
-  it('names the deck and puts no number beside it, on either screen', async () => {
-    stubInterest(transport, {
-      outgoing: [],
-      mutual: [],
-      outstanding: [
-        { sport: 'PADEL', outstanding: 3, cap: 10 },
-        { sport: 'TENNIS', outstanding: 9, cap: 10 },
-      ],
-    });
-    await launchSignedIn();
-    fireEvent.press(await screen.findByLabelText('Play'));
-    await screen.findByLabelText('Tuesday evening');
-
-    expect(await screen.findByLabelText(MATCH_ME_TITLE)).toBeTruthy();
-    expect(screen.queryByLabelText(/yeses/)).toBeNull();
-    expect(screen.queryByText(/Match me ·/)).toBeNull();
-
-    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
-    await screen.findByLabelText(/^Marek Z\./);
-
-    expect(screen.getByLabelText(MATCH_ME_TITLE)).toBeTruthy();
-    expect(screen.queryByText(/Match me ·/)).toBeNull();
-  });
 
   /**
-   * The figure the segment used to draw still moves on the tap's own answer — it is the
-   * **ending sentence** that prints it now, which is where it has room to say what it counts.
+   * The figure the old segment drew still moves on the tap's own answer — it is the **ending
+   * sentence** that prints it, which is where it has room to say what it counts.
    */
   it('moves the ending’s own count on the answer’s response rather than on a second request', async () => {
     stubInterest(transport, {
       outgoing: [],
       mutual: [],
-      outstanding: [{ sport: 'PADEL', outstanding: 2, cap: 10 }],
+      outstanding: [{ sport: 'PADEL', outstanding: 2, cap: 10, ttl_days: 21 }],
     });
     await openDeck();
     await screen.findByLabelText(/^Marek Z\./);
@@ -1059,14 +954,133 @@ describe('the segment', () => {
     // One read, at mount. The tap's answer carried the new count, so nothing asked again.
     expect(transport.requestsTo('GET', INTEREST)).toHaveLength(1);
   });
+});
 
-  it('takes the player back to Find a game as an arrival rather than a step back', async () => {
+/**
+ * **Players, the tab** ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1). The deck is the whole of the second column: no title row, a *Deck | Radar* toggle for a
+ * header, chips only where there is a choice, and nothing asking anybody what kind of game.
+ */
+describe('Players, the tab', () => {
+  /**
+   * Lit on the deck, from the deck's side: the bar's order and roots are `theShell.test.tsx`'s,
+   * and what this adds is that the column the deck lights is Players and not Play.
+   */
+  it('lights Players and not Play, and is its own root', async () => {
     await openDeck();
     await screen.findByLabelText(/^Marek Z\./);
 
-    fireEvent.press(screen.getByLabelText('Find a game'));
+    expect(screen.getByRole('tab', { name: 'Players', selected: true })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Play', selected: false })).toBeTruthy();
+    expect(router.canGoBack()).toBe(false);
+  });
 
-    await waitFor(() => expect(screen).toHavePathname('/play'));
+  /** No title row: the toggle is the header, and there is no heading element to land on. */
+  it('opens on Deck, with the toggle for a header and no title', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    expect(screen.getByRole('button', { name: PANE_LABEL.deck, selected: true })).toBeTruthy();
+    expect(screen.getByRole('button', { name: PANE_LABEL.radar, selected: false })).toBeTruthy();
+    expect(screen.queryByRole('header')).toBeNull();
+    expect(screen.queryByText(/Match me/)).toBeNull();
+  });
+
+  it('flips to a Radar pane that says it is not built, and back', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.radar }));
+
+    expect(await screen.findByText(RADAR_LINE)).toBeTruthy();
+    expect(screen.queryByLabelText(/^Marek Z\./)).toBeNull();
+    expect(screen.getByRole('button', { name: PANE_LABEL.radar, selected: true })).toBeTruthy();
+    // A pane and not a route: the toggle moved and the tab did not.
+    expect(screen).toHavePathname('/players');
+
+    fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.deck }));
+
+    expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
+    expect(screen.queryByText(RADAR_LINE)).toBeNull();
+  });
+
+  /** The toggle is the screen's own state, and the screen is remounted on every arrival. */
+  it('lands on Deck again after leaving from Radar, because Players always opens on Deck', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+    fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.radar }));
+    await screen.findByText(RADAR_LINE);
+
+    fireEvent.press(screen.getByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    fireEvent.press(screen.getByLabelText('Players'));
+    await waitFor(() => expect(screen).toHavePathname('/players'));
+
+    expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
+    expect(screen.getByRole('button', { name: PANE_LABEL.deck, selected: true })).toBeTruthy();
+    expect(screen.queryByText(RADAR_LINE)).toBeNull();
+  });
+
+  /**
+   * **Chips only when there is a choice.** Rated in two sports, the row is under the toggle and
+   * reads and writes the same browsed sport Play's chips do; rated in one, the mock is seen
+   * exactly. Rated in none is *Rate a sport first* — `NO_RATED_SPORT_LINE`, drawn off
+   * `sportOnScreen` answering nothing (`domain/findAGame.test.ts`) — and it cannot be walked
+   * here: the entry gate sends a player with no rating to the questionnaire before any tab is
+   * drawn, which is the reason the screen represents the branch at all.
+   */
+  it('draws the sport chips for a player rated in two sports, under the toggle', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    expect(screen.getByText(SPORT_HEADING)).toBeTruthy();
+    expect(screen.getByLabelText('Padel')).toBeTruthy();
+    expect(screen.getByLabelText('Tennis')).toBeTruthy();
+  });
+
+  it('draws no chips for a player rated in one sport', async () => {
+    stubGate(transport, { ratings: [rating('PADEL')], hasPlayerProfile: true });
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    expect(screen.queryByText(SPORT_HEADING)).toBeNull();
+    expect(screen.queryByLabelText('Padel')).toBeNull();
+    expect(dealBodies()).toEqual([{ sport: 'PADEL' }]);
+  });
+
+  /**
+   * **Nobody is asked to declare on Players, and nothing says what the deal runs on.** The
+   * one-tap card and the *Dealing … · Change* line were the deck's for as long as it read a
+   * declaration; every deal runs under one ruler now (ADR-0169 §2), and both are absences.
+   */
+  it('deals an undeclared player without an interstitial, and draws no standing line', async () => {
+    stubProfileSurface(transport, {
+      availability: [{ day: 2, part: 'EVENING' }],
+      search_radius_km: 12,
+      play_intents: {},
+    });
+    await openDeck();
+
+    expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
+    expect(dealBodies()).toEqual([{ sport: 'PADEL' }]);
+    expect(screen.queryByText(declarationTitle('Padel'))).toBeNull();
+    for (const intent of ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'] as const) {
+      const line = declarationLine({ intent, mode: undefined, sportName: 'Padel' });
+      expect(screen.queryByLabelText(line.spoken)).toBeNull();
+      expect(screen.queryByLabelText(line.actionLabel)).toBeNull();
+    }
+    for (const mode of ['COMPETITIVE', 'FOR_FUN'] as const) {
+      expect(screen.queryByLabelText(modeControlLabel(mode))).toBeNull();
+    }
+  });
+
+  it('draws no standing line for a declared player either', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    const line = declarationLine({ intent: 'FOR_FUN', mode: undefined, sportName: 'Padel' });
+    expect(screen.queryByLabelText(line.spoken)).toBeNull();
+    expect(screen.queryByLabelText(line.actionLabel)).toBeNull();
   });
 });
 
@@ -1085,17 +1099,6 @@ describe('the footer, and what it promises', () => {
     fireEvent(await screen.findByLabelText(/^Marek Z\./), 'longPress');
 
     expect(await screen.findByLabelText('Why fit 78')).toBeTruthy();
-  });
-
-  /**
-   * The bar reads its active column off the **first** path segment, so ⚡Play stays lit for
-   * every screen inside Play — which is what the deck being `/play/deck` rather than a route
-   * of its own buys.
-   */
-  it('keeps ⚡Play lit, because the deck is inside the tab', async () => {
-    await openDeck();
-
-    expect(screen.getByLabelText('Play').props.accessibilityState?.selected).toBe(true);
   });
 });
 
@@ -1260,98 +1263,5 @@ describe('the question a deal raised', () => {
     // No sheet at all — the card the deal dealt is reachable, which it would not be behind one.
     expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
     expect(screen.queryByText(REFRESH_YOUR_TIMES)).toBeNull();
-  });
-});
-
-/**
- * **The declaration at rest on the second Play surface**
- * ([#295](https://github.com/Raketa02/Raketa/issues/295)).
- *
- * The deck is the one screen in the product where the durable answer *is* what the search runs
- * on — `SearchEnvelope.mode` is null exactly here — so the line has one state and no drift
- * variant. What is asserted is mostly that absence, which is only observable from outside.
- */
-describe('the declaration, standing where there is no mode', () => {
-  /** The line as the copy deck writes it, so an assertion is never a spelling of one. */
-  const dealing = (intent: Wire['PlayIntent'], sportName: string) =>
-    declarationLine({ intent, mode: undefined, sportName });
-
-  const DEALT = dealing('FOR_FUN', 'Padel');
-
-  it('says the deal runs on what the profile holds, under the chips it is chosen by', async () => {
-    await openDeck();
-    await screen.findByLabelText(/^Marek Z\./);
-
-    expect(screen.getByLabelText(DEALT.spoken)).toBeTruthy();
-    expect(screen.getByLabelText(DEALT.actionLabel)).toBeTruthy();
-  });
-
-  /**
-   * There is nothing on this screen for the declaration to disagree with — no segment, and
-   * therefore no `differs` state and no *Update*. The absence of the control is the reason the
-   * sentence can be written the way it is.
-   */
-  it('has no drift variant, because there is no switch to drift from', async () => {
-    await openDeck();
-    await screen.findByLabelText(/^Marek Z\./);
-
-    for (const mode of ['COMPETITIVE', 'FOR_FUN'] as const) {
-      expect(screen.queryByLabelText(modeControlLabel(mode))).toBeNull();
-      expect(
-        screen.queryByLabelText(
-          declarationLine({ intent: 'FOR_FUN', mode, sportName: 'Padel' }).spoken,
-        ),
-      ).toBeNull();
-    }
-    expect(DEALT.action).toBe('Change');
-  });
-
-  /**
-   * The chip is what chooses which declaration is being read, and *either suits me* gets a frame
-   * of its own — `declarationNamesAKind` is where that is argued, and
-   * `findAGamePresentation.test` is where the two frames are compared. What this adds is that
-   * the right one reaches the screen.
-   */
-  it('follows the chip, and claims no kind for an answer that named none', async () => {
-    stubProfileSurface(transport, {
-      availability: [{ day: 2, part: 'EVENING' }],
-      search_radius_km: 12,
-      play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'NO_PREFERENCE' },
-    });
-    await openDeck();
-    await screen.findByLabelText(dealing('COMPETITIVE', 'Padel').spoken);
-
-    fireEvent.press(screen.getByLabelText('Tennis'));
-
-    expect(await screen.findByLabelText(dealing('NO_PREFERENCE', 'Tennis').spoken)).toBeTruthy();
-    expect(screen.queryByLabelText(dealing('FOR_FUN', 'Tennis').spoken)).toBeNull();
-  });
-
-  /**
-   * *Change* means one thing across the tab: the declaration's home is the You tab (#296), and
-   * the deck does not grow a second editor for it any more than it grows one for the radius.
-   */
-  it('sends Change to where the declaration lives, and writes nothing on the way', async () => {
-    await openDeck();
-    await screen.findByLabelText(/^Marek Z\./);
-
-    fireEvent.press(screen.getByLabelText(DEALT.actionLabel));
-
-    await waitFor(() => expect(screen).toHavePathname('/you'));
-    expect(transport.requestsTo('PUT', PADEL_INTENT)).toEqual([]);
-    expect(transport.requestsTo('PUT', TENNIS_INTENT)).toEqual([]);
-  });
-
-  /** An undeclared sport is the interstitial's state, and there is nothing yet to stand for. */
-  it('is not drawn at all on a sport nobody has declared in', async () => {
-    await openDeck();
-    await screen.findByLabelText(/^Marek Z\./);
-
-    fireEvent.press(screen.getByLabelText('Tennis'));
-    await screen.findByText(declarationTitle('Tennis'));
-
-    for (const intent of ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'] as const) {
-      expect(screen.queryByLabelText(dealing(intent, 'Tennis').spoken)).toBeNull();
-    }
   });
 });

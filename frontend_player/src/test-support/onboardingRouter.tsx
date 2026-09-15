@@ -20,7 +20,6 @@ import { ReducedMotionProvider } from '@/shared/ui';
 
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
-import AroundRoute from '@/app/(app)/(tabs)/around';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
 import ChallengeFillRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/fill';
 import YesRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/yes';
@@ -30,9 +29,9 @@ import ConversationGameRoute from '@/app/(app)/(tabs)/chats/conversation/[conver
 import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
 import NowRoute from '@/app/(app)/(tabs)/index';
 import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
-import DeckRoute from '@/app/(app)/(tabs)/play/deck';
 import PoolRoute from '@/app/(app)/(tabs)/play/pool';
 import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
+import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
@@ -85,12 +84,12 @@ export const ONBOARDING_ROUTES = {
   _layout: TestRoot,
   '(app)/_layout': AppLayout,
   '(app)/(tabs)/_layout': TabsLayout,
-  // The five-tab shell. Play is a directory because the deck, the builder and the pool
-  // land under it, and the bar reads its active column off that first segment.
+  // The five-tab shell. Play is a directory because the builder and the pool land under it,
+  // and the bar reads its active column off that first segment. Players is a single-screen
+  // root: the deck is the whole tab (ADR-0169 §1).
   '(app)/(tabs)/index': NowRoute,
-  '(app)/(tabs)/around': AroundRoute,
+  '(app)/(tabs)/players': PlayersRoute,
   '(app)/(tabs)/play/index': FindAGameRoute,
-  '(app)/(tabs)/play/deck': DeckRoute,
   '(app)/(tabs)/play/builder': BuilderRoute,
   '(app)/(tabs)/play/pool': PoolRoute,
   // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,

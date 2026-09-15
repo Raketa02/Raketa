@@ -126,20 +126,35 @@ review comment and a test description all use the same word.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
 - **The shell** — the five tabs a signed-in player is inside, and the **one stack** under
-  them. `Now · Around · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
+  them. `Now · Players · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
   `TabShell`. Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it,
   which is the whole of what
   [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. _Avoid_: "the tab
   navigator" — there isn't one.
+- **Players** — the second tab, and **the deck is the whole of it**
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1):
+  key `players`, label _Players_, Feather `users`, route `/players`, a single-screen root like
+  the other flanking tabs. It was _Around_, a placeholder, and the rename is whole. The tab has
+  **no title row** — its header is the _Deck | Radar_ toggle, with the right slot left for the
+  chip — and it opens on Deck every time, because the shell keeps no per-tab history and the
+  toggle is the screen's own state. Players answers _who would I like to play with?_; Play
+  answers _who is available and even on Thursday?_ _Avoid_: "Around", which no longer exists;
+  "Match me", which survives as a word only in _Matched!_; "the deck tab" — the tab is Players
+  and the deck is what is on it.
+- **Radar** — the second pane of the Players tab, behind the toggle, and **not built**: one
+  muted line saying so, in a placeholder's shape, until a map has an argument of its own
+  (ADR-0169 §9). A pane and not a route, so the tab can never open on it. _Avoid_: "the map"
+  — there is none; `radar` the glyph, which is still not drawn (ADR-0135).
 - **The reset** — `resetShellStack`, the shell's only navigation move: throw the stack away
   and lay a new one down. Four tabs lay down one screen and ⚡Play lays down two, which is
   why back from Play's entry leaves Play rather than walking it. **A Play session ends
   exactly when it runs.** _Avoid_: "switching tabs" as though it were a push.
-- **A placeholder tab** — one of the four with no screen behind it yet. It states what its
-  tab will be and that it is not built, in one sentence, so a player can tell it from a
-  bug. Three of the four are **citations** of decisions taken elsewhere, and **Now never
-  says nothing is happening** — it is where a send lands. _Avoid_: "empty state" (that is a
-  screen with a real answer of nothing) and "coming soon".
+- **A placeholder tab** — a tab with no screen behind it yet, and there is **one**, You. It
+  states what its tab will be and that it is not built, in one sentence, so a player can tell
+  it from a bug; the sentence is a **citation** of a decision taken elsewhere. Four tabs have
+  left the table — Play, Chats and Now by being built, Around by retiring when the deck moved
+  in as Players — and **Now never says nothing is happening** — it is where a send lands.
+  _Avoid_: "empty state" (that is a screen with a real answer of nothing) and "coming soon".
 
 ### The onboarding flow
 
@@ -260,7 +275,9 @@ nine do not exist on the backend, and the first four are the shape
 long, and what it must never remember. The stores are `features/play/store/`; the rules are
 `features/play/domain/`. The **Declaration interstitial** is the exception on both counts — it
 is a screen this app draws over a write and a refusal the backend already owns, and it is
-listed here because it is a Play surface rather than a profile one.
+listed here because it is a Play surface rather than a profile one. The deck is the Players
+tab's now and is listed under [Routing](#routing); what Play keeps of it is the feature that
+draws it.
 
 - **Play session** — **one visit to the Play tab**: the Working copy and the Line-up built on
   it, and nothing else. It begins when the shell lays the Play stack down and **ends exactly
@@ -318,17 +335,21 @@ listed here because it is a Play surface rather than a profile one.
   first two are minted by a mutation and read by id from `searchKeys.detail(search_id)`; **the
   deal is the exception**, because nothing reads one back by id and a second one is not a second
   copy — `POST /deck` excludes everybody already dealt for a day, so asking twice spends the
-  player's own pool. It is held under `searchKeys.deck(sport, week, under)`, keyed by **the
+  player's own pool. It is held under `searchKeys.deck(sport, under)`, keyed by **the
   question rather than the answer**, which is the only key that can be built before the request
-  and therefore the only one under which _already asked_ is a fact. `under` is the radius and the
-  declaration: they are not on the request, they change the answer, and leaving them out is the
-  deck answering _Widen in You_ with the deal that ran before the widening. The entry holds the
+  and therefore the only one under which _already asked_ is a fact. `under` is the radius: it is
+  not on the request, it changes the answer, and leaving it out is the deck answering _Widen in
+  You_ with the deal that ran before the widening. The declaration was in it and is not, and
+  neither is a week — the deck reads no declaration and runs on the profile's grid
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1, §2).
+  The entry holds the
   Origin search **and the rows**, which is what lets a Line-up's seats be ids and nothing else:
   every name, level and photograph on a court is read back off them. **Nothing in Play
   background-refetches** — `staleTime: Infinity`, no refetch on focus — because foregrounding
   the app would otherwise reorder the pool under the player's finger. What _does_ refetch on the
-  ordinary defaults: the profile and its week, the ratings behind the sport chips, and the Match
-  me count. **Re-sorting costs no round trip** and neither does re-arranging four people; only
+  ordinary defaults: the profile and its week, the ratings behind the sport chips, and the
+  outstanding-yes count. **Re-sorting costs no round trip** and neither does re-arranging four
+  people; only
   changing who is on the court does. _Avoid_: "results", and "the pool" for all three — a deal
   and a shortlist are not pools.
 - **Withheld seat** — a seated player the **live gates no longer admit**, found as a **set
@@ -525,14 +546,12 @@ listed here because it is a Play surface rather than a profile one.
   the screen names whom it replaces before it happens. It **needs no clearing rule**, because
   the court pops rather than pushes and the route unmounts with it. _Avoid_: holding it in a
   store, which reintroduces exactly the bug the pop already prevents.
-- **Play segment** — the **two ways through the Play tab** as one control, drawn on both
-  screens and never on the tab bar: _Find a game_ and _Match me_. The halves move in opposite
-  directions, and that is the whole of it — _Find a game_ is an **arrival**, so it calls [the
-  reset](#routing) and ends the Play session, where _Match me_ is an ordinary push with Find a
-  game left underneath. It is design-system 6.3, specified since the document was locked and
-  built for this. _Avoid_: "the play tabs" — the bar has the tabs, and this is inside one of
-  them; `router.back()` for the left half, which lands correctly on most paths and silently
-  wrongly on the rest.
+- ~~**Play segment**~~ — **struck** ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+  §1). It was the two ways through the Play tab as one control, _Find a game_ and _Match me_,
+  drawn on both screens; the deck is the Players tab now, Play opens on Find a game with nothing
+  above its mode section, and nothing in the app links to a deck route under Play. The design-
+  system 6.3 control it was built for is the Players tab's _Deck | Radar_ toggle now, beside
+  the mode segment Find a game still draws. _Avoid_: "Match me" for the deck; "the play tabs".
 - **Outstanding yeses** — your **own** _Let's play_ yeses still standing in the sport on
   screen, read from `GET /interest` and **filtered by sport**, so that the number is about the
   deck it is drawn under. It is the one figure in the tab that background-refetches, because
@@ -543,7 +562,8 @@ listed here because it is a Play surface rather than a profile one.
   It is drawn as a **sentence on the deck's ending** and nowhere else: it was `Match me · 3` on
   the segment until that was struck, because a number in that position reads as _how many cards
   are waiting_, which is the count the deck refuses to publish anywhere.
-  _Avoid_: "Match me count" — the segment carries no number; "unread", "inbox" and "badge" —
+  _Avoid_: "Match me count" — the segment is gone, and carried no number while it stood;
+  "unread", "inbox" and "badge" —
   there is no inbox and the bar carries no badge;
   counting the outgoing list, which is this app answering a question the response answers.
 

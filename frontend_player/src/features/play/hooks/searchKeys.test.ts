@@ -54,59 +54,40 @@ describe('query keys', () => {
  * **The deal is keyed by the question, not by the answer** — the one ranked list that is, and
  * the one where asking twice is not free: a deal excludes everybody already dealt for a day, so
  * a second ask spends ten more people. Everything that changes the answer is therefore in the
- * key, including the two facts the request does not carry.
+ * key, including the one fact the request does not carry.
+ *
+ * **The question is the sport under the radius, and nothing else**
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1, §2). The deck is reached from a tab of its own and runs on the profile's week, so there
+ * is no improvised week to be a second question; and it deals everybody under one ruler, so the
+ * declaration no longer changes the answer and is out of the key.
  */
-describe('the deal on Match me', () => {
-  const UNDER = { radiusKm: 12, intent: 'FOR_FUN' } as const;
-  const TUESDAY_EVENING = { day: 2, part: 'evening' } as const;
-  const SATURDAY_MORNING = { day: 6, part: 'morning' } as const;
+describe('the deal on Players', () => {
+  const UNDER = { radiusKm: 12 } as const;
 
   it('is one question, so asking it again finds the deal already held', () => {
-    expect(searchKeys.deck('padel', undefined, UNDER)).toEqual(
-      searchKeys.deck('padel', undefined, UNDER),
-    );
+    expect(searchKeys.deck('padel', UNDER)).toEqual(searchKeys.deck('padel', UNDER));
   });
 
   it('is a different question per sport, which is what a chip press changes', () => {
-    expect(searchKeys.deck('padel', undefined, UNDER)).not.toEqual(
-      searchKeys.deck('tennis', undefined, UNDER),
-    );
-  });
-
-  it('is a different question on an improvised week, and the same one on a re-ticked cell', () => {
-    expect(searchKeys.deck('padel', [TUESDAY_EVENING], UNDER)).not.toEqual(
-      searchKeys.deck('padel', undefined, UNDER),
-    );
-    // Ticks are kept in press order and a week is a set: ticking a cell and unticking another
-    // must not be a second question about the same week.
-    expect(searchKeys.deck('padel', [TUESDAY_EVENING, SATURDAY_MORNING], UNDER)).toEqual(
-      searchKeys.deck('padel', [SATURDAY_MORNING, TUESDAY_EVENING], UNDER),
-    );
+    expect(searchKeys.deck('padel', UNDER)).not.toEqual(searchKeys.deck('tennis', UNDER));
   });
 
   /**
-   * Neither of these is on the request — the server resolves both from the profile — and both
-   * change the answer. Left out, the deck answers *Widen in You* with the deal that ran before
-   * the widening, which is this screen ignoring its own only piece of advice.
+   * Not on the request — the server resolves it from the profile — and it changes the answer.
+   * Left out, the deck answers *Widen in You* with the deal that ran before the widening, which
+   * is this screen ignoring its own only piece of advice.
    */
   it('is a different question once the radius the advice points at has moved', () => {
-    expect(searchKeys.deck('padel', undefined, { ...UNDER, radiusKm: 30 })).not.toEqual(
-      searchKeys.deck('padel', undefined, UNDER),
-    );
+    expect(searchKeys.deck('padel', { radiusKm: 30 })).not.toEqual(searchKeys.deck('padel', UNDER));
   });
 
-  it('is a different question under a different declaration, because the deck has no mode', () => {
-    expect(searchKeys.deck('padel', undefined, { ...UNDER, intent: 'COMPETITIVE' })).not.toEqual(
-      searchKeys.deck('padel', undefined, UNDER),
-    );
+  it('holds neither a week nor a declaration, because neither changes a deal any more', () => {
+    expect(searchKeys.deck('padel', UNDER)).toEqual(['play', 'search', 'deck', 'padel', UNDER]);
   });
 
   it('sits under the feature root like every other key, so a sign-out clears it', () => {
-    expect(searchKeys.deck('padel', undefined, UNDER).slice(0, 3)).toEqual([
-      'play',
-      'search',
-      'deck',
-    ]);
+    expect(searchKeys.deck('padel', UNDER).slice(0, 3)).toEqual(['play', 'search', 'deck']);
   });
 });
 

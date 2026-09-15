@@ -22,7 +22,12 @@ import type { TabBarKey } from '@/shared/ui';
  */
 export const SHELL_TAB_ROOT = {
   now: '/',
-  around: '/around',
+  /**
+   * The deck's own tab ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §1). It was Around, a placeholder; the rename is whole — key, label, glyph and route —
+   * because a half-rename is the thing a later session trips over.
+   */
+  players: '/players',
   play: '/play',
   chats: '/chats',
   you: '/you',
@@ -37,9 +42,11 @@ export type ShellRoute = (typeof SHELL_TAB_ROOT)[TabBarKey];
  * Two entries rather than one, and that is the whole of *back leaves Play entirely* — a
  * player who presses back from Find a game is on Now because Now is what is behind it, not
  * because a screen refused to be the last one. It is also why the depth is stated here
- * rather than pushed at a call site: the second caller of the reset is the *Find a game*
- * segment ([#268](https://github.com/Raketa02/Raketa/issues/268)), which re-enters the
- * tab from inside it, and re-entering has to mean the same arrangement as arriving.
+ * rather than pushed at a call site: for as long as the deck lived under Play, the *Find a
+ * game* segment re-entered the tab from inside it
+ * ([#268](https://github.com/Raketa02/Raketa/issues/268)), and re-entering had to mean the
+ * same arrangement as arriving. The segment is gone with the deck's move to Players
+ * (ADR-0169 §1); the arrangement is still stated once.
  */
 export const PLAY_STACK = [SHELL_TAB_ROOT.now, SHELL_TAB_ROOT.play] as const;
 
@@ -74,9 +81,9 @@ const TAB_FOR_SEGMENT: Readonly<Partial<Record<string, TabBarKey>>> = {
  * Which tab a pathname belongs to — **by its first segment**, so Play stays lit for every
  * screen inside Play.
  *
- * That is not a convenience: the builder, the pool and the deck are `/play/…` and a player
- * is inside the tab for the length of a whole flow, which is exactly what the ring is for.
- * Matching the whole path would go dark on the second screen.
+ * That is not a convenience: the builder and the pool are `/play/…` and a player is inside
+ * the tab for the length of a whole flow, which is exactly what the ring is for. Matching the
+ * whole path would go dark on the second screen.
  *
  * A path the shell does not own answers `now`, because the shell's own root is the only
  * honest answer to a question it should never be asked: everything outside `(tabs)` —

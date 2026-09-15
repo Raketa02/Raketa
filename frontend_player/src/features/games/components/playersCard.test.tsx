@@ -212,7 +212,8 @@ async function openTheGame(over: Parameters<typeof stubTheWorld>[0] = {}) {
 
   await launchSignedIn(`/games/${GAME}`);
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
-  await screen.findByText(PLAYERS);
+  // By role: the bar's second column says *Players* too, and it is a tab and not a heading.
+  await screen.findByRole('header', { name: PLAYERS });
 }
 
 /** The card, found by its own eyebrow. */
@@ -367,7 +368,7 @@ describe('the tap', () => {
     fireEvent.press(await screen.findByLabelText(recordCloseLabel(false)));
 
     await waitFor(() => expect(screen.queryByText(RECORD_TITLE)).toBeNull());
-    expect(screen.getByText(PLAYERS)).toBeTruthy();
+    expect(screen.getByRole('header', { name: PLAYERS })).toBeTruthy();
   });
 });
 
