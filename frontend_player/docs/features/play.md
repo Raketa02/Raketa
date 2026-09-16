@@ -1028,3 +1028,71 @@ press and mocks 5 and 7 hold the tile still across two widths. The root spec is 
 to amend; the sentence stands there until it is. **A retry** reads _Looking around…_ while it
 is on its way, not the failure it answers — the spec is silent, and a wait spent under the
 sentence it is meant to answer is the wrong one.
+
+**The sheet's foot on the radar** ([#464](https://github.com/Raketa02/Raketa/issues/464),
+[ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §4,
+[`the-radar.md`](../../../docs/specs/matchmaking/the-radar.md) §5, `the-words.md` §26). The
+record sheet reached from a radar card ends in **Not today** · **Let's play** — the deck's two
+words through `DECK_ANSWER_WORDS`, `secondary` and `primary`, the swipe's reading order, spoken
+with the person's name as the deck's buttons are — or in what already stands between the two.
+`PlayerRecordSheet` gained one optional slot for it, `foot`, which the radar fills with
+`radar/RadarSheetFoot` and the deck's _i_ and long press fill with nothing
+([`player_record.md`](player_record.md)). **The relation is a fold, and the fold is
+`domain/standingRelation`'s**: four facts from three places — the row's `inclusion_reason`, the
+reader's outgoing and mutual lists, and the challenges feature's answer to _do we share a
+court_ — and one precedence, **matched › court › liker › said yes › open**, written in one place
+because a component holding four `if`s is one refactor from two buttons over a match. Matched
+outranks a court because a mutual-born court is the ordinary case and the door to the chat is
+what the reader earned; a court outranks either yes for the cool-off's own reason — _a rematch
+is arranged in the chat the two already have_ (ADR-0169 §6); a liker outranks the reader's own
+yes for the builder card's reason — both true is a mutual the lists have not caught up with.
+The fold hands the court back on its own arm, so the foot draws it without narrowing a value
+the fold already had. The feet: a stranger gets the two buttons; a liker gets _Wants to play
+you_ — §10's tag, the builder's, reached through `livenessLine('INTEREST_RECEIVED')` and never
+re-typed — above them; the reader's own live yes gets the plain _You said yes_ tag beside
+**Not today**, and that pass **does not take the yes back** — nothing does, a yes lives its 21
+days — it says _not to my deck_, which is what a pass has always meant (ADR-0128 §1); a match
+gets _You're matched_, the one sentence this surface writes for itself, and **Open the chat**
+where the court has a room; a court gets its own line — the Chats row's `standingLine`, the
+challenges feature's words — and no buttons. A _not today_ the reader gave earlier lands on the
+two buttons: **no route anywhere returns a pass**, so the client cannot tell a stranger from
+somebody passed on, and the spec asks for the same two either way — _Let's play_ lifts it.
+**The mutual list crosses now**, ids per sport under its own name (`MutualInterest`,
+`matchedWith`, `useMutualInterest`), and it stays the one list _You said yes_ must never be
+drawn from. **The court is the challenges feature's answer** — `useCourtWith` over its own
+`domain/courtWith`, whose bound on _one behind them_ is argued in
+[`challenges.md`](challenges.md) — and the court's id crosses one seam while the room's id
+crosses the other (`useChatDoor`), meeting at the surface as ADR-0149 §3 has the game screen's
+door meet. **Two calls the records did not make**, each one sentence to reverse: matched over
+court, which means somebody matched on the deck inside the last 21 days reads _You're matched_
+rather than the court line while the two share one; and at the cap the sheet closes and the
+sentence is a toast, as on the deck, rather than a note inside the sheet — the same closing
+every press gets.
+
+**An answer from the sheet is the deck's own, with the reading for its origin** (#464, ADR-0174
+§4). `hooks/useRadarAnswers` sends `sayYes` / `sayNo` with the **reading's** `search_id` as the
+Origin key; the cap is withheld first by the deck's rule; the row is **marked on the press**
+(`domain/reading`'s `withAnswer`, in the mutation's own `onMutate` so the sheet's closing cannot
+drop it) and unmarked on a refusal; and the reply settles through **`settleYes`** — the yes's
+cache effects pulled out of `useSayYes` so the deck and the radar apply one patch: the count,
+the outgoing list, the mutual list, every held deal's chip and the held reading's chip
+(`oneFewerWaitingOnReading`, keyed to the answer's sport) on a liker's mutual, and the yes
+screen pushed for a mutual naming a challenge. **The press side is one module too** —
+`components/answerFeedback`: `withheldAtTheCap` with `CAP_REACHED_SENTENCE`, `sayPassed`,
+`sayYesOutcome` — called from the deck's `answer` and the pane's, so the two surfaces cannot
+drift about who may fly or what is said; `AnswerNotes` draws the amber _resumes_ and the
+refusal's sentence for both, in the radar's gutter under the header because the pane has no
+scroller for them to sit above a card in. **The sheet closes first on every press**, because a
+`Modal` sits over a pushed screen and over the toast; the chat door is pushed by the pane after
+the sheet is down. The card's last line then reads _You said yes ›_ or _Not today ›_
+(`ANSWERED_LINE`: the tag's and the button's words with the door's mark) in place of _Tap for
+the full card ›_; the person stays on the radar and the face never changes. **Tested** through
+the router harness (`radar.test.tsx`, _the sheet's foot_): each relation's foot and its buttons
+in order, the liker's line only with `inclusion_reason`, the door opening the room and absent
+without one, a court named and a stale ended one released, a yes and a pass posting with the
+reading's origin and marking the card while the row stays, a radar yes minting no deal and
+touching no held one, the said-yes foot on reopening off the reply with no second read, a
+refusal taking the mark back, a mutual naming a challenge pushing the yes route, a mutual naming
+none toasting, the cap settling a stranger and flying a liker, and the chip counting down on a
+liker's mutual given from either pane; `deck.test.tsx` holds the deck's _i_ and long press to no
+foot. **Not seen on a device** — one yes, one pass and one mutual are asked for a look.

@@ -1181,7 +1181,7 @@ describe('at the ceiling', () => {
  * *why this Fit* lives behind the sheet's fit row (ADR-0169 §3).
  */
 describe('the record', () => {
-  it('opens the record sheet from the i, with the pairing’s fit row', async () => {
+  it('opens the record sheet from the i, with the pairing’s fit row — and no foot', async () => {
     await openDeck();
     await screen.findByLabelText(MAREK_CARD);
 
@@ -1189,13 +1189,20 @@ describe('the record', () => {
 
     expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
     expect(await screen.findByRole('button', { name: fitRowLabel(78) })).toBeTruthy();
+    // The deck's *i* fills the sheet's slot with nothing (ADR-0174 §4): the deck's own buttons
+    // are one tap away, and two places to answer at once invites a double tap. The sheet
+    // therefore names no second *Let's play* — the one under the sheet, hidden from a listener
+    // while it is up, is the only element by that name, and it is the deck's.
+    expect(screen.queryByTestId('radar-sheet-foot')).toBeNull();
+    expect(screen.getAllByLabelText("Let's play, Marek Z.", HIDDEN_TOO)).toHaveLength(1);
   });
 
-  it('opens the same sheet on a long press — the i’s twin, with no hint line to say so', async () => {
+  it('opens the same sheet on a long press — the i’s twin, with no hint line to say so, and no foot', async () => {
     await openDeck();
     fireEvent(await screen.findByLabelText(MAREK_CARD), 'longPress');
 
     expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
+    expect(screen.queryByTestId('radar-sheet-foot')).toBeNull();
   });
 
   /**

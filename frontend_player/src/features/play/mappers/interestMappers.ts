@@ -25,7 +25,7 @@
  * this app knowing it. **Read them from here, never hardcode them**: both are ruleset
  * configuration and may move between releases.
  *
- * ## The outgoing rows cross as ids, and the mutual rows stop here
+ * ## The outgoing rows cross as ids, and so do the mutual rows — under their own name
  *
  * The rows themselves stopped at this boundary for as long as nothing drew them — *a
  * `player_id` and an `expires_at` are You's screen, not Play's*. ADR-0169 §8 gave the ids one
@@ -34,15 +34,16 @@
  * screen. So the ids cross, per sport, and **nothing else about them does**: `at` and
  * `expires_at` are dates the server's clock owns, and *no list of your yeses* is one of §8's
  * refusals — what crosses is a lookup, never a screen (`domain/outgoingInterest`). The mutual
- * list is not read at all: a mutual has come back, is not *outgoing*, and is the one list the
- * tag must never be drawn from.
+ * list was not read at all until the radar's sheet asked *am I matched with this person*
+ * (ADR-0174 §4); it crosses the same way now, ids per sport, and stays the one list *You said
+ * yes* must never be drawn from — a mutual has come back and is not *outgoing*.
  */
 
 import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { OutgoingInterest } from '../domain/outgoingInterest';
+import type { MutualInterest, OutgoingInterest } from '../domain/outgoingInterest';
 import type { InterestStanding } from '../domain/yesBudget';
 
 type InterestListResponse = components['schemas']['InterestListResponse'];
@@ -69,7 +70,8 @@ export interface SportInterest extends InterestStanding {
 export type OutstandingInterest = Readonly<Partial<Record<Sport, SportInterest>>>;
 
 /**
- * The read, whole: where every sport stands, and who the reader has said yes to in each.
+ * The read, whole: where every sport stands, who the reader has said yes to in each, and whose
+ * yes came back.
  *
  * *My* because the glossary's **Interest** is one yes to one person; this is the reader's whole
  * ledger of them, as `GET /interest` answers it.
@@ -77,10 +79,15 @@ export type OutstandingInterest = Readonly<Partial<Record<Sport, SportInterest>>
 export interface MyInterest {
   readonly standing: OutstandingInterest;
   readonly outgoing: OutgoingInterest;
+  readonly mutual: MutualInterest;
 }
 
 export function toInterest(response: InterestListResponse): MyInterest {
-  return { standing: fromRows(response.outstanding), outgoing: fromOutgoing(response.outgoing) };
+  return {
+    standing: fromRows(response.outstanding),
+    outgoing: idsPerSport(response.outgoing),
+    mutual: idsPerSport(response.mutual),
+  };
 }
 
 /**
@@ -96,15 +103,18 @@ export function toOutstandingAfterTap(outstanding: OutstandingSchema): Outstandi
   return fromRows([outstanding]);
 }
 
-/** Ids per sport, in the order the wire sent them; a sport this build cannot name takes its rows out. */
-function fromOutgoing(rows: readonly OutgoingInterestSchema[]): OutgoingInterest {
-  const outgoing: Partial<Record<Sport, string[]>> = {};
+/**
+ * Ids per sport, in the order the wire sent them; a sport this build cannot name takes its rows
+ * out. The outgoing rows and the mutual rows are one wire shape, so one narrowing serves both.
+ */
+function idsPerSport(rows: readonly OutgoingInterestSchema[]): OutgoingInterest {
+  const ids: Partial<Record<Sport, string[]>> = {};
   for (const row of rows) {
     const sport = toSport(row.sport);
     if (sport === undefined) continue;
-    (outgoing[sport] ??= []).push(row.player_id);
+    (ids[sport] ??= []).push(row.player_id);
   }
-  return outgoing;
+  return ids;
 }
 
 function fromRows(rows: readonly OutstandingSchema[]): OutstandingInterest {

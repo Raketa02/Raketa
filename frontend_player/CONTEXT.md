@@ -148,9 +148,15 @@ review comment and a test description all use the same word.
   inside `DeckScreen`, its own frame on the app's third dark surface with no scroller, because
   the field takes the drag; its view and selection are `store/radarView`'s for the life of the
   process and a cold start opens at home; its geometry is `domain/radarGeometry`'s pure
-  functions and the field's tiles ride one native-driven transform. _Avoid_: "the map" — there
-  is no basemap, no street and no address; `radar` the glyph, which is still not drawn
-  (ADR-0135); "the radar tab".
+  functions and the field's tiles ride one native-driven transform. **Its record sheet has a
+  foot** — _Not today_ · _Let's play_, or what the spec's §5 table calls the standing relation,
+  which on the client is `domain/standingRelation`'s fold of the row's admitting code, the
+  reader's two interest lists and the challenges feature's court, in the order matched › court ›
+  liker › said yes › open — and an answer from it is the deck's own with the reading's
+  `search_id` for its origin, marking the row's `answered` and removing nobody
+  (`hooks/useRadarAnswers`). _Avoid_: "the map" — there is no basemap, no street and no
+  address; `radar` the glyph, which is still not drawn (ADR-0135); "the radar tab"; a foot on
+  the deck's _i_ sheet, which fills the slot with nothing by decision.
 - **Reading** — the root's term: what `POST /radar` answers. On the client it is `Reading` in
   `domain/reading` — the envelope and `RadarRow[]`, each row the deal's `Candidate` plus a
   required `distanceKm` and `bearingDeg` and `ratings[]` — held under `searchKeys.reading(sport)`
@@ -632,7 +638,9 @@ draws it.
   is a different number on a different envelope.
   The same read carries **who** the yeses went to, as ids per sport and nothing else, for the
   **[interest tags](#the-play-tab)** and the challenge screen's invitee's line; the mutual list
-  stops at the mapper.
+  crosses the same way under its own name (`MutualInterest`, `matchedWith`) for one reader — the
+  radar's sheet saying _You're matched_ (ADR-0174 §4) — and is still never the list _You said
+  yes_ is drawn from.
   _Avoid_: "Match me count" — the segment is gone, and carried no number while it stood;
   "unread", "inbox" and "badge" —
   there is no inbox and the bar carries no badge;
@@ -650,13 +658,17 @@ draws it.
   reading's, computed by the deck's own rule** (ADR-0174 §5): how many people have a live yes
   towards the viewer in this sport that would be dealt to them, drawn as the volt chip in the
   Players header — _2 want to play you_ — at one and above and **never at nought**, on either
-  pane, and decremented when a yes on a card carrying `inclusion_reason` comes back mutual.
-  **A count and never a list**: nothing on any route names who
+  pane, and decremented when a yes on a card carrying `inclusion_reason` comes back mutual —
+  on every held deal and on the held reading alike. **A count and never a list**: nothing on any
+  route names who
   ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4, which
   reverses ADR-0109 §2 by exactly this one number). The liker is unmarked on the deck and lands
-  where the nudge puts them. _Avoid_: "likes", "matches waiting", "inbox"; a badge on the bar,
-  which stays refused; reading the chip as _how many cards are behind this one_ — that is the
-  counter's; two chips with two numbers — the reading's is the deck's.
+  where the nudge puts them; **on the radar's record sheet they are marked** — _Wants to play
+  you_, §10's tag, above the two buttons — because the radar has no order to make the chip's
+  promise findable with (ADR-0174 §4, narrowing ADR-0109 §2 by that one sentence). _Avoid_:
+  "likes", "matches waiting", "inbox"; a badge on the bar, which stays refused; reading the chip
+  as _how many cards are behind this one_ — that is the counter's; two chips with two numbers —
+  the reading's is the deck's; the sentence on the deck card, which stays unmarked.
 - **The stamps** — _LET'S PLAY_ and _NOT TODAY_, two outlined words the deck card wears under
   the thumb, one volt and one white, tilted, **invisible at rest**, fading in with the drag and
   full at the threshold (95pt) where a release commits the answer in the drag's direction

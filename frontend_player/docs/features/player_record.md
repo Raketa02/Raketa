@@ -183,3 +183,16 @@ inside each player's coarse area, which is why a same-cell candidate carries a d
 _In your area_ is still the comparison of two codes and nothing else on the header moves. The
 rule that the whole line goes on your own record stands, and so does _In your area_ standing
 alone where the distance is omitted.
+
+**The sheet has a foot now, and one surface fills it**
+([#464](https://github.com/Raketa02/Raketa/issues/464),
+[ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §4).
+`PlayerRecordSheet` takes an optional `foot` — a slot, drawn last and inside the scroll because a
+sheet reads statement first and answer last (9.1), and only with the record: a refused record is
+somebody the reader may not act on, and buttons over the refusal would say otherwise. It is a
+slot and not a prop set this sheet reads, for the module's own rule — it reads no global state —
+and what stands between two people is the caller's to know. The radar fills it with
+_Not today_ · _Let's play_ or the standing relation (`radar/RadarSheetFoot`, [`play.md`](play.md));
+**the deck's _i_ and the long press fill nothing, by decision**: the deck's own buttons are one tap
+away and two places to answer at once invites a double tap, which `deck.test.tsx` holds. The next
+surface that wants a foot has to argue for one.

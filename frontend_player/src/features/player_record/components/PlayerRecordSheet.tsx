@@ -50,9 +50,24 @@
  * action than tapping a face should feel like — and it opens at a **standing height** so the
  * skeleton and the record are the same size and the panel does not jump when the answer lands.
  *
+ * ## A foot, filled by one surface
+ *
+ * The sheet had no control but the pairing row until the radar
+ * ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §4, [#464](https://github.com/Raketa02/Raketa/issues/464)): reached from a radar card it ends
+ * in *Not today* and *Let's play*, or in what already stands between the two. That foot is an
+ * **optional slot** — `foot`, drawn under everything else and only where the caller fills it —
+ * and not a prop set this sheet reads, because what stands between two people is the caller's
+ * to know and this sheet reads no global state. The deck's *i* and the long press fill nothing,
+ * by decision: the deck's own buttons are one tap away and two places to answer at once invites
+ * a double tap. It is drawn with the record and never over the skeleton or the refusal — a
+ * refused record is somebody the reader may not act on, and the buttons would say otherwise.
+ * The next surface that wants a foot has to argue for one.
+ *
  * ## Six regions, six elements
  *
- * There is no interactive element inside it other than the pairing row, so every group merges
+ * There is no interactive element inside it other than the pairing row — and the foot, where a
+ * caller fills it — so every group merges
  * into the nearest heading (§20.1) and `recordPresentation` writes what each of them says. The
  * counted card and *What opponents said* are two of them for a reason that is not layout: one
  * is headed with a promise about **authorship**, and the other is what would break it. The
@@ -64,6 +79,7 @@
  * no one control to return to.
  */
 
+import type { ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { codeMessage, type AppError } from '@/shared/errors';
@@ -141,6 +157,12 @@ export interface PlayerRecordSheetProps {
     readonly fit: number;
     readonly onExplain: () => void;
   };
+  /**
+   * **The action slot** — what the sheet ends in, where the surface that opened it has
+   * something to offer. Drawn under the record and only with it; nothing here decides what it
+   * says. See the module note.
+   */
+  readonly foot?: ReactNode;
 }
 
 export function PlayerRecordSheet({
@@ -152,6 +174,7 @@ export function PlayerRecordSheet({
   viewerAreaCode,
   tagOverlap,
   pairing,
+  foot,
 }: PlayerRecordSheetProps) {
   const record = usePlayerRecord({
     subject,
@@ -182,6 +205,7 @@ export function PlayerRecordSheet({
             {...(viewerAreaCode === undefined ? {} : { viewerAreaCode })}
             {...(tagOverlap === undefined ? {} : { tagOverlap })}
             {...(pairing === undefined ? {} : { pairing })}
+            {...(foot === undefined ? {} : { foot })}
           />
         )}
       </View>
@@ -229,10 +253,14 @@ function Filled({
   viewerAreaCode,
   tagOverlap,
   pairing,
+  foot,
 }: {
   readonly record: PlayerRecord;
   readonly playerId: string;
-} & Pick<PlayerRecordSheetProps, 'distanceKm' | 'viewerAreaCode' | 'tagOverlap' | 'pairing'>) {
+} & Pick<
+  PlayerRecordSheetProps,
+  'distanceKm' | 'viewerAreaCode' | 'tagOverlap' | 'pairing' | 'foot'
+>) {
   // Their live tags, in whichever register the pairing licenses. The claim about nothing is the
   // engine's and is kept; every other silence draws the tags and says nothing.
   const tags = recordTagRow(record.socialTags, tagOverlap);
@@ -281,6 +309,10 @@ function Filled({
           <SocialTagRow row={tags} />
         </View>
       )}
+
+      {/* The foot, last, where the surface filled it. A sheet reads statement first and answer
+          last, which is the whole reason it is at the end and inside the scroll (9.1). */}
+      {foot === undefined ? null : <View style={s.foot}>{foot}</View>}
     </>
   );
 }
@@ -289,6 +321,8 @@ const s = StyleSheet.create({
   // The standing height, so the skeleton and the filled sheet are one surface. `minHeight`
   // rather than `height`: a long record grows past it and `BottomSheet`'s cap is what stops it.
   body: { minHeight: STANDING_HEIGHT, gap: theme.space.sm },
+  // A step above the record, so the answers read as the sheet's foot and not the tags' tail.
+  foot: { marginTop: theme.space.xs },
   refusal: { ...theme.type.tiny, color: theme.color.muted },
   failure: { gap: theme.space.sm },
 });

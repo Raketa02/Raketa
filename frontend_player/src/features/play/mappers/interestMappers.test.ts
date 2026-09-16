@@ -3,7 +3,7 @@
  * it to — and the things about it worth pinning: the count is the *outstanding* figure the
  * contract publishes rather than a length this app derives, the cap and the life of a yes cross
  * **beside** it rather than being held here, the outgoing list crosses as **ids per sport and
- * nothing else**, and the mutual list stops at this boundary.
+ * nothing else**, and the mutual list crosses the same way under its own name.
  *
  * *"Outstanding means sent, unexpired and not yet mutual"* — a rule about the server's clock
  * and about a yes that has come back, neither of which a phone can evaluate. Counting the
@@ -48,7 +48,7 @@ describe('the read', () => {
 
   /** An absent sport is *nothing outstanding there*, which is what the route means by silence. */
   it('is partial, so a sport with no row simply has no entry', () => {
-    expect(toInterest(list())).toEqual({ standing: {}, outgoing: {} });
+    expect(toInterest(list())).toEqual({ standing: {}, outgoing: {}, mutual: {} });
   });
 
   it('drops a sport this build cannot name, rather than keying a map by a wire code', () => {
@@ -60,11 +60,13 @@ describe('the read', () => {
             { sport: 'PICKLEBALL' as never, outstanding: 9, cap: 10, ttl_days: 21 },
           ],
           outgoing: [sent(ANIA, 'PADEL'), sent(MAREK, 'PICKLEBALL' as never)],
+          mutual: [sent(MAREK, 'PADEL'), sent(ANIA, 'PICKLEBALL' as never)],
         }),
       ),
     ).toEqual({
       standing: { padel: { outstanding: 3, cap: 10, ttlDays: 21 } },
       outgoing: { padel: [ANIA] },
+      mutual: { padel: [MAREK] },
     });
   });
 
@@ -84,10 +86,15 @@ describe('the read', () => {
 
   /**
    * A mutual has come back and is not *outgoing*: it is the list *You said yes* must never read,
-   * because the person it names has already matched the reader.
+   * because the person it names has already matched the reader. It crosses under its own name,
+   * as ids per sport and nothing else, for the one reader it has — the radar's sheet saying
+   * *You're matched* (ADR-0174 §4).
    */
-  it('reads nothing from the mutual list', () => {
-    expect(toInterest(list({ mutual: [sent(ANIA, 'PADEL')] })).outgoing).toEqual({});
+  it('keeps the mutual list out of the outgoing one, and carries it as ids per sport of its own', () => {
+    const read = toInterest(list({ mutual: [sent(ANIA, 'PADEL'), sent(MAREK, 'TENNIS')] }));
+
+    expect(read.outgoing).toEqual({});
+    expect(read.mutual).toEqual({ padel: [ANIA], tennis: [MAREK] });
   });
 });
 

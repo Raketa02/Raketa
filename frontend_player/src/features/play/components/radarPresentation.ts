@@ -1,8 +1,9 @@
 /**
  * Everything the **Radar** pane says — the tile's *you*, a ring's label, the counter between
- * ±, a level under a face, the card's six lines, the footer's headline and its right-hand
- * count, the hint by zoom state, the empty reading, *Looking around…*, the failure and its
- * retry, and the cluster's three spoken names
+ * ±, a level under a face, the card's six lines and its answered last line, the footer's
+ * headline and its right-hand count, the hint by zoom state, the empty reading, *Looking
+ * around…*, the failure and its retry, the cluster's three spoken names, and the record sheet's
+ * foot
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §26, drawn by
  * [ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
  * §7).
@@ -21,6 +22,16 @@
  * state** and never on the selection: a selected card at 18 km across is still a field of faces
  * to move around. The failure is the one footer with no hint: *Try again* stands in its place.
  *
+ * ## The sheet's foot cites, and writes one line of its own
+ *
+ * The two buttons are the deck's two words (`DECK_ANSWER_WORDS`, §20.5) and are spoken with the
+ * person's name as the deck's buttons are, so a listener hears the same act on either surface.
+ * *Wants to play you* is §10's tag — `INTEREST_RECEIVED`'s line, the builder's own — and *You
+ * said yes* is the builder's plain tag; both are reached rather than re-typed, so a rewording
+ * moves everywhere at once. The chat door is every chat door's words (`OPEN_THE_CHAT`, the
+ * conversations feature's) and the court's line is the Chats row's own (`standingLine`). The
+ * one sentence this surface writes is *You're matched*.
+ *
  * ## The counter prints one decimal below 10 and a whole number above
  *
  * *5,4 km across* and *18 km across* are the ladder's own spellings; a pinch resting at 7,83
@@ -32,8 +43,11 @@ import { formatDistanceKm, formatWidthKm } from '@/shared/formatting/ratingForma
 import { counted } from '@/shared/formatting/counted';
 
 import type { ZoomState } from '../domain/radarGeometry';
+import type { RadarAnswer } from '../domain/reading';
 
 import { WIDEN_IN_YOU } from './deckPresentation';
+import { livenessLine } from './livenessPresentation';
+import { DECK_ANSWER_WORDS, YOU_SAID_YES_WORD } from './playerCardPresentation';
 
 /** Under the viewer's tile. Lower case, `tiny`. */
 export const YOU_LABEL = 'you';
@@ -79,6 +93,40 @@ export function tagsInCommon(count: number): string {
 
 /** The card's last line — coral; the whole card is the target. */
 export const TAP_FOR_THE_FULL_CARD = 'Tap for the full card ›';
+
+/**
+ * The card's last line **after an answer** — in place of the door, and the face never changes
+ * (§26). The tag's words and the button's, each with the door's mark, so the line and the act
+ * it records are one string.
+ */
+export const ANSWERED_LINE: Readonly<Record<RadarAnswer, string>> = {
+  yes: `${YOU_SAID_YES_WORD} ›`,
+  no: `${DECK_ANSWER_WORDS.pass} ›`,
+};
+
+// ---------------------------------------------------------------------------
+// The record sheet's foot
+// ---------------------------------------------------------------------------
+
+/** The two buttons: the deck's two words, `secondary` and `primary`, the swipe's reading order. */
+export const FOOT_ANSWER_WORDS: Readonly<Record<RadarAnswer, string>> = {
+  no: DECK_ANSWER_WORDS.pass,
+  yes: DECK_ANSWER_WORDS.accept,
+};
+
+/** The two buttons' spoken names — the act and the person, as the deck's buttons say them. */
+export function footAnswerLabels(name: string): Readonly<Record<RadarAnswer, string>> {
+  return { no: `${FOOT_ANSWER_WORDS.no}, ${name}`, yes: `${FOOT_ANSWER_WORDS.yes}, ${name}` };
+}
+
+/** A liker's line above the two buttons — §10's tag, the builder's, cited. */
+export const WANTS_TO_PLAY_YOU = livenessLine('INTEREST_RECEIVED');
+
+/** The reader's own yes, beside *Not today* — the builder's plain tag, cited. */
+export const YOU_SAID_YES = YOU_SAID_YES_WORD;
+
+/** A mutual, live: the one sentence the foot writes for itself. The door beside it is `OPEN_THE_CHAT`. */
+export const YOURE_MATCHED = "You're matched";
 
 /** `14 players in view` · `1 player in view` — recounted on every move. */
 export function playersInView(count: number): string {

@@ -55,10 +55,13 @@ import {
   holdsTheExit,
   leavingWouldEnd,
   pairAlreadyPlaying,
+  standingFactsFor,
   type Challenge,
   type LeavingEnds,
 } from '../domain/challenge';
 import { challengeInbox, challengesWaiting } from '../domain/challengeInbox';
+import { courtWith } from '../domain/courtWith';
+import type { StandingFacts } from '../domain/standing';
 import { readChallenges } from '../use-cases/readChallenges';
 import { sendChallenge, type SendAsk, type SentChallenge } from '../use-cases/sendChallenge';
 
@@ -264,4 +267,34 @@ export function useChallengesWaiting(): number | undefined {
 
   const waiting = challengesWaiting(data, me);
   return waiting === 0 ? undefined : waiting;
+}
+
+/**
+ * **The court the reader shares with one person, as its row would say it** — `courtWith` read
+ * off the list the tab bar holds, for the radar's record sheet
+ * ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §4). The id, so the surface can find the court's chat; and the standing as it reads to this
+ * reader, so the surface can say the court's own line through `standingLine` — the words stay
+ * this feature's, and the surface composes them. Nothing about the seats crosses.
+ *
+ * `useChallengeRow`'s posture on the entry — read what is held, fetch only if nothing is: the
+ * sheet is open for a moment, and the list is already fresh whenever the reader is in the app.
+ *
+ * `undefined` is no court, no list yet, no reader yet, or a court whose standing this build has
+ * no words for — which it may not name, and so does not.
+ */
+export interface CourtWith {
+  readonly challengeId: string;
+  readonly facts: StandingFacts;
+}
+
+export function useCourtWith(playerId: string): CourtWith | undefined {
+  const { data } = useChallengeList(true, Infinity);
+  const me = useCurrentUser().data?.id;
+
+  if (data === undefined || me === undefined) return undefined;
+  const court = courtWith(data, me, playerId);
+  if (court === undefined) return undefined;
+  const facts = standingFactsFor(court, me);
+  return facts === undefined ? undefined : { challengeId: court.challengeId, facts };
 }

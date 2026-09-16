@@ -589,3 +589,20 @@ asked for a look.
 `metaLine` every Play surface prints with, and its reason lines hand `pairing` to `reasonLine`
 beside each evidence, as the play record explains
 ([`play.md`](play.md)). Nothing else on the card moves.
+
+**The court the reader shares with one person crosses the seam, as its row would say it**
+([#464](https://github.com/Raketa02/Raketa/issues/464),
+[ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §4).
+The radar's record sheet names a court instead of offering _Let's play_ where the two already
+have one, and the question is this feature's pair rule read for a single name: `domain/courtWith`
+— the live court **both** are still on (`playersStillIn`, so the reader who left is a stranger
+to it again), else the ended court the person held a seat on **while its row is still news on
+the Chats list** (`belongsOnTheInbox`). The second half is a call the records did not make: the
+spec's _one behind them_ is modelled on the deck's thirty-day cool-off, that number is ruleset
+configuration that never crosses the wire, and a lapsed challenge from a year ago is not a
+reason to refuse two people a game — so the court is named for exactly as long as Chats names
+it, and a no of the reader's own names nothing here either. `useCourtWith(playerId)` reads it
+off the list at `useChallengeRow`'s posture — what is held, fetched only if nothing is — and
+hands over the id and the `StandingFacts`, so the sheet's foot says the court's line through
+`standingLine` and composes none of its own; the room's door is the conversations feature's join
+on the id, met at the surface as the game screen's is (ADR-0149 §3).

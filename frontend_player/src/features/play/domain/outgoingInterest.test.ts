@@ -5,7 +5,7 @@
  * §8).
  */
 
-import { outgoingAfterYes, saidYesTo } from './outgoingInterest';
+import { matchedWith, mutualAfterYes, outgoingAfterYes, saidYesTo } from './outgoingInterest';
 
 const ANIA = 'aaaaaaaa-0000-4000-8000-000000000001';
 const MAREK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -58,5 +58,37 @@ describe('the list after a yes of your own', () => {
     expect(
       outgoingAfterYes({ padel: [ANIA, MAREK] }, { sport: 'padel', playerId: MAREK }, true),
     ).toEqual({ padel: [ANIA] });
+  });
+});
+
+describe('whether you are matched with somebody', () => {
+  /** A mutual is per sport as a yes is: matched in padel says nothing about tennis. */
+  it('is true exactly for a person in your mutual list for that sport', () => {
+    const mutual = { padel: [MAREK] };
+
+    expect(matchedWith(mutual, 'padel', MAREK)).toBe(true);
+    expect(matchedWith(mutual, 'padel', ANIA)).toBe(false);
+    expect(matchedWith(mutual, 'tennis', MAREK)).toBe(false);
+    expect(matchedWith(undefined, 'padel', MAREK)).toBe(false);
+  });
+});
+
+describe('the mutual list after a yes of your own', () => {
+  it('gains the person when the reply says mutual, so the sheet says so without a second read', () => {
+    expect(mutualAfterYes({ padel: [ANIA] }, { sport: 'padel', playerId: MAREK }, true)).toEqual({
+      padel: [ANIA, MAREK],
+    });
+    expect(mutualAfterYes({}, { sport: 'tennis', playerId: MAREK }, true)).toEqual({
+      tennis: [MAREK],
+    });
+  });
+
+  it('lists nobody twice, and is untouched by a one-sided yes', () => {
+    expect(mutualAfterYes({ padel: [MAREK] }, { sport: 'padel', playerId: MAREK }, true)).toEqual({
+      padel: [MAREK],
+    });
+    expect(mutualAfterYes({ padel: [ANIA] }, { sport: 'padel', playerId: MAREK }, false)).toEqual({
+      padel: [ANIA],
+    });
   });
 });

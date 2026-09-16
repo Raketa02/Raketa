@@ -16,14 +16,27 @@
  * ## The reading is not a deal
  *
  * It enters no dealt memory and notes no exposure (ADR-0174 §4 as amended); the client holds it
- * under a five-minute stale time and never appends to it (`hooks/useReading`). A row answered
- * from the record sheet stays a row — the radar hides nobody for a pass (§4) — which is #464's
- * to draw on the card's last line.
+ * under a five-minute stale time and never appends to it (`hooks/useReading`).
+ *
+ * ## A row answered stays a row, and remembers what was said
+ *
+ * *Let's play* and *Not today* from the record sheet are the deck's own answers with the
+ * reading's id as their origin (§4); the person **stays on the radar** — the radar hides nobody
+ * for a pass — and their card's last line reads *You said yes ›* or *Not today ›* in place of
+ * the door. So the answer is written onto the row ({@link withAnswer}) rather than the row being
+ * removed, by the mutation that made it and never by a refetch: a reading that comes back after
+ * the window is the whole reach again, and is allowed to have forgotten. **By person, not by
+ * search**: an answer names the reading it came off for the ledger's sake, and the mark is about
+ * whom the reader answered, which a fresh reading of the same reach may well draw again.
  */
 
 import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
 import type { Candidate, SearchEnvelope } from './candidate';
+import { isLiker } from './yesBudget';
+
+/** What the reader said about a row from the sheet — the two answers, and nothing else. */
+export type RadarAnswer = 'yes' | 'no';
 
 /** One sport a player is rated in, with the Level held there — the card's sport rows. */
 export interface RatedSport {
@@ -39,6 +52,11 @@ export interface RadarRow extends Candidate {
   readonly bearingDeg: number;
   /** Every sport they are rated in, the registry's order. `card.level` is the reading's sport's. */
   readonly ratings: readonly RatedSport[];
+  /**
+   * What the reader said about them from the sheet, on this held reading. Absent until they
+   * have, and absent again on a refused write — see the module note.
+   */
+  readonly answered?: RadarAnswer;
 }
 
 /** One answer to `POST /radar`: the envelope every card is drawn with, and the rows drawn. */
@@ -87,4 +105,49 @@ export function selectionOn(
 ): string | undefined {
   if (selectedId === undefined) return undefined;
   return rows.some((row) => row.playerId === selectedId) ? selectedId : undefined;
+}
+
+/**
+ * The reading with one row marked as answered — or unmarked, when the write was refused and the
+ * mark is taken back. The same reading where it does not hold the person, so a patch of an
+ * entry the answer is not about leaves the entry alone.
+ */
+export function withAnswer(
+  reading: Reading,
+  playerId: string,
+  answered: RadarAnswer | undefined,
+): Reading {
+  if (!reading.rows.some((row) => row.playerId === playerId)) return reading;
+  return {
+    ...reading,
+    rows: reading.rows.map((row) => {
+      if (row.playerId !== playerId) return row;
+      const { answered: _was, ...rest } = row;
+      return answered === undefined ? rest : { ...rest, answered };
+    }),
+  };
+}
+
+/**
+ * The reading with one fewer person waiting — **only where the row answered was a liker's**,
+ * the deck's own rule read on the reading's envelope (`deckHand`'s `oneFewerWaiting`,
+ * ADR-0169 §4; ADR-0174 §5).
+ *
+ * The chip on the radar is the deck's number on the reading's envelope, so a liker's yes come
+ * back mutual counts one of the people it counted as answered, here as there. A stranger's
+ * mutual was never counted; a reading that carried no count, or nought, has nothing to drop.
+ */
+export function oneFewerWaitingOnReading(reading: Reading, playerId: string): Reading {
+  const row = reading.rows.find((one) => one.playerId === playerId);
+  const waiting = reading.envelope.pool.wantToPlayYou;
+  if (row === undefined || !isLiker(row) || waiting === undefined || waiting === 0) {
+    return reading;
+  }
+  return {
+    ...reading,
+    envelope: {
+      ...reading.envelope,
+      pool: { ...reading.envelope.pool, wantToPlayYou: waiting - 1 },
+    },
+  };
 }

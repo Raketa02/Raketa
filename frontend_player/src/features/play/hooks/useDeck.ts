@@ -78,7 +78,13 @@
  * request at all. So the deck keeps the pause, and a deferred answer really is the answer.
  */
 
-import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { router } from 'expo-router';
 
 import { yesRoute } from '@/features/challenges/types';
@@ -93,7 +99,8 @@ import {
   type AnsweredCard,
   type DeckDeal,
 } from '../domain/deckHand';
-import { outgoingAfterYes } from '../domain/outgoingInterest';
+import { mutualAfterYes, outgoingAfterYes } from '../domain/outgoingInterest';
+import { oneFewerWaitingOnReading, type Reading } from '../domain/reading';
 import { dealDeck, type DeckAsk, type DeckOutcome } from '../use-cases/dealDeck';
 import { resetDeck } from '../use-cases/resetDeck';
 import { sayNo, sayYes, type CardAnswer, type InterestExpressed } from '../use-cases/answerCard';
@@ -291,31 +298,61 @@ function holdsHand(held: HeldDeal, searchId: string): boolean {
  *
  * The route is the challenges feature's, read through its surface: both entries to the yes
  * screen end in a challenge, and the mutual reply names the one it opened (ADR-0154).
+ *
+ * ## The effects are one function, because the radar gives the same yes
+ *
+ * A *Let's play* from the radar's record sheet is the deck's own yes with a reading's id for
+ * its origin (ADR-0174 §4), and everything above is true of it: the count moves, the lists
+ * move, the chip on every held deal counts down, the yes screen is pushed. So the effects are
+ * {@link settleYes}, called from this mutation's `onSuccess` and from the radar's
+ * (`hooks/useRadarAnswers`), and the two cannot drift.
  */
 export function useSayYes() {
   const client = useQueryClient();
 
   return useMutation<InterestExpressed, AppError, CardAnswer>({
     mutationFn: sayYes,
-    onSuccess: ({ outstanding, mutual, challengeId }, answer) => {
-      client.setQueryData<MyInterest>(searchKeys.interest(), (held) =>
-        held === undefined
-          ? undefined
-          : {
-              standing: { ...held.standing, ...outstanding },
-              outgoing: outgoingAfterYes(held.outgoing, answer, mutual),
-            },
-      );
-
-      if (mutual) {
-        client.setQueriesData<HeldDeal>({ queryKey: searchKeys.decks() }, (held) =>
-          held === undefined ? held : { ...held, ...oneFewerWaiting(held, answer) },
-        );
-      }
-
-      if (mutual && challengeId !== null) router.push(yesRoute(challengeId, 'mutual'));
-    },
+    onSuccess: (reply, answer) => settleYes(client, reply, answer),
   });
+}
+
+/**
+ * **What a yes's reply does to the cache and the stack** — the interest read patched from the
+ * reply (the count, the outgoing list, and the mutual list, which is where a mutual arrives),
+ * every held deal's chip and the held reading's chip counted down on a liker's mutual, and the
+ * yes screen pushed for a mutual naming a challenge. See the note above `useSayYes` for each.
+ *
+ * The reading's chip is the deck's number on the reading's envelope (ADR-0174 §5), so it
+ * counts down here for a yes from either surface: a deck yes on a liker the held reading also
+ * admitted is one of the people that chip counted, answered. The reading is the sport's, so
+ * the patch reaches one entry and never a reading for another sport that admitted the same
+ * person for a different yes.
+ */
+export function settleYes(
+  client: QueryClient,
+  { outstanding, mutual, challengeId }: InterestExpressed,
+  answer: CardAnswer,
+): void {
+  client.setQueryData<MyInterest>(searchKeys.interest(), (held) =>
+    held === undefined
+      ? undefined
+      : {
+          standing: { ...held.standing, ...outstanding },
+          outgoing: outgoingAfterYes(held.outgoing, answer, mutual),
+          mutual: mutualAfterYes(held.mutual, answer, mutual),
+        },
+  );
+
+  if (mutual) {
+    client.setQueriesData<HeldDeal>({ queryKey: searchKeys.decks() }, (held) =>
+      held === undefined ? held : { ...held, ...oneFewerWaiting(held, answer) },
+    );
+    client.setQueryData<Reading>(searchKeys.reading(answer.sport), (held) =>
+      held === undefined ? undefined : oneFewerWaitingOnReading(held, answer.playerId),
+    );
+  }
+
+  if (mutual && challengeId !== null) router.push(yesRoute(challengeId, 'mutual'));
 }
 
 /**

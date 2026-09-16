@@ -205,3 +205,14 @@ export { LEAVE_THIS_GAME } from './components/leaveGamePresentation';
  */
 export { dropCourtOfGame } from './hooks/challengeCache';
 export { challengeKeys } from './hooks/challengeKeys';
+
+/**
+ * **The court the reader shares with one person**, for the radar's record sheet
+ * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §4, [#464](https://github.com/Raketa02/Raketa/issues/464)): a live challenge or game the two
+ * are on, or one just behind them, read off this feature's own list by its own pair rule
+ * (`domain/courtWith`). What crosses is the court's id and its standing as it reads to the
+ * reader — `StandingFacts`, which `standingLine` above already turns into the row's sentence —
+ * so the sheet's foot names the court in this feature's words and never composes its own.
+ */
+export { useCourtWith, type CourtWith } from './hooks/useChallenges';

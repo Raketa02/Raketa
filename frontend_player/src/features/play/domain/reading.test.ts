@@ -1,5 +1,13 @@
-import type { Candidate } from './candidate';
-import { drawOrder, selectionOn, sportRows, type RadarRow } from './reading';
+import type { Candidate, SearchEnvelope } from './candidate';
+import {
+  drawOrder,
+  oneFewerWaitingOnReading,
+  selectionOn,
+  sportRows,
+  withAnswer,
+  type RadarRow,
+  type Reading,
+} from './reading';
 
 const BARE: Omit<Candidate, 'playerId' | 'distanceKm'> = {
   fit: 70,
@@ -83,5 +91,79 @@ describe('the selection against the next reading', () => {
     expect(selectionOn(rows, 'gone')).toBeUndefined();
     expect(selectionOn(rows, undefined)).toBeUndefined();
     expect(selectionOn([], 'a')).toBeUndefined();
+  });
+});
+
+/** A reading's envelope with the chip's number on it — the deck's number by the deck's rule. */
+function envelope(wantToPlayYou: number | undefined): SearchEnvelope {
+  return {
+    searchId: 'reading-1',
+    mode: null,
+    pool: {
+      radiusKmUsed: 10,
+      playersInRange: 2,
+      window: null,
+      ...(wantToPlayYou === undefined ? {} : { wantToPlayYou }),
+    },
+    rulesetVersion: 'ruleset-v1',
+    engineVersion: 'matchfit-v1',
+    radiusClamp: false,
+    optimisedFor: null,
+    sortsAvailable: [],
+    rungOffers: null,
+  };
+}
+
+function reading(rows: readonly RadarRow[], wantToPlayYou?: number): Reading {
+  return { envelope: envelope(wantToPlayYou), rows };
+}
+
+describe('a row after an answer', () => {
+  /**
+   * The person stays on the radar — the radar hides nobody for a pass (ADR-0174 §4) — and the
+   * card's last line says what was said. Marking is by person: the reading is the whole reach
+   * and an answer is about one row of it.
+   */
+  it('marks the one row and keeps every row', () => {
+    const held = reading([row('filip', 1.9), row('marek', 4.8)]);
+
+    const after = withAnswer(held, 'filip', 'yes');
+
+    expect(after.rows.map((r) => [r.playerId, r.answered])).toEqual([
+      ['filip', 'yes'],
+      ['marek', undefined],
+    ]);
+    expect(after.envelope).toBe(held.envelope);
+  });
+
+  /** A refused write takes the mark back — the same return the deck's card makes. */
+  it('unmarks on the answer being taken back', () => {
+    const held = withAnswer(reading([row('filip', 1.9)]), 'filip', 'no');
+    expect(withAnswer(held, 'filip', undefined).rows[0]?.answered).toBeUndefined();
+  });
+
+  it('leaves a reading that does not hold the person as it was', () => {
+    const held = reading([row('marek', 4.8)]);
+    expect(withAnswer(held, 'filip', 'yes')).toBe(held);
+  });
+});
+
+describe('the reading’s chip after a liker’s mutual', () => {
+  const liker = row('zofia', 2.2, { inclusionReason: 'INTEREST_LIFT' });
+
+  it('drops by one when the person answered carried the admitting code', () => {
+    const held = reading([liker, row('filip', 1.9)], 3);
+    expect(oneFewerWaitingOnReading(held, 'zofia').envelope.pool.wantToPlayYou).toBe(2);
+  });
+
+  it('is untouched for a stranger, at nought, and where the reading carried no count', () => {
+    const stranger = reading([liker, row('filip', 1.9)], 3);
+    expect(oneFewerWaitingOnReading(stranger, 'filip')).toBe(stranger);
+
+    const nought = reading([liker], 0);
+    expect(oneFewerWaitingOnReading(nought, 'zofia')).toBe(nought);
+
+    const uncounted = reading([liker]);
+    expect(oneFewerWaitingOnReading(uncounted, 'zofia')).toBe(uncounted);
   });
 });

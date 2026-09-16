@@ -21,15 +21,17 @@
  *    profile. Where the engine compared nothing — one side published no tags in a column, or
  *    the match is beyond this build's vocabulary — the line is **not drawn**, because *no tags in
  *    common* is a claim and *we do not know* is not (`shared/vocabulary/socialTagOverlap`).
- * 6. **The last line** — *Tap for the full card ›* in coral. #464 replaces it with the answer
- *    line after a yes or a pass; nothing here knows about answers yet.
+ * 6. **The last line** — *Tap for the full card ›* in coral; or, once the reader has answered
+ *    them from the sheet, *You said yes ›* / *Not today ›* in its place (ADR-0174 §4). The row
+ *    carries the answer (`domain/reading`), the face never changes, and the card is still the
+ *    door: the sheet says it in full, and a yes can still be given over a *not today*.
  *
  * ## The whole card is the target
  *
  * One accessibility element, a `button`, named by the §26 sentence — the same name the face
  * carries at the other two widths, so a listener follows one person through every state —
- * and its press opens the record sheet (§7.5): read-only until #464 fills the sheet's foot.
- * The pill, the chip, the dot and the mark merge into it, as they merge into the deck card.
+ * and its press opens the record sheet (§7.5), with its foot. The pill, the chip, the dot and
+ * the mark merge into it, as they merge into the deck card.
  *
  * The card is drawn at its natural size and the field places and counter-scales it, so a
  * card is always ~190 pt whatever the pinch is doing (§7.9).
@@ -47,6 +49,7 @@ import { wearsOnCourtMark } from '../../domain/onCourtMark';
 import { sportRows, type RadarRow } from '../../domain/reading';
 import { socialTagOverlap } from '../../domain/socialTagOverlap';
 import {
+  ANSWERED_LINE,
   FIT_WORD,
   RELIABILITY_WORD,
   TAP_FOR_THE_FULL_CARD,
@@ -118,7 +121,9 @@ export function RadarCard({ row, sport, accessibilityLabel, onPress }: RadarCard
         <Text style={common > 0 ? s.tagsShared : s.tagsNone}>{tagsInCommon(common)}</Text>
       )}
 
-      <Text style={s.door}>{TAP_FOR_THE_FULL_CARD}</Text>
+      <Text style={s.door}>
+        {row.answered === undefined ? TAP_FOR_THE_FULL_CARD : ANSWERED_LINE[row.answered]}
+      </Text>
     </Pressable>
   );
 }

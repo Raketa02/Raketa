@@ -114,10 +114,9 @@ import { sportLabel, useSkillRatings } from '@/features/onboarding/types';
 import { useProfileSurface } from '@/features/player_profile/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { ShellScreen } from '@/features/shell/types';
-import { offlineMessage, recoveryMessage } from '@/shared/errors';
+import { recoveryMessage } from '@/shared/errors';
 import { playerName } from '@/shared/formatting/playerName';
-import { showToast } from '@/shared/store/toast.store';
-import { Button, Note, announce, behindOverlay, moveAccessibilityFocus, theme } from '@/shared/ui';
+import { Button, Note, behindOverlay, moveAccessibilityFocus, theme } from '@/shared/ui';
 
 import type { Candidate } from '../domain/candidate';
 import {
@@ -132,7 +131,7 @@ import {
 import { sportOnScreen } from '../domain/findAGame';
 import { firstUnasked } from '../domain/raisedPrompt';
 import { socialTagOverlap } from '../domain/socialTagOverlap';
-import { yesWithheld, yesesToGive } from '../domain/yesBudget';
+import { yesesToGive } from '../domain/yesBudget';
 import {
   useDeal,
   useDeckProgress,
@@ -145,6 +144,7 @@ import { useOutstandingInterest } from '../hooks/useInterest';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
 
+import { AnswerNotes } from './AnswerNotes';
 import { DeckAnswers } from './DeckAnswers';
 import { DeckEnding } from './DeckEnding';
 import { DeckPill } from './DeckPill';
@@ -152,18 +152,17 @@ import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
 import { PlayersToggle } from './PlayersToggle';
 import { PromptSheet } from './PromptSheet';
 import { SportChips } from './SportChips';
+import { sayPassed, sayYesOutcome, withheldAtTheCap } from './answerFeedback';
 import { DeckCard } from './candidate/DeckCard';
 import {
   DEALING_LABEL,
   DEAL_AGAIN_LABEL,
   NO_RATED_SPORT_LINE,
   deckCounter,
-  passedAnnouncement,
   wantToPlayYouChip,
-  yesOutcome,
   type PlayersPane,
 } from './deckPresentation';
-import { CAP_REACHED_SENTENCE, playErrorMessage } from './playErrorMessage';
+import { playErrorMessage } from './playErrorMessage';
 import { RadarPane } from './radar/RadarPane';
 import { poolDescription } from './searchPresentation';
 import { WhyFitSheet } from './whyfit/WhyFitSheet';
@@ -340,14 +339,14 @@ export function DeckScreen() {
    * reply knows. Withheld is the ceiling: no yeses to give, on a card that carries no
    * `inclusion_reason` — the card settles, a toast says the ceiling, and nothing is sent
    * (`domain/yesBudget`). The same function answers the drag and the buttons, so the two paths
-   * cannot disagree about who may fly.
+   * cannot disagree about who may fly — and what the press says is `answerFeedback`'s, shared
+   * with the radar's sheet, so the two surfaces cannot either.
    */
   const answer = (said: DeckExit, card: DealtCard): DragVerdict => {
     if (leaving !== undefined || onThisSport === undefined) return 'withheld';
 
     const { candidate } = card;
-    if (said === 'yes' && yesWithheld({ give, inclusionReason: candidate.inclusionReason })) {
-      showToast({ message: CAP_REACHED_SENTENCE });
+    if (said === 'yes' && withheldAtTheCap({ give, inclusionReason: candidate.inclusionReason })) {
       return 'withheld';
     }
 
@@ -357,7 +356,7 @@ export function DeckScreen() {
     setLeaving({ card: write, said });
 
     if (said === 'no') {
-      announce(passedAnnouncement(name));
+      sayPassed(name);
       no.mutate(write, { onError: () => cardReturned(card) });
       return 'taken';
     }
@@ -368,11 +367,7 @@ export function DeckScreen() {
       // naming a challenge is the yes screen — pushed by the mutation's own success handler
       // (`hooks/useDeck`) and not from here, since this callback is dropped the moment the deck
       // is left and the reply may land after it has been.
-      onSuccess: (reply) => {
-        const outcome = yesOutcome(name, reply);
-        if (outcome.kind === 'announce') announce(outcome.message);
-        if (outcome.kind === 'toast') showToast({ message: outcome.message, tone: outcome.tone });
-      },
+      onSuccess: (reply) => sayYesOutcome(name, reply),
       onError: () => cardReturned(card),
     });
     return 'taken';
@@ -442,17 +437,9 @@ export function DeckScreen() {
               </Note>
             ) : null}
 
-            {/* Paused, not failed: `networkMode: 'online'` holds a write rather than refusing
-                  it, so an offline player would otherwise watch nothing happen. */}
-            {answerPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
-
-            {/* The failed answer's sentence sits above the card it is about — which is back on
-                  screen, because a refusal returns it. */}
-            {answerError !== null ? (
-              <Note variant="coral" accessibilityRole="alert">
-                {playErrorMessage(answerError)}
-              </Note>
-            ) : null}
+            {/* Paused, not failed — and the failed answer's sentence above the card it is about,
+                  which is back on screen because a refusal returns it. */}
+            <AnswerNotes paused={answerPaused} error={answerError} />
 
             {deal.error !== null ? (
               <View style={s.failure}>

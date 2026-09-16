@@ -5,17 +5,23 @@
 
 import { WIDEN_IN_YOU } from './deckPresentation';
 import {
+  ANSWERED_LINE,
   BACK_TO_YOU_LABEL,
+  FOOT_ANSWER_WORDS,
   LOOKING_AROUND,
   PRIVACY_LINE,
   RADAR_FAILED,
   TAP_FOR_THE_FULL_CARD,
   TRY_AGAIN,
+  WANTS_TO_PLAY_YOU,
+  YOURE_MATCHED,
   YOU_LABEL,
+  YOU_SAID_YES,
   ZOOM_IN_LABEL,
   ZOOM_OUT_LABEL,
   cardDistance,
   emptyHint,
+  footAnswerLabels,
   nobodyInReach,
   offScreen,
   playersInView,
@@ -103,5 +109,31 @@ describe('the cluster, spoken', () => {
     expect(ZOOM_IN_LABEL).toBe('Zoom in');
     expect(ZOOM_OUT_LABEL).toBe('Zoom out');
     expect(BACK_TO_YOU_LABEL).toBe('Back to you');
+  });
+});
+
+describe('the sheet’s foot, and the card after an answer', () => {
+  /** §26: the deck's two words, `secondary` and `primary`, the swipe's reading order. */
+  it('offers the deck’s two words, spoken with the person’s name', () => {
+    expect(FOOT_ANSWER_WORDS).toEqual({ no: 'Not today', yes: "Let's play" });
+    expect(footAnswerLabels('Filip N.')).toEqual({
+      no: 'Not today, Filip N.',
+      yes: "Let's play, Filip N.",
+    });
+  });
+
+  /** The liker's line is §10's tag, cited; the reader's own yes is the builder's plain tag. */
+  it('cites the two interest tags rather than re-spelling them', () => {
+    expect(WANTS_TO_PLAY_YOU).toBe('Wants to play you');
+    expect(YOU_SAID_YES).toBe('You said yes');
+  });
+
+  it('says a match, and names the chat door as every chat door is named', () => {
+    expect(YOURE_MATCHED).toBe("You're matched");
+  });
+
+  /** The card's last line, answered — in place of the door; the face never changes. */
+  it('replaces the door with what was said', () => {
+    expect(ANSWERED_LINE).toEqual({ yes: 'You said yes ›', no: 'Not today ›' });
   });
 });

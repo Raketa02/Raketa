@@ -18,25 +18,38 @@
  * - **The sport chips refetch and clear the selection**, keeping the view.
  * - **The view survives a tab switch**; a cold start opens at home.
  * - **The pinch is continuous and the next ± snaps**; a drag moves the view and recounts.
- * - **A card opens the record sheet, read-only.**
+ * - **A card opens the record sheet, with the foot the relation demands** (ADR-0174 §4,
+ *   [#464](https://github.com/Raketa02/Raketa/issues/464)): the two buttons for a stranger, a
+ *   liker's line above them, the reader's own yes beside *Not today*, a match with its chat
+ *   door, a shared court named with no buttons. A yes and a pass post with the reading's
+ *   origin, close the sheet, mark the card's last line and keep the row; a refusal takes the
+ *   mark back; the outcomes are the deck's — the spoken line, the one toast, the yes screen;
+ *   the cap withholds a stranger's yes with the deck's sentence; the chip counts down on a
+ *   liker's mutual.
  */
 
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { AccessibilityInfo } from 'react-native';
 
 import { onlineManager } from '@tanstack/react-query';
 
 import { theme } from '@/shared/ui';
 
+import { standingLine } from '@/features/challenges/types';
+import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { RECORD_TITLE, recordCloseLabel } from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import {
+  CHALLENGES_PATH,
   GATE_USER,
   PROFILE_SURFACE_SERVED,
   launchSignedIn,
+  outgoingYes,
   resetHaptics,
+  stubChallenges,
+  stubConversations,
   stubGate,
   stubHaptics,
   stubInterest,
@@ -49,6 +62,7 @@ import {
   errorResponse,
   installTransport,
   json,
+  noContent,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -59,18 +73,31 @@ import { useRadarView } from '../store/radarView.store';
 import { endPlaySession } from '../store/playSession.store';
 
 import { radarTileLabel } from './accessibilityPresentation';
-import { PANE_LABEL, WIDEN_IN_YOU, wantToPlayYouChip } from './deckPresentation';
 import {
+  PANE_LABEL,
+  WIDEN_IN_YOU,
+  interestAnnouncement,
+  mutualToast,
+  passedAnnouncement,
+  wantToPlayYouChip,
+} from './deckPresentation';
+import { CAP_REACHED_SENTENCE, playErrorMessage } from './playErrorMessage';
+import {
+  ANSWERED_LINE,
   BACK_TO_YOU_LABEL,
   LOOKING_AROUND,
   PRIVACY_LINE,
   RADAR_FAILED,
   TAP_FOR_THE_FULL_CARD,
   TRY_AGAIN,
+  WANTS_TO_PLAY_YOU,
+  YOURE_MATCHED,
+  YOU_SAID_YES,
   ZOOM_IN_LABEL,
   ZOOM_OUT_LABEL,
   cardDistance,
   emptyHint,
+  footAnswerLabels,
   nobodyInReach,
   offScreen,
   playersInView,
@@ -85,9 +112,14 @@ const DECK = '/api/v1/deck';
 const RADAR = '/api/v1/radar';
 const PLAYERS = '/api/v1/players';
 const OWN_RECORD = '/api/v1/players/me/record';
+const INTEREST = '/api/v1/interest';
+const PASSES = '/api/v1/passes';
 
 const SEARCH_ID = 'd0d1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
 const HERE = 'A+050612+0019938';
+const ME = GATE_USER.id;
+const CHALLENGE = 'cccccccc-0000-4000-8000-00000000000c';
+const ROOM = 'cccccccc-0000-4000-8000-000000000007';
 
 const FILIP = 'aaaaaaaa-0000-4000-8000-000000000001';
 const MAREK = 'aaaaaaaa-0000-4000-8000-000000000002';
@@ -254,6 +286,87 @@ function filipsRecord(): Wire['PlayerRecordResponse'] {
   };
 }
 
+/** A yes's reply: one-sided, or mutual — naming the court it opened, or none. */
+function expressed(
+  mutual: boolean,
+  challengeId: string | null = null,
+  outstanding = 3,
+): Wire['ExpressedInterestResponse'] {
+  return {
+    interest: outgoingYes(FILIP, 'PADEL'),
+    mutual,
+    challenge_id: challengeId,
+    outstanding: { sport: 'PADEL', outstanding, cap: 20, ttl_days: 21 },
+  };
+}
+
+/** Where padel stands: `outstanding` of a cap of 20, with the two lists beside it. */
+function interest(
+  outstanding: number,
+  lists: Partial<Pick<Wire['InterestListResponse'], 'outgoing' | 'mutual'>> = {},
+): Wire['InterestListResponse'] {
+  return {
+    outgoing: [],
+    mutual: [],
+    outstanding: [{ sport: 'PADEL', outstanding, cap: 20, ttl_days: 21 }],
+    ...lists,
+  };
+}
+
+/** A court between the viewer and Filip, as `GET /challenges` lists it — ours, everybody in. */
+function courtWithFilip(
+  standing: Wire['Standing'] = 'ON',
+  over: Partial<Wire['ChallengeSchema']> = {},
+): Wire['ChallengeSchema'] {
+  return {
+    challenge_id: CHALLENGE,
+    sport: 'PADEL',
+    organiser_id: ME,
+    standing,
+    opened_at: '2026-09-12T18:00:00Z',
+    seats: [
+      { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'ada' },
+      { side: 'B', player_id: FILIP, answer: 'ACCEPTED', name: 'Filip N.' },
+    ],
+    ...over,
+  };
+}
+
+/** The room that court opened, listed. */
+function roomWithFilip(): Wire['ConversationRowSchema'] {
+  const both = [
+    { player_id: ME, name: 'ada' },
+    { player_id: FILIP, name: 'Filip N.' },
+  ];
+  return {
+    conversation_id: ROOM,
+    challenge_id: CHALLENGE,
+    game_id: null,
+    sport: 'PADEL',
+    members: both,
+    people: both,
+    last_entry: null,
+  };
+}
+
+/** The challenge a mutual named, as the yes screen reads it: the two of us, `ON` from birth. */
+function matchedWithFilip(): Wire['ChallengeDetailResponse'] {
+  return {
+    read_at: '2026-09-16T18:00:00Z',
+    challenge_id: CHALLENGE,
+    sport: 'PADEL',
+    mode: null,
+    window: null,
+    organiser_id: FILIP,
+    standing: 'ON',
+    opened_at: '2026-09-16T18:00:00Z',
+    seats: [
+      { side: 'A', player_id: FILIP, answer: 'ACCEPTED', name: 'Filip N.' },
+      { side: 'B', player_id: ME, answer: 'ACCEPTED', name: 'ada' },
+    ],
+  };
+}
+
 /** A face or a card, as it is spoken — the one name a person carries through every state. */
 const tile = (name: string, distanceKm: number, level = 2.6, sportName = 'Padel') =>
   radarTileLabel({ name, distance: cardDistance(distanceKm), sportName, level });
@@ -280,6 +393,8 @@ beforeEach(() => {
   transport.on('POST', RADAR, () => json(reading({ wantToPlayYou: 3 })));
   transport.on('GET', OWN_RECORD, () => json(ownRecord()));
   transport.on('GET', `${PLAYERS}/${FILIP}/record?sport=PADEL`, () => json(filipsRecord()));
+  transport.on('POST', INTEREST, () => json(expressed(false), 201));
+  transport.on('POST', PASSES, () => noContent());
 });
 
 afterEach(async () => {
@@ -642,7 +757,7 @@ describe('tapping, flying, selecting', () => {
     );
   });
 
-  it('opens the record sheet from a card, read-only, and closes back to the field', async () => {
+  it('opens the record sheet from a card, and closes back to the field', async () => {
     await openRadar();
     fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
     landedAt(FLY_TO_WIDTH_KM);
@@ -650,10 +765,286 @@ describe('tapping, flying, selecting', () => {
     fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
 
     expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Let’s play|Let's play/ })).toBeNull();
     fireEvent.press(screen.getByLabelText(recordCloseLabel(false)));
     await waitFor(() => expect(screen.queryByText(RECORD_TITLE)).toBeNull());
     expect(screen.getByRole('button', { name: FILIP_TILE })).toBeTruthy();
+  });
+});
+
+/**
+ * **The sheet's foot** — what stands between the reader and the person on the card, and the
+ * two answers where nothing does (ADR-0174 §4, `the-radar.md` §5, `the-words.md` §26).
+ */
+describe('the sheet’s foot', () => {
+  const FILIP_LABELS = footAnswerLabels('Filip N.');
+  const toasts = () => useToastQueue.getState().queue.map((toast) => toast.message);
+  const spoken = () =>
+    (AccessibilityInfo.announceForAccessibilityWithOptions as jest.Mock).mock.calls.map(
+      ([message]) => message as string,
+    );
+
+  /** Filip's card, tapped: the sheet with his record, and the foot folded. */
+  async function openFilipsSheet() {
+    await openRadar();
+    fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
+    landedAt(FLY_TO_WIDTH_KM);
+    fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
+    await screen.findByText(RECORD_TITLE);
+    return within(await screen.findByTestId('radar-sheet-foot'));
+  }
+
+  const buttonsIn = (foot: ReturnType<typeof within>) =>
+    foot.queryAllByRole('button').map((button) => button.props.accessibilityLabel as string);
+
+  /** Filip's card as drawn on the field — its last line is the one thing an answer changes. */
+  const filipsCard = () => textOf(screen.getByRole('button', { name: FILIP_TILE }));
+
+  it('draws the two buttons for a stranger, in the swipe’s reading order, and no line', async () => {
+    const foot = await openFilipsSheet();
+
+    expect(buttonsIn(foot)).toEqual([FILIP_LABELS.no, FILIP_LABELS.yes]);
+    expect(foot.queryByText(WANTS_TO_PLAY_YOU)).toBeNull();
+    expect(foot.queryByText(YOU_SAID_YES)).toBeNull();
+    expect(foot.queryByText(YOURE_MATCHED)).toBeNull();
+  });
+
+  it('says Wants to play you above the two buttons, exactly for a row carrying the admitting code', async () => {
+    transport.on('POST', RADAR, () =>
+      json(
+        reading({
+          candidates: [row('Filip N.', FILIP, 1.9, 47, { inclusion_reason: 'INTEREST_LIFT' })],
+        }),
+      ),
+    );
+    const foot = await openFilipsSheet();
+
+    expect(foot.getByText(WANTS_TO_PLAY_YOU)).toBeTruthy();
+    expect(buttonsIn(foot)).toEqual([FILIP_LABELS.no, FILIP_LABELS.yes]);
+  });
+
+  it('says You said yes beside Not today where the reader has a live yes towards them', async () => {
+    stubInterest(transport, interest(1, { outgoing: [outgoingYes(FILIP, 'PADEL')] }));
+    const foot = await openFilipsSheet();
+
+    expect(foot.getByText(YOU_SAID_YES)).toBeTruthy();
+    expect(buttonsIn(foot)).toEqual([FILIP_LABELS.no]);
+  });
+
+  it('says You’re matched with the chat door where their yes came back, and the door opens the room', async () => {
+    stubInterest(transport, interest(0, { mutual: [outgoingYes(FILIP, 'PADEL')] }));
+    stubChallenges(transport, [courtWithFilip('ON', { organiser_id: FILIP })]);
+    stubConversations(transport, [roomWithFilip()]);
+    const foot = await openFilipsSheet();
+
+    expect(foot.getByText(YOURE_MATCHED)).toBeTruthy();
+    // The door is a join over the rooms list, which lands a beat after the foot does.
+    const door = await foot.findByRole('button', { name: OPEN_THE_CHAT });
+    expect(buttonsIn(foot)).toEqual([OPEN_THE_CHAT]);
+
+    fireEvent.press(door);
+
+    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+    expect(screen.queryByText(RECORD_TITLE)).toBeNull();
+  });
+
+  /** A mutual whose court has no room — not yet, or not any more — says so and offers no dead door. */
+  it('says You’re matched and offers no door where the court has no room', async () => {
+    stubInterest(transport, interest(0, { mutual: [outgoingYes(FILIP, 'PADEL')] }));
+    const foot = await openFilipsSheet();
+
+    expect(foot.getByText(YOURE_MATCHED)).toBeTruthy();
+    expect(buttonsIn(foot)).toEqual([]);
+  });
+
+  it('names the court the two share, in the Chats row’s own words, and draws no buttons', async () => {
+    stubChallenges(transport, [courtWithFilip('ON')]);
+    const foot = await openFilipsSheet();
+
+    expect(foot.getByText(standingLine({ side: 'organiser', standing: 'ON' }))).toBeTruthy();
+    expect(buttonsIn(foot)).toEqual([]);
+  });
+
+  it('draws the two buttons again once a shared court is behind them and off the list’s shelf', async () => {
+    stubChallenges(
+      transport,
+      [
+        courtWithFilip('LAPSED', {
+          ended_at: '2026-09-01T18:00:00Z',
+          ended_by: FILIP,
+          seats: [
+            { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'ada' },
+            { side: 'B', player_id: FILIP, answer: 'LAPSED', name: 'Filip N.' },
+          ],
+        }),
+      ],
+      '2026-09-16T18:00:00Z',
+    );
+    const foot = await openFilipsSheet();
+
+    expect(buttonsIn(foot)).toEqual([FILIP_LABELS.no, FILIP_LABELS.yes]);
+  });
+
+  it('a yes posts with the reading’s origin, closes the sheet, marks the card and keeps the row', async () => {
+    const foot = await openFilipsSheet();
+    fireEvent.press(foot.getByRole('button', { name: FILIP_LABELS.yes }));
+
+    await waitFor(() => expect(screen.queryByText(RECORD_TITLE)).toBeNull());
+    await waitFor(() => expect(transport.requestsTo('POST', INTEREST)).toHaveLength(1));
+    expect(transport.requestsTo('POST', INTEREST)[0]?.body).toEqual({
+      sport: 'PADEL',
+      player_id: FILIP,
+      search_id: SEARCH_ID,
+    });
+
+    // Still on the radar — the radar hides nobody for an answer — with the door replaced.
+    expect(filipsCard()).toContain(ANSWERED_LINE.yes);
+    expect(filipsCard()).not.toContain(TAP_FOR_THE_FULL_CARD);
+    // The one-sided yes is spoken and not shown, as on the deck.
+    await waitFor(() => expect(spoken()).toContain(interestAnnouncement('Filip N.')));
+    expect(toasts()).toEqual([]);
+    expect(screen).toHavePathname('/players');
+  });
+
+  /**
+   * A yes given on the radar reaches the deck **on the server's next deal** (`already_asked`),
+   * and nowhere else: it mints no deal of its own, and a deal already held is found as it was
+   * when the player flips back — nothing minted, nothing hidden by this side.
+   */
+  it('mints no deal and touches no held deal: the deck is found as it was', async () => {
+    transport.on('POST', DECK, () =>
+      json(reading({ candidates: [row('Marek Z.', MAREK, 4.8, 20)], searchId: 'a-deal' })),
+    );
+    const foot = await openFilipsSheet();
+    expect(transport.requestsTo('POST', DECK)).toHaveLength(1);
+
+    fireEvent.press(foot.getByRole('button', { name: FILIP_LABELS.yes }));
+    await waitFor(() => expect(transport.requestsTo('POST', INTEREST)).toHaveLength(1));
+    fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.deck }));
+
+    expect(await screen.findByLabelText("Let's play, Marek Z.")).toBeTruthy();
+    expect(transport.requestsTo('POST', DECK)).toHaveLength(1);
+  });
+
+  /** The chip is one number on either pane, so a deck yes on a liker reaches the held reading too. */
+  it('counts the reading’s chip down on a liker’s mutual given from the deck', async () => {
+    const filip = row('Filip N.', FILIP, 1.9, 47, { inclusion_reason: 'INTEREST_LIFT' });
+    transport.on('POST', RADAR, () => json(reading({ candidates: [filip], wantToPlayYou: 3 })));
+    transport.on('POST', DECK, () =>
+      json(reading({ candidates: [filip], wantToPlayYou: 3, searchId: 'a-deal' })),
+    );
+    transport.on('POST', INTEREST, () => json(expressed(true), 201));
+    await openRadar();
+    expect(screen.getByText(wantToPlayYouChip(3))).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.deck }));
+    fireEvent.press(await screen.findByLabelText("Let's play, Filip N."));
+    await waitFor(() => expect(transport.requestsTo('POST', INTEREST)).toHaveLength(1));
+    fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.radar }));
+
+    expect(await screen.findByText(wantToPlayYouChip(2))).toBeTruthy();
+    expect(readingBodies()).toHaveLength(1);
+  });
+
+  it('reopens on a said-yes with You said yes beside Not today, off the reply and no second read', async () => {
+    const foot = await openFilipsSheet();
+    fireEvent.press(foot.getByRole('button', { name: FILIP_LABELS.yes }));
+    await waitFor(() => expect(transport.requestsTo('POST', INTEREST)).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByText(RECORD_TITLE)).toBeNull());
+
+    fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
+    const again = within(await screen.findByTestId('radar-sheet-foot'));
+
+    expect(again.getByText(YOU_SAID_YES)).toBeTruthy();
+    expect(buttonsIn(again)).toEqual([FILIP_LABELS.no]);
+    expect(transport.requestsTo('GET', INTEREST)).toHaveLength(1);
+  });
+
+  it('a pass posts with the reading’s origin, marks the card Not today, and leaves the two buttons for next time', async () => {
+    const foot = await openFilipsSheet();
+    fireEvent.press(foot.getByRole('button', { name: FILIP_LABELS.no }));
+
+    await waitFor(() => expect(screen.queryByText(RECORD_TITLE)).toBeNull());
+    await waitFor(() => expect(transport.requestsTo('POST', PASSES)).toHaveLength(1));
+    expect(transport.requestsTo('POST', PASSES)[0]?.body).toEqual({
+      sport: 'PADEL',
+      player_id: FILIP,
+      search_id: SEARCH_ID,
+    });
+    expect(filipsCard()).toContain(ANSWERED_LINE.no);
+    expect(spoken()).toContain(passedAnnouncement('Filip N.'));
+
+    // A pass is nobody's to read back, so the sheet offers both again — *Let's play* lifts it.
+    fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
+    const again = within(await screen.findByTestId('radar-sheet-foot'));
+    expect(buttonsIn(again)).toEqual([FILIP_LABELS.no, FILIP_LABELS.yes]);
+  });
+
+  it('a refused answer takes the mark back and says why', async () => {
+    transport.on('POST', INTEREST, () => errorResponse(409, 'outstanding_interest_cap_reached'));
+    const foot = await openFilipsSheet();
+    fireEvent.press(foot.getByRole('button', { name: FILIP_LABELS.yes }));
+
+    expect(
+      await screen.findByText(
+        playErrorMessage({ code: 'outstanding_interest_cap_reached' } as never),
+      ),
+    ).toBeTruthy();
+    expect(filipsCard()).toContain(TAP_FOR_THE_FULL_CARD);
+    expect(filipsCard()).not.toContain(ANSWERED_LINE.yes);
+  });
+
+  it('a mutual naming a challenge is the yes screen, pushed after the sheet has closed', async () => {
+    transport.on('POST', INTEREST, () => json(expressed(true, CHALLENGE), 201));
+    transport.on('GET', `${CHALLENGES_PATH}/${CHALLENGE}`, () => json(matchedWithFilip()));
+    const foot = await openFilipsSheet();
+    fireEvent.press(foot.getByRole('button', { name: FILIP_LABELS.yes }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE}/yes`));
+    expect(screen).toHaveSearchParams(expect.objectContaining({ which: 'mutual' }));
+    expect(toasts()).toEqual([]);
+  });
+
+  it('a mutual naming no chat is the one toast, and the radar stays', async () => {
+    transport.on('POST', INTEREST, () => json(expressed(true), 201));
+    const foot = await openFilipsSheet();
+    fireEvent.press(foot.getByRole('button', { name: FILIP_LABELS.yes }));
+
+    await waitFor(() => expect(toasts()).toEqual([mutualToast('Filip N.')]));
+    expect(screen).toHavePathname('/players');
+    expect(filipsCard()).toContain(ANSWERED_LINE.yes);
+  });
+
+  it('at the cap, Let’s play on a stranger settles with the deck’s sentence and sends nothing', async () => {
+    stubInterest(transport, interest(20));
+    const foot = await openFilipsSheet();
+    fireEvent.press(foot.getByRole('button', { name: FILIP_LABELS.yes }));
+
+    await waitFor(() => expect(toasts()).toEqual([CAP_REACHED_SENTENCE]));
+    expect(screen.queryByText(RECORD_TITLE)).toBeNull();
+    expect(transport.requestsTo('POST', INTEREST)).toHaveLength(0);
+    expect(filipsCard()).toContain(TAP_FOR_THE_FULL_CARD);
+  });
+
+  /** A liker's yes closes a mutual and is never outstanding, so the cap exempts it — and the chip counts them answered. */
+  it('at the cap, Let’s play on a liker flies, and the chip counts down on the mutual', async () => {
+    stubInterest(transport, interest(20));
+    transport.on('POST', RADAR, () =>
+      json(
+        reading({
+          candidates: [row('Filip N.', FILIP, 1.9, 47, { inclusion_reason: 'INTEREST_LIFT' })],
+          wantToPlayYou: 3,
+        }),
+      ),
+    );
+    transport.on('POST', INTEREST, () => json(expressed(true), 201));
+    const foot = await openFilipsSheet();
+    // Under the sheet the pane is hidden from a listener; the chip is still drawn.
+    expect(screen.getByText(wantToPlayYouChip(3), HIDDEN_TOO)).toBeTruthy();
+
+    fireEvent.press(foot.getByRole('button', { name: FILIP_LABELS.yes }));
+
+    await waitFor(() => expect(transport.requestsTo('POST', INTEREST)).toHaveLength(1));
+    expect(await screen.findByText(wantToPlayYouChip(2))).toBeTruthy();
   });
 });
 
