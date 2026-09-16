@@ -664,29 +664,31 @@ Rules to preserve:
   are asserted: an answer on one meets `challenge_is_over` (the seat's own refusals first,
   then the challenge's), and neither `seats_awaiting_answers` nor the lapse loop counts
   it — the read asks the fold, and `Challenge.lapse` records no day the removal cut short,
-  which is ADR-0142 §5 on the write side; `WITHDRAWN` is this act's alone. **On a court
-  that has been a game it is *Call it off*, and it reaches the game**
-  ([ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md), ADR-0172 §1):
-  `Challenge.call_off` records `ChallengeCalledOff(called_by=the presser)` — never a
-  withdrawal — and the use case hands `call_off` over on the same port in the same
-  transaction; `GameCalledOff` is the fourth end — read first by `standing_of`, in
-  `SETTLED`, out of `PLAYED`, and **in no tally**, because a ghost is silence and this was an
-  act — and the act is **any player's on the court**, an accepted seat, with no
-  organiser-first rule and no fallback; only in `LINE_UP_INCOMPLETE`
-  (`not_a_half_built_line_up` on a whole court or with a fill still pending). Which act a
-  court gets is the fold's to say (`has_become_a_game`), in the use case, never the
-  client's; asking the aggregate the wrong one is an `invariant`. `withdraw_is_the_organisers`
-  keeps its code for both acts — *the act is not yours* — and an ended challenge is
-  `challenge_is_over` on both, as everywhere else — which is now what a *Call it off*
-  pressed after the departure that called the game off meets. A court whose window already
-  closed is called off without the game being told; the ghost stands with the presser on the
-  challenge's record, and `CallOffGame` steps over that one end and no other. **The card's
+  which is ADR-0142 §5 on the write side; `WITHDRAWN` is this act's alone. **A court that
+  has been a game is nobody's to end, and the route refuses it with `court_has_been_a_game`**
+  ([ADR-0175](../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+  §1; *Call it off* lived here under ADR-0163 and ADR-0172 §1 and is gone). Such a court is
+  called off two ways and no third, each recording `ChallengeCalledOff` — never a withdrawal
+  — and handing `call_off` over on the same port in the same transaction, so `GameCalledOff`
+  is the fourth end — read first by `standing_of`, in `SETTLED`, out of `PLAYED`, and **in
+  no tally**: **the departure that deserts it** (`deserted`: nobody on it, whoever is still
+  deciding; or one player and no seat awaiting — ADR-0175 §2), `called_by` the leaver; and
+  **the hour** (ADR-0175 §3), `called_by=None` on both events, written by the
+  `unfilled-court` loop every minute over every court somebody ever left (`LeftCourtQuery`),
+  for those the fold says are `LINE_UP_INCOMPLETE` and the moment guard says are past their
+  hour — the plan's agreed point, or the horizon's end where no day was agreed — or already
+  history. **Correctness depends on that loop**: the challenge's fold cannot read a plan, so
+  a court past its hour reads *needs a player* until it runs. A ghosted court is called off
+  the same way and `CallOffGame` steps over that one end and no other. **The card's
   dismissal is the reader's own act on `games`** (ADR-0172 §5): `POST /games/{id}/dismissal`
   answers `204`, admitted on a `CALLED_OFF` game for somebody on its court and refused with
   `game_is_not_called_off` on every other standing; `GameDismissed` is recorded once per
   player (`games.dismissed`, a second press writes nothing), the aggregate folds the set,
   and `ReadGames` subtracts its reader — as does `ReadChallenges`, through `GameOfCourtQuery`'s
-  `dismissed_of`, so the challenge row goes with the card (ADR-0173); nothing else reads it,
+  `dismissed_of`, so the challenge row goes with the card (ADR-0173); and the row has a door of
+  its own, `POST /challenges/{id}/dismissal`, for everybody the court asked — the invitee still
+  deciding when it was called off has a row and never had a card — which hands the act to
+  `Game.dismiss_for_the_court` on the court's word (ADR-0175 §5). Nothing else reads the set,
   and the room it might have reached is gone before a card can be dismissed. **Three ends
   are folded from the record and the clock and the fourth is announced, and all four are
   never stored** — there is no `ResultConfirmed`, no sweep and no job, because a derived

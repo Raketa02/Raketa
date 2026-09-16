@@ -487,7 +487,6 @@ async def read_paths(
             court_games=court_games,
             uow=uow,
             clock=clock,
-            planned_games=build_planned_game_handover(session),
         ),
         # **The accept's hand-over and the accept's moment guard**, built the
         # same way, because a departure is the accept's mirror — a seat moving

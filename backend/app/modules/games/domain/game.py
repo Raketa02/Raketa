@@ -255,25 +255,27 @@ class Game:
 
     # -- ending it ---------------------------------------------------------
 
-    def call_off(self, *, by: UUID, occurred_at: Instant) -> None:
-        """Somebody on the court ends a game that has a seat open. **Its end.**
+    def call_off(self, *, by: UUID | None, occurred_at: Instant) -> None:
+        """A game that has a seat open is ended. **Its end.**
 
-        Told by ``challenges`` in the transaction of the withdrawal
-        (``docs/adr/0163`` §2), which has already decided whose act it is — or
-        of the departure that left one player on the court (``docs/adr/0165``
-        §3), where ``by`` is the leaver. What this refuses is the aggregate's
-        own invariant, kept whether or not the caller already guarantees it:
-        **a game awaiting its entry with a seat open**, and nothing else. A
-        court standing whole that will not play lets its window lapse into
-        *Never played*; a game already ended by its clock is never un-ended,
-        because the platform has drawn that card. And the caller **was on the
-        court**: on it now, or the one whose leaving opened a seat that is still
-        open — the one rule every act here shares, read at the width this act
-        needs, since the leaver has been vacated by the time the court is told
-        their departure emptied it.
+        Told by ``challenges`` in the transaction of the departure that left at
+        most one player on the court (``docs/adr/0165`` §3), where ``by`` is
+        the leaver — or of the hour that found the court still short of a
+        player (``docs/adr/0175`` §3), where ``by`` is nobody. What this
+        refuses is the aggregate's own invariant, kept whether or not the
+        caller already guarantees it: **a game awaiting its entry with a seat
+        open**, and nothing else. A court standing whole that will not play
+        lets its window lapse into *Never played*; a game already ended by its
+        clock is never un-ended, because the platform has drawn that card. And
+        a named caller **was on the court**: on it now, or the one whose
+        leaving opened a seat that is still open — the one rule every act here
+        shares, read at the width this act needs, since the leaver has been
+        vacated by the time the court is told their departure emptied it. The
+        hour is on no court and names nobody.
         """
 
-        if by not in self.line_up.players and by not in self.departed:
+        on_the_court = by is None or by in self.line_up.players or by in self.departed
+        if not on_the_court:
             raise YouWereNotOnThisCourt()
         if (
             self.standing_at(occurred_at) is not GameStanding.AWAITING_ENTRY
@@ -301,6 +303,25 @@ class Game:
         """
 
         self._side_of(by)
+        self._clear_for(by, occurred_at=occurred_at)
+
+    def dismiss_for_the_court(self, *, by: UUID, occurred_at: Instant) -> None:
+        """The same act, for somebody **the court vouches for** — anybody the
+        challenge this game came from had asked, seated on the game or not
+        (``docs/adr/0175`` §5).
+
+        The Chats row is drawn for everybody the court asked, and an invitee
+        who was still deciding when the hour or the last departure called it
+        off has a row and no card. Their removal reaches this stream through
+        ``challenges``' hand-over, which has already answered *were they on
+        the court* against the seats it holds; this side asks only its own
+        question — that the game is ``CALLED_OFF`` — and records the same
+        event the rail's own trash does, so one set answers both lists.
+        """
+
+        self._clear_for(by, occurred_at=occurred_at)
+
+    def _clear_for(self, by: UUID, *, occurred_at: Instant) -> None:
         if self.standing_at(occurred_at) is not GameStanding.CALLED_OFF:
             raise GameIsNotCalledOff()
         if by in self.dismissed:

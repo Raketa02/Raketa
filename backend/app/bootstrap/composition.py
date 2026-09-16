@@ -89,6 +89,7 @@ from app.modules.challenges.infrastructure.profile_friendly_choice import (
     ProfileFriendlyChoice,
 )
 from app.modules.games.application.call_off_game import CallOffGame
+from app.modules.games.application.dismiss_game import DismissGameOfCourt
 from app.modules.games.application.open_planned_game import OpenPlannedGame
 from app.modules.games.application.vacate_seat import VacateSeat
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
@@ -187,6 +188,7 @@ from app.modules.challenges.domain.ports import (
     ChallengeRepository,
     CourtPairingQuery,
     LapsingChallengeQuery,
+    LeftCourtQuery,
     OpenChallengeQuery,
     OriginSearchQuery,
     PlayerNames as ChallengePlayerNames,
@@ -205,6 +207,9 @@ from app.modules.challenges.infrastructure.event_sourced_challenge_repository im
 )
 from app.modules.challenges.infrastructure.event_sourced_lapsing_challenge_query import (  # noqa: E501
     EventSourcedLapsingChallengeQuery,
+)
+from app.modules.challenges.infrastructure.event_sourced_left_court_query import (
+    EventSourcedLeftCourtQuery,
 )
 from app.modules.challenges.infrastructure.users_names import (
     UsersNames as ChallengeUsersNames,
@@ -611,6 +616,12 @@ def build_lapsing_challenge_query(session: AsyncSession) -> LapsingChallengeQuer
     them here would be the same stream read twice.
     """
     return EventSourcedLapsingChallengeQuery(session)
+
+
+def build_left_court_query(session: AsyncSession) -> LeftCourtQuery:
+    """The candidate set the hour loop opens — over the log, and with no codec,
+    on the lapse read's argument (``docs/adr/0175`` §3)."""
+    return EventSourcedLeftCourtQuery(session)
 
 
 def build_challenge_names(session: AsyncSession) -> ChallengePlayerNames:
@@ -1171,18 +1182,20 @@ def build_planned_game_handover(
     runtime: EventRuntime | None = None,
 ) -> PlannedGameHandover:
     """The game a completed line-up opens or re-seats, the seat a departure
-    vacates, and the game a withdrawal calls off, recorded inline
-    (``docs/adr/0162``, ``docs/adr/0163``).
+    vacates, the game a deserting departure or the hour calls off, and the
+    dismissal a reader records on it from the Chats row, recorded inline
+    (``docs/adr/0162``, ``docs/adr/0163``, ``docs/adr/0175``).
 
-    It wraps three ``games`` use cases rather than an aggregate: what a game born
+    It wraps four ``games`` use cases rather than an aggregate: what a game born
     of a completed line-up *is* belongs to that context, and the adapter is a
-    translation of one sentence into another — three times.
+    translation of one sentence into another — four times.
 
-    **One repository for all three**, because they run in one transaction and
+    **One repository for all four**, because they run in one transaction and
     each loads the stream it appends to; **no unit of work here**, because the
-    hand-over joins the transaction of the acceptance, the departure or the
-    withdrawal that caused it, so the use case appends and publishes and the
-    caller commits — the boundary stays a decision about the command.
+    hand-over joins the transaction of the acceptance, the departure, the
+    sweep or the dismissal that caused it, so the use case appends and
+    publishes and the caller commits — the boundary stays a decision about the
+    command.
     """
     games = build_game_repository(
         session=session,
@@ -1190,7 +1203,10 @@ def build_planned_game_handover(
         events=build_event_publisher(session, runtime=runtime),
     )
     return GamesPlannedGame(
-        OpenPlannedGame(games=games), VacateSeat(games=games), CallOffGame(games=games)
+        OpenPlannedGame(games=games),
+        VacateSeat(games=games),
+        CallOffGame(games=games),
+        DismissGameOfCourt(games=games),
     )
 
 

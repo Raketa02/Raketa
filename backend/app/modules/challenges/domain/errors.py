@@ -208,16 +208,13 @@ class TheWithdrawIsTheOrganisers(ForbiddenError):
     exists and the caller can see it, and what is being refused is an act on
     everybody else's arrangement.
 
-    **One code for two acts, and the code keeps its name** (``docs/adr/0165``
-    §4–§5). On a court that was never a game the act is *Remove the challenge*
-    and it is the organiser's alone — an invitee, whether they joined or are
-    still deciding, is told so before anything about the court is read. On a
-    court that has been a game the act is *Call it off* and it is **any
-    player's on the court**: the organiser's seat buys nothing there, and
-    somebody who left, the organiser who left, and a newcomer still deciding on
-    a fill are all told the same thing — *the act is not yours*. The sentence
-    lost its fallback clause when ``0165`` §5 made the call-off everybody's;
-    the code did not move, because a shipped client already switches on it.
+    **One act again, and the code keeps its name** (``docs/adr/0165`` §4;
+    ``docs/adr/0175`` §1 retired the second). The act is *Remove the
+    challenge* and it is the organiser's alone — an invitee, whether they
+    joined or are still deciding, is told so before anything about the court
+    is read, and so is an organiser who has left their own seat. The code
+    carried *Call it off* for a season and did not move when that act went,
+    because a shipped client already switches on it.
 
     **The invitee is not offered a smaller version of it either.** Somebody who
     joined leaves the court instead (``docs/adr/0165`` §1), and that is not a
@@ -229,10 +226,7 @@ class TheWithdrawIsTheOrganisers(ForbiddenError):
     code = "withdraw_is_the_organisers"
 
     def __init__(self) -> None:
-        super().__init__(
-            "Only the organiser may remove a challenge, and only somebody on the "
-            "court may call off the game it became."
-        )
+        super().__init__("Only the organiser may remove a challenge.")
 
 
 class TheFillIsTheLiveMembers(ForbiddenError):
@@ -292,34 +286,31 @@ class SomebodyHasJoinedTheCourt(ConflictError):
         )
 
 
-class OnlyAHalfBuiltLineUpIsWithdrawn(ConflictError):
-    """A call-off asked of a court that has been a game and is not half built.
+class TheCourtHasBeenAGame(ConflictError):
+    """A removal asked of a court that has been a game.
 
-    **The exit exists exactly where nothing else ends it**, and on a court that
-    has been a game that is ``LINE_UP_INCOMPLETE`` (``docs/adr/0163`` §2, kept by
-    ``docs/adr/0165`` §5): a seat is open and nobody is deciding on it. A whole
-    court — ``ON`` — has no seat to call the game off for, and a full court that
-    will not play lets its window lapse into *Never played* as it always has; a
-    court whose open seat a newcomer is still deciding on — ``AWAITING_ANSWERS``
-    after a fill — is not half built yet, and becomes so again the moment they
-    say no or their day runs out.
+    **Such a court has no exit anybody presses** (``docs/adr/0175`` §1). It
+    ends by its seats — the departure that leaves at most one player on it —
+    or by its hour, when it is still short of a player as its moment passes;
+    never by one person's decision over the others. *Remove the challenge* is
+    the organiser's while nobody has joined, and a court that became a game is
+    one everybody joined, whatever its seats hold since. Asked before
+    ``SomebodyHasJoinedTheCourt``, because an organiser alone again on a
+    reopened court would otherwise be told nobody has joined a court that has
+    been played for.
 
-    **One code for the two, deliberately.** They are one sentence — *this is not
-    a half-built line-up* — and the fold has already told the caller which.
-
-    **Never on a court that was never a game.** There the act is *Remove the
-    challenge*, and its refusal is ``SomebodyHasJoinedTheCourt``: a court that
-    was never a game cannot be half built without somebody having joined, so
-    the question this code answers does not arise. An ended challenge is
-    refused with ``TheChallengeIsOver`` on both kinds of court — the same word
-    every other act here uses for one, and it used to be this code for the
-    withdraw alone.
+    Its own code rather than ``somebody_has_joined``, so a client that ever
+    offered the act by mistake reads which rule it met. An ended court is
+    refused with ``TheChallengeIsOver`` first, as every act is.
     """
 
-    code = "not_a_half_built_line_up"
+    code = "court_has_been_a_game"
 
     def __init__(self) -> None:
-        super().__init__("Only a game with a seat open can be called off.")
+        super().__init__(
+            "This court became a game; it ends only by its players leaving or "
+            "by its hour passing."
+        )
 
 
 class TheGameIsHistory(ConflictError):
@@ -359,6 +350,22 @@ class TheGameMomentHasPassed(ConflictError):
         super().__init__("The moment this game was agreed for has passed.")
 
 
+class TheCourtIsNotCalledOff(ConflictError):
+    """*Remove this row* asked of a court that is not called off.
+
+    The dismissal is admitted on ``CALLED_OFF`` and on no other standing
+    (``docs/adr/0172`` §5, ``docs/adr/0175`` §5): a live court's row is the
+    court, and the other endings' rows are the record for the day they stay.
+    The game's own trash refuses the same case as ``game_is_not_called_off``;
+    this is the row's word for it, one code on each list.
+    """
+
+    code = "court_is_not_called_off"
+
+    def __init__(self) -> None:
+        super().__init__("Only a called-off court's row can be removed.")
+
+
 class TheChallengeIsOver(ConflictError):
     """Something was asked of a challenge nobody is left in.
 
@@ -367,8 +374,9 @@ class TheChallengeIsOver(ConflictError):
     would end what has ended; and answering a seat on a challenge its organiser
     removed while the seat's day was still running (``docs/adr/0165`` §4) would
     say yes to a court that is over. **One code for the four endings**,
-    whichever act met them — *Call it off* pressed after the departure that
-    called the game off meets it too (``docs/adr/0172`` §2).
+    whichever act met them — an answer to a fill's invitation after the court
+    it was for was called off meets it too (``docs/adr/0172`` §2,
+    ``docs/adr/0175`` §2).
     """
 
     code = "challenge_is_over"

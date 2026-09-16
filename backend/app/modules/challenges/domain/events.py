@@ -240,20 +240,23 @@ class ChallengeCalledOff:
     """The game this court became was called off, and the court ended with it
     (``docs/adr/0172`` §1).
 
-    Written by the two acts that call a game off and by nothing else, in the
+    Written by the two things that call a game off and by nothing else, in the
     same transaction as the hand-over to ``games``: the **departure** that
-    leaves one player on a game — ``called_by`` the leaver — and *Call it off*
-    on a reopened court, any player's on it — ``called_by`` the presser. The
-    seat, the court's ending and the game's end commit together or none of them
-    does.
+    leaves at most one player on a game — ``called_by`` the leaver — and, since
+    ``docs/adr/0175`` §3, **the hour**: a court still short of a player when
+    its moment passes is called off by the platform, and ``called_by`` is
+    ``None``. Nobody presses it any more (``0175`` §1). The seat, the court's
+    ending and the game's end commit together or none of them does.
 
     **The second event here that is not about a seat**, and the second
     exemption: a whole-court conclusion with an actor, which is why its field is
     ``called_by`` — as on ``GameCalledOff`` — and not ``player_id``, the name a
     seat's answer carries. It carries the actor because, unlike the withdrawal,
     the act is not the organiser's by construction and no seat on the stream
-    says whose it was: the presser is still seated among others, and the
-    leaver's ``SeatLeft`` is one of several.
+    says whose it was: the leaver's ``SeatLeft`` is one of several. **Nullable
+    at version 1**: a payload written before ``0175`` carries a player and still
+    decodes; the field widened, and no reader of it was ever outside this
+    process.
 
     Whole-challenge and irreversible, as the withdrawal is: there is no fill, no
     acceptance and no re-seat from it, and re-asking the same people is a
@@ -261,7 +264,7 @@ class ChallengeCalledOff:
     """
 
     challenge_id: UUID
-    called_by: UUID
+    called_by: UUID | None
     occurred_at: datetime
 
 

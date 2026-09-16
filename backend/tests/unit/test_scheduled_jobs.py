@@ -26,6 +26,7 @@ from app.bootstrap.jobs import (
     CANDIDATE_INDEX_TAIL_JOB,
     CHALLENGE_LAPSE_JOB,
     CONVERSATION_SWEEP_JOB,
+    UNFILLED_COURT_JOB,
     RATING_CATCH_UP_JOB,
     EXPOSURE_ROLL_JOB,
     GRID_STALENESS_JOB,
@@ -174,6 +175,7 @@ def _nothing_but(**overrides):
             "GRID_STALENESS_ENABLED": False,
             "INTEREST_EXPIRY_ENABLED": False,
             "CHALLENGE_LAPSE_ENABLED": False,
+            "UNFILLED_COURT_ENABLED": False,
             "RATING_CATCH_UP_ENABLED": False,
             "CONVERSATION_SWEEP_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
@@ -605,6 +607,57 @@ async def test_the_lapse_loop_runs_end_to_end_through_the_real_wiring(
         record.message == "challenge lapse loop finished"
         and record.seats == 0
         and record.challenges == 0
+        and record.conflicts == 0
+        for record in caplog.records
+    )
+
+
+# ---------------------------------------------------------------------------
+# The hour loop (docs/adr/0175 §3)
+# ---------------------------------------------------------------------------
+
+
+def test_the_hour_loop_is_registered_and_carries_the_configured_cadence():
+    """A minute, because the interval is how long a court past its hour reads
+    *needs a player* with nothing to press — a fact about the deployment and
+    not about any court."""
+
+    settings = _nothing_but(
+        UNFILLED_COURT_ENABLED=True, UNFILLED_COURT_INTERVAL_SECONDS=30.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [job.name for job in jobs] == [UNFILLED_COURT_JOB]
+    assert jobs[0].interval_seconds == 30.0
+
+
+def test_the_hour_loop_without_a_session_factory_refuses_to_be_registered():
+    """It reads the log and correctness depends on it, so it joins the loud
+    branch twice over: a loop that silently did not register would leave
+    every unfilled court reading *needs a player* for ever."""
+
+    settings = _nothing_but(UNFILLED_COURT_ENABLED=True)
+
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(session_factory=None, settings=settings)
+
+
+async def test_the_hour_loop_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """A quiet sweep is logged as a quiet sweep, with the two figures the
+    record exists for."""
+
+    settings = _nothing_but(UNFILLED_COURT_ENABLED=True)
+    (hour,) = build_scheduled_jobs(session_factory=session_factory, settings=settings)
+
+    with caplog.at_level(logging.INFO):
+        await hour.run_once()
+
+    assert any(
+        record.message == "unfilled court loop finished"
+        and record.courts == 0
         and record.conflicts == 0
         for record in caplog.records
     )

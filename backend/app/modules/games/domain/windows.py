@@ -78,6 +78,22 @@ PROPOSAL_WINDOW: Final = timedelta(hours=24)
 ACCEPTANCE_GRACE: Final = timedelta(hours=6)
 
 
+def horizon_ends_at(planned_at: Instant) -> Instant:
+    """The last instant this game could have been played — the end of its
+    week, and **the moment a court with no day agreed is measured against**
+    (``docs/adr/0175`` §3).
+
+    A plan's agreed point is the moment while there is one; a court whose day
+    was never picked has none, and read that way it would admit a fill and a
+    departure right up to the entry window closing on a ghost. So the horizon's
+    end stands in for it: past this instant the game is one nobody may be
+    seated into or leave, and the hour loop calls a court still short of a
+    player off here rather than letting the grace ghost it.
+    """
+
+    return instant(planned_at + PLAN_HORIZON)
+
+
 def entry_closes_at(planned_at: Instant) -> Instant:
     """When *we played* stops being sayable, and the game becomes a ghost.
 
