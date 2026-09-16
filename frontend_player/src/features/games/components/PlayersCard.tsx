@@ -141,7 +141,7 @@ export function PlayersCard({ game, playerId, pairing, faces }: PlayersCardProps
 
           const { playerId: who } = seat;
           const person = {
-            ...(seat.nickname === undefined ? {} : { nickname: seat.nickname }),
+            ...(seat.name === undefined ? {} : { name: seat.name }),
             yours: who === playerId,
           };
           const row = pairingRowOf(seat);

@@ -5,7 +5,11 @@
   before the court is whole), §1's
   *a challenge folds `game_opened` off `SeatLeft`* (it folds it off the line-up completing), and
   §1's and §9's *the last person may leave too … and it lapses into Never played* (the departure
-  that leaves one on a game calls it off). §2–§8 stand.
+  that leaves one on a game calls it off). §2–§8 stand — **§2's title narrowed 2026-09-15 by
+  [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1**
+  to *by its seats alone*: a court that has been a game still reaches no ending from its seats,
+  and it **ends with its game**, by either act that calls the game off, recorded on the challenge
+  as `CALLED_OFF` in the transaction that tells the game.
 - **Date:** 2026-09-12
 - **Supersedes, by named sentence:**
   [ADR-0142](0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md) §2's
@@ -175,6 +179,14 @@ the one `LINE_UP_INCOMPLETE` that does not — until the act that touches the ga
 > The withdraw reaches a reopened court and calls the game off in the same transaction; the
 > organiser's fallback is decided there too. The paragraph above is kept as the reason the
 > refusal was interim rather than as a rule.
+
+> **And the court has an ending of its own, since 2026-09-15:
+> [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1.**
+> This section's title holds for the seats: a court that has been a game still folds to no
+> ending from them. It ends **with its game** — the departure that deserts it and *Call it off*
+> each record `ChallengeCalledOff` in the transaction that tells the game — and reads
+> `CALLED_OFF`, the seventh standing, rather than staying `LINE_UP_INCOMPLETE` after its game
+> is over.
 
 ### 3. The game's line-up stops being frozen, and the same game is re-seated
 

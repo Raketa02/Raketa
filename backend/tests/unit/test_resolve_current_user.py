@@ -15,7 +15,7 @@ from app.modules.users.application.resolve_current_user import (
 )
 from app.modules.users.domain.errors import UserNotEligible
 from app.modules.users.domain.user import User
-from app.modules.users.domain.value_objects import Email, HashedPassword, Nickname
+from app.modules.users.domain.value_objects import Email, HashedPassword
 from app.shared.ids import new_uuid
 
 
@@ -82,7 +82,6 @@ def _user() -> User:
     return User(
         id=new_uuid(),
         email=Email("alice@example.com"),
-        nickname=Nickname("alice"),
         password_hash=HashedPassword("hash"),
         created_at=datetime.now(timezone.utc),
     )

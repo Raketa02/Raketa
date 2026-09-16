@@ -14,7 +14,9 @@
  * `has_player_profile` is served on `GET /users/me`, which the app already asks for, already
  * keys, and already seeds from bootstrap when a stored session was validated. So on a warm
  * launch the profile branch costs nothing at all, and on a cold one it costs a request the
- * app was going to make anyway.
+ * app was going to make anyway. **The name rides on the same read** — the gate's first
+ * destination ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §3) costs nothing more than the fourth did.
  *
  * **All three must answer before the gate does.** A launch that can read ratings but not the
  * player has no safe default — routing into the app is exactly the outcome the fourth branch
@@ -178,6 +180,7 @@ export function useEntryDecision(): EntryDecision {
   if (beingReplaced) return { kind: 'pending' };
 
   return entryDestination({
+    hasName: user.data.name !== undefined,
     ratings: ratings.data,
     runInProgress: run.data ?? undefined,
     deferredRunIds,

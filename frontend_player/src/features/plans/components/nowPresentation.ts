@@ -222,7 +222,10 @@ export const ACCENT: Readonly<Record<GameCardName, CardAccent>> = {
   counted: { bar: theme.color.mint, button: 'settled' },
   uncounted: { bar: theme.color.mint, button: 'settled' },
   'never-played': { bar: theme.color.mint, button: 'settled' },
-  'called-off': { bar: theme.color.mint, button: 'settled' },
+  // The on-dark fill — the tag's own quiet colour — under a red tag (ADR-0172 §8): the door
+  // explains rather than settles, and a green door under *Called off* would be a card whose
+  // colours disagreed about it. The bar stays the soft default; nothing on this card is agreed.
+  'called-off': { bar: theme.color.mint, button: 'onDark' },
   unreadable: { bar: theme.color.mint, button: 'settled' },
 };
 
@@ -270,7 +273,9 @@ export function sportSpoken(game: Game, sportName: string): string {
 
 /**
  * **The one line the card keeps** — the window on *Needs result*, and the standing on everything
- * that is not a rung. `undefined` on the three rungs whose whole account is the slots.
+ * that is not a rung. `undefined` on the three rungs whose whole account is the slots, **and on
+ * the called-off card**, which names nobody under its slots (ADR-0172 §8): its tag is the whole
+ * of what it says, and *What happened?* is the door to the screen that says who.
  *
  * ***Needs result* is the override that survived the gloss**, because a passed agreement makes the
  * unfilled slots irrelevant and the entry window is the only live fact left. It **obeys nothing**:
@@ -293,7 +298,7 @@ export function cardLine(name: GameCardName, { game, playerId }: CardFacts): str
       : `${durationLeft(game.entryClosesAt, game.readAt)} left`;
   }
 
-  if (isRung(name)) return undefined;
+  if (isRung(name) || name === 'called-off') return undefined;
 
   return gameStandingLine(game, playerId);
 }
@@ -319,6 +324,15 @@ export interface CardFacts {
  * (ADR-0155), and a door that named it would be promising a button it does not press.
  */
 export const FINISH_THE_PLAN = 'Finish the plan';
+
+/**
+ * **The wide door on a called-off card** — a question, because the card names nobody and the
+ * screen behind it says who ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §8). The door is `open`, as *Game on*'s and *Planning*'s are; what you arrive at is the
+ * ending block's heading — *The game was called off for lack of players*, or *{name} called the
+ * game off* — and the verb names the reason for going, as *Finish the plan* does.
+ */
+export const WHAT_HAPPENED = 'What happened?';
 
 /**
  * **The wide door's verb, per name** — §22.7's three, one per door, *Finish the plan* on the
@@ -348,7 +362,7 @@ const DOOR_LABEL: Readonly<Record<GameCardName, string | undefined>> = {
   counted: undefined,
   uncounted: undefined,
   'never-played': undefined,
-  'called-off': undefined,
+  'called-off': WHAT_HAPPENED,
   unreadable: undefined,
 };
 

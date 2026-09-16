@@ -29,13 +29,16 @@ delivery rather than to a client.
 **What is refused, and why, is in ``telling.py``** — as a table, so the six the
 prose says publish nothing are named in one place a test can walk.
 
-**Two arms write nothing into the room and take the room away.** A withdrawal
-**destroys** it (``docs/adr/0153`` §2), and so does the game being called off
-(``docs/adr/0165`` §3) — a departure that leaves one player on a game calls it
-off with no withdrawal beside it. The tellings that draw the least are the ones
-with the largest effect — which is why their rows in ``telling.py`` reach the
-room while refusing a line, and why a reader who took *refused* to mean *not
-delivered* would leave every withdrawn court a readable room for ever.
+**Two arms write nothing into the room and take the room away.** A challenge
+ending by an act **destroys** it (``docs/adr/0153`` §2) — the organiser's
+removal, and since ``docs/adr/0172`` §6 the court's own call-off, on the same
+arm — and so does the game being called off (``docs/adr/0165`` §3). The two
+acts that call a game off write the court's ending and the game's in one
+transaction, so whichever is delivered first destroys the room and the other
+finds nothing. The tellings that draw the least are the ones with the largest
+effect — which is why their rows in ``telling.py`` reach the room while
+refusing a line, and why a reader who took *refused* to mean *not delivered*
+would leave every withdrawn court a readable room for ever.
 
 **A line nudges the room and an opening does not**, which is the nudge's own
 shape rather than a rule about tellings (``docs/adr/0147`` §3). A frame says *the
@@ -76,6 +79,7 @@ from uuid import UUID, uuid4
 from app.application.events import DeliveryContext
 from app.kernel import Instant, instant, minute_of_day
 from app.modules.challenges.domain.events import (
+    ChallengeCalledOff,
     ChallengeOpenedFromMutualInterest,
     ChallengeWithdrawn,
     SeatAccepted,
@@ -174,8 +178,8 @@ class TellTheRoom:
                 values={DEPARTURE: _departure_of(event).value},
                 context=context,
             )
-        elif isinstance(event, ChallengeWithdrawn):
-            await self._withdrawn(event)
+        elif isinstance(event, (ChallengeWithdrawn, ChallengeCalledOff)):
+            await self._the_court_was_ended(event)
         elif isinstance(event, GameCalledOff):
             await self._called_off(event)
         elif isinstance(event, GamePlanned):
@@ -325,13 +329,21 @@ class TellTheRoom:
 
     # -- being closed ------------------------------------------------------
 
-    async def _withdrawn(self, event: ChallengeWithdrawn) -> None:
-        """Whoever held the exit ended it. **The room is destroyed, and writes
-        no line** — whether or not it already holds its game (``docs/adr/0163``).
+    async def _the_court_was_ended(
+        self, event: ChallengeWithdrawn | ChallengeCalledOff
+    ) -> None:
+        """Whoever held the exit ended it — the organiser removing a court
+        nobody had joined, or the court being called off with its game
+        (``docs/adr/0172`` §6). **The room is destroyed, and writes no line**
+        — whether or not it already holds its game (``docs/adr/0163``).
 
         ``docs/adr/0153`` §2. There is nobody left to read a line — the news is on
-        the challenge screen — and this is the only arm here whose whole effect is
-        that the room stops existing.
+        the challenge row and the card — and this arm's whole effect is that the
+        room stops existing. The court's call-off is written in one transaction
+        with the game's end, so whichever of the two is delivered first
+        destroys the room and the other finds nothing; on ADR-0163 §6's ghost
+        path the game is not told, and this is what destroys a room the sweep
+        has not reached.
 
         **No nudge, and that is not an omission.** A nudge says *the room is now
         this long*, and there is no room to be a length; a phone with the screen
@@ -361,13 +373,12 @@ class TellTheRoom:
         and writes no line** (``docs/adr/0165`` §3) — the withdrawal's arm,
         reached through the game.
 
-        A call-off arrives with a withdrawal beside it (``docs/adr/0163``) or
-        alone, told by the departure that left one player on the court. Beside
-        a withdrawal, whichever of the two is delivered first destroys the room
-        and this finds nothing; alone, this is the only telling that will. A
-        room that is not there is that redelivery, or a game this context was
-        never told about, and both want exactly nothing done. No nudge, for the
-        withdrawal's reason: there is no room to be a length.
+        A call-off arrives beside the court's own ending, written in the same
+        transaction by either act (``docs/adr/0172`` §1): whichever of the two
+        is delivered first destroys the room and the other finds nothing. A
+        room that is not there is that, a redelivery, or a game this context
+        was never told about, and all want exactly nothing done. No nudge, for
+        the withdrawal's reason: there is no room to be a length.
 
         **Found through the game, and the room always knows it by now.** A
         call-off is written in a strictly later transaction than the game's

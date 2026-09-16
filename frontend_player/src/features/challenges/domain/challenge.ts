@@ -22,6 +22,12 @@
  * that lapsed between the read and the render. So an ended challenge is one the server called
  * ended, and a seat is out of it when it says it declined or lapsed.
  *
+ * **And who ended it is not read here either** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §3): every ending carries `ended_by`, read on the server from the same per-seat instants the
+ * ending is dated from, so the row's name and the row's date cannot come from two clocks. This
+ * side used to walk the seats for *the first decline in court order*, which was wrong the moment
+ * a departure ended a court and undefined when nobody declined; now it looks one id up.
+ *
  * **This names nobody the server refused about.** The gate ran server-side and refused whole;
  * all this decides is which of the organiser's **own** open games to point at, which #222 puts
  * on the *embarrassment* side rather than the safety side.
@@ -41,6 +47,9 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import {
   GIVES_UP_THE_SEAT,
   type ChallengeSide,
+  type EndedFacts,
+  type EndedStanding,
+  type EndingFacts,
   type SeatAnswer,
   type Standing,
   type StandingFacts,
@@ -53,13 +62,15 @@ export interface ChallengeSeat {
   /** Absent while they have not answered, and on a seat nobody was put in. */
   readonly answer?: SeatAnswer;
   /**
-   * The whole handle, and never a familiar form derived from it (ADR-0107).
+   * The whole name, and never a familiar form derived from it (ADR-0107, read through
+   * ADR-0171) — and never the nickname, which is a handle drawn on a record and said nowhere.
    *
-   * Absent on an empty seat and absent where `users` no longer has the account. The seat stays
-   * either way — a seat with no handle is still a position on the court, and every sentence
-   * that would have named them says `?` instead.
+   * Absent on an empty seat and absent where `users` no longer has the account — never for an
+   * unnamed player, whom the entry gate holds at the naming step. The seat stays either way —
+   * a seat with no name is still a position on the court, and every sentence that would have
+   * named them says `?` instead.
    */
-  readonly nickname?: string;
+  readonly name?: string;
   /**
    * When this seat's answer stops being wanted — **this seat's own**, dated when it was
    * invited.
@@ -105,6 +116,28 @@ export interface Challenge {
    * which is this field for three standings and the court's own deadlines for the fourth.
    */
   readonly endedAt?: string;
+  /**
+   * **The player whose act ended it** — on every ending, and absent on the three standings that
+   * are not one ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §3). Always the occupant of one of the court's seats, never a second copy of a name: the
+   * face and the name a row draws are that seat's, which is what makes *the face is who the
+   * sentence names* one lookup. On `CALLED_OFF` it is the last leaver or whoever pressed *Call
+   * it off*, told apart by their seat; on `DECLINED` the seat whose no or departure completed the
+   * desertion; on `LAPSED` the seat whose window was the last to run out; on `WITHDRAWN` the
+   * organiser.
+   *
+   * **On the list and on every act's reply, and not on the detail read** — `GET /challenges/{id}`
+   * carries neither this nor `gameId` today, so the screen that draws an ended court reads them
+   * off the row the list already holds (`useChallengeRow`).
+   */
+  readonly endedBy?: string;
+  /**
+   * **The game this court became**, and absent until its line-up first completed — the same id
+   * ever after, through a re-seat and through the ending (ADR-0172 §4). What lets the leaver's
+   * sheet tell *calls the game off* from *closes this court* without a join on the games cache.
+   * On the list and on every act's reply, as `endedBy` is.
+   */
+  readonly gameId?: string;
   /** The instant the whole list was folded against. Every duration on the row is read from it. */
   readonly readAt: string;
   /** The court in its fixed order, empty seats included. */
@@ -112,10 +145,11 @@ export interface Challenge {
 }
 
 /**
- * The three standings that mean **this challenge has ended**.
+ * The four standings that mean **this challenge has ended**.
  *
- * A `Record` keyed by the union rather than a list, for §1's reason: a seventh standing added
- * to the contract fails `pnpm typecheck` here rather than quietly counting as open.
+ * A `Record` keyed by the union rather than a list, for §1's reason: an eighth standing added
+ * to the contract fails `pnpm typecheck` here rather than quietly counting as open — which is
+ * exactly how `CALLED_OFF` arrived (ADR-0172 §2).
  */
 const ENDED: Readonly<Record<Standing, boolean>> = {
   AWAITING_ANSWERS: false,
@@ -124,7 +158,18 @@ const ENDED: Readonly<Record<Standing, boolean>> = {
   DECLINED: true,
   LAPSED: true,
   WITHDRAWN: true,
+  CALLED_OFF: true,
 };
+
+/** Whether this standing is one of the four endings — `ENDED`, read as a type guard. */
+export function isAnEnding(standing: Standing): standing is EndedStanding {
+  return ENDED[standing];
+}
+
+/** The same guard over the fold: whether these facts are an ending's, with who and how on them. */
+export function hasEnded(facts: StandingFacts): facts is EndedFacts {
+  return isAnEnding(facts.standing);
+}
 
 /**
  * Whether a game still stands between the people in it.
@@ -265,9 +310,9 @@ export function ownSeat(challenge: Challenge, playerId: string): ChallengeSeat |
  *   is awaiting, so the reader's own answer may already be given, and *"They're waiting on you"*
  *   was drawn for somebody who had already spoken.
  *
- * **Who a sentence names is read off the seats in court order**, and it is always the whole
- * handle or nobody: a seat `users` can no longer answer for is `unknown`, which draws `?`
- * rather than a name this app invented.
+ * **Who an ending's sentence names is `ended_by`'s seat**, and it is always the whole name or
+ * nobody: a seat `users` can no longer answer for is `unknown`, which draws `?` rather than a
+ * name this app invented — and so is an ending the wire named nobody for.
  */
 export function standingFactsFor(
   challenge: Challenge,
@@ -277,8 +322,8 @@ export function standingFactsFor(
 
   const side: ChallengeSide = challenge.organiserId === playerId ? 'organiser' : 'invitee';
   // What the reader's own seat says. Both **live** standings key an invitee's sentence on it
-  // (§13.1, §13.2) and the four endings never do, so it is read once here rather than twice
-  // below. Absence means opposite things on the two — see `StandingFacts`.
+  // (§13.1, §13.2) and the two folded endings read it before naming anybody else, so it is read
+  // once here. Absence means opposite things on the two live ones — see `StandingFacts`.
   const ownAnswer = ownSeat(challenge, playerId)?.answer;
 
   switch (challenge.standing) {
@@ -304,11 +349,10 @@ export function standingFactsFor(
         ...(ownAnswer === undefined ? {} : { ownAnswer }),
       };
     case 'DECLINED':
-      return { side, standing: 'DECLINED', player: whoAnswered(challenge, 'DECLINED') };
     case 'LAPSED':
-      return { side, standing: 'LAPSED', player: whoAnswered(challenge, 'LAPSED') };
     case 'WITHDRAWN':
-      return { side, standing: 'WITHDRAWN', player: seatName(organiserSeat(challenge)) };
+    case 'CALLED_OFF':
+      return { side, standing: challenge.standing, ...endingFacts(challenge, playerId) };
   }
 }
 
@@ -319,18 +363,96 @@ function countAwaiting(challenge: Challenge): number {
 }
 
 /**
- * The **first** seat in court order to have given this answer.
+ * **Whose act ended it, and how** — `ended_by` looked up on the court, once, for the four
+ * endings' one payload (ADR-0172 §3, §7).
  *
- * One person, because the sentence names one. A doubles court where two people declined is a
- * court that has ended once, and counting them would be a figure this list was never asked
- * for — the ceiling every refusal in this feature is already held to.
+ * `you` where the id is the reader's; the seat's whole name where it is somebody else's; and
+ * `unknown` where the wire named nobody, or named a seat `users` no longer answers for. A
+ * departure is read off that seat's own answer — `LEFT` — and off nothing else, so the sentence
+ * is always true of the person it names whichever of two the server's bound picked.
  */
-function whoAnswered(challenge: Challenge, answer: SeatAnswer): NamedPlayer {
-  return seatName(challenge.seats.find((seat) => seat.answer === answer));
+function endingFacts(challenge: Challenge, playerId: string): EndingFacts {
+  const seat = whoEndedIt(challenge);
+  const ownAnswer = ownSeat(challenge, playerId)?.answer;
+
+  return {
+    endedBy: seat?.playerId === playerId ? { kind: 'you' } : seatName(seat),
+    byADeparture: seat?.answer === 'LEFT',
+    ...(ownAnswer === undefined ? {} : { ownAnswer }),
+  };
 }
 
-function organiserSeat(challenge: Challenge): ChallengeSeat | undefined {
-  return challenge.seats.find((seat) => seat.playerId === challenge.organiserId);
+/**
+ * **The seat `ended_by` holds**, or nothing — where the wire named nobody, or named somebody who
+ * holds no seat on this court, which the contract says cannot happen and this side does not
+ * assume.
+ */
+export function whoEndedIt(challenge: Challenge): ChallengeSeat | undefined {
+  if (challenge.endedBy === undefined) return undefined;
+  return challenge.seats.find((seat) => seat.playerId === challenge.endedBy);
+}
+
+/**
+ * **Whether an ending's sentence is about the reader's own act** — and therefore whose face the
+ * row draws ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7's *the face is who the sentence names*, read from the other side).
+ *
+ * Two ways: `ended_by` is the reader — their own removal, their own press, the departure that
+ * called it off — or, on the two **folded** endings, the reader's own seat gave up: §13's
+ * invitee column says *You said no* and *Your day ran out* of a seat that did, whoever's act
+ * closed the court after it. The two announced endings never read the reader's seat that way:
+ * a *Called off* row names the act that called it off, and a withdrawal names the organiser to
+ * everybody asked, answered or not (§13 — *separating them would say who else was on the court*).
+ *
+ * It is one predicate here rather than one in the deck and one in the faces rule, because the
+ * two must agree: a row drawing `ended_by`'s face under a sentence about the reader would be a
+ * face the words do not name.
+ */
+export function endingIsTheReadersOwn(facts: EndedFacts): boolean {
+  if (facts.endedBy.kind === 'you') return true;
+  if (facts.standing !== 'DECLINED' && facts.standing !== 'LAPSED') return false;
+  return facts.ownAnswer !== undefined && GIVES_UP_THE_SEAT[facts.ownAnswer];
+}
+
+/**
+ * **What the reader's leaving would do to this court** — the sheet's rule
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §9), read off the row the list already holds and never off a second read.
+ *
+ * The ending rule is *at most one player on the court and no seat awaiting an answer*
+ * (ADR-0165 §3), so the reader's leaving ends it exactly when they hold an accepted seat, **one**
+ * other seat is accepted, and nobody is still deciding. Which sentence that earns is
+ * `gameId`'s: on a court that has been a game the departure calls the game off — for the one
+ * left, too — and on one that has not it closes the court. `undefined` is every other court,
+ * where today's line stands: the seat opens for somebody else.
+ *
+ * A court already over answers nothing, because there is nothing to leave. The row can be a
+ * beat behind the server — a second departure landing while the sheet is up — and the server's
+ * answer is what happens; a refusal is said on the sheet as every refusal there is.
+ */
+export function leavingWouldEnd(challenge: Challenge, playerId: string): LeavingEnds | undefined {
+  if (!challengeStands(challenge)) return undefined;
+  if (ownSeat(challenge, playerId)?.answer !== 'ACCEPTED') return undefined;
+  if (countAwaiting(challenge) > 0) return undefined;
+
+  const others = challenge.seats.filter(
+    (seat) => seat.playerId !== playerId && seat.answer === 'ACCEPTED',
+  );
+  const [theOneLeft] = others;
+  if (theOneLeft === undefined || others.length !== 1) return undefined;
+
+  return {
+    court: challenge.gameId === undefined ? 'never-a-game' : 'a-game',
+    theOneLeft: seatName(theOneLeft),
+  };
+}
+
+/** What a departure ends, and for whom — {@link leavingWouldEnd}'s answer where it has one. */
+export interface LeavingEnds {
+  /** Whether the court has been a game: the departure calls it off, or closes a court that never was one. */
+  readonly court: 'a-game' | 'never-a-game';
+  /** The one person the reader would leave alone on it. */
+  readonly theOneLeft: NamedPlayer;
 }
 
 /**
@@ -341,7 +463,5 @@ function organiserSeat(challenge: Challenge): ChallengeSeat | undefined {
  * exactly what ADR-0107 forbids.
  */
 export function seatName(seat: ChallengeSeat | undefined): NamedPlayer {
-  return seat?.nickname === undefined
-    ? { kind: 'unknown' }
-    : { kind: 'player', nickname: seat.nickname };
+  return seat?.name === undefined ? { kind: 'unknown' } : { kind: 'player', name: seat.name };
 }

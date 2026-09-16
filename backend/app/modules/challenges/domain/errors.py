@@ -366,8 +366,9 @@ class TheChallengeIsOver(ConflictError):
     set of people, which is a **new** challenge; leaving it or withdrawing it
     would end what has ended; and answering a seat on a challenge its organiser
     removed while the seat's day was still running (``docs/adr/0165`` §4) would
-    say yes to a court that is over. **One code for the three endings**,
-    whichever act met them.
+    say yes to a court that is over. **One code for the four endings**,
+    whichever act met them — *Call it off* pressed after the departure that
+    called the game off meets it too (``docs/adr/0172`` §2).
     """
 
     code = "challenge_is_over"

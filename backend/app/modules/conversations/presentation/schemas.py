@@ -9,7 +9,7 @@ it was stored, so rewording a line could never reword the backlog.
 
 **``values`` never repeats what the response already resolves.** The line
 carries ``actor_id``; the client fills ``{name}`` from the ``people`` beside it,
-which the read resolved at that moment. A handle correction therefore reaches the
+which the read resolved at that moment. A name correction therefore reaches the
 whole backlog for free.
 
 **And ``people`` is everybody the response names, not only the roster**
@@ -33,7 +33,7 @@ entry's ``seq`` is the high-water mark, on the detail and on the row alike
 **Every nullable field here is ``null`` and never omitted**, except a
 photograph's two: a room whose line-up has not completed has no game, a room
 where nothing has happened has no last entry, and a player ``users`` can no
-longer name has no handle — three measured nothings. ``photo_id`` and
+longer name has no name — three measured nothings. ``photo_id`` and
 ``photo_url`` are **omitted**, exactly together, because a player with no
 photograph is not an absence to report: the client draws a generated court
 poster, which needs nothing from the wire.
@@ -54,7 +54,7 @@ OMITTED: Any = None
 
 
 class ConversationPersonSchema(BaseModel):
-    """One person this response names — **a handle and a face, and nothing else.**
+    """One person this response names — **a name and a face, and nothing else.**
 
     No Level, no band, no area, no score — those are a *card*'s, and a card is
     what a searcher reads to decide about a game that might happen. Everybody
@@ -73,15 +73,17 @@ class ConversationPersonSchema(BaseModel):
             "`author_id` match"
         ),
     )
-    nickname: str | None = Field(
+    name: str | None = Field(
         ...,
         description=(
-            "The whole handle, and **`null` for an account `users` can no longer "
-            "name**. The person keeps their place either way: a member dropped "
-            "would draw a three-person doubles court, and an actor dropped "
-            "would leave a line naming nobody. Draw the unknown player's mark "
-            "for `null` and nothing else. Nothing may derive a familiar form "
-            "from it."
+            "The whole name, and **`null` for an account `users` can no longer "
+            "name** — never for an unnamed player, whom the entry gate holds at "
+            "the naming step. The person keeps their place either way: a member "
+            "dropped would draw a three-person doubles court, and an actor "
+            "dropped would leave a line naming nobody. Draw the unknown player's "
+            "mark for `null` and nothing else. Nothing may derive a familiar "
+            "form from it, and it is never the nickname: a handle is drawn on a "
+            "record and said nowhere (``docs/adr/0171``)."
         ),
     )
     photo_id: UUID = Field(
@@ -205,7 +207,7 @@ class SystemLineSchema(BaseModel):
         ...,
         description=(
             "Who did it, or `null`. **Render `{name}` from the `people` on the "
-            "response that carried this line** — the handle is never repeated "
+            "response that carried this line** — the name is never repeated "
             "here, so a corrected one fixes the whole backlog. Not from "
             "`members` alone: the actor of a `SEAT_LEFT` line is by definition "
             "no longer one, and `people` is where the read put their face. "
@@ -216,7 +218,7 @@ class SystemLineSchema(BaseModel):
     values: dict[str, str] = Field(
         ...,
         description=(
-            "What the sentence needs beyond a handle, and **nothing membership "
+            "What the sentence needs beyond a name, and **nothing membership "
             "already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` "
             "carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the "
             "three plan "
@@ -429,9 +431,9 @@ class LiveTypingSchema(BaseModel):
     behind `seq` was never asked for a number. A client must not advance any
     cursor on one, and there is nothing here it could advance it to.
 
-    **It carries no name.** Fill handles from the membership you are already
+    **It carries no name.** Fill names from the membership you are already
     holding, exactly as every system line does — which is why a corrected
-    nickname fixes the indicator without a frame being re-sent.
+    name fixes the indicator without a frame being re-sent.
 
     **An empty list is the clear**, and it is the only clear there is: nobody
     sends *stopped*, and the server reports whoever's heartbeat has not expired.

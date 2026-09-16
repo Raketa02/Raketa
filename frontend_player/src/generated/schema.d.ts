@@ -30,10 +30,30 @@ export interface paths {
         };
         /**
          * Current authenticated user
-         * @description Carries `has_player_profile`, the fourth branch of onboarding's entry gate. It is read from the profile's event stream rather than from a projection, so a player who has just committed their profile is never sent back into the social steps by a read model that has not caught up.
+         * @description Carries `name` and `nickname` — null until the naming, and `name` is the **first** branch of onboarding's entry gate — and `has_player_profile`, its fourth. All three are read from the player's own event streams rather than from a projection, so a player who has just named themselves or committed their profile is never sent back to a step they just finished by a read model that has not caught up.
          */
         get: operations["me_api_v1_users_me_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Name yourself — how should people see you?
+         * @description **The naming**: one act carrying a name and a nickname, for the authenticated player, and repeatable — a later change is the same act, and keeping the nickname you already hold is admitted. Refused with `409 nickname_already_taken` when the handle is another player's; the name is checked against nobody. Answers the pair as recorded — the name trimmed and collapsed — and the client re-reads `GET /me` before moving on, which is where the entry gate reads it.
+         */
+        put: operations["name_me_api_v1_users_me_name_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -843,7 +863,7 @@ export interface paths {
          *
          *     **The pairing is computed when you open this, in your own direction.** Nothing is copied at send and nothing is replayed from the organiser's search — which is why a challenge born of a mutual yes draws the same screen as one built from a shortlist, and why the Fit here is genuinely yours.
          *
-         *     **The card block is drawn while the arrangement is being decided and at no other time.** A challenge that ended draws its arrangement and the handles alone, and so does the seat of somebody who declined or lapsed inside one that is still open: they have left, and that person is a stranger to you again.
+         *     **The card block is drawn while the arrangement is being decided and at no other time.** A challenge that ended draws its arrangement and the names alone, and so does the seat of somebody who declined or lapsed inside one that is still open: they have left, and that person is a stranger to you again.
          *
          *     **Answering is never gated on any of it.** If the pairing cannot be computed — you hold no rating in this sport, or something the matcher needs could not be read — `pairing_absence` says which, the arrangement answers as always, and the buttons are drawn from the standing.
          *
@@ -953,7 +973,7 @@ export interface paths {
          *
          *     **Remove the challenge** — on a court that was never a game. The organiser's, and admitted exactly while **nobody besides the organiser holds an accepted seat**: before anybody has answered, and again once everybody who joined has left — whatever seats are still deciding. The moment somebody has joined it is refused: a court somebody has joined is nobody's to end for the others, so from then on the organiser leaves it like anybody else, and it is over by itself when at most one player is on it and nobody is still deciding. The invitees' challenges read `WITHDRAWN` and offer no answer — a yes or a no on a removed challenge is refused with `challenge_is_over` — and an invitation whose day was still running is neither answered nor unanswered: it leaves the record that prices silence, and the lapse loop writes nothing for it.
          *
-         *     **Call it off** — on a court that has been a game and lost somebody. The court is half built again, and this is how the game is called off: the challenge is withdrawn exactly as below, and the game it became reaches its fourth end, `CALLED_OFF`, in the same act — its plan is history, its pairing is history, and it is neither an evening nor a game that never happened, so nothing anybody is measured on moves. **Any player on the court**, the organiser or not, and only while a seat is open with nobody deciding on it: a full court that will not play lets its window lapse into `NEVER_PLAYED`, as it always has. A court whose game's window has already closed is withdrawn all the same, and the game stays the ghost it already is.
+         *     **Call it off** — on a court that has been a game and lost somebody. The court is half built again, and this is how the game is called off: the challenge records its own ending, `CALLED_OFF` with `ended_by` you — **never `WITHDRAWN`**, which is *Remove the challenge*'s alone — and the game it became reaches its fourth end, `CALLED_OFF` with `called_off_by` you, in the same act: its plan is history, its pairing is history, and it is neither an evening nor a game that never happened, so nothing anybody is measured on moves. **Any player on the court**, the organiser or not, and only while a seat is open with nobody deciding on it: a full court that will not play lets its window lapse into `NEVER_PLAYED`, as it always has. A court whose game's window has already closed is called off all the same, with you on its record, and the game stays the ghost it already is. A court whose game a departure already called off is over, and this meets `challenge_is_over`.
          *
          *     **Whole-challenge, and it never removes one person.** A withdraw ends the arrangement for everybody on it, and taking one person out of a court that still stands is refused here as it is everywhere else.
          *
@@ -961,7 +981,7 @@ export interface paths {
          *
          *     **What this releases is the people on the court.** A send holds its pairs for as long as an answer is owed, and a reopened court holds its pair until it is re-seated or called off; this is that exit. Somebody who let their day run out needed none: their seat reopened and the open-challenge rule released them with it.
          *
-         *     **A noun and not a verb**, because what this creates is the withdrawal — the one thing in this context that a fold of the seats could never produce. The conversation is destroyed in the act where one exists: there is none before anybody has answered, and there may be one the organiser is alone in again.
+         *     **A noun and not a verb**, because what this creates is the ending — the withdrawal, or the court's call-off — which are the two things in this context that a fold of the seats could never produce. The conversation is destroyed in the act where one exists: there is none before anybody has answered, there may be one the organiser is alone in again, and a court that has been a game has one.
          */
         post: operations["withdraw_challenge_api_v1_challenges__challenge_id__withdrawal_post"];
         delete?: never;
@@ -985,7 +1005,7 @@ export interface paths {
          *
          *     **Any player on the court, the organiser included**, while the court stands — and, on a game, while it is awaiting its entry and its agreed moment is ahead or no moment is agreed yet. Once the moment has passed, leaving means nothing and is refused; a court that is not a game has no moment to guard.
          *
-         *     **A court is over when at most one player is on it and no seat is awaiting an answer**, and the organiser is a player in that rule. Before a game the challenge ends by itself — as `DECLINED`, because a departure is a no — and its room with it. On a game, the departure that leaves one player on it **calls the game off** in this request: `GET /games` reads `CALLED_OFF`, the room is gone, and the challenge stands with nobody to fill the seat for. Singles included: an opponent who leaves calls the game off.
+         *     **A court is over when at most one player is on it and no seat is awaiting an answer**, and the organiser is a player in that rule. Before a game the challenge ends by itself — as `DECLINED`, because a departure is a no — and its room with it. On a game, the departure that leaves one player on it **ends the court with its game** in this request: the challenge reads `CALLED_OFF` naming you, `GET /games` reads `CALLED_OFF` naming you, and the room is gone. Singles included: an opponent who leaves calls the game off — for the person they leave, too.
          *
          *     **You are out of this court's own pool for as long as it stands.** Nobody is asked twice on one challenge; being asked again is a **new** challenge. Every other search reaches you at once — the pair rule released you the moment you left.
          *
@@ -1184,6 +1204,8 @@ export interface paths {
          *     **The standing is derived, never stored.** It is folded from the record and the clock at the moment you asked, so a game whose entry window ran out reads as never played whether or not anything has swept it — nothing sweeps it, because there is nothing for a sweep to correct.
          *
          *     **`read_at` is the instant every standing and deadline here was folded against.** Render your countdowns from it, so they cannot disagree with the standing beside them.
+         *
+         *     **A called-off game you have dismissed is not here** (`POST /games/{id}/dismissal`), on this device and every other — the dismissal is recorded on the game, once, and subtracted on every read.
          */
         get: operations["read_games_api_v1_games_get"];
         put?: never;
@@ -1203,7 +1225,7 @@ export interface paths {
         };
         /**
          * The game's pairing
-         * @description **The game screen's forecast, split, stakes and Levels, computed when you ask.** Nothing here is stored on the game, and nothing on `GET /games` changes: a seat there still carries a handle and nothing else.
+         * @description **The game screen's forecast, split, stakes and Levels, computed when you ask.** Nothing here is stored on the game, and nothing on `GET /games` changes: a seat there still carries a name and nothing else.
          *
          *     **Read in your direction.** `split.gap` is your side's strength minus theirs, and `at_stake` is what a counted result would do to *your* Level — the rating engine's own rule read forward, side against side, so it is the pair the result will deliver.
          *
@@ -1266,6 +1288,32 @@ export interface paths {
          *     **Saying nothing does the same thing**, a day later. Accepting is how you make it true sooner, and it is never how you avoid a penalty — there is none.
          */
         post: operations["accept_result_api_v1_games__game_id__result_acceptance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/dismissal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove this card
+         * @description **Clear a called-off game's card from your own rail** (`docs/adr/0172` §5). Yours alone: nobody else's rail moves, the game and its record are untouched, and the challenge's row and the screen behind it keep the news for their day. It is instant and there is no undo — a mis-tap loses the card and nothing else, which is why there is no sheet.
+         *
+         *     **Recorded on the game, once per player**, so the card is gone on your other phone and after a reinstall; `GET /games` subtracts it on every read rather than keeping a list.
+         *
+         *     **Only on a game that is `CALLED_OFF`**, and only for somebody on its court — the presser, or the players the leaver left; the leaver's seat is open and the card was never on their rail.
+         *
+         *     **A noun and not a verb**, like the departure: what this creates is the dismissal, and it answers nothing because the thing a redraw would draw is the thing you removed.
+         */
+        post: operations["dismiss_game_api_v1_games__game_id__dismissal_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1419,7 +1467,7 @@ export interface paths {
          *
          *     **Absence is the only reason given.** A game not yet a day old, one whose week has run out and one you have already answered are all simply not here — and none of them is something to draw differently.
          *
-         *     **Ids only.** Join `game_id` against `/api/v1/games` for the handles, the sport and the date; `players` is everybody else who was on that court, in the line-up's own order.
+         *     **Ids only.** Join `game_id` against `/api/v1/games` for the names, the sport and the date; `players` is everybody else who was on that court, in the line-up's own order.
          *
          *     **Ignoring all of this costs nothing.** There is no strand for rating, no penalty, and nothing is recorded about a card that expired.
          */
@@ -1799,6 +1847,32 @@ export interface components {
          */
         BlockSurface: "SHORTLIST" | "LINEUP" | "FILL_SEATS" | "DECK";
         /**
+         * CalledOffBySchema
+         * @description Who called the game off, and what they are called (``docs/adr/0172`` §4).
+         *
+         *     **The name is carried because the court cannot supply it**: the leaver whose
+         *     departure called the game off has been **vacated** — their seat is drawn
+         *     `player_id: null` — so the seats alone could not name them. It is the same
+         *     name a seat carries, read in the same set read, and it is `null` for the
+         *     same reason a seat's is: an account `users` no longer answers for.
+         *
+         *     **A departure is told from a press by whether this player still holds a
+         *     seat on the game.** The presser does; the leaver's seat is open. No second
+         *     field says which — the record already does.
+         */
+        CalledOffBySchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description The whole name, and **nothing may derive a familiar form from it** (``docs/adr/0107``, ``docs/adr/0171``). ``null`` where ``users`` no longer has the account — never for an unnamed player, whom the entry gate holds at the naming step.
+             */
+            name?: string | null;
+        };
+        /**
          * CandidateSchema
          * @description One row of the shortlist: the pairing, and the person.
          *
@@ -1877,7 +1951,7 @@ export interface components {
          *     **The card block is drawn while the arrangement is being decided and at no
          *     other time** (``docs/adr/0143`` §8) — one rule stated on the two standings
          *     that draw one, so a standing added later is silent by default. `DECLINED` and
-         *     `LAPSED` draw the arrangement and the handles alone; `ON` draws neither,
+         *     `LAPSED` draw the arrangement and the names alone; `ON` draws neither,
          *     because the game's own screen owns it the moment a game exists.
          *
          *     **Nothing here is re-gated against who is reading** (§2). The four
@@ -1889,7 +1963,7 @@ export interface components {
          *     amendment, on [#394](https://github.com/Raketa02/Raketa/issues/394)). The card
          *     block is a **decision aid**, so a reader with no answer left to give is drawn
          *     none — which settles what the block is *for* rather than who may read a
-         *     challenge. They still get the arrangement, every seat and every handle, and
+         *     challenge. They still get the arrangement, every seat and every name, and
          *     the buttons are drawn from the standing as they always were.
          */
         ChallengeDetailResponse: {
@@ -2007,9 +2081,30 @@ export interface components {
              *     - **A withdrawal is exact.** A decision somebody took, carrying its own moment.
              *     - **A decline is an upper bound**, at or before which that person left. Nothing records when somebody said no, so it is bounded by the tighter of the two facts that are recorded: that seat's own deadline, and the last thing that happened to the challenge.
              *
-             *     So `LAPSED` and `WITHDRAWN` are always exact, and `DECLINED` is exact whenever the seat that left **last** was one that ran out — which a mixed court often is — and a bound otherwise. The bound is late rather than early, which is the safe direction for a shelf life: a row that outstays it is news gone stale, and one retired early is somebody never learning a seat reopened.
+             *     So `LAPSED`, `WITHDRAWN` and `CALLED_OFF` are always exact, and `DECLINED` is exact whenever the seat that left **last** was one that ran out — which a mixed court often is — and a bound otherwise. The bound is late rather than early, which is the safe direction for a shelf life: a row that outstays it is news gone stale, and one retired early is somebody never learning a seat reopened.
+             *
+             *     **`CALLED_OFF` is exact too**: the act's own instant, a departure's or a press's (`docs/adr/0172` §2).
              */
             ended_at?: string | null;
+            /**
+             * Ended By
+             * @description The player whose act ended this challenge (`docs/adr/0172` §3). ``null`` on the three standings that are not endings, and that is the whole of what the absence means.
+             *
+             *     **Always the occupant of one of the court's seats**, never a second copy of a name — the face and the name a row draws are that seat's. Which seat, by standing:
+             *
+             *     - `CALLED_OFF` — the last leaver, or whoever pressed *Call it off*; told apart by their seat, which reads `LEFT` for a leaver and `ACCEPTED` for a presser.
+             *     - `WITHDRAWN` — the organiser.
+             *     - `DECLINED` — the seat whose *no* or departure completed the desertion: a seat that `LEFT` or `DECLINED`, never one that ran out, because a no outranks silence. Between two nos dated alike, court order.
+             *     - `LAPSED` — the seat whose window was the last to run out.
+             *
+             *     Read from the same per-seat instants `ended_at` is made from, so the name and the date cannot come from two clocks.
+             */
+            ended_by?: string | null;
+            /**
+             * Game Id
+             * @description The game this court became, and ``null`` until its line-up first completed — the same id ever after, through a re-seat and through the ending (`docs/adr/0172` §4). What lets a row and the leaver's sheet tell a court that has been a game from one that has not: leaving the last other player on one *calls the game off*, and on one that has not it *closes the court*. Read from `games` and never recorded on the challenge.
+             */
+            game_id?: string | null;
             /**
              * Seats
              * @description The court in its fixed order — every **A** seat, then every **B**. Empty seats are in the list, because which side is short is part of what a court is: an A-side full with a B-side short is a different court from the reverse.
@@ -2180,10 +2275,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Nickname
-             * @description The whole handle, and **`null` for an account `users` can no longer name**. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it.
+             * Name
+             * @description The whole name, and **`null` for an account `users` can no longer name** — never for an unnamed player, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it, and it is never the nickname: a handle is drawn on a record and said nowhere (``docs/adr/0171``).
              */
-            nickname: string | null;
+            name: string | null;
             /**
              * Photo Id
              * Format: uuid
@@ -2198,7 +2293,7 @@ export interface components {
         };
         /**
          * ConversationPersonSchema
-         * @description One person this response names — **a handle and a face, and nothing else.**
+         * @description One person this response names — **a name and a face, and nothing else.**
          *
          *     No Level, no band, no area, no score — those are a *card*'s, and a card is
          *     what a searcher reads to decide about a game that might happen. Everybody
@@ -2217,10 +2312,10 @@ export interface components {
              */
             player_id: string;
             /**
-             * Nickname
-             * @description The whole handle, and **`null` for an account `users` can no longer name**. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it.
+             * Name
+             * @description The whole name, and **`null` for an account `users` can no longer name** — never for an unnamed player, whom the entry gate holds at the naming step. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it, and it is never the nickname: a handle is drawn on a record and said nowhere (``docs/adr/0171``).
              */
-            nickname: string | null;
+            name: string | null;
             /**
              * Photo Id
              * Format: uuid
@@ -2588,10 +2683,10 @@ export interface components {
          */
         CourtPersonSchema: {
             /**
-             * Nickname
-             * @description The whole handle. There is no name in this platform and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole handle or names nobody.
+             * Name
+             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole name or names nobody (``docs/adr/0171``). Never the nickname: a handle is drawn on a record and said nowhere.
              */
-            nickname: string;
+            name: string;
             /**
              * Photo Id
              * Format: uuid
@@ -2978,7 +3073,7 @@ export interface components {
          *     **The card is per seat as well as per challenge** (``docs/adr/0143`` §8).
          *     Somebody who declined or lapsed inside a still-open court gets none: the pair
          *     releases the moment a seat leaves, and *that person is a stranger to you once
-         *     more.* Their seat stays and keeps its handle, because the standing sentences
+         *     more.* Their seat stays and keeps its name, because the standing sentences
          *     name them.
          *
          *     **Your own seat never carries one either.** A pairing with yourself is not a
@@ -3006,14 +3101,14 @@ export interface components {
              */
             answer_by?: string | null;
             /**
-             * Nickname
-             * @description The whole handle, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``).
+             * Name
+             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the nickname, which is a handle drawn on a record and said nowhere.
              *
-             *     ``null`` on a seat nobody was put in, and ``null`` where ``users`` no longer has the account. The seat stays either way: a seat with no handle is still a position on the court, and the screen has a side to name instead.
+             *     ``null`` on a seat nobody was put in, and ``null`` where ``users`` no longer has the account — never for an unnamed player, whom the entry gate holds at the naming step. The seat stays either way: a seat with no name is still a position on the court, and the screen has a side to name instead.
              *
-             *     **A handle is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
+             *     **A name is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
              */
-            nickname?: string | null;
+            name?: string | null;
             /**
              * @description Who this person is and what you make of them, drawn only while the arrangement is still being decided and only for somebody still in it. Omitted on your own seat, on an empty one, on a seat that declined or lapsed, on **every** seat when you yourself have declined or lapsed, and on every seat when `pairing_absence` says there is no pairing to draw.
              *
@@ -3400,7 +3495,7 @@ export interface components {
          *     **Read beside the game and stored nowhere.** Everything here is as-of-now
          *     and means what a card means *because this game has not happened*; the route
          *     refuses once it has. Nothing on `GET /games` changes: a seat there still
-         *     carries a handle and nothing else.
+         *     carries a name and nothing else.
          *
          *     **Three blocks, and each is omitted on its own ground.** `forecast` and
          *     `split` go together — one computation — and are omitted when the pairing
@@ -3437,7 +3532,7 @@ export interface components {
          * @description One seat on the court and the Level of the person in it.
          *
          *     **This is not a card**, and it is not the seat on `GET /games` either — that
-         *     one carries a handle and nothing else (``docs/adr/0141``), and it is
+         *     one carries a name and nothing else (``docs/adr/0141``), and it is
          *     untouched. What is here is the four figures a record's skill panel and a
          *     player card already publish, read beside the game for as long as the game
          *     has not happened.
@@ -3541,9 +3636,11 @@ export interface components {
             entry_closes_at?: string | null;
             /**
              * Called Off At
-             * @description When somebody called it off, while a seat was open (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from — a day later, as `played_at` and `entry_closes_at` already shelve the other endings. **Nobody is named**: the room is gone and the card says *Called off*.
+             * @description When somebody called it off, while a seat was open (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from — a day later, as `played_at` and `entry_closes_at` already shelve the other endings. Who is `called_off_by`.
              */
             called_off_at?: string | null;
+            /** @description The player who called it off, and their name (``docs/adr/0172`` §4). ``null`` on every standing but `CALLED_OFF`. The last leaver, whose seat is drawn open — or whoever pressed *Call it off*, who still holds one; which of the two is read off the seats, and the game screen's heading is keyed on it. */
+            called_off_by?: components["schemas"]["CalledOffBySchema"] | null;
             /**
              * Seats
              * @description The court, in the order the challenge handed it over
@@ -3907,9 +4004,9 @@ export interface components {
          *     behind `seq` was never asked for a number. A client must not advance any
          *     cursor on one, and there is nothing here it could advance it to.
          *
-         *     **It carries no name.** Fill handles from the membership you are already
+         *     **It carries no name.** Fill names from the membership you are already
          *     holding, exactly as every system line does — which is why a corrected
-         *     nickname fixes the indicator without a frame being re-sent.
+         *     name fixes the indicator without a frame being re-sent.
          *
          *     **An empty list is the clear**, and it is the only clear there is: nobody
          *     sends *stopped*, and the server reports whoever's heartbeat has not expired.
@@ -4048,6 +4145,55 @@ export interface components {
             points: number;
         };
         /**
+         * NameRequest
+         * @description The naming — *How should people see you?* (``docs/adr/0171`` §1–2).
+         *
+         *     Both fields, always: the naming is one act carrying both, and there is no
+         *     event for one without the other. The shape rules here are the value
+         *     objects' own, restated so the generated client type carries them — and
+         *     **the name is normalised before its bounds are checked**, exactly as
+         *     :class:`Name` normalises it, so ``"  Ania   Kowalska "`` is admitted and
+         *     recorded as ``Ania Kowalska`` and ``"   A   "`` is refused here as too
+         *     short. A bound checked on the raw string would admit the second and hand
+         *     it to the value object, which refuses it — a typed value meeting an
+         *     invariant, which is a 500 for a player's typo (``CONTEXT.md``, *Invariant
+         *     vs Unavailability*).
+         */
+        NameRequest: {
+            /**
+             * Name
+             * @description What you are called — free text, spaces allowed, **never unique**: two players may share one. Trimmed, runs of whitespace collapsed to one space, 2–64 characters after that. This is what every screen says about you.
+             */
+            name: string;
+            /**
+             * Nickname
+             * @description A handle: letters, digits and `. _ -`, no spaces, 2–64 characters, **unique across the platform** — refused with `nickname_already_taken` when another player holds it, admitted when it is already yours. Shown as `@nickname` under your name on your own You tab and on your record, and said nowhere else.
+             */
+            nickname: string;
+        };
+        /**
+         * NamingResponse
+         * @description What the naming recorded: the name as it now stands and the nickname.
+         *
+         *     Not a ``UserResponse``, deliberately — that shape carries
+         *     ``has_player_profile``, a fact of another context's this write never asks
+         *     about, and ``false`` there would be a claim. The client re-reads ``/me``
+         *     before moving on (``docs/adr/0171`` §3); this is what lets it show the
+         *     normalised name back at once.
+         */
+        NamingResponse: {
+            /**
+             * Name
+             * @description The name as recorded: trimmed, collapsed.
+             */
+            name: string;
+            /**
+             * Nickname
+             * @description The handle, as recorded.
+             */
+            nickname: string;
+        };
+        /**
          * OnCourtVerdict
          * @description What the on-court check concluded about a photograph. **Two values.**
          *
@@ -4081,7 +4227,7 @@ export interface components {
             /**
              * Game Id
              * Format: uuid
-             * @description The game this card is about. Post the answer to `/api/v1/sportsmanship/{game_id}`, and join it against `/api/v1/games` for the handles, the sport and the date.
+             * @description The game this card is about. Post the answer to `/api/v1/sportsmanship/{game_id}`, and join it against `/api/v1/games` for the names, the sport and the date.
              */
             game_id: string;
             /**
@@ -4522,10 +4668,10 @@ export interface components {
          */
         PlayerCardSchema: {
             /**
-             * Nickname
-             * @description The whole handle. There is no name in this platform and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole handle or names nobody.
+             * Name
+             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole name or names nobody (``docs/adr/0171``). Never the nickname: a handle is drawn on a record and their own You tab, and said nowhere.
              */
-            nickname: string;
+            name: string;
             /**
              * Photo Id
              * Format: uuid
@@ -4749,8 +4895,13 @@ export interface components {
              */
             is_self: boolean;
             /**
+             * Name
+             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole name or names nobody (``docs/adr/0171``). The title of the sheet.
+             */
+            name: string;
+            /**
              * Nickname
-             * @description The whole handle. There is no name in this platform and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole handle or names nobody.
+             * @description Their handle, drawn as `@nickname` under the name. **The record and the You tab are the only two places it is drawn** — never on a row, a card, a sentence, a sheet, a toast, a seat label or a spoken name — because two people may share a name and this is the screen a friend tells them apart on.
              */
             nickname: string;
             /**
@@ -5822,14 +5973,14 @@ export interface components {
              */
             answer_by?: string | null;
             /**
-             * Nickname
-             * @description The whole handle, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``).
+             * Name
+             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the nickname, which is a handle drawn on a record and said nowhere.
              *
-             *     ``null`` on a seat nobody was put in, and ``null`` where ``users`` no longer has the account. The seat stays either way: a seat with no handle is still a position on the court, and the screen has a side to name instead.
+             *     ``null`` on a seat nobody was put in, and ``null`` where ``users`` no longer has the account — never for an unnamed player, whom the entry gate holds at the naming step. The seat stays either way: a seat with no name is still a position on the court, and the screen has a side to name instead.
              *
-             *     **A handle is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
+             *     **A name is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
              */
-            nickname?: string | null;
+            name?: string | null;
         };
         /**
          * SeatingSchema
@@ -5840,7 +5991,7 @@ export interface components {
          *     its place — so a four with one seat open is still a four and the client
          *     folds *Needs a player* from it. Nothing on the wire names that rung.
          *
-         *     **A handle, and nothing else about them** (``docs/adr/0141``). A Level, a
+         *     **A name, and nothing else about them** (``docs/adr/0141``). A Level, a
          *     band, an area and a run of form are what a *searcher* reads to decide about a
          *     game that might happen, and a gate decided they may see them; this is the
          *     record of a game that did, and it re-publishes nobody's profile off the back
@@ -5856,12 +6007,12 @@ export interface components {
              */
             player_id: string | null;
             /**
-             * Nickname
-             * @description The whole handle, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``).
+             * Name
+             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the nickname: a handle is drawn on a record and said nowhere.
              *
-             *     ``null`` where ``users`` no longer has this account, and on an open seat. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead.
+             *     ``null`` where ``users`` no longer has this account, and on an open seat — never for an unnamed player, whom the entry gate holds at the naming step. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead.
              */
-            nickname?: string | null;
+            name?: string | null;
         };
         /**
          * SendChallengeRequest
@@ -6296,10 +6447,10 @@ export interface components {
         };
         /**
          * Standing
-         * @description The six standings, as codes. A client's words are the client's own.
+         * @description The seven standings, as codes. A client's words are the client's own.
          * @enum {string}
          */
-        Standing: "AWAITING_ANSWERS" | "ON" | "LINE_UP_INCOMPLETE" | "DECLINED" | "LAPSED" | "WITHDRAWN";
+        Standing: "AWAITING_ANSWERS" | "ON" | "LINE_UP_INCOMPLETE" | "DECLINED" | "LAPSED" | "WITHDRAWN" | "CALLED_OFF";
         /**
          * StandingProposalSchema
          * @description One side's score, on the table and not yet settled on.
@@ -6481,12 +6632,12 @@ export interface components {
             occurred_at: string;
             /**
              * Actor Id
-             * @description Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** — the handle is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face. `null` on `SIDE_FORMED`, which is about both people on the side and names neither.
+             * @description Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** — the name is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face. `null` on `SIDE_FORMED`, which is about both people on the side and names neither.
              */
             actor_id: string | null;
             /**
              * Values
-             * @description What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` — the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED`, `GAME_PLAYED` and `SIDE_FORMED` carry nothing.
+             * @description What the sentence needs beyond a name, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` — the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED`, `GAME_PLAYED` and `SIDE_FORMED` carry nothing.
              */
             values: {
                 [key: string]: string;
@@ -6581,7 +6732,15 @@ export interface components {
          * @enum {string}
          */
         UnfilledReason: "NO_CANDIDATE_ABOVE_FLOOR" | "NO_ADMISSIBLE_COMBINATION" | "POOL_EXHAUSTED" | "NO_SHARED_SLOTS";
-        /** UserCreateRequest */
+        /**
+         * UserCreateRequest
+         * @description Sign-up: credentials and the attestation, and nothing about who you are.
+         *
+         *     The nickname left this payload with ``docs/adr/0171`` §2 — it is asked in
+         *     onboarding, beside the name, with :class:`NameRequest`. **Extra fields are
+         *     refused** rather than ignored, so a client still sending one meets the
+         *     validation envelope instead of a sign-up that quietly dropped what it said.
+         */
         UserCreateRequest: {
             /**
              * Email
@@ -6592,8 +6751,6 @@ export interface components {
             password1: string;
             /** Password2 */
             password2: string;
-            /** Nickname */
-            nickname: string;
             /**
              * Adult Attested
              * @description The player's own claim that they are an adult. Required, and required to be `true`: the platform is adults only and that is a precondition of holding an account. `false` is refused with `adult_attestation_required`, and the client writes the sentence. **Not a date of birth and not age verification** — this records that the question was asked and answered, and nothing more.
@@ -6609,6 +6766,13 @@ export interface components {
          *     joined here, on the response, because the gate reads it on every cold launch
          *     and a second round trip for one boolean would be a second thing to fail
          *     (``docs/adr/0090``).
+         *
+         *     ``name`` and ``nickname`` are **null until the naming**, and this is the one
+         *     read where either may be null (``docs/adr/0171`` §2): a player on any
+         *     surface that names another player has necessarily been named, because the
+         *     gate holds an unnamed account at the naming step. On ``/me`` they are read
+         *     from the player's own stream, as ``has_player_profile`` is, so they are
+         *     right the instant after the commit the gate reads them after.
          *
          *     **It is not an "onboarded" flag.** The rating context's invariant against one
          *     stands: whether a player has been through onboarding *for a sport* is asked
@@ -6627,8 +6791,16 @@ export interface components {
              * Format: email
              */
             email: string;
-            /** Nickname */
-            nickname: string;
+            /**
+             * Name
+             * @description What this player is called — what every screen says. `null` until the naming, and **the entry gate's first destination**: a player with no name is sent to the naming step before anything else.
+             */
+            name?: string | null;
+            /**
+             * Nickname
+             * @description The handle, unique across the platform, drawn as `@nickname` under the name on the You tab and nowhere else. `null` until the naming.
+             */
+            nickname?: string | null;
             /** Authority */
             authority: string;
             /** Is Admin */
@@ -6800,6 +6972,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    name_me_api_v1_users_me_name_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamingResponse"];
+                };
+            };
+            /** @description `nickname_already_taken` — the handle is another player's, `details.field` is `nickname`, and nothing was recorded: the act is one event, so the name is not kept either. The client writes the sentence under the field. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -8541,7 +8755,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The challenge is over, and it is returned as it now stands at `WITHDRAWN`, with every seat exactly as it was — a seat still awaiting an answer keeps its question and its deadline, and the standing is read before either. */
+            /** @description The challenge is over, and it is returned as it now stands — `WITHDRAWN` on a court that was never a game, `CALLED_OFF` on one that has been, `ended_by` naming you either way — with every seat exactly as it was: a seat still awaiting an answer keeps its question and its deadline, and the standing is read before either. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8605,7 +8819,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in — on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; and `DECLINED` where you were the last but one on a court that was never a game and nobody is deciding — **a court is over when at most one player is on it and no seat is awaiting an answer**, and a departure is a no. On a game the challenge stands and the **game** is called off instead, in this same request: `GET /games` reads it `CALLED_OFF`, and the room is gone. */
+            /** @description Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in — on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; `DECLINED` where you were the last but one on a court that was never a game and nobody is deciding — **a court is over when at most one player is on it and no seat is awaiting an answer**, and a departure is a no; and `CALLED_OFF` where you were the last but one on a court that has been a game: the court ends with its game, `ended_by` you, and the game is called off in this same request — `GET /games` reads it `CALLED_OFF` with `called_off_by` you, and the room is gone. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9151,6 +9365,53 @@ export interface operations {
             };
         };
     };
+    dismiss_game_api_v1_games__game_id__dismissal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The card is cleared from your rail — on this device and every other — and nothing else moves. A second press answers the same and writes nothing. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `you_were_not_on_this_court` — no game of **yours** has that id. One code for two cases — it does not exist, or you did not play in it — because separating them would answer *is this id real* about four strangers' evening. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `game_is_not_called_off` — only a called-off game's card can be cleared. The other endings' cards carry a score or a strand's verdict and are the record for the day they stay; a live game's card is the game. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_plans_api_v1_plans_get: {
         parameters: {
             query?: never;
@@ -9573,7 +9834,7 @@ export interface operations {
                     "application/json": components["schemas"]["PlayerRecordResponse"];
                 };
             };
-            /** @description `record_unavailable` — this account has no record to draw: no handle, or no profile committed. The recovery is onboarding's second part, which `GET /users/me` already sends a cold launch into. */
+            /** @description `record_unavailable` — this account has no record to draw: not yet named, or no profile committed. The recovery is onboarding's second part, which `GET /users/me` already sends a cold launch into. */
             404: {
                 headers: {
                     [name: string]: unknown;

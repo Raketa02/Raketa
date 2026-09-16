@@ -757,7 +757,7 @@ out of visual context, and never the decline button's own words, which would off
 the same choice twice. §20.6 puts focus on the title on the way in, which is what makes the
 question heard before either answer is offered.
 
-## 13. A challenge's standing — six codes, seventeen sentences
+## 13. A challenge's standing — seven codes, and an ended row names who
 
 #221: *"**Challenge sent** and **Challenge for you** are one standing read from two sides, not
 two states."* So the code is one and the sentence is two, keyed by `(standing, side)`, with
@@ -776,14 +776,53 @@ side derived from whether the reader holds the organiser seat.
 > not answered, and in doubles one has — §13.2. Every sentence above is untouched by that as well,
 > and #331's ruling still binds anything §13.2 does not name.
 
+> **And a seventh code, with the ended rows re-keyed, by
+> [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+> (2026-09-15).** A court that has been a game ends with its game and reads **`CALLED_OFF`**; every
+> ending carries **`ended_by`**, the player whose act ended it; and an ended row's sentence is keyed
+> by that player's own seat rather than by side — the second table. The four live rows and
+> `WITHDRAWN`'s two sentences are untouched; `{name}` in the `DECLINED` and `LAPSED` rows now names
+> `ended_by` rather than the first decline in court order.
+
 | Standing | To the organiser | To an invitee |
 | --- | --- | --- |
 | `AWAITING_ANSWERS` | `Waiting on {n} answers` | `They're waiting on you` |
 | `ON` | `Everybody's in` | `You're in — everybody's in` |
 | `LINE_UP_INCOMPLETE` | `{n} in, {m} seats open — the chat is already open` | `You're in. {m} seats open, and the chat is already open` |
-| `DECLINED` | `{name} said no — that seat is open again` | `You said no` |
+| `DECLINED` | `{name} said no — that seat is open again` — or `{name} left — nobody else is coming`, by `ended_by`'s seat (below) | `You said no` |
 | `LAPSED` | `{name}'s day ran out — that seat is open again` | `Your day ran out` |
 | **`WITHDRAWN`** | `You withdrew this` | `{name} withdrew this — that court is closed` |
+| **`CALLED_OFF`** | keyed by `ended_by`'s seat and not by side — the table below | the same |
+
+**The ended rows, keyed by the standing and by `ended_by`'s own seat**
+([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+§7). One rule for every ending on the shelf: the sentence names the person whose act ended the
+court, `{name}` is that person's whole name (§15), and **the face on the row is that person's**
+(`the-loop-screens.md` §1.1).
+
+| Standing · `ended_by`'s seat | The row |
+| --- | --- |
+| `CALLED_OFF` · `LEFT` | `{name} left` |
+| `CALLED_OFF` · still seated, another player | `{name} called the game off` |
+| `CALLED_OFF` · still seated, the reader | `You called the game off` |
+| `DECLINED` · `LEFT` | `{name} left — nobody else is coming` |
+| `DECLINED` · `DECLINED` | `{name} said no — that seat is open again` — as above, now naming `ended_by` |
+| `LAPSED` | `{name}'s day ran out — that seat is open again` — as above, now naming `ended_by` |
+
+**The sentence is always true of the person it names.** It is keyed by `ended_by`'s own seat, so
+a seat that `LEFT` reads *left* and a seat that `DECLINED` reads *said no*, whichever the server's
+bound picked between two; a lapsed seat is never named on a `DECLINED` court, because a no
+outranks silence in the fold that picks the name. **`{name} left — nobody else is coming`** is the
+row the 2026-09-14 fix dropped rather than draw as *? said no* — a court somebody joined and walked
+out of, leaving the reader alone with nobody deciding — and it now keeps its day like every ending.
+**A reader whose own act ended it still leaves the inbox at once** — their own *no*, their own
+*left*, their own removal — and a stale route reads `You said no` / `You left` / `You withdrew this`
+as before; **the presser's own row stays its day**, reading `You called the game off`.
+
+**`CALLED_OFF` is the game's fourth end, seen from the court** — the departure that leaves one
+player on a game, or *Call it off* — and it is the one word for that ending everywhere: the tag on
+the row (`the-loop-screens.md` §1.2), the card, the button and its sheet (§22.9), the screen's
+headings. ***Cancel* appears nowhere.**
 
 **`LINE_UP_INCOMPLETE` carries #221's constraint in its words.** *"The chat opens on the first
 acceptance and grows with each one"*, which makes it **not a waiting room** — and its obvious
@@ -802,10 +841,11 @@ The `answers challenges` strand needs the denominator, so a lapse that reads as 
 copy is a fact quietly restated as a different one.
 
 **`WITHDRAWN` is neither**, and its word is the documentation's own. Not *cancel* or *call off*,
-which is the plan's and is out of scope; not *stand down*, which the root
-[`CONTEXT.md`](../../../CONTEXT.md) owns platform-wide for a term that cannot be evaluated. **The
-invitee who never answered is told the same as the one who accepted** — separating them would say
-who else was on the court.
+which is the game's and is `CALLED_OFF`'s (ADR-0172 §1 — *Call it off* on a court that has been a
+game records that standing, and `WITHDRAWN` is *Remove the challenge*'s alone); not *stand down*,
+which the root [`CONTEXT.md`](../../../CONTEXT.md) owns platform-wide for a term that cannot be
+evaluated. **The invitee who never answered is told the same as the one who accepted** —
+separating them would say who else was on the court.
 
 ### 13.1 The third reading — an invitee who has left a challenge that has not
 
@@ -894,7 +934,7 @@ shape it is in.
 `Waiting on {n} answers` covers every case they can reach. The asymmetry is the whole of why the
 invitee needed a third reading and they did not.
 
-**Six, not twenty.** The twenty card states are *"a presentation vocabulary spanning money,
+**Seven, not twenty.** The twenty card states are *"a presentation vocabulary spanning money,
 booking and results this context does not own"*, and an unknown standing takes §3's gap
 rather than a shorter list.
 
@@ -949,28 +989,44 @@ location, and it becomes:
 
 ## 15. Names
 
-`Nickname` is **2–64 characters**, `users` holds no name at all, and ADR-0107 is explicit:
-*"every sentence naming somebody uses the whole handle or names nobody — the prototype's
-`split(' ')[0]` has nothing behind it here, and inventing a first name is the product
-addressing a person by a name they never gave it."*
+A player has a **Name** — free text, **2–64 characters**, spaces allowed, never unique — and a
+**Nickname**, a unique handle that is drawn as `@nickname` under the name on the You tab and on
+the record screen and is **said nowhere**
+([ADR-0171](../../adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+**The name is what every sentence says**, and ADR-0107 §4's rule reads on it: *every sentence
+naming somebody uses the whole name or names nobody — the prototype's `split(' ')[0]` has nothing
+behind it here, and inventing a first name is the product addressing a person by a name they
+never gave it.* A name the player typed with a space in it is a name they gave; a first name cut
+out of it by a sentence is not.
 
-> **One `playerName()`: the handle, whole, and `You` for yourself.** Used by §B10's
+> **One `playerName()`: the name, whole, and `You` for yourself.** Used by §B10's
 > head-to-head row, §B16's side-name formatter, §B17's `SH.propose`, and **all eight of
-> §F3's toasts that name somebody.**
+> §F3's toasts that name somebody.** No sentence, row, card, sheet, toast, seat label or spoken
+> name carries the nickname.
 
 **The result screens join that list, and they name a person only where a person acted**
 ([ADR-0141](../../adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A games seat
-carries a handle and nothing else about its occupant, so the row's eyebrow says *who you
+carries a name and nothing else about its occupant, so the row's eyebrow says *who you
 played* — the fact that tells two padel games in a week apart, where a duration cannot — and two
 sentences name somebody: *{name} put a score up* and *{name} agreed with your score*. **The two
 columns of a score stay sides.** A score is a **side's** claim, capped one per side and
-answerable by either of the two who played it, so a column headed with a handle would charge a
+answerable by either of the two who played it, so a column headed with a name would charge a
 doubles score to one of them and a listener reading a set cell by cell would hear the wrong
 person's six.
 
 **A seat label may truncate visually; a sentence may not, and a spoken name never does.**
 ADR-0107's rule is against *inventing* a familiar form — a visual truncation invents nothing,
-and the accessible name carries the whole handle, which is where the rule actually bites.
+and the accessible name carries the whole name, which is where the rule actually bites. A list
+truncates by dropping whole names (*Laia Quintana +2*), never by shortening one; where a box draws
+the **stem** (ADR-0157) it is cut at the name's first break — a dot or a space — so *Diego
+Fabregat* draws *Diego* there; what a box does past that, its own ellipsis, is that box's
+business. **The two initials over a generated poster are the one derived form** —
+[ADR-0167](../../adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §3's
+exception, cut from the name at the same break (*Ania Kowalska* → `AK`), its fence unchanged.
+
+> **Elsewhere in this file, *handle* is the word of the day the section was written**, and names
+> what this section now calls the name — a `tomek.p` in an example is a seeded handle from before
+> ADR-0171. Every rule those sections cite is this one, and none of them is changed by the word.
 
 **§B16's side-name formatter is redrawn, not kept.** *"You + Marek"* is a layout that assumed
 short words; at 64 characters the 46px seat is the binding constraint (§G5 already lists the
@@ -2074,11 +2130,16 @@ writing:
 | `Fill the seat` | the Now card's wide door on **Needs a player**, and the game screen's primary act on that arm — **the same act, singular** ([#419](https://github.com/Raketa02/Raketa/issues/419)): one per surface, because a challenge screen is about a court still being built with as many seats open as the send left, and this door is about a game that had every seat and lost one. Two seats may be open (#411 rule 3); the door still names the errand one seat at a time, as the tag does. On the card it is a door like the others — it opens the game screen and runs nothing ([#429](https://github.com/Raketa02/Raketa/issues/429) F1; it ran the fill from the card until then); on the screen it is the act, which mints a search and still reaches nobody. `theActsWords.ts`', because two features say it |
 | `Finish the plan` · `Open` · `We played` · `Confirm the result` | the Now card's wide door, one per name — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §5.2. **`Finish the plan` is Planning's word for the same door Game on opens with `Open`** ([#413](https://github.com/Raketa02/Raketa/issues/413)): the destination is the same and the errand is not. *Finish* and not *Lock*, because the lock is an act with its own control on that screen (ADR-0155) |
 
-**And one ending with no door**: **`Called off`** is the card's word for `GameStanding.CALLED_OFF`
+**And one ending whose card has two buttons and no wide door**: **`Called off`** is the card's
+word for `GameStanding.CALLED_OFF`
 ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) — an ending like *Never
 played*, and unlike it in one respect the card must not draw: nobody let a window close on it,
-somebody ended it. The sentence is *It was called off* and it names nobody, because `called_off_by`
-is on no wire and the room that would have said who is gone.
+somebody ended it. **The card names nobody, and the screen behind it does** (amended 2026-09-15,
+[ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+§8; it read *It was called off — nobody is named* while `called_off_by` was on no wire): where a
+live card has its wide door the card offers **`What happened?`**, opening the game screen, and
+beside it a square button with the trash glyph, spoken **`Remove this card`**, that clears the
+card from Now at once — §22.9 has the screen's headings and the trash's rule.
 
 **Nothing offline gets a third sentence.** `does-not-resume` is the shared value, unchanged, and
 the two values split on **resumption**; a third keyed to the act would break the only distinction
@@ -2109,6 +2170,20 @@ a departure destroys **nothing** — the others keep the game, the plan and the 
 says what survives, and the second says the one cost that is the leaver's alone: `already_asked_at`
 keeps them out of this court's pool for as long as it stands. Nothing here says the pair rule
 releases, on §22.3's own line.
+
+**Except when the leaving would end the game** (amended 2026-09-15,
+[ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+§9): when, besides the reader's own, exactly one seat on the court is still accepted and no seat
+is awaiting an answer — the reader's leaving leaves one person on a game — the first line is
+false, because nobody keeps anything. The sheet then gains §22.10's ending line **above** its
+three, in the same case and the same words:
+
+| | |
+| --- | --- |
+| Body, first, when the reader's leaving would leave one person on the game | `Leaving now calls the game off — for {name} too. Your chat goes with it.` |
+
+`{name}` is that one person, their whole name (§15). The three lines below it stay as they are;
+the title, the act and the dismissal do not move.
 
 **The visible control is the whole sentence**, so it is the accessible name too — unlike
 `Withdraw`, there is no shorter form a reader would want. A refused leave draws no new copy: a
@@ -2175,18 +2250,38 @@ game*, because that is what the people still in it lose. Nothing here says the p
 on §22.3's own line. A refused call-off draws no new copy: a stale tap re-reads and says nothing,
 `challenge_not_found` leaves the screen, and `account_held` is `challengeErrorMessage`'s sentence.
 
-**The ending's words** — the fourth end, drawn as *Never played* is:
+**The ending's words** — the fourth end, drawn as *Never played* is, **and the screen says who**
+(amended 2026-09-15,
+[ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+§8; until then the title was *It was called off* and *nobody is named*, because `called_off_by` was
+on no wire):
 
 | | |
 | --- | --- |
 | The tag | `Called off` |
 | The state word | `called off` |
-| The line under the slots, and the standing line | `Called off` |
-| The screen's title | `It was called off` |
-| The body | `Nobody is marked for that. Not you, not any of the others.` — the ghost's own sentence, because it is the same fact about the same people: neither an evening nor a game that never happened, so nothing anybody is measured on moves |
+| The standing line | `Called off` |
+| Under the card's slots | **nothing** — the card names nobody, and offers two things instead of a line |
+| The card's two buttons | `What happened?` — the on-dark fill where a live card has its wide door, opening the game screen · a square button with the trash glyph, spoken `Remove this card`, that clears the card from Now at once, for good, on every device — no sheet, because it removes a card and not a fact: the row and the screen behind it keep the news for their day |
 
-**Nobody is named**, because `called_off_by` is on no wire and the room that would have said who
-is gone with the act. The card is shelved a day from `called_off_at`.
+**The screen's ending block, keyed by how it ended** — a departure told from a press by whether
+`called_off_by` still holds a seat on the game (the leaver's is vacated):
+
+| | Heading | Body |
+| --- | --- | --- |
+| a departure, singles | `The game was called off for lack of players` | `{name} left, so the singles game is called off. Nobody is marked for it — not you, not them.` |
+| a departure, doubles | `The game was called off for lack of players` | `{name} was the last to leave, so the doubles game is called off. Nobody is marked for it — not you, not any of them.` |
+| the button | `{name} called the game off` — the reader's own: `You called the game off` | `Nobody is marked for it — not you, not any of the others.` |
+
+The body still says what the ghost's says about the strands — the same fact about the same people:
+neither an evening nor a game that never happened, so nothing anybody is measured on moves — and
+what changed is that the heading is a sentence and the body names the person. `{name}` is
+`called_off_by`'s whole name (§15). The card is shelved a day from `called_off_at`, for a card
+nobody clears.
+
+**One word: called off.** The tag, the control and its sheet, the headings and every sentence in
+this section use it; ***cancel* appears nowhere** — not on a control, not in a sentence, not in a
+code.
 
 ### 22.10 Leaving from the Chats list, and before the court is whole
 
@@ -2210,6 +2305,23 @@ in one breath, because nobody is in a chat separately from being on its court, a
 so that leaving the chat is not a surprise about leaving the game. §22.8's three are reached from a
 screen about a game the reader has been looking at and say what survives and what the leaver gives
 up; this one is reached from a list, one swipe deep, and has to say what the act **is** first.
+
+**The line changes when the leaving would end the court** (amended 2026-09-15,
+[ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+§9) — the reader is the only other accepted seat and no seat is awaiting an answer, read off the row
+the list already holds — because then the seat opens for nobody. Which of the two it is, the
+challenge's `game_id` decides:
+
+| The court | Body |
+| --- | --- |
+| a game — `game_id` set | `Leaving now calls the game off — for {name} too. Your chat goes with it.` |
+| never a game — `game_id` null | `Leaving now closes this court for {name}. Your chat goes with it.` |
+| otherwise | `Your seat opens for someone else and you'll leave the chat.` — the line above, unchanged |
+
+`{name}` is the one person left, their whole name (§15). The title, the act, the in-flight word and
+the dismissal do not move, and the same three lines are said on the challenge screen's *Leave the
+game*, which is the same sheet. The rule is read off a list that may be a beat stale; the server's
+answer is what happens, and a refusal is said below as before.
 
 **A refusal is said on the sheet, in words.** On the game screen a refused leave re-reads and says
 nothing, because the fold the re-read lands on is the sentence; a list row has no fold, so the
@@ -2306,10 +2418,11 @@ the seats — so *no system line announces a derived standing* holds as it did.
 overflows a Chats row, **the fix is a shorter value, not a second line** — one rule for both row
 kinds instead of two.
 
-### 23.1 The six events that publish nothing, and why
+### 23.1 The events that publish nothing, and why
 
-A builder reading the event list would write a line for each. **Six are refused, and three
-different rules do it.**
+A builder reading the event list would write a line for each. **Each of these is refused, and
+three different rules do it** (six when this section was written; the rows since added each say
+which rule).
 
 | Event | Why nothing |
 | --- | --- |
@@ -2318,7 +2431,9 @@ different rules do it.**
 | `GamePlanned` | **the seats already imply it** |
 | `challenges.withdrawn` | it **destroys** the room in the same act |
 | `games.seat_vacated` · `games.line_up_reseated` | the challenge's own `SeatLeft` and the acceptance that completed the court draw the lines, and membership reads the game's line-up live — a room told twice would write a second line |
-| `games.called_off` | the challenge's own withdrawal **destroys** the room in the same transaction, so there is nobody left to read a line and no room to be a length ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) |
+| `games.called_off` | it **destroys** the room, on the withdrawal's arm, and writes no line ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md); since [#424](https://github.com/Raketa02/Raketa/issues/424) it reaches the room, because the departure's call-off arrives with no withdrawal beside it) |
+| `challenges.called_off` | the court's own ending on a court that has been a game ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1, §6) — written beside `games.called_off` in one transaction, it **destroys** the room as `challenges.withdrawn` does; whichever of the two is delivered first finds the room and the other finds nothing, and on a court whose game had already ghosted it is the only one that arrives |
+| `games.dismissed` | a reader clearing a *Called off* card from their Now (ADR-0172 §5) — the room is gone before the card can be dismissed, so it reaches the room **not at all** |
 | `ResultProposed` · `Corrected` · `Countered` · `Accepted` | `games` has its own conversation for the argument |
 
 **No system line announces a derived standing, and there is no *Game on* line** — the prototype

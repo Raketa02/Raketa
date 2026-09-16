@@ -17,7 +17,7 @@ const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
 const BO = 'eeeeeeee-0000-4000-8000-000000000099';
 
 function member(over: Partial<Wire['ConversationMemberSchema']> = {}) {
-  return { player_id: TOMEK, nickname: 'tomek.p', ...over };
+  return { player_id: TOMEK, name: 'tomek.p', ...over };
 }
 
 /**
@@ -25,7 +25,7 @@ function member(over: Partial<Wire['ConversationMemberSchema']> = {}) {
  * on the court. A suite naming somebody who is not supplies `people` itself.
  */
 function room(over: Partial<Wire['ConversationRowSchema']> = {}): Wire['ConversationRowSchema'] {
-  const members = over.members ?? [member(), member({ player_id: ME, nickname: 'me_' })];
+  const members = over.members ?? [member(), member({ player_id: ME, name: 'me_' })];
 
   return {
     conversation_id: 'cccccccc-0000-4000-8000-000000000003',
@@ -51,8 +51,8 @@ describe('what crosses', () => {
       conversationId: 'cccccccc-0000-4000-8000-000000000003',
       sport: 'padel',
       members: [
-        { playerId: TOMEK, nickname: 'tomek.p' },
-        { playerId: ME, nickname: 'me_' },
+        { playerId: TOMEK, name: 'tomek.p' },
+        { playerId: ME, name: 'me_' },
       ],
     });
   });
@@ -90,7 +90,7 @@ describe('what crosses', () => {
 
     expect(withPhoto?.members[0]).toEqual({
       playerId: TOMEK,
-      nickname: 'tomek.p',
+      name: 'tomek.p',
       photoUrl: 'https://example/photo-1',
     });
     expect(mapped()[0]?.members[0]).not.toHaveProperty('photoUrl');
@@ -98,7 +98,7 @@ describe('what crosses', () => {
 
   /** A member `users` can no longer name keeps their place: dropping them draws a short court. */
   it('keeps a member whose handle the platform has lost', () => {
-    const [conversation] = mapped({ members: [member({ nickname: null })] });
+    const [conversation] = mapped({ members: [member({ name: null })] });
 
     expect(conversation?.members).toEqual([{ playerId: TOMEK }]);
   });
@@ -112,26 +112,20 @@ describe('what crosses', () => {
   it('carries the people the row names, a member and a departed player alike', () => {
     const [conversation] = mapped({
       members: [member()],
-      people: [
-        member(),
-        { player_id: BO, nickname: 'bo', photo_id: 'p-1', photo_url: 'https://x/1' },
-      ],
+      people: [member(), { player_id: BO, name: 'bo', photo_id: 'p-1', photo_url: 'https://x/1' }],
     });
 
     expect(conversation?.people).toEqual([
-      { playerId: TOMEK, nickname: 'tomek.p' },
-      { playerId: BO, nickname: 'bo', photoUrl: 'https://x/1' },
+      { playerId: TOMEK, name: 'tomek.p' },
+      { playerId: BO, name: 'bo', photoUrl: 'https://x/1' },
     ]);
   });
 
-  /** `nickname: null` is the one case the `?` is for, on a person exactly as on a member. */
+  /** `name: null` is the one case the `?` is for, on a person exactly as on a member. */
   it('keeps a person whose handle the platform has lost, with no handle', () => {
-    const [conversation] = mapped({ people: [member(), { player_id: BO, nickname: null }] });
+    const [conversation] = mapped({ people: [member(), { player_id: BO, name: null }] });
 
-    expect(conversation?.people).toEqual([
-      { playerId: TOMEK, nickname: 'tomek.p' },
-      { playerId: BO },
-    ]);
+    expect(conversation?.people).toEqual([{ playerId: TOMEK, name: 'tomek.p' }, { playerId: BO }]);
   });
 });
 
@@ -284,14 +278,14 @@ describe('one room, opened', () => {
    */
   it('carries the people the newest page names, beside the room and not on it', () => {
     const room = toConversationRoom(
-      opened({ members: [member()], people: [member(), { player_id: BO, nickname: 'bo' }] }),
+      opened({ members: [member()], people: [member(), { player_id: BO, name: 'bo' }] }),
     );
 
     expect(room?.people).toEqual([
-      { playerId: TOMEK, nickname: 'tomek.p' },
-      { playerId: BO, nickname: 'bo' },
+      { playerId: TOMEK, name: 'tomek.p' },
+      { playerId: BO, name: 'bo' },
     ]);
-    expect(room?.room.members).toEqual([{ playerId: TOMEK, nickname: 'tomek.p' }]);
+    expect(room?.room.members).toEqual([{ playerId: TOMEK, name: 'tomek.p' }]);
     expect(room?.room).not.toHaveProperty('people');
   });
 });
@@ -321,7 +315,7 @@ describe('a page backward', () => {
 
   /** The page's own authors and actors — not the roster, and nothing about who is in the room. */
   it('carries the people the page names, which is not the roster', () => {
-    expect(toEntryPage({ entries: [line], people: [{ player_id: BO, nickname: null }] })).toEqual({
+    expect(toEntryPage({ entries: [line], people: [{ player_id: BO, name: null }] })).toEqual({
       entries: [expect.objectContaining({ seq: 2 })],
       people: [{ playerId: BO }],
     });

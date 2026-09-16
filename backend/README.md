@@ -13,7 +13,10 @@ ports, and Docker images are built separately for development and production.
 
 ## Capabilities
 
-- User signup with domain validation for email, nickname, and password strength.
+- User signup with domain validation for email and password strength — credentials only —
+  and **the naming** (`PUT /api/v1/users/me/name`): a name, free text that every screen says,
+  and a unique nickname, drawn as `@…` on a record and the You tab
+  ([ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
 - Login with access and refresh JWT issuance.
 - Refresh-token rotation with server-side token state and replay protection.
 - Idempotent logout that does not leak token existence.
@@ -88,7 +91,7 @@ expressed as immutable domain events:
 
 The aggregate can be created from history with `User.from_history(...)`, records
 new events through an internal `EventRecorder`, and exposes pending events with
-`pull_events()`. Value objects (`Email`, `Nickname`, `RawPassword`,
+`pull_events()`. Value objects (`Email`, `Name`, `Nickname`, `RawPassword`,
 `HashedPassword`) keep validation and normalization close to the domain.
 
 The `auth` module models refresh-token state separately. Refresh tokens are JWTs

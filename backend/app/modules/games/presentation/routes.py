@@ -1,5 +1,5 @@
-"""The four game routes: read yours, read one's pairing, state a score, agree
-with one.
+"""The five game routes: read yours, read one's pairing, state a score, agree
+with one, clear a called-off one's card.
 
 **There is no route that creates a game, none that moves a seat on one, and
 none that ends one.** A game exists because a challenge's line-up completed, and
@@ -8,15 +8,21 @@ arranged this* a fact rather than a claim. A seat opens because somebody left
 the **challenge** (``POST /challenges/{id}/departure``) and is filled because the
 next completed line-up re-seated the same game; here a seat somebody left is
 drawn with `player_id: null` (``docs/adr/0162``). And a game with a seat open
-is **called off** because the challenge was withdrawn
-(``POST /challenges/{id}/withdrawal``), which is where the act's permission
-lives; here it is read as `standing: CALLED_OFF` with `called_off_at` beside it
-(``docs/adr/0163``).
+is **called off** because its court was — by *Call it off*
+(``POST /challenges/{id}/withdrawal``) or by the departure that left one player
+on it — which is where the act's permission lives; here it is read as
+`standing: CALLED_OFF` with `called_off_at` and `called_off_by` beside it
+(``docs/adr/0163``, ``docs/adr/0172`` §4).
+
+**The one act here that is the reader's own is the dismissal**
+(``docs/adr/0172`` §5): a called-off game's card cleared from their rail,
+recorded once per player and derived on every read of ``GET /games``. It
+removes a card, not a fact, so it answers nothing.
 
 **The pairing is read beside the game and never on it** (``docs/adr/0161``).
 ``GameSchema`` carries no forecast and never will; what the game screen draws
 is computed when asked, for the reader, for as long as the game has not
-happened — and the seat on the list still carries a handle and nothing else.
+happened — and the seat on the list still carries a name and nothing else.
 
 **There is no route called confirm.** A result is confirmed when a clock passes,
 and a clock is nobody's request. Silence confirming is not an endpoint that goes
@@ -36,6 +42,7 @@ from fastapi import APIRouter, status
 from app.core.exception_handlers import ErrorResponse
 from app.modules.games.application.commands import (
     AcceptResultCommand,
+    DismissGameCommand,
     StateResultCommand,
 )
 from app.modules.games.application.read_game_pairing import GamePairingRead
@@ -50,12 +57,14 @@ from app.modules.games.domain.windows import (
 )
 from app.modules.games.presentation.dependencies import (
     AcceptResultDep,
+    DismissGameDep,
     ReadGamePairingDep,
     ReadGamesDep,
     StateResultDep,
 )
 from app.modules.games.presentation.schemas import (
     AcceptanceSchema,
+    CalledOffBySchema,
     GameListResponse,
     GamePairingResponse,
     GameSchema,
@@ -176,7 +185,10 @@ _ACCEPTING_REFUSALS: dict[int | str, dict[str, Any]] = {
         "nothing sweeps it, because there is nothing for a sweep to correct.\n\n"
         "**`read_at` is the instant every standing and deadline here was folded "
         "against.** Render your countdowns from it, so they cannot disagree with "
-        "the standing beside them."
+        "the standing beside them.\n\n"
+        "**A called-off game you have dismissed is not here** "
+        "(`POST /games/{id}/dismissal`), on this device and every other — the "
+        "dismissal is recorded on the game, once, and subtracted on every read."
     ),
 )
 async def read_games(
@@ -226,7 +238,7 @@ async def read_games(
     description=(
         "**The game screen's forecast, split, stakes and Levels, computed when "
         "you ask.** Nothing here is stored on the game, and nothing on "
-        "`GET /games` changes: a seat there still carries a handle and nothing "
+        "`GET /games` changes: a seat there still carries a name and nothing "
         "else.\n\n"
         "**Read in your direction.** `split.gap` is your side's strength minus "
         "theirs, and `at_stake` is what a counted result would do to *your* "
@@ -344,6 +356,55 @@ async def accept_result(
     )
 
 
+@router.post(
+    "/{game_id}/dismissal",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "description": (
+                "The card is cleared from your rail — on this device and every "
+                "other — and nothing else moves. A second press answers the "
+                "same and writes nothing."
+            )
+        },
+        status.HTTP_403_FORBIDDEN: _REFUSALS[status.HTTP_403_FORBIDDEN],
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`game_is_not_called_off` — only a called-off game's card can "
+                "be cleared. The other endings' cards carry a score or a "
+                "strand's verdict and are the record for the day they stay; a "
+                "live game's card is the game."
+            ),
+        },
+    },
+    summary="Remove this card",
+    description=(
+        "**Clear a called-off game's card from your own rail** "
+        "(`docs/adr/0172` §5). Yours alone: nobody else's rail moves, the "
+        "game and its record are untouched, and the challenge's row and the "
+        "screen behind it keep the news for their day. It is instant and there "
+        "is no undo — a mis-tap loses the card and nothing else, which is why "
+        "there is no sheet.\n\n"
+        "**Recorded on the game, once per player**, so the card is gone on "
+        "your other phone and after a reinstall; `GET /games` subtracts it on "
+        "every read rather than keeping a list.\n\n"
+        "**Only on a game that is `CALLED_OFF`**, and only for somebody on its "
+        "court — the presser, or the players the leaver left; the leaver's "
+        "seat is open and the card was never on their rail.\n\n"
+        "**A noun and not a verb**, like the departure: what this creates is "
+        "the dismissal, and it answers nothing because the thing a redraw "
+        "would draw is the thing you removed."
+    ),
+)
+async def dismiss_game(
+    game_id: UUID,
+    user: CurrentUserDep,
+    use_case: DismissGameDep,
+) -> None:
+    await use_case.execute(DismissGameCommand(game_id=game_id, player_id=user.id))
+
+
 def _score(payload: ScoreSchema) -> Score:
     """The wire's sets as the domain's score. **Validated there, not here.**
 
@@ -359,11 +420,11 @@ def _score(payload: ScoreSchema) -> Score:
 def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
     """One game as its own court is allowed to see it.
 
-    The occupants carry **a handle and nothing else** (``docs/adr/0141``). A
+    The occupants carry **a name and nothing else** (``docs/adr/0141``). A
     card, a Level and an area belong to a search's answer, where a gate decided
     they may be shown; a game is a record of an evening, and a screen that
     re-published somebody's profile off the back of it would be a directory with
-    extra steps. A handle is not that: it is what these four people already knew
+    extra steps. A name is not that: it is what these four people already knew
     about each other by the time they were on a court together, and without it
     the screens name *sides* — which leaves a result agreed with nobody and three
     padel games in a week told apart by nothing but how long ago they were
@@ -372,7 +433,7 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
     **Nothing here is re-gated against who is reading.** The four fail-closed
     gates decide who may be *introduced*, and an evening you were both at is not
     an introduction; ``docs/adr/0095`` §7 already settled that a block is
-    forward-looking and does not reach into a game already agreed. A handle that
+    forward-looking and does not reach into a game already agreed. A name that
     vanished from a row would also be the trace §8 says neither party ever sees.
     """
 
@@ -398,14 +459,22 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
             else None
         ),
         called_off_at=game.called_off_at,
+        called_off_by=(
+            None
+            if game.called_off_by is None
+            else CalledOffBySchema(
+                player_id=game.called_off_by,
+                name=one.names.get(game.called_off_by),
+            )
+        ),
         seats=[
             SeatingSchema(
                 side=seating.side,
                 player_id=seating.player_id,
-                nickname=(
+                name=(
                     None
                     if seating.player_id is None
-                    else one.handles.get(seating.player_id)
+                    else one.names.get(seating.player_id)
                 ),
             )
             for seating in game.line_up.seatings

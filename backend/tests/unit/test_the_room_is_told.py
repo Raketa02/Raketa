@@ -18,6 +18,7 @@ import pytest
 
 from app.kernel import Sport, instant
 from app.modules.challenges.domain.events import (
+    ChallengeCalledOff,
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
     ChallengeWithdrawn,
@@ -39,6 +40,7 @@ from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
     GameCalledOff,
+    GameDismissed,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -70,10 +72,12 @@ EVERY_PUBLISHED_EVENT = (
     SeatLeft,
     SeatsInvited,
     ChallengeWithdrawn,
+    ChallengeCalledOff,
     GamePlanned,
     SeatVacated,
     LineUpReseated,
     GameCalledOff,
+    GameDismissed,
     GamePlayed,
     ResultProposed,
     ResultCorrected,
@@ -107,26 +111,28 @@ def test_each_event_that_publishes_nothing_names_its_reason(telling):
     assert telling.why_nothing
 
 
-def test_the_ten_that_write_nothing_are_the_ten_the_words_names():
+def test_the_twelve_that_write_nothing_are_the_twelve_the_words_names():
     """``the-words.md`` §23.1 is headed *the six events that publish nothing* and
-    its own table names eleven, four grouped on one row as *the result
-    argument*, two on one row as *the game's line-up moving*, and the call-off
-    on a row of its own (``docs/adr/0163``). The discrepancy is in the source;
-    this asserts the events.
+    its own table names twelve of them, four grouped on one row as *the result
+    argument*, two on one row as *the game's line-up moving*, the call-off on
+    a row of its own (``docs/adr/0163``), and the court's own call-off and the
+    dismissal since ``docs/adr/0172``. The discrepancy is in the source; this
+    asserts the events.
 
     The mutual keeps its row there and left this list with ``docs/adr/0169``
     §8: on a doubles court it writes the side line, so here it is a row with a
-    code and a condition rather than a refusal — ten refusals, see the test
-    below.
+    code and a condition rather than a refusal — see the test below.
     """
 
     assert {telling.event for telling in WRITES_NOTHING} == {
         ChallengeSent,
         ChallengeWithdrawn,
+        ChallengeCalledOff,
         GamePlanned,
         SeatVacated,
         LineUpReseated,
         GameCalledOff,
+        GameDismissed,
         ResultProposed,
         ResultCorrected,
         ResultCountered,
@@ -231,6 +237,20 @@ def test_the_withdrawal_draws_nothing_and_has_the_largest_effect_of_any_telling(
     assert withdrawn.line is None
     assert withdrawn.reaches_the_room
     assert ChallengeWithdrawn in TOLD_ABOUT
+
+
+def test_the_courts_call_off_reaches_the_room_and_the_dismissal_does_not():
+    """``docs/adr/0172`` §6 — the court's own ending is subscribed beside the
+    withdrawal, the same arm; the dismissal reaches the room not at all, because
+    there is no room by then."""
+
+    called_off = next(t for t in TELLINGS if t.event is ChallengeCalledOff)
+    assert called_off.line is None and called_off.reaches_the_room
+    assert ChallengeCalledOff in TOLD_ABOUT
+
+    dismissed = next(t for t in TELLINGS if t.event is GameDismissed)
+    assert dismissed.line is None and not dismissed.reaches_the_room
+    assert GameDismissed not in TOLD_ABOUT
 
 
 def test_the_result_argument_never_reaches_the_room_at_all():

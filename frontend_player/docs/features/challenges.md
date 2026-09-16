@@ -541,3 +541,44 @@ Chats list where there is nothing to pop to — a cold link to the route, which
 suite walks both. The challenge's face is untouched: `dismissTo` down to the list under the
 challenge screen for both moves, as before. `LATER`, `MATCHED_WORD` and `matchedAnnouncement`
 cross the feature's surface for the deck's suite and nothing else.
+
+**The court ends with the game, the ending says who, and the row and the screen say it**
+([#454](https://github.com/Raketa02/Raketa/issues/454), [ADR-0172](../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+§2–§4, §7, §9). `CALLED_OFF` is the seventh standing — `STANDINGS`, `ENDED`,
+`STILL_BEING_ARRANGED` and the vocabulary assertion each gained the row the compiler demanded —
+and every ending carries `ended_by` and, on a court that has been a game, `game_id`, both mapped
+off the list and off every act's reply and carried onto the row by `rowRedrawnFrom`, so the
+presser's row reads _You called the game off_ on the reply. **The ended rows are keyed by
+`ended_by`'s own seat and never by side**: `StandingFacts`' four endings share one `EndingFacts`
+payload — who, as a `NamedPlayer` with `you` for the reader; `byADeparture`, read off that seat's
+`LEFT`; and the reader's own seat — and `endingLine` writes §13's second table from it, reading the
+reader's own seat first on the two folded endings (an invitee who lapsed while somebody else's no
+closed the court reads _Your day ran out_, as the column always said) and the act alone on the two
+announced ones. **The face is who the sentence names**: `othersOn` draws `ended_by`'s seat on an
+ended row, and where the sentence is about the reader's own act — _Your day ran out_, _You called
+the game off_ — the people still on the court, which on an ended court is never nobody; a doubles
+_said no_ row goes from three faces to one. `endingIsTheReadersOwn` is the one predicate the words
+and the faces share. **The departure-drop rule is retired** — `endedOnADepartureLeavingTheReader`
+existed because the only sentence was _? said no_ — and `removedByTheReader` shrank to the
+organiser seat, since `WITHDRAWN` is _Remove the challenge_'s alone. **The `Called off` tag**, the
+kit's `bad` variant, sits at the trailing edge of a `CALLED_OFF` row and no other, spoken last in
+the row's name because the sentence does not say the word; the stripe's rule is untouched. **The
+ended court** is a sixth arm, `ended`, for `CALLED_OFF` and a departure-ended `DECLINED`: the
+sentence, `EndedCourt` — every occupied seat with a `SeatWord` read off its answer, and
+_called it off_ off `ended_by` because the presser's seat reads `ACCEPTED` like the reader's — and
+no arm at all. **The detail read carries neither `ended_by` nor `game_id`** (the spec's §0.1 says
+both reads grow them; #453 put them on `ChallengeSchema` alone), so the screen reads both off the
+row the list holds — `useChallengeRow`, at `staleTime: Infinity` so a second observer does not
+refetch the tab bar's list on every mount — and `asTheRowSays` merges them before the fold; if the
+detail read grows the two fields, the mapper changes and nothing else does. **The leaver's sheet
+says what the leaving does**: `leavingWouldEnd` is the ending rule read a move ahead — the reader
+holds an accepted seat, exactly one other is accepted, nobody is deciding — and `game_id` picks
+_calls the game off — for {name} too_ over _closes this court for {name}_; both doors and the
+game screen's `LeaveGame` read it off the same row, so three sheets cannot disagree about one
+court. On the game screen's three-line sheet the ending line **replaces** the first line rather
+than preceding it, as the record has it: _The others keep the game and can fill your seat_ is false
+of a leaving that calls it off, and a sheet saying both would contradict itself. Nothing on the
+wire says _cancel_, and nothing here does. The mock's hint under the ended court (_Nothing to
+press…_) is not drawn: the record does not ask for it, and the sentence above already says what
+took the controls. **Not seen on a device** — the tag, the ended court and the sheet lines are
+asked for a look.

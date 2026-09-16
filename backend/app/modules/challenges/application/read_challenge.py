@@ -46,7 +46,7 @@ from app.modules.challenges.domain.ports import (
     CourtCards,
     CourtPairingQuery,
     CourtSeat,
-    PlayerHandles,
+    PlayerNames,
 )
 from app.modules.challenges.domain.standing import ARRANGING, Standing
 
@@ -74,7 +74,7 @@ class DetailedChallenge:
     challenge: Challenge
     standing: Standing
     read_at: Instant
-    handles: Mapping[UUID, str]
+    names: Mapping[UUID, str]
     court: CourtCards | None
 
     def card_for(self, player_id: UUID) -> CourtCard | None:
@@ -96,17 +96,17 @@ class ReadChallenge:
         self,
         *,
         challenges: ChallengeRepository,
-        handles: PlayerHandles,
+        names: PlayerNames,
         pairings: CourtPairingQuery,
         clock: Clock,
     ) -> None:
         self._challenges = challenges
-        self._handles = handles
+        self._names = names
         self._pairings = pairings
         self._clock = clock
 
     async def execute(self, command: ReadChallengeCommand) -> DetailedChallenge:
-        """The arrangement, the handles, and the cards where a card is drawn.
+        """The arrangement, the names, and the cards where a card is drawn.
 
         **The clock is read once**, and every fold in the answer is against it —
         the standing, each seat's own deadline, and which seats are still in.
@@ -117,7 +117,7 @@ class ReadChallenge:
         now = instant(self._clock.now())
         challenge = await self._yours(command)
         standing = challenge.standing_at(now)
-        handles = await self._handles.handles_of(
+        names = await self._names.names_of(
             sorted(
                 seat.player_id
                 for seat in challenge.seats
@@ -128,7 +128,7 @@ class ReadChallenge:
             challenge=challenge,
             standing=standing,
             read_at=now,
-            handles=handles,
+            names=names,
             court=await self._court(challenge, standing, command.reader_id, now),
         )
 

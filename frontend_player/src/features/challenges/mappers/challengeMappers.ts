@@ -29,7 +29,7 @@
  * `ChallengeSchema` carried fields nothing drew, and *"these fields are mapped by the ticket
  * that draws them"* was the rule. The Chats inbox is that ticket
  * ([#360](https://github.com/Raketa02/Raketa/issues/360)): the row prints a sport, sorts on
- * `opened_at`, names a person from a seat's `nickname` and folds a duration from that seat's
+ * `opened_at`, names a person from a seat's `name` and folds a duration from that seat's
  * `answer_by` — so those four arrive, and `mode` and `window` stay unmapped, because still
  * nothing draws them.
  *
@@ -151,6 +151,8 @@ export function toChallenges(response: ChallengeListResponse): readonly Challeng
         sport,
         openedAt: one.opened_at,
         ...(one.ended_at == null ? {} : { endedAt: one.ended_at }),
+        ...(one.ended_by == null ? {} : { endedBy: one.ended_by }),
+        ...(one.game_id == null ? {} : { gameId: one.game_id }),
         readAt: response.read_at,
         seats: one.seats.map(toSeat),
       },
@@ -162,7 +164,7 @@ function toSeat(seat: components['schemas']['SeatSchema']): ChallengeSeat {
   return {
     ...(seat.player_id == null ? {} : { playerId: seat.player_id }),
     ...(seat.answer == null ? {} : { answer: seat.answer }),
-    ...(seat.nickname == null ? {} : { nickname: seat.nickname }),
+    ...(seat.name == null ? {} : { name: seat.name }),
     ...(seat.answer_by == null ? {} : { answerBy: seat.answer_by }),
   };
 }

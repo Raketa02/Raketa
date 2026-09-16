@@ -23,9 +23,8 @@ async def test_a_domain_error_carries_its_own_code_not_its_base_class(
     client, valid_signup_payload
 ):
     await client.post("/api/v1/users", json=valid_signup_payload)
-    dup = {**valid_signup_payload, "nickname": "alice2"}
 
-    resp = await client.post("/api/v1/users", json=dup)
+    resp = await client.post("/api/v1/users", json=valid_signup_payload)
 
     assert resp.status_code == 409
     body = _envelope(resp)
@@ -38,9 +37,8 @@ async def test_a_domain_error_carries_its_own_code_not_its_base_class(
 @pytest.mark.asyncio
 async def test_details_survive_onto_the_envelope(client, valid_signup_payload):
     await client.post("/api/v1/users", json=valid_signup_payload)
-    dup = {**valid_signup_payload, "nickname": "alice2"}
 
-    resp = await client.post("/api/v1/users", json=dup)
+    resp = await client.post("/api/v1/users", json=valid_signup_payload)
 
     assert resp.json()["details"] == {"field": "email"}
 
@@ -156,7 +154,6 @@ async def test_a_rejected_body_never_echoes_what_was_sent(client):
             "email": "not-an-email",
             "password1": "hunter22!",
             "password2": "hunter22!",
-            "nickname": "alice",
             "adult_attested": True,
         },
     )
@@ -177,8 +174,9 @@ async def test_an_unrouted_path_is_the_same_envelope(client):
 async def test_status_semantics_are_unchanged(client, valid_signup_payload):
     # Only the body and its codes changed. A 409 is still a 409.
     await client.post("/api/v1/users", json=valid_signup_payload)
-    dup = {**valid_signup_payload, "nickname": "alice2"}
 
-    assert (await client.post("/api/v1/users", json=dup)).status_code == 409
+    assert (
+        await client.post("/api/v1/users", json=valid_signup_payload)
+    ).status_code == 409
     assert (await client.get("/api/v1/users/me")).status_code == 401
     assert (await client.post("/api/v1/users", json={})).status_code == 422

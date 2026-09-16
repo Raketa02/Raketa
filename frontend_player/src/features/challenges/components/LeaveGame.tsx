@@ -60,10 +60,11 @@ import { Button, Note, theme } from '@/shared/ui';
 
 import { actRefusal } from '../domain/actRefusal';
 import { useLeaveGame } from '../hooks/useChallenge';
+import { useLeavingWouldEnd } from '../hooks/useChallenges';
 
 import { actOnRefusal } from './actOnRefusal';
 import { challengeErrorMessage } from './challengeErrorMessage';
-import { LEAVE_THIS_GAME, LEAVING } from './leaveGamePresentation';
+import { LEAVE_THIS_GAME, LEAVING, leaveThisGameBody } from './leaveGamePresentation';
 import { LeaveSheet } from './LeaveSheet';
 
 export interface LeaveGameProps {
@@ -85,6 +86,13 @@ export interface LeaveGameProps {
 export function LeaveGame({ challengeId, offered, onReRead }: LeaveGameProps) {
   const leave = useLeaveGame();
   const online = useIsOnline();
+  /**
+   * **What the leaving would do**, read off the challenge's row on the list this feature holds
+   * (ADR-0172 §9) — the same hook the Chats list's door reads, so the two sheets cannot disagree
+   * about one court. On a game the case is a singles, or a doubles down to two: besides the
+   * reader's own seat exactly one is still occupied and none is awaiting.
+   */
+  const ends = useLeavingWouldEnd(challengeId);
 
   /**
    * Whether the confirmation is up, and **the control it hands focus back to.**
@@ -144,6 +152,7 @@ export function LeaveGame({ challengeId, offered, onReRead }: LeaveGameProps) {
         onClose={() => setConfirming(false)}
         onLeave={go}
         returnFocusTo={control}
+        body={leaveThisGameBody(ends)}
       />
     </View>
   );

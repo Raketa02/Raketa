@@ -70,8 +70,8 @@ export interface LikelyRange {
  * depending on who was looking.
  */
 export interface PlayerCard {
-  /** The whole handle. Nothing derives a familiar form from it — ADR-0107, and §15. */
-  readonly nickname: string;
+  /** The whole name. Nothing derives a familiar form from it — ADR-0107 through ADR-0171, and §15. */
+  readonly name: string;
   /**
    * The short-lived signed link that draws their photograph, **omitted** with the id when
    * they have none — and the client draws the generated poster instead.

@@ -21,7 +21,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
-import { IT_WAS_CALLED_OFF } from '@/features/games/types';
+import { IT_WAS_CALLED_OFF, calledTheGameOff } from '@/features/games/types';
 import { AppError, offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -86,22 +86,22 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const THREE: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: KASIA, nickname: 'kasia_w' },
-  { player_id: TOMEK, nickname: 'tomek.p' },
+  { player_id: ME, name: 'me_' },
+  { player_id: KASIA, name: 'kasia_w' },
+  { player_id: TOMEK, name: 'tomek.p' },
 ];
 
 /** A padel four after Marek left: three in, one open — the court every case here is read on. */
 const SHORT: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, nickname: 'me_' },
-  { side: 'A', player_id: KASIA, nickname: 'kasia_w' },
-  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
-  { side: 'B', player_id: null, nickname: null },
+  { side: 'A', player_id: ME, name: 'me_' },
+  { side: 'A', player_id: KASIA, name: 'kasia_w' },
+  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
+  { side: 'B', player_id: null, name: null },
 ];
 
 const FULL: Wire['GameSchema']['seats'] = [
   ...SHORT.slice(0, 3),
-  { side: 'B', player_id: MAREK, nickname: 'marekb' },
+  { side: 'B', player_id: MAREK, name: 'marekb' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
@@ -132,10 +132,10 @@ function row(over: Partial<Wire['ChallengeSchema']> = {}): Wire['ChallengeSchema
     opened_at: '2026-09-07T09:00:00Z',
     ended_at: null,
     seats: [
-      { side: 'A', player_id: ME, nickname: 'me_', answer: 'ACCEPTED', answer_by: null },
-      { side: 'A', player_id: KASIA, nickname: 'kasia_w', answer: 'ACCEPTED', answer_by: null },
-      { side: 'B', player_id: TOMEK, nickname: 'tomek.p', answer: 'ACCEPTED', answer_by: null },
-      { side: 'B', player_id: MAREK, nickname: 'marekb', answer: 'LEFT', answer_by: null },
+      { side: 'A', player_id: ME, name: 'me_', answer: 'ACCEPTED', answer_by: null },
+      { side: 'A', player_id: KASIA, name: 'kasia_w', answer: 'ACCEPTED', answer_by: null },
+      { side: 'B', player_id: TOMEK, name: 'tomek.p', answer: 'ACCEPTED', answer_by: null },
+      { side: 'B', player_id: MAREK, name: 'marekb', answer: 'LEFT', answer_by: null },
     ],
     ...over,
   };
@@ -144,17 +144,17 @@ function row(over: Partial<Wire['ChallengeSchema']> = {}): Wire['ChallengeSchema
 /** The court once its organiser has left too: two seats open, and the exit fallen back to us. */
 const ORGANISER_LEFT = row({
   seats: [
-    { side: 'A', player_id: ME, nickname: 'me_', answer: 'ACCEPTED', answer_by: null },
-    { side: 'A', player_id: KASIA, nickname: 'kasia_w', answer: 'ACCEPTED', answer_by: null },
-    { side: 'B', player_id: TOMEK, nickname: 'tomek.p', answer: 'LEFT', answer_by: null },
-    { side: 'B', player_id: MAREK, nickname: 'marekb', answer: 'LEFT', answer_by: null },
+    { side: 'A', player_id: ME, name: 'me_', answer: 'ACCEPTED', answer_by: null },
+    { side: 'A', player_id: KASIA, name: 'kasia_w', answer: 'ACCEPTED', answer_by: null },
+    { side: 'B', player_id: TOMEK, name: 'tomek.p', answer: 'LEFT', answer_by: null },
+    { side: 'B', player_id: MAREK, name: 'marekb', answer: 'LEFT', answer_by: null },
   ],
 });
 
 const TWO_SHORT: Wire['GameSchema']['seats'] = [
   ...SHORT.slice(0, 2),
-  { side: 'B', player_id: null, nickname: null },
-  { side: 'B', player_id: null, nickname: null },
+  { side: 'B', player_id: null, name: null },
+  { side: 'B', player_id: null, name: null },
 ];
 
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
@@ -178,18 +178,27 @@ const PASSED = plan({
   agreed_point: '2026-09-11T16:00:00Z',
 });
 
-/** What the route says back: the challenge as it now stands, withdrawn. */
+/**
+ * What the route says back on a court that has been a game: the court's own ending, `CALLED_OFF`
+ * with `ended_by` the presser — never `WITHDRAWN` (ADR-0172 §1).
+ */
 const WITHDRAWN: Wire['ChallengeSchema'] = row({
-  standing: 'WITHDRAWN',
+  standing: 'CALLED_OFF',
   ended_at: '2026-09-12T09:05:00Z',
+  ended_by: ME,
+  game_id: GAME,
 });
 
-/** The game once the act has landed and the list has been re-read: the fourth end, dated. */
+/** The game once the act has landed and the list has been re-read: the fourth end, dated, and who. */
 const CALLED_OFF = game({
   standing: 'CALLED_OFF',
   entry_closes_at: null,
   called_off_at: '2026-09-12T09:05:00Z',
+  called_off_by: { player_id: ME, name: 'me_' },
 });
+
+/** The presser's own heading on the re-fold (ADR-0172 §8) — and never the nameless one. */
+const YOU_CALLED_IT_OFF = calledTheGameOff({ kind: 'you' });
 
 const refusal = (code: string): AppError =>
   new AppError('conflict', 'business-conflict', 'test failure', { code });
@@ -297,7 +306,7 @@ describe('who may call it off', () => {
     expect(await screen.findByRole('button', { name: CALL_IT_OFF })).toBeTruthy();
     await callItOff();
 
-    expect(await screen.findByText(IT_WAS_CALLED_OFF)).toBeTruthy();
+    expect(await screen.findByText(YOU_CALLED_IT_OFF)).toBeTruthy();
     expect(transport.requestsTo('POST', WITHDRAWAL_PATH)).toHaveLength(1);
   });
 
@@ -315,22 +324,22 @@ describe('who may call it off', () => {
       challenges: [
         row({
           seats: [
-            { side: 'A', player_id: ME, nickname: 'me_', answer: 'LEFT', answer_by: null },
+            { side: 'A', player_id: ME, name: 'me_', answer: 'LEFT', answer_by: null },
             {
               side: 'A',
               player_id: KASIA,
-              nickname: 'kasia_w',
+              name: 'kasia_w',
               answer: 'ACCEPTED',
               answer_by: null,
             },
             {
               side: 'B',
               player_id: TOMEK,
-              nickname: 'tomek.p',
+              name: 'tomek.p',
               answer: 'ACCEPTED',
               answer_by: null,
             },
-            { side: 'B', player_id: MAREK, nickname: 'marekb', answer: 'LEFT', answer_by: null },
+            { side: 'B', player_id: MAREK, name: 'marekb', answer: 'LEFT', answer_by: null },
           ],
         }),
       ],
@@ -424,7 +433,7 @@ describe('the call-off', () => {
 
     stubGames(transport, [CALLED_OFF], READ_AT);
     answer();
-    await screen.findByText(IT_WAS_CALLED_OFF);
+    await screen.findByText(YOU_CALLED_IT_OFF);
   });
 
   /**
@@ -444,7 +453,8 @@ describe('the call-off', () => {
 
     await callItOff();
 
-    expect(await screen.findByText(IT_WAS_CALLED_OFF)).toBeTruthy();
+    expect(await screen.findByText(YOU_CALLED_IT_OFF)).toBeTruthy();
+    expect(screen.queryByText(IT_WAS_CALLED_OFF)).toBeNull();
     expect(screen).toHavePathname(`/games/${GAME}`);
     await waitFor(() => {
       expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(games);

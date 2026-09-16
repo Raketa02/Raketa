@@ -58,8 +58,12 @@ export type GameCardName = (typeof GAME_CARD_NAMES)[number];
  * **The named door in a card's footer** — §5.2's table, and the rule over it: *the button carries
  * the act's verb, it navigates, and it never writes.*
  *
- * `undefined` is a card with nothing to press, which the four endings and the gap all are: a
+ * `undefined` is a card with nothing to press, which three of the endings and the gap are: a
  * control offering an act that state cannot take would be the app naming a thing it cannot do.
+ * **The fourth ending's card opens the game screen** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §8): a called-off card names nobody, and *What happened?* is the door to the screen that does
+ * — the same `open` as *Game on*'s, and the word is `nowPresentation`'s. The trash beside it is
+ * not a door: it writes, and it is `features/games`' own act composed into the card's footer.
  *
  * **`fill` names the door on a court somebody left, and it navigates like the other three.** It
  * ran the fill from the card and landed in the builder when it arrived
@@ -125,12 +129,38 @@ const DOOR: Readonly<Record<GameCardName, GameDoor | undefined>> = {
   counted: undefined,
   uncounted: undefined,
   'never-played': undefined,
-  'called-off': undefined,
+  // *What happened?* — the screen behind the card is where the ending says who (ADR-0172 §8).
+  'called-off': 'open',
   unreadable: undefined,
 };
 
 export function doorOf(name: GameCardName): GameDoor | undefined {
   return DOOR[name];
+}
+
+/**
+ * **Which card carries the trash** — *Remove this card*, the reader's own dismissal, on the
+ * called-off card and on no other ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §5). The other endings' cards carry a score or a strand's verdict and are the record for the
+ * day they stay; this one carries nothing the challenge row does not, and it is the one a player
+ * wants gone. A `Record` over the union, so widening the trash is a row here and a decision,
+ * never a fall-through — the record names it out of scope.
+ */
+const CLEARABLE: Readonly<Record<GameCardName, boolean>> = {
+  planning: false,
+  'game-on': false,
+  'needs-a-player': false,
+  'needs-result': false,
+  confirm: false,
+  counted: false,
+  uncounted: false,
+  'never-played': false,
+  'called-off': true,
+  unreadable: false,
+};
+
+export function mayBeCleared(name: GameCardName): boolean {
+  return CLEARABLE[name];
 }
 
 /**

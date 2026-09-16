@@ -1,4 +1,4 @@
-"""What a caller may ask this context to do. **Five commands, and no flags.**
+"""What a caller may ask this context to do. **Six commands, and no flags.**
 
 Each is one sentence a player could say. There is no *kind* on the result
 command deciding between proposing, correcting and countering: which of the three
@@ -61,6 +61,15 @@ class StateResultCommand:
 @dataclass(frozen=True, slots=True)
 class AcceptResultCommand:
     """*That is what happened.* From the other side, and one is enough."""
+
+    game_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class DismissGameCommand:
+    """*Remove this card.* The reader's own, on a called-off game
+    (``docs/adr/0172`` §5)."""
 
     game_id: UUID
     player_id: UUID

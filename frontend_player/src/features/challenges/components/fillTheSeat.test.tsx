@@ -93,22 +93,22 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const THREE: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: KASIA, nickname: 'kasia_w' },
-  { player_id: TOMEK, nickname: 'tomek.p' },
+  { player_id: ME, name: 'me_' },
+  { player_id: KASIA, name: 'kasia_w' },
+  { player_id: TOMEK, name: 'tomek.p' },
 ];
 
 /** A padel four after Marek left: three in, one open. */
 const SHORT: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, nickname: 'me_' },
-  { side: 'A', player_id: KASIA, nickname: 'kasia_w' },
-  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
-  { side: 'B', player_id: null, nickname: null },
+  { side: 'A', player_id: ME, name: 'me_' },
+  { side: 'A', player_id: KASIA, name: 'kasia_w' },
+  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
+  { side: 'B', player_id: null, name: null },
 ];
 
 const FULL: Wire['GameSchema']['seats'] = [
   ...SHORT.slice(0, 3),
-  { side: 'B', player_id: DOROTA, nickname: 'dorota_w' },
+  { side: 'B', player_id: DOROTA, name: 'dorota_w' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
@@ -156,7 +156,7 @@ function card(playerId: string): Wire['CandidateSchema'] {
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname: NAMES[playerId] ?? 'anon',
+      name: NAMES[playerId] ?? 'anon',
       area_code: 'A+050612+0019938',
       social_tags: [],
       level: 3.1,

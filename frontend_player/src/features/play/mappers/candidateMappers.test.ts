@@ -49,7 +49,7 @@ function row(over: Partial<Wire['CandidateSchema']> = {}): Wire['CandidateSchema
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname: 'Marek Z.',
+      name: 'Marek Z.',
       photo_url: 'https://photos.example/marek?sig=abc',
       area_code: 'A+050612+0019938',
       social_tags: ['PLAYS_TO_WIN'],
@@ -258,7 +258,7 @@ describe('the candidate', () => {
   it('renames the wire’s fields and keeps the order it was given', () => {
     const candidate = toCandidate(row({ terms: [OVERLAP] }));
 
-    expect(candidate.card.nickname).toBe('Marek Z.');
+    expect(candidate.card.name).toBe('Marek Z.');
     expect(candidate.terms[0]?.evidence).toEqual({
       kind: 'availability_overlap',
       sharedCount: 3,
@@ -542,6 +542,6 @@ describe('a withheld row', () => {
     });
 
     expect(list.candidates).toHaveLength(1);
-    expect(list.candidates[0]?.card.nickname).toBe('Marek Z.');
+    expect(list.candidates[0]?.card.name).toBe('Marek Z.');
   });
 });

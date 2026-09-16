@@ -208,7 +208,11 @@ describe('the placeholder', () => {
     pressTab('You');
 
     expect(await screen.findByText(PLACEHOLDER_COPY.you.line)).toBeTruthy();
-    expect(await screen.findByText(`${GATE_USER.nickname} · ${GATE_USER.email}`)).toBeTruthy();
+    // The name, and the handle under it — the You tab is one of the two screens that draw
+    // an `@nickname` (ADR-0171 §4).
+    expect(await screen.findByText(GATE_USER.name ?? '')).toBeTruthy();
+    expect(screen.getByText(`@${GATE_USER.nickname ?? ''}`)).toBeTruthy();
+    expect(screen.getByText(GATE_USER.email)).toBeTruthy();
     expect(screen.getByLabelText('Sign out')).toBeTruthy();
   });
 
@@ -423,7 +427,8 @@ describe('the shell survives the gate re-reading the player', () => {
     queryClient.setQueryData(authKeys.currentUser(), {
       id: GATE_USER.id,
       email: GATE_USER.email,
-      nickname: GATE_USER.nickname,
+      name: GATE_USER.name ?? undefined,
+      nickname: GATE_USER.nickname ?? undefined,
       hasPlayerProfile: true,
     });
   }
@@ -573,8 +578,8 @@ describe('the bar stands down inside a conversation', () => {
   const READ_AT = '2026-09-08T12:00:00Z';
 
   const MEMBERS: Wire['ConversationMemberSchema'][] = [
-    { player_id: GATE_USER.id, nickname: 'me_' },
-    { player_id: TOMEK, nickname: 'tomek.p' },
+    { player_id: GATE_USER.id, name: 'me_' },
+    { player_id: TOMEK, name: 'tomek.p' },
   ];
 
   /** One squash challenge addressed to you, with its detail — enough for the screen to draw. */
@@ -585,13 +590,13 @@ describe('the bar stands down inside a conversation', () => {
     standing: 'AWAITING_ANSWERS',
     opened_at: '2026-09-08T08:00:00Z',
     seats: [
-      { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
+      { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
       {
         side: 'B',
         player_id: GATE_USER.id,
         answer: null,
         answer_by: '2026-09-09T08:00:00Z',
-        nickname: 'me_',
+        name: 'me_',
       },
     ],
   };

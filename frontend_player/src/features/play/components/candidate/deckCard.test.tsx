@@ -99,7 +99,7 @@ function candidate(
     fit: 76,
     distanceKm: 2,
     card: {
-      nickname: 'Filip N.',
+      name: 'Filip N.',
       photoUrl: PHOTO,
       photoReview: 'allowed',
       areaCode: HERE,

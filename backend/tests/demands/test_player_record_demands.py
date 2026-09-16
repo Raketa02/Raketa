@@ -969,7 +969,7 @@ def _a_search(searcher: UUID, shown: UUID) -> SearchRecord:
                 concerns=(),
                 distance_km=4,
                 card=RecordedCard(
-                    nickname="ada",
+                    name="ada",
                     photo_id=None,
                     review=None,
                     area_code="A+05151-000013",

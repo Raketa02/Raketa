@@ -2,7 +2,16 @@
 
 - **Status:** Accepted — **§1's *whose act* superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §5**: any player on
   the court, with no organiser-first clause and no fallback; and a game is also called off
-  **by the departure** that leaves one player on it (ADR-0165 §3). §2–§7 stand.
+  **by the departure** that leaves one player on it (ADR-0165 §3). §2–§7 stand — **and three
+  sentences superseded 2026-09-15 by
+  [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)**:
+  §4's *no `called_off_by`* (the game read carries the player and their name, §4 there); §5's
+  *`GameCalledOff` reaches the room not at all* (the departure's call-off destroys the room
+  through the game, and has since #424 — §6 there); and the record's *the act is the withdraw* /
+  §7's *the challenge is `WITHDRAWN`* (*Call it off* records `CALLED_OFF`, the challenge's
+  seventh standing, and `WITHDRAWN` is *Remove the challenge*'s alone — §1 there). The
+  Consequences' *who withdrew a court whose game had already ended is not recorded* is recorded
+  now. §2, §3 and §6 stand whole.
 - **Date:** 2026-09-12
 - **Supersedes, by named sentence:**
   [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)'s *"a game reaches exactly
@@ -187,6 +196,12 @@ afterwards, in either direction.
 
 ### 4. The wire — `called_off_at` beside `played_at`, and no name
 
+> **The name is on the wire since 2026-09-15:
+> [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §4.**
+> `GameSchema` carries `called_off_by` — the player and their name, from the `called_by` this
+> section kept on the record for exactly this day — and the game screen names them. Everything
+> else here stands: `called_off_at`, `entry_closes_at` going `null`, the refusal codes.
+
 `GameSchema` gains `called_off_at: datetime | null`, in `played_at`'s shape: `null` until the
 act, the act's own instant after it. It is what the client shelves the ending card by — a day
 from the end, as `belongsOnTheRail` already reads `entryClosesAt ?? playedAt` — because
@@ -200,6 +215,13 @@ on the entry; `not_a_game_to_call_off` is the aggregate's backstop and no route 
 Everything is additive.
 
 ### 5. The room — destroyed in the act, told nothing new
+
+> **`GameCalledOff` does reach the room** — since the departure's call-off
+> ([ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §3,
+> built by #424) arrived with no withdrawal beside it, the room's teller destroys the room on
+> `games.called_off` too, and finds nothing where the challenge's own ending got there first.
+> [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §6
+> says which arm destroys the room on each path; *destroyed in the act, no line, no nudge* stands.
 
 `challenges.withdrawn` already destroys the room, and the arm does not read `game_id`:
 `_withdrawn` looks the room up by challenge and destroys whatever it finds, and `lifetime`'s

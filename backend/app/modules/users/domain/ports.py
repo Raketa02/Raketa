@@ -1,18 +1,53 @@
 from __future__ import annotations
 
-from typing import Collection, Mapping, Optional, Protocol, runtime_checkable
+from dataclasses import dataclass
+from typing import Collection, Mapping, Optional, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.modules.users.domain.events import UserRegistered
+from app.modules.users.domain.events import UserNamed, UserRegistered
 from app.modules.users.domain.user import User
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Naming:
+    """How a named player is seen: the **name** every screen says, and the
+    **nickname** drawn as ``@…`` on their record and their own You tab
+    (``docs/adr/0171`` §1).
+
+    Both or neither — the naming is one act carrying both — so a read that
+    answers with one of these answers with the pair, and an account that has
+    neither is simply absent from the answer.
+    """
+
+    name: str
+    nickname: str
 
 
 @runtime_checkable
 class UserRepository(Protocol):
     async def get_by_id(self, user_id: UUID) -> Optional[User]: ...
     async def get_by_email(self, email: str) -> Optional[User]: ...
-    async def get_by_nickname(self, nickname: str) -> Optional[User]: ...
+
+    async def get_by_nickname(self, nickname: str) -> Optional[User]:
+        """The account holding this handle, if any.
+
+        The one uniqueness read the naming makes (``docs/adr/0171`` §2): the
+        act refuses with ``NicknameAlreadyTaken`` when the holder is somebody
+        else, and admits a player keeping their own.
+        """
+        ...
+
     async def project_registered(self, event: UserRegistered) -> User: ...
+
+    async def project_named(self, event: UserNamed) -> User:
+        """Write the naming onto the projection row, in the act's own transaction.
+
+        The read model is written beside the event and never behind it
+        (``docs/adr/0002``'s CQRS-lite), which is what lets the uniqueness read
+        above see a nickname the instant it is taken.
+        """
+        ...
 
     async def find_disabled_among(
         self, user_ids: Collection[UUID]
@@ -31,21 +66,25 @@ class UserRepository(Protocol):
         """
         ...
 
-    async def find_nicknames_of(
+    async def find_namings_of(
         self, user_ids: Collection[UUID]
-    ) -> Mapping[UUID, str]:
+    ) -> Mapping[UUID, Naming]:
         """What each of these accounts is called, as one set read.
 
-        Asked by the matcher, which puts a **nickname** on a player card and
-        holds no name of its own (``docs/adr/0107``) — and answered here rather
-        than by a reader of this context's table, on the rule its neighbour above
-        states: a consumer-driven contract is satisfied by the **provider**, and
-        ``users`` owns what an account is called and where that is stored.
+        Asked by every context that puts a **name** on a card, a seat or a
+        member and holds no name of its own (``docs/adr/0107``, ``docs/adr/0171``
+        §4) — and answered here rather than by a reader of this context's
+        table, on the rule its neighbour above states: a consumer-driven
+        contract is satisfied by the **provider**, and ``users`` owns what an
+        account is called and where that is stored.
 
         A mapping and not a per-id question, because the caller has a whole
-        shortlist and asks once. **An id this context has never seen is simply
-        absent from the answer** — the caller drops the row rather than drawing a
-        card with a blank name, and inventing a placeholder here would be this
-        context answering for an account it does not have.
+        shortlist and asks once. **An id this context has never seen is absent
+        from the answer, and so is an account not yet named** — the caller
+        drops a card it cannot name and keeps a seat with ``None`` on it, and
+        inventing a placeholder here would be this context answering for an
+        account it does not have. The gate holds an unnamed account at the
+        naming step, so the second absence is one no surface should reach; a
+        ``?`` drawn for a person who exists is where it would first show.
         """
         ...

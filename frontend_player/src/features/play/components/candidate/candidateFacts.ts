@@ -168,7 +168,7 @@ export interface CandidateFactsInput {
 
 export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
   const { candidate, envelope, drawn, argues = true, socialTags, record, stake, photo } = input;
-  const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
+  const name = playerName({ kind: 'player', name: candidate.card.name });
   const level = levelFactsOf(candidate);
   // Read once for both registers, exactly as the tag row and the record block are: the panel
   // draws the mark from this answer and the label speaks it from the same one, so a

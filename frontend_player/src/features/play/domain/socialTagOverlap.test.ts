@@ -43,7 +43,7 @@ function candidate(over: Partial<Candidate> = {}): Candidate {
     playerId: 'p1',
     fit: 78,
     card: {
-      nickname: 'marek',
+      name: 'marek',
       areaCode: 'A+050612+0019938',
       socialTags: [...THEIRS],
       level: 2.8,

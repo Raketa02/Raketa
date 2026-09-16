@@ -5,6 +5,11 @@
  * function. `POST /api/v1/users` returns the created user, not a token pair, so an app
  * that stopped there would leave a new player looking at a sign-in form and wondering
  * whether their account exists.
+ *
+ * **Credentials only.** Nothing about who the player is travels here: the account is created
+ * unnamed, and the naming is onboarding's first step
+ * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §2), which the entry gate sends the new session straight into.
  */
 
 import { register } from '../api/authApi';
@@ -29,7 +34,6 @@ import { signIn } from './signIn';
 export async function signUp(registration: Registration): Promise<void> {
   await register({
     email: registration.email,
-    nickname: registration.nickname,
     password1: registration.password,
     password2: registration.password,
     // Sent as the player gave it. Nothing here coerces it to `true`: a caller that could

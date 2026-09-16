@@ -61,6 +61,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import type { AtStake, Forecast, LikelyRange, ScoredTerm, Term } from '@/features/play/types';
 
 import {
+  hasEnded,
   mayRemove,
   ownSeat,
   seatName,
@@ -68,7 +69,13 @@ import {
   type Challenge,
   type ChallengeSeat,
 } from './challenge';
-import { GIVES_UP_THE_SEAT, type SeatAnswer, type Standing, type StandingFacts } from './standing';
+import {
+  GIVES_UP_THE_SEAT,
+  type EndedFacts,
+  type SeatAnswer,
+  type Standing,
+  type StandingFacts,
+} from './standing';
 
 /**
  * Who one person on this court is — **a closed list with two permanent gaps.**
@@ -83,8 +90,8 @@ import { GIVES_UP_THE_SEAT, type SeatAnswer, type Standing, type StandingFacts }
  * vocabulary of the context built to take it off him.
  */
 export interface CourtPerson {
-  /** The whole handle. Nothing derives a familiar form from it — ADR-0107. */
-  readonly nickname: string;
+  /** The whole name. Nothing derives a familiar form from it — ADR-0107, through ADR-0171. */
+  readonly name: string;
   /**
    * The short-lived signed link that draws their photograph, **omitted with the id** when they
    * have none — and the client draws the generated poster instead.
@@ -226,12 +233,20 @@ export interface ChallengeDetail {
   readonly seats: readonly DetailSeat[];
   /** Absent when there is no absence to report — see {@link PAIRING_ABSENCES}. */
   readonly pairingAbsence?: PairingAbsence;
+  /**
+   * **Who ended it, and the game the court became — the row's, not this read's.**
+   * `GET /challenges/{id}` carries neither `ended_by` nor `game_id`; the list and every act's
+   * reply do (ADR-0172 §3–§4), so the screen merges them off the row it was opened from
+   * ({@link asTheRowSays}) before folding the arm, and this read alone leaves both absent.
+   */
+  readonly endedBy?: string;
+  readonly gameId?: string;
 }
 
 /**
  * What this screen is, for this reader — **the state it is keyed on.**
  *
- * Five arms over six standings and two sides, because what the screen branches on is not the
+ * Six arms over seven standings and two sides, because what the screen branches on is not the
  * standing: it is *is there a sentence*, *is there a card block*, and *is there anything to
  * press*. The sentence rides on the arm as `StandingFacts` so that the one fold answers all
  * three and a component cannot arrive at a different reading of the same challenge.
@@ -302,8 +317,18 @@ export type ChallengeArm =
       readonly mayLeave: boolean;
     }
   /**
-   * **The sentence alone** — every ending, `ON`, and the reader who has left a court that has
-   * not, **in either live standing** (#392).
+   * **The ended court** — the row's sentence over every seat and what each person did, and no
+   * arm at all ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §7): a `CALLED_OFF` court, and a `DECLINED` one that a **departure** ended. Nothing on it is
+   * an act the server would refuse — no fill, no chat door, no leave, no remove — and the two are
+   * one drawing because they are one story: somebody joined, and the last of them walked out, or
+   * pressed the button. A court everybody merely declined, a lapse and a removal stay `stated`:
+   * their sentence names the one person the row is about, and there was never a court to show.
+   */
+  | { readonly kind: 'ended'; readonly facts: EndedFacts; readonly court: readonly SeatDid[] }
+  /**
+   * **The sentence alone** — every other ending, `ON`, and the reader who has left a court that
+   * has not, **in either live standing** (#392).
    *
    * `ON` is here because #324 gave the **card** to the game's own standing the moment a game
    * exists — not because nothing reaches it. A completed line-up keeps its row while it is news
@@ -380,7 +405,91 @@ export function challengeArm(detail: ChallengeDetail, playerId: string): Challen
     return { kind: 'filling', facts, mayLeave: onACourtWithSomebody(detail, playerId) };
   }
 
+  if (hasEnded(facts) && endedOnTheCourt(facts)) {
+    return { kind: 'ended', facts, court: whatEachDid(detail, playerId, facts) };
+  }
+
   return { kind: 'stated', facts };
+}
+
+/**
+ * **Which endings draw the court** — a `CALLED_OFF` court, whichever way, and a `DECLINED` court
+ * a departure deserted. Keyed on the facts already folded, so the drawing and the sentence cannot
+ * disagree about what happened.
+ */
+function endedOnTheCourt(facts: EndedFacts): boolean {
+  return facts.standing === 'CALLED_OFF' || (facts.standing === 'DECLINED' && facts.byADeparture);
+}
+
+/**
+ * **What each person on the court did** — one word per seat, read off the seat's own answer, and
+ * off `ended_by` for the one word the seats cannot say: the presser's seat still reads `ACCEPTED`,
+ * and *called it off* is theirs alone.
+ *
+ * Occupied seats only, in court order: an empty seat did nothing and is nobody, and a court lists
+ * people. The reader is `you`, so the row reads *You · in* rather than their own name back to them.
+ */
+function whatEachDid(
+  detail: ChallengeDetail,
+  playerId: string,
+  facts: EndedFacts,
+): readonly SeatDid[] {
+  return detail.seats.flatMap((seat) => {
+    if (seat.playerId === undefined) return [];
+    const pressed =
+      facts.standing === 'CALLED_OFF' && !facts.byADeparture && seat.playerId === detail.endedBy;
+
+    return [
+      {
+        playerId: seat.playerId,
+        who: seat.playerId === playerId ? { kind: 'you' } : seatName(seat),
+        did: pressed ? 'called-it-off' : DID[seat.answer ?? 'ACCEPTED'],
+      },
+    ];
+  });
+}
+
+/**
+ * A seat's answer as the ended court says it — keyed by the union, so a fifth answer fails
+ * `pnpm typecheck` here rather than drawing a court with a seat that did nothing. An unanswered
+ * seat cannot be on an ended court that was deserted (nobody is deciding), and reads as *in*
+ * rather than inventing a word.
+ */
+const DID: Readonly<Record<SeatAnswer, SeatWord>> = {
+  ACCEPTED: 'in',
+  DECLINED: 'said-no',
+  LAPSED: 'ran-out',
+  LEFT: 'left',
+};
+
+/** What one person on an ended court did — the code, keyed to its word in `challengeDetailPresentation.ts`. */
+export type SeatWord = 'in' | 'left' | 'said-no' | 'ran-out' | 'called-it-off';
+
+/** One person on an ended court: who, and what they did. */
+export interface SeatDid {
+  readonly playerId: string;
+  readonly who: NamedPlayer;
+  readonly did: SeatWord;
+}
+
+/**
+ * **The detail, with the ending the row holds** — `ended_by` and `game_id` merged off the list's
+ * row, which is what the screen was opened from and what the tab bar holds anyway.
+ *
+ * The detail read carries neither field (its docstring says so), and the ended court cannot be
+ * drawn without the first: a presser's seat reads `ACCEPTED` like the reader's, and only
+ * `ended_by` says which of them *called it off*. Nothing else of the row crosses — not its
+ * seats, which are the same court read against a different instant, and not `ended_at`, whose
+ * one reader is the shelf. A row that has not landed changes nothing, and the screen re-folds
+ * when it does.
+ */
+export function asTheRowSays(detail: ChallengeDetail, row: Challenge | undefined): ChallengeDetail {
+  if (row === undefined) return detail;
+  return {
+    ...detail,
+    ...(row.endedBy === undefined ? {} : { endedBy: row.endedBy }),
+    ...(row.gameId === undefined ? {} : { gameId: row.gameId }),
+  };
 }
 
 /**
@@ -449,6 +558,7 @@ export function readerIsInTheRoom(arm: ChallengeArm): boolean {
     case 'stated':
       return arm.facts.standing === 'ON';
     case 'answer':
+    case 'ended':
     case 'unreadable':
       return false;
   }
@@ -552,18 +662,36 @@ export function redrawnFrom(detail: ChallengeDetail, answered: AnsweredChallenge
  * `challengeKeys.detail`'s note refuses.
  */
 export function rowRedrawnFrom(row: Challenge, answered: AnsweredChallenge): Challenge {
-  return { ...row, standing: answered.standing, seats: answered.seats };
+  return {
+    ...row,
+    standing: answered.standing,
+    // The ending, as the reply says it — assigned rather than spread-when-present, so a reply
+    // that ended nothing clears nothing stale and a reply that ended the court dates and names
+    // it on the row at once (ADR-0172 §7: the presser's row reads *You called the game off* on
+    // the reply).
+    endedAt: answered.endedAt,
+    endedBy: answered.endedBy,
+    gameId: answered.gameId,
+    seats: answered.seats,
+  };
 }
 
 /**
- * What an answer route says back — the standing, and the court under it.
+ * What an answer route says back — the standing, the court under it, and the ending where the
+ * act was one.
  *
- * Spelled as the two fields the merge reads rather than as a whole `Challenge`: the reply carries
+ * Spelled as the fields the merge reads rather than as a whole `Challenge`: the reply carries
  * a sport and an `opened_at` this screen already holds and no `read_at` at all, and a shape with
- * fields the merge must remember to ignore is how one of them eventually gets written in.
+ * fields the merge must remember to ignore is how one of them eventually gets written in. The
+ * three ending fields joined it with ADR-0172: a withdrawal's or a departure's reply can end the
+ * court, and the row redrawn from it needs the date for its shelf, `ended_by` for its sentence
+ * and `game_id` for the sheet — all three absent on a reply that ended nothing.
  */
 export interface AnsweredChallenge {
   /** Absent when the reply named a standing this build has no words for. */
   readonly standing?: Standing;
+  readonly endedAt?: string;
+  readonly endedBy?: string;
+  readonly gameId?: string;
   readonly seats: readonly ChallengeSeat[];
 }

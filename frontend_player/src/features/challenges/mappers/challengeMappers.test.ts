@@ -75,8 +75,8 @@ describe('the challenges coming back', () => {
           seats: [
             { side: 'A', player_id: ME, answer: 'ACCEPTED' },
             { side: 'A', player_id: BEA, answer: 'ACCEPTED' },
-            { side: 'B', player_id: CYRYL, answer: 'DECLINED', nickname: 'cyryl.k' },
-            { side: 'B', player_id: null, answer: null, answer_by: null, nickname: null },
+            { side: 'B', player_id: CYRYL, answer: 'DECLINED', name: 'cyryl.k' },
+            { side: 'B', player_id: null, answer: null, answer_by: null, name: null },
           ],
         },
       ],
@@ -93,7 +93,7 @@ describe('the challenges coming back', () => {
         seats: [
           { playerId: ME, answer: 'ACCEPTED' },
           { playerId: BEA, answer: 'ACCEPTED' },
-          { playerId: CYRYL, answer: 'DECLINED', nickname: 'cyryl.k' },
+          { playerId: CYRYL, answer: 'DECLINED', name: 'cyryl.k' },
           {},
         ],
       },
@@ -184,6 +184,50 @@ describe('the challenges coming back', () => {
 
     expect(withdrawn?.endedAt).toBe('2026-09-03T09:00:00Z');
     expect(standing).not.toHaveProperty('endedAt');
+  });
+
+  /**
+   * **Every ending names whose act ended it, and a court that has been a game names its game**
+   * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §3–§4) — both nullable on the wire, both absent here where the wire said nothing.
+   */
+  it('carries who ended it and the game the court became, and no field where the wire said nothing', () => {
+    const response = {
+      read_at: READ_AT,
+      challenges: [
+        {
+          challenge_id: 'c7',
+          sport: 'TENNIS',
+          organiser_id: ME,
+          standing: 'CALLED_OFF',
+          opened_at: '2026-09-01T10:00:00Z',
+          ended_at: '2026-09-03T09:00:00Z',
+          ended_by: BEA,
+          game_id: 'g7',
+          seats: [
+            { side: 'A', player_id: ME, answer: 'ACCEPTED' },
+            { side: 'B', player_id: BEA, answer: 'LEFT', name: 'bea.k' },
+          ],
+        },
+        {
+          challenge_id: 'c8',
+          sport: 'TENNIS',
+          organiser_id: ME,
+          standing: 'AWAITING_ANSWERS',
+          opened_at: '2026-09-01T10:00:00Z',
+          ended_at: null,
+          ended_by: null,
+          game_id: null,
+          seats: [{ side: 'A', player_id: ME, answer: 'ACCEPTED' }],
+        },
+      ],
+    } satisfies Wire['ChallengeListResponse'];
+
+    const [calledOff, standing] = toChallenges(response);
+
+    expect(calledOff).toMatchObject({ standing: 'CALLED_OFF', endedBy: BEA, gameId: 'g7' });
+    expect(standing).not.toHaveProperty('endedBy');
+    expect(standing).not.toHaveProperty('gameId');
   });
 
   /** A sport takes the whole row with it: it is what the row calls the game. */

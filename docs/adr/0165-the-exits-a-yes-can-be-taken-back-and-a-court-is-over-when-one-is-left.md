@@ -5,7 +5,13 @@
   the chat separately from being on the court … so **leave the chat** can only mean **leave the game**"*
   holds while a seat on the court can still be left or taken, and not after — once the game's
   agreed moment has passed, or the game has been played, a member may **leave the chat** and keep
-  the seat they played in. Everything else here stands, rule 1 included.
+  the seat they played in. Everything else here stands, rule 1 included — **§3's *on a game*
+  half narrowed 2026-09-15 by
+  [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1**:
+  the departure that leaves one player on a game still calls the game off, and now records the
+  court's own ending, `CALLED_OFF`, beside it — the challenge no longer reads
+  `LINE_UP_INCOMPLETE` once its game is over — and the Consequence's *that sentence is #428's*
+  is written there (§7): *{name} left*.
 - **Date:** 2026-09-13
 - **Supersedes, by named sentence:**
   [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) §1's *"a court that
@@ -140,6 +146,15 @@ is not.
   place the game's end is true, exactly as ADR-0163 §2 argued for the act.
 - **A court past its entry window is untouched**: the moment guard already refuses a departure on
   a ghost, and ADR-0163 §6's leniency for a withdraw on one stands.
+
+> **The *on a game* arm records the court's ending too, since 2026-09-15
+> ([ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1).**
+> The departure that deserts a game writes `ChallengeCalledOff` with the leaver as `called_by`
+> and then hands `call_off` over as above, so the challenge reads `CALLED_OFF` rather than
+> `LINE_UP_INCOMPLETE` with one seat `LEFT` — which is what left Paula's row blank. The rule, the
+> hand-over and *not a second place for a derived fact* stand: the seats still reach no ending on a
+> court that has been a game, and the conclusion the event announces — *the game is called off* —
+> is one no arrangement of them reaches.
 
 ### 4. *Remove the challenge* — the withdraw, while nobody has joined
 

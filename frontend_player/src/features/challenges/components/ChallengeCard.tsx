@@ -157,7 +157,7 @@ export function ChallengeCard({ playerId, card, seats }: ChallengeCardProps) {
         <View style={s.body}>
           {/* No `inclusionReason`: a challenge has no list to have been lifted onto, so the tag
               beside the handle has nothing it could be about. */}
-          <CardHead name={person.nickname} fit={pairing.fit} />
+          <CardHead name={person.name} fit={pairing.fit} />
 
           <FactRow
             value={identityRow({

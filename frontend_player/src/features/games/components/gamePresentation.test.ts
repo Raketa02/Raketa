@@ -45,8 +45,8 @@ const GAME: Game = {
   kind: 'COUNTED',
   standing: 'AWAITING_ANSWER',
   seats: [
-    { side: 'A', playerId: 'me', nickname: 'me_' },
-    { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+    { side: 'A', playerId: 'me', name: 'me_' },
+    { side: 'B', playerId: 'them', name: 'tomek.p' },
   ],
   plannedAt: '2026-09-01T09:00:00Z',
   proposals: [],
@@ -55,7 +55,7 @@ const GAME: Game = {
 
 /** The two people any of these sentences can name: you, and the player across the net. */
 const YOU: NamedPlayer = { kind: 'you' };
-const THEM: NamedPlayer = { kind: 'player', nickname: 'tomek.p' };
+const THEM: NamedPlayer = { kind: 'player', name: 'tomek.p' };
 
 const PROPOSAL = {
   side: 'A',
@@ -133,13 +133,70 @@ describe('silence confirming, which has to be visible before it happens', () => 
   });
 
   /**
-   * The two words #419 §3 and ADR-0163 fix. **Nobody is named**: `called_off_by` is on no wire, and
-   * the room that would have said who is gone with the act.
+   * The two words #419 §3 and ADR-0163 fix, where the wire named nobody — which since ADR-0172
+   * §4 it promises not to; the sentence stands for a reply that breaks the promise.
    */
-  it('says a called-off game was called off, and names nobody', () => {
+  it('says a called-off game was called off, and names nobody where the wire named nobody', () => {
     expect(resultTitle({ kind: 'called-off' })).toBe('It was called off');
     expect(standingLine({ kind: 'called-off' }, READ_AT)).toBe('Called off');
     expect(resultBody({ kind: 'called-off' })).not.toMatch(/\bby\b|who/);
+  });
+
+  /**
+   * **The ending block, keyed by how it ended** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §8): a departure's heading says the game was called off for lack of players and its body
+   * names who left, singles and doubles differing by one clause; the button's heading names the
+   * presser — *You* for the reader's own — over the ghost's own body.
+   */
+  it('heads a departure with the shortage and names the leaver in the body', () => {
+    const tomek = { kind: 'player', name: 'tomek.p' } as const;
+    const singles = {
+      kind: 'called-off',
+      ending: { by: tomek, how: 'departure', format: 'singles' },
+    } as const;
+    const doubles = {
+      kind: 'called-off',
+      ending: { by: tomek, how: 'departure', format: 'doubles' },
+    } as const;
+
+    expect(resultTitle(singles)).toBe('The game was called off for lack of players');
+    expect(resultBody(singles)).toBe(
+      'tomek.p left, so the singles game is called off. Nobody is marked for it — not you, not them.',
+    );
+    expect(resultTitle(doubles)).toBe('The game was called off for lack of players');
+    expect(resultBody(doubles)).toBe(
+      'tomek.p was the last to leave, so the doubles game is called off. Nobody is marked for it — not you, not any of them.',
+    );
+  });
+
+  it('heads a press with who pressed, You for the reader’s own, over the ghost’s body', () => {
+    const tomek = { kind: 'player', name: 'tomek.p' } as const;
+    const theirs = {
+      kind: 'called-off',
+      ending: { by: tomek, how: 'press', format: 'doubles' },
+    } as const;
+    const mine = {
+      kind: 'called-off',
+      ending: { by: { kind: 'you' }, how: 'press', format: 'doubles' },
+    } as const;
+
+    expect(resultTitle(theirs)).toBe('tomek.p called the game off');
+    expect(resultTitle(mine)).toBe('You called the game off');
+    expect(resultBody(theirs)).toBe('Nobody is marked for it — not you, not any of the others.');
+    expect(resultBody(mine)).toBe(resultBody(theirs));
+    // The card's gloss and the standing line are the one word, whoever's act it was.
+    expect(standingLine(theirs, READ_AT)).toBe('Called off');
+  });
+
+  it('never says cancel of an ending', () => {
+    const tomek = { kind: 'player', name: 'tomek.p' } as const;
+    for (const how of ['departure', 'press'] as const) {
+      const argument = {
+        kind: 'called-off',
+        ending: { by: tomek, how, format: 'singles' },
+      } as const;
+      expect(`${resultTitle(argument)} ${resultBody(argument)}`).not.toMatch(/cancel/i);
+    }
   });
 
   it('drops the clause rather than inventing a deadline when the wire sent none', () => {
@@ -395,10 +452,10 @@ describe('the eyebrow on the plan lead', () => {
   const doubles: Game = {
     ...GAME,
     seats: [
-      { side: 'A', playerId: 'me', nickname: 'me_' },
-      { side: 'A', playerId: 'partner', nickname: 'kasia_w' },
-      { side: 'B', playerId: 'them', nickname: 'tomek.p' },
-      { side: 'B', playerId: 'other', nickname: 'marekb' },
+      { side: 'A', playerId: 'me', name: 'me_' },
+      { side: 'A', playerId: 'partner', name: 'kasia_w' },
+      { side: 'B', playerId: 'them', name: 'tomek.p' },
+      { side: 'B', playerId: 'other', name: 'marekb' },
     ],
   };
 
@@ -447,10 +504,10 @@ describe('the rest', () => {
     const doubles: Game = {
       ...GAME,
       seats: [
-        { side: 'A', playerId: 'me', nickname: 'me_' },
-        { side: 'A', playerId: 'partner', nickname: 'kasia_w' },
-        { side: 'B', playerId: 'them', nickname: 'tomek.p' },
-        { side: 'B', playerId: 'other', nickname: 'marekb' },
+        { side: 'A', playerId: 'me', name: 'me_' },
+        { side: 'A', playerId: 'partner', name: 'kasia_w' },
+        { side: 'B', playerId: 'them', name: 'tomek.p' },
+        { side: 'B', playerId: 'other', name: 'marekb' },
       ],
     };
 
@@ -463,7 +520,7 @@ describe('the rest', () => {
     const erased: Game = {
       ...GAME,
       seats: [
-        { side: 'A', playerId: 'me', nickname: 'me_' },
+        { side: 'A', playerId: 'me', name: 'me_' },
         { side: 'B', playerId: 'them' },
       ],
     };
@@ -521,10 +578,10 @@ describe('the court’s pairing, in words', () => {
   it('labels the bar with stems — you and your partner against the other side', () => {
     const doubles = barLabels(
       [
-        { side: 'A', playerId: 'me', nickname: 'tomek.p' },
-        { side: 'A', playerId: 'p', nickname: 'Zofia.B' },
-        { side: 'B', playerId: 'o1', nickname: 'kuba_w' },
-        { side: 'B', playerId: 'o2', nickname: 'Ola Nowak' },
+        { side: 'A', playerId: 'me', name: 'tomek.p' },
+        { side: 'A', playerId: 'p', name: 'Zofia.B' },
+        { side: 'B', playerId: 'o1', name: 'kuba_w' },
+        { side: 'B', playerId: 'o2', name: 'Ola Nowak' },
       ],
       'me',
     );
@@ -535,8 +592,8 @@ describe('the court’s pairing, in words', () => {
   it('labels a singles bar with you and one stem', () => {
     const singles = barLabels(
       [
-        { side: 'B', playerId: 'o', nickname: 'kuba_w' },
-        { side: 'A', playerId: 'me', nickname: 'tomek.p' },
+        { side: 'B', playerId: 'o', name: 'kuba_w' },
+        { side: 'A', playerId: 'me', name: 'tomek.p' },
       ],
       'me',
     );
@@ -576,15 +633,15 @@ describe('the court’s pairing, in words', () => {
 
   /** The row's own name: the handle whole with the one mark that says it is yours. */
   it('names a row by the whole handle, and marks yours', () => {
-    expect(playerRowName({ nickname: 'tomek.p', yours: false })).toBe('tomek.p');
-    expect(playerRowName({ nickname: 'tomek.p', yours: true })).toBe('tomek.p (you)');
+    expect(playerRowName({ name: 'tomek.p', yours: false })).toBe('tomek.p');
+    expect(playerRowName({ name: 'tomek.p', yours: true })).toBe('tomek.p (you)');
     expect(playerRowName({ yours: false })).toBe('?');
   });
 
   /** What the tap is called: the record it opens, by whose it is. */
   it('names the control by the record it opens', () => {
-    expect(recordLabel({ nickname: 'tomek.p', yours: false })).toBe('tomek.p’s record');
-    expect(recordLabel({ nickname: 'tomek.p', yours: true })).toBe('Your record');
+    expect(recordLabel({ name: 'tomek.p', yours: false })).toBe('tomek.p’s record');
+    expect(recordLabel({ name: 'tomek.p', yours: true })).toBe('Your record');
     expect(recordLabel({ yours: false })).toBe('?’s record');
   });
 });

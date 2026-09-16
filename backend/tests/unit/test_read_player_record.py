@@ -54,7 +54,8 @@ PHOTO = uuid4()
 
 def an_identity(*, photo_id: UUID | None = PHOTO) -> SubjectIdentity:
     return SubjectIdentity(
-        nickname="Karol T.",
+        name="Karol Tomczyk",
+        nickname="karol_t",
         photo_id=photo_id,
         review=OnCourtVerdict.ALLOWED if photo_id else None,
         area_code="A+05151-00013",

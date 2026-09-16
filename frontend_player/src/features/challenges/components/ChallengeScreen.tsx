@@ -2,13 +2,22 @@
  * **One challenge, the two answers, and the way out of every court that is still being arranged**
  * — the screen a row in the Chats inbox opens.
  *
- * A **state-keyed surface over the six standings and two sides**, and never a `GameStanding`: a
+ * A **state-keyed surface over the seven standings and two sides**, and never a `GameStanding`: a
  * challenge with no acceptance has no game to key a screen on, which is why there are two
  * state-keyed surfaces in this app and not one
  * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §2). Which
  * arm is drawn is `challengeArm`'s answer and never this file's — the sentence, the card block
  * and the controls are three readings of **one** fold, so the screen cannot say *They're waiting
  * on you* over a court it is also refusing to let you answer.
+ *
+ * **An ended court is drawn as one** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7): a `CALLED_OFF` court and a `DECLINED` one a departure deserted draw the row's sentence,
+ * `EndedCourt` — every seat and what each person did — and **no arm**: no fill, no chat door, no
+ * leave, no remove. Nothing on it is an act the server would accept. The two facts the sentence
+ * and the court need that the detail read does not carry — `ended_by`, without which a presser's
+ * seat reads *in* like the reader's, and `game_id` — are read off the row the list already holds
+ * (`useChallengeRow`, merged by `asTheRowSays` before the fold), which is the row the tap came
+ * in by and the read the tab bar keeps for its badge.
  *
  * **`ON` has an arm, and the inbox row is what reaches it.** The game's own standing owns the
  * **card** the moment a game exists (#324, ADR-0143 §8), so this arm draws the sentence and
@@ -153,18 +162,21 @@ import { seatName } from '../domain/challenge';
 import { fillRoute, yesRoute } from '../schemas/routeParams';
 import {
   acceptedPlayers,
+  asTheRowSays,
   challengeArm,
   readerIsInTheRoom,
   seatsAwaiting,
   type ChallengeDetail,
 } from '../domain/challengeDetail';
 import { useAnswerSeat, useChallenge } from '../hooks/useChallenge';
+import { useChallengeRow } from '../hooks/useChallenges';
 import type { SeatAnswerAct } from '../use-cases/answerSeat';
 
 import { actOnRefusal } from './actOnRefusal';
 import { ChallengeCard } from './ChallengeCard';
 import { challengeErrorMessage } from './challengeErrorMessage';
 import { DepartureDoor } from './DepartureDoor';
+import { EndedCourt } from './EndedCourt';
 import {
   FILL_THE_SEATS,
   IM_IN,
@@ -188,6 +200,7 @@ export interface ChallengeScreenProps {
 
 export function ChallengeScreen({ challengeId }: ChallengeScreenProps) {
   const { data, isPending, error, refetch } = useChallenge(challengeId);
+  const row = useChallengeRow(challengeId);
   const me = useCurrentUser().data?.id;
 
   if (data === undefined || me === undefined) {
@@ -214,7 +227,9 @@ export function ChallengeScreen({ challengeId }: ChallengeScreenProps) {
     );
   }
 
-  return <Arrangement detail={data} playerId={me} onReRead={() => void refetch()} />;
+  return (
+    <Arrangement detail={asTheRowSays(data, row)} playerId={me} onReRead={() => void refetch()} />
+  );
 }
 
 function Arrangement({
@@ -485,6 +500,13 @@ function Arrangement({
       </RemovalDoor>
     ) : null;
 
+  /**
+   * **Nothing is pinned on the ended court** (ADR-0172 §7) — no fill, no chat door, no leave, no
+   * remove, whatever room the list may still hold for a beat — and an arm with no act of its own
+   * and no door has nothing to pin either.
+   */
+  const nothingToPin = arm.kind === 'ended' || (door === null && leave === null && remove === null);
+
   return (
     <ShellScreen
       title={CHALLENGE_SCREEN_TITLE}
@@ -553,7 +575,7 @@ function Arrangement({
               />
             </View>
           </View>
-        ) : door === null && leave === null && remove === null ? undefined : (
+        ) : nothingToPin ? undefined : (
           /* The arms with no act of their own — an accepted seat waiting on the others, a court
              that is on, the organiser waiting on answers — and a room the list holds. The door is
              what they offer, and only while it exists; the arranging arm offers the way out
@@ -571,6 +593,10 @@ function Arrangement({
       }
     >
       <Text style={s.standing}>{sentence}</Text>
+
+      {/* The ended court: every seat and what each person did, under the sentence that says who
+          ended it. Nothing else is drawn on this arm — no cards, no forecast, no controls. */}
+      {arm.kind === 'ended' ? <EndedCourt court={arm.court} /> : null}
 
       {/* The organiser's own reading of the wait: §14's second sentence, once per seat, because
           the window is the seat's and a seat invited later starts its own day. */}

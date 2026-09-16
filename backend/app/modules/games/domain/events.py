@@ -1,4 +1,4 @@
-"""The Games context's domain events — **nine, and every one of them an act**.
+"""The Games context's domain events — **ten, and every one of them an act**.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a sport, a kind and a window as their codes, a
@@ -36,6 +36,14 @@ that caused it. Neither announces a standing — a court with an open seat is st
 ``AWAITING_ENTRY`` — and each passes ``docs/adr/0142`` §3's test the way a
 withdrawal does: a departure, and the arrangement that replaces it, are decisions
 no arrangement of this record could reach.
+
+**One event is a player's own and moves nothing on the game**
+(``docs/adr/0172`` §5). ``GameDismissed`` is somebody clearing a called-off
+game's card from their own rail: recorded once per player on the game's stream
+because the card must be gone on their other phone and after a reinstall, and
+read by the rail's fold alone — not by the tallies, not by the settled query,
+not by the room, which is gone before a card can be dismissed. It announces no
+standing and changes nobody else's read.
 
 **Three proposals events and not one with a kind field.** A first score, a
 revision of your own side's score and a disagreement with the other side's are
@@ -121,12 +129,15 @@ class LineUpReseated:
 class GameCalledOff:
     """Somebody on the court ended the game while a seat was open.
 
-    Told by ``challenges`` in the transaction of the **withdrawal** that caused
-    it (``docs/adr/0163`` §2), so the ``WITHDRAWN`` on the challenge and the end
-    on the game commit together or neither does. It carries **who**, because on
-    a court that has been a game the withdraw is no longer the organiser's alone
-    — and ``ChallengeWithdrawn`` still carries no player, so this is the one
-    record of the actor.
+    Told by ``challenges`` in the transaction of the act that ended the court
+    (``docs/adr/0163`` §2, ``docs/adr/0172`` §1) — *Call it off*, or the
+    departure that left one player on it — so the ``CALLED_OFF`` on the
+    challenge and the end on the game commit together or neither does. It
+    carries **who**: the presser, or the leaver whose departure emptied the
+    court, and since ``docs/adr/0172`` §4 that name crosses the wire as
+    ``called_off_by`` — the leaver's seat is vacated by then, so the court
+    cannot supply it, and a departure is told from a press by whether the
+    named player still holds a seat.
 
     **It is the fourth end and the only one an event reaches.** The standing
     reads it first, before the clock; a game already ended by its clock is never
@@ -136,6 +147,24 @@ class GameCalledOff:
 
     game_id: UUID
     called_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class GameDismissed:
+    """One player cleared this called-off game's card from their own rail
+    (``docs/adr/0172`` §5).
+
+    The reader's own act and nobody else's fact: recorded once per player, so a
+    second dismissal by the same player writes nothing, and read by the rail's
+    fold alone — ``GET /games`` omits a game its reader has dismissed, derived
+    on every read and never a stored list. It removes a card, not a fact: the
+    game, its record and the challenge's row are untouched, and there is no
+    undo.
+    """
+
+    game_id: UUID
+    dismissed_by: UUID
     occurred_at: datetime
 
 

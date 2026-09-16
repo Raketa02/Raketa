@@ -290,7 +290,7 @@ _ANSWER_REFUSALS: dict[int | str, dict[str, Any]] = {
         "Fit here is genuinely yours.\n\n"
         "**The card block is drawn while the arrangement is being decided and "
         "at no other time.** A challenge that ended draws its arrangement and "
-        "the handles alone, and so does the seat of somebody who declined or "
+        "the names alone, and so does the seat of somebody who declined or "
         "lapsed inside one that is still open: they have left, and that person "
         "is a stranger to you again.\n\n"
         "**Answering is never gated on any of it.** If the pairing cannot be "
@@ -511,10 +511,12 @@ async def fill_seats(
     responses={
         status.HTTP_200_OK: {
             "description": (
-                "The challenge is over, and it is returned as it now stands at "
-                "`WITHDRAWN`, with every seat exactly as it was — a seat still "
-                "awaiting an answer keeps its question and its deadline, and "
-                "the standing is read before either."
+                "The challenge is over, and it is returned as it now stands — "
+                "`WITHDRAWN` on a court that was never a game, `CALLED_OFF` on "
+                "one that has been, `ended_by` naming you either way — with "
+                "every seat exactly as it was: a seat still awaiting an answer "
+                "keeps its question and its deadline, and the standing is read "
+                "before either."
             )
         },
         status.HTTP_404_NOT_FOUND: _ANSWER_REFUSALS[status.HTTP_404_NOT_FOUND],
@@ -570,15 +572,19 @@ async def fill_seats(
         "loop writes nothing for it.\n\n"
         "**Call it off** — on a court that has been a game and lost somebody. "
         "The court is half built again, and this is how the game is called "
-        "off: the challenge is withdrawn exactly as below, and the game it "
-        "became reaches its fourth end, `CALLED_OFF`, in the same act — its "
-        "plan is history, its pairing is history, and it is neither an evening "
-        "nor a game that never happened, so nothing anybody is measured on "
-        "moves. **Any player on the court**, the organiser or not, and only "
-        "while a seat is open with nobody deciding on it: a full court that "
-        "will not play lets its window lapse into `NEVER_PLAYED`, as it always "
-        "has. A court whose game's window has already closed is withdrawn all "
-        "the same, and the game stays the ghost it already is.\n\n"
+        "off: the challenge records its own ending, `CALLED_OFF` with "
+        "`ended_by` you — **never `WITHDRAWN`**, which is *Remove the "
+        "challenge*'s alone — and the game it became reaches its fourth end, "
+        "`CALLED_OFF` with `called_off_by` you, in the same act: its plan is "
+        "history, its pairing is history, and it is neither an evening nor a "
+        "game that never happened, so nothing anybody is measured on moves. "
+        "**Any player on the court**, the organiser or not, and only while a "
+        "seat is open with nobody deciding on it: a full court that will not "
+        "play lets its window lapse into `NEVER_PLAYED`, as it always has. A "
+        "court whose game's window has already closed is called off all the "
+        "same, with you on its record, and the game stays the ghost it "
+        "already is. A court whose game a departure already called off is "
+        "over, and this meets `challenge_is_over`.\n\n"
         "**Whole-challenge, and it never removes one person.** A withdraw ends "
         "the arrangement for everybody on it, and taking one person out of a "
         "court that still stands is refused here as it is everywhere else.\n\n"
@@ -592,11 +598,12 @@ async def fill_seats(
         "its pair until it is re-seated or called off; this is that exit. "
         "Somebody who let their day run out needed none: their seat reopened "
         "and the open-challenge rule released them with it.\n\n"
-        "**A noun and not a verb**, because what this creates is the withdrawal "
-        "— the one thing in this context that a fold of the seats could never "
-        "produce. The conversation is destroyed in the act where one exists: "
-        "there is none before anybody has answered, and there may be one the "
-        "organiser is alone in again."
+        "**A noun and not a verb**, because what this creates is the ending — "
+        "the withdrawal, or the court's call-off — which are the two things in "
+        "this context that a fold of the seats could never produce. The "
+        "conversation is destroyed in the act where one exists: there is none "
+        "before anybody has answered, there may be one the organiser is alone "
+        "in again, and a court that has been a game has one."
     ),
 )
 async def withdraw_challenge(
@@ -621,13 +628,15 @@ async def withdraw_challenge(
                 "Your seat is open again, and the challenge as it now stands. "
                 "`LINE_UP_INCOMPLETE` where the others are in — on a game, that "
                 "game survives with your seat empty; `AWAITING_ANSWERS` where "
-                "somebody is still deciding; and `DECLINED` where you were the "
+                "somebody is still deciding; `DECLINED` where you were the "
                 "last but one on a court that was never a game and nobody is "
                 "deciding — **a court is over when at most one player is on it "
-                "and no seat is awaiting an answer**, and a departure is a no. "
-                "On a game the challenge stands and the **game** is called off "
-                "instead, in this same request: `GET /games` reads it "
-                "`CALLED_OFF`, and the room is gone."
+                "and no seat is awaiting an answer**, and a departure is a no; "
+                "and `CALLED_OFF` where you were the last but one on a court "
+                "that has been a game: the court ends with its game, `ended_by` "
+                "you, and the game is called off in this same request — "
+                "`GET /games` reads it `CALLED_OFF` with `called_off_by` you, "
+                "and the room is gone."
             )
         },
         status.HTTP_404_NOT_FOUND: {
@@ -687,10 +696,11 @@ async def withdraw_challenge(
         "awaiting an answer**, and the organiser is a player in that rule. "
         "Before a game the challenge ends by itself — as `DECLINED`, because a "
         "departure is a no — and its room with it. On a game, the departure "
-        "that leaves one player on it **calls the game off** in this request: "
-        "`GET /games` reads `CALLED_OFF`, the room is gone, and the challenge "
-        "stands with nobody to fill the seat for. Singles included: an opponent "
-        "who leaves calls the game off.\n\n"
+        "that leaves one player on it **ends the court with its game** in "
+        "this request: the challenge reads `CALLED_OFF` naming you, `GET "
+        "/games` reads `CALLED_OFF` naming you, and the room is gone. Singles "
+        "included: an opponent who leaves calls the game off — for the person "
+        "they leave, too.\n\n"
         "**You are out of this court's own pool for as long as it stands.** "
         "Nobody is asked twice on one challenge; being asked again is a **new** "
         "challenge. Every other search reaches you at once — the pair rule "
@@ -720,14 +730,14 @@ async def leave_game(
 def _challenge(one: StandingChallenge) -> ChallengeSchema:
     """One challenge as its court is allowed to see it.
 
-    **The occupants carry a handle and nothing else** (``docs/adr/0143`` §7). A
+    **The occupants carry a name and nothing else** (``docs/adr/0143`` §7). A
     Level, a band, an area and a photograph are what a *card* carries, and a card
     is as-of-now: it belongs on the detail read, where the arrangement is still
     being decided and the person reading is doing what a searcher does. A list
     that drew one would be a directory with extra steps, priced over somebody's
     whole history of being asked.
 
-    A handle passes ``docs/adr/0141`` §1's test instead: it is what these people
+    A name passes ``docs/adr/0141`` §1's test instead: it is what these people
     were already calling each other, and nothing a gate decided somebody may see.
     """
 
@@ -741,16 +751,18 @@ def _challenge(one: StandingChallenge) -> ChallengeSchema:
         standing=one.standing,
         opened_at=challenge.opened_at,
         ended_at=one.ended_at,
+        ended_by=one.ended_by,
+        game_id=one.game_id,
         seats=[
             SeatSchema(
                 side=seat.side,
                 player_id=seat.player_id,
                 answer=seat.answer,
                 answer_by=seat.answer_by,
-                nickname=(
+                name=(
                     None
                     if seat.player_id is None
-                    else one.handles.get(seat.player_id)
+                    else one.names.get(seat.player_id)
                 ),
             )
             for seat in challenge.seats
@@ -807,8 +819,8 @@ def _detailed_seat(
         "player_id": seat.player_id,
         "answer": seat.answer,
         "answer_by": seat.answer_by,
-        "nickname": (
-            None if seat.player_id is None else one.handles.get(seat.player_id)
+        "name": (
+            None if seat.player_id is None else one.names.get(seat.player_id)
         ),
     }
     if seat.player_id is None or seat.player_id == reader_id:
@@ -831,7 +843,7 @@ def _seat_card(card: CourtCard) -> dict[str, Any]:
     """
 
     person: dict[str, Any] = {
-        "nickname": card.person.nickname,
+        "name": card.person.name,
         "area_code": card.person.area_code,
         "level": card.person.level,
         "band": card.person.band,

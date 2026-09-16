@@ -192,7 +192,8 @@ class ArrangingCourt(Protocol):
         self, challenge_ids: Collection[UUID], *, now: Instant
     ) -> frozenset[UUID]:
         """Which of these challenges are **over** at this instant — ``DECLINED``,
-        ``LAPSED`` or ``WITHDRAWN`` — as ``challenges`` folds it. **One call.**
+        ``LAPSED``, ``WITHDRAWN`` or ``CALLED_OFF`` — as ``challenges`` folds
+        it. **One call.**
 
         ``now`` travels with the question because a lapse is a deadline passing
         and is true before any sweep has recorded it; a reader between the two
@@ -272,14 +273,17 @@ class MemberFace:
     ([#408](https://github.com/Raketa02/Raketa/issues/408)); one shape for both,
     because a client fills ``{name}`` from one list.
 
-    **A handle, a photograph, and nothing else.** No Level, no band, no area, no
+    **A name, a photograph, and nothing else.** No Level, no band, no area, no
     score: a card is what a *searcher* reads to decide about a game that might
     happen, and these people have already agreed to play. ``docs/adr/0141`` §1
     fixes what may be borrowed about a person on a record of an evening, and this
     room is one.
 
-    ``nickname`` is ``None`` for a player ``users`` can no longer name. **The
-    member keeps their place** — they are still somebody who agreed to play, and
+    ``name`` is the **Name** and never the nickname (``docs/adr/0171`` §4) — a
+    handle is drawn on a record and said nowhere, and a room is where people
+    are said. ``None`` for a player ``users`` can no longer name, and never for
+    an unnamed one, whom the entry gate holds at the naming step. **The member
+    keeps their place** — they are still somebody who agreed to play, and
     dropping them would draw a three-person doubles court.
 
     ``photo_id`` and ``photo_url`` are present **exactly together**. An id with
@@ -294,7 +298,7 @@ class MemberFace:
     """
 
     player_id: UUID
-    nickname: str | None = None
+    name: str | None = None
     photo_id: UUID | None = None
     photo_url: str | None = None
 
@@ -309,10 +313,10 @@ class MemberFace:
 class MemberFaces(Protocol):
     """What the people in a room are called and what they look like.
 
-    **A third spelling of a handle read, and the duplication is the decision** —
+    **A third spelling of a name read, and the duplication is the decision** —
     ``challenges`` and ``games`` each have their own, for the reason both say:
     two contexts needing *what do I print on this seat* is not a reason for one
-    to own the other's vocabulary. This one carries a face beside the handle
+    to own the other's vocabulary. This one carries a face beside the name
     because a room draws one and neither of the others does.
     """
 
@@ -322,7 +326,7 @@ class MemberFaces(Protocol):
         a read asks once about the roster **and** everybody its entries name.
 
         *One question* rather than *one query*, and the difference is worth
-        stating: the handles are a set read, but a photograph is chosen off a
+        stating: the names are a set read, but a photograph is chosen off a
         Player profile and a profile is a **stream folded per person**, so the
         implementation pays a fold each. What the port promises is that no caller
         ever loops — not that the provider does not.

@@ -15,6 +15,7 @@ const PHOTO = 'https://photos.example/one.jpg';
 function response(over: Partial<Wire['PlayerRecordResponse']> = {}): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
+    name: 'Bea K',
     nickname: 'bea_k',
     area_code: 'A+050612+0019938',
     social_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],

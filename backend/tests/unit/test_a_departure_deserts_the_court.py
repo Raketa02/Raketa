@@ -5,8 +5,11 @@ The API suite proves the outcomes; this pins the **sentences** the use case hand
 over, which no HTTP read can see: nothing at all for a court that was never a
 game, the seat alone for a game that still has two on it, and the seat **then**
 the call-off — ``called_by`` the leaver — for the departure that leaves one
-player with nobody deciding. Every collaborator is a hand-written stub
-implementing the port, which is this suite's rule.
+player with nobody deciding, off the ending the aggregate recorded
+(``docs/adr/0172`` §1). And the reply's ``game_id``: the game the court became,
+asked of ``games`` for the redraw, and ``None`` where the fold says the court
+was never one. Every collaborator is a hand-written stub implementing the
+port, which is this suite's rule.
 """
 
 from __future__ import annotations
@@ -52,7 +55,7 @@ class _Challenges:
 
 
 class _Handles:
-    async def handles_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+    async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
         return {player_id: str(player_id)[:4] for player_id in player_ids}
 
 
@@ -91,6 +94,22 @@ class _Games:
         self, *, challenge_id: UUID, by: UUID, occurred_at: Instant
     ) -> None:
         self.told.append(("called_off", by))
+
+
+class _CourtGames:
+    """*Which of these courts have a game* — every court asked about has one,
+    and it is the same id every time it is asked."""
+
+    def __init__(self) -> None:
+        self.games: dict[UUID, UUID] = {}
+        self.asked: list[frozenset[UUID]] = []
+
+    async def games_of(self, challenge_ids: Collection[UUID]) -> Mapping[UUID, UUID]:
+        self.asked.append(frozenset(challenge_ids))
+        return {
+            challenge_id: self.games.setdefault(challenge_id, new_uuid())
+            for challenge_id in challenge_ids
+        }
 
 
 def _invited(player_id: UUID, side: Side, position: int) -> SeatPlan:
@@ -133,18 +152,25 @@ def _a_two() -> Challenge:
     )
 
 
-def _leave(challenge: Challenge, games: _Games, *, now: Instant) -> LeaveGame:
+def _leave(
+    challenge: Challenge,
+    games: _Games,
+    *,
+    now: Instant,
+    court_games: _CourtGames | None = None,
+) -> LeaveGame:
     challenges = _Challenges()
     challenges.held[challenge.id] = challenge
     challenge.pull_events()
     return LeaveGame(
         challenges=challenges,
-        handles=_Handles(),
+        names=_Handles(),
         safety=a_safe_court([ORGANISER, ALICE, BOB, CAROL]),
         games=_SeatsMayChange(),
         uow=CountingUnitOfWork(),
         clock=FrozenClock(now),
         planned_games=games,
+        court_games=court_games or _CourtGames(),
     )
 
 
@@ -156,12 +182,15 @@ async def test_a_court_that_was_never_a_game_hands_nothing_over():
     challenge.accept(BOB, occurred_at=at(2))
     games = _Games()
 
-    answered = await _leave(challenge, games, now=at(3)).execute(
-        LeaveGameCommand(challenge_id=challenge.id, player_id=ALICE)
-    )
+    court_games = _CourtGames()
+    answered = await _leave(
+        challenge, games, now=at(3), court_games=court_games
+    ).execute(LeaveGameCommand(challenge_id=challenge.id, player_id=ALICE))
 
     assert games.told == []
     assert answered.standing is Standing.AWAITING_ANSWERS
+    assert answered.game_id is None, "the fold's answer, not the other context's"
+    assert court_games.asked == [frozenset()], "asked about no court, as the names are"
 
 
 async def test_a_departure_that_leaves_two_on_a_game_opens_the_seat_and_no_more():
@@ -171,17 +200,21 @@ async def test_a_departure_that_leaves_two_on_a_game_opens_the_seat_and_no_more(
     challenge.leave(CAROL, occurred_at=at(2))
     games = _Games()
 
-    answered = await _leave(challenge, games, now=at(3)).execute(
-        LeaveGameCommand(challenge_id=challenge.id, player_id=BOB)
-    )
+    court_games = _CourtGames()
+    answered = await _leave(
+        challenge, games, now=at(3), court_games=court_games
+    ).execute(LeaveGameCommand(challenge_id=challenge.id, player_id=BOB))
 
     assert games.told == [("vacated", BOB)]
     assert answered.standing is Standing.LINE_UP_INCOMPLETE
+    assert answered.game_id == court_games.games[challenge.id]
 
 
 async def test_the_departure_that_leaves_one_vacates_the_seat_and_then_calls_it_off():
     """The seat first, then the end, so the record reads in the order it
-    happened — and ``called_by`` is the leaver, whose departure ended it."""
+    happened — and ``called_by`` is the leaver, whose departure ended it. The
+    court's own ending is the aggregate's, recorded beside the ``SeatLeft``,
+    and the reply reads ``CALLED_OFF`` naming the leaver."""
 
     challenge = _a_padel_four()
     for who in (ALICE, BOB, CAROL):
@@ -195,9 +228,11 @@ async def test_the_departure_that_leaves_one_vacates_the_seat_and_then_calls_it_
     )
 
     assert games.told == [("vacated", ALICE), ("called_off", ALICE)]
-    assert answered.standing is Standing.LINE_UP_INCOMPLETE, (
-        "the challenge stands; it is the game that ended"
+    assert answered.standing is Standing.CALLED_OFF, (
+        "the court ends with its game (docs/adr/0172 §1)"
     )
+    assert answered.ended_by == ALICE
+    assert answered.game_id is not None
 
 
 async def test_in_singles_either_player_leaving_calls_it_off():

@@ -22,8 +22,8 @@ function game(over: Partial<Game> = {}): Game {
     sport: 'padel',
     standing: 'AWAITING_ENTRY',
     seats: [
-      { side: 'A', playerId: 'me', nickname: 'me' },
-      { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+      { side: 'A', playerId: 'me', name: 'me' },
+      { side: 'B', playerId: 'them', name: 'tomek.p' },
     ],
     plannedAt: '2026-09-08T09:00:00Z',
     entryClosesAt: '2026-09-19T09:00:00Z',
@@ -42,7 +42,7 @@ function plan(over: Partial<Plan> = {}): Plan {
 }
 
 /** The same court after the opponent left: their seat open, nobody in it. */
-const SHORT: Game['seats'] = [{ side: 'A', playerId: 'me', nickname: 'me' }, { side: 'B' }];
+const SHORT: Game['seats'] = [{ side: 'A', playerId: 'me', name: 'me' }, { side: 'B' }];
 
 describe('which card a game draws', () => {
   it('reads the ladder only while an entry is still awaited', () => {
@@ -105,7 +105,7 @@ describe('the door each card carries', () => {
       undefined,
       undefined,
       undefined,
-      undefined,
+      'open',
       undefined,
     ]);
   });
@@ -120,16 +120,19 @@ describe('the door each card carries', () => {
     expect(doorOf('needs-a-player')).not.toBe(doorOf('game-on'));
   });
 
-  it('offers nothing on the four endings and on the gap', () => {
-    for (const name of [
-      'counted',
-      'uncounted',
-      'never-played',
-      'called-off',
-      'unreadable',
-    ] as const) {
+  it('offers nothing on three of the endings and on the gap', () => {
+    for (const name of ['counted', 'uncounted', 'never-played', 'unreadable'] as const) {
       expect(doorOf(name)).toBeUndefined();
     }
+  });
+
+  /**
+   * **The called-off card opens the game screen** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §8): the card names nobody, and *What happened?* is the door to the screen that does. The
+   * same `open` as *Game on*'s; the word differs, and that is `nowPresentation`'s.
+   */
+  it('opens the game from the called-off card, whose screen says what happened', () => {
+    expect(doorOf('called-off')).toBe('open');
   });
 });
 

@@ -60,7 +60,7 @@ import { challengeErrorMessage } from './challengeErrorMessage';
 import { standingLine } from './challengePresentation';
 import { FILL_THE_SEATS, REMOVE_THE_CHALLENGE } from './challengeDetailPresentation';
 import {
-  LEAVE_FROM_THE_LIST_BODY,
+  leavingEndsLine,
   LEAVE_SHEET_CLOSE_LABEL,
   LEAVE_SHEET_TITLE,
   LEAVE_THE_GAME,
@@ -111,8 +111,8 @@ const PADEL_RATING: Wire['RatingResponse'] = {
  */
 function court(): Wire['SeatSchema'][] {
   return [
-    { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-    { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
+    { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+    { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
     { side: 'B' },
     { side: 'B' },
   ];
@@ -151,7 +151,7 @@ function card(playerId: string): Wire['CandidateSchema'] {
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname: NAMES[playerId] ?? 'anon',
+      name: NAMES[playerId] ?? 'anon',
       area_code: 'A+050612+0019938',
       social_tags: [],
       level: 3.1,
@@ -304,12 +304,12 @@ function conversationRow(
     game_id: null,
     sport: 'PADEL',
     members: [
-      { player_id: ME, nickname: 'me_' },
-      { player_id: BEA, nickname: 'bea_k' },
+      { player_id: ME, name: 'me_' },
+      { player_id: BEA, name: 'bea_k' },
     ],
     people: [
-      { player_id: ME, nickname: 'me_' },
-      { player_id: BEA, nickname: 'bea_k' },
+      { player_id: ME, name: 'me_' },
+      { player_id: BEA, name: 'bea_k' },
     ],
     last_entry: null,
     ...over,
@@ -375,8 +375,8 @@ describe('the three controls', () => {
    */
   it('gives a reader who has left the sentence about their own seat and nothing to press', async () => {
     const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
-      { side: 'A', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
+      { side: 'A', player_id: ME, answer: 'DECLINED', name: 'me_' },
       { side: 'B' },
       { side: 'B' },
     ];
@@ -418,6 +418,10 @@ describe('the three controls', () => {
 
 describe('*Leave the game*', () => {
   const DEPARTURE_PATH = `${DETAIL_PATH}/departure`;
+  const CLOSES_THE_COURT_FOR_BEA = leavingEndsLine({
+    court: 'never-a-game',
+    theOneLeft: { kind: 'player', name: 'bea_k' },
+  });
 
   /**
    * **A yes can be taken back before the court is whole** (ADR-0165 §1,
@@ -438,13 +442,18 @@ describe('*Leave the game*', () => {
     expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
   });
 
+  /**
+   * **The sheet says what the leaving does** (ADR-0172 §9): on this court the reader and Bea are
+   * the only two in, nobody is deciding and it never became a game — so the line says the leaving
+   * closes the court for her, read off the row the list holds.
+   */
   it('opens the sheet that names the consequence, and sends nothing until confirmed', async () => {
     await openTheChallenge();
 
     fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
 
     expect(await screen.findByText(LEAVE_SHEET_TITLE)).toBeTruthy();
-    expect(screen.getByText(LEAVE_FROM_THE_LIST_BODY)).toBeTruthy();
+    expect(screen.getByText(CLOSES_THE_COURT_FOR_BEA)).toBeTruthy();
     expect(transport.requestsTo('POST', DEPARTURE_PATH)).toEqual([]);
   });
 
@@ -457,8 +466,8 @@ describe('*Leave the game*', () => {
    */
   it('leaves the screen on the reply, landing on Chats with the row gone', async () => {
     const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: ME, answer: 'LEFT', nickname: 'me_' },
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
+      { side: 'A', player_id: ME, answer: 'LEFT', name: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
       { side: 'B' },
       { side: 'B' },
     ];
@@ -468,7 +477,7 @@ describe('*Leave the game*', () => {
     fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
     // One label on the control and on the sheet's act, and what is under the sheet is hidden
     // while it is up — so the second press can only reach the act.
-    await screen.findByText(LEAVE_FROM_THE_LIST_BODY);
+    await screen.findByText(CLOSES_THE_COURT_FOR_BEA);
     // What the list reads on its return: the seat is `LEFT`, and a departure of one's own goes.
     stubChallenges(transport, [row({ seats: left })], READ_AT);
     fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
@@ -484,8 +493,8 @@ describe('*Leave the game*', () => {
    */
   it('still says You left, with nothing to press, to a reader who opens it afterwards', async () => {
     const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: ME, answer: 'LEFT', nickname: 'me_' },
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
+      { side: 'A', player_id: ME, answer: 'LEFT', name: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
       { side: 'B' },
       { side: 'B' },
     ];
@@ -513,7 +522,7 @@ describe('*Leave the game*', () => {
 
     await openTheChallenge();
     fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
-    await screen.findByText(LEAVE_FROM_THE_LIST_BODY);
+    await screen.findByText(CLOSES_THE_COURT_FOR_BEA);
     fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
 
     expect(await screen.findByRole('alert')).toBeTruthy();
@@ -557,8 +566,8 @@ describe('*Open the chat*', () => {
 
   it('is not drawn to a reader who has left the court', async () => {
     const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
-      { side: 'A', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
+      { side: 'A', player_id: ME, answer: 'DECLINED', name: 'me_' },
       { side: 'B' },
       { side: 'B' },
     ];

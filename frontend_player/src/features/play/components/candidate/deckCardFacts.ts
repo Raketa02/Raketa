@@ -54,7 +54,7 @@ export interface DeckCardFacts {
 }
 
 export function deckCardFacts(candidate: Candidate, envelope: SearchEnvelope): DeckCardFacts {
-  const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
+  const name = playerName({ kind: 'player', name: candidate.card.name });
   const { level, band, range } = candidate.card;
   // Read once for both registers: the mark is the one thing on this card whose absence has two
   // causes, and two reads of it are two chances to fold them differently.

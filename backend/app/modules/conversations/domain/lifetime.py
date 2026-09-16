@@ -16,8 +16,8 @@ without drawing a line is the shape ``ChallengeOpenedFromMutualInterest`` and
 
 **A room without a game has no clock here, and that absence is the decision**
 (``docs/adr/0164`` §6). It has ended exactly when its challenge is over —
-``DECLINED``, ``LAPSED``, ``WITHDRAWN`` — which is a fact about somebody else's
-record, read on every read through the port the room already reads its
+``DECLINED``, ``LAPSED``, ``WITHDRAWN``, ``CALLED_OFF`` — which is a fact about
+somebody else's record, read on every read through the port the room already reads its
 membership from (``application/lifetime.py``), and never folded off this stream.
 There used to be a third anchor here: the last membership line, when it was a
 departure, plus the grace — a 48 h *departure shelf* that closed a room while

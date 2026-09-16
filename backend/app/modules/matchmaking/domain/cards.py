@@ -59,11 +59,14 @@ fields, three providers, and none of them folded into the identity:
 player has none, which is most people. A card is the surface where *nought games*
 and *no record* would be one absence in two spellings, and absence here has one.
 
-**A nickname, and nothing may shorten it.** ``users`` holds no real name and no
-given name. Every sentence naming somebody uses the whole handle or names
+**A name, and nothing may shorten it.** ``users`` holds the **Name** a player
+gave — free text, spaces allowed — and the **Nickname**, a handle that is drawn
+on a record and said nowhere (``docs/adr/0171``); a card carries the name and
+never the handle. Every sentence naming somebody uses the whole name or names
 nobody — the prototype's ``split(' ')[0]`` has nothing behind it here, and
 inventing a first name is the product addressing a person by a name they never
-gave it.
+gave it. That a name may now hold a space changes nothing about the rule: the
+platform says what the player gave it, whole.
 """
 
 from __future__ import annotations
@@ -89,12 +92,13 @@ class CardIdentity:
     Everything else on a card — the area, the tags, the Level and its band — is
     already on the index row, because those are facts a player changes about
     themselves. These three are absent for two reasons, both deliberate: a
-    nickname belongs to ``users``, which the index does not tail at all, and
+    name belongs to ``users``, which the index does not tail at all, and
     **no photo fact reaches the index** by ``docs/adr/0107``'s rule that the card
     is assembled outside the engine — which covers the id and the verdict alike.
     """
 
-    nickname: str
+    #: The **name**, and never the nickname (``docs/adr/0171`` §4).
+    name: str
     #: The **first** photo, which is the one a card shows: order is meaning in a
     #: player's photo list. ``None`` when they have none, and the client draws
     #: the generated court poster rather than a placeholder for a missing image.
@@ -120,7 +124,7 @@ class PlayerCardSource(Protocol):
     **One call for the whole shortlist, never one call per row** — the shape
     every set read in this module has. What that call costs *behind* the port is
     the adapter's business and is not promised here: the one this repository has
-    pays a set read for the nicknames, a profile per surviving row and, for a row
+    pays a set read for the names, a profile per surviving row and, for a row
     with a photograph, an object-store ``HEAD`` for its verdict
     (``docs/adr/0138``). It is read *after* the floor, so all of that is bounded
     by twenty players even when the pool is five hundred — which is what makes a
@@ -130,11 +134,11 @@ class PlayerCardSource(Protocol):
     async def identities_for(
         self, player_ids: Collection[UUID]
     ) -> Mapping[UUID, CardIdentity]:
-        """Each of these players' nickname, first photo and that photo's verdict.
+        """Each of these players' name, first photo and that photo's verdict.
 
         A player absent from the answer is one ``users`` has never heard of. A
         row whose card cannot be assembled is **dropped from the response**
-        rather than shown with a blank name: a card with no nickname is not a
+        rather than shown with a blank name: a card with no name is not a
         card, and the search is still a `200` with one fewer row.
 
         **A missing verdict is never a missing card.** It is the ordinary state
@@ -275,7 +279,7 @@ class PlayerRecordSource(Protocol):
         **A failure here is not a soft one, and that is why nothing catches it.**
         The absence on this card means *they have none*; an outage answered as an
         empty mapping would publish that about everybody on the shortlist. A
-        refusal is the honest answer, exactly as it is when a nickname cannot be
+        refusal is the honest answer, exactly as it is when a name cannot be
         read.
         """
         ...

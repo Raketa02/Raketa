@@ -53,7 +53,7 @@ export function YesTile({ seat, size }: YesTileProps) {
       />
       {/* Over the poster only. A seat whose handle the record has lost draws the poster bare:
           initials for `?` would be a drawing of nothing. */}
-      {seat.photoUrl === undefined && seat.nickname !== undefined ? (
+      {seat.photoUrl === undefined && seat.name !== undefined ? (
         <View
           style={s.initials}
           pointerEvents="none"
@@ -68,7 +68,7 @@ export function YesTile({ seat, size }: YesTileProps) {
             numberOfLines={1}
             adjustsFontSizeToFit
           >
-            {handleInitials(seat.nickname)}
+            {handleInitials(seat.name)}
           </Text>
         </View>
       ) : null}

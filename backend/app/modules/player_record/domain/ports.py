@@ -62,18 +62,18 @@ from app.modules.player_record.domain.record import (
 class SubjectIdentitySource(Protocol):
     """Who a person is, as a record may describe them. **One player at a time.**
 
-    Composed from more than one provider behind the port — a handle belongs to
-    ``users``, a photograph, an area and a tag selection to the Player profile —
-    which is ``docs/adr/0098``'s *a row names one implementation and not one
-    provider*: the consumer asks one question and the adapter pays whatever that
-    costs on the other side.
+    Composed from more than one provider behind the port — a name and a nickname
+    belong to ``users``, a photograph, an area and a tag selection to the Player
+    profile — which is ``docs/adr/0098``'s *a row names one implementation and
+    not one provider*: the consumer asks one question and the adapter pays
+    whatever that costs on the other side.
     """
 
     async def identity_of(self, player_id: UUID) -> SubjectIdentity | None:
-        """This player's handle, photograph, area and tags, or ``None``.
+        """This player's name and nickname, photograph, area and tags, or ``None``.
 
         **``None`` is every way a person cannot be described**: an id this
-        platform has never issued, an account whose handle cannot be read, and a
+        platform has never issued, an account not yet named, and a
         player who has not committed a profile. They are one answer here because
         they have one consequence — the record refuses, in the one shape it
         refuses in — and separating them would be the route answering *is this

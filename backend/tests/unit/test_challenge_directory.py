@@ -19,7 +19,7 @@ anything noticing.
 substring read — their id is in an earlier event — and the challenge is not
 theirs to keep watching.
 
-**And a fourth, from ``docs/adr/0143`` §7:** the handles come back with the rows,
+**And a fourth, from ``docs/adr/0143`` §7:** the names come back with the rows,
 read once over the union of every court, and a seat whose account ``users`` no
 longer has keeps its place with no handle on it.
 """
@@ -93,7 +93,7 @@ class RecordingHandles:
         self.known = {} if known is None else known
         self.asked: list[tuple] = []
 
-    async def handles_of(self, player_ids):
+    async def names_of(self, player_ids):
         self.asked.append(tuple(player_ids))
         return {
             player_id: self.known[player_id]
@@ -102,12 +102,21 @@ class RecordingHandles:
         }
 
 
+class NoCourtHasAGame:
+    """``GameOfCourtQuery`` for courts none of which has completed: the fold
+    never asks about one, and this answers nobody if it did."""
+
+    async def games_of(self, challenge_ids):
+        return {}
+
+
 def _reading(
-    session, *, now: Instant, handles: RecordingHandles | None = None
+    session, *, now: Instant, names: RecordingHandles | None = None
 ) -> ReadChallenges:
     return ReadChallenges(
         directory=build_challenge_directory(session),
-        handles=handles or RecordingHandles(),
+        names=names or RecordingHandles(),
+        court_games=NoCourtHasAGame(),
         clock=FrozenClock(now),
     )
 
@@ -269,7 +278,7 @@ async def test_a_seat_given_to_somebody_else_is_no_longer_yours(session_factory)
 
 
 # ---------------------------------------------------------------------------
-# The handles, and the instant — ``docs/adr/0143`` §7
+# The names, and the instant — ``docs/adr/0143`` §7
 # ---------------------------------------------------------------------------
 
 
@@ -284,18 +293,18 @@ async def test_the_handles_are_one_question_over_the_union_of_every_court(
     collection rather than on what happens to be visible.
     """
 
-    handles = RecordingHandles({ORGANISER: "Ola", ALICE: "Alicja", BOB: "Bartek"})
+    names = RecordingHandles({ORGANISER: "Ola", ALICE: "Alicja", BOB: "Bartek"})
     async with session_factory() as session:
         await _record(session, a_tennis_challenge(invitee=ALICE, sent_at=at()))
         await _record(session, a_tennis_challenge(invitee=BOB, sent_at=at(1)))
 
-        _, mine = await _reading(session, now=at(2), handles=handles).execute(
+        _, mine = await _reading(session, now=at(2), names=names).execute(
             ReadChallengesCommand(reader_id=ORGANISER)
         )
 
-        assert handles.asked == [tuple(sorted([ORGANISER, ALICE, BOB]))]
+        assert names.asked == [tuple(sorted([ORGANISER, ALICE, BOB]))]
         assert all(
-            one.handles == {ORGANISER: "Ola", ALICE: "Alicja", BOB: "Bartek"}
+            one.names == {ORGANISER: "Ola", ALICE: "Alicja", BOB: "Bartek"}
             for one in mine
         )
 
@@ -305,22 +314,22 @@ async def test_a_seat_whose_account_is_gone_keeps_its_place_with_no_handle(
 ):
     """**A player absent from the answer keeps their seat.**
 
-    A card with no nickname is not a card and a shortlist drops that row; a
-    *seat* with no nickname is still a person who was asked, and dropping it
+    A card with no name is not a card and a shortlist drops that row; a
+    *seat* with no name is still a person who was asked, and dropping it
     would publish a court one person short. The handle goes absent, the seat
     stays, and the screen has a side to name instead.
     """
 
-    handles = RecordingHandles({ORGANISER: "Ola"})
+    names = RecordingHandles({ORGANISER: "Ola"})
     async with session_factory() as session:
         await _record(session, a_tennis_challenge(invitee=ALICE, sent_at=at()))
 
-        _, mine = await _reading(session, now=at(1), handles=handles).execute(
+        _, mine = await _reading(session, now=at(1), names=names).execute(
             ReadChallengesCommand(reader_id=ORGANISER)
         )
 
         assert len(mine[0].challenge.seats) == 2
-        assert mine[0].handles == {ORGANISER: "Ola"}
+        assert mine[0].names == {ORGANISER: "Ola"}
 
 
 async def test_the_instant_answers_even_when_the_list_is_empty(session_factory):

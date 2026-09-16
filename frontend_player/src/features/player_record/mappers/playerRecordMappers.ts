@@ -80,6 +80,7 @@ type OpponentVarietySchema = components['schemas']['OpponentVarietySchema'];
 export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
   return {
     isSelf: response.is_self,
+    name: response.name,
     nickname: response.nickname,
     // Verbatim, and absent where absent. Nothing trims, shortens or defaults it: what
     // crosses is what they wrote, fenced on the way in and never on the way out.

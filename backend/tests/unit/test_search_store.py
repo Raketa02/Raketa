@@ -96,7 +96,7 @@ def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
         # price.
         card=(
             RecordedCard(
-                nickname="ada",
+                name="ada",
                 photo_id=PHOTO,
                 review=PhotoReviewDecision.FLAGGED,
                 area_code="LDN-CENTRAL",
@@ -218,7 +218,7 @@ async def test_the_whole_row_that_was_shown_comes_back(store):
     """**The record is self-contained**, because nothing it was assembled from
     remembers what it said an hour ago.
 
-    A nickname changes, a Level moves, a player leaves an area, and a Level delta
+    A name changes, a Level moves, a player leaves an area, and a Level delta
     is priced against ratings that keep moving — so a read-back that re-read them
     would answer a different search and call it the same one. The card, the
     concerns, the distance and the at-stake block are on the row.
@@ -232,7 +232,7 @@ async def test_the_whole_row_that_was_shown_comes_back(store):
     row = (await adapter.find(search_id=record.id, searcher_id=SEARCHER)).returned[0]
 
     assert row.card is not None
-    assert row.card.nickname == "ada"
+    assert row.card.name == "ada"
     assert row.card.photo_id == PHOTO, "an id, never a URL"
     assert row.card.social_tags == ("PLAYS_TO_WIN",)
     assert (row.card.level, row.card.range_low, row.card.range_high) == (
@@ -284,7 +284,7 @@ async def test_a_card_written_before_the_record_block_reads_back_without_one(sto
     row = (await adapter.find(search_id=record.id, searcher_id=SEARCHER)).returned[0]
 
     assert row.card is not None
-    assert row.card.nickname == "ada", "an older card stopped reading at all"
+    assert row.card.name == "ada", "an older card stopped reading at all"
     assert row.card.player_score is None
     assert row.card.counted_games is None
     assert row.card.last_five == ()
@@ -317,7 +317,7 @@ async def test_a_card_written_before_the_intro_reads_back_without_one(store):
     row = (await adapter.find(search_id=record.id, searcher_id=SEARCHER)).returned[0]
 
     assert row.card is not None
-    assert row.card.nickname == "ada", "an older card stopped reading at all"
+    assert row.card.name == "ada", "an older card stopped reading at all"
     assert row.card.intro is None
 
 
@@ -628,7 +628,7 @@ def test_a_basis_and_the_reasons_beside_it_may_not_be_different_lengths():
             concerns=(),
             distance_km=None,
             card=RecordedCard(
-                nickname="ada",
+                name="ada",
                 photo_id=None,
                 review=None,
                 area_code="LDN-CENTRAL",
@@ -648,7 +648,7 @@ def test_a_basis_and_the_reasons_beside_it_may_not_be_different_lengths():
 
 def test_a_near_miss_may_not_carry_a_card():
     """A near miss was **shown to nobody**, so there is no card it could have
-    shown — and a row carrying one would be layer 3 holding a person's nickname
+    shown — and a row carrying one would be layer 3 holding a person's name
     for a screen it may never reach."""
 
     from app.kernel import InvariantViolated
@@ -676,7 +676,7 @@ def test_a_near_miss_may_not_carry_a_card():
             concerns=(),
             distance_km=None,
             card=RecordedCard(
-                nickname="ada",
+                name="ada",
                 photo_id=None,
                 review=None,
                 area_code="LDN-CENTRAL",

@@ -71,7 +71,11 @@ async def _open_runs(client, headers) -> list[dict]:
 
 
 async def test_every_seeded_address_signs_in_and_is_who_it_says(client, seeded):
-    """One password, every address, and the nickname the slug promises."""
+    """One password, every address, and the name and nickname the catalog dealt.
+
+    ``First Last`` and a lowercase handle without a dot (``docs/adr/0171`` §5):
+    a seeded court reads *Diego Fabregat left* and never *Diego.Fabregat left*.
+    """
 
     for entry in seeded.values():
         headers = await _sign_in(client, entry.account)
@@ -80,7 +84,11 @@ async def test_every_seeded_address_signs_in_and_is_who_it_says(client, seeded):
 
         assert me.status_code == 200, me.text
         assert me.json()["email"] == entry.account.email
+        assert me.json()["name"] == entry.account.name
         assert me.json()["nickname"] == entry.account.nickname
+        assert " " in entry.account.name and "." not in entry.account.name
+        assert entry.account.nickname == entry.account.nickname.lower()
+        assert "." not in entry.account.nickname
 
 
 async def test_the_brand_new_player_has_every_empty_state_at_once(client, seeded):

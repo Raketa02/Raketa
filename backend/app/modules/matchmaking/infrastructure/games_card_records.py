@@ -1,7 +1,7 @@
 """The card's record block, over ``games``' own published reads.
 
 **The card's second author, and its second provider.** ``PlayerCardSource``
-answers who somebody is — a nickname, a photograph, a verdict on it — and this
+answers who somebody is — a name, a photograph, a verdict on it — and this
 answers what the platform has watched them do: how many counted games they have
 played, and how the last five of those went. Two ports rather than five fields on
 one, because ``docs/adr/0098`` splits by *who supplies the fact* and these are

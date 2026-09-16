@@ -85,6 +85,13 @@ A conversation is destroyed at the **earliest** of:
 > challenge and destroys whatever it finds, and nothing here moves the end later. `GameCalledOff`
 > itself reaches the room not at all.
 
+> **And again 2026-09-15 by [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §6.** `GameCalledOff` does reach the room — the departure that
+> leaves one player on a game calls it off with no withdrawal beside it, and the room is destroyed
+> on that event too — and a court that has been a game now ends as `CALLED_OFF` through its own
+> event, which destroys the room on this same arm. Whichever of the two is delivered first finds
+> the room; the other finds nothing. Still in the act, still no line, and nothing here moves the
+> end later.
+
 **Both anchors are facts the room is already told, and this is the windfall.**
 `Game.planned_at` **is** `GamePlanned.occurred_at` — `game.py:406` sets it from that event and
 nothing else — and `the-words.md` §23.1 already lists `GamePlanned` among the events the room

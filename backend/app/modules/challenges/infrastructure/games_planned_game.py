@@ -12,8 +12,9 @@ line-up is*.
 identical strings on both sides on purpose, so the mapping here is a pass-through
 rather than a table; a table would be a place for the two spellings to drift.
 Three sentences now (``docs/adr/0163``): the opening, the departure, and the
-call-off — by a withdrawal, or by the departure that left one player on the
-court (``docs/adr/0165`` §3).
+call-off — by *Call it off*, or by the departure that left one player on the
+court (``docs/adr/0165`` §3), each of which has recorded the court's own ending
+first (``docs/adr/0172`` §1).
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ from app.modules.games.application.vacate_seat import VacateSeat
 @final
 class GamesPlannedGame:
     """*Everybody accepted* → the ``games`` command that records the arrangement;
-    *somebody left* → the one that opens their seat; *the court is withdrawn* →
+    *somebody left* → the one that opens their seat; *the court is called off* →
     the one that calls the game off."""
 
     def __init__(

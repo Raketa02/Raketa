@@ -162,3 +162,12 @@ and a second caller is not the third. **Present on your own record as on anybody
 what strangers read, shown back to you — and nowhere else on this sheet or any other: not a
 seat, not a Chats row, not a conversation header, not a challenge card, and not Find a game's
 shortlist or pool cards, which `candidateCards.test.tsx` holds to it.
+
+**The header draws the name, and `@nickname` under it — one of the two places a handle is drawn**
+([#451](https://github.com/Raketa02/Raketa/issues/451),
+[ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+§4). The record's read carries both. The title of the sheet is the whole name with `(you)` after
+your own, and the handle sits under it in `tiny` and `muted` as `atNickname` spells it: two people
+may share a name, and this is the screen a friend opens to tell them apart, which is why the
+handle is here and on the reader's own You tab and nowhere else. The header's spoken name says
+both, in the order they are drawn, because a listener is told what a reader is shown.

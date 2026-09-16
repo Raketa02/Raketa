@@ -112,7 +112,7 @@ async def test_the_provisional_figure_becomes_exactly_the_final_figure(
     await world.fold_the_log(session_factory, candidate_source)
     shortlist = (await world.search(client, searcher["token"])).json()
     by_name = {
-        row["player_card"]["nickname"]: row["player_id"]
+        row["player_card"]["name"]: row["player_id"]
         for row in shortlist["candidates"]
     }
     partner, lone, twin = by_name["ana"], by_name["bo"], by_name["twin"]
@@ -197,7 +197,7 @@ async def test_a_provisional_forecast_carries_the_split_it_assumed(
     await world.fold_the_log(session_factory, candidate_source)
     shortlist = (await world.search(client, searcher["token"])).json()
     by_name = {
-        row["player_card"]["nickname"]: row["player_id"]
+        row["player_card"]["name"]: row["player_id"]
         for row in shortlist["candidates"]
     }
     partner, lone, twin = by_name["ana"], by_name["bo"], by_name["twin"]

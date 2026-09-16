@@ -96,7 +96,7 @@ async def test_the_password_is_carried_once_at_the_top_level(client, seeded):
 
     assert roster["password"] == SEED_PASSWORD
     for account in roster["accounts"]:
-        assert set(account) == {"player_id", "email", "nickname"}
+        assert set(account) == {"player_id", "email", "name", "nickname"}
 
 
 async def test_the_roster_is_ordered_by_address(client, seeded):
@@ -132,14 +132,13 @@ async def test_the_two_spellings_of_the_predicate_agree(client):
     rather than over rows inserted behind the write path.
     """
 
-    for email, nickname in BOTH_SIDES:
+    for email, _ in BOTH_SIDES:
         response = await client.post(
             "/api/v1/users",
             json={
                 "email": email,
                 "password1": "hunter22!",
                 "password2": "hunter22!",
-                "nickname": nickname,
                 "adult_attested": True,
             },
         )

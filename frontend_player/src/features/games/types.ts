@@ -49,11 +49,22 @@ export { CourtPairing, type CourtPairingProps } from './components/CourtPairing'
  */
 export {
   BALANCE_FORECAST,
+  CALLED_OFF_FOR_LACK_OF_PLAYERS,
   IT_WAS_CALLED_OFF,
   OPEN_SEAT,
   PLAYERS,
+  REMOVE_THIS_CARD,
+  calledTheGameOff,
   recordLabel,
 } from './components/gamePresentation';
+
+/**
+ * ***Remove this card*, for the Now card** — the dismissal of a called-off game's card, this
+ * feature's act composed into `features/plans`' card as `FillTheSeat` is
+ * ([ADR-0172](../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §5). The control, its glyph and its spoken name; the act and its cache effect stay behind it.
+ */
+export { RemoveCard, type RemoveCardProps } from './components/RemoveCard';
 
 /**
  * The route's own check on the id it is handed, because a route param is attacker-controlled and

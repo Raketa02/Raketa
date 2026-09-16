@@ -17,7 +17,7 @@ function row(playerId: string, fit: number, distanceKm?: number, playerScore?: n
     fit,
     ...(distanceKm === undefined ? {} : { distanceKm }),
     card: {
-      nickname: playerId,
+      name: playerId,
       areaCode: 'A+050612+0019938',
       socialTags: [],
       level: 2.7,

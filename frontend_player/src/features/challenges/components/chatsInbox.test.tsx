@@ -12,7 +12,7 @@
  * because the wording is the deck's to change and the rules are not.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -36,7 +36,12 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { CHALLENGES_HEADING, standingLine, yourAnswerWindowLine } from './challengePresentation';
+import {
+  CALLED_OFF_TAG,
+  CHALLENGES_HEADING,
+  standingLine,
+  yourAnswerWindowLine,
+} from './challengePresentation';
 
 const ME = GATE_USER.id;
 const EWA = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -71,8 +76,8 @@ function challenge(over: Partial<Wire['ChallengeSchema']> = {}): Wire['Challenge
     standing: 'AWAITING_ANSWERS',
     opened_at: at(-4),
     seats: [
-      { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { side: 'B', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+      { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
     ],
     ...over,
   };
@@ -84,8 +89,8 @@ function mySend(over: Partial<Wire['ChallengeSchema']> = {}): Wire['ChallengeSch
     challenge_id: 'eeeeeeee-0000-4000-8000-000000000005',
     organiser_id: ME,
     seats: [
-      { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-      { side: 'B', player_id: TOMEK, answer: null, answer_by: at(20), nickname: 'tomek.p' },
+      { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+      { side: 'B', player_id: TOMEK, answer: null, answer_by: at(20), name: 'tomek.p' },
     ],
     ...over,
   });
@@ -135,6 +140,27 @@ describe('what the section holds', () => {
   });
 
   /**
+   * **A row draws the name, space and all, and never the nickname**
+   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+   * §4): *Diego Fabregat*, whole, drawn and spoken — and no `@` anywhere on the tab, because
+   * two Diegos are told apart on the record and not on a row.
+   */
+  it('names the people on a row by their whole names', async () => {
+    await openChats([
+      challenge({
+        seats: [
+          { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'Diego Fabregat' },
+          { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'Ania Kowalska' },
+        ],
+      }),
+    ]);
+
+    const row = await screen.findByLabelText(/^Diego Fabregat, Squash/);
+    expect(within(row).getByText('Diego Fabregat')).toBeTruthy();
+    expect(screen.queryByText(/@/)).toBeNull();
+  });
+
+  /**
    * The count went with the widening. `CHALLENGES FOR YOU · 1` agreed exactly with the badge,
    * which counts only what is addressed to you — and two numbers meaning different things on
    * one screen is #326's own named failure.
@@ -151,9 +177,10 @@ describe('what the section holds', () => {
     const justDeclined = mySend({
       standing: 'DECLINED',
       ended_at: at(-1),
+      ended_by: TOMEK,
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'B', player_id: TOMEK, answer: 'DECLINED', answer_by: at(-1), nickname: 'tomek.p' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'B', player_id: TOMEK, answer: 'DECLINED', answer_by: at(-1), name: 'tomek.p' },
       ],
     });
 
@@ -165,7 +192,8 @@ describe('what the section holds', () => {
           standingLine({
             side: 'organiser',
             standing: 'DECLINED',
-            player: { kind: 'player', nickname: 'tomek.p' },
+            endedBy: { kind: 'player', name: 'tomek.p' },
+            byADeparture: false,
           }),
         ),
       ),
@@ -183,8 +211,8 @@ describe('what the section holds', () => {
       standing: 'DECLINED',
       ended_at: at(-1),
       seats: [
-        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-        { side: 'B', player_id: ME, answer: 'DECLINED', answer_by: at(20), nickname: 'me_' },
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { side: 'B', player_id: ME, answer: 'DECLINED', answer_by: at(20), name: 'me_' },
       ],
     });
     const iLeft = challenge({
@@ -192,8 +220,8 @@ describe('what the section holds', () => {
       sport: 'PADEL',
       standing: 'LINE_UP_INCOMPLETE',
       seats: [
-        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-        { side: 'A', player_id: ME, answer: 'DECLINED', answer_by: at(20), nickname: 'me_' },
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { side: 'A', player_id: ME, answer: 'DECLINED', answer_by: at(20), name: 'me_' },
         { side: 'B' },
         { side: 'B' },
       ],
@@ -214,13 +242,13 @@ describe('what the section holds', () => {
       // which it keeps.
       ended_at: at(-99),
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
         {
           side: 'B',
           player_id: TOMEK,
           answer: 'DECLINED',
           answer_by: at(-99),
-          nickname: 'tomek.p',
+          name: 'tomek.p',
         },
       ],
     });
@@ -242,8 +270,8 @@ describe('the order', () => {
     const later = challenge({
       challenge_id: 'aaaaaaaa-0000-4000-8000-00000000000b',
       seats: [
-        { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
-        { side: 'B', player_id: ME, answer: null, answer_by: at(40), nickname: 'me_' },
+        { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+        { side: 'B', player_id: ME, answer: null, answer_by: at(40), name: 'me_' },
       ],
     });
     const myOldSend = mySend({
@@ -254,8 +282,8 @@ describe('the order', () => {
       challenge_id: 'aaaaaaaa-0000-4000-8000-00000000000d',
       opened_at: at(-2),
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'B', player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'B', player_id: OLA, answer: null, answer_by: at(20), name: 'ola.k' },
       ],
     });
 
@@ -312,10 +340,10 @@ describe('the row', () => {
       sport: 'PADEL',
       standing: 'LINE_UP_INCOMPLETE',
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
-        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), nickname: 'ewa.m' },
-        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), nickname: 'ola.k' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), name: 'ewa.m' },
+        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), name: 'ola.k' },
       ],
     });
 
@@ -328,39 +356,50 @@ describe('the row', () => {
   });
 
   /**
-   * **And a court that ended on somebody leaving it, with me the one left, has no row at all**
-   * ([#429](https://github.com/Raketa02/Raketa/issues/429)): B took the yes back after C and D
-   * said no, so the court is over (`DECLINED` — a departure is a no) with nobody committed to it
-   * but me. The room the yes opened is where that was told; the row has no news to keep a day.
+   * **A court that ended on somebody leaving it, with me the one left, keeps its row and says
+   * who** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §7): the departure-drop rule — a row that vanished because the only sentence would have
+   * read *? said no* — is retired, and the row reads *{name} left — nobody else is coming* under
+   * the leaver's face for its day.
    */
-  it('drops a court that ended on somebody leaving, with me the one left on it', async () => {
+  it('keeps a court that ended on somebody leaving, with me the one left, and names them', async () => {
     const theyAllWent = mySend({
       sport: 'PADEL',
       standing: 'DECLINED',
       ended_at: at(-1),
+      ended_by: TOMEK,
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'A', player_id: TOMEK, answer: 'LEFT', answer_by: at(20), nickname: 'tomek.p' },
-        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), nickname: 'ewa.m' },
-        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), nickname: 'ola.k' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'A', player_id: TOMEK, answer: 'LEFT', answer_by: at(20), name: 'tomek.p' },
+        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), name: 'ewa.m' },
+        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), name: 'ola.k' },
       ],
     });
 
     await openChats([theyAllWent]);
 
-    expect(await screen.findByText(CHATS_COPY.emptyChallenges)).toBeTruthy();
-    expect(screen.queryByLabelText(/tomek\.p/)).toBeNull();
+    const row = await screen.findByLabelText(/^tomek\.p, Padel/);
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'DECLINED',
+        endedBy: { kind: 'player', name: 'tomek.p' },
+        byADeparture: true,
+      }),
+    );
+    expect(row.props.accessibilityLabel).not.toContain('ewa.m');
+    expect(screen.queryByText(CALLED_OFF_TAG)).toBeNull();
   });
 
-  /** A nickname is not shortenable, so the list gives way by dropping whole names. */
+  /** A name is not shortenable, so the list gives way by dropping whole names. */
   it('drops whole handles rather than shortening one, and says how many it dropped', async () => {
     const four = challenge({
       sport: 'PADEL',
       seats: [
-        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.magdalena.wisniewska' },
-        { side: 'A', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
-        { side: 'B', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.przybylski' },
-        { side: 'B', player_id: OLA, answer: 'ACCEPTED', nickname: 'ola.kowalczyk' },
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.magdalena.wisniewska' },
+        { side: 'A', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
+        { side: 'B', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.przybylski' },
+        { side: 'B', player_id: OLA, answer: 'ACCEPTED', name: 'ola.kowalczyk' },
       ],
     });
 
@@ -378,6 +417,217 @@ describe('the row', () => {
   });
 });
 
+/**
+ * **The ended rows, walked one by one** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7): each draws `ended_by`'s face and name under the sentence keyed by that person's seat, the
+ * `Called off` tag is on `CALLED_OFF` rows and on no other, a doubles *said no* row draws one face
+ * rather than three, and the clock stripe's rule is untouched by any of it.
+ */
+describe('an ended row names whose act ended it', () => {
+  const ended = (over: Partial<Wire['ChallengeSchema']>) =>
+    mySend({ sport: 'PADEL', ended_at: at(-1), ...over });
+
+  const NAMED_TOMEK = { kind: 'player', name: 'tomek.p' } as const;
+
+  /** The row named after one person: their name in the handles, and nobody else's anywhere on it. */
+  async function theRowNaming(name: string) {
+    const row = await screen.findByLabelText(new RegExp(`^${name.replace('.', '\\.')}, Padel`));
+    expect(screen.getByText(name)).toBeTruthy();
+    expect(screen.queryByText(/\+\d/)).toBeNull();
+    return row;
+  }
+
+  it('names the last leaver under *{name} left*, and wears the tag', async () => {
+    await openChats([
+      ended({
+        standing: 'CALLED_OFF',
+        ended_by: TOMEK,
+        game_id: 'aaaaaaaa-0000-4000-8000-00000000000a',
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: EWA, answer: 'LEFT', name: 'ewa.m' },
+          { side: 'B', player_id: OLA, answer: 'LEFT', name: 'ola.k' },
+          { side: 'B', player_id: TOMEK, answer: 'LEFT', name: 'tomek.p' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'CALLED_OFF',
+        endedBy: NAMED_TOMEK,
+        byADeparture: true,
+      }),
+    );
+    // The faces that left one by one never come back on the row that ends it.
+    expect(row.props.accessibilityLabel).not.toMatch(/ewa\.m|ola\.k/);
+    expect(screen.getByText(CALLED_OFF_TAG)).toBeTruthy();
+    expect(row.props.accessibilityLabel).toMatch(new RegExp(`${CALLED_OFF_TAG}$`));
+  });
+
+  it('names the presser under *{name} called the game off*, and wears the tag', async () => {
+    await openChats([
+      ended({
+        standing: 'CALLED_OFF',
+        ended_by: TOMEK,
+        game_id: 'aaaaaaaa-0000-4000-8000-00000000000a',
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+          { side: 'B', player_id: OLA, answer: 'ACCEPTED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'LEFT', name: 'ewa.m' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'CALLED_OFF',
+        endedBy: NAMED_TOMEK,
+        byADeparture: false,
+      }),
+    );
+    expect(screen.getByText(CALLED_OFF_TAG)).toBeTruthy();
+  });
+
+  /**
+   * **The presser's own row stays its day** and names the people still on the court — a sentence
+   * about the reader's own act names nobody else, and the row is never blank.
+   */
+  it('reads *You called the game off* to the presser, over the faces still on the court', async () => {
+    await openChats([
+      ended({
+        standing: 'CALLED_OFF',
+        ended_by: ME,
+        game_id: 'aaaaaaaa-0000-4000-8000-00000000000a',
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+          { side: 'B', player_id: OLA, answer: 'ACCEPTED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'LEFT', name: 'ewa.m' },
+        ],
+      }),
+    ]);
+
+    const row = await screen.findByLabelText(/^tomek\.p and ola\.k, Padel/);
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'CALLED_OFF',
+        endedBy: { kind: 'you' },
+        byADeparture: false,
+      }),
+    );
+    expect(row.props.accessibilityLabel).not.toMatch(/ewa\.m|me_/);
+    expect(screen.getByText(CALLED_OFF_TAG)).toBeTruthy();
+  });
+
+  it('names the one who left under *{name} left — nobody else is coming*, with no tag', async () => {
+    await openChats([
+      ended({
+        standing: 'DECLINED',
+        ended_by: TOMEK,
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: TOMEK, answer: 'LEFT', name: 'tomek.p' },
+          { side: 'B', player_id: OLA, answer: 'DECLINED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'DECLINED', name: 'ewa.m' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'DECLINED',
+        endedBy: NAMED_TOMEK,
+        byADeparture: true,
+      }),
+    );
+    expect(screen.queryByText(CALLED_OFF_TAG)).toBeNull();
+  });
+
+  /** Today's doubles *said no* row goes from three faces to one: the tap answers *which court*. */
+  it('names the one who said no under *{name} said no*, one face on a doubles court', async () => {
+    await openChats([
+      ended({
+        standing: 'DECLINED',
+        ended_by: TOMEK,
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: OLA, answer: 'DECLINED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'DECLINED', name: 'ewa.m' },
+          { side: 'B', player_id: TOMEK, answer: 'DECLINED', name: 'tomek.p' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'DECLINED',
+        endedBy: NAMED_TOMEK,
+        byADeparture: false,
+      }),
+    );
+    expect(row.props.accessibilityLabel).not.toMatch(/ewa\.m|ola\.k/);
+    expect(screen.queryByText(CALLED_OFF_TAG)).toBeNull();
+  });
+
+  it("names the one whose day ran out last under *{name}'s day ran out*, with no tag", async () => {
+    await openChats([
+      ended({
+        standing: 'LAPSED',
+        ended_by: TOMEK,
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: OLA, answer: 'LAPSED', name: 'ola.k' },
+          { side: 'B', player_id: EWA, answer: 'LAPSED', name: 'ewa.m' },
+          { side: 'B', player_id: TOMEK, answer: 'LAPSED', name: 'tomek.p' },
+        ],
+      }),
+    ]);
+
+    const row = await theRowNaming('tomek.p');
+    expect(row.props.accessibilityLabel).toContain(
+      standingLine({
+        side: 'organiser',
+        standing: 'LAPSED',
+        endedBy: NAMED_TOMEK,
+        byADeparture: false,
+      }),
+    );
+    expect(screen.queryByText(CALLED_OFF_TAG)).toBeNull();
+  });
+
+  /** The stripe marks a clock of yours, and an ended row has none — the tag and the stripe never share a row. */
+  it('draws no stripe on any ended row, and still one on the row with a clock of mine', async () => {
+    await openChats([
+      challenge(),
+      ended({
+        standing: 'CALLED_OFF',
+        ended_by: TOMEK,
+        game_id: 'aaaaaaaa-0000-4000-8000-00000000000a',
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'B', player_id: TOMEK, answer: 'LEFT', name: 'tomek.p' },
+        ],
+      }),
+    ]);
+
+    await theRowNaming('tomek.p');
+    await screen.findByLabelText(/^ewa\.m, Squash/);
+    expect(stripes()).toHaveLength(1);
+    expect(screen.getByText(CALLED_OFF_TAG)).toBeTruthy();
+  });
+});
+
 describe('coming back to the list', () => {
   /**
    * **The return re-reads the standing** ([#429](https://github.com/Raketa02/Raketa/issues/429)
@@ -390,17 +640,17 @@ describe('coming back to the list', () => {
   it('re-reads the challenges when the player comes back from a room', async () => {
     const ROOM = 'eeeeeeee-0000-4000-8000-00000000000e';
     const members = [
-      { player_id: ME, nickname: 'me_' },
-      { player_id: EWA, nickname: 'ewa.m' },
+      { player_id: ME, name: 'me_' },
+      { player_id: EWA, name: 'ewa.m' },
     ];
     const four = (olaAnswer: 'DECLINED' | null) =>
       mySend({
         sport: 'PADEL',
         seats: [
-          { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-          { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-          { side: 'B', player_id: TOMEK, answer: null, answer_by: at(20), nickname: 'tomek.p' },
-          { side: 'B', player_id: OLA, answer: olaAnswer, answer_by: at(20), nickname: 'ola.k' },
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+          { side: 'B', player_id: TOMEK, answer: null, answer_by: at(20), name: 'tomek.p' },
+          { side: 'B', player_id: OLA, answer: olaAnswer, answer_by: at(20), name: 'ola.k' },
         ],
       });
     stubConversations(transport, [
@@ -517,8 +767,8 @@ describe('the badge on the bar', () => {
       challenge_id: 'ffffffff-0000-4000-8000-000000000006',
       standing: 'ON',
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'B', player_id: OLA, answer: 'ACCEPTED', nickname: 'ola.k' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'B', player_id: OLA, answer: 'ACCEPTED', name: 'ola.k' },
       ],
     });
 

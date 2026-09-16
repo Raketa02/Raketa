@@ -17,11 +17,11 @@ behind it by construction — the opening runs in the acceptance's own transacti
 — so a port answering ``None`` there is a broken precondition rather than a
 state, and it raises rather than admitting the act. The alternative is a seat
 moving on a record nobody can find. **And a court that has ended costs no read
-either** (``docs/adr/0163`` §3): a reopened court can now be withdrawn, so an
+either** (``docs/adr/0163`` §3): a reopened court can now be called off, so an
 ended court that has been a game exists, and the aggregate's own
 ``challenge_is_over`` is the refusal it owes — *standing, then moment*, which
 is the order ``docs/adr/0162`` §1 stated. Reading the game first would answer
-``game_is_history`` about a challenge the caller is looking at as ``WITHDRAWN``.
+``game_is_history`` about a challenge the caller is looking at as ``CALLED_OFF``.
 """
 
 from __future__ import annotations

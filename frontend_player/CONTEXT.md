@@ -676,13 +676,16 @@ not restated here; what follows is only what this client had to invent to draw t
   heading a score column with a handle.
 - **The court's handles** — what a seat says about the person in it, and **the whole of it**: no
   Level, no band, no area, no run of form, because those are what a _searcher_ reads to decide
-  about a game that might happen. They are drawn in the eyebrow — _Padel · with kasia_w, tomek.p
-  and marekb_, which is what tells two padel games in a week apart — and in the two sentences
-  about something a **person** did: putting a score up, and agreeing with one. Always the
-  **whole** handle
-  ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4), and the
-  unknown player's `?` for a seat `users` can no longer answer for. _Avoid_: shortening one, and
-  dropping a seat that has no handle — the court keeps its shape and loses a word.
+  about a game that might happen. They are drawn in the eyebrow — _Padel · with Kasia Wójcik,
+  Tomek Przybylski and Marek Baran_, which is what tells two padel games in a week apart — and in
+  the two sentences about something a **person** did: putting a score up, and agreeing with one.
+  Always the **whole** name
+  ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4, read
+  through [ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md):
+  the seat carries the **Name** and never the nickname, which is a handle drawn on a record and
+  said nowhere — the term keeps its word for the reason the specs do), and the unknown player's
+  `?` for a seat `users` can no longer answer for. _Avoid_: shortening one, and dropping a seat
+  that has no name — the court keeps its shape and loses a word.
 - **The plan slot** — the one `ReactNode` `GameScreen` grew when it stopped being only the result
   argument ([#368](https://github.com/Raketa02/Raketa/issues/368)): a child the screen renders on
   its **entry arm** and knows nothing about, filled by `features/plans`
@@ -802,7 +805,10 @@ what this client had to invent to draw the room
   list's scroll. A row rests **closed** or **revealed** and never in between. The Chats
   conversation row reveals _Leave the game_, which is the departure's door (`DepartureDoor`,
   `features/challenges`', **composed in by the shell** because neither feature may import the
-  other); the organiser's challenge row, **while nobody has joined**, reveals _Remove the
+  other — and whose sheet reads `leavingWouldEnd` off the court's row on that feature's list, so
+  it says _calls the game off — for {name} too_ or _closes this court for {name}_ where the
+  reader is the last other seat, [ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+  §9); the organiser's challenge row, **while nobody has joined**, reveals _Remove the
   challenge_ (`RemovalDoor`, the same feature's own, so nothing is composed); every other row
   reveals nothing and does not move. Both doors are one shape — an `ActDoor` a surface draws
   however a door looks there, on `useActDoor`, which holds when the sheet is up and that a
@@ -968,7 +974,9 @@ only what this client had to invent to draw what is happening today and next
   the court, the slot count and the clock: the five rungs, **Confirm the result** (one name over
   four `AWAITING_ANSWER` arms), **Counted**, **Uncounted**, **Never played**, **Called off** (the
   fourth end, [ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md) — shelved a
-  day from `calledOffAt`, read before the window and the entry, and drawn as _Never played_ is),
+  day from `calledOffAt`, read before the window and the entry, and since
+  [ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+  §8 the one ending's card that offers something: _What happened?_ and the trash),
   and the named gap for a standing this build cannot read. It is the
   **tag**, and every slot on the card that differs by name is a **table lookup on it** — the stage
   dot, the accent, the door's word — so a twelfth name fails `pnpm typecheck` in one file.
@@ -1003,16 +1011,24 @@ only what this client had to invent to draw what is happening today and next
   volt on `primary`.
 - **The line under the slots** — the one fact the shell keeps from before: **Needs result's
   window** (`{duration} left`, folded against `read_at`, obeying nothing) and **the endings'
-  standing** (`gameStandingLine`, cited). Nothing on the three plan-led rungs. _Avoid_: the gloss
-  coming back under another name, and a checklist on the card.
+  standing** (`gameStandingLine`, cited). Nothing on the three plan-led rungs, and **nothing on
+  the called-off card** ([ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+  §8), whose tag is the whole of what it says. _Avoid_: the gloss coming back under another name,
+  and a checklist on the card.
 - **The two doors** — **the wide door** is the next thing to do and its word changes with the
   stage: `Finish the plan` · `Open` · `Fill the seat` · `We played` · `Confirm the result`, one per
-  name and none on an ending; it **navigates and never writes**. `Fill the seat` is the one door
-  that runs something first — the challenge screen's fill, a search that reaches nobody — and it
-  is `features/challenges`' `FillTheSeat` drawn in the door's place, only while the agreed moment
-  is ahead. **The bubble** beside it is the icon door to the room, drawn only where there is one.
-  **The body is not a door.** _Avoid_: a pressable body, a disabled control where a card offers
-  nothing, a door that writes, and a third door.
+  name, none on three of the endings, and **`What happened?`** on the called-off card, which
+  opens the game screen whose heading says who ([ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+  §8); it **navigates and never writes**. `Fill the seat` is the one door that runs something
+  first — the challenge screen's fill, a search that reaches nobody — and it is
+  `features/challenges`' `FillTheSeat` drawn in the door's place, only while the agreed moment is
+  ahead. **The bubble** beside it is the icon door to the room, drawn only where there is one.
+  **The trash** takes the bubble's place on the called-off card and is not a door: it is
+  `features/games`' `RemoveCard` — the dismissal, `POST /games/{id}/dismissal`, the reader's own
+  — which clears the card from Now at once, on the reply, with no sheet; `mayBeCleared` names the
+  one card that carries it. **The body is not a door.** _Avoid_: a pressable body, a disabled
+  control where a card offers nothing, a door that writes, a third door, and the trash on any
+  other ending.
 - **The court's acts** — the game screen's fourth slot, `courtActs`, drawn last on the plan lead:
   every one a **challenge** act reached from a game, composed by `plans` through
   `challenges/types.ts` and handed its one rule as `offered`. `Fill the seat` (primary, where

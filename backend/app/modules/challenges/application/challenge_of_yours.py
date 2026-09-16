@@ -10,8 +10,12 @@ whether a stranger's challenge id is real, one probe at a time.
 was recorded at**, so an accept that completed a four and the ``ON`` it produced
 are one reading and not two.
 
-**The reply is the redraw** (#327), and the handles are read *after* the commit,
-because they are the one thing on the answer that is not part of it.
+**The reply is the redraw** (#327), and the names are read *after* the commit,
+because they are the one thing on the answer that is not part of it. **The game
+the court became is read before it** (``docs/adr/0172`` §4): it is asked of the
+store the act just wrote to, in the act's own transaction, so an outage there
+has already rolled the act back — and a redraw that could not say whether the
+court has been a game would draw the wrong sheet.
 
 Answering a seat and withdrawing a challenge are different acts on different
 subjects — one is about your own seat and the other ends everybody's — and they
@@ -29,10 +33,15 @@ from uuid import UUID
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, Instant
-from app.modules.challenges.application.read_challenges import StandingChallenge
+from app.modules.challenges.application.read_challenges import (
+    StandingChallenge,
+    been_a_game,
+    game_of,
+)
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.errors import NoChallengeOfYoursHasThatId
-from app.modules.challenges.domain.ports import ChallengeRepository, PlayerHandles
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
+from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
 from app.modules.challenges.domain.standing import Standing
 
 logger = logging.getLogger(__name__)
@@ -45,12 +54,14 @@ class AChallengeOfYours:
         self,
         *,
         challenges: ChallengeRepository,
-        handles: PlayerHandles,
+        names: PlayerNames,
+        court_games: GameOfCourtQuery,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._challenges = challenges
-        self._handles = handles
+        self._names = names
+        self._court_games = court_games
         self._uow = uow
         self._clock = clock
 
@@ -90,7 +101,7 @@ class AChallengeOfYours:
     ) -> StandingChallenge:
         """The court as it now stands — **the reply is the redraw** (#327).
 
-        The handles are read **after** the commit, because they are the one thing
+        The names are read **after** the commit, because they are the one thing
         on the answer that is not part of it: a name that could not be looked up
         must not roll back somebody's yes.
 
@@ -98,16 +109,25 @@ class AChallengeOfYours:
         from here. The act is already committed at this line, so an exception
         would hand the player a failure for something that succeeded — and *the
         reply is the redraw* means they would do it again, into a seat that has
-        already been answered or a challenge that has already ended. A handle
+        already been answered or a challenge that has already ended. A name
         nobody could look up is the same absence as an account ``users`` no
         longer has: ``null`` on the wire, the seat intact, and the screen naming
         a side instead.
+
+        **The game is read before the commit, and only where the fold says
+        there is one.** It is the same store the act wrote to — the hand-over
+        appends to it in this transaction, and the rows are flushed — so an
+        outage there is one that has already refused the act; and a court the
+        fold says has been a game with no game behind it is a broken store,
+        refused rather than drawn as *never a game*.
         """
 
+        games = await self._court_games.games_of(been_a_game([challenge]))
+        game_id = game_of(challenge, games)
         await self._uow.commit()
-        handles: Mapping[UUID, str] = {}
+        names: Mapping[UUID, str] = {}
         try:
-            handles = await self._handles.handles_of(
+            names = await self._names.names_of(
                 sorted(
                     seat.player_id
                     for seat in challenge.seats
@@ -116,9 +136,13 @@ class AChallengeOfYours:
             )
         except Exception:
             logger.warning(
-                "the court's handles could not be read after an act on it",
+                "the court's names could not be read after an act on it",
                 exc_info=True,
             )
         return StandingChallenge(
-            challenge=challenge, standing=standing, read_at=at, handles=handles
+            challenge=challenge,
+            standing=standing,
+            read_at=at,
+            names=names,
+            game_id=game_id,
         )

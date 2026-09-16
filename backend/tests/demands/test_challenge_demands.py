@@ -226,7 +226,7 @@ async def test_the_person_block_is_a_whole_handle_and_no_free_text(
         )
 
     person = answer.cards[0].person
-    assert person.nickname == "ada"
+    assert person.name == "ada"
     assert person.area_code
     assert person.range_low <= person.level <= person.range_high
     assert person.band
@@ -406,7 +406,7 @@ async def test_a_court_with_nobody_across_the_net_has_no_forecast(
     assert answer.absent is None
     assert answer.cards[0].pairing.forecast is None
     assert answer.cards[0].pairing.terms
-    assert answer.cards[0].person.nickname == "ada"
+    assert answer.cards[0].person.name == "ada"
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +421,7 @@ async def test_a_reader_with_no_rating_in_the_sport_has_nothing_to_compute(
     """**Being asked to play a sport you never declared for is how this works.**
 
     Not a corner of it, and not an error: the screen draws the arrangement and
-    the handles, omits the pairing block and does not apologise for it. The code
+    the names, omits the pairing block and does not apologise for it. The code
     says whose gap it is, and it is not an outage's.
     """
 

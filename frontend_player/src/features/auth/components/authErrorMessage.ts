@@ -15,7 +15,7 @@
 
 import { codeMessage, type AppError } from '@/shared/errors';
 
-import { ADULT_ATTESTATION_MISSING } from '../schemas/authForms';
+import { ADULT_ATTESTATION_MISSING, type FieldErrors } from '../schemas/authForms';
 
 const BY_CODE: Readonly<Record<string, string>> = {
   invalid_credentials: "That email and password don't match. Try again.",
@@ -59,4 +59,35 @@ export function authErrorField(error: AppError): string | undefined {
   const field = error.details?.field;
   if (typeof field !== 'string') return undefined;
   return FORM_FIELD[field] ?? field;
+}
+
+/**
+ * **What a box says under itself** — the form's own refusal first, else the server's where it
+ * named this field, else nothing.
+ *
+ * One rule for the two forms that render a server conflict under a box: the form's message wins
+ * because it was raised against what is in the box *now*, and a server refusal against the same
+ * field is what the player reads once the form has nothing to say. A refusal against no field is
+ * the banner's, and this answers nothing for it — `bannerMessage` is that half.
+ */
+export function errorUnderField(
+  field: string,
+  fieldErrors: FieldErrors,
+  serverError: AppError | null,
+): string | undefined {
+  const own = fieldErrors[field];
+  if (own !== undefined) return own;
+  if (serverError !== null && authErrorField(serverError) === field) {
+    return authErrorMessage(serverError);
+  }
+  return undefined;
+}
+
+/**
+ * The banner's sentence: a server refusal that names **no** field. One that names a field is
+ * rendered under that box by {@link errorUnderField} and must not be said twice.
+ */
+export function bannerMessage(serverError: AppError | null): string | undefined {
+  if (serverError === null || authErrorField(serverError) !== undefined) return undefined;
+  return authErrorMessage(serverError);
 }

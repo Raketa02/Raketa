@@ -46,6 +46,7 @@ from app.application.ports.events import EventCodec
 from app.kernel import Instant
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.events import (
+    ChallengeCalledOff,
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
     ChallengeWithdrawn,
@@ -387,12 +388,16 @@ def _invitations_in(
                     continue
                 if seat.player_id in wanted:
                     invitations.setdefault((seat.player_id, seat.answer_by), None)
-        elif isinstance(event, ChallengeWithdrawn):
-            withdrawn_at = Instant(event.occurred_at)
+        elif isinstance(event, (ChallengeWithdrawn, ChallengeCalledOff)):
+            # Either recorded conclusion draws the line; a call-off cuts no day
+            # short by construction — both acts that record one are admitted
+            # with nobody deciding — and the aggregate's ``lapse`` reads the
+            # same rule off the same conclusion, so the two cannot disagree.
+            ended_at = Instant(event.occurred_at)
             invitations = {
                 (player_id, answer_by): answered_at
                 for (player_id, answer_by), answered_at in invitations.items()
-                if answered_at is not None or answer_by <= withdrawn_at
+                if answered_at is not None or answer_by <= ended_at
             }
         elif isinstance(event, (SeatAccepted, SeatDeclined)):
             if event.player_id not in wanted:

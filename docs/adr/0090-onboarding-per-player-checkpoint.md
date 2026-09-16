@@ -1,6 +1,9 @@
 # ADR-0090 — Onboarding is two parts, and the second one is per player
 
-- **Status:** Accepted
+- **Status:** Accepted — **the entry gate's list amended 2026-09-15 by
+  [ADR-0171](0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md) §3**: a
+  fifth destination, *no name → the naming step*, read **first**, and passing the narrowed
+  invariant's test the way the Player profile does. Everything else here stands.
 - **Date:** 2026-08-25
 
 > **Narrows an invariant in [`CONTEXT.md`](../../CONTEXT.md).** The rating context states

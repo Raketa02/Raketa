@@ -10,6 +10,7 @@ import type { Challenge, ChallengeSeat } from './challenge';
 import {
   challengeStands,
   holdsTheExit,
+  leavingWouldEnd,
   mayRemove,
   pairAlreadyPlaying,
   playersStillIn,
@@ -40,7 +41,7 @@ const WAITING_ON_BEA = challenge('AWAITING_ANSWERS', [
 ]);
 
 describe('which challenges still hold a pair', () => {
-  it('counts the three live standings and none of the three endings', () => {
+  it('counts the three live standings and none of the four endings', () => {
     const stands = STANDINGS.filter((standing) => challengeStands(challenge(standing, [])));
 
     expect(stands).toEqual(['AWAITING_ANSWERS', 'ON', 'LINE_UP_INCOMPLETE']);
@@ -251,9 +252,9 @@ describe('who on this court you already have a game with', () => {
  * gap instead of a sentence about a code nobody here understands.
  */
 describe('what a standing says to a reader', () => {
-  const named = (playerId: string, nickname: string, answer?: SeatAnswer): ChallengeSeat => ({
+  const named = (playerId: string, name: string, answer?: SeatAnswer): ChallengeSeat => ({
     playerId,
-    nickname,
+    name,
     ...(answer === undefined ? {} : { answer }),
   });
 
@@ -325,32 +326,209 @@ describe('what a standing says to a reader', () => {
     expect(standingFactsFor(asked, BEA)).not.toHaveProperty('ownAnswer');
   });
 
-  it('names the first person in court order to have given the answer that ended it', () => {
+  /**
+   * **An ending names whose act ended it, and the wire says who** — `ended_by`, never a walk
+   * over the seats ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §3, §7): the name and the date come from the same fold on the server, and a seat that
+   * `LEFT` reads as a departure wherever it is named.
+   */
+  it('names ended_by on a decline, and says whether their seat was a departure', () => {
+    const declined = challenge('DECLINED', [
+      named(ME, 'me.p', 'ACCEPTED'),
+      named(BEA, 'bea.k', 'DECLINED'),
+    ]);
+
+    expect(standingFactsFor({ ...declined, endedBy: BEA }, ME)).toMatchObject({
+      standing: 'DECLINED',
+      endedBy: { kind: 'player', name: 'bea.k' },
+      byADeparture: false,
+    });
+
+    // B took the yes back after C said no: the wire names B, whose seat reads `LEFT`.
+    const deserted = challenge('DECLINED', [
+      named(ME, 'me.p', 'ACCEPTED'),
+      named(BEA, 'bea.k', 'LEFT'),
+      named(CYRYL, 'cyryl.w', 'DECLINED'),
+      {},
+    ]);
+
+    expect(standingFactsFor({ ...deserted, endedBy: BEA }, ME)).toMatchObject({
+      standing: 'DECLINED',
+      endedBy: { kind: 'player', name: 'bea.k' },
+      byADeparture: true,
+    });
+  });
+
+  it('names the reader as *you* where their own act ended it, and carries their own seat', () => {
+    const iSaidNo: Challenge = {
+      ...challenge('DECLINED', [named(BEA, 'bea.k', 'ACCEPTED'), named(ME, 'me.p', 'DECLINED')]),
+      organiserId: BEA,
+      endedBy: ME,
+    };
+
+    expect(standingFactsFor(iSaidNo, ME)).toMatchObject({
+      standing: 'DECLINED',
+      endedBy: { kind: 'you' },
+      byADeparture: false,
+      ownAnswer: 'DECLINED',
+    });
+  });
+
+  /**
+   * The seventh standing, keyed the same way: the last leaver's seat reads `LEFT`, the presser's
+   * still reads `ACCEPTED`, and which of the two it was is the whole difference between
+   * *{name} left* and *{name} called the game off*.
+   */
+  it('tells a call-off by a departure from one by the button off ended_by’s seat', () => {
+    const beaLeft = challenge('CALLED_OFF', [
+      named(ME, 'me.p', 'ACCEPTED'),
+      named(BEA, 'bea.k', 'LEFT'),
+    ]);
+    const beaPressed = challenge('CALLED_OFF', [
+      named(ME, 'me.p', 'ACCEPTED'),
+      named(BEA, 'bea.k', 'ACCEPTED'),
+      named(CYRYL, 'cyryl.w', 'LEFT'),
+      {},
+    ]);
+
+    expect(standingFactsFor({ ...beaLeft, endedBy: BEA }, ME)).toMatchObject({
+      standing: 'CALLED_OFF',
+      endedBy: { kind: 'player', name: 'bea.k' },
+      byADeparture: true,
+    });
+    expect(standingFactsFor({ ...beaPressed, endedBy: BEA }, ME)).toMatchObject({
+      standing: 'CALLED_OFF',
+      endedBy: { kind: 'player', name: 'bea.k' },
+      byADeparture: false,
+    });
+    expect(standingFactsFor({ ...beaPressed, endedBy: ME }, ME)).toMatchObject({
+      endedBy: { kind: 'you' },
+      byADeparture: false,
+    });
+  });
+
+  it('names the organiser on a withdrawal, and nobody at all when users has lost them', () => {
+    const withdrawn: Challenge = {
+      ...challenge('WITHDRAWN', [named(ME, 'me.p'), named(BEA, 'bea.k')]),
+      endedBy: ME,
+    };
+
+    expect(standingFactsFor(withdrawn, BEA)).toMatchObject({
+      endedBy: { kind: 'player', name: 'me.p' },
+    });
+    expect(standingFactsFor(withdrawn, ME)).toMatchObject({ endedBy: { kind: 'you' } });
+
+    const nameless: Challenge = { ...withdrawn, seats: [{ playerId: ME }, { playerId: BEA }] };
+    expect(standingFactsFor(nameless, BEA)).toMatchObject({ endedBy: { kind: 'unknown' } });
+  });
+
+  /** The wire broke its promise: an ending with nobody named draws `?`, and never a guess. */
+  it('names nobody where the contract claimed an ending and named nobody', () => {
     const declined = challenge('DECLINED', [
       named(ME, 'me.p', 'ACCEPTED'),
       named(BEA, 'bea.k', 'DECLINED'),
     ]);
 
     expect(standingFactsFor(declined, ME)).toMatchObject({
-      standing: 'DECLINED',
-      player: { kind: 'player', nickname: 'bea.k' },
+      endedBy: { kind: 'unknown' },
+      byADeparture: false,
     });
-  });
-
-  it('names the organiser on a withdrawal, and nobody at all when users has lost them', () => {
-    const withdrawn = challenge('WITHDRAWN', [named(ME, 'me.p'), named(BEA, 'bea.k')]);
-
-    expect(standingFactsFor(withdrawn, BEA)).toMatchObject({
-      player: { kind: 'player', nickname: 'me.p' },
-    });
-
-    const nameless: Challenge = { ...withdrawn, seats: [{ playerId: ME }, { playerId: BEA }] };
-    expect(standingFactsFor(nameless, BEA)).toMatchObject({ player: { kind: 'unknown' } });
   });
 
   it('folds to nothing on a standing it has no words for, so the row draws the gap', () => {
     const unreadable: Challenge = { ...halfBuilt, standing: undefined };
 
     expect(standingFactsFor(unreadable, ME)).toBeUndefined();
+  });
+});
+
+/**
+ * **What the reader's leaving would do to the court** — the sheet's rule
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §9): the reader is the only other accepted seat and no seat is awaiting an answer, read off
+ * the row the list holds, and `game_id` says whether that ends a game or closes a court.
+ */
+describe('what leaving would end', () => {
+  const named = (playerId: string, name: string, answer?: SeatAnswer): ChallengeSeat => ({
+    playerId,
+    name,
+    ...(answer === undefined ? {} : { answer }),
+  });
+
+  it('calls the game off for the one person left, on a court that has been a game', () => {
+    const singles: Challenge = {
+      ...challenge('ON', [named(BEA, 'bea.k', 'ACCEPTED'), named(ME, 'me.p', 'ACCEPTED')]),
+      organiserId: BEA,
+      gameId: 'g1',
+    };
+
+    expect(leavingWouldEnd(singles, ME)).toEqual({
+      court: 'a-game',
+      theOneLeft: { kind: 'player', name: 'bea.k' },
+    });
+  });
+
+  it('closes the court for the one person left, on a court that was never a game', () => {
+    const halfBuilt = challenge('LINE_UP_INCOMPLETE', [
+      named(ME, 'me.p', 'ACCEPTED'),
+      named(BEA, 'bea.k', 'ACCEPTED'),
+      named(CYRYL, 'cyryl.w', 'DECLINED'),
+      {},
+    ]);
+
+    expect(leavingWouldEnd(halfBuilt, BEA)).toEqual({
+      court: 'never-a-game',
+      theOneLeft: { kind: 'player', name: 'me.p' },
+    });
+  });
+
+  it('ends nothing while somebody is still deciding, or while two others are in', () => {
+    const deciding = challenge('AWAITING_ANSWERS', [
+      named(ME, 'me.p', 'ACCEPTED'),
+      named(BEA, 'bea.k', 'ACCEPTED'),
+      { playerId: CYRYL, name: 'cyryl.w', answerBy: '2026-09-06T09:00:00Z' },
+      {},
+    ]);
+    const three: Challenge = {
+      ...challenge('LINE_UP_INCOMPLETE', [
+        named(ME, 'me.p', 'ACCEPTED'),
+        named(BEA, 'bea.k', 'ACCEPTED'),
+        named(CYRYL, 'cyryl.w', 'ACCEPTED'),
+        { playerId: 'dana', name: 'dana.s', answer: 'LEFT' },
+      ]),
+      gameId: 'g1',
+    };
+
+    expect(leavingWouldEnd(deciding, BEA)).toBeUndefined();
+    expect(leavingWouldEnd(three, BEA)).toBeUndefined();
+  });
+
+  it('ends nothing for a reader who holds no accepted seat, or on a court already over', () => {
+    const iLeftAlready = challenge('LINE_UP_INCOMPLETE', [
+      named(ME, 'me.p', 'LEFT'),
+      named(BEA, 'bea.k', 'ACCEPTED'),
+      named(CYRYL, 'cyryl.w', 'ACCEPTED'),
+      {},
+    ]);
+    const over: Challenge = {
+      ...challenge('CALLED_OFF', [named(ME, 'me.p', 'ACCEPTED'), named(BEA, 'bea.k', 'LEFT')]),
+      endedBy: BEA,
+      gameId: 'g1',
+    };
+
+    expect(leavingWouldEnd(iLeftAlready, ME)).toBeUndefined();
+    expect(leavingWouldEnd(over, ME)).toBeUndefined();
+  });
+
+  it('names the one left as ? where users has lost them, and still says what ends', () => {
+    const nameless: Challenge = {
+      ...challenge('ON', [{ playerId: BEA, answer: 'ACCEPTED' }, named(ME, 'me.p', 'ACCEPTED')]),
+      gameId: 'g1',
+    };
+
+    expect(leavingWouldEnd(nameless, ME)).toEqual({
+      court: 'a-game',
+      theOneLeft: { kind: 'unknown' },
+    });
   });
 });

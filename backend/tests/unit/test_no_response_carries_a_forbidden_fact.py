@@ -25,8 +25,10 @@ added to a candidate row, in a diff where nothing looks wrong.
   which says a row **it already showed** is no longer shown and names nobody.
 - **a birthdate or an age** — nothing in this backend collects one, and no gate
   may reopen it here.
-- **a real name** — the platform holds a **nickname**, and nothing may derive a
-  familiar form from it.
+- **a first, last, full or given name** — the platform holds the **Name** a
+  player typed, whole (``docs/adr/0171``), and nothing may derive a familiar
+  form from it: a ``first_name`` field would be the product addressing somebody
+  by a word they never gave it.
 - **a shard key** — the partition is derived, so there is no field for a future
   conjunct to attach to.
 - **an unsettled case** — the matcher never reads `cases`; the hold does its
@@ -254,6 +256,7 @@ def test_the_walk_refuses_the_fields_it_exists_to_refuse(field: str):
 @pytest.mark.parametrize(
     "field",
     [
+        "name",
         "nickname",
         "area_code",
         "fit",

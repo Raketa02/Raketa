@@ -16,9 +16,9 @@ const TOMEK = 'tomek';
 
 /** A padel four after Marek left: three in, one open, in the court's order. */
 const SHORT: readonly GameSeat[] = [
-  { side: 'A', playerId: ME, nickname: 'me_' },
-  { side: 'A', playerId: KASIA, nickname: 'kasia_w' },
-  { side: 'B', playerId: TOMEK, nickname: 'tomek.p' },
+  { side: 'A', playerId: ME, name: 'me_' },
+  { side: 'A', playerId: KASIA, name: 'kasia_w' },
+  { side: 'B', playerId: TOMEK, name: 'tomek.p' },
   { side: 'B' },
 ];
 

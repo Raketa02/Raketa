@@ -40,6 +40,13 @@ export function challengeRowLabel(
   handles: readonly string[],
   sportName: string,
   line: string,
+  /**
+   * The tag's word, where the row wears one — spoken last, as it is drawn last. The stripe is
+   * hidden because the sentence already says its fact; the tag's word is not in the sentence,
+   * so it is said (ADR-0172 §7).
+   */
+  tag?: string,
 ): string {
-  return `${spokenHandles(handles)}, ${sportName}, ${line}`;
+  const spoken = `${spokenHandles(handles)}, ${sportName}, ${line}`;
+  return tag === undefined ? spoken : `${spoken}, ${tag}`;
 }

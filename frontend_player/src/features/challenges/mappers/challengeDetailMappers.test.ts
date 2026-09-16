@@ -17,7 +17,7 @@ const EWA = 'ewa';
 
 const A_CARD: Wire['SeatCardSchema'] = {
   person: {
-    nickname: 'ewa.m',
+    name: 'ewa.m',
     area_code: 'WAW-C',
     level: 2.71,
     band: 'Established',
@@ -37,7 +37,7 @@ function response(
     standing: 'AWAITING_ANSWERS',
     opened_at: '2026-09-08T08:00:00Z',
     seats: [
-      { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m', card: A_CARD },
+      { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m', card: A_CARD },
       { side: 'B', player_id: ME, answer: null, answer_by: '2026-09-10T08:00:00Z' },
     ],
     ...over,
@@ -89,7 +89,7 @@ describe('null is *this response said nothing*', () => {
   it('collapses every optional to absent, so no screen has two spellings of one gap', () => {
     const detail = toChallengeDetail(
       response({
-        seats: [{ side: 'A', player_id: null, answer: null, answer_by: null, nickname: null }],
+        seats: [{ side: 'A', player_id: null, answer: null, answer_by: null, name: null }],
       }),
     );
 
@@ -101,7 +101,7 @@ describe('the card is per seat', () => {
   it('keeps it where the wire drew one and invents none where it did not', () => {
     const detail = toChallengeDetail(response());
 
-    expect(detail?.seats[0]?.card?.person.nickname).toBe('ewa.m');
+    expect(detail?.seats[0]?.card?.person.name).toBe('ewa.m');
     expect(detail?.seats[1]?.card).toBeUndefined();
   });
 
@@ -125,7 +125,7 @@ describe("what an answer's reply carries", () => {
       standing: 'LINE_UP_INCOMPLETE',
       opened_at: '2026-09-08T08:00:00Z',
       seats: [
-        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
         { side: 'B', player_id: ME, answer: 'DECLINED' },
       ],
     });
@@ -133,9 +133,38 @@ describe("what an answer's reply carries", () => {
     expect(answered).toEqual({
       standing: 'LINE_UP_INCOMPLETE',
       seats: [
-        { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+        { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
         { playerId: ME, answer: 'DECLINED' },
       ],
+    });
+  });
+
+  /**
+   * **And the ending, where the act was one** — the withdrawal's and the departure's replies say
+   * when, who and which game (ADR-0172 §3–§4), and the row redrawn from them reads *You called
+   * the game off* on the reply rather than a round trip later.
+   */
+  it('carries the ending — when, who, and the game — where the reply names one', () => {
+    const answered = toAnsweredChallenge({
+      challenge_id: 'c1',
+      sport: 'SQUASH',
+      organiser_id: EWA,
+      standing: 'CALLED_OFF',
+      opened_at: '2026-09-08T08:00:00Z',
+      ended_at: '2026-09-08T10:00:00Z',
+      ended_by: ME,
+      game_id: 'g1',
+      seats: [
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { side: 'B', player_id: ME, answer: 'ACCEPTED' },
+      ],
+    });
+
+    expect(answered).toMatchObject({
+      standing: 'CALLED_OFF',
+      endedAt: '2026-09-08T10:00:00Z',
+      endedBy: ME,
+      gameId: 'g1',
     });
   });
 });

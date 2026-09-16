@@ -21,14 +21,13 @@ from app.application.events import EventCatalog
 from app.application.events.envelope import SerializedEventEnvelope
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.users.application.event_subscriptions import register_user_events
-from app.modules.users.domain.events import UserRegistered
+from app.modules.users.domain.events import UserNamed, UserRegistered
 
 NOW = datetime(2026, 8, 27, tzinfo=timezone.utc)
 
 REGISTERED = UserRegistered(
     user_id=uuid4(),
     email="ada@example.com",
-    nickname="ada",
     password_hash="$2b$12$notarealhash",
     authority="USER",
     is_admin=False,
@@ -51,10 +50,12 @@ def _codec() -> JsonEventCodec:
     return JsonEventCodec(catalog)
 
 
-def _envelope(payload: dict[str, object]) -> SerializedEventEnvelope:
+def _envelope(
+    payload: dict[str, object], *, event_type: str = "users.user_registered"
+) -> SerializedEventEnvelope:
     return SerializedEventEnvelope(
         id=uuid4(),
-        event_type="users.user_registered",
+        event_type=event_type,
         schema_version=1,
         payload=payload,
         occurred_at=NOW,
@@ -90,3 +91,40 @@ def test_a_row_written_before_the_question_existed_still_decodes() -> None:
     # account never made. Reading absence as a refusal is the backfill ADR-0124
     # forbids, arrived at by accident.
     assert decoded == replace(REGISTERED, adult_attested=None)
+
+
+def test_the_registration_carries_no_nickname() -> None:
+    """Sign-up is credentials (``docs/adr/0171`` §2), and the row says so.
+
+    Still v1: only one shape of this row will ever be stored, because only
+    ``local`` runs and a reset seed is the migration. The version is what would
+    have to move first the day a store outlives a change like this.
+    """
+
+    encoded = _codec().encode(REGISTERED)
+
+    assert encoded.event_type == "users.user_registered"
+    assert encoded.schema_version == 1
+    assert "nickname" not in encoded.payload
+    assert "name" not in encoded.payload
+
+
+def test_the_naming_round_trips_under_its_own_contract() -> None:
+    codec = _codec()
+    named = UserNamed(
+        user_id=REGISTERED.user_id,
+        name="Ada Lovelace",
+        nickname="ada",
+        occurred_at=NOW,
+    )
+
+    encoded = codec.encode(named)
+
+    assert encoded.event_type == "users.user_named"
+    assert encoded.schema_version == 1
+    assert encoded.payload["name"] == "Ada Lovelace"
+    assert encoded.payload["nickname"] == "ada"
+    assert (
+        codec.decode(_envelope(encoded.payload, event_type="users.user_named"))
+        == named
+    )

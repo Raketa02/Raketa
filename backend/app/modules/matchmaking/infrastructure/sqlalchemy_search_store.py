@@ -555,7 +555,7 @@ def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
     if card is None:
         return None
     return {
-        "nickname": card.nickname,
+        "name": card.name,
         "photo_id": None if card.photo_id is None else str(card.photo_id),
         "review": None if card.review is None else card.review.value,
         "area_code": card.area_code,
@@ -625,7 +625,7 @@ def _recorded_card(blob: Mapping[str, Any] | None) -> RecordedCard | None:
     # card this build cannot have shown.
     review = blob.get("review")
     return RecordedCard(
-        nickname=blob["nickname"],
+        name=blob["name"],
         photo_id=None if photo_id is None else UUID(photo_id),
         review=None if review is None else PhotoReviewDecision(review),
         area_code=blob["area_code"],

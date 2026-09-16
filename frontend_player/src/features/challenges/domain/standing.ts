@@ -1,5 +1,5 @@
 /**
- * What a challenge **is**, at the instant it was read — five codes, and no more.
+ * What a challenge **is**, at the instant it was read — seven codes, and no more.
  *
  * *"**Challenge sent** and **Challenge for you** are one standing read from two sides, not two
  * states"* ([#221](https://github.com/Raketa02/Raketa/issues/221)): the code is one and the
@@ -11,12 +11,21 @@
  * takes the out-of-date gap rather than a shorter list
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13).
  *
- * **`WITHDRAWN` is the sixth and it is the one the seats cannot reach**
+ * **`WITHDRAWN` is the sixth and it is one of the two the seats cannot reach**
  * ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)):
- * every other code is a fold of the seats and the clock, and this one is an act. It is
- * neither a decline nor a lapse, and its word is the record's own — not *cancel* or *call
- * off*, which belong to the plan, and not *stand down*, which the root `CONTEXT.md` owns
- * platform-wide for a term that cannot be evaluated.
+ * every other code is a fold of the seats and the clock, and this one is an act — *Remove the
+ * challenge*, the organiser's while nobody has joined, and that act alone since ADR-0172. It is
+ * neither a decline nor a lapse, and its word is the record's own — not *cancel*, and not
+ * *stand down*, which the root `CONTEXT.md` owns platform-wide for a term that cannot be
+ * evaluated.
+ *
+ * **`CALLED_OFF` is the seventh, and it is the game's fourth end seen from the court**
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §1–§2): a court that has been a game ends *with* its game, by the departure that leaves one
+ * player on it or by *Call it off*, and the challenge records that ending in the act that tells
+ * the game. It is an ending like the other three — dated by `ended_at`, kept on the inbox's
+ * day-long shelf, never re-entered — and the second conclusion the seats cannot reach, because
+ * which of two deserted courts is called off is a fact only the act that took it knows.
  *
  * The standing is **derived from the seats and the clock and never stored**, so it is right
  * for the whole gap between a deadline and anything noticing — which is also why nothing on
@@ -32,6 +41,7 @@ export const STANDINGS = [
   'DECLINED',
   'LAPSED',
   'WITHDRAWN',
+  'CALLED_OFF',
 ] as const;
 
 export type Standing = (typeof STANDINGS)[number];
@@ -82,13 +92,46 @@ export const GIVES_UP_THE_SEAT: Readonly<Record<SeatAnswer, boolean>> = {
 };
 
 /**
+ * **An ending, as its sentence quotes it** — who ended it, how, and what the reader's own seat
+ * says ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §3, §7).
+ *
+ * The four endings share one payload because they are keyed one way: **by whose act ended the
+ * court and by that person's own seat**, which the wire names as `ended_by` and this fold turns
+ * into a name. A seat that `LEFT` reads *left* wherever it is named — on a `CALLED_OFF` court it
+ * tells the last leaver from the presser, on a `DECLINED` one the departure that deserted a
+ * half-built court from the no that did — and `byADeparture` is that one reading, made once.
+ *
+ * **`endedBy` is `you` where the reader's own act ended it** — their own *no*, their own *left*,
+ * their own removal, their own press — which is what lets one deck say *You called the game off*
+ * and *{name} called the game off* off one field. The two folded endings read the reader's own
+ * seat as well: §13's invitee column — *You said no*, *Your day ran out* — is true of a seat that
+ * gave up whoever's act closed the court after it, and `ownAnswer` carries that seat.
+ */
+export interface EndingFacts {
+  /**
+   * The player whose act ended it — `ended_by`, as a sentence names them. `unknown` where the
+   * wire named nobody or named a seat `users` can no longer answer for: the row draws `?` and
+   * never a name this app picked by walking the seats.
+   */
+  readonly endedBy: NamedPlayer;
+  /** Whether `ended_by`'s seat reads `LEFT`: the ending was a departure, not a no, a lapse or a press. */
+  readonly byADeparture: boolean;
+  /**
+   * What the **reader's own seat** says where they gave it up — a no, a day run out, a yes taken
+   * back. Absent where they are in, or hold no seat.
+   */
+  readonly ownAnswer?: SeatAnswer;
+}
+
+/**
  * One standing, with the payload its sentence quotes.
  *
- * A discriminated fold rather than `(standing, side, counts)`: four of the six quote a
- * figure or a name, two quote nothing, and a flat signature would let a caller pass a count
- * that belongs to a different standing.
+ * A discriminated fold rather than `(standing, side, counts)`: the live standings quote a
+ * figure, the endings quote a person and their act, and a flat signature would let a caller
+ * pass a count that belongs to a different standing.
  *
- * **A person is a `NamedPlayer`, never a string.** Four of these sentences name somebody, and
+ * **A person is a `NamedPlayer`, never a string.** Every ending names somebody, and
  * ADR-0107's *the whole handle or nobody* is a rule about what may be written — a `name:
  * string` parameter would let a caller shorten a handle on the way in and leave the rule
  * documented rather than held.
@@ -139,7 +182,14 @@ export type StandingFacts = { readonly side: ChallengeSide } & (
        */
       readonly ownAnswer?: SeatAnswer;
     }
-  | { readonly standing: 'DECLINED'; readonly player: NamedPlayer }
-  | { readonly standing: 'LAPSED'; readonly player: NamedPlayer }
-  | { readonly standing: 'WITHDRAWN'; readonly player: NamedPlayer }
+  | ({ readonly standing: 'DECLINED' } & EndingFacts)
+  | ({ readonly standing: 'LAPSED' } & EndingFacts)
+  | ({ readonly standing: 'WITHDRAWN' } & EndingFacts)
+  | ({ readonly standing: 'CALLED_OFF' } & EndingFacts)
 );
+
+/** The four standings that are endings — the arms of {@link StandingFacts} that carry {@link EndingFacts}. */
+export type EndedStanding = Extract<Standing, 'DECLINED' | 'LAPSED' | 'WITHDRAWN' | 'CALLED_OFF'>;
+
+/** The four arms of {@link StandingFacts} that are endings — one type, so a reader of them switches over four and no more. */
+export type EndedFacts = Extract<StandingFacts, { readonly standing: EndedStanding }>;

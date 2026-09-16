@@ -165,7 +165,7 @@ def _card(seat: PairedSeat, photo_url: str | None) -> CourtCard:
     return CourtCard(
         person=CourtPerson(
             player_id=seat.player_id,
-            nickname=card.nickname,
+            name=card.name,
             area_code=card.area_code,
             level=card.level,
             band=card.band,

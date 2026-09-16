@@ -159,16 +159,16 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', nickname: 'me_' },
-            { side: 'B', player_id: 'them', nickname: 'tomek.p' },
+            { side: 'A', player_id: 'me', name: 'me_' },
+            { side: 'B', player_id: 'them', name: 'tomek.p' },
           ],
         }),
       ],
     });
 
     expect(game?.seats).toEqual([
-      { side: 'A', playerId: 'me', nickname: 'me_' },
-      { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+      { side: 'A', playerId: 'me', name: 'me_' },
+      { side: 'B', playerId: 'them', name: 'tomek.p' },
     ]);
   });
 
@@ -184,15 +184,15 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', nickname: 'me_' },
-            { side: 'B', player_id: 'them', nickname: null },
+            { side: 'A', player_id: 'me', name: 'me_' },
+            { side: 'B', player_id: 'them', name: null },
           ],
         }),
       ],
     });
 
     expect(game?.seats).toEqual([
-      { side: 'A', playerId: 'me', nickname: 'me_' },
+      { side: 'A', playerId: 'me', name: 'me_' },
       { side: 'B', playerId: 'them' },
     ]);
   });
@@ -208,14 +208,14 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', nickname: 'me_' },
-            { side: 'B', player_id: null, nickname: null },
+            { side: 'A', player_id: 'me', name: 'me_' },
+            { side: 'B', player_id: null, name: null },
           ],
         }),
       ],
     });
 
-    expect(game?.seats).toEqual([{ side: 'A', playerId: 'me', nickname: 'me_' }, { side: 'B' }]);
+    expect(game?.seats).toEqual([{ side: 'A', playerId: 'me', name: 'me_' }, { side: 'B' }]);
   });
 
   /**
@@ -238,6 +238,36 @@ describe('a code this build has never seen', () => {
       calledOffAt: '2026-09-04T20:00:00Z',
     });
     expect(toGame(wireGame({ called_off_at: null }), READ_AT)?.calledOffAt).toBeUndefined();
+  });
+
+  /**
+   * **And who called it off, with their name** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §4): the leaver's seat is vacated on the game, so the court cannot supply the name and the
+   * field carries it — `null` where `users` no longer has the account, which draws `?`.
+   */
+  it('reads who called it off and their name, and leaves a lost name absent', () => {
+    const named = toGame(
+      wireGame({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+        called_off_by: { player_id: 'tomek', name: 'tomek.p' },
+      }),
+      READ_AT,
+    );
+    const nameless = toGame(
+      wireGame({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+        called_off_by: { player_id: 'tomek', name: null },
+      }),
+      READ_AT,
+    );
+
+    expect(named?.calledOffBy).toEqual({ playerId: 'tomek', name: 'tomek.p' });
+    expect(nameless?.calledOffBy).toEqual({ playerId: 'tomek' });
+    expect(toGame(wireGame({ called_off_by: null }), READ_AT)).not.toHaveProperty('calledOffBy');
   });
 
   it('drops a game whose court it cannot place somebody on', () => {

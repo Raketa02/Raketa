@@ -22,14 +22,12 @@ ALICE = {
     "email": "alice.profile@example.com",
     "password1": "hunter22!",
     "password2": "hunter22!",
-    "nickname": "alice-profile",
     "adult_attested": True,
 }
 BOB = {
     "email": "bob.profile@example.com",
     "password1": "hunter22!",
     "password2": "hunter22!",
-    "nickname": "bob-profile",
     "adult_attested": True,
 }
 
@@ -43,7 +41,18 @@ async def auth_headers(client, payload=ALICE) -> dict[str, str]:
         json={"email": payload["email"], "password": payload["password1"]},
     )
     assert login.status_code == 200, login.text
-    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    # Named, because a record is read back below and an unnamed player has no
+    # record identity to read (``docs/adr/0171``): sign-up is credentials only
+    # and the naming is the first step of onboarding.
+    handle = payload["email"].split("@")[0].replace(".", "_")
+    named = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": handle.replace("_", " ").title(), "nickname": handle},
+        headers=headers,
+    )
+    assert named.status_code == 200, named.text
+    return headers
 
 
 def a_body(**overrides) -> dict:

@@ -54,7 +54,12 @@ from app.modules.player_profile.domain.social_tags import (
     SocialTag,
     SocialTagSelection,
 )
-from app.modules.users.domain.value_objects import Email, Nickname, RawPassword
+from app.modules.users.domain.value_objects import (
+    Email,
+    Name,
+    Nickname,
+    RawPassword,
+)
 
 #: A TLD RFC 2606 reserves: no registry will ever sell a name under it, so a
 #: seed account can never become somebody's real mailbox.
@@ -427,28 +432,27 @@ Scenario = OpenRun | AbandonedRun | RatedRun
 #:
 #: A slug says what an account *is for* — ``said-yes-to-you`` names a state, and
 #: naming states is what makes the catalog readable from the report. It is a
-#: terrible thing to meet on a card. Every screen in this product draws
-#: ``nickname``, so a developer testing the builder was reading a sentence about
-#: a fixture where a person's name goes, and could not tell a crowded court from
-#: a list of test conditions.
+#: terrible thing to meet on a card. Every screen in this product draws the
+#: **name**, so a developer testing the builder was reading a sentence about a
+#: fixture where a person's name goes, and could not tell a crowded court from a
+#: list of test conditions.
 #:
 #: So the slug stays the identifier — the address is still ``{slug}@…``, the
-#: report still prints it, and every assertion still names it — and the
-#: **nickname becomes a name**. The two were the same string and did not have to
-#: be.
-#:
-#: **``First.Last`` and not ``First Last``**, because ``Nickname`` is
-#: ``^[A-Za-z0-9_.-]+$``: this platform's nickname is a handle and a space is not
-#: in it. That is a decision the users context already made, and a fixture is not
-#: where it gets reopened — so the dot is the most name-shaped thing a legal
-#: nickname can be.
+#: report still prints it, and every assertion still names it — and the account
+#: is **named** as a player is: a **Name**, ``First Last``, and a **Nickname**
+#: derived from it, the lowercase ``first_last`` (``docs/adr/0171`` §5). This
+#: file used to argue ``First.Last`` *and not* ``First Last``, because a nickname
+#: is a handle and a space is not in it, and declined to reopen the users
+#: context's rule from a fixture. It was right to decline; ADR-0171 is where the
+#: rule was reopened, and the dot went with it.
 #:
 #: **Two surname pools, and that is what keeps them apart.** The catalog and the
 #: cohort are dealt by two different modules and neither can see the other's
 #: list, so a shared pool would collide on a name eventually and the collision
-#: would surface as a unique-constraint violation half way through a run. Given
-#: separate surnames, a catalog name and a cohort name cannot be equal whatever
-#: either list grows to.
+#: would surface as a unique-constraint violation on the **nickname** half way
+#: through a run — a name may be shared, a handle may not, and the handle is a
+#: function of the name. Given separate surnames, a catalog name and a cohort
+#: name cannot be equal whatever either list grows to.
 FIRST_NAMES: tuple[str, ...] = (
     "Marta", "Ines", "Carla", "Nuria", "Alba", "Rocio", "Lucia", "Elena",
     "Sofia", "Paula", "Irene", "Clara", "Laia", "Nerea", "Ainhoa", "Julia",
@@ -476,7 +480,7 @@ COHORT_SURNAMES: tuple[str, ...] = (
 
 @lru_cache(maxsize=None)
 def _roster(surnames: tuple[str, ...]) -> tuple[str, ...]:
-    """Every ``First.Last`` this pool can make, **in one shuffled order.**
+    """Every ``First Last`` this pool can make, **in one shuffled order.**
 
     Shuffled rather than enumerated, and that is the whole point of the
     indirection. Read in the obvious nested order, the first forty names dealt
@@ -492,9 +496,21 @@ def _roster(surnames: tuple[str, ...]) -> tuple[str, ...]:
     that pool and leaves the others alone.
     """
 
-    pairs = [f"{first}.{last}" for last in surnames for first in FIRST_NAMES]
+    pairs = [f"{first} {last}" for last in surnames for first in FIRST_NAMES]
     random.Random(f"names|{'|'.join(surnames)}").shuffle(pairs)
     return tuple(pairs)
+
+
+def handle_of(name: str) -> str:
+    """The nickname a seeded ``First Last`` is given: **lowercase, no dot**
+    (``docs/adr/0171`` §5) — ``Diego Fabregat`` is ``@diego_fabregat``.
+
+    A function of the name and nothing else, so the two lists dealt out of
+    disjoint surname pools stay disjoint on the handle too, which is the field
+    that is unique.
+    """
+
+    return "_".join(name.lower().split())
 
 
 def dealt_name(index: int, surnames: tuple[str, ...]) -> str:
@@ -520,9 +536,10 @@ class SeedAccount:
     """One deterministic account: what it is called, and what state it is in.
 
     ``slug`` is the name of the *state*, and it is the only identifier here —
-    the address and the nickname are derived from it. Carrying an address as its
-    own field would let an account be called one thing and reachable at another,
-    which is precisely the confusion a named catalog exists to remove.
+    the address, the name and the nickname are derived from it. Carrying an
+    address as its own field would let an account be called one thing and
+    reachable at another, which is precisely the confusion a named catalog
+    exists to remove.
 
     ``scenarios`` is per sport and may be empty: an account with nothing in it is
     a state, and the one every client's empty screen is drawn from.
@@ -544,7 +561,7 @@ class SeedAccount:
         return f"{self.slug}@{SEED_EMAIL_DOMAIN}"
 
     @property
-    def nickname(self) -> str:
+    def name(self) -> str:
         """The name this account is shown under — **never its slug.**
 
         Read out of the register rather than stored on the account, because the
@@ -555,13 +572,20 @@ class SeedAccount:
 
         **The slug is the fallback and it is proven unreachable**, by
         ``refuse_an_account_nobody_named`` over each real list at import. The
-        alternative — raising here — makes ``nickname`` partial, and every guard
-        in this module reads it: an account built to be *refused* for a bad
-        address would explode on its name before the guard could say so, and the
-        refusal a developer got would name the wrong thing.
+        alternative — raising here — makes ``name`` partial, and every guard in
+        this module reads it: an account built to be *refused* for a bad address
+        would explode on its name before the guard could say so, and the refusal
+        a developer got would name the wrong thing.
         """
 
         return NAMES.get(self.slug, self.slug)
+
+    @property
+    def nickname(self) -> str:
+        """The handle, derived from the name (``docs/adr/0171`` §5): what the
+        record and the You tab draw as ``@…``, and no other screen says."""
+
+        return handle_of(self.name)
 
 
 BRAND_NEW_PLAYER = SeedAccount(
@@ -878,7 +902,7 @@ ACCOUNTS: tuple[SeedAccount, ...] = (
 
 #: slug -> the name it is shown under, written by ``name_them`` at import.
 #:
-#: A register rather than a field for the reason ``SeedAccount.nickname`` gives,
+#: A register rather than a field for the reason ``SeedAccount.name`` gives,
 #: and **module-level rather than per-list** so that a name dealt twice is a
 #: collision this process can see. Two lists dealt out of two disjoint surname
 #: pools cannot collide, and this is where that would show up if they ever did.
@@ -900,19 +924,20 @@ def name_them(accounts: Sequence[SeedAccount], surnames: tuple[str, ...]) -> Non
 
     Refuses a name already dealt, which is the check that keeps the surname
     pools honest: two pools that stopped being disjoint would otherwise seat two
-    people under one nickname and fail on the unique constraint half way through
-    a run, with some accounts written and some not.
+    people under one nickname — the handle is a function of the name — and fail
+    on the unique constraint half way through a run, with some accounts written
+    and some not.
     """
 
     for index, slug in enumerate(sorted(one.slug for one in accounts)):
         name = dealt_name(index, surnames)
-        if (taken := _TAKEN.get(name.lower())) is not None:
+        if (taken := _TAKEN.get(handle_of(name))) is not None:
             raise RuntimeError(
                 f"'{slug}' was dealt the name '{name}', which '{taken}' already "
                 f"holds. The surname pools have stopped being disjoint."
             )
         NAMES[slug] = name
-        _TAKEN[name.lower()] = slug
+        _TAKEN[handle_of(name)] = slug
 
 
 name_them(ACCOUNTS, CATALOG_SURNAMES)
@@ -921,7 +946,7 @@ name_them(ACCOUNTS, CATALOG_SURNAMES)
 def refuse_an_account_nobody_named(accounts: Sequence[SeedAccount]) -> None:
     """Every account in a real list was dealt a name. **Asked at import.**
 
-    ``SeedAccount.nickname`` falls back to the slug so that the guards can run
+    ``SeedAccount.name`` falls back to the slug so that the guards can run
     against accounts built to be refused, and this is what stops that fallback
     ever reaching a database: a list somebody forgot to hand to ``name_them``
     fails the import rather than seeding people under ``said-yes-to-you`` again.
@@ -939,7 +964,7 @@ def _refuse_an_impossible_catalog() -> None:
     """Fail at import rather than part-way through a run.
 
     The value objects are the domain's own, so this asks the exact question the
-    registration endpoint would ask — an address or nickname the API would reject
+    naming would ask — an address, a name or a nickname the API would reject
     cannot sit here waiting to break a seed run that has already written half of
     its accounts.
 
@@ -991,6 +1016,7 @@ def refuse_an_impossible_account(account: SeedAccount) -> None:
     """
 
     Email(account.email)
+    Name(account.name)
     Nickname(account.nickname)
 
     sports: set[Sport] = set()

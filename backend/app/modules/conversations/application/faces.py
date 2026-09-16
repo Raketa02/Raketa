@@ -21,11 +21,11 @@ def faces_in(
     """These people's faces, ordered by id and never by a set's iteration.
 
     **Somebody the faces read cannot name keeps their place**, carrying their id
-    and no handle. For a member that is ``games``' rule verbatim — they are still
+    and no name. For a member that is ``games``' rule verbatim — they are still
     somebody who agreed to play, and dropping them would draw a three-person
     doubles court. For somebody a line names it is the same rule for the same
     reason: the line still happened, and a client that finds nobody under the
-    id draws the unknown player's mark exactly as it would for a handle
+    id draws the unknown player's mark exactly as it would for a name
     ``users`` has lost.
 
     Sorted because a set is never the source of a traversal (``docs/adr/0105``

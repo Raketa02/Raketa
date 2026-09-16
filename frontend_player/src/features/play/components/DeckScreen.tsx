@@ -356,7 +356,7 @@ export function DeckScreen() {
       return 'withheld';
     }
 
-    const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
+    const name = playerName({ kind: 'player', name: candidate.card.name });
     const write = { sport: onThisSport, playerId: candidate.playerId, searchId: card.searchId };
 
     setLeaving({ card: write, said });
@@ -416,7 +416,7 @@ export function DeckScreen() {
           action={
             pane === 'deck' && showing !== undefined ? (
               <DeckAnswers
-                name={playerName({ kind: 'player', nickname: showing.candidate.card.nickname })}
+                name={playerName({ kind: 'player', name: showing.candidate.card.name })}
                 onPass={() => answer('no', showing)}
                 onAccept={() => answer('yes', showing)}
                 onRecord={() => setReading(showing.candidate)}
@@ -601,7 +601,7 @@ export function DeckScreen() {
           onClose={() => setExplaining(undefined)}
           candidate={explaining}
           envelope={dealt.envelope}
-          name={playerName({ kind: 'player', nickname: explaining.card.nickname })}
+          name={playerName({ kind: 'player', name: explaining.card.name })}
           returnFocusTo={body}
         />
       )}

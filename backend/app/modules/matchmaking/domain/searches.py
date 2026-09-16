@@ -243,7 +243,7 @@ class RecordedCard:
     The card is assembled outside the engine (``docs/adr/0107``) from two
     sources — the index row and ``users`` — and neither of them remembers what it
     said an hour ago. A read-back that re-read them would answer a *different*
-    search: a nickname changed since, a Level that has moved, an area the player
+    search: a name changed since, a Level that has moved, an area the player
     has left. So the card is recorded here, and the round trip reproduces the
     answer that was given rather than the one that would be given now.
 
@@ -266,7 +266,8 @@ class RecordedCard:
     job is that a card cannot be stored half-assembled.
     """
 
-    nickname: str
+    #: The **name** as it was shown — never the nickname (``docs/adr/0171`` §4).
+    name: str
     #: ``None`` when they had no photo, and the client drew the generated court
     #: poster. **Not a measured zero** — there is no photo to point at.
     photo_id: UUID | None

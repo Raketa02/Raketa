@@ -26,7 +26,7 @@ from app.modules.games.application.commands import (
 from app.modules.games.application.read_games import StandingGame
 from app.modules.games.domain.errors import YouWereNotOnThisCourt
 from app.modules.games.domain.game import Game
-from app.modules.games.domain.ports import GameRepository, PlayerHandles
+from app.modules.games.domain.ports import GameRepository, PlayerNames
 
 
 class _ActOnAResult:
@@ -36,12 +36,12 @@ class _ActOnAResult:
         self,
         *,
         games: GameRepository,
-        handles: PlayerHandles,
+        names: PlayerNames,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._games = games
-        self._handles = handles
+        self._names = names
         self._uow = uow
         self._clock = clock
 
@@ -80,10 +80,10 @@ class _ActOnAResult:
         silently.
         """
 
-        return await self._handles.handles_of(sorted(game.line_up.players))
+        return await self._names.names_of(sorted(game.line_up.players))
 
     async def _saved(
-        self, game: Game, at: Instant, handles: Mapping[UUID, str]
+        self, game: Game, at: Instant, names: Mapping[UUID, str]
     ) -> StandingGame:
         """Write the act, then fold the game against the instant it happened at.
 
@@ -93,7 +93,7 @@ class _ActOnAResult:
 
         await self._games.save(game)
         await self._uow.commit()
-        return StandingGame.folded(game, now=at, handles=handles)
+        return StandingGame.folded(game, now=at, names=names)
 
 
 @final
@@ -106,9 +106,9 @@ class StateResult(_ActOnAResult):
         game = await self._yours(
             game_id=command.game_id, player_id=command.player_id
         )
-        handles = await self._named(game)
+        names = await self._named(game)
         game.state_result(by=command.player_id, score=command.score, occurred_at=at)
-        return await self._saved(game, at, handles)
+        return await self._saved(game, at, names)
 
 
 @final
@@ -120,6 +120,6 @@ class AcceptResult(_ActOnAResult):
         game = await self._yours(
             game_id=command.game_id, player_id=command.player_id
         )
-        handles = await self._named(game)
+        names = await self._named(game)
         game.accept_result(by=command.player_id, occurred_at=at)
-        return await self._saved(game, at, handles)
+        return await self._saved(game, at, names)

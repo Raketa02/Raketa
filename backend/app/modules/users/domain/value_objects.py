@@ -28,7 +28,38 @@ class Email:
 
 
 @dataclass(frozen=True)
+class Name:
+    """What a player is called (``docs/adr/0171`` §1).
+
+    Free text: trimmed, runs of whitespace collapsed to one space, 2–64
+    characters after that, and **never unique** — two players may share one, and
+    it is checked against nobody. *Diego Fabregat*, *Diego*, *Dieguito* and
+    *Ania Kowalska* are all names.
+
+    It is what every screen says. The nickname beside it is a handle, shown as
+    ``@nickname`` on a record and a player's own You tab and said nowhere.
+    """
+
+    value: str
+
+    def __post_init__(self) -> None:
+        # ``split()`` with no argument splits on any run of whitespace and drops
+        # the ends, so this is the trim and the collapse in one step.
+        v = " ".join(self.value.split())
+        if not (2 <= len(v) <= 64):
+            raise ValueError(f"invalid name: {self.value!r}")
+        object.__setattr__(self, "value", v)
+
+
+@dataclass(frozen=True)
 class Nickname:
+    """A handle, unique across the platform (``docs/adr/0171`` §1).
+
+    2–64 characters of ``[A-Za-z0-9_.-]`` — no space, which is what keeps a
+    name out of the field that is unique. Shown as ``@nickname`` under the name
+    on a player's record and on their own You tab, and **said nowhere**.
+    """
+
     value: str
 
     def __post_init__(self) -> None:

@@ -38,6 +38,7 @@ import { restoreSession } from './restoreSession';
 const USER: Wire['UserResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
+  name: 'Ada Lovelace',
   nickname: 'ada',
   authority: 'player',
   is_admin: false,
@@ -78,6 +79,7 @@ describe('relaunching', () => {
     expect(restored.user).toEqual({
       id: USER.id,
       email: USER.email,
+      name: USER.name,
       nickname: USER.nickname,
       hasPlayerProfile: USER.has_player_profile,
     });
@@ -147,7 +149,7 @@ describe('relaunching', () => {
 
     expect(rotated).toBe(true);
     expect(restored.status).toBe('authenticated');
-    expect(restored.user?.nickname).toBe('ada');
+    expect(restored.user?.name).toBe('Ada Lovelace');
     expect(hasTokens()).toBe(true);
   });
 
@@ -251,6 +253,7 @@ describe('the launch sequence', () => {
       expect(queryClient.getQueryData(authKeys.currentUser())).toEqual({
         id: USER.id,
         email: USER.email,
+        name: USER.name,
         nickname: USER.nickname,
         hasPlayerProfile: USER.has_player_profile,
       }),

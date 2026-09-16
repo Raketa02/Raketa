@@ -20,15 +20,15 @@ import {
 
 const KASIA: StarSubject = {
   playerId: 'aaaaaaaa-0000-4000-8000-000000000001',
-  name: { kind: 'player', nickname: 'kasia_w' },
+  name: { kind: 'player', name: 'kasia_w' },
 };
 const TOMEK: StarSubject = {
   playerId: 'bbbbbbbb-0000-4000-8000-000000000002',
-  name: { kind: 'player', nickname: 'tomek.p' },
+  name: { kind: 'player', name: 'tomek.p' },
 };
 const MAREK: StarSubject = {
   playerId: 'cccccccc-0000-4000-8000-000000000003',
-  name: { kind: 'player', nickname: 'marekb' },
+  name: { kind: 'player', name: 'marekb' },
 };
 const NOBODY: StarSubject = {
   playerId: 'dddddddd-0000-4000-8000-000000000004',

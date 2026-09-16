@@ -99,6 +99,6 @@ const AGAINST = 'against';
 function spoken(seat: YesSeat): string {
   if (seat.kind === 'empty') return AN_EMPTY_SEAT;
   return playerName(
-    seat.nickname === undefined ? { kind: 'unknown' } : { kind: 'player', nickname: seat.nickname },
+    seat.name === undefined ? { kind: 'unknown' } : { kind: 'player', name: seat.name },
   );
 }

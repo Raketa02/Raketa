@@ -13,9 +13,11 @@
  * ## The entry gate
  *
  * The second redirect is onboarding's, and onboarding is **two parts** — so the gate has
- * four destinations rather than two: an unfinished run resumes, no ratings goes to welcome,
- * a rating with no Player profile goes to the second part's first step, and only then does
- * a player reach the app ([ADR-0090](../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
+ * five destinations rather than two: an unnamed account goes to the naming step before
+ * anything else ([ADR-0171](../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §3), an unfinished run resumes, no ratings goes to welcome, a rating with no Player profile
+ * goes to the second part's first step, and only then does a player reach the app
+ * ([ADR-0090](../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
  *
  * None of it is part of `SessionStatus`: making "has a rating" a session state would block
  * every cold launch on a network request, which is the opposite of what the bootstrap
@@ -28,6 +30,7 @@
 
 import { Redirect, Stack } from 'expo-router';
 
+import { NAMING_STEP } from '@/features/auth/types';
 import {
   EntryUnavailableScreen,
   useEndOnboardingPass,
@@ -61,6 +64,10 @@ export default function AppLayout() {
       return null;
     case 'unavailable':
       return <EntryUnavailableScreen reason={entry.reason} onRetry={entry.retry} />;
+    case 'naming':
+      // Before anything else: every destination after this one says the player's name. Which
+      // route that is belongs to the feature that owns the naming, not to this file.
+      return <Redirect href={NAMING_STEP} />;
     case 'welcome':
       return <Redirect href="/welcome" />;
     case 'social-steps':

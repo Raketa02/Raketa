@@ -51,7 +51,7 @@ def card(
     last_five: tuple[GameResult, ...] = (),
 ) -> RecordedCard:
     return RecordedCard(
-        nickname="ada",
+        name="ada",
         photo_id=None,
         review=None,
         area_code="LDN-CENTRAL",

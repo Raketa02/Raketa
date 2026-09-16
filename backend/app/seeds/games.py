@@ -365,9 +365,15 @@ async def the_game_already_there(
     organiser = player_of(paths, cohort, game.organiser)
     _, standing = await paths.read_games.execute(organiser)
     for row in standing:
+        # **The people who were on the court, the departed included.** A
+        # called-off game's leaver has been vacated (``docs/adr/0162`` §3), so
+        # its line-up alone is one seat short of the declaration and a second
+        # run would arrange the game again; ``departed`` is whose leaving
+        # opened the seats that are open now, and a re-seat empties it.
+        on_the_court = row.game.line_up.players | row.game.departed
         if (
             row.game.sport.value == game.sport
-            and row.game.line_up.players == wanted
+            and on_the_court == wanted
             and (when is None or _on_the_same_day(row.game.planned_at, when))
         ):
             return row.game

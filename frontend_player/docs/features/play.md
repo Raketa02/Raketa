@@ -32,8 +32,10 @@ selection exists to prevent — and only _then_ takes three, falling back to the
 **promoted to `shared/`** on
 `recoveryMessage.ts`'s third-caller rule rather than re-typed here — the Social tags, the
 week's days and parts, and the level and percentage formats — beside `playerName()`, which is
-ADR-0107's _the whole handle or nobody_ with one implementation and a type that will not take
-a shortened one, the one sentence a build says about a code it is too old to read, and
+ADR-0107's _the whole handle or nobody_ — _the whole **name** or nobody_ since
+[ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md),
+which is how every _handle_ in this record now reads — with one implementation and a type that
+will not take a shortened one, the one sentence a build says about a code it is too old to read, and
 `counted()`, the single seam every counted phrase routes through so that a market with real
 plural rules has one function to change rather than every sentence that counts something.
 

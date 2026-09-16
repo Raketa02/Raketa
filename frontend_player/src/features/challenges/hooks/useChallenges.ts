@@ -51,7 +51,13 @@ import { useOnReturn } from '@/shared/lib/platform';
 
 import { useCurrentUser } from '@/features/auth/types';
 
-import { holdsTheExit, pairAlreadyPlaying, type Challenge } from '../domain/challenge';
+import {
+  holdsTheExit,
+  leavingWouldEnd,
+  pairAlreadyPlaying,
+  type Challenge,
+  type LeavingEnds,
+} from '../domain/challenge';
 import { challengeInbox, challengesWaiting } from '../domain/challengeInbox';
 import { readChallenges } from '../use-cases/readChallenges';
 import { sendChallenge, type SendAsk, type SentChallenge } from '../use-cases/sendChallenge';
@@ -91,7 +97,7 @@ export function useSendChallenge() {
  *
  * **It answers a player id and never a name.** Turning one into words needs the handle, which is
  * the *court's* to read off the search it was built from — this feature has never seen a
- * nickname and must not learn to guess one.
+ * name and must not learn to guess one.
  *
  * `undefined` while the answer is on its way, and `undefined` again when there is nobody in it
  * to name. The two are deliberately not told apart: the sentence the screen writes without a
@@ -126,12 +132,12 @@ export function useOpenPair(invitees: readonly string[], enabled: boolean): stri
  * Zero rather than an invalidation at each call site, because the two are the same instruction
  * and only one of them is stated where the read is.
  */
-function useChallengeList(enabled = true) {
+function useChallengeList(enabled = true, staleTime = 0) {
   return useQuery<readonly Challenge[], AppError>({
     queryKey: challengeKeys.list(),
     queryFn: ({ signal }) => readChallenges({ signal }),
     enabled,
-    staleTime: 0,
+    staleTime,
   });
 }
 
@@ -203,6 +209,40 @@ export function useHoldsTheExit(challengeId: string, enabled: boolean): boolean 
   const row = data?.find((one) => one.challengeId === challengeId);
 
   return enabled && row !== undefined && playerId !== undefined && holdsTheExit(row, playerId);
+}
+
+/**
+ * **One row, as the list holds it** — for a surface that needs a fact only the list carries:
+ * `ended_by` and `game_id`, which the detail read does not serve (ADR-0172 §3–§4), read by the
+ * challenge screen for the ended court and by the departure's two doors for their sheet.
+ *
+ * `useHoldsTheExit`'s shape, the row rather than one answer off it — and `useHeldChallenge`'s
+ * posture on the entry: **read what is held, and fetch only if nothing is.** The list is the
+ * tab bar's read, kept fresh by that observer at its own `staleTime: 0` whenever the reader is
+ * in the app, so a second observer at nought would send a request for a row the cache already
+ * holds every time a game screen or a challenge screen mounted (`useHoldsTheExit` gates itself
+ * for that reason). A cold route finds nothing held and fetches, and the surface re-folds when
+ * it lands. `undefined` is a row the list does not hold, or has not landed.
+ */
+export function useChallengeRow(challengeId: string): Challenge | undefined {
+  const { data } = useChallengeList(true, Infinity);
+
+  return data?.find((one) => one.challengeId === challengeId);
+}
+
+/**
+ * **What the reader's leaving would do to this court** — `leavingWouldEnd` read off the row the
+ * list holds, for the three sheets the departure has ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §9): the Chats row's door, the challenge screen's door and the game screen's control read one
+ * hook, so they cannot say different things about one court. Who the reader is comes from
+ * `useCurrentUser`, as every other reading of this list takes it; nothing held or nobody yet is
+ * today's line.
+ */
+export function useLeavingWouldEnd(challengeId: string): LeavingEnds | undefined {
+  const row = useChallengeRow(challengeId);
+  const me = useCurrentUser().data?.id;
+
+  return row === undefined || me === undefined ? undefined : leavingWouldEnd(row, me);
 }
 
 /**

@@ -102,8 +102,8 @@ SportAsked = Annotated[
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
             "description": (
-                "`record_unavailable` — this account has no record to draw: no "
-                "handle, or no profile committed. The recovery is onboarding's "
+                "`record_unavailable` — this account has no record to draw: not "
+                "yet named, or no profile committed. The recovery is onboarding's "
                 "second part, which `GET /users/me` already sends a cold launch "
                 "into."
             ),

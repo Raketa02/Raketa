@@ -118,7 +118,7 @@ export function handlesOn(
 
     const row = court.rows.get(seat.playerId);
     const who: NamedPlayer =
-      row === undefined ? { kind: 'unknown' } : { kind: 'player', nickname: row.card.nickname };
+      row === undefined ? { kind: 'unknown' } : { kind: 'player', name: row.card.name };
     const photo = row?.card.photoUrl;
 
     return [

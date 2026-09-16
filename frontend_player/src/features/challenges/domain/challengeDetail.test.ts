@@ -11,6 +11,7 @@
 import type { ChallengeDetail, DetailSeat, SeatCard } from './challengeDetail';
 import {
   acceptedPlayers,
+  asTheRowSays,
   challengeArm,
   readerIsInTheRoom,
   redrawnFrom,
@@ -432,7 +433,143 @@ describe('the room, and whether the reader is in it', () => {
     expect(readerIsInTheRoom(challengeArm(detail('AWAITING_ANSWERS', left, BEA), ME))).toBe(false);
     expect(readerIsInTheRoom(challengeArm(detail('DECLINED', ended, BEA), ME))).toBe(false);
     expect(readerIsInTheRoom(challengeArm(detail('WITHDRAWN', ended, BEA), ME))).toBe(false);
+    expect(readerIsInTheRoom(challengeArm(detail('CALLED_OFF', ended, BEA), ME))).toBe(false);
     expect(readerIsInTheRoom(challengeArm(detail(undefined, ended, BEA), ME))).toBe(false);
+  });
+});
+
+/**
+ * **The ended court** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7): a `CALLED_OFF` court and a `DECLINED` one a departure ended are drawn as the row's
+ * sentence over every seat and what each person did — *You · in*, *left*, *said no*, *called it
+ * off* — and offer nothing. Every other ending, and a court everybody merely declined, is the
+ * sentence alone as before.
+ */
+describe('the ended court', () => {
+  const named = (playerId: string, name: string, answer?: DetailSeat['answer']): DetailSeat => ({
+    playerId,
+    name,
+    ...(answer === undefined ? {} : { answer }),
+  });
+
+  it('lists every seat and what each did, on a game called off by the last departure', () => {
+    const court = {
+      ...detail('CALLED_OFF', [
+        named(ME, 'me.p', 'ACCEPTED'),
+        named(BEA, 'bea.k', 'LEFT'),
+        named(CYRYL, 'cyryl.w', 'LEFT'),
+        named(DIETER, 'dieter.s', 'LEFT'),
+      ]),
+      endedBy: DIETER,
+      gameId: 'g1',
+    };
+
+    expect(challengeArm(court, ME)).toEqual({
+      kind: 'ended',
+      facts: expect.objectContaining({ standing: 'CALLED_OFF', byADeparture: true }),
+      court: [
+        { playerId: ME, who: { kind: 'you' }, did: 'in' },
+        { playerId: BEA, who: { kind: 'player', name: 'bea.k' }, did: 'left' },
+        { playerId: CYRYL, who: { kind: 'player', name: 'cyryl.w' }, did: 'left' },
+        { playerId: DIETER, who: { kind: 'player', name: 'dieter.s' }, did: 'left' },
+      ],
+    });
+  });
+
+  /** The presser's seat still reads `ACCEPTED`; `ended_by` is what says they *called it off*. */
+  it('marks the presser as having called it off, and the others still seated as in', () => {
+    const court = {
+      ...detail('CALLED_OFF', [
+        named(ME, 'me.p', 'ACCEPTED'),
+        named(BEA, 'bea.k', 'ACCEPTED'),
+        named(CYRYL, 'cyryl.w', 'ACCEPTED'),
+        named(DIETER, 'dieter.s', 'LEFT'),
+      ]),
+      endedBy: BEA,
+      gameId: 'g1',
+    };
+
+    const arm = challengeArm(court, ME);
+    expect(arm.kind === 'ended' ? arm.court.map((seat) => seat.did) : []).toEqual([
+      'in',
+      'called-it-off',
+      'in',
+      'left',
+    ]);
+    // And the reader's own press reads *You · called it off*.
+    const mine = challengeArm({ ...court, endedBy: ME }, ME);
+    expect(mine.kind === 'ended' ? mine.court[0] : undefined).toEqual({
+      playerId: ME,
+      who: { kind: 'you' },
+      did: 'called-it-off',
+    });
+  });
+
+  it('is drawn for a court that never became a game and ended on a departure, with a no and a lapse said', () => {
+    const court = {
+      ...detail('DECLINED', [
+        named(ME, 'me.p', 'ACCEPTED'),
+        named(BEA, 'bea.k', 'LEFT'),
+        named(CYRYL, 'cyryl.w', 'DECLINED'),
+        named(DIETER, 'dieter.s', 'LAPSED'),
+      ]),
+      endedBy: BEA,
+    };
+
+    const arm = challengeArm(court, ME);
+    expect(arm.kind).toBe('ended');
+    expect(arm.kind === 'ended' ? arm.court.map((seat) => seat.did) : []).toEqual([
+      'in',
+      'left',
+      'said-no',
+      'ran-out',
+    ]);
+  });
+
+  /** An empty seat did nothing and is nobody: a court lists people. */
+  it('lists occupied seats only', () => {
+    const court = {
+      ...detail('DECLINED', [named(ME, 'me.p', 'ACCEPTED'), named(BEA, 'bea.k', 'LEFT'), {}, {}]),
+      endedBy: BEA,
+    };
+
+    const arm = challengeArm(court, ME);
+    expect(arm.kind === 'ended' ? arm.court.map((seat) => seat.playerId) : []).toEqual([ME, BEA]);
+  });
+
+  it('is not drawn for a court everybody declined, a lapse or a withdrawal, which stay the sentence alone', () => {
+    const declined = {
+      ...detail('DECLINED', [named(ME, 'me.p', 'ACCEPTED'), named(BEA, 'bea.k', 'DECLINED')]),
+      endedBy: BEA,
+    };
+    const lapsed = {
+      ...detail('LAPSED', [named(ME, 'me.p', 'ACCEPTED'), named(BEA, 'bea.k', 'LAPSED')]),
+      endedBy: BEA,
+    };
+    const withdrawn = {
+      ...detail('WITHDRAWN', [named(ME, 'me.p', 'ACCEPTED'), named(BEA, 'bea.k')]),
+      endedBy: ME,
+    };
+
+    expect(challengeArm(declined, ME).kind).toBe('stated');
+    expect(challengeArm(lapsed, ME).kind).toBe('stated');
+    expect(challengeArm(withdrawn, ME).kind).toBe('stated');
+  });
+
+  /**
+   * The detail read carries no `ended_by` and no `game_id`; the row the list holds does. Merged
+   * onto the detail before the fold, and a row that has not landed changes nothing.
+   */
+  it('reads who ended it and the game off the row the list holds', () => {
+    const court = detail('CALLED_OFF', [
+      named(ME, 'me.p', 'ACCEPTED'),
+      named(BEA, 'bea.k', 'LEFT'),
+    ]);
+    const row = { ...court, endedBy: BEA, gameId: 'g1', endedAt: '2026-09-05T11:00:00Z' };
+
+    expect(asTheRowSays(court, row)).toMatchObject({ endedBy: BEA, gameId: 'g1' });
+    expect(asTheRowSays(court, row)).not.toHaveProperty('endedAt');
+    expect(asTheRowSays(court, undefined)).toBe(court);
   });
 });
 
@@ -457,10 +594,10 @@ describe('the seats the organiser is waiting on', () => {
     const waiting = seatsAwaiting(
       detail('AWAITING_ANSWERS', [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: BEA, nickname: 'bea.k', answerBy: '2026-09-07T09:00:00Z' },
+        { playerId: BEA, name: 'bea.k', answerBy: '2026-09-07T09:00:00Z' },
         {
           playerId: CYRYL,
-          nickname: 'cyryl.w',
+          name: 'cyryl.w',
           answer: 'DECLINED',
           answerBy: '2026-09-07T09:00:00Z',
         },
@@ -469,7 +606,7 @@ describe('the seats the organiser is waiting on', () => {
     );
 
     expect(waiting).toEqual([
-      { player: { kind: 'player', nickname: 'bea.k' }, answerBy: '2026-09-07T09:00:00Z' },
+      { player: { kind: 'player', name: 'bea.k' }, answerBy: '2026-09-07T09:00:00Z' },
     ]);
   });
 });

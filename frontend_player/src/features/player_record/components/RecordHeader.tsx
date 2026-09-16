@@ -1,8 +1,8 @@
 /**
  * **The record's header** — the photograph with the Level on it, and who this is beside it.
  *
- * A `PhotoPanel` at record size and a column: the whole handle, their intro where they wrote
- * one, the identity line, and one pill per rated sport.
+ * A `PhotoPanel` at record size and a column: the whole name, the `@nickname` under it, their
+ * intro where they wrote one, the identity line, and one pill per rated sport.
  *
  * ## The reliability pill left, and it is now a block under the level bar
  *
@@ -24,12 +24,18 @@
  * draws a poster with nothing printed on it rather than a nought. There is no panel of noughts
  * anywhere on this sheet.
  *
- * ## The whole handle, always
+ * ## The whole name, always — and the handle under it, here and on the You tab only
  *
- * There is no name on this platform and nothing may derive a familiar form from a handle —
- * `playerName()`'s rule, and the reason the column wraps rather than truncates. On your own
- * record the handle takes `(you)` after it, because a face you are reading about is a stranger
- * until something says otherwise.
+ * Nothing may derive a familiar form from a name — `playerName()`'s rule, and the reason the
+ * column wraps rather than truncates. On your own record the name takes `(you)` after it,
+ * because a face you are reading about is a stranger until something says otherwise.
+ *
+ * Under it, `@nickname`: two people may share a name, and this is the screen a friend opens to
+ * tell them apart, which is why the handle is drawn **here and on the reader's own You tab and
+ * nowhere else** — never on a row, a card, a sentence, a sheet, a toast, a seat label or a
+ * spoken name
+ * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §4). The mark is `atNickname`'s, spelled once so the two screens cannot disagree.
  *
  * ## The intro sits under the name, and the gap closes where there is none
  *
@@ -54,9 +60,10 @@
  * ## One element, and the pills merge into it — but the button does not
  *
  * §20.1: everything with no action of its own merges into the nearest action above it. The
- * panel, the handle, the intro, the identity line and the pills have none, so they are one
- * element and `recordHeaderLabel` is what it says — identifying facts first, in the order they
- * are drawn, with the intro inside its marks so it is heard as their words and never as a name.
+ * panel, the name, the handle, the intro, the identity line and the pills have none, so they
+ * are one element and `recordHeaderLabel` is what it says — identifying facts first, in the
+ * order they are drawn, with the intro inside its marks so it is heard as their words and never
+ * as a name.
  *
  * **`Player fit` is an action and therefore its own element**, which is the same rule read the
  * other way. It sits under the pills rather than at the foot of the sheet: it is the sheet's
@@ -67,6 +74,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
+import { atNickname } from '@/shared/formatting/playerName';
 import { PhotoPanel, theme } from '@/shared/ui';
 
 import type { PlayerRecord } from '../domain/playerRecord';
@@ -105,7 +113,8 @@ export function RecordHeader({
   onExplainFit,
   fit,
 }: RecordHeaderProps) {
-  const handle = recordHandle(record.nickname, record.isSelf);
+  const name = recordHandle(record.name, record.isSelf);
+  const handle = atNickname(record.nickname);
   const intro = record.intro === undefined ? undefined : introLine(record.intro);
   const identity = identityLine({
     areaCode: record.areaCode,
@@ -119,6 +128,7 @@ export function RecordHeader({
       style={s.header}
       accessible
       accessibilityLabel={recordHeaderLabel({
+        name,
         handle,
         onCourt: record.onCourt,
         ...(intro === undefined ? {} : { intro }),
@@ -144,6 +154,7 @@ export function RecordHeader({
       />
 
       <View style={s.column}>
+        <Text style={s.name}>{name}</Text>
         <Text style={s.handle}>{handle}</Text>
 
         {intro === undefined ? null : <Text style={s.intro}>{intro}</Text>}
@@ -162,10 +173,11 @@ export function RecordHeader({
 
 const s = StyleSheet.create({
   header: { flexDirection: 'row', gap: theme.space.md, alignItems: 'flex-start' },
-  // The column takes whatever the panel leaves, so a 64-character handle wraps inside it
+  // The column takes whatever the panel leaves, so a 64-character name wraps inside it
   // rather than pushing the panel off the sheet.
   column: { flex: 1, gap: theme.space.xs },
-  handle: { ...theme.type.h1, color: theme.color.ink },
+  name: { ...theme.type.h1, color: theme.color.ink },
+  handle: { ...theme.type.tiny, color: theme.color.muted },
   // The deck card's role for the same line, on paper instead of over a photograph: a
   // sentence to read rather than small print, and in `muted` because it is what they said
   // and not what the platform measured.

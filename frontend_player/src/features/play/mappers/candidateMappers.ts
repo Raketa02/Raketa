@@ -271,7 +271,7 @@ export function toCandidate(row: CandidateSchema): Candidate {
     // absence, and what lets *Closest* sort a stood-down row last instead of first.
     ...(row.distance_km === undefined ? {} : { distanceKm: row.distance_km }),
     card: {
-      nickname: row.player_card.nickname,
+      name: row.player_card.name,
       ...(row.player_card.photo_url === undefined ? {} : { photoUrl: row.player_card.photo_url }),
       // Omitted where nobody looked, and omitted again where the verdict is a word this
       // build has never seen — the two collapse, because both are *this card cannot say a

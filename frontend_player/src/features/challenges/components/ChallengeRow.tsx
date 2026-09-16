@@ -1,6 +1,6 @@
 /**
  * One row under `CHALLENGES` — **face(s) · the whole handle(s) · the sport · one line · the
- * stripe**, and the whole of it is the door.
+ * stripe, or the tag**, and the whole of it is the door.
  *
  * Fully clickable and comfortably past 44pt by its own geometry: a 38pt face inside the card's
  * `space.md` padding is 62 before anything else is drawn, so there is no `hitSlop` here
@@ -55,6 +55,17 @@
  * every row with a live clock is coral on most of a section at once. 1.3 reads amber as *watch
  * this — reversible, not yet wrong*, which is exactly a live answer window.
  *
+ * ## The tag is the ending's word, on the one ending that has one
+ *
+ * A **`Called off`** tag in the kit's *bad* variant — red on red-soft, 1.3's *ended badly* — at
+ * the trailing edge of a `CALLED_OFF` row and of no other
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7). It carries the state word the Now card carries, in the colour meaning picks, where a live
+ * row carries its amber stripe; the two never share a row, because a called-off court has no
+ * clock of anybody's. **The face is who the sentence names** — `othersOn`'s rule for the whole
+ * shelf — so a row reading *Diego Fabregat left* draws Diego and nobody else, and an ended row
+ * is never blank.
+ *
  * ## The organiser's row, while nobody has joined, swipes left to reveal one thing
  *
  * *Remove the challenge* ([#428](https://github.com/Raketa02/Raketa/issues/428),
@@ -78,14 +89,19 @@ import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { sportLabel } from '@/features/onboarding/types';
 import { handleLine } from '@/shared/formatting/handleList';
 import { playerName } from '@/shared/formatting/playerName';
-import { PlayerPhoto, PressableCard, SwipeRow, theme } from '@/shared/ui';
+import { PlayerPhoto, PressableCard, SwipeRow, Tag, theme } from '@/shared/ui';
 
 import { mayRemove, seatName, type Challenge } from '../domain/challenge';
 import { othersOn } from '../domain/challengeInbox';
 import type { ActDoor } from '../hooks/useActDoor';
 
 import { challengeRowLabel } from './challengeAccessibility';
-import { challengeRowLine, rowHasAClockOfYours } from './challengePresentation';
+import {
+  CALLED_OFF_TAG,
+  challengeRowLine,
+  rowHasAClockOfYours,
+  rowWearsTheTag,
+} from './challengePresentation';
 import { FACE_OVERLAP, ROW_FACE, handleBudget } from './challengeRowGeometry';
 import { RemovalDoor } from './RemovalDoor';
 
@@ -110,12 +126,13 @@ export function ChallengeRow({ challenge, playerId }: ChallengeRowProps) {
 
   const sport = sportLabel(challenge.sport);
   const line = challengeRowLine(challenge, playerId);
+  const tag = rowWearsTheTag(challenge) ? CALLED_OFF_TAG : undefined;
 
   /** The card — the door to the challenge — around whatever act it is handed, or around nothing. */
   const card = (door?: ActDoor) => (
     <PressableCard
       ref={door?.control}
-      accessibilityLabel={challengeRowLabel(handles, sport, line)}
+      accessibilityLabel={challengeRowLabel(handles, sport, line, tag)}
       accessibilityActions={door === undefined ? undefined : [door.action]}
       onAccessibilityAction={door?.onAccessibilityAction}
       onPress={() =>
@@ -147,6 +164,10 @@ export function ChallengeRow({ challenge, playerId }: ChallengeRowProps) {
           importantForAccessibility="no-hide-descendants"
         />
       ) : null}
+
+      {/* Inside the row's one element, so a listener hears its word at the end of the row's
+          name rather than as a second element. */}
+      {tag === undefined ? null : <Tag label={tag} variant="bad" />}
     </PressableCard>
   );
 

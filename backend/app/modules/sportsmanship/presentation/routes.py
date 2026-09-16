@@ -109,7 +109,7 @@ _REFUSALS: dict[int | str, dict[str, Any]] = {
         "**Absence is the only reason given.** A game not yet a day old, one "
         "whose week has run out and one you have already answered are all simply "
         "not here — and none of them is something to draw differently.\n\n"
-        "**Ids only.** Join `game_id` against `/api/v1/games` for the handles, "
+        "**Ids only.** Join `game_id` against `/api/v1/games` for the names, "
         "the sport and the date; `players` is everybody else who was on that "
         "court, in the line-up's own order.\n\n"
         "**Ignoring all of this costs nothing.** There is no strand for rating, "

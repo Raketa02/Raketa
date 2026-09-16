@@ -81,12 +81,12 @@ class NotAGameToCallOff(ConflictError):
     the end it is, because a call-off that reached a ghost would flip a standing
     the platform has already drawn and un-charge a strand after the fact.
 
-    The challenge guarantees the open seat by construction — a withdraw is
+    The challenge guarantees the open seat by construction — *Call it off* is
     admitted in ``LINE_UP_INCOMPLETE`` and nowhere else — and the use case steps
     over a game already ended by its clock rather than raising this, so on the
-    withdraw route neither half is a code a client meets. The aggregate keeps the
-    refusal all the same: the button is UX, and the server is the correctness
-    mechanism.
+    withdrawal route neither half is a code a client meets. The aggregate keeps
+    the refusal all the same: the button is UX, and the server is the
+    correctness mechanism.
     """
 
     code = "not_a_game_to_call_off"
@@ -113,6 +113,23 @@ class TheGameWasCalledOff(ConflictError):
         super().__init__(
             "This game was called off, so it cannot be recorded as played."
         )
+
+
+class GameIsNotCalledOff(ConflictError):
+    """A dismissal asked of a game on any standing but ``CALLED_OFF``.
+
+    Its own code (``docs/adr/0172`` §5), because the other endings' cards are
+    the record for the day they stay — *Never played*, *Counted* and
+    *Uncounted* carry a score or a strand's verdict — and a live game's card is
+    the game. Widening the trash is a design of its own and is out of scope by
+    name, so the refusal says which standing the act wants rather than an
+    umbrella.
+    """
+
+    code = "game_is_not_called_off"
+
+    def __init__(self) -> None:
+        super().__init__("Only a called-off game's card can be dismissed.")
 
 
 class TheGameIsNotOpenToSeating(ConflictError):

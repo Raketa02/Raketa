@@ -95,11 +95,11 @@ function toSeat(wire: SeatingSchema): GameSeat | undefined {
   if (side === undefined) return undefined;
 
   const playerId = wire.player_id ?? undefined;
-  const nickname = wire.nickname ?? undefined;
+  const name = wire.name ?? undefined;
   return {
     side,
     ...(playerId === undefined ? {} : { playerId }),
-    ...(nickname === undefined ? {} : { nickname }),
+    ...(name === undefined ? {} : { name }),
   };
 }
 
@@ -159,6 +159,17 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
     playedAt: wire.played_at ?? undefined,
     entryClosesAt: wire.entry_closes_at ?? undefined,
     calledOffAt: wire.called_off_at ?? undefined,
+    // Present exactly where the wire named somebody (ADR-0172 §4): the name rides with the id
+    // because the leaver's seat is vacated and the court cannot supply it, and a lost name is
+    // absent rather than `null` for the reason every seat's is.
+    ...(wire.called_off_by == null
+      ? {}
+      : {
+          calledOffBy: {
+            playerId: wire.called_off_by.player_id,
+            ...(wire.called_off_by.name == null ? {} : { name: wire.called_off_by.name }),
+          },
+        }),
     score: wire.score == null ? undefined : toScore(wire.score),
     outcome: wire.outcome == null ? undefined : member(OUTCOMES, wire.outcome),
     proposals: proposals.filter((one): one is StandingProposal => one !== undefined),

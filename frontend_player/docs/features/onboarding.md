@@ -44,3 +44,21 @@ player just earned and the second part was otherwise standing between them and i
 rating is written when the questionnaire completes, not when a profile is committed, so
 nothing on that screen was ever waiting on the commit to be true. Entered with no pass
 running, it has nothing of its own to show and says so.
+
+**The entry gate reads the name before anything else, and the naming step is the first screen
+after sign-up** ([#451](https://github.com/Raketa02/Raketa/issues/451),
+[ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+§3). The gate has five destinations now — _no name → the naming step_ · resume · welcome · the
+social steps · the app — and the new one goes **first**, because every destination after it says
+the player's name: the questionnaire may address them by it and every surface inside the app
+does. It is read off `GET /users/me`'s `name`, which rides on the read the gate already makes for
+`has_player_profile` and is served from the `User`'s own stream for the same reason — the moment
+after the naming is exactly when a lagging read model would send a player back to the step they
+just finished. It passes the glossary's test the way the profile flag did: a name has no sport
+dimension, so _does this player have a name_ is a per-player question with a per-player answer.
+The gate routes every shape, including the ones the flow cannot produce — an unnamed account
+holding a run or a rating is still sent to the naming step, on the fourth destination's own
+lesson that a shape the gate does not route is a loop. The step itself is `features/auth/`'s
+(its record says why), reached at `/name` through `NAMING_STEP` as the social steps are through
+`SOCIAL_STEPS_ENTRY`; it claims the hardware back like every first step does, and after the
+naming it hands the next destination back to this gate rather than naming welcome itself.

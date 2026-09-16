@@ -24,7 +24,7 @@ anything about anybody else.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -34,6 +34,7 @@ from app.api.dependencies import (
     DomainEventStoreDep,
     EventPublisherDep,
     UnitOfWorkDep,
+    get_clock,
 )
 from app.bootstrap.composition import (
     build_block_query,
@@ -57,6 +58,7 @@ from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
 from app.modules.challenges.application.send_challenge import SendChallenge
+from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
 from app.modules.challenges.presentation.dependencies import get_send_challenge
 from app.modules.matchmaking.application.express_interest import ExpressInterest
 from app.modules.matchmaking.infrastructure.challenges_mutual_challenge import (
@@ -67,6 +69,7 @@ from app.modules.matchmaking.presentation.dependencies import (
     get_express_interest,
 )
 from tests.api import matchmaking_world as world
+from tests.unit.fake_event_store import FrozenClock
 
 
 @pytest.fixture
@@ -657,6 +660,8 @@ async def test_the_organiser_removes_a_challenge_nobody_has_answered(
     body = withdrawn.json()
     assert body["standing"] == "WITHDRAWN"
     assert body["ended_at"] is not None
+    assert body["ended_by"] == str(searcher["id"]), "the organiser, off the stream"
+    assert body["game_id"] is None, "never a game"
     invited = [
         seat for seat in body["seats"] if seat["player_id"] != str(searcher["id"])
     ]
@@ -850,6 +855,8 @@ async def test_a_row_that_still_stands_says_so_by_saying_nothing(
     assert row["standing"] == "AWAITING_ANSWERS"
     assert "ended_at" in row
     assert row["ended_at"] is None
+    assert "ended_by" in row and row["ended_by"] is None
+    assert "game_id" in row and row["game_id"] is None
 
 
 async def test_an_ended_row_carries_the_instant_its_shelf_life_is_measured_from(
@@ -925,6 +932,39 @@ async def test_a_court_everybody_turned_down_is_dated_by_the_seats(
     deadlines = [seat["answer_by"] for seat in row["seats"] if seat["answer_by"]]
     assert deadlines
     assert all(ended < datetime.fromisoformat(one) for one in deadlines)
+    # Three nos bounded alike, and court order names one (docs/adr/0172 §3):
+    # the first invited seat in the court's fixed order.
+    first_invited = next(seat for seat in row["seats"] if seat["answer_by"])
+    assert row["ended_by"] == first_invited["player_id"]
+    assert first_invited["answer"] == "DECLINED"
+
+
+async def test_a_court_that_ran_out_is_named_for_the_last_window(
+    client, session_factory, candidate_source, searcher
+):
+    """``docs/adr/0172`` §3 — a lapse names the seat whose window was the last
+    to run out. Every deadline here was dated at the send, so they are one
+    instant and court order names the first invited seat; the fact the wire
+    pins is that the person named is one whose seat ran out, unswept."""
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    await _send(client, searcher["token"], search_id, court)
+    frozen = FrozenClock(
+        at=datetime.now(timezone.utc) + ANSWER_WINDOW + timedelta(hours=1)
+    )
+    world.override(client, get_clock, lambda: frozen)
+
+    (row,) = await _challenges(client, searcher["token"])
+
+    assert row["standing"] == "LAPSED"
+    first_invited = next(seat for seat in row["seats"] if seat["answer_by"])
+    assert row["ended_by"] == first_invited["player_id"], "court order"
+    assert first_invited["player_id"] != str(searcher["id"])
+    assert first_invited["answer"] is None, "unswept: the window closing is the leaving"
+    assert datetime.fromisoformat(first_invited["answer_by"]) == datetime.fromisoformat(
+        row["ended_at"]
+    )
 
 
 async def test_a_refused_mint_and_an_innocent_one_name_the_same_nothing(

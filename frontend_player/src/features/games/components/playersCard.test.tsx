@@ -65,18 +65,18 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const FOUR: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: TOMEK, nickname: 'tomek.p', photo_id: 'p1', photo_url: TOMEK_PHOTO },
-  { player_id: KASIA, nickname: 'kasia.w' },
-  { player_id: MAREK, nickname: 'marek b' },
+  { player_id: ME, name: 'me_' },
+  { player_id: TOMEK, name: 'tomek.p', photo_id: 'p1', photo_url: TOMEK_PHOTO },
+  { player_id: KASIA, name: 'kasia.w' },
+  { player_id: MAREK, name: 'marek b' },
 ];
 
 /** Seated in the challenge's order — the other side first, and you last on yours. */
 const DOUBLES_SEATS: Wire['GameSchema']['seats'] = [
-  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
-  { side: 'B', player_id: MAREK, nickname: 'marek b' },
-  { side: 'A', player_id: KASIA, nickname: 'kasia.w' },
-  { side: 'A', player_id: ME, nickname: 'me_' },
+  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
+  { side: 'B', player_id: MAREK, name: 'marek b' },
+  { side: 'A', player_id: KASIA, name: 'kasia.w' },
+  { side: 'A', player_id: ME, name: 'me_' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
@@ -140,7 +140,8 @@ function pairing(over: Partial<Wire['GamePairingResponse']> = {}): Wire['GamePai
 function record(over: Partial<Wire['PlayerRecordResponse']> = {}): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
-    nickname: 'tomek.p',
+    name: 'tomek.p',
+    nickname: 'tomek_p',
     area_code: 'A+050612+0019938',
     social_tags: [],
     sports: [{ sport: 'PADEL', level: 2.8, band: 'Established' }],
@@ -232,10 +233,10 @@ const drawnIn = () =>
     .map((text) => text.props.children)
     .filter((child): child is string => typeof child === 'string');
 
-const me = { nickname: 'me_', yours: true };
-const tomek = { nickname: 'tomek.p', yours: false };
-const kasia = { nickname: 'kasia.w', yours: false };
-const marek = { nickname: 'marek b', yours: false };
+const me = { name: 'me_', yours: true };
+const tomek = { name: 'tomek.p', yours: false };
+const kasia = { name: 'kasia.w', yours: false };
+const marek = { name: 'marek b', yours: false };
 
 describe('the rows', () => {
   /**
@@ -334,6 +335,9 @@ describe('the tap', () => {
     await openTheGame();
     transport.on('GET', `/api/v1/players/${TOMEK}/record?sport=PADEL`, () => json(record()));
 
+    // No `@` on any row: the handle is the record's and the You tab's, and nobody else's.
+    expect(screen.queryByText(/@/)).toBeNull();
+
     fireEvent.press(screen.getByRole('button', { name: recordLabel(tomek) }));
 
     expect(await screen.findByLabelText(recordCloseLabel(false))).toBeTruthy();
@@ -343,13 +347,16 @@ describe('the tap', () => {
         transport.requestsTo('GET', `/api/v1/players/${TOMEK}/record?sport=PADEL`),
       ).toHaveLength(1),
     );
+    // The name, and the `@nickname` under it — the record is one of the two places it is drawn
+    // (ADR-0171 §4).
+    expect(await screen.findByText('@tomek_p')).toBeTruthy();
   });
 
   /** Your own row opens your own record, retitled, through the route that serves it. */
   it('opens your own record from your own row', async () => {
     await openTheGame();
     transport.on('GET', '/api/v1/players/me/record?sport=PADEL', () =>
-      json(record({ is_self: true, nickname: 'me_' })),
+      json(record({ is_self: true, name: 'me_' })),
     );
 
     fireEvent.press(screen.getByRole('button', { name: recordLabel(me) }));

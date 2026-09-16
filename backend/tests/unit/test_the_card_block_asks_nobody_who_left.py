@@ -72,7 +72,7 @@ class _Repository:
 
 
 class _Handles:
-    async def handles_of(self, player_ids: Sequence[UUID]) -> Mapping[UUID, str]:
+    async def names_of(self, player_ids: Sequence[UUID]) -> Mapping[UUID, str]:
         return {player_id: f"h{n}" for n, player_id in enumerate(player_ids)}
 
 
@@ -152,7 +152,7 @@ def a_read_of(challenge: Challenge, *, now: Instant) -> tuple[ReadChallenge, _Pa
     return (
         ReadChallenge(
             challenges=_Repository(challenge),
-            handles=_Handles(),
+            names=_Handles(),
             pairings=pairings,
             clock=_Clock(now),
         ),
@@ -219,7 +219,7 @@ async def test_a_reader_whose_day_ran_out_unswept_is_asked_about_nobody():
 
 async def test_the_departed_reader_keeps_the_whole_arrangement_and_every_handle():
     """**Only the card goes.** §13's sentences for a departed reader quote nobody,
-    but the arrangement and the handles are what keep the row readable — and
+    but the arrangement and the names are what keep the row readable — and
     ``docs/adr/0143`` §8 keeps the handle on exactly this argument."""
 
     challenge = a_court_still_being_filled()
@@ -228,7 +228,7 @@ async def test_the_departed_reader_keeps_the_whole_arrangement_and_every_handle(
     answer, _ = await _read(challenge, by=DEPARTED, now=at(3))
 
     assert len(answer.challenge.seats) == 4
-    assert answer.handles.keys() == {ORGANISER, ACCEPTED, DEPARTED}
+    assert answer.names.keys() == {ORGANISER, ACCEPTED, DEPARTED}
     assert answer.read_at == at(3)
 
 

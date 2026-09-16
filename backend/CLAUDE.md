@@ -626,17 +626,34 @@ Rules to preserve:
   and no seat awaiting an answer* — replaces the *no live seat besides the organiser's*
   clause, and **a departure is a no**, so before a game the fold reaches `DECLINED` and the
   room ends with its challenge, and the ending is dated by the departure's own instant
-  (`departed_at`, folded off `SeatLeft` for #388's reason). On a game the fold does not end the
-  court; the departure use case asks the same rule after recording itself and, when it
-  fires, hands `call_off` over on the same port right after the seat — `called_by` is the
-  leaver — so the game is `CALLED_OFF`, singles included, and the room is destroyed by
-  `GameCalledOff` reaching it (the second telling whose whole effect is that the room
-  stops existing). The game admits that caller because it folds `departed` off
-  `SeatVacated` — *the people who may act are the people who were on the court*. A decline
-  or a lapse that leaves one player on a game does **not** call it off — only the departure
-  asks the rule — and that court is filled or called off as before. **The withdraw is two
-  acts on one route, told apart by whether the court has been a game** (ADR-0165 §4–§5,
-  #426). On a court that was never a game it is ***Remove the challenge***: the organiser's,
+  (`departed_at`, folded off `SeatLeft` for #388's reason). **On a game the fold reaches no
+  ending by the seats alone, and the court ends with its game**
+  ([ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md),
+  #453): `Challenge.leave` asks the same rule as it records the departure and, when it
+  fires on a court that has been a game, writes `ChallengeCalledOff(called_by=the leaver)`
+  right after the `SeatLeft` — the seventh standing, `CALLED_OFF`, the second conclusion an
+  event may announce, passed on ADR-0142 §3's test because the seats can reach *deserted*
+  and cannot say whether that game is called off (a fill's newcomer's *no* deserts a game
+  too, and ends nothing). The use case then hands `call_off` over on the same port right
+  after the seat, so the seat, the court's ending and the game's end commit together or
+  none does: the game is `CALLED_OFF` **naming the leaver** (`called_off_by`, off
+  `GameCalledOff.called_by`, the field ADR-0163 §4 kept for this day — their seat is
+  vacated, so the court cannot supply the name), singles included, and the room is
+  destroyed by whichever of `challenges.called_off` and `games.called_off` is delivered
+  first, the other finding nothing (`telling.py` names both). The game admits that caller
+  because it folds `departed` off `SeatVacated` — *the people who may act are the people who
+  were on the court*. **Every ending names whose act it was** — `ended_by` on the challenge
+  read, read by the same fold that dates it (`ending_of`): the leaver or the presser off
+  `Conclusion`, the organiser off the stream for a withdrawal, and for the two folded
+  endings the occupant of the seat whose leaving is read — a no or a departure on
+  `DECLINED`, never a lapse, an exact instant outranking a bound and court order breaking
+  what is left. **And `game_id` is on the challenge read, read from `games` and never
+  recorded**: `GameOfCourtQuery` is the fourth port on the arrow `challenges → games`, asked
+  once per list about the courts the fold says have been a game, and once per act for the
+  redraw — before the commit, because it is the store the act just wrote to. **The withdrawal
+  route is two acts, told apart by whether the court has been a game** (ADR-0165 §4–§5,
+  #426), and since ADR-0172 §1 two events. On a court that was never a game it is ***Remove
+  the challenge***: the organiser's,
   admitted **exactly while nobody besides the organiser holds an accepted seat** — before
   anybody has answered, and again once everybody who joined has left, whatever seats are
   still deciding — and refused with `somebody_has_joined` the moment one person is in, since
@@ -647,19 +664,29 @@ Rules to preserve:
   are asserted: an answer on one meets `challenge_is_over` (the seat's own refusals first,
   then the challenge's), and neither `seats_awaiting_answers` nor the lapse loop counts
   it — the read asks the fold, and `Challenge.lapse` records no day the removal cut short,
-  which is ADR-0142 §5 on the write side. **On a court that has been a game it is *Call it
-  off*, and it reaches the game**
-  ([ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): the withdraw
-  hands `call_off` over on the same port in the same transaction, `GameCalledOff` is the
-  fourth end — read first by `standing_of`, in `SETTLED`, out of `PLAYED`, and **in no
-  tally**, because a ghost is silence and this was an act — and the act is **any player's on
-  the court**, an accepted seat, with no organiser-first rule and no fallback; only in
-  `LINE_UP_INCOMPLETE` (`not_a_half_built_line_up` on a whole court or with a fill still
-  pending). `withdraw_is_the_organisers` keeps its code for both acts — *the act is not
-  yours* — and an ended challenge is `challenge_is_over` on both, as everywhere else. A
-  court whose window already closed is withdrawn without the game being told; the ghost
-  stands, and so does a game a departure already called off — `CallOffGame` steps over
-  both ends rather than re-ending either. **Three ends
+  which is ADR-0142 §5 on the write side; `WITHDRAWN` is this act's alone. **On a court
+  that has been a game it is *Call it off*, and it reaches the game**
+  ([ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md), ADR-0172 §1):
+  `Challenge.call_off` records `ChallengeCalledOff(called_by=the presser)` — never a
+  withdrawal — and the use case hands `call_off` over on the same port in the same
+  transaction; `GameCalledOff` is the fourth end — read first by `standing_of`, in
+  `SETTLED`, out of `PLAYED`, and **in no tally**, because a ghost is silence and this was an
+  act — and the act is **any player's on the court**, an accepted seat, with no
+  organiser-first rule and no fallback; only in `LINE_UP_INCOMPLETE`
+  (`not_a_half_built_line_up` on a whole court or with a fill still pending). Which act a
+  court gets is the fold's to say (`has_become_a_game`), in the use case, never the
+  client's; asking the aggregate the wrong one is an `invariant`. `withdraw_is_the_organisers`
+  keeps its code for both acts — *the act is not yours* — and an ended challenge is
+  `challenge_is_over` on both, as everywhere else — which is now what a *Call it off*
+  pressed after the departure that called the game off meets. A court whose window already
+  closed is called off without the game being told; the ghost stands with the presser on the
+  challenge's record, and `CallOffGame` steps over that one end and no other. **The card's
+  dismissal is the reader's own act on `games`** (ADR-0172 §5): `POST /games/{id}/dismissal`
+  answers `204`, admitted on a `CALLED_OFF` game for somebody on its court and refused with
+  `game_is_not_called_off` on every other standing; `GameDismissed` is recorded once per
+  player (`games.dismissed`, a second press writes nothing), the aggregate folds the set,
+  and `ReadGames` subtracts its reader — nothing else reads it, and the room it might have
+  reached is gone before a card can be dismissed. **Three ends
   are folded from the record and the clock and the fourth is announced, and all four are
   never stored** — there is no `ResultConfirmed`, no sweep and no job, because a derived
   standing has exactly one place to be true, and `GameCalledOff` may announce its end
@@ -679,19 +706,26 @@ Rules to preserve:
   moment each became final
   ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
   It has **two inward ports**, and the first is a single field wide:
-  `PlayerHandles` puts a **nickname** on a seat and nothing else about the person in it
-  ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A card is
+  `PlayerNames` puts a **name** on a seat and nothing else about the person in it
+  ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md); the name and
+  never the nickname since
+  [ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md),
+  which is also why the port stopped being called `PlayerHandles` — a **handle** is now the
+  nickname's word, drawn as `@…` on a record and the You tab and said nowhere). A card is
   what a *searcher* reads to decide about a game that might happen, so a Level, an area or a run
-  of form on a record of an evening would be an as-of-now fact stapled to the past; the handle is
+  of form on a record of an evening would be an as-of-now fact stapled to the past; the name is
   what four people already knew about each other by the time they were on a court together, and
   without it the screens named **sides** — a result agreed with nobody, and three padel games in
   a week told apart by nothing but how long ago they were arranged. **The court is the whole of
   the permission and nothing is re-gated against the reader**: the four fail-closed gates decide
   who may be *introduced*, ADR-0095 §7 already settled that a block does not reach into a game
-  already agreed, and a handle that vanished from a row would be §8's trace. It is **one set read
-  per response** over the union of every court in the answer, and a handle `users` cannot answer
+  already agreed, and a name that vanished from a row would be §8's trace. It is **one set read
+  per response** over the union of every court in the answer, and a name `users` cannot answer
   for is `null` with the seat kept — the opposite of the shortlist, which drops a row it cannot
-  name.
+  name. A null there never means *unnamed*: sign-up creates an account with credentials only
+  and **the naming** (`PUT /api/v1/users/me/name`, one event carrying name and nickname,
+  repeatable) is onboarding's first step, so the entry gate holds an unnamed account there and
+  `GET /users/me` is the one read where `name` and `nickname` may be null.
   **The second inward port is `CourtPairing`, and it is read *beside* the game and never on it**
   ([ADR-0161](../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)).
   `GET /games/{game_id}/pairing` answers the forecast, the split, what is at stake and each
@@ -711,7 +745,7 @@ Rules to preserve:
   from `rating`'s **published** read (`RatedPlayerQuery.published_for`), never from the index.
   **Two providers stand behind the one port and fail on their own**: a process with no index
   draws no forecast and still names every Level and prices the court. `GET /games` is
-  untouched: a seat there still carries a handle and nothing else.
+  untouched: a seat there still carries a name and nothing else.
 - **A room is opened by the first acceptance, and it is told by contexts that do not know
   it exists** ([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md),
   [ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
@@ -740,7 +774,7 @@ Rules to preserve:
   the game live either way), one rule read against two records, and a stored roster would be
   the copy that decides who may read the messages. **Two shapes ride one stream and no sentence is
   ever stored**: a Message is content, a system line is a code and its values, and `values`
-  never repeats what membership already says, so a corrected handle fixes the whole backlog —
+  never repeats what membership already says, so a corrected name fixes the whole backlog —
   and **the read resolves a face for everybody the page names, not only for the roster**
   (ADR-0148 §4 as amended, #408): the person a `SEAT_LEFT` line is about was never a member
   — a *no* is not an accepted seat — so each of the three reads carries `people`: the roster
@@ -1017,7 +1051,7 @@ Rules to preserve:
   id and the people on it, and an open card is by definition one nobody has answered.
   It borrows one thing,
   `SettledCourts` over `games`' directory, whose adapter lives in **this** context the way
-  `PlayerHandles`' lives in `games`; *settled* there is narrowed to **played and over**,
+  `PlayerNames`' lives in `games`; *settled* there is narrowed to **played and over**,
   because a ghost has nobody to rate and an unscored game very much does. **The card's two
   clocks are domain and neither is configuration** (`domain/window.py`): it opens the day
   after the game — an answer given ten minutes after losing badly is not the answer wanted —

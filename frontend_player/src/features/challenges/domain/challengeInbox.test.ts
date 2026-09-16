@@ -54,7 +54,7 @@ function challenge(
 /** Somebody asked me, and I have not answered — the one shape the badge counts. */
 const askedMe = (overrides: Partial<Challenge> = {}) =>
   challenge(overrides, [
-    { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+    { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
     { playerId: ME, answerBy: at(20) },
   ]);
 
@@ -234,7 +234,7 @@ describe('a no of my own', () => {
    */
   it('leaves at once, on a court it ended', () => {
     const iSaidNo = challenge({ standing: 'DECLINED', openedAt: at(-4), endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answer: 'DECLINED', answerBy: at(20) },
     ]);
 
@@ -243,7 +243,7 @@ describe('a no of my own', () => {
 
   it('leaves at once, on a court that carries on filling without me', () => {
     const stillFilling = challenge({ standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answer: 'DECLINED', answerBy: at(20) },
       {},
       {},
@@ -259,7 +259,7 @@ describe('a no of my own', () => {
       { organiserId: ME, standing: 'DECLINED', openedAt: at(-4), endedAt: at(-1) },
       [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answer: 'DECLINED', answerBy: at(20), nickname: 'ewa.m' },
+        { playerId: EWA, answer: 'DECLINED', answerBy: at(20), name: 'ewa.m' },
       ],
     );
 
@@ -269,7 +269,7 @@ describe('a no of my own', () => {
   /** A lapse is not a decline: nobody chose it, and *Your day ran out* is kept to be read. */
   it('is not a lapse, which keeps its row to be read', () => {
     const myDayRanOut = challenge({ standing: 'LAPSED', openedAt: at(-49), endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answer: 'LAPSED', answerBy: at(-1) },
     ]);
 
@@ -286,8 +286,8 @@ describe('a departure of my own', () => {
    */
   it('leaves at once, on a court that carries on filling without me', () => {
     const iLeft = challenge({ standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { playerId: 'ola', answer: 'ACCEPTED', nickname: 'ola.k' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { playerId: 'ola', answer: 'ACCEPTED', name: 'ola.k' },
       { playerId: ME, answer: 'LEFT' },
       {},
     ]);
@@ -299,7 +299,7 @@ describe('a departure of my own', () => {
   /** And on the court it ended — one left, nobody deciding, and a departure is a no. */
   it('leaves at once, on a court my leaving ended', () => {
     const iEndedIt = challenge({ standing: 'DECLINED', openedAt: at(-4), endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answer: 'LEFT' },
     ]);
 
@@ -310,7 +310,7 @@ describe('a departure of my own', () => {
   it('is news to the others, whose row stays while the court fills', () => {
     const theyLeft = challenge({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE' }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'LEFT', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'LEFT', name: 'ewa.m' },
     ]);
 
     expect(belongsOnTheInbox(theyLeft, ME)).toBe(true);
@@ -329,8 +329,8 @@ describe('a removal of my own', () => {
       { organiserId: ME, standing: 'WITHDRAWN', sport: 'padel', openedAt: at(-4), endedAt: at(-1) },
       [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answerBy: at(20), nickname: 'ewa.m' },
-        { playerId: 'ola', answer: 'DECLINED', answerBy: at(20), nickname: 'ola.k' },
+        { playerId: EWA, answerBy: at(20), name: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', answerBy: at(20), name: 'ola.k' },
         {},
       ],
     );
@@ -342,101 +342,135 @@ describe('a removal of my own', () => {
   /** To the people asked, the same removal is news — §13's sixth row — and their row keeps its day. */
   it('is news to an invitee, whose row stays its day', () => {
     const theyRemovedIt = challenge({ standing: 'WITHDRAWN', openedAt: at(-4), endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answerBy: at(20) },
     ]);
 
     expect(belongsOnTheInbox(theyRemovedIt, ME)).toBe(true);
   });
+});
 
-  /**
-   * **A game called off is not a removal**, though the standing is the same word: others had
-   * joined, and since anybody on the court may call it off the organiser did not necessarily act.
-   * Their row keeps its day, as it does for a departure.
-   */
-  it('is not a court called off with others on it, whose row keeps its day for the organiser', () => {
-    const calledOff = challenge(
+/**
+ * **A court that has been a game ends with its game, and the ending says who**
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §2, §7): `CALLED_OFF` is an ending like the other three and keeps its day on the shelf — to the
+ * one left on it by the last departure, and to everybody the button ended it for. What leaves at
+ * once is the reader's own departure, as it always did; **the presser's own row is not one of
+ * those**, because the court behind it is theirs to read too.
+ */
+describe('a court called off', () => {
+  const calledOff = (endedBy: string, seats: readonly ChallengeSeat[]) =>
+    challenge(
       {
         organiserId: ME,
-        standing: 'WITHDRAWN',
+        standing: 'CALLED_OFF',
         sport: 'padel',
-        openedAt: at(-30),
         endedAt: at(-1),
+        endedBy,
+        gameId: 'g1',
+      },
+      seats,
+    );
+
+  it('keeps its day for the one left on it by the last departure', () => {
+    const theyAllLeft = calledOff('tomek', [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'LEFT', name: 'ewa.m' },
+      { playerId: 'ola', answer: 'LEFT', name: 'ola.k' },
+      { playerId: 'tomek', answer: 'LEFT', name: 'tomek.p' },
+    ]);
+
+    expect(belongsOnTheInbox(theyAllLeft, ME)).toBe(true);
+  });
+
+  it('leaves at once for the last leaver, whose own act it was', () => {
+    const iWasLast = calledOff(ME, [
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { playerId: ME, answer: 'LEFT' },
+    ]);
+
+    expect(belongsOnTheInbox(iWasLast, ME)).toBe(false);
+  });
+
+  it('keeps its day for the presser, and for everybody the button ended it for', () => {
+    const olaPressed = calledOff('ola', [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { playerId: 'ola', answer: 'ACCEPTED', name: 'ola.k' },
+      { playerId: 'tomek', answer: 'LEFT', name: 'tomek.p' },
+    ]);
+
+    expect(belongsOnTheInbox(olaPressed, ME)).toBe(true);
+    expect(belongsOnTheInbox(olaPressed, 'ola')).toBe(true);
+    // Somebody who had already left is not told again: their own act took the row already.
+    expect(belongsOnTheInbox(olaPressed, 'tomek')).toBe(false);
+  });
+
+  it('lets go once its day has passed, as every ending does', () => {
+    const yesterday = challenge(
+      {
+        organiserId: ME,
+        standing: 'CALLED_OFF',
+        endedAt: at(-(ENDED_ROW_SHELF_LIFE_MS / HOUR)),
+        endedBy: EWA,
+        gameId: 'g1',
       },
       [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-        { playerId: 'ola', answer: 'ACCEPTED', nickname: 'ola.k' },
-        { playerId: 'tomek', answer: 'LEFT', nickname: 'tomek.p' },
+        { playerId: EWA, answer: 'LEFT', name: 'ewa.m' },
       ],
     );
 
-    expect(belongsOnTheInbox(calledOff, ME)).toBe(true);
+    expect(belongsOnTheInbox(yesterday, ME)).toBe(false);
   });
 });
 
+/**
+ * **The departure-drop rule is retired** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7). A court somebody joined and walked out of, leaving the reader alone with nobody deciding,
+ * used to leave the inbox at once because the only sentence available would have read *? said
+ * no*; the sentence exists now — *{name} left — nobody else is coming* — and the row keeps its
+ * day like every ending.
+ */
 describe('a court that ended on somebody leaving it, with me the one left', () => {
-  /**
-   * B said yes, C and D said no, and B took the yes back: the organiser is alone with nobody
-   * deciding, so the court is over — `DECLINED`, because a departure is a no (ADR-0165 §3) —
-   * and the seat that was taken back reads `LEFT`. The room the first yes opened is where the
-   * departure was told, and what is left is a court with nobody committed to it but the reader:
-   * nothing to fill and nobody to ask again about, so the row goes with the room rather than
-   * keeping a day as news ([#429](https://github.com/Raketa02/Raketa/issues/429)).
-   */
-  it('leaves at once, for the reader left on it', () => {
+  it('keeps its day for the reader left on it', () => {
     const theyAllWent = challenge(
-      { organiserId: ME, standing: 'DECLINED', sport: 'padel', endedAt: at(-1) },
+      { organiserId: ME, standing: 'DECLINED', sport: 'padel', endedAt: at(-1), endedBy: EWA },
       [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answer: 'LEFT', nickname: 'ewa.m' },
-        { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
-        { playerId: 'tomek', answer: 'DECLINED', nickname: 'tomek.p' },
+        { playerId: EWA, answer: 'LEFT', name: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', name: 'ola.k' },
+        { playerId: 'tomek', answer: 'DECLINED', name: 'tomek.p' },
       ],
     );
 
-    expect(belongsOnTheInbox(theyAllWent, ME)).toBe(false);
-    expect(challengeInbox([theyAllWent], ME)).toEqual([]);
+    expect(belongsOnTheInbox(theyAllWent, ME)).toBe(true);
+    expect(challengeInbox([theyAllWent], ME)).toEqual([theyAllWent]);
   });
 
   /** The ending rule is organiser-blind, and so is this: an invitee left alone reads the same. */
-  it('leaves at once for an invitee the organiser walked out on', () => {
-    const organiserLeft = challenge({ standing: 'DECLINED', endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'LEFT', nickname: 'ewa.m' },
+  it('keeps its day for an invitee the organiser walked out on', () => {
+    const organiserLeft = challenge({ standing: 'DECLINED', endedAt: at(-1), endedBy: EWA }, [
+      { playerId: EWA, answer: 'LEFT', name: 'ewa.m' },
       { playerId: ME, answer: 'ACCEPTED' },
     ]);
 
-    expect(belongsOnTheInbox(organiserLeft, ME)).toBe(false);
+    expect(belongsOnTheInbox(organiserLeft, ME)).toBe(true);
   });
 
-  /**
-   * A court everybody merely **declined** is not this: nobody was ever in it with the reader,
-   * and *{name} said no — that seat is open again* is the news #388 keeps a day.
-   */
-  it('is not a court everybody declined, whose row keeps its day', () => {
-    const allSaidNo = challenge(
-      { organiserId: ME, standing: 'DECLINED', sport: 'padel', endedAt: at(-1) },
+  /** And still goes at once for the one who walked out — their own act, as before. */
+  it('leaves at once for the one who left', () => {
+    const iWalkedOut = challenge(
+      { organiserId: ME, standing: 'DECLINED', sport: 'padel', endedAt: at(-1), endedBy: ME },
       [
-        { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answer: 'DECLINED', nickname: 'ewa.m' },
-        { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
-        { playerId: 'tomek', answer: 'DECLINED', nickname: 'tomek.p' },
+        { playerId: ME, answer: 'LEFT' },
+        { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', name: 'ola.k' },
+        {},
       ],
     );
 
-    expect(belongsOnTheInbox(allSaidNo, ME)).toBe(true);
-  });
-
-  /** And not a reader whose own seat was never accepted — their day ran out, and that is theirs to read. */
-  it('is not a court the reader lapsed on, whose row keeps its day', () => {
-    const myDayRanOut = challenge({ standing: 'DECLINED', endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { playerId: 'ola', answer: 'LEFT', nickname: 'ola.k' },
-      { playerId: ME, answer: 'LAPSED', answerBy: at(-2) },
-      {},
-    ]);
-
-    expect(belongsOnTheInbox(myDayRanOut, ME)).toBe(true);
+    expect(belongsOnTheInbox(iWalkedOut, ME)).toBe(false);
   });
 });
 
@@ -450,41 +484,127 @@ describe('who a row names', () => {
   it('drops the seats that were given up while the court is still being filled', () => {
     const filling = challenge({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
-      { playerId: 'tomek', answer: 'LAPSED', nickname: 'tomek.p' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { playerId: 'ola', answer: 'DECLINED', name: 'ola.k' },
+      { playerId: 'tomek', answer: 'LAPSED', name: 'tomek.p' },
     ]);
     const awaiting = challenge({ organiserId: ME, standing: 'AWAITING_ANSWERS', sport: 'padel' }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
-      { playerId: 'tomek', answerBy: at(20), nickname: 'tomek.p' },
-      { playerId: 'kuba', answer: 'LEFT', nickname: 'kuba.z' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { playerId: 'ola', answer: 'DECLINED', name: 'ola.k' },
+      { playerId: 'tomek', answerBy: at(20), name: 'tomek.p' },
+      { playerId: 'kuba', answer: 'LEFT', name: 'kuba.z' },
     ]);
 
     expect(othersOn(filling, ME).map((seat) => seat.playerId)).toEqual([EWA]);
     expect(othersOn(awaiting, ME).map((seat) => seat.playerId)).toEqual([EWA, 'tomek']);
   });
 
-  /** An ended court is history rather than a line-up, and names everybody it asked. */
-  it('names everybody asked once the court has ended, so a singles no still has a face', () => {
-    const declined = challenge({ organiserId: ME, standing: 'DECLINED', endedAt: at(-1) }, [
-      { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'DECLINED', nickname: 'ewa.m' },
-    ]);
-    const on = challenge({ organiserId: ME, standing: 'ON' }, [
-      { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-    ]);
+  /**
+   * **An ended row names who the sentence names** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §7): `ended_by`'s face and no other, so a doubles *said no* row goes from three faces to one
+   * and the faces that left one by one never come back on the row that ends it.
+   */
+  it('names ended_by once the court has ended, and nobody else', () => {
+    const declined = challenge(
+      { organiserId: ME, standing: 'DECLINED', endedAt: at(-1), endedBy: EWA },
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: EWA, answer: 'DECLINED', name: 'ewa.m' },
+      ],
+    );
+    const theyAllLeft = challenge(
+      {
+        organiserId: ME,
+        standing: 'CALLED_OFF',
+        sport: 'padel',
+        endedAt: at(-1),
+        endedBy: 'tomek',
+        gameId: 'g1',
+      },
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: EWA, answer: 'LEFT', name: 'ewa.m' },
+        { playerId: 'ola', answer: 'LEFT', name: 'ola.k' },
+        { playerId: 'tomek', answer: 'LEFT', name: 'tomek.p' },
+      ],
+    );
+    const twoSaidNo = challenge(
+      { organiserId: ME, standing: 'DECLINED', sport: 'padel', endedAt: at(-1), endedBy: 'ola' },
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: EWA, answer: 'DECLINED', name: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', name: 'ola.k' },
+        { playerId: 'tomek', answer: 'DECLINED', name: 'tomek.p' },
+      ],
+    );
 
     expect(othersOn(declined, ME).map((seat) => seat.playerId)).toEqual([EWA]);
+    expect(othersOn(theyAllLeft, ME).map((seat) => seat.playerId)).toEqual(['tomek']);
+    expect(othersOn(twoSaidNo, ME).map((seat) => seat.playerId)).toEqual(['ola']);
+  });
+
+  /**
+   * **A sentence about the reader's own act names nobody else, so the row draws the people
+   * still on the court** — the organiser under *Your day ran out*, the two still in under
+   * *You called the game off*. Never the reader's own face, and never blank: an ended court
+   * always has somebody still on it.
+   */
+  it('names the people still on the court where the sentence is about the reader', () => {
+    const myDayRanOut = challenge(
+      { standing: 'LAPSED', sport: 'padel', endedAt: at(-1), endedBy: ME },
+      [
+        { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { playerId: ME, answer: 'LAPSED' },
+        { playerId: 'ola', answer: 'LAPSED', name: 'ola.k' },
+        {},
+      ],
+    );
+    const iPressed = challenge(
+      {
+        organiserId: EWA,
+        standing: 'CALLED_OFF',
+        sport: 'padel',
+        endedAt: at(-1),
+        endedBy: ME,
+        gameId: 'g1',
+      },
+      [
+        { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: 'ola', answer: 'ACCEPTED', name: 'ola.k' },
+        { playerId: 'tomek', answer: 'LEFT', name: 'tomek.p' },
+      ],
+    );
+
+    expect(othersOn(myDayRanOut, ME).map((seat) => seat.playerId)).toEqual([EWA]);
+    expect(othersOn(iPressed, ME).map((seat) => seat.playerId)).toEqual([EWA, 'ola']);
+  });
+
+  /** A promise broken — an ending the wire named nobody for — is not a blank row. */
+  it('names everybody asked where the wire named nobody, so the row is never blank', () => {
+    const nameless = challenge({ organiserId: ME, standing: 'DECLINED', endedAt: at(-1) }, [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'DECLINED', name: 'ewa.m' },
+    ]);
+
+    expect(othersOn(nameless, ME).map((seat) => seat.playerId)).toEqual([EWA]);
+  });
+
+  /** A completed line-up is not an ending, and names everybody on it. */
+  it('names everybody on a completed line-up', () => {
+    const on = challenge({ organiserId: ME, standing: 'ON' }, [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+    ]);
+
     expect(othersOn(on, ME).map((seat) => seat.playerId)).toEqual([EWA]);
   });
 
   it('never names the reader, and never an empty seat', () => {
     const court = challenge({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       {},
       {},
     ]);

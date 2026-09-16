@@ -260,7 +260,16 @@ export interface PlayerRecord {
    * drops the distance, and getting it wrong is most visible on the one screen it matters on.
    */
   readonly isSelf: boolean;
-  /** The whole handle. Nothing may derive a familiar form from it. */
+  /** The whole name — the sheet's title. Nothing may derive a familiar form from it. */
+  readonly name: string;
+  /**
+   * Their handle, drawn as `@nickname` under the name. **This sheet and the You tab are the
+   * only two places it is drawn** — never on a row, a card, a sentence, a sheet, a toast, a seat
+   * label or a spoken name — because two people may share a name and this is the screen a friend
+   * tells them apart on
+   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+   * §4).
+   */
   readonly nickname: string;
   /**
    * One line they wrote about themselves — their **intro** — verbatim, drawn under the name

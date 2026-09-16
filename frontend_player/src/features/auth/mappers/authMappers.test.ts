@@ -1,4 +1,4 @@
-import { toAuthenticatedUser, toTokens } from './authMappers';
+import { toAuthenticatedUser, toNaming, toTokens } from './authMappers';
 
 describe('toTokens', () => {
   it("renames the wire's spelling without carrying expiry upward", () => {
@@ -20,6 +20,7 @@ describe('toAuthenticatedUser', () => {
     const user = toAuthenticatedUser({
       id: 'e2b1c0d4-0000-4000-8000-000000000001',
       email: 'ada@example.com',
+      name: 'Ada Lovelace',
       nickname: 'ada',
       authority: 'player',
       is_admin: true,
@@ -31,12 +32,35 @@ describe('toAuthenticatedUser', () => {
     expect(user).toEqual({
       id: 'e2b1c0d4-0000-4000-8000-000000000001',
       email: 'ada@example.com',
+      name: 'Ada Lovelace',
       nickname: 'ada',
       hasPlayerProfile: false,
     });
     // A client that renders differently for an admin has invented an authorization
     // decision it cannot enforce. Backend authorization is the only authorization.
     expect(user).not.toHaveProperty('isAdmin');
+  });
+
+  /**
+   * **`null` on the wire is *not yet named*, and it is carried as absence** — the one read
+   * where either may be null
+   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+   * §2). The entry gate reads the absence and sends the player to the naming step.
+   */
+  it('carries an unnamed player as one with no name and no nickname', () => {
+    const user = toAuthenticatedUser({
+      id: 'e2b1c0d4-0000-4000-8000-000000000001',
+      email: 'ada@example.com',
+      name: null,
+      nickname: null,
+      authority: 'player',
+      is_admin: false,
+      is_active: true,
+      has_player_profile: false,
+    });
+
+    expect(user).not.toHaveProperty('name');
+    expect(user).not.toHaveProperty('nickname');
   });
 
   it('carries whether the second part of onboarding has been committed', () => {
@@ -47,6 +71,7 @@ describe('toAuthenticatedUser', () => {
     const user = toAuthenticatedUser({
       id: 'e2b1c0d4-0000-4000-8000-000000000001',
       email: 'ada@example.com',
+      name: 'Ada Lovelace',
       nickname: 'ada',
       authority: 'player',
       is_admin: false,
@@ -56,5 +81,14 @@ describe('toAuthenticatedUser', () => {
     });
 
     expect(user.hasPlayerProfile).toBe(true);
+  });
+});
+
+describe('toNaming', () => {
+  it('carries what the naming recorded — the name as normalised, and the handle', () => {
+    expect(toNaming({ name: 'Ada Lovelace', nickname: 'ada' })).toEqual({
+      name: 'Ada Lovelace',
+      nickname: 'ada',
+    });
   });
 });

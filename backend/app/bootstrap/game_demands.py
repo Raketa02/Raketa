@@ -13,7 +13,7 @@ should not have to guess which list it belongs in.
 **Two rows, and the tuple is what is asserted over.** A register asserts about
 the ports it declares rather than about every ``Protocol`` in
 ``games/domain/ports.py``: most of them are this context's own reads or what it
-publishes, contracted on the register beside this one. ``PlayerHandles`` is the
+publishes, contracted on the register beside this one. ``PlayerNames`` is the
 other port this context consumes and is deliberately not here: one field wide,
 over ``users``, it is what the games list already exercises on every read and
 was never an outward demand on a context with rules of its own.

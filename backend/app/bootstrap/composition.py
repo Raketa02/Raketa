@@ -69,9 +69,13 @@ from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
 from app.modules.challenges.domain.friendly_choice import FriendlyChoiceQuery
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 from app.modules.challenges.domain.settled_game import SettledGameQuery
+from app.modules.challenges.infrastructure.games_game_of_court import (
+    GamesGameOfCourt,
+)
 from app.modules.challenges.infrastructure.games_planned_game import (
     GamesPlannedGame,
 )
@@ -153,7 +157,7 @@ from app.modules.games.domain.ports import (
     GameHistoryQuery,
     GameRepository,
     OpponentVarietyQuery,
-    PlayerHandles,
+    PlayerNames,
     SeatableCourt,
 )
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
@@ -169,7 +173,7 @@ from app.modules.plans.infrastructure.games_agreed_moment import PlansAgreedMome
 from app.modules.games.infrastructure.event_sourced_game_repository import (
     EventSourcedGameRepository,
 )
-from app.modules.games.infrastructure.users_handles import UsersHandles
+from app.modules.games.infrastructure.users_names import UsersNames
 from app.modules.matchmaking.infrastructure.games_shared_courts import (
     GamesSharedCourts,
 )
@@ -185,7 +189,7 @@ from app.modules.challenges.domain.ports import (
     LapsingChallengeQuery,
     OpenChallengeQuery,
     OriginSearchQuery,
-    PlayerHandles as ChallengePlayerHandles,
+    PlayerNames as ChallengePlayerNames,
 )
 from app.modules.challenges.infrastructure.absent_providers import (
     NoHoldsExist as NoChallengeHoldsExist,
@@ -202,8 +206,8 @@ from app.modules.challenges.infrastructure.event_sourced_challenge_repository im
 from app.modules.challenges.infrastructure.event_sourced_lapsing_challenge_query import (  # noqa: E501
     EventSourcedLapsingChallengeQuery,
 )
-from app.modules.challenges.infrastructure.users_handles import (
-    UsersHandles as ChallengeUsersHandles,
+from app.modules.challenges.infrastructure.users_names import (
+    UsersNames as ChallengeUsersNames,
 )
 from app.modules.challenges.infrastructure.event_sourced_open_challenge_query import (
     EventSourcedOpenChallengeQuery,
@@ -609,15 +613,15 @@ def build_lapsing_challenge_query(session: AsyncSession) -> LapsingChallengeQuer
     return EventSourcedLapsingChallengeQuery(session)
 
 
-def build_challenge_handles(session: AsyncSession) -> ChallengePlayerHandles:
+def build_challenge_names(session: AsyncSession) -> ChallengePlayerNames:
     """*What is this person called* — the one thing a challenge **list** borrows.
 
-    The second line in this file building a handles adapter, and the second
-    ``UsersHandles`` class behind it: ``challenges`` and ``games`` each declare
+    The second line in this file building a names adapter, and the second
+    ``UsersNames`` class behind it: ``challenges`` and ``games`` each declare
     the port because neither may import the other, so the two are aliased apart
     here rather than one context signing the other's (``docs/adr/0143`` §7).
     """
-    return ChallengeUsersHandles(build_user_repository(session))
+    return ChallengeUsersNames(build_user_repository(session))
 
 
 def build_challenge_hold_query(session: AsyncSession) -> ChallengeAccountHoldQuery:
@@ -1243,6 +1247,27 @@ def build_seatable_game_query(
     return GamesSeatableGame(build_seatable_court(session, runtime=runtime))
 
 
+def build_game_of_court_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> GameOfCourtQuery:
+    """*Which of these courts have a game, and which game?* — the challenge
+    read's fourth question on the arrow ``challenges -> games``
+    (``docs/adr/0172`` §4), wired the way the settled read is and for its
+    reason: the join is the repository's, nothing is written through it, and a
+    second reading repository inside one unit of work is safe because the
+    hand-over's is the only writer.
+    """
+    return GamesGameOfCourt(
+        build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
 def build_settled_game_query(
     session: AsyncSession,
     *,
@@ -1294,14 +1319,14 @@ def build_game_history_query(
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
 
 
-def build_player_handles(session: AsyncSession) -> PlayerHandles:
+def build_player_names(session: AsyncSession) -> PlayerNames:
     """*What is this person called* — the one thing ``games`` borrows about one.
 
     Built from ``users``' own repository rather than from the session, so this
     line stays a choice of implementation and the fold behind it stays with the
     context that owns it (``docs/adr/0141``).
     """
-    return UsersHandles(build_user_repository(session))
+    return UsersNames(build_user_repository(session))
 
 
 def build_game_directory(
@@ -1606,7 +1631,7 @@ def build_settled_courts(session: AsyncSession) -> SettledCourts:
     """*Is this a settled court of mine, and who else was on it* — over ``games``.
 
     The adapter lives in ``sportsmanship``'s own infrastructure, which is the
-    shape ``games`` takes for ``PlayerHandles``: a provider publishes what it
+    shape ``games`` takes for ``PlayerNames``: a provider publishes what it
     knows about its own subject, and the context that wants it narrower does the
     narrowing. It is built over the directory rather than beside it, so the
     court a card is drawn for is folded from the same read of the log the games
@@ -2214,10 +2239,10 @@ def build_member_faces(
     settings: Settings,
     runtime: EventRuntime | None = None,
 ) -> MemberFaces:
-    """A handle from ``users``, a face from the Player profile, a link from the
+    """A name from ``users``, a face from the Player profile, a link from the
     store.
 
-    **The third handles adapter in this file**, and the first that carries a
+    **The third names adapter in this file**, and the first that carries a
     photograph beside the name: ``docs/adr/0148`` §6 made one affordable here
     where ``docs/adr/0143`` refused it, because a room is destroyed rather than
     kept.

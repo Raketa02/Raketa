@@ -180,3 +180,20 @@ leave; the deck's stage is the one screen whose content is a stage rather than a
 asserting a stamp that follows the drag, since a whole `swipe` has released before anything can be
 looked at. And the deck reuses the swipe row's `intent` — `SWIPE_INTENT`, one number for the one
 finger deciding between a tap, a scroll and a drag — beside its own `deckSwipe.commit` of 95.
+
+**The one formatter reads the name, its word break already cut at a space, and `@nickname` is
+spelled beside it** ([#451](https://github.com/Raketa02/Raketa/issues/451),
+[ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+`playerName()`'s `NamedPlayer` carries a **name** where it carried the nickname, and ADR-0107 §4's
+rule reads on it unchanged — the whole name or nobody, and nothing invents a familiar form.
+`handleStem` and `handleInitials` **keep their names and their break** — a space or a dot — and
+the space half is exercised for the first time: _Diego Fabregat_ stems to `Diego` in a box and
+initials to `DF` over a poster, and each is still a prefix or a cut of what the owner typed, which
+is what §4 admitted. The two functions keep _handle_ in their names for the reason the specs keep
+_the whole handle_ in their prose and read through the ADR rather than being rewritten; what they
+cut is the name, and a handle — the nickname — is never stemmed because it is never drawn where a
+stem is. `atNickname` joins them: the one spelling of `@nickname`, the form a handle takes on the
+two screens that draw one — the record and the reader's own You tab — and on no row, card,
+sentence, sheet, toast, seat label or spoken name. It sits in the formatter's file because the
+fence is a fact about how a person is named, and nothing else in that file takes a nickname, which
+is how every other surface keeps it: by never being handed one.

@@ -84,6 +84,7 @@ from app.seeds.clock import NEWCOMER_WINDOW_DAYS
 from app.seeds.catalog import (
     COHORT_SURNAMES,
     dealt_name,
+    handle_of,
     BAND_ADVANCED,
     BAND_DEVELOPING,
     BAND_ESTABLISHED,
@@ -1095,10 +1096,12 @@ class CohortMember:
 
     @property
     def nickname(self) -> str:
-        """The name this member is shown under. **The handle is the id, not the
-        name** — see ``catalog.FIRST_NAMES``."""
+        """The handle a member is given, derived from the name
+        (``docs/adr/0171`` §5) — and **not** ``handle``, which is this
+        fixture's own id: the address, the answer key and the ring's numbering
+        are all it, and a person never sees it. See ``catalog.FIRST_NAMES``."""
 
-        return self.name
+        return handle_of(self.name)
 
     @property
     def answers(self) -> AnswerPolicy:
@@ -1168,9 +1171,9 @@ def _named(members: Sequence[CohortMember]) -> tuple[CohortMember, ...]:
     """One name each, dealt **by sorted handle** out of the cohort's own pool.
 
     Sorted rather than drawn, and dealt over the whole population rather than
-    per ring, because a name has to be unique across all of them and a keyed
-    draw collides: two members under one nickname is a unique-constraint
-    violation found half way through a seed run.
+    per ring, because the nickname derived from a name has to be unique across
+    all of them and a keyed draw collides: two members under one nickname is a
+    unique-constraint violation found half way through a seed run.
 
     Sorted by handle, so the deal is a function of *which members exist*. A
     member added to a ring renames the members after them **within that ring's

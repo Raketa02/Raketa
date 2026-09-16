@@ -52,9 +52,9 @@ scrolled to.
 client re-reads when a send is refused on the pair rule, and the one an invitee
 opens to find that they were asked.
 
-``PlayerHandles`` is the one thing this context borrows about a person on a list,
+``PlayerNames`` is the one thing this context borrows about a person on a list,
 and ``CourtPairingQuery`` is everything it borrows about one on a **detail**. The
-split is ``docs/adr/0143``'s: a handle is what these people already call each
+split is ``docs/adr/0143``'s: a name is what these people already call each
 other and costs a set read, while a card is as-of-now and costs a profile read
 and an object-store signature per person — which is why the list carries the
 first and only the detail carries the second.
@@ -397,7 +397,10 @@ class CourtPerson:
     """
 
     player_id: UUID
-    nickname: str
+    #: The **name**, whole, and never the nickname (``docs/adr/0171`` §4): a
+    #: card is a place a person is *named*, and the handle is drawn on the
+    #: record alone.
+    name: str
     area_code: str
     level: float
     band: str
@@ -649,18 +652,20 @@ class ChallengeDirectory(Protocol):
 
 
 @runtime_checkable
-class PlayerHandles(Protocol):
-    """What the people on a court are called. **A handle, and the whole of it.**
+class PlayerNames(Protocol):
+    """What the people on a court are called. **A name, and the whole of it.**
 
     **A second spelling of ``games``' port of the same name, and the duplication
     is the decision** — ``origins.py`` and ``Side`` take it for the same reason.
     Two contexts each need *what do I print on this seat*, neither may import the
     other, and the alternative to two spellings is one of them owning the other's
-    vocabulary. The adapters meet ``users``' own ``find_nicknames_of`` and it is
-    where the two sentences are kept apart.
+    vocabulary. The adapters meet ``users``' own ``find_namings_of`` and it is
+    where the two sentences are kept apart — and where the nickname is left
+    behind, because a handle is drawn on a record and said nowhere
+    (``docs/adr/0171`` §4).
 
     ``docs/adr/0141`` §1 fixes what may be borrowed about a person here and
-    ``docs/adr/0143`` §7 applies it one surface over: the handle they chose, and
+    ``docs/adr/0143`` §7 applies it one surface over: the name they gave, and
     nothing that changes with who is looking. A Level, an area and a photograph
     are what a **card** carries, and a card is drawn on the detail read alone,
     where the arrangement is still being decided.
@@ -670,14 +675,16 @@ class PlayerHandles(Protocol):
     about the union of everybody on any of its courts.
     """
 
-    async def handles_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
-        """Each of these players' handle, as one set read.
+    async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        """Each of these players' name, as one set read.
 
-        **A player absent from the answer keeps their seat.** The handle goes
-        ``None`` on the wire and the seat stays, because a seat with no nickname
+        **A player absent from the answer keeps their seat.** The name goes
+        ``None`` on the wire and the seat stays, because a seat with no name
         is still a person who was asked — and dropping it would publish a
         three-person doubles court. That is ``games``' rule verbatim, and it is
         the reason ``docs/adr/0143`` §7 could put the field on the seat at all.
+        A null there never means *unnamed*: the gate holds an unnamed account
+        at the naming step.
         """
         ...
 

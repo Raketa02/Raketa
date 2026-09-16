@@ -316,6 +316,10 @@ async def test_a_search_that_showed_them_opens_their_record(
     body = response.json()
     assert body == {
         "is_self": False,
+        # The one read about another player that carries both halves of the
+        # naming (``docs/adr/0171`` §4): two people may share a name, and the
+        # record is where a friend tells them apart.
+        "name": "subject",
         "nickname": "subject",
         "area_code": "A+05151-000013",
         "social_tags": list(world.COMPETITIVE_TAGS),
@@ -390,6 +394,7 @@ async def test_your_own_record_opens_with_nothing_behind_it(client, searcher):
 
     assert response.status_code == 200, response.text
     assert response.json()["is_self"] is True
+    assert response.json()["name"] == "searcher"
     assert response.json()["nickname"] == "searcher"
 
 
@@ -442,6 +447,7 @@ async def test_the_person_who_was_invited_can_open_the_organiser_s_record(
     response = await record_of(client, invitee["token"], searcher["id"])
 
     assert response.status_code == 200, response.text
+    assert response.json()["name"] == "searcher"
     assert response.json()["nickname"] == "searcher"
 
 

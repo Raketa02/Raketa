@@ -20,7 +20,6 @@ def _event(
     return UserRegistered(
         user_id=user_id,
         email="alice@example.com",
-        nickname="alice",
         password_hash="hash",
         authority="USER",
         is_admin=False,

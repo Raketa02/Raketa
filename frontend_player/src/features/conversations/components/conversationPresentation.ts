@@ -416,7 +416,7 @@ export const LIVE_NOTE: Readonly<Record<Exclude<LiveState, 'live'>, string>> = {
  * list, so the collapse is reached only in a four where everybody else is typing at once.
  *
  * **The whole handle, never a first name** (ADR-0107), filled from membership and never from the
- * frame — so a corrected nickname fixes the indicator with no frame re-sent. **The roster and not
+ * frame — so a corrected name fixes the indicator with no frame re-sent. **The roster and not
  * `people`**, deliberately: a typist is gated on membership and is one (ADR-0156), so the one list
  * a departed player is on is the one list that cannot be typing. **The ellipsis is one
  * character**, so a screen reader does not read *dot dot dot*.

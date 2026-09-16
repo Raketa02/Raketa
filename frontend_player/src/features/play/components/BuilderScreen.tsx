@@ -676,8 +676,8 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    */
   const pair = useOpenPair(invitees, refusal?.kind === 'READ_YOUR_CHALLENGES');
   // The handle is the **record's**, because that is where a name lives: `challenges` answers a
-  // player id and has never seen a nickname.
-  const pairName = pair === undefined ? undefined : rows.get(pair)?.card.nickname;
+  // player id and has never seen a name.
+  const pairName = pair === undefined ? undefined : rows.get(pair)?.card.name;
 
   const sportName = sport === undefined ? undefined : sportLabel(sport);
   const profile = profileSurface.data;
@@ -1441,7 +1441,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           onClose={() => setExplaining(undefined)}
           candidate={explained.candidate}
           envelope={explained.envelope}
-          name={playerName({ kind: 'player', nickname: explained.candidate.card.nickname })}
+          name={playerName({ kind: 'player', name: explained.candidate.card.name })}
         />
       )}
 
@@ -1457,7 +1457,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
             sendTheChallenge();
           }}
           returnFocusTo={sendControl}
-          invitees={invitees.map((playerId) => namedPlayer(rows.get(playerId)?.card.nickname))}
+          invitees={invitees.map((playerId) => namedPlayer(rows.get(playerId)?.card.name))}
           // *"Nothing opens until they accept"* is false for doubles: the first acceptance
           // opens the chat, and the number the sentence quotes is the answers still owed —
           // which is the invitees, because the organiser's own seat is accepted from birth.
@@ -1517,8 +1517,8 @@ interface ReadRecord {
 const EMPTY_SEAT: SeatOccupancy = { kind: 'empty' };
 
 /** A handle, or the unknown player's question mark for a seat the record can no longer describe. */
-function namedPlayer(nickname: string | undefined): NamedPlayer {
-  return nickname === undefined ? { kind: 'unknown' } : { kind: 'player', nickname };
+function namedPlayer(name: string | undefined): NamedPlayer {
+  return name === undefined ? { kind: 'unknown' } : { kind: 'player', name };
 }
 
 /**
@@ -1560,7 +1560,7 @@ function toOccupant(
     ...(row === undefined
       ? {}
       : {
-          nickname: row.card.nickname,
+          name: row.card.name,
           level: row.card.level,
           ...(row.card.photoUrl === undefined ? {} : { photoUrl: row.card.photoUrl }),
         }),

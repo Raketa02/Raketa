@@ -23,6 +23,7 @@ import {
   FINISH_THE_PLAN,
   GAMES_HEADING,
   STAGE_DOT,
+  WHAT_HAPPENED,
   cardLine,
   cardSlotSpoken,
   cardStateWord,
@@ -38,15 +39,15 @@ const GAME_ID = '11111111-0000-4000-8000-000000000001';
 const READ_AT = '2026-09-12T09:00:00Z';
 
 const SINGLES_SEATS: Game['seats'] = [
-  { side: 'A', playerId: 'me', nickname: 'me_' },
-  { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+  { side: 'A', playerId: 'me', name: 'me_' },
+  { side: 'B', playerId: 'them', name: 'tomek.p' },
 ];
 
 /** A doubles court after two people left: two seats open. */
 const TWO_SHORT: Game['seats'] = [
-  { side: 'A', playerId: 'me', nickname: 'me_' },
+  { side: 'A', playerId: 'me', name: 'me_' },
   { side: 'A' },
-  { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+  { side: 'B', playerId: 'them', name: 'tomek.p' },
   { side: 'B' },
 ];
 
@@ -142,9 +143,18 @@ describe('the accent', () => {
 
   it('is mint on every other card, until its own design arrives', () => {
     for (const name of GAME_CARD_NAMES) {
-      if (name === 'planning' || name === 'needs-a-player') continue;
+      if (name === 'planning' || name === 'needs-a-player' || name === 'called-off') continue;
       expect(ACCENT[name]).toEqual({ bar: theme.color.mint, button: 'settled' });
     }
+  });
+
+  /**
+   * **The called-off card's door is the on-dark fill** — the tag's own quiet colour
+   * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §8): a settled green door under a red tag would be a card whose colours disagreed about it.
+   */
+  it('is the on-dark fill on the called-off card, whose door explains rather than settles', () => {
+    expect(ACCENT['called-off']).toEqual({ bar: theme.color.mint, button: 'onDark' });
   });
 });
 
@@ -213,6 +223,10 @@ describe('the door’s word', () => {
    * screen keeps `⚡ Fill the seats` for the same act — that surface is about a court still being
    * built, and this one is about the one seat that opened.
    */
+  it('asks What happened? on the called-off card, whose door opens the screen that says', () => {
+    expect(doorLabel('called-off')).toBe(WHAT_HAPPENED);
+  });
+
   it('says Fill the seat on Needs a player, where the door is the fill', () => {
     expect(CARD_TAG['needs-a-player']).toBe('Needs a player');
     expect(doorLabel('needs-a-player')).toBe(FILL_THE_SEAT);
@@ -249,8 +263,8 @@ describe('the sport word', () => {
   it('says nothing about singles or doubles — the court says the format', () => {
     const four: Game['seats'] = [
       ...SINGLES_SEATS,
-      { side: 'A', playerId: 'a', nickname: 'ola_k' },
-      { side: 'B', playerId: 'b', nickname: 'marekb' },
+      { side: 'A', playerId: 'a', name: 'ola_k' },
+      { side: 'B', playerId: 'b', name: 'marekb' },
     ];
 
     expect(sportWord(game({ seats: four }), 'Padel')).toBe('Padel');
@@ -300,6 +314,15 @@ describe('the line under the slots', () => {
 
       expect(cardLine(name, facts({ standing }))).toBe(gameStandingLine(ended, 'me'));
     }
+  });
+
+  /**
+   * **The called-off card names nobody and says nothing under its slots**
+   * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §8): the tag says *Called off*, and *What happened?* is the door to the screen that says who.
+   */
+  it('is nothing on the called-off card, whose tag is the whole of what it says', () => {
+    expect(cardLine('called-off', facts({ standing: 'CALLED_OFF' }))).toBeUndefined();
   });
 });
 

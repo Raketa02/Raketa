@@ -151,7 +151,7 @@ async def test_the_breakdown_survives_the_round_trip_whole(
     for term in row["terms"]:
         assert term["evidence"]["kind"]
         assert term["contribution"] == pytest.approx(term["weight"] * term["value"])
-    assert row["player_card"]["nickname"]
+    assert row["player_card"]["name"]
     assert row["player_card"]["area_code"]
     # The Level **and** how sure of it the platform was, against the answer
     # that was actually given. A range re-read from a rating that has moved

@@ -208,7 +208,7 @@ describe('many requests failing at once', () => {
 describe('a rejected refresh', () => {
   it('signs the player out exactly once, clearing credentials and the cache', async () => {
     await signedIn();
-    queryClient.setQueryData(['previous', 'player'], { nickname: 'ada' });
+    queryClient.setQueryData(['previous', 'player'], { name: 'ada' });
 
     const paths = [ME, '/api/v1/ratings', '/api/v1/sports'];
     paths.forEach(guarded);

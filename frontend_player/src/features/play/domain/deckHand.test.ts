@@ -38,7 +38,7 @@ function candidate(playerId: string): Candidate {
     playerId,
     fit: 78,
     card: {
-      nickname: playerId,
+      name: playerId,
       areaCode: 'A+050612+0019938',
       socialTags: [],
       level: 2.83,

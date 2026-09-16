@@ -120,7 +120,7 @@ class _NoGames:
 class _Faces:
     async def faces_of(self, player_ids: Collection[UUID]):
         return {
-            player_id: MemberFace(player_id=player_id, nickname="somebody")
+            player_id: MemberFace(player_id=player_id, name="somebody")
             for player_id in player_ids
         }
 

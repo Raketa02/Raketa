@@ -986,7 +986,7 @@ def _refuse_a_card_the_platform_watched_nothing_of(pool: SearchRecord) -> str:
         and card.counted_games <= LAST_FIVE
     ]
     drawn = [
-        (card.nickname, card.counted_games, len(card.last_five)) for card in cards
+        (card.name, card.counted_games, len(card.last_five)) for card in cards
     ]
     for wanted, found, why in (
         (
@@ -1773,7 +1773,7 @@ async def _refuse_a_challenge_screen_with_nobody_on_it(paths: ReadPaths) -> str:
     return (
         f"court · {PROTAGONIST.slug} reads "
         f"{THEY_CHALLENGED_YOU.account.slug}'s card on challenge "
-        f"{courts[0].challenge.id}: {card.person.nickname}, level "
+        f"{courts[0].challenge.id}: {card.person.name}, level "
         f"{card.person.level:.2f} in band {card.person.band}, Fit "
         f"{card.pairing.fit:.0f} over {len(card.pairing.terms)} term(s) with "
         f"{len(card.pairing.degraded_terms)} stood down, forecast "

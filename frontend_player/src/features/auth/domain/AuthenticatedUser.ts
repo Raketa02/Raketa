@@ -18,13 +18,29 @@
  * than carried: nothing in the player app may branch on them. A client that renders
  * differently for an admin has invented an authorization decision it cannot enforce.
  *
- * `hasPlayerProfile` is the one field that is kept for the opposite reason — the client is
- * *required* to branch on it, at launch, before any route tree exists.
+ * `hasPlayerProfile` and `name` are the two fields kept for the opposite reason — the client
+ * is *required* to branch on them, at launch, before any route tree exists.
  */
 export interface AuthenticatedUser {
   readonly id: string;
   readonly email: string;
-  readonly nickname: string;
+  /**
+   * What this player is called — **what every screen says about them**, and the entry gate's
+   * first destination when it is absent
+   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+   *
+   * Absent until the naming, and this is the one read on which it may be: sign-up creates
+   * the account unnamed, and the gate holds it at the naming step until it is not. Read from
+   * the `User`'s own stream for `hasPlayerProfile`'s reason — the moment after the naming is
+   * exactly when a lagging read model would send a player back to the step they just finished.
+   */
+  readonly name?: string;
+  /**
+   * Their handle, unique across the platform — drawn as `@nickname` under the name on their
+   * own You tab and on their record, and **said nowhere else**. Absent until the naming, with
+   * the name: the two are one act.
+   */
+  readonly nickname?: string;
   /**
    * Whether onboarding's second part has been committed — the entry gate's fourth branch
    * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
@@ -46,10 +62,14 @@ export interface SignInCredentials {
   readonly password: string;
 }
 
-/** What a player types to create an account. */
+/**
+ * What a player types to create an account — **credentials, and nothing about who they are.**
+ *
+ * The nickname left this shape with ADR-0171 §2: sign-up is choosing credentials, and saying
+ * who you are is a different moment, asked first thing in onboarding by {@link Naming}.
+ */
 export interface Registration {
   readonly email: string;
-  readonly nickname: string;
   readonly password: string;
   /**
    * The player's own claim that they are an adult — an **attestation**, one boolean, and
@@ -65,4 +85,22 @@ export interface Registration {
    * also **not age verification**: it records that the question was asked and answered.
    */
   readonly adultAttested: boolean;
+}
+
+/**
+ * **The naming** — *How should people see you?* — the one act that names a player
+ * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §2).
+ *
+ * Both together, always: there is no event for one without the other, so a shape carrying one
+ * would be a naming the server cannot record. The name is what the player wants to be called
+ * — free text, spaces allowed, never unique; the nickname is a handle under the rule the sign-up
+ * form used to state, unique across the platform and refused with `nickname_already_taken` when
+ * it is another player's. **Repeatable**: a later change is the same act, and this is also what
+ * the naming answers with — the name as recorded, trimmed and collapsed, which is why the screen
+ * re-reads the player rather than trusting what it typed.
+ */
+export interface Naming {
+  readonly name: string;
+  readonly nickname: string;
 }

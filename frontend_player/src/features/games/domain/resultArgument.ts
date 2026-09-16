@@ -15,7 +15,7 @@
  * | --- | --- | --- |
  * | `AWAITING_ENTRY` | — | the entry, and when it stops being sayable |
  * | `NEVER_PLAYED` | — | a ghost: nothing to do, and nobody marked for it |
- * | `CALLED_OFF` | — | the fourth end (ADR-0163): somebody ended it, and nobody is marked for it |
+ * | `CALLED_OFF` | — | the fourth end (ADR-0163): somebody ended it — a departure or a press, and the screen says who (ADR-0172) — and nobody is marked for it |
  * | `AWAITING_ANSWER` | your score | free correction, and the hour silence agrees |
  * | `AWAITING_ANSWER` | their score | agree, or disagree **with a score** |
  * | `AWAITING_ANSWER` | both scores | both of them, and the agreement that ends the argument |
@@ -70,7 +70,14 @@
 
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 
-import { openSeats, type Acceptance, type Game, type Score, type StandingProposal } from './game';
+import {
+  openSeats,
+  type Acceptance,
+  type CalledOffBy,
+  type Game,
+  type Score,
+  type StandingProposal,
+} from './game';
 import type { GameSide, Outcome } from './vocabulary';
 
 /** The one act a screen state offers, in the order the screen draws them. */
@@ -148,8 +155,13 @@ export type ResultArgument =
    */
   | { readonly kind: 'awaiting-entry'; readonly entryClosesAt?: string; readonly seatOpen: boolean }
   | { readonly kind: 'never-played' }
-  /** Called off while a seat was open — an act, and an ending like the ghost's with nobody marked. */
-  | { readonly kind: 'called-off' }
+  /**
+   * Called off while a seat was open — an act, and an ending like the ghost's with nobody marked.
+   * **`ending` says whose act, and which of the two** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §4, §8): absent only where the wire named nobody, which it promises not to, and the screen
+   * then says *It was called off* as it did before the name was on the wire.
+   */
+  | { readonly kind: 'called-off'; readonly ending?: CalledOffEnding }
   | { readonly kind: 'ours-stands'; readonly proposal: StandingProposal }
   /** `by` is whoever on the other side put it up — the one person a screen here can name. */
   | {
@@ -170,6 +182,20 @@ export type ResultArgument =
   | ({ readonly kind: 'agreed'; readonly agreement: StandingAgreement } & ScoresOnTable)
   | { readonly kind: 'confirmed'; readonly score?: Score; readonly outcome?: Outcome }
   | { readonly kind: 'unscored' };
+
+/**
+ * **How a game was called off, and by whom** — the game screen's heading and body are keyed on it.
+ *
+ * `how` is read off the seats and nothing else: the presser still holds a seat and the leaver's
+ * is open (ADR-0172 §4). `format` is the court's size, because the departure's body says *the
+ * singles game* or *the doubles game* — the one sentence on the screen that names the shape.
+ */
+export interface CalledOffEnding {
+  /** Who — `you` for the reader's own press, the whole name, or `?` where `users` lost them. */
+  readonly by: NamedPlayer;
+  readonly how: 'departure' | 'press';
+  readonly format: 'singles' | 'doubles';
+}
 
 /**
  * Which side of the net is yours — **a join, not a rule.**
@@ -194,8 +220,8 @@ export function sideOf(game: Game, playerId: string): GameSide | undefined {
  */
 export function whoIs(game: Game, reader: string, playerId: string): NamedPlayer {
   if (playerId === reader) return { kind: 'you' };
-  const nickname = game.seats.find((seat) => seat.playerId === playerId)?.nickname;
-  return nickname === undefined ? { kind: 'unknown' } : { kind: 'player', nickname };
+  const name = game.seats.find((seat) => seat.playerId === playerId)?.name;
+  return name === undefined ? { kind: 'unknown' } : { kind: 'player', name };
 }
 
 /**
@@ -214,6 +240,33 @@ export function othersOn(game: Game, reader: string): readonly NamedPlayer[] {
       : [whoIs(game, reader, seat.playerId)],
   );
 }
+
+/**
+ * The fourth end, as the screen names it: who, told from the reader; how, told off whether that
+ * player still holds a seat; and the court's shape, told off its size.
+ */
+function calledOffEnding(game: Game, reader: string, calledOffBy: CalledOffBy): CalledOffEnding {
+  const stillSeated = game.seats.some((seat) => seat.playerId === calledOffBy.playerId);
+
+  return {
+    by: whoCalledItOff(calledOffBy, reader),
+    how: stillSeated ? 'press' : 'departure',
+    format: game.seats.length <= SINGLES_SEATS ? 'singles' : 'doubles',
+  };
+}
+
+/**
+ * `whoIs`'s three answers, off the field rather than off a seat — the leaver's seat is vacated,
+ * so the name has to come with the id (ADR-0172 §4).
+ */
+function whoCalledItOff(calledOffBy: CalledOffBy, reader: string): NamedPlayer {
+  if (calledOffBy.playerId === reader) return { kind: 'you' };
+  if (calledOffBy.name === undefined) return { kind: 'unknown' };
+  return { kind: 'player', name: calledOffBy.name };
+}
+
+/** How many seats a singles court has — two, and the boundary between the two words. */
+const SINGLES_SEATS = 2;
 
 /**
  * Everybody on your side but you, and everybody across the net — **as counts.**
@@ -244,7 +297,9 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
     case 'NEVER_PLAYED':
       return { kind: 'never-played' };
     case 'CALLED_OFF':
-      return { kind: 'called-off' };
+      return game.calledOffBy === undefined
+        ? { kind: 'called-off' }
+        : { kind: 'called-off', ending: calledOffEnding(game, playerId, game.calledOffBy) };
     case 'CONFIRMED':
       return { kind: 'confirmed', score: game.score, outcome: game.outcome };
     case 'UNSCORED':

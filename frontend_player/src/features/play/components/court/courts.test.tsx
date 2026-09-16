@@ -28,14 +28,14 @@ const YOU: CourtSeatOccupant = { kind: 'you', playerId: 'me' };
 const PARTNER: CourtSeatOccupant = {
   kind: 'player',
   playerId: 'player-a',
-  nickname: LONG_HANDLE,
+  name: LONG_HANDLE,
   level: 2.92,
   accepted: false,
 };
 const OPPONENT: CourtSeatOccupant = {
   kind: 'player',
   playerId: 'player-b',
-  nickname: 'ana',
+  name: 'ana',
   level: 3.1,
   accepted: false,
 };

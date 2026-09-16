@@ -97,9 +97,9 @@ describe('the sheet’s two titles', () => {
     expect(recordCloseLabel(true)).toBe(`Close ${OWN_RECORD_TITLE.toLowerCase()}`);
   });
 
-  it('marks your own handle rather than replacing it', () => {
-    expect(recordHandle('bea_k', true)).toBe(`bea_k ${YOU_MARK}`);
-    expect(recordHandle('bea_k', false)).toBe('bea_k');
+  it('marks your own name rather than replacing it', () => {
+    expect(recordHandle('Bea Kowalczyk', true)).toBe(`Bea Kowalczyk ${YOU_MARK}`);
+    expect(recordHandle('Bea Kowalczyk', false)).toBe('Bea Kowalczyk');
   });
 });
 
@@ -180,19 +180,32 @@ describe('the record blocks, as one element', () => {
 });
 
 describe('the header, as one element', () => {
-  it('leads with the handle and drops what is absent rather than speaking nothing', () => {
+  /**
+   * The name first and the handle second, because that is the order they are drawn — and the
+   * handle *is* here: this sheet is one of the two places it is drawn
+   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+   * §4), and a listener is told what a reader is shown.
+   */
+  it('leads with the name and the handle, and drops what is absent rather than speaking nothing', () => {
     expect(
       recordHeaderLabel({
-        handle: 'bea_k',
+        name: 'Bea Kowalczyk',
+        handle: '@bea_k',
         onCourt: true,
         identity: 'In your area · 4 km',
         sports: ['Padel 2,75'],
       }),
-    ).toBe('bea_k. Photo checked: on court. In your area · 4 km. Padel 2,75');
+    ).toBe('Bea Kowalczyk. @bea_k. Photo checked: on court. In your area · 4 km. Padel 2,75');
 
-    expect(recordHeaderLabel({ handle: 'bea_k', onCourt: false, identity: '', sports: [] })).toBe(
-      'bea_k',
-    );
+    expect(
+      recordHeaderLabel({
+        name: 'Bea Kowalczyk',
+        handle: '@bea_k',
+        onCourt: false,
+        identity: '',
+        sports: [],
+      }),
+    ).toBe('Bea Kowalczyk. @bea_k');
   });
 
   it('speaks the intro inside its marks, after the handle and before where they are', () => {
@@ -200,13 +213,14 @@ describe('the header, as one element', () => {
     // words, which the quotation marks say, and never as the name (ADR-0170 §4).
     expect(
       recordHeaderLabel({
-        handle: 'bea_k',
+        name: 'Bea Kowalczyk',
+        handle: '@bea_k',
         onCourt: false,
         intro: introLine('Will travel for a hard game.'),
         identity: '4 km',
         sports: ['Padel 2,75'],
       }),
-    ).toBe('bea_k. “Will travel for a hard game.”. 4 km. Padel 2,75');
+    ).toBe('Bea Kowalczyk. @bea_k. “Will travel for a hard game.”. 4 km. Padel 2,75');
   });
 
   /**
@@ -216,8 +230,14 @@ describe('the header, as one element', () => {
    */
   it('says nothing about a photograph that was flagged or never checked', () => {
     expect(
-      recordHeaderLabel({ handle: 'bea_k', onCourt: false, identity: '4 km', sports: [] }),
-    ).toBe('bea_k. 4 km');
+      recordHeaderLabel({
+        name: 'Bea Kowalczyk',
+        handle: '@bea_k',
+        onCourt: false,
+        identity: '4 km',
+        sports: [],
+      }),
+    ).toBe('Bea Kowalczyk. @bea_k. 4 km');
   });
 });
 

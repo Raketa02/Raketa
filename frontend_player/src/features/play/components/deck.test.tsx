@@ -125,7 +125,7 @@ const HERE = 'A+050612+0019938';
 
 /** One dealt card. Enough terms that the sheet has rows and the tiles have figures. */
 function card(
-  nickname: string,
+  name: string,
   playerId: string,
   over: Partial<Wire['CandidateSchema']> = {},
 ): Wire['CandidateSchema'] {
@@ -134,7 +134,7 @@ function card(
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname,
+      name,
       area_code: HERE,
       social_tags: ['PLAYS_TO_WIN'],
       level: 2.83,
@@ -302,9 +302,9 @@ const THE_ROOM = `/chats/conversation/${ROOM}`;
  * (ADR-0154 §2). Neither seat carries a card: a mutual-born court is drawn on posters here.
  */
 function matched(sport: 'TENNIS' | 'PADEL'): Wire['ChallengeDetailResponse'] {
-  const marek = { player_id: MAREK, answer: 'ACCEPTED' as const, nickname: 'Marek Z.' };
-  const me = { player_id: ME, answer: 'ACCEPTED' as const, nickname: 'ada' };
-  const nobody = { player_id: null, answer: null, answer_by: null, nickname: null };
+  const marek = { player_id: MAREK, answer: 'ACCEPTED' as const, name: 'Marek Z.' };
+  const me = { player_id: ME, answer: 'ACCEPTED' as const, name: 'ada' };
+  const nobody = { player_id: null, answer: null, answer_by: null, name: null };
   return {
     read_at: READ_AT,
     challenge_id: CHALLENGE,
@@ -330,8 +330,8 @@ function matched(sport: 'TENNIS' | 'PADEL'): Wire['ChallengeDetailResponse'] {
 }
 
 const MAREK_AND_ME = [
-  { player_id: MAREK, nickname: 'Marek Z.' },
-  { player_id: ME, nickname: 'ada' },
+  { player_id: MAREK, name: 'Marek Z.' },
+  { player_id: ME, name: 'ada' },
 ];
 
 /** The room the mutual's challenge opened, listed and openable. */
@@ -364,7 +364,8 @@ function theRoomIsThere(sport: 'TENNIS' | 'PADEL', gameId: string | null) {
 function mareksRecord(): Wire['PlayerRecordResponse'] {
   return {
     is_self: false,
-    nickname: 'Marek Z.',
+    name: 'Marek Z.',
+    nickname: 'marek_z',
     area_code: HERE,
     social_tags: ['PLAYS_TO_WIN'],
     sports: [{ sport: 'PADEL', level: 2.83, band: 'Established' }],
@@ -387,8 +388,8 @@ function mareksRecord(): Wire['PlayerRecordResponse'] {
 
 /** The spoken *Matched!* for the one card every walk says yes to. */
 const MATCHED_SPOKEN = matchedAnnouncement({
-  yours: [{ kind: 'person', playerId: ME, nickname: 'ada' }],
-  theirs: [{ kind: 'person', playerId: MAREK, nickname: 'Marek Z.' }],
+  yours: [{ kind: 'person', playerId: ME, name: 'ada' }],
+  theirs: [{ kind: 'person', playerId: MAREK, name: 'Marek Z.' }],
 });
 
 let transport: Transport;
@@ -1215,7 +1216,7 @@ describe('the record', () => {
       json({ ...mareksRecord(), intro: LINE }),
     );
     transport.on('GET', `${PLAYERS}/${ANA}/record?sport=PADEL`, () =>
-      json({ ...mareksRecord(), nickname: 'Ana K.' }),
+      json({ ...mareksRecord(), name: 'Ana K.', nickname: 'ana_k' }),
     );
     await openDeck();
 
@@ -1223,11 +1224,13 @@ describe('the record', () => {
     expect(await screen.findByText(`“${LINE}”`)).toBeTruthy();
     expect(marek().props.accessibilityLabel).toContain(`“${LINE}”`);
 
-    // On the sheet, under the name — the header is one element, spoken handle first and the
-    // line inside its marks straight after.
+    // On the sheet, under the name — the header is one element, spoken name and `@nickname`
+    // first (ADR-0171 §4) and the line inside its marks straight after.
     fireEvent(marek(), 'longPress');
     await screen.findByText(RECORD_TITLE);
-    expect(await screen.findByLabelText(new RegExp(`^Marek Z\\.\\. “${LINE}”`))).toBeTruthy();
+    expect(
+      await screen.findByLabelText(new RegExp(`^Marek Z\\.\\. @marek_z\\. “${LINE}”`)),
+    ).toBeTruthy();
     expect(screen.getByText(`“${LINE}”`)).toBeTruthy();
 
     // And Ana, who wrote none: the card closes the gap rather than drawing empty marks, and

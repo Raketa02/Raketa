@@ -152,14 +152,13 @@ async def test_a_hold_read_answers_with_ids_the_caller_asked_about(
 # same two accounts without a line being written for it.
 
 
-async def _register(session, *, nickname: str, is_active: bool):
+async def _register(session, *, handle: str, is_active: bool):
     users = SqlAlchemyUserRepository(session)
     user_id = new_uuid()
     await users.project_registered(
         UserRegistered(
             user_id=user_id,
-            email=f"{nickname}@example.com",
-            nickname=nickname,
+            email=f"{handle}@example.com",
             password_hash="x" * 12,
             authority="USER",
             is_admin=False,
@@ -184,8 +183,8 @@ async def test_a_disabled_account_may_not_be_shown_and_an_active_one_may(
     """
 
     port = implementation.build(session)
-    playing = await _register(session, nickname="active", is_active=True)
-    disabled = await _register(session, nickname="disabled", is_active=False)
+    playing = await _register(session, handle="active", is_active=True)
+    disabled = await _register(session, handle="disabled", is_active=False)
 
     withheld = await port.may_not_be_shown([playing, disabled])
 

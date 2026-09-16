@@ -34,6 +34,18 @@
  * fallback. Success is the reply: `useLeaveGame` writes it into the challenge list and drops the
  * room the court opened from the conversations list, so both rows are gone the moment the reply
  * lands and before any re-read (#427: *gone without a refetch*).
+ *
+ * ## The sheet says what the leaving does, off the row the list holds
+ *
+ * **The one line changes when the leaving would end the court**
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §9): the reader is the only other accepted seat and nobody is deciding, which is the ending
+ * rule read a move ahead, and `game_id` says whether that *calls the game off — for {name} too*
+ * or *closes this court for {name}*. The rule is `leavingWouldEnd`'s, read off the challenge's
+ * row on the list this feature already holds for the tab bar (`useLeavingWouldEnd`) — the same
+ * row whichever surface the door is met on, so the list's swipe, the challenge screen's button
+ * and the game screen's control cannot say different things about one court. The row can be a beat behind the server; the
+ * server's answer is what happens, said on the sheet as every refusal here is.
  */
 
 import type { ReactNode } from 'react';
@@ -44,13 +56,10 @@ import { useIsOnline } from '@/shared/lib/platform';
 import { behindOverlay } from '@/shared/ui';
 
 import { useLeaveGame } from '../hooks/useChallenge';
+import { useLeavingWouldEnd } from '../hooks/useChallenges';
 import { useActDoor, type ActDoor } from '../hooks/useActDoor';
 
-import {
-  LEAVE_FROM_THE_LIST_BODY,
-  LEAVE_THE_GAME,
-  leaveRefusalMessage,
-} from './leaveGamePresentation';
+import { LEAVE_THE_GAME, leaveFromTheListBody, leaveRefusalMessage } from './leaveGamePresentation';
 import { LeaveSheet } from './LeaveSheet';
 
 /** The name the row's accessibility action goes by — see `ActDoorAsk.actionName`. */
@@ -78,6 +87,7 @@ export interface DepartureDoorProps {
 export function DepartureDoor({ challengeId, onRefusal, onDone, children }: DepartureDoorProps) {
   const leave = useLeaveGame();
   const online = useIsOnline();
+  const ends = useLeavingWouldEnd(challengeId);
   const { door, confirming, close, confirm } = useActDoor({
     act: leave,
     challengeId,
@@ -100,7 +110,7 @@ export function DepartureDoor({ challengeId, onRefusal, onDone, children }: Depa
         onClose={close}
         onLeave={confirm}
         returnFocusTo={door.control}
-        body={[LEAVE_FROM_THE_LIST_BODY]}
+        body={leaveFromTheListBody(ends)}
         busy={leave.isPending}
         refusal={leave.error === null ? undefined : leaveRefusalMessage(leave.error)}
         offline={!online}
