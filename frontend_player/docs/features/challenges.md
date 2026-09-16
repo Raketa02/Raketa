@@ -582,3 +582,10 @@ wire says _cancel_, and nothing here does. The mock's hint under the ended court
 press…_) is not drawn: the record does not ask for it, and the sentence above already says what
 took the controls. **Not seen on a device** — the tag, the ended court and the sheet lines are
 asked for a look.
+
+**The challenge card's row and spoken label print the distance to one decimal**
+([#461](https://github.com/Raketa02/Raketa/issues/461)) — _2,71 · Established · likely 2,55 –
+2,87 · 3,1 km · Score 91_, spoken _3,1 km away_ — through the same `formatDistanceKm` and
+`metaLine` every Play surface prints with, and its reason lines hand `pairing` to `reasonLine`
+beside each evidence, as the play record explains
+([`play.md`](play.md)). Nothing else on the card moves.

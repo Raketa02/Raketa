@@ -248,9 +248,10 @@ export function distanceReason(evidence: DistanceEvidence, pair: PairFacts): str
  * all: an unknown `kind` is stopped at the mapper, and §3 rules a card's reason line one of
  * the placements where an unreadable code is *dropped* rather than named.
  *
- * The pair travels beside the evidence for the one renderer that reads it, and it is required
- * rather than optional so the surface that asks *does this say something* and the surface that
- * prints it cannot answer from different facts.
+ * The pair travels beside the evidence for the one renderer that reads it. The **parameter** is
+ * required rather than optional so the surface that asks *does this say something* and the
+ * surface that prints it hand over the same pair; the **field** inside it stays optional because
+ * `distanceKm` is optional on every candidate, which is why `distanceReason` answers its absence.
  */
 export function reasonLine(evidence: Evidence, pair: PairFacts): string | undefined {
   switch (evidence.kind) {

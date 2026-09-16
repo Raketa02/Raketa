@@ -1,5 +1,6 @@
 /**
- * The rating's numbers, as they are written.
+ * The rating's numbers, as they are written — and, because the decimal comma has one home,
+ * the app's other decimals too: a star average and a distance.
  *
  * **Comma decimals, two places** (design-system Appendix B). Every figure here is drawn in
  * a mono, tabular role, which is the mechanism that stops a row reflowing when a level goes
@@ -43,8 +44,13 @@ const MINUS = '\u2212';
 /** The en dash is the range dash, and it is spaced so two 4-character numbers stay apart. */
 const RANGE_DASH = ' – ';
 
+/** The comma substitution itself — spelled once, which is the whole of this module's claim. */
+function comma(value: number, places: number): string {
+  return value.toFixed(places).replace('.', ',');
+}
+
 function decimal(value: number): string {
-  return value.toFixed(DECIMALS).replace('.', ',').replace('-', MINUS);
+  return comma(value, DECIMALS).replace('-', MINUS);
 }
 
 /** A Level, an Uncertainty, a band edge — anything on the 1,00–5,00 scale. */
@@ -81,7 +87,7 @@ export function formatSignedLevel(value: number): string {
  * ([`CONTEXT.md`](../../../../CONTEXT.md) · Sportsmanship).
  */
 export function formatStars(value: number): string {
-  return value.toFixed(STAR_DECIMALS).replace('.', ',');
+  return comma(value, STAR_DECIMALS);
 }
 
 /**
@@ -100,7 +106,7 @@ export function formatStars(value: number): string {
  * module's note names.
  */
 export function formatDistanceKm(value: number): string {
-  return `${value.toFixed(DISTANCE_DECIMALS).replace('.', ',')} km`;
+  return `${comma(value, DISTANCE_DECIMALS)} km`;
 }
 
 export function formatRange(range: { readonly low: number; readonly high: number }): string {

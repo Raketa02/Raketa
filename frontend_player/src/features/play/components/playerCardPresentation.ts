@@ -82,15 +82,16 @@ export function levelRow(facts: LevelRowFacts): string {
   return `${formatLevel(facts.level)} · ${facts.band} · likely ${formatRange(facts.range)}`;
 }
 
-/**
- * Kilometres **to one decimal**, as the contract sends them — the client rounds nothing.
- *
- * The number is measured between two **drawn spots**, one fixed point inside each player's
- * coarse area, and it is the same number the record's identity line and the why-fit sentence
- * print for the same person ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
- * §2). Nothing prints a whole kilometre any more.
- */
+/** What the meta line states — a distance, and the one comparison it may draw beside it. */
 export interface MetaLineFacts {
+  /**
+   * Kilometres **to one decimal**, as the contract sends them — the client rounds nothing.
+   *
+   * Measured between two **drawn spots**, one fixed point inside each player's coarse area,
+   * and the same number the record's identity line and the why-fit sentence print for the
+   * same person ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §2). Nothing prints a whole kilometre any more.
+   */
   readonly km: number;
   /** Their coarse area, as a machine code. **Never printed.** */
   readonly theirAreaCode: string;
