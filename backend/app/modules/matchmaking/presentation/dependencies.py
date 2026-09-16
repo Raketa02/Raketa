@@ -69,6 +69,7 @@ from app.bootstrap.composition import (
 )
 from app.infrastructure.redis_client import get_redis
 from app.modules.blocks.presentation.dependencies import BlockQueryDep
+from app.modules.matchmaking.application.deck_exclusions import DeckExclusionReads
 from app.modules.matchmaking.application.express_interest import ExpressInterest
 from app.modules.matchmaking.application.fail_closed_gates import FailClosedGates
 from app.modules.matchmaking.application.forecast_lineup import ForecastLineup
@@ -80,6 +81,7 @@ from app.modules.matchmaking.application.record_prompt_decline import (
 from app.modules.matchmaking.application.read_back_search import ReadBackSearch
 from app.modules.matchmaking.application.read_interest import ReadInterest
 from app.modules.matchmaking.application.run_deck_deal import RunDeckDeal
+from app.modules.matchmaking.application.run_radar_reading import RunRadarReading
 from app.modules.matchmaking.application.run_lineup_search import RunLineupSearch
 from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
 from app.modules.matchmaking.application.search_workbench import SearchWorkbench
@@ -374,25 +376,49 @@ def get_deck_reset_ledger(db: DbSession) -> DeckResetLedger:
 DeckResetLedgerDep = Annotated[DeckResetLedger, Depends(get_deck_reset_ledger)]
 
 
-def get_run_deck_deal(
+def get_deck_exclusion_reads(
     db: DbSession,
-    workbench: SearchWorkbenchDep,
     suppression: SuppressionLedgerDep,
     interest: InterestLedgerDep,
     passes: PassLedgerDep,
     resets: DeckResetLedgerDep,
-) -> RunDeckDeal:
-    """The deck, assembled per request. **Four ledgers and one port the
-    shortlist has not.**
+) -> DeckExclusionReads:
+    """The deck's four reads, assembled per request. **Four ledgers and one port
+    the shortlist has not.**
 
     The suppression cache, the pass record and the reset record are the deck's
     alone — a pass reaches no other surface, and *Show them again* is a button
     on a deck — and the interest ledger is here for the deck's own *already
     asked* exclusion, which is a read of the player's **own outgoing** rows
     rather than the lift's read of incoming ones the workbench makes. The court
-    port is the cool-off's (``docs/adr/0169`` §6), read on this surface and on
-    no other, and it is built from the composition root like every outward port
-    so the seed's deal and a request's read the same courts.
+    port is the cool-off's (``docs/adr/0169`` §6), built from the composition
+    root like every outward port so the seed's deal and a request's read the
+    same courts.
+
+    **Two surfaces hold this, for two different reasons.** The deal holds people
+    out with it; the radar asks it for the chip alone (``docs/adr/0174`` §5) —
+    the deck's number, by the deck's rule, over the same stores, so the chip on
+    either pane of Players cannot disagree with the one beside it.
+    """
+
+    return DeckExclusionReads(
+        ruleset=build_ruleset(),
+        searches=build_search_store(db),
+        suppression=suppression,
+        interest=interest,
+        passes=passes,
+        courts=build_shared_court_query(db),
+        resets=resets,
+    )
+
+
+DeckExclusionReadsDep = Annotated[DeckExclusionReads, Depends(get_deck_exclusion_reads)]
+
+
+def get_run_deck_deal(
+    workbench: SearchWorkbenchDep, held_out: DeckExclusionReadsDep
+) -> RunDeckDeal:
+    """The deck, assembled per request.
 
     There is no prompt ledger: a deal raises no question, because the two a
     search can raise are about a grid it improvised and a widening it keeps
@@ -403,16 +429,28 @@ def get_run_deck_deal(
         workbench=workbench,
         ruleset=build_ruleset(),
         engine=build_match_fit_engine(),
-        searches=build_search_store(db),
-        suppression=suppression,
-        interest=interest,
-        passes=passes,
-        courts=build_shared_court_query(db),
-        resets=resets,
+        held_out=held_out,
     )
 
 
 RunDeckDealDep = Annotated[RunDeckDeal, Depends(get_run_deck_deal)]
+
+
+def get_run_radar_reading(
+    workbench: SearchWorkbenchDep, held_out: DeckExclusionReadsDep
+) -> RunRadarReading:
+    """The radar, assembled per request — **over the deck's own reads**, for
+    the chip and for nothing that decides who is drawn."""
+
+    return RunRadarReading(
+        workbench=workbench,
+        ruleset=build_ruleset(),
+        engine=build_match_fit_engine(),
+        held_out=held_out,
+    )
+
+
+RunRadarReadingDep = Annotated[RunRadarReading, Depends(get_run_radar_reading)]
 
 
 def get_reset_deck(

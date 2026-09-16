@@ -793,6 +793,7 @@ async def test_the_cohort_reaches_every_screen_it_promises(
         "absences ·",
         "block ·",
         "pass ·",
+        "radar ·",
         "record block ·",
         "run of form ·",
         "player score ·",

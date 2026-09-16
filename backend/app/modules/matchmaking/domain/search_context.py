@@ -52,7 +52,10 @@ from app.modules.player_profile.domain.play_intent import PlayIntent
 #: stands down on the deck — its weight renormalises away by the mechanism a term
 #: already uses when it has nothing to read — and a declaration moves nobody, up
 #: or down. Find a game is untouched: its mode still selects its vector and the
-#: term still reads.
+#: term still reads. **The radar stands it down too** (``docs/adr/0174`` §3):
+#: it runs under the deck's ruler so that one pair prints one Fit on both panes
+#: of Players, and the rule is read off the surface's own ``scores_under_one_ruler``
+#: rather than spelled twice.
 #:
 #: Declared here rather than in ``deck.py`` because the fact rides on the
 #: **context** — ``score_all`` and the reciprocal read both ask it, and each
@@ -276,7 +279,7 @@ class SearchContext:
         which terms it reads.
         """
 
-        if self.surface is SearchSurface.DECK:
+        if self.surface.scores_under_one_ruler:
             return STOOD_DOWN_ON_THE_DECK
         return frozenset()
 

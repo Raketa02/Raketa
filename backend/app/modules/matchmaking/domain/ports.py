@@ -894,11 +894,13 @@ class SharedCourtQuery(Protocol):
     A person the searcher has more than one game with is one row: an ahead court
     if any is ahead, otherwise the latest ``behind_since``.
 
-    **Read at the deal and on no other surface.** Find a game keeps
+    **Read for the deck's exclusions and for nothing else.** Find a game keeps
     ``docs/adr/0142`` §1's release — a search is a question about the city, and
     somebody you played on Saturday is a fine partner for next week's four. The
     deck is for meeting people, and a rematch is arranged in the chat the two
-    already have.
+    already have. The radar reads it too, and only for the deck's number on
+    its envelope (``docs/adr/0174`` §5): who the radar draws is untouched by
+    it, and Karol from Saturday is on the map.
 
     **It fails soft**, like the history beside it: an outage repeats a card of
     somebody the viewer already knows, which is embarrassment and never danger,

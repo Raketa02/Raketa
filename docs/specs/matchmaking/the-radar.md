@@ -39,12 +39,13 @@ none), no position (the server holds the viewer's cell).
 
 **A reading is a recorded search** — the fifth surface, `RADAR`, beside the shortlist, the
 line-up, the deck and completing a half-built game — with a `search_id`, rows kept with their
-Fit and breakdown for ever (ADR-0104), a row in the prior-disclosure register so the record
-sheet opens from every card it drew (ADR-0159 §3), and an Origin key an answer can name. The
-rows are ordered by **drawn distance, then player id**, so a position means something.
+Fit and breakdown for ever (ADR-0104), a prior disclosure through ADR-0159 §3's search strand so
+the record sheet opens from every card it drew (no fourth register row — ADR-0174 §1 as
+amended), and an Origin key an answer can name. The rows are ordered by **drawn distance as
+printed, then player id**, so a position means something and is reproducible off the row.
 
-**A reading is not a deal.** It enters no dealt memory, spends no hand, and is not counted
-where deals are counted (ADR-0131, ADR-0174 §4).
+**A reading is not a deal.** It enters no dealt memory, spends no hand, notes no exposure
+(ADR-0174 §4 as amended), and is not counted where deals are counted (ADR-0131, ADR-0174 §4).
 
 **Envelope** — the deal envelope's shape, reused: `search_id`, `pool { radius_km_used,
 players_in_range, want_to_play_you }`, `ruleset_version`, `engine_version`, `my_area_code`.

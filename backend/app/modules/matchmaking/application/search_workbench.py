@@ -91,6 +91,7 @@ from app.modules.matchmaking.domain.search_context import (
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
+    RatedSportRecord,
     RecordedCard,
     SearchCandidateRecord,
     SearchInitiation,
@@ -170,6 +171,13 @@ class AnsweredCandidate:
     #: forward (``docs/adr/0139``), and ``None`` only where one of the two holds
     #: no rating in this sport.
     at_stake: AtStake | None
+    #: **The radar's two, and ``None`` on every other surface.** The bearing from
+    #: the viewer's drawn spot to this player's, and every sport they are rated
+    #: in with the Level held there (``docs/adr/0174`` §2). Attached here beside
+    #: the card for the reason the card is: neither is a fact the scorer may
+    #: see, and both are recorded so a read-back never recomputes them.
+    bearing_deg: int | None = None
+    ratings: tuple[RatedSportRecord, ...] | None = None
 
     def recorded_card(self) -> RecordedCard:
         """The card as it was shown, from the sources that assembled it.
@@ -336,6 +344,34 @@ class SearchWorkbench:
                 "the candidate index is more than a day behind the log"
             )
         return snapshot, freshness
+
+    def partitions_beside(
+        self, bound: CandidateSnapshot
+    ) -> Mapping[Sport, CandidateSnapshot]:
+        """This process's index for **every** sport — the one already bound, and
+        the others bound here, once each.
+
+        The radar's sport chips are read across partitions (``radar.py``): a
+        card's own Level comes off the index row in the reading's sport, and the
+        chips beside it come off the same index in the others, so the two
+        cannot disagree about what somebody published. **The search's own
+        partition is the container the search bound**, never a second call to
+        the source — a refresh between the two would hand back a container the
+        bound one disagrees with (``docs/adr/0112``: bound once, never re-read).
+        Walked in the sport registry's own order, never a set's
+        (``docs/adr/0105``), and none of the others is asked about its
+        freshness: the ladder binds the partition the search runs in, and a
+        chip is a fact about a person rather than about who is in range.
+        """
+
+        return {
+            sport: (
+                bound
+                if bound.partition == Partition.for_sport(sport)
+                else self._candidates.snapshot(Partition.for_sport(sport))
+            )
+            for sport in Sport
+        }
 
     # -- the searcher's own facts -------------------------------------------
 
@@ -770,6 +806,8 @@ class SearchWorkbench:
         card: RecordedCard | None,
         at_stake: AtStake | None,
         suppression_lapsed: bool | None = None,
+        bearing_deg: int | None = None,
+        ratings: tuple[RatedSportRecord, ...] | None = None,
     ) -> SearchCandidateRecord:
         """One row of the record — **the whole row that was shown, not a summary.**
 
@@ -778,7 +816,14 @@ class SearchWorkbench:
         name changes, a Level moves, a player leaves an area, and a Level
         delta is priced against ratings that keep moving. A read-back that
         re-read them would answer a different search and call it the same one
-        (``docs/adr/0109``).
+        (``docs/adr/0109``). The radar's bearing and sport chips are recorded
+        on the same argument.
+
+        **A returned row was not withheld, whatever the floor concluded.** On
+        every other surface that is a tautology — a row the floor refused is a
+        near miss — and on the radar it is the rule: the floor is computed and
+        not applied (``docs/adr/0174`` §3), so a drawn row under it is a drawn
+        row, and ``withheld_reason`` is a fact about the near-miss band alone.
         """
 
         floor = self._ruleset.floors.quality_floor
@@ -801,7 +846,9 @@ class SearchWorkbench:
             their_slot_count=len(row.generated.row.availability),
             days_away=row.generated.overlap.days_away,
             inclusion_reason=row.inclusion_reason,
-            withheld_reason=row.withheld_reason,
+            withheld_reason=(
+                row.withheld_reason if band is CandidateBand.NEAR_MISS else None
+            ),
             missing_terms=row.missing_terms,
             reliability_penalty_applied=row.reliability_penalty_applied,
             reliability_penalty_decisive=row.reliability_penalty_decisive(floor),
@@ -816,6 +863,10 @@ class SearchWorkbench:
             # asserts as a biconditional: a shortlist row is not a card, and a
             # near miss was dealt to nobody.
             suppression_lapsed=suppression_lapsed,
+            # Set on a drawn row and ``None`` everywhere else, on the same
+            # biconditional: only the radar draws a spot with a compass.
+            bearing_deg=bearing_deg,
+            ratings=ratings,
         )
 
     def recorded_rows(
@@ -852,6 +903,8 @@ class SearchWorkbench:
                 suppression_lapsed=(
                     None if lapsed is None else lapsed[row.scored.player_id]
                 ),
+                bearing_deg=row.bearing_deg,
+                ratings=row.ratings,
             )
             for position, row in enumerate(returned, start=1)
         ) + tuple(

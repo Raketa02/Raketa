@@ -42,6 +42,7 @@ from app.modules.matchmaking.application.forecast_lineup import ForecastAnswer
 from app.modules.matchmaking.application.read_back_search import ReadBackAnswer
 from app.modules.matchmaking.application.run_lineup_search import LineupAnswer
 from app.modules.matchmaking.application.run_deck_deal import DeckAnswer
+from app.modules.matchmaking.application.run_radar_reading import RadarAnswer
 from app.modules.matchmaking.application.run_shortlist_search import ShortlistAnswer
 from app.modules.matchmaking.domain.lineups import LineupSeat, Side as CourtSide
 from app.modules.matchmaking.domain.prompts import RaisedPrompt
@@ -67,6 +68,7 @@ from app.modules.matchmaking.presentation.schemas import (
     PlayerCardSchema,
     PoolSchema,
     PromptSchema,
+    RatedSportSchema,
     RungOfferSchema,
     SearchEnvelope,
     ShortlistResponse,
@@ -108,10 +110,10 @@ def render_deal(answer: DeckAnswer, photos: PhotoLinks) -> ShortlistResponse:
     any of the four surfaces, so a deal that crossed in a second shape would be a
     deal that could not be read back through the one renderer this module has.
 
-    What differs is what the record says. ``mode`` is ``null`` — exactly on the
-    deck and nowhere else — the sort list is empty, and ``rung_offers`` is
-    ``null`` because the ladder does not reach here and the offers were not
-    computed at all.
+    What differs is what the record says. ``mode`` is ``null`` — on the deck
+    and the radar, the two surfaces that score under one ruler — the sort list
+    is empty, and ``rung_offers`` is ``null`` because the ladder does not reach
+    here and the offers were not computed at all.
 
     ``prompts`` is passed, and an empty list is the honest answer on a deal that
     ran on the profile's own week: the deck accepts an improvised grid now, so it
@@ -132,6 +134,38 @@ def render_deal(answer: DeckAnswer, photos: PhotoLinks) -> ShortlistResponse:
             # later one, which is why the read-back omits them.
             remaining=answer.remaining,
             want_to_play_you=answer.want_to_play_you,
+        ),
+        candidates=[_candidate(row, photos) for row in answer.record.returned],
+    )
+
+
+def render_reading(answer: RadarAnswer, photos: PhotoLinks) -> ShortlistResponse:
+    """One reading, in **the same shape a deal crosses in** (``docs/adr/0174``
+    §2: *the deal envelope's shape, reused*).
+
+    The read-back's requirement, exactly as it binds the deal: a reading that
+    crossed in a second shape could not be read back through the one renderer
+    this module has. What differs is what the record says — ``mode`` is
+    ``null``, the sort list is empty, ``rung_offers`` is ``null`` — and the
+    two fields only a reading's rows carry, which ``_candidate`` renders off
+    the row wherever the row holds them.
+
+    ``want_to_play_you`` is passed, **the deck's number** (§5), and omitted at
+    zero rather than sent as ``0``: the radar draws a chip at one and above,
+    and a measured nought is the deal's to say. There is no ``remaining`` — a
+    reading draws everybody — and no ``prompts``, which is passed as an empty
+    list for the deal's reason: the reading is a `POST`, and an empty list
+    honestly says it raised none.
+    """
+
+    return ShortlistResponse(
+        search=_envelope(
+            answer.record,
+            answer.sorts_available,
+            prompts=(),
+            want_to_play_you=(
+                answer.want_to_play_you if answer.want_to_play_you > 0 else None
+            ),
         ),
         candidates=[_candidate(row, photos) for row in answer.record.returned],
     )
@@ -555,6 +589,15 @@ def _candidate(
         # Omitted rather than sent as zero when the term stood down, which is
         # what lets *Closest* sort a stood-down row last instead of first.
         fields["distance_km"] = row.distance_km
+    if row.bearing_deg is not None:
+        # A reading's row and no other's, by the record's own biconditional:
+        # rendered off the row so a read-back draws the compass that was drawn.
+        fields["bearing_deg"] = row.bearing_deg
+    if row.ratings is not None:
+        fields["ratings"] = [
+            RatedSportSchema(sport=rated.sport, level=rated.level)
+            for rated in row.ratings
+        ]
     if row.inclusion_reason is InclusionReason.INTEREST_LIFT:
         # **Only a reason that admits somebody crosses**, and the test is the
         # value rather than its presence: the store holds three and two of them

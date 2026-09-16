@@ -114,6 +114,24 @@ class RunDeckDealCommand:
 
 @final
 @dataclass(frozen=True, slots=True)
+class RunRadarReadingCommand:
+    """One reading of the reach — **the sport is the whole ask**
+    (``docs/adr/0174`` §1, ``the-radar.md`` §2).
+
+    No mode, because there is none: the radar scores under the deck's ruler for
+    everybody. No radius, because the reach is the profile's own search radius
+    and there is no city. No position, because the server holds the viewer's
+    cell. And no week: a reading ranks nothing, so a grid to rank on would be
+    an ask with nothing to answer it.
+    """
+
+    searcher_id: UUID
+    sport: Sport
+    trace_id: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class ResetDeckCommand:
     """*Show them again.* One tap at the end of a deck, for one sport.
 

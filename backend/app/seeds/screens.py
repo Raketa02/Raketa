@@ -114,6 +114,7 @@ from app.seeds.paths import (
     TRACE_ID,
     ReadPaths,
     deal_a_deck,
+    read_a_radar,
     read_paths,
     returned_ids,
     run_a_shortlist,
@@ -222,6 +223,7 @@ async def assert_the_screens(
             lines.extend(
                 await _the_eleven(paths, pool, line_up, pairs=pairs)
             )
+            lines.append(await _refuse_a_radar_that_hides_anybody(paths, pool))
             lines.extend(
                 await _the_record_block(
                     paths,
@@ -1782,6 +1784,119 @@ async def _refuse_a_challenge_screen_with_nobody_on_it(paths: ReadPaths) -> str:
             if card.pairing.forecast is None
             else f"{card.pairing.forecast.pct}%"
         )
+    )
+
+
+async def _refuse_a_radar_that_hides_anybody(
+    paths: ReadPaths, pool: SearchRecord
+) -> str:
+    """*Her padel reading draws her whole pool, the courts and the pass included.*
+
+    The radar applies no judgement and none of the deck's exclusions
+    (``docs/adr/0174`` §3): everybody her pool showed is on it, and so is
+    everybody the pool's ``OPEN_CHALLENGE`` gate held out — a court with her is a
+    line on the sheet and never a hole on the map — and the person she said
+    *not today* to, who is gone from her deck and still on her radar. The two
+    blocked accounts are absent, on the one gate the radar keeps.
+
+    **Read as a fresh reading rather than off a record the run already
+    produced**, because a reading costs the next surface nothing: it enters no
+    dealt memory and notes no exposure, so this is the one surface a fixture can
+    read as often as it likes. Every row is asserted to carry a bearing and its
+    sport chips, and the chip on the envelope is asserted to be at least one —
+    ``said-yes-to-you`` is waiting, and the deck would deal them.
+
+    **Three of the five gates are proved here, and two cannot be.** The
+    histogram shows the block gate firing on the two named for it and the
+    gender gate firing at all — the cohort carries every preference — while the
+    open-challenge and level gates read **zero** on a reading, which is *not
+    asked* and never *nobody excluded*. A hold and a disabled account have no
+    producer in this build (nothing can hold or disable anybody), so those two
+    are proved over a fixture city in ``tests/api/test_radar.py`` instead, and
+    that file is where the five are proved together.
+    """
+
+    answer = await read_a_radar(paths, PROTAGONIST.email, Sport.PADEL)
+    record = answer.record
+    drawn = returned_ids(record)
+    missing_from_the_pool = sorted(
+        str(row.player_id) for row in pool.returned if row.player_id not in drawn
+    )
+    if missing_from_the_pool:
+        raise ScreenIsEmpty(
+            f"{len(missing_from_the_pool)} of the {len(pool.returned)} rows in "
+            f"{PROTAGONIST.slug}'s padel pool are missing from her radar. The "
+            f"radar asks five gates and applies no floor, so everyone a "
+            f"shortlist showed is inside its reach: {missing_from_the_pool}."
+        )
+    for named in (*ABSENT_ON_THE_OPEN_CHALLENGE_GATE, YOU_PASSED_THEM):
+        if _card_for(paths, record, named) is None:
+            raise ScreenIsEmpty(
+                f"'{named.account.slug}' is missing from {PROTAGONIST.slug}'s "
+                f"padel radar. A court with her and a *not today* hold people "
+                f"out of her deck and not off her map: the radar asks neither "
+                f"the open-challenge gate nor the pass suppression, and an "
+                f"absence here is one of them reaching a surface it does not "
+                f"belong to. Gates: "
+                f"{dict(sorted(record.counts.excluded_by_gate.items()))}."
+            )
+    for named in ABSENT_ON_THE_BLOCKED_GATE:
+        if _was_scored(paths, record, named):
+            raise ScreenIsEmpty(
+                f"'{named.account.slug}' is on {PROTAGONIST.slug}'s padel radar "
+                f"and one of them blocked the other. The block gate is one of "
+                f"the five the radar keeps, and it fails closed."
+            )
+    gates = record.counts.excluded_by_gate
+    if gates.get(GateCode.BLOCKED.value, 0) < len(ABSENT_ON_THE_BLOCKED_GATE):
+        raise ScreenIsEmpty(
+            f"{len(ABSENT_ON_THE_BLOCKED_GATE)} account(s) are named for the "
+            f"block gate and it excluded {gates.get(GateCode.BLOCKED.value, 0)} "
+            f"from {PROTAGONIST.slug}'s padel radar. An absence is not the "
+            f"claim — the histogram is. Gates: {dict(sorted(gates.items()))}."
+        )
+    if gates.get(GateCode.GENDER_PREFERENCE.value, 0) < 1:
+        raise ScreenIsEmpty(
+            f"the gender gate excluded nobody from {PROTAGONIST.slug}'s padel "
+            f"radar, over a cohort that carries every preference. It is one of "
+            f"the five the radar keeps. Gates: {dict(sorted(gates.items()))}."
+        )
+    not_asked = (GateCode.OPEN_CHALLENGE, GateCode.LEVEL)
+    if any(gates.get(code.value, 0) for code in not_asked):
+        raise ScreenIsEmpty(
+            f"a gate the radar does not ask excluded somebody from "
+            f"{PROTAGONIST.slug}'s padel radar: a zero there means *not asked*, "
+            f"and a count means the deck's judgement reached a surface that "
+            f"promised none. Gates: {dict(sorted(gates.items()))}."
+        )
+    without_a_compass = [
+        str(row.player_id)
+        for row in record.returned
+        if row.bearing_deg is None or not row.ratings
+    ]
+    if without_a_compass:
+        raise ScreenIsEmpty(
+            f"{len(without_a_compass)} row(s) on {PROTAGONIST.slug}'s padel "
+            f"radar carry no bearing or no sport chips: {without_a_compass}. A "
+            f"drawn spot is a bearing and a distance, and a card's chips are "
+            f"every sport its player is rated in — which is at least this one."
+        )
+    if answer.want_to_play_you < 1:
+        raise ScreenIsEmpty(
+            f"{PROTAGONIST.slug}'s padel radar says nobody wants to play her, and "
+            f"'{SAID_YES_TO_YOU.account.slug}' has a live yes towards her that "
+            f"the deck would deal. The chip is the deck's number computed by the "
+            f"deck's rule, so a nought here is that rule refusing the one "
+            f"account named for it."
+        )
+    return (
+        f"radar · {PROTAGONIST.slug} · padel: {record.counts.n_returned} drawn of "
+        f"{record.counts.n_generated} in the box, every pool row among them, "
+        f"{len(ABSENT_ON_THE_OPEN_CHALLENGE_GATE)} courts and the pass drawn, "
+        f"BLOCKED {gates.get(GateCode.BLOCKED.value, 0)} and GENDER_PREFERENCE "
+        f"{gates.get(GateCode.GENDER_PREFERENCE.value, 0)} on the histogram with "
+        f"the four not asked at nought, and {answer.want_to_play_you} waiting on "
+        f"the deck's count"
     )
 
 

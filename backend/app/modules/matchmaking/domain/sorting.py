@@ -169,9 +169,11 @@ def sorts_available(
     player's hand for a control to reorder, and its **order is its whole
     variety** — two bands plus ``PASS_SUPPRESS`` (``the-two-contracts.md`` §6).
     A control that resorted a deal would be offering to undo the one thing the
-    surface does. The surface decides it here rather than at each caller, because
-    the search that has just run and the same deal read back a month later must
-    reach one answer.
+    surface does. **Nor the radar**: a reading is a map and not a list, and its
+    one order — the distance, then the id — is the Origin key's and never a
+    reader's (``docs/adr/0174`` §1). The surface decides it here rather than at
+    each caller, because the search that has just run and the same one read
+    back a month later must reach one answer.
     """
 
     if surface is not SearchSurface.SHORTLIST:

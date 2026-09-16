@@ -9,6 +9,7 @@ withheld* — so the near-miss band has no read path at all, and a stranger's
 
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
@@ -30,6 +31,7 @@ from app.modules.matchmaking.domain.searches import (
     InclusionReason,
     LineupRecord,
     PoolDescription,
+    RatedSportRecord,
     RecordedCard,
     SearchCandidateRecord,
     SearchInitiation,
@@ -745,3 +747,138 @@ def test_the_redaction_detector_must_agree_with_the_rows_written():
                 ),
             }
         )
+
+
+# ---------------------------------------------------------------------------
+# The reading — a ``RADAR`` record (``docs/adr/0174`` §1)
+# ---------------------------------------------------------------------------
+
+
+def _a_reading() -> SearchRecord:
+    """A reading's record: no mode, a bearing and the ratings on every row."""
+
+    base = _record()
+    returned = tuple(
+        replace(
+            row,
+            bearing_deg=47 + row.position,
+            ratings=(
+                RatedSportRecord(sport=Sport.PADEL, level=2.7),
+                RatedSportRecord(sport=Sport.TENNIS, level=3.1),
+            ),
+        )
+        for row in base.returned
+    )
+    return replace(
+        base,
+        mode=None,
+        intent_read=None,
+        surface=SearchSurface.RADAR,
+        rung_offers=None,
+        offered_by_search_id=None,
+        rung_taken=None,
+        counts=replace(base.counts, n_near_miss_recorded=0),
+        best_withheld_fit=None,
+        candidates=returned,
+    )
+
+
+async def test_a_reading_round_trips_with_its_bearings_and_ratings(store):
+    """Both are recorded because a read-back never recomputes: a bearing is spot
+    to spot and the cell under a spot moves, and a Level moves."""
+
+    adapter, session = store
+    reading = _a_reading()
+    await adapter.record(reading)
+    await session.commit()
+
+    read = await adapter.find(search_id=reading.id, searcher_id=SEARCHER)
+
+    assert read is not None
+    assert read.surface is SearchSurface.RADAR
+    assert read.mode is None
+    assert [row.bearing_deg for row in read.returned] == [48, 49]
+    assert read.returned[0].ratings == (
+        RatedSportRecord(sport=Sport.PADEL, level=2.7),
+        RatedSportRecord(sport=Sport.TENNIS, level=3.1),
+    )
+
+
+def test_a_reading_has_no_mode_and_a_shortlist_still_must():
+    """``scores_under_one_ruler`` is the deck's rule and now the radar's: the
+    record's invariant reads it, so a reading with a mode is refused as a
+    deal with one is, and a shortlist without one still is."""
+
+    from app.kernel import InvariantViolated
+
+    with pytest.raises(InvariantViolated):
+        replace(_a_reading(), mode=SearchMode.FOR_FUN)
+    with pytest.raises(InvariantViolated):
+        replace(_record(), mode=None)
+
+
+def test_a_bearing_and_the_ratings_sit_on_a_readings_returned_rows_and_nowhere_else():
+    """Biconditional, like the deck's re-show flag: a shortlist row has no
+    bearing to carry, and a reading's row cannot be written without one."""
+
+    from app.kernel import InvariantViolated
+
+    reading = _a_reading()
+    with pytest.raises(InvariantViolated):
+        replace(
+            reading,
+            candidates=tuple(
+                replace(row, bearing_deg=None) for row in reading.candidates
+            ),
+        )
+    with pytest.raises(InvariantViolated):
+        replace(
+            reading,
+            candidates=tuple(replace(row, ratings=None) for row in reading.candidates),
+        )
+    shortlist = _record()
+    with pytest.raises(InvariantViolated):
+        replace(
+            shortlist,
+            candidates=tuple(
+                replace(row, bearing_deg=90)
+                if row.band is CandidateBand.RETURNED
+                else row
+                for row in shortlist.candidates
+            ),
+        )
+
+
+def test_the_tables_no_mode_constraint_spells_the_surfaces_the_property_names():
+    """The ORM's check constraints cannot read ``scores_under_one_ruler``, so
+    they spell the surfaces by name — and this holds the spelling to the
+    property, so a surface added to one and not the other goes red."""
+
+    from sqlalchemy import CheckConstraint
+
+    from app.modules.matchmaking.infrastructure.search_model import SearchORM
+
+    named = {
+        surface.value for surface in SearchSurface if surface.scores_under_one_ruler
+    }
+    constraints = {
+        constraint.name: str(constraint.sqltext)
+        for constraint in SearchORM.__table_args__
+        if isinstance(constraint, CheckConstraint)
+    }
+    for name in (
+        "ck_search_mode_null_exactly_under_one_ruler",
+        "ck_search_intent_read_only_under_one_ruler",
+    ):
+        spelled = set(re.findall(r"'([A-Z_]+)'", constraints[name]))
+        assert spelled == named, (name, spelled, named)
+
+
+def test_a_bearing_is_a_whole_degree_on_the_compass():
+    from app.kernel import InvariantViolated
+
+    row = _candidate(CandidateBand.RETURNED, 1)
+    with pytest.raises(InvariantViolated):
+        replace(row, bearing_deg=360)
+    with pytest.raises(InvariantViolated):
+        replace(row, bearing_deg=-1)

@@ -111,6 +111,14 @@ that the record sheet opens from every card it drew (ADR-0159 §3's fourth row),
 be asked, and an answer given on it can name its origin (§4). Its rows are ordered by drawn
 distance and then by player id, so the Origin key's position means something.
 
+> **Amended 2026-09-16 (#460).** The sheet opens from a reading's card through ADR-0159 §3's
+> *second* strand — *a search of the reader's returned them* — which reads no surface, so no
+> fourth row was added to the prior-disclosure register: a row over the same adapter would
+> be the first row twice. The fourth *row* ADR-0159 anticipated is for a surface that is not
+> a search. And the order sorts on the **printed** one-decimal distance rather than the raw
+> spot measurement, so that the order is reproducible off the recorded row alone; two people
+> who print the same number sit by id.
+
 **The reach is the viewer's search radius, and there is no city.** The author asked for the
 whole city Ania is in, plus its suburbs, and asked which of that and the radius was doable. A
 city has no source here — no table, no borders, and a phone's geocoder names a place without
@@ -201,6 +209,12 @@ court yet, and the chat is born.
 **A reading never counts as dealt.** Ania browses the radar on Monday and does nothing;
 Tuesday's deck deals Filip. The dealt memory (ADR-0131) is fed by deals and by nothing else. Only
 an answer reaches the deck; a look never does — the author's own restatement.
+
+> **Amended 2026-09-16 (#460).** A reading notes no **exposure** either. The exposure ledger
+> prices who has been *offered* — the zero-exposure lift and the busy sink read it to spread
+> the deck's hand — and a map is not an offer; a reading that wrote it would mark every player
+> in a dense city *shown* several times a day and end the lift's meaning, which is a look
+> reaching the deck's order by the back door this section closes.
 
 **The sheet's foot.** The record sheet, reached from a radar card, gains an action bar it has
 never had: *Not today* and *Let's play* — the deck's two words — in the swipe's reading order — **on the radar only**; the

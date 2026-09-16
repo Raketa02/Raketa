@@ -1860,6 +1860,83 @@
         ]
       }
     },
+    "/api/v1/radar": {
+      "post": {
+        "tags": [
+          "radar"
+        ],
+        "summary": "Read the radar",
+        "description": "Every player rated in this sport inside your reach, at their distance and bearing \u2014 the population the deck deals from, with the deck's reach and none of its judgement.\n\n**The sport is the whole ask.** No mode (every pairing scores under the deck's ruler), no radius (the reach is your own Search radius \u2014 there is no city), no position (the server holds your area), no week.\n\n**Five gates and nothing after them.** Blocked either way, under a hold, disabled, a gender preference either way, and rated in the sport \u2014 then everyone inside the circle is drawn, each with a `fit` printed as served. No level band, no quality floor, no cool-off, no pass memory, no dealt memory: somebody you have a court with, somebody you said *not today* to and somebody you are matched with are all on the radar.\n\n**Each row carries `bearing_deg` beside `distance_km`** \u2014 north `0`, clockwise, spot to spot, served and never derived \u2014 and `ratings[]`, every sport the player is rated in with their Level. Both are on the row and never inside `player_card`. The rows are ordered by distance and then by id, so a position means something.\n\n**`pool.want_to_play_you` is the deck's number.** Computed by the deck's own rule \u2014 its gates and its exclusions \u2014 so the chip here and the chip on the deck are one number; omitted at zero. Somebody who said yes to you whom the deck would never deal is still drawn, carrying `inclusion_reason: INTEREST_LIFT`, and is not counted.\n\n**A reading is not a deal.** It never enters the dealt memory: browse on Monday and do nothing, and Tuesday's deck deals the same people. Only an answer reaches the deck \u2014 `POST /interest` and `POST /passes` take this `search_id` exactly as they take a deal's \u2014 and after either the person **stays on the radar**.\n\n**Read it back** through `GET /api/v1/searches/{id}`, in this same shape, minus the chip \u2014 it is true of the moment the reading ran.",
+        "operationId": "read_the_radar_api_v1_radar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadRadarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "One reading: every player the radar may draw for you in this sport, ordered by distance and then id, sharing one `search_id`. **An empty reading is also a 200** \u2014 nobody rated in this sport inside your reach is an answer, and the pool it came from is described either way.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShortlistResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_held` \u2014 this account is under a live hold.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius or an area from.\n\n**Never `play_intent_not_declared`**: like the deck, the radar reads no declaration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded` \u2014 four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*. A gate that cannot be evaluated refuses the whole reading rather than drawing anybody it could not check.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/passes": {
       "post": {
         "tags": [
@@ -4330,6 +4407,21 @@
             "title": "Distance Km",
             "description": "Kilometres to one decimal, measured between the two **drawn spots** \u2014 one fixed point inside each player's coarse area, the same for every viewer \u2014 and never below `0.1`. The Fit does not read it: the distance term and the radius gate measure cell to cell, so a player at the very edge may print `10.3` inside a 10 km reach. **Promoted out of the distance evidence** so the *Closest* sort reads a field rather than reaching into a variant, and **omitted** rather than sent as zero when the distance term stood down \u2014 which is what lets a stood-down row sort last instead of first."
           },
+          "bearing_deg": {
+            "type": "integer",
+            "maximum": 359.0,
+            "minimum": 0.0,
+            "title": "Bearing Deg",
+            "description": "**On a reading only.** The compass bearing from your drawn spot to theirs \u2014 north `0`, east `90`, clockwise, a whole degree \u2014 measured spot to spot beside `distance_km`, so the two place one point on the radar. **Served, never derived**: the client computes no geometry beyond scaling. On the row and never inside `player_card`, because its value depends on who is looking. Omitted on every other surface."
+          },
+          "ratings": {
+            "items": {
+              "$ref": "#/components/schemas/RatedSportSchema"
+            },
+            "type": "array",
+            "title": "Ratings",
+            "description": "**On a reading only.** Every sport this player is rated in, with the Level held there, in the sport registry's order \u2014 the card's sport chips. `player_card.level` is the same number for the reading's own sport. Omitted on every other surface."
+          },
           "player_card": {
             "$ref": "#/components/schemas/PlayerCardSchema"
           },
@@ -4396,7 +4488,7 @@
           "liveness_reasons"
         ],
         "title": "CandidateSchema",
-        "description": "One row of the shortlist: the pairing, and the person.\n\nThree field families have a **different author** from the rest and are\nattached by the backend after the scorer returns \u2014 the card, the at-stake\nblock and the distance. None of them is a fact the scorer may see, and none\nmay be computed by the client.\n\nOn a read-back this row means *the live gates still admit this person*, and\nit says so: ``withheld`` is ``false``, positively, rather than absent. A row\nthe gates no longer admit is a :class:`WithheldRowSchema` instead, and the\ntwo are a union precisely so that **rendering a person the product has agreed\nnot to show is not a shape this contract can hold** (``docs/adr/0109``)."
+        "description": "One row of the shortlist: the pairing, and the person.\n\nThree field families have a **different author** from the rest and are\nattached by the backend after the scorer returns \u2014 the card, the at-stake\nblock and the distance. None of them is a fact the scorer may see, and none\nmay be computed by the client. **On a reading two more join them**, the\nbearing and the sport chips, on the same argument.\n\nOn a read-back this row means *the live gates still admit this person*, and\nit says so: ``withheld`` is ``false``, positively, rather than absent. A row\nthe gates no longer admit is a :class:`WithheldRowSchema` instead, and the\ntwo are a union precisely so that **rendering a person the product has agreed\nnot to show is not a shape this contract can hold** (``docs/adr/0109``)."
       },
       "ChallengeDetailResponse": {
         "properties": {
@@ -7970,7 +8062,7 @@
             "type": "integer",
             "minimum": 0.0,
             "title": "Want To Play You",
-            "description": "**On a deal only.** How many people have a live *Let's play* towards you in this sport that would be dealt to you: every gate passed, not passed on by you within the pass window, not cooling off after a court you shared, and not already mutual. Somebody dealt this morning and unanswered still counts \u2014 the dealt memory is not applied. **A count and never a list**: nothing on any route names who. `0` is a measured nought, so a chip drawn from it is drawn at one and above."
+            "description": "**On a deal, and on a reading.** How many people have a live *Let's play* towards you in this sport that **the deck would deal** to you: every one of the deck's gates passed, not passed on by you within the pass window, not cooling off after a court you shared, and not already mutual. Somebody dealt this morning and unanswered still counts \u2014 the dealt memory is not applied. **On a reading it is the deck's number, computed by the deck's rule**, so the chip on either pane of Players is one number \u2014 and somebody the radar draws whom the deck would never deal is not in it, though their card says they said yes. **A count and never a list**: nothing on any route names who. On a deal `0` is a measured nought; on a reading it is omitted at zero, so a chip is drawn at one and above either way."
           }
         },
         "type": "object",
@@ -8205,6 +8297,25 @@
         ],
         "title": "RangeResponse"
       },
+      "RatedSportSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level in that sport, as published"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level"
+        ],
+        "title": "RatedSportSchema",
+        "description": "One sport somebody is rated in, and the Level they hold there \u2014 a card's\nsport chip (``docs/adr/0174`` \u00a72). The Level and nothing else: the record\nis where a band, a range and a certainty are drawn."
+      },
       "RatingResponse": {
         "properties": {
           "sport": {
@@ -8273,6 +8384,20 @@
         ],
         "title": "RatingsResponse",
         "description": "Every sport this player is rated at \u2014 empty when they are rated at none."
+      },
+      "ReadRadarRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport this reading is for"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport"
+        ],
+        "title": "ReadRadarRequest",
+        "description": "What a reading is asked for. **The sport, and that is the whole\ncontract** (``the-radar.md`` \u00a72).\n\n**There is no `mode`**, because there is none: the radar scores every\npairing under the deck's ruler, and a mode on this body would be the field\nthe telemetry constraint refuses. **There is no radius**, because the reach\nis your own Search radius and there is no city; the slider on Find a game\nis where it moves. **There is no position**, because the server holds your\narea and puts it on a cold start. And **there is no week**: a reading ranks\nnobody, so there is nothing for a grid to rank on."
       },
       "RecordLikelyRangeSchema": {
         "properties": {
@@ -8831,7 +8956,7 @@
                 "type": "null"
               }
             ],
-            "description": "Null exactly on the deck, which has no mode."
+            "description": "Null exactly on the deck and the radar, which have no mode and score every pairing under one ruler."
           },
           "my_area_code": {
             "type": "string",
@@ -8976,10 +9101,11 @@
           "SHORTLIST",
           "LINEUP",
           "DECK",
-          "FILL_SEATS"
+          "FILL_SEATS",
+          "RADAR"
         ],
         "title": "SearchSurface",
-        "description": "Which terminal stage ran. Four values, and pooling their rates is how\nevery number the engine is judged by becomes meaningless \u2014 ``FILL_SEATS`` is\nnot even optimising for the searcher.\n\n``SHORTLIST`` and ``DECK`` can be written today; the two line-up surfaces\narrive with their route. All four were declared before any of them could be\nwritten, because ``surface`` is a stored column and a vocabulary that grows\none value per ticket is a vocabulary whose old rows cannot be read against\nthe new ones."
+        "description": "Which terminal stage ran. Five values, and pooling their rates is how\nevery number the engine is judged by becomes meaningless \u2014 ``FILL_SEATS`` is\nnot even optimising for the searcher, and ``RADAR`` ranks nobody at all.\n\n``SHORTLIST`` and ``DECK`` could be written from the start; the two line-up\nsurfaces arrived with their route, and the **reading** with the radar\n(``docs/adr/0174`` \u00a71). The first four were declared before any of them\ncould be written, because ``surface`` is a stored column and a vocabulary\nthat grows one value per ticket is a vocabulary whose old rows cannot be\nread against the new ones \u2014 and the fifth is the one surface that was\nargued for after the column existed, which is what an ADR is for."
       },
       "SeatAnswer": {
         "type": "string",

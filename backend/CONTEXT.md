@@ -540,6 +540,34 @@ there; they are not repeated here.
   since 2026-09-16 — and computing the drawn distance in `fence.py`, which is where
   everything the scorer sees is assembled and where this one number must never be.
 
+- **Asked gates** vs **not asked** — how the radar's **reading** keeps five of the ten
+  gates without relaxing the other four, which
+  [ADR-0099](../docs/adr/0099-relaxation-offers-the-searchers-own-asks.md) forbids. `gates.asked_on`
+  names the set per surface — every surface asks all ten but `RADAR`, which asks `BLOCKED`,
+  `HELD_ACCOUNT`, `ACCOUNT_INACTIVE`, `GENDER_PREFERENCE` and `NOT_RATED`, with
+  `OUTSIDE_RADIUS` as the reach — and `gate_of` steps over a gate the surface does not ask
+  **without evaluating it**, never evaluating and overruling it. The histogram keeps ten keys
+  on every surface, so a reading records a **zero** under each gate it did not ask, which the
+  telemetry reads as *not asked* on a `RADAR` row and never as *nobody was excluded*
+  ([ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §3).
+  What follows the gates on a reading is `domain/radar.py`: everyone admitted is scored,
+  everyone scored is drawn, the floor is computed and not applied, and the order is the
+  printed distance then the id. _Avoid_: "relaxed" for a gate the radar drops, and a
+  `SearchContext` field carrying the set — it is derived from the surface so a context
+  cannot say one thing about its surface and another about its gates.
+
+- **Scores under one ruler** — `SearchSurface.scores_under_one_ruler`, true of the deck and
+  the reading and false of the three that take a mode from the request. The one place the
+  record's invariant and the context's stood-down terms read *which surfaces have no mode*;
+  the `search` table's two check constraints (`0027`) cannot read it and spell the surfaces
+  by name, and `tests/unit/test_search_store.py` holds that spelling to the property, so a
+  surface added to one and not the other goes red. The deck's own ledgers are shared the
+  same way: `application/deck_exclusions.py` holds the four reads behind the deal's
+  exclusions once, built once per request and handed to both use cases, and a reading asks
+  it **only for the chip** — `pool.want_to_play_you` is the deck's number by the deck's
+  rule, over a generation re-run under the deck's surface — and never for who it draws.
+  _Avoid_: "the deck's" as the test for a null mode, which is now half the truth.
+
 - **Tail reader** — `CandidateIndexTail`, the **candidate index's only writer**. It
   subscribes to `event_store` in `sequence_no` order and **not** to the outbox, and the two
   are different subscriptions with different guarantees

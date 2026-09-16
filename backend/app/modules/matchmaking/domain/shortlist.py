@@ -581,8 +581,8 @@ def _searcher_as_candidate(
     return ScorableCandidate(
         player_id=str(facts.player_id),
         level=LevelReading(mu=facts.mu, sigma=facts.sigma),
-        # ``None`` for a viewer who never declared, which only the deck admits
-        # — and the deck stands the term down before it could read it.
+        # ``None`` for a viewer who never declared, which only the deck and the
+        # radar admit — and both stand the term down before it could read it.
         declared_intent=(
             None if facts.declared_intent is None else facts.declared_intent.value
         ),

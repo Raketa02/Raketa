@@ -59,9 +59,10 @@ already carry that, and it would be the only context segment in the document.
 | `POST /api/v1/searches` | `SHORTLIST` | A ranked shortlist with full breakdowns |
 | `POST /api/v1/lineups` | `LINEUP` / `FILL_SEATS` | The pool it seated from, a seated line-up, three arrangements, forecasts |
 | `POST /api/v1/deck` | `DECK` | One deal: an ordered batch of cards |
+| `POST /api/v1/radar` | `RADAR` | One reading: everyone in the reach, by distance and bearing, with the deck's chip ([`the-radar.md`](the-radar.md) §2) |
 | `GET /api/v1/searches/{id}` | — | Any of the above, read back |
 
-**All three are `POST`s that create a search, and that is honest rather than tidy.**
+**All four are `POST`s that create a search, and that is honest rather than tidy.**
 [ADR-0104](../../adr/0104-the-search-record-is-the-answer-and-never-expires.md) makes every
 engine invocation a durable, unexpiring `search` row; a `GET` that writes one would be the
 only route in this backend lying about its verb.

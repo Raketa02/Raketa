@@ -17,6 +17,17 @@ under the **first in declaration order** — stated here rather than discovered,
 because a histogram whose keys depend on evaluation order is a histogram nobody
 can compare across releases.
 
+**The radar asks five of the ten, and the other four are not relaxed — they are
+not asked** (``docs/adr/0174`` §3). A gate is somebody else's rule about being
+seen or an account that cannot be acted on, or it is a judgement about the
+pairing; the radar promised no judgement, and ADR-0099 forbids relaxing a gate,
+so the four it drops are dropped by having no question for them to gate rather
+than by being loosened. :func:`asked_on` is the one place that says which, and
+:func:`gate_of` walks the roster in declaration order asking only those — so the
+histogram keeps ten keys on every surface and a reading records a **zero** under
+each gate it did not ask, which the telemetry reads as *not asked* on a
+``RADAR`` row and never as *nobody was excluded*.
+
 **Gender is a gate and never a score.** It is applied in **both directions**, it
 fails **closed**, it is explained to its owner and revealed to nobody else, and
 nothing on any screen reveals how many people it hid. That last part is why the
@@ -41,7 +52,7 @@ from app.modules.matchmaking.domain.search_context import (
     SearchContext,
     is_new_at,
 )
-from app.modules.matchmaking.domain.searches import SearchInitiation
+from app.modules.matchmaking.domain.searches import SearchInitiation, SearchSurface
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.mutual_preference import (
     preferences_are_mutual,
@@ -93,6 +104,36 @@ class GateCode(str, Enum):
 #: than a silent hole in the denominator.
 GATE_ROSTER: tuple[GateCode, ...] = tuple(GateCode)
 
+#: The gates the **radar** asks (``docs/adr/0174`` §3): the three about safety
+#: and an account that cannot be acted on, the mutual preference, and being
+#: rated in the sport — plus the reach, which is the circle bounding the
+#: population rather than a judgement about anybody inside it. Not
+#: ``OPEN_CHALLENGE`` (a court with the viewer is a line on the sheet, never a
+#: hole on the map), not ``LEVEL`` (*no level band*), and not the two that are
+#: inert or engine-initiated only.
+_ASKED_ON_THE_RADAR: frozenset[GateCode] = frozenset(
+    {
+        GateCode.BLOCKED,
+        GateCode.HELD_ACCOUNT,
+        GateCode.NOT_RATED,
+        GateCode.OUTSIDE_RADIUS,
+        GateCode.ACCOUNT_INACTIVE,
+        GateCode.GENDER_PREFERENCE,
+    }
+)
+
+
+_EVERY_GATE: frozenset[GateCode] = frozenset(GATE_ROSTER)
+
+
+def asked_on(surface: SearchSurface) -> frozenset[GateCode]:
+    """Which of the ten this surface asks. **Every surface but the radar asks
+    all ten**, and the radar's six are named once, above."""
+
+    if surface is SearchSurface.RADAR:
+        return _ASKED_ON_THE_RADAR
+    return _EVERY_GATE
+
 
 def gate_of(
     row: CandidateRow, context: SearchContext, *, distance_km: float
@@ -104,30 +145,49 @@ def gate_of(
     twice is the kind of duplication that ends with two answers.
 
     The order below **is** :class:`GateCode`'s declaration order, and the
-    telemetry counts the first that fires.
+    telemetry counts the first that fires. A gate the surface does not ask is
+    stepped over without being evaluated — never evaluated and ignored, which
+    would be a gate that fired and was overruled.
     """
 
     searcher = context.searcher
     player_id = row.player_id
-    if player_id in context.gates.blocked_player_ids:
+    asked = asked_on(context.surface)
+    # Each gate is guarded by *is it asked* before it is evaluated, in one
+    # chain rather than a table of closures: this runs once per row in the
+    # box, and ten allocations per candidate would be the cost of a surface
+    # the other four never asked for.
+    if GateCode.BLOCKED in asked and player_id in context.gates.blocked_player_ids:
         return GateCode.BLOCKED
-    if player_id in context.gates.held_player_ids:
+    if GateCode.HELD_ACCOUNT in asked and player_id in context.gates.held_player_ids:
         return GateCode.HELD_ACCOUNT
-    if row.sport != searcher.sport.value or not row.rating_status:
+    if GateCode.NOT_RATED in asked and (
+        row.sport != searcher.sport.value or not row.rating_status
+    ):
         return GateCode.NOT_RATED
-    if distance_km > float(searcher.radius_km):
+    if GateCode.OUTSIDE_RADIUS in asked and distance_km > float(searcher.radius_km):
         return GateCode.OUTSIDE_RADIUS
-    if player_id in context.gates.open_challenge_ids:
+    if (
+        GateCode.OPEN_CHALLENGE in asked
+        and player_id in context.gates.open_challenge_ids
+    ):
         return GateCode.OPEN_CHALLENGE
-    if _photo(row):
+    if GateCode.PHOTO in asked and _photo(row):
         return GateCode.PHOTO
-    if context.initiation is SearchInitiation.ENGINE and row.proposals_opt_in is False:
+    if (
+        GateCode.PROPOSALS_OPT_OUT in asked
+        and context.initiation is SearchInitiation.ENGINE
+        and row.proposals_opt_in is False
+    ):
         return GateCode.PROPOSALS_OPT_OUT
-    if player_id in context.gates.unshowable_player_ids:
+    if (
+        GateCode.ACCOUNT_INACTIVE in asked
+        and player_id in context.gates.unshowable_player_ids
+    ):
         return GateCode.ACCOUNT_INACTIVE
-    if not _gender_satisfied(row, context):
+    if GateCode.GENDER_PREFERENCE in asked and not _gender_satisfied(row, context):
         return GateCode.GENDER_PREFERENCE
-    if not _level_close_enough(row, context):
+    if GateCode.LEVEL in asked and not _level_close_enough(row, context):
         return GateCode.LEVEL
     return None
 

@@ -63,31 +63,20 @@ from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
 from app.kernel import Instant, InvariantViolated
 from app.modules.matchmaking.application.commands import RunDeckDealCommand
+from app.modules.matchmaking.application.deck_exclusions import DeckExclusionReads
 from app.modules.matchmaking.application.search_workbench import (
     AnsweredCandidate,
     SearchWorkbench,
 )
-from app.modules.matchmaking.application.outward_reads import read_demand
 from app.modules.matchmaking.domain.deck import (
     INHERITED_ON_THE_DECK,
     Deal,
-    DeckExclusions,
-    cleared_by_reset,
-    cooling_off,
     deal,
-    dealt_memory_from,
 )
-from app.modules.matchmaking.domain.deck_reset import DeckResetLedger
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.index_staleness import IndexFreshness
-from app.modules.matchmaking.domain.interest import InterestLedger
-from app.modules.matchmaking.domain.ledgers import SuppressionLedger
-from app.modules.matchmaking.domain.passes import (
-    PassLedger,
-    suppression_lapsed_at,
-)
-from app.modules.matchmaking.domain.ports import SharedCourt, SharedCourtQuery
+from app.modules.matchmaking.domain.passes import suppression_lapsed_at
 from app.modules.matchmaking.domain.prompts import (
     RaisedPrompt,
     improvised_week,
@@ -97,7 +86,6 @@ from app.modules.matchmaking.domain.search_context import (
     SearchContext,
     SearcherFacts,
 )
-from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.domain.searches import (
     PoolDescription,
     SearchInitiation,
@@ -155,22 +143,16 @@ class RunDeckDeal:
         workbench: SearchWorkbench,
         ruleset: Ruleset,
         engine: MatchFit,
-        searches: SearchStore,
-        suppression: SuppressionLedger,
-        interest: InterestLedger,
-        passes: PassLedger,
-        courts: SharedCourtQuery,
-        resets: DeckResetLedger,
+        held_out: DeckExclusionReads,
     ) -> None:
         self._work = workbench
         self._ruleset = ruleset
         self._engine = engine
-        self._searches = searches
-        self._suppression = suppression
-        self._interest = interest
-        self._passes = passes
-        self._courts = courts
-        self._resets = resets
+        # **The four reads are shared with the radar** (``deck_exclusions.py``):
+        # its chip is this surface's rule, computed over these same stores, so
+        # there is one implementation of *whom the deck holds out* and the two
+        # chips cannot come to disagree.
+        self._held_out = held_out
 
     async def execute(self, command: RunDeckDealCommand) -> DeckAnswer:
         now = self._work.clock.now()
@@ -218,25 +200,20 @@ class RunDeckDeal:
             )
 
         with self._work.timed(stages, "read_deck_exclusions"):
-            passed_at = await self._passes.last_passed_at(
-                passer_id=command.searcher_id,
+            held_out = await self._held_out.for_a_deal(
+                searcher_id=command.searcher_id,
                 sport=command.sport,
-                candidate_ids=in_box,
+                in_box=in_box,
+                now=now,
             )
-            reset_at = await self._resets.latest_at(
-                player_id=command.searcher_id, sport=command.sport
-            )
-            exclusions = await self._exclusions(
-                command, in_box, now, passed_at=passed_at, reset_at=reset_at
-            )
-            re_shows = self._re_shows(passed_at, now)
+            re_shows = self._re_shows(held_out.passed_at, now)
 
         with self._work.scoring(stages):
             try:
                 dealt = deal(
                     context,
                     self._engine,
-                    exclusions=exclusions,
+                    exclusions=held_out.exclusions,
                     re_shows=re_shows,
                 )
             except InvariantViolated as broken:
@@ -274,71 +251,7 @@ class RunDeckDeal:
             prompts=() if week is None else (week,),
         )
 
-    # -- the four the deck adds to the gates ---------------------------------
-
-    async def _exclusions(
-        self,
-        command: RunDeckDealCommand,
-        in_box: tuple[UUID, ...],
-        now: Instant,
-        *,
-        passed_at: Mapping[UUID, datetime],
-        reset_at: Instant | None,
-    ) -> DeckExclusions:
-        """Whom this deal holds out, and where each answer comes from.
-
-        Four reads, four stores, three different postures — which is the whole
-        of *the gate is the cache; the evidence is the row* seen from one method.
-
-        **Suppression** is the cache and it fails soft: an outage answers
-        *nobody*, which repeats a card rather than emptying a deal. What the
-        viewer's last *Show them again* cleared is subtracted from it off the
-        **pass record**, never off the cache — the keys are left to lapse, and
-        a reset that had to reach the cache could fail soft and lie.
-        **Already asked** is the durable interest ledger, read over this player's
-        own outgoing yeses — their own rows, so it is not an inbox — and it lapses
-        with the yes, which is how ``INTEREST_TTL`` expiry *returns a person to
-        the deck*; the reset does not touch it. **Already dealt** is the search
-        record itself, bounded by ``DEALT_MEMORY`` or by the reset, whichever is
-        later, which is what makes a spent deal deal again and *deal everyone
-        again* true. **Cooling off** is ``games``' record, read through a port
-        in the matcher's words that fails soft like the cache does
-        (``docs/adr/0169`` §6): the courts still ahead, and the ones behind the
-        two of them inside the window and since the reset.
-        """
-
-        suppressed = await self._suppression.suppressed_for(
-            passer_id=command.searcher_id, candidate_ids=in_box
-        )
-        outgoing = await self._interest.outgoing(
-            player_id=command.searcher_id, now=now
-        )
-        dealt = await self._searches.dealt_since(
-            searcher_id=command.searcher_id,
-            sport=command.sport,
-            since=dealt_memory_from(now, reset_at=reset_at),
-        )
-        no_courts: tuple[SharedCourt, ...] = ()
-        courts = await read_demand(
-            SharedCourtQuery,
-            lambda: self._courts.shared_courts(command.searcher_id),
-            stood_down=no_courts,
-        )
-        return DeckExclusions(
-            suppressed=suppressed - cleared_by_reset(passed_at, reset_at=reset_at),
-            already_asked=frozenset(
-                yes.to_player_id
-                for yes in outgoing
-                if yes.sport is command.sport
-            ),
-            already_dealt=dealt,
-            cooling_off=cooling_off(
-                courts,
-                now=now,
-                days=self._ruleset.interest.deck_cool_off_days,
-                reset_at=reset_at,
-            ),
-        )
+    # -- the re-show flag ------------------------------------------------------
 
     def _re_shows(
         self, passed_at: Mapping[UUID, datetime], now: Instant

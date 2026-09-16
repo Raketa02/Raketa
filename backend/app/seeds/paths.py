@@ -111,13 +111,19 @@ from app.modules.games.application.read_games import ReadGames
 from app.modules.games.domain.ports import GameHistoryQuery
 from app.modules.matchmaking.application.commands import (
     RunDeckDealCommand,
+    RunRadarReadingCommand,
     RunShortlistSearchCommand,
 )
+from app.modules.matchmaking.application.deck_exclusions import DeckExclusionReads
 from app.modules.matchmaking.application.express_interest import ExpressInterest
 from app.modules.matchmaking.application.read_interest import ReadInterest
 from app.modules.matchmaking.application.record_pass import RecordPass
 from app.modules.matchmaking.application.run_deck_deal import DeckAnswer, RunDeckDeal
 from app.modules.matchmaking.application.run_lineup_search import RunLineupSearch
+from app.modules.matchmaking.application.run_radar_reading import (
+    RadarAnswer,
+    RunRadarReading,
+)
 from app.modules.matchmaking.application.run_shortlist_search import (
     RunShortlistSearch,
 )
@@ -164,16 +170,20 @@ class SeedPathMissing(RuntimeError):
 class ReadPaths:
     """Every surface a seed run reads or writes through, and what reads it back.
 
-    The searches, the deck and the line-up are the three surfaces; the yes, the
-    pass, the block, the send and the two answers are the five gestures. They sit
-    in one value because the edges and the claims are two halves of one run and a
-    second assembly is a second opinion.
+    The searches, the deck, the line-up and the radar are the four surfaces;
+    the yes, the pass, the block, the send and the two answers are the five
+    gestures. They sit in one value because the edges and the claims are two
+    halves of one run and a second assembly is a second opinion.
     """
 
     workbench: SearchWorkbench
     shortlist: RunShortlistSearch
     deck: RunDeckDeal
     lineup: RunLineupSearch
+    #: The reading (``docs/adr/0174``) — the one surface that draws everybody
+    #: in the reach, which is what makes it the surface a fixture can prove
+    #: its whole population on: a court, a pass and a mutual hide nobody here.
+    radar: RunRadarReading
     interest: ExpressInterest
     read_interest: ReadInterest
     passes: RecordPass
@@ -379,6 +389,17 @@ async def read_paths(
         absent_terms=build_absent_terms(),
         meter=None,
     )
+    # Built once and shared by the deal and the reading, as a request shares
+    # it: one object over the deck's four stores, so the two chips are one.
+    held_out = DeckExclusionReads(
+        ruleset=ruleset,
+        searches=searches,
+        suppression=suppression,
+        interest=interest,
+        passes=passes,
+        courts=build_shared_court_query(session),
+        resets=build_deck_reset_ledger(session),
+    )
     return ReadPaths(
         workbench=workbench,
         shortlist=RunShortlistSearch(
@@ -393,12 +414,16 @@ async def read_paths(
             workbench=workbench,
             ruleset=ruleset,
             engine=engine,
-            searches=searches,
-            suppression=suppression,
-            interest=interest,
-            passes=passes,
-            courts=build_shared_court_query(session),
-            resets=build_deck_reset_ledger(session),
+            held_out=held_out,
+        ),
+        # Over the deck's own reads, as a request assembles it: the chip on a
+        # reading is the deck's number, and a reading assembled over different
+        # stores would be a chip that could disagree with the deal's.
+        radar=RunRadarReading(
+            workbench=workbench,
+            ruleset=ruleset,
+            engine=engine,
+            held_out=held_out,
         ),
         lineup=RunLineupSearch(
             workbench=workbench,
@@ -649,6 +674,22 @@ async def deal_a_deck(paths: ReadPaths, email: str, sport: Sport) -> DeckAnswer:
             sport=sport,
             availability_override=None,
             trace_id=TRACE_ID,
+        )
+    )
+
+
+async def read_a_radar(paths: ReadPaths, email: str, sport: Sport) -> RadarAnswer:
+    """One reading, through the use case a request runs.
+
+    **A reading costs nothing the next surface pays for**: it enters no dealt
+    memory and notes no exposure (``docs/adr/0174`` §4), so it can be read as
+    often as a run likes — the one thing it leaves behind is its own search
+    record, which never expires.
+    """
+
+    return await paths.radar.execute(
+        RunRadarReadingCommand(
+            searcher_id=paths.player(email), sport=sport, trace_id=TRACE_ID
         )
     )
 

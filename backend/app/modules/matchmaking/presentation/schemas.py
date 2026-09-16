@@ -263,6 +263,22 @@ class DealDeckRequest(BaseModel):
     )
 
 
+class ReadRadarRequest(BaseModel):
+    """What a reading is asked for. **The sport, and that is the whole
+    contract** (``the-radar.md`` §2).
+
+    **There is no `mode`**, because there is none: the radar scores every
+    pairing under the deck's ruler, and a mode on this body would be the field
+    the telemetry constraint refuses. **There is no radius**, because the reach
+    is your own Search radius and there is no city; the slider on Find a game
+    is where it moves. **There is no position**, because the server holds your
+    area and puts it on a cold start. And **there is no week**: a reading ranks
+    nobody, so there is nothing for a grid to rank on.
+    """
+
+    sport: Sport = Field(..., description="Which sport this reading is for")
+
+
 class RecordPassRequest(BaseModel):
     """One *not today*, and where the card came from. **Write-only.**
 
@@ -399,14 +415,19 @@ class PoolSchema(BaseModel):
         OMITTED,
         ge=0,
         description=(
-            "**On a deal only.** How many people have a live *Let's play* "
-            "towards you in this sport that would be dealt to you: every gate "
-            "passed, not passed on by you within the pass window, not cooling "
-            "off after a court you shared, and not already mutual. Somebody "
-            "dealt this morning and unanswered still counts — the dealt "
-            "memory is not applied. **A count and never a list**: nothing on "
-            "any route names who. `0` is a measured nought, so a chip drawn "
-            "from it is drawn at one and above."
+            "**On a deal, and on a reading.** How many people have a live "
+            "*Let's play* towards you in this sport that **the deck would "
+            "deal** to you: every one of the deck's gates passed, not passed "
+            "on by you within the pass window, not cooling off after a court "
+            "you shared, and not already mutual. Somebody dealt this morning "
+            "and unanswered still counts — the dealt memory is not applied. "
+            "**On a reading it is the deck's number, computed by the deck's "
+            "rule**, so the chip on either pane of Players is one number — "
+            "and somebody the radar draws whom the deck would never deal is "
+            "not in it, though their card says they said yes. **A count and "
+            "never a list**: nothing on any route names who. On a deal `0` is "
+            "a measured nought; on a reading it is omitted at zero, so a chip "
+            "is drawn at one and above either way."
         ),
     )
 
@@ -525,7 +546,10 @@ class SearchEnvelope(BaseModel):
     surface: SearchSurface
     mode: SearchMode | None = Field(
         ...,
-        description="Null exactly on the deck, which has no mode.",
+        description=(
+            "Null exactly on the deck and the radar, which have no mode and "
+            "score every pairing under one ruler."
+        ),
     )
     my_area_code: str = Field(
         OMITTED,
@@ -916,13 +940,23 @@ class ForecastSchema(BaseModel):
     )
 
 
+class RatedSportSchema(BaseModel):
+    """One sport somebody is rated in, and the Level they hold there — a card's
+    sport chip (``docs/adr/0174`` §2). The Level and nothing else: the record
+    is where a band, a range and a certainty are drawn."""
+
+    sport: Sport
+    level: float = Field(..., description="Their Level in that sport, as published")
+
+
 class CandidateSchema(BaseModel):
     """One row of the shortlist: the pairing, and the person.
 
     Three field families have a **different author** from the rest and are
     attached by the backend after the scorer returns — the card, the at-stake
     block and the distance. None of them is a fact the scorer may see, and none
-    may be computed by the client.
+    may be computed by the client. **On a reading two more join them**, the
+    bearing and the sport chips, on the same argument.
 
     On a read-back this row means *the live gates still admit this person*, and
     it says so: ``withheld`` is ``false``, positively, rather than absent. A row
@@ -962,6 +996,29 @@ class CandidateSchema(BaseModel):
             "and **omitted** rather than sent as zero when the distance term "
             "stood down — which is what lets a stood-down row sort last "
             "instead of first."
+        ),
+    )
+    bearing_deg: int = Field(
+        default=OMITTED,
+        ge=0,
+        le=359,
+        description=(
+            "**On a reading only.** The compass bearing from your drawn spot to "
+            "theirs — north `0`, east `90`, clockwise, a whole degree — "
+            "measured spot to spot beside `distance_km`, so the two place one "
+            "point on the radar. **Served, never derived**: the client "
+            "computes no geometry beyond scaling. On the row and never inside "
+            "`player_card`, because its value depends on who is looking. "
+            "Omitted on every other surface."
+        ),
+    )
+    ratings: list[RatedSportSchema] = Field(
+        default=OMITTED,
+        description=(
+            "**On a reading only.** Every sport this player is rated in, with "
+            "the Level held there, in the sport registry's order — the card's "
+            "sport chips. `player_card.level` is the same number for the "
+            "reading's own sport. Omitted on every other surface."
         ),
     )
     player_card: PlayerCardSchema

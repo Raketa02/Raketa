@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from math import asin, cos, radians, sin, sqrt, tau
+from math import asin, atan2, cos, degrees, radians, sin, sqrt, tau
 from typing import final
 from uuid import UUID
 
@@ -157,6 +157,36 @@ def distance_km(first: Point, second: Point) -> float:
         + cos(first_latitude) * cos(second_latitude) * sin(delta_longitude / 2.0) ** 2
     )
     return 2.0 * EARTH_RADIUS_KM * asin(min(1.0, sqrt(chord)))
+
+
+#: Degrees on a compass. A bearing is reduced into ``[0, 360)`` and printed as
+#: a whole degree, so the top of the compass is ``0`` and never ``360``.
+_FULL_CIRCLE_DEGREES = 360
+
+
+def bearing_deg(first: Point, second: Point) -> int:
+    """The initial compass bearing from one point to another, as a whole degree.
+
+    North is ``0``, east ``90``, clockwise, on ``[0, 359]`` — the radar's own
+    reading of *where they are from here* (``docs/adr/0174`` §2), measured spot
+    to spot beside the distance and served rather than derived by any client.
+    Forward azimuth on the sphere, which agrees with the haversine beside it:
+    a bearing read off a flat approximation would point a few degrees off at
+    the reach's edge, and the radar draws the point.
+
+    Rounded to the nearest degree **after** reduction, and reduced again after
+    rounding, so a bearing just west of north prints ``0`` and not ``360``.
+    """
+
+    first_latitude = radians(first.latitude)
+    second_latitude = radians(second.latitude)
+    delta_longitude = radians(second.longitude - first.longitude)
+    east = sin(delta_longitude) * cos(second_latitude)
+    north = cos(first_latitude) * sin(second_latitude) - sin(first_latitude) * cos(
+        second_latitude
+    ) * cos(delta_longitude)
+    azimuth = degrees(atan2(east, north)) % _FULL_CIRCLE_DEGREES
+    return round(azimuth) % _FULL_CIRCLE_DEGREES
 
 
 def drawn_spot(player_id: UUID, cell: Point) -> Point:

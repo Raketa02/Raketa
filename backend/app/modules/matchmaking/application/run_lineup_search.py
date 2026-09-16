@@ -379,9 +379,10 @@ class RunLineupSearch:
             # the workbench built rather than off the request — which is the only
             # spelling that stays true when the mode was inherited from a
             # challenge or resolved from a declaration. ``intent_read`` stays
-            # ``None``: it is non-null **exactly on the deck**, where ``mode`` is
-            # null and a declaration is the only record of what was scored. Here
-            # a real mode was chosen and recorded, so the row says which.
+            # ``None``: it is set only where ``mode`` is null — the deck and
+            # the radar — and a declaration is the only record of what was
+            # scored. Here a real mode was chosen and recorded, so the row
+            # says which.
             mode=searcher.mode,
             intent_read=None,
             surface=surface,

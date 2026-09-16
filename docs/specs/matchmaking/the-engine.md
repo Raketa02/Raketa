@@ -138,7 +138,7 @@ whole reason there is one engine rather than three.
   4  MODIFY        three modifiers, ±10 stack, each prints                   §6
   5  QUALITY FLOOR below it, not shown at all. minimum evidence beside it    §7
   6  LIVENESS      reorders. never enters Fit. never crosses as a number     §8
-  7  TERMINAL      shortlist │ line-up → group objective → arrange │ deck    §10
+  7  TERMINAL      shortlist │ line-up → group objective → arrange │ deck │ reading  §10
   8  EXPLAIN       evidence codes, ranked by contribution                    §5.4
 ```
 
@@ -755,6 +755,49 @@ resets from its sample, which is the cost #231 named and the author accepted. **
 deck is still the honest empty state**, and it now says how many are left before it is reached:
 `pool.remaining` on the envelope, and `pool.want_to_play_you` for the chip.
 
+### 10.4 The reading
+
+**The radar's surface, `RADAR`, and the fifth**
+([ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §1, §3, §5;
+[`the-radar.md`](the-radar.md) §2–§3). `POST /api/v1/radar` with a sport, and nothing else: the
+reach is the viewer's own search radius applied as the same box and exact circle the deck uses,
+there is no city, and there is no mode — the reading scores under the deck's ruler for everybody,
+`INTENT_ALIGNMENT` stood down, `mode` null and `intent_read` recorded as it stood, under the same
+constraint the deck writes under, widened to the two surfaces that score under one ruler.
+
+**Five gates asked, and the other four are not asked** — never relaxed, which §11 forbids:
+`BLOCKED`, `HELD_ACCOUNT`, `ACCOUNT_INACTIVE`, `GENDER_PREFERENCE` and `NOT_RATED` hold, with
+`OUTSIDE_RADIUS` as the reach itself; `OPEN_CHALLENGE`, `LEVEL`, `PHOTO` and `PROPOSALS_OPT_OUT`
+have no question on this surface to gate. The histogram keeps ten keys and a reading records a
+**zero** under each of the four, which
+[`search-telemetry.md`](search-telemetry.md) reads as *not asked* on a `RADAR` row.
+
+**No judgement after the gates.** Everyone admitted is scored and everyone scored is drawn: no
+quality floor (computed, not applied — the near-miss band is empty and `best_withheld_fit` is
+null), no cool-off, no pass memory, no dealt memory, no *already asked*. **The order is the
+printed distance and then the player id** — no rank key, no bands — so a position exists for
+the Origin key to name. Stage 6 still runs for every row, because the row crosses with its
+liveness reasons and the sheet reads `INTEREST_LIFT` off it; it moves nobody.
+
+**Two fields are the reading's alone**, on the row and never in the card: `bearing_deg` from the
+viewer's drawn spot to the player's, and `ratings[]` — every sport the player is rated in with
+the Level held there, read across the index's partitions. Both are recorded, because a read-back
+never recomputes.
+
+**A reading is not a deal** (ADR-0174 §4, bounding
+[ADR-0131](../../adr/0131-a-deal-remembers-for-a-day-so-a-spent-deal-deals-again.md)). It enters
+no dealt memory — `dealt_since` reads `surface = DECK` and nothing else — and it notes no
+exposure, because the ledger prices who has been *offered* and a map is not an offer. What
+reaches the deck is an answer: `POST /interest` and `POST /passes` take a reading's `search_id`
+as an Origin key through the same resolver a deal's answers use.
+
+**The chip is the deck's number** (ADR-0174 §5). `pool.want_to_play_you` on a reading is
+computed by the deck's own function over a generation run under the deck's ten gates and the
+deck's exclusions — the reads shared in `application/deck_exclusions.py` — so the chip on either
+pane of Players is one number; omitted at zero. The named edge: a liker whose Level is too far
+for the deck is drawn, carries `INTEREST_LIFT`, and is not counted. There is no `remaining`: a
+reading draws everybody.
+
 ---
 
 ## 11. Relaxation — offered, never applied
@@ -932,13 +975,14 @@ release kind — **weight-only** or **shape-class** — is **derived, never decl
 
 ## 14. The contracts
 
-Nine routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
+Ten routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
 
 | Route | Creates a search | Notes |
 | --- | --- | --- |
 | `POST /api/v1/searches` | ✓ | **deliberately not idempotent** — two taps are two searches, and §19's denominator is *searches run* |
 | `POST /api/v1/lineups` | ✓ | `LINEUP` / `FILL_SEATS`, differing only by `locked_seats` |
 | `POST /api/v1/deck` | ✓ | `sport`, and the week this one deal runs on — no mode, no rung |
+| `POST /api/v1/radar` | ✓ | `RADAR` — `sport` only; **never a deal** (§10.4): no dealt memory, no exposure, five gates asked |
 | `GET /api/v1/searches/{id}` | — | the **same schema** the `POST` returned |
 | `POST /api/v1/interest` | — | idempotent per `(from, to, sport)`; `search_id` required |
 | `POST /api/v1/forecasts` | **no — deliberately** | re-`POST`ing a line-up per swap would enter a six-edit builder session into the denominator as six searches |

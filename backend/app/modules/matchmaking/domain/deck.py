@@ -473,14 +473,19 @@ def deal(
             if exclusions.suppresses(candidate.player_uuid)
         ),
         remaining=len(admitted) - len(ordered),
-        want_to_play_you=_waiting(generation, context, exclusions),
+        want_to_play_you=waiting(generation, context, exclusions),
     )
 
 
-def _waiting(
+def waiting(
     generation: Generation, context: SearchContext, exclusions: DeckExclusions
 ) -> int:
     """How many live yeses towards the viewer would be dealt, memory aside.
+
+    **Public, because the radar's chip is this number** (``docs/adr/0174`` §5):
+    a reading computes it over a generation run under the deck's own gates and
+    the deck's own exclusions, through this one function, so the chip on
+    either pane of Players is one number and never two.
 
     **A fold over the lift's own read, and never a second one.** The context
     already holds *which of these people said yes to me* — bounded to the box,

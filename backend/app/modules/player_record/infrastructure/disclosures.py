@@ -36,6 +36,15 @@ class SearchesThatShowedThem:
     *The subject was returned by a search of the reader's* — read from the one
     place that fact is already written down rather than recomputed: the
     ``RETURNED`` rows of the reader's own searches (``docs/adr/0104``).
+
+    **The radar's reading is the fourth surface that introduces one player to
+    another, and it rides on this strand rather than adding one**
+    (``docs/adr/0174`` §1). A reading is a recorded search with ``RETURNED``
+    rows, and the read below asks for no surface — so the sheet opens from
+    every card a reading drew by the same rule it opens from a shortlist's,
+    and a fourth register row over this same adapter would be the first row
+    twice. The fourth *row* ADR-0159 §3 anticipated is for a surface that is
+    not a search, and there is none yet.
     """
 
     def __init__(self, searches: SearchStore) -> None:

@@ -37,6 +37,7 @@ from app.modules.matchmaking.domain.searches import (
     LineupRecord,
     RecordedCombination,
     PoolDescription,
+    RatedSportRecord,
     RecordedCard,
     SearchCandidateRecord,
     SearchInitiation,
@@ -523,6 +524,15 @@ def _candidate_row(
             }
         ),
         suppression_lapsed=candidate.suppression_lapsed,
+        bearing_deg=candidate.bearing_deg,
+        ratings=(
+            None
+            if candidate.ratings is None
+            else [
+                {"sport": rated.sport.value, "level": rated.level}
+                for rated in candidate.ratings
+            ]
+        ),
     )
 
 
@@ -609,6 +619,15 @@ def _candidate_record(row: SearchCandidateORM) -> SearchCandidateRecord:
             )
         ),
         suppression_lapsed=row.suppression_lapsed,
+        bearing_deg=row.bearing_deg,
+        ratings=(
+            None
+            if row.ratings is None
+            else tuple(
+                RatedSportRecord(sport=Sport(rated["sport"]), level=rated["level"])
+                for rated in row.ratings
+            )
+        ),
     )
 
 
