@@ -20,7 +20,7 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { onlineManager } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
-import { OPEN_THE_CHAT } from '@/features/conversations/types';
+import { PLAYERS } from '@/features/games/types';
 import { endPlaySession } from '@/features/play/types';
 import { AppError, offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -52,9 +52,8 @@ import { FILL_THE_SEAT } from '@/shared/vocabulary/theActsWords';
 
 import { SEND_CHALLENGE_LABEL } from '../types';
 
-import { CALL_IT_OFF } from './callOffPresentation';
 import { challengeErrorMessage } from './challengeErrorMessage';
-import { LEAVE_THIS_GAME } from './leaveGamePresentation';
+import { LEAVE_THE_GAME } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
 const KASIA = 'cccccccc-0000-4000-8000-000000000003';
@@ -297,7 +296,7 @@ async function openTheGame(over: Parameters<typeof stubTheWorld>[0] = {}) {
   await waitFor(() => expect(screen).toHavePathname('/'));
   act(() => router.push(`/games/${GAME}`));
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
-  await screen.findByText(OPEN_THE_CHAT);
+  await screen.findByRole('header', { name: PLAYERS });
 }
 
 /** The press, and where it lands: the builder, already holding the court. */
@@ -308,38 +307,40 @@ async function fillTheSeat() {
 }
 
 describe('where the control is', () => {
-  /** The primary act on this arm: under the chat door, above the court's other acts. */
-  it('is the primary act on the Needs a player arm, above Leave this game', async () => {
+  /** The one act on this arm: directly under the card, above the players card (ADR-0175 §4). */
+  it('is the act directly under the card on the Needs a player arm, and stands alone', async () => {
     await openTheGame({ plans: [AHEAD] });
 
     const control = await screen.findByRole('button', { name: FILL_THE_SEAT });
-    const buttons = screen.getAllByRole('button').map((one) => one.props.accessibilityLabel);
+    const inOrder = screen.root.findAll(() => true);
 
-    expect(buttons.indexOf(FILL_THE_SEAT)).toBeGreaterThan(buttons.indexOf(OPEN_THE_CHAT));
-    expect(buttons.indexOf(FILL_THE_SEAT)).toBeLessThan(buttons.indexOf(LEAVE_THIS_GAME));
-    expect(screen.queryByRole('button', { name: CALL_IT_OFF })).toBeNull();
+    expect(inOrder.indexOf(control)).toBeLessThan(
+      inOrder.indexOf(screen.getByRole('header', { name: PLAYERS })),
+    );
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
+    expect(screen.queryByText(/call it off/i)).toBeNull();
     expect(control.props.accessibilityState.busy).toBe(false);
   });
 
   it('is not drawn on a full court', async () => {
     await openTheGame({ games: [game({ seats: FULL })], plans: [AHEAD] });
 
-    await screen.findByRole('button', { name: LEAVE_THIS_GAME });
+    await screen.findByRole('header', { name: PLAYERS });
     expect(screen.queryByRole('button', { name: FILL_THE_SEAT })).toBeNull();
   });
 
   /**
    * **Once the moment has passed nobody may be seated into the game** — the send from the
-   * builder would be refused with `game_moment_has_passed`, so the door stands down with the
-   * leave, mirroring the server off the same instant rather than opening a builder that cannot
-   * send.
+   * builder would be refused with `game_moment_has_passed`, so the door stands down, mirroring
+   * the server off the same instant rather than opening a builder that cannot send. Nothing else
+   * is drawn for the court then; the hour calls it off (ADR-0175 §3).
    */
   it('is not drawn once the agreed moment has passed', async () => {
     await openTheGame({ plans: [PASSED] });
 
-    await screen.findByText(OPEN_THE_CHAT);
+    await screen.findByRole('header', { name: PLAYERS });
     expect(screen.queryByRole('button', { name: FILL_THE_SEAT })).toBeNull();
-    expect(screen.queryByRole('button', { name: LEAVE_THIS_GAME })).toBeNull();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
   });
 });
 
@@ -402,7 +403,7 @@ describe('a refused fill', () => {
     expect(screen.queryByRole('alert')).toBeNull();
     // The re-read lands past the moment, and the door is gone with it.
     await waitFor(() => expect(screen.queryByRole('button', { name: FILL_THE_SEAT })).toBeNull());
-    expect(screen.getByText(OPEN_THE_CHAT)).toBeTruthy();
+    expect(screen.getByRole('header', { name: PLAYERS })).toBeTruthy();
   });
 
   /** A hold is a fact about the account, said where the act was refused. */

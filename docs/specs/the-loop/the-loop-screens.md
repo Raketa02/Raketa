@@ -180,16 +180,16 @@ others, with a room that ended before the row's day did — which only a same-ev
 
 **A court that has been a game ends with its game, and its row keeps its day like any ending**
 (amended 2026-09-15, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1–§2, §7). `CALLED_OFF` is the seventh standing — the departure that
-leaves one player on a game, or *Call it off* — dated exactly by `ended_at` and shelved a day from
-it. **The rule that dropped the row of a court ended by somebody else's departure is retired**: it
+deserts a game, or the hour that finds it still short of a player (amended 2026-09-16, [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+§2–§3; *Call it off* is retired) — dated exactly by `ended_at` and shelved a day from it. **The rule that dropped the row of a court ended by somebody else's departure is retired**: it
 existed for one day because the only sentence §13 could say of that court was *? said no*, and
 `the-words.md` §13 now has the sentence — *{name} left — nobody else is coming* — so the row stays
 and says it. What still leaves at once is the reader's **own** act: their own *no*, their own
 *left*, their own removal — **and, since [ADR-0173](../../adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md), their own dismissal**: a `CALLED_OFF` row goes the moment the
 reader clears the court, from this row's swipe or from the Now card's trash, because the server
-subtracts it from their list as it subtracts the card. The presser's own row — *You called the game off* — is not one of those
-and stays its day, because the court behind it, every seat with what each person did, is theirs to
-read too.
+subtracts it from their list as it subtracts the card. The hour's row — *Nobody filled the seat*,
+nobody's act — stays its day for everybody the court asked, and every one of them may clear it
+([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §3, §5); the presser's row, *You called the game off*, went with the press.
 
 **The face is who the sentence names — one rule for the whole shelf** ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §7). An ended row
 draws the face and the name of `ended_by`, the player the wire says ended it, and no other. A
@@ -379,17 +379,17 @@ nothing on the wire carries a side.
 | Standing · reader | The sentence | Card block | Controls, in order |
 | --- | --- | --- | --- |
 | `AWAITING_ANSWERS` · invitee, unanswered | §13 *They're waiting on you* | **yes** | **`I'm in`** · **`Not this time`** |
-| `AWAITING_ANSWERS` · invitee, accepted | §13.2 *You're in. Waiting on {n} answers…* | **yes** | **Open the chat** *(the door, below)* · **Leave the game** *(a yes taken back before the court is whole — ADR-0165 §1, #427; the same sheet the Chats list's swipe opens, §22.10)* |
+| `AWAITING_ANSWERS` · invitee, accepted | §13.2 *You're in. Waiting on {n} answers…* | **yes** | **Open the chat** *(the door, below)*. ~~**Leave the game**~~ — the Chats row's swipe alone since [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4 |
 | `AWAITING_ANSWERS` · invitee, declined / lapsed | §13.2's **two sentences** — *You said no…* / *Your day ran out…* | no | none |
-| `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | **Open the chat** *(the door, below)* · **Remove the challenge** *(while nobody besides the organiser holds an accepted seat — ADR-0165 §4)* · **Leave the game** *(once somebody has joined — the organiser is a player in that rule, ADR-0165 §1, #427; a court of one has nothing to leave)* |
-| `LINE_UP_INCOMPLETE` · member | §13 *{n} in, {m} seats open…* / *You're in. {m} seats open…* | **yes** | **⚡ Fill the seats** · **Open the chat** · **Leave the game** *(any member — ADR-0165 §1)* |
+| `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | **Open the chat** *(the door, below)* · **Remove the challenge** *(while nobody besides the organiser holds an accepted seat and the court has never been a game — ADR-0165 §4, [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §1)*. ~~**Leave the game**~~ — the Chats row's swipe alone since [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4 |
+| `LINE_UP_INCOMPLETE` · member | §13 *{n} in, {m} seats open…* / *You're in. {m} seats open…* | **yes** | **⚡ Fill the seats** · **Open the chat**. ~~**Leave the game**~~ — the Chats row's swipe alone since [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4 |
 | `LINE_UP_INCOMPLETE` · reader who left | §13's **two new sentences** — §2.5 | no | none |
 | `DECLINED` · both | §13 *{name} said no…* / *You said no* | no | none |
 | `LAPSED` · both | §13 *{name}'s day ran out…* / *Your day ran out* | no | none |
 | `WITHDRAWN` · both | §13 *You withdrew this* / *{name} withdrew this — that court is closed* | no | none |
-| **`CALLED_OFF`** · both, and `DECLINED` ended by a departure | §13's ended-row sentence keyed by `ended_by`'s seat — *{name} left* · *{name} called the game off* · *You called the game off* · *{name} left — nobody else is coming* — over **the court with every seat and what each person did** (*You · in*, *left*, *said no*, *called it off*) — the ended court, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §7 | no | **none** — no fill, no chat door, no leave, no remove |
+| **`CALLED_OFF`** · both, and `DECLINED` ended by a departure | §13's ended-row sentence keyed by `ended_by`'s seat — *{name} left* · *Nobody filled the seat* (the hour's, [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §3) · *{name} left — nobody else is coming* — over **the court with every seat and what each person did** (*You · in*, *left*, *said no*, *was still deciding*; *called it off* went with the press) — the ended court, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §7 | no | **none** — no fill, no chat door, no leave, no remove |
 | `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | **Open the chat** *(the door, below)* |
-| `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat** · **Leave the game** *(this read cannot tell a reopened court from one that was never a game, so it draws the same door — §2.5)*. **Call it off** *(any player on the court — ADR-0165 §5)* is the **game screen's** (§5.1), not this arm's — #428, §2.5 |
+| `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat**. ~~**Leave the game**~~ and ~~**Call it off**~~ — leaving is the Chats row's swipe alone and nobody calls a game off (amended 2026-09-16, [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §1, §4): such a court ends by its seats or by its hour |
 | `LINE_UP_INCOMPLETE` · reader who **left the game** | §13's two sentences for a reader who left, read as *You left* | no | none |
 
 **A reopened court is the half-built court again, and it is reached from the game**
@@ -613,17 +613,19 @@ file by name. It binds every control on every screen in this document, not only 
 
 ### 2.5 `LINE_UP_INCOMPLETE`, and the reader who has left
 
-**Three controls, in the order grow · talk · end** (ADR-0150), and everybody on the court sees
-three. *Withdraw* is gone from this arm — a court somebody has joined is nobody's to end for the
-others ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4) — and the third is **Leave the game** on a court that was never a game, or
-**Call it off** on one that has been, which is any player's (ADR-0165 §3, §5).
+**Two controls, in the order grow · talk** (ADR-0150; amended 2026-09-16, [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §1, §4), and
+everybody on the court sees two. *Withdraw* is gone from this arm — a court somebody has joined
+is nobody's to end for the others ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4) — and so is the third control it once had:
+**Leave the game** is the Chats row's swipe alone, and **Call it off** exists for nobody — a
+court that has been a game ends by its seats or by its hour. The two rows below are kept as the
+record of what stood here.
 
 | Control | Who | What it does |
 | --- | --- | --- |
 | **⚡ Fill the seats** | any live member | runs the fill and **pushes a builder holding a full court and a fresh search** |
 | **Open the chat** | any live member | `/chats/conversation/[conversationId]` |
-| **Leave the game** | any live member, on a court that was never a game | `POST …/departure` — the seat opens; the same sheet the Chats list's swipe opens (ADR-0165 §6, `the-words.md` §22.10). On a game the control is the game screen's, as #411 rule 8 has it — but the challenge read carries no fact for whether a court has been a game, so #427 draws this on every filling court the reader is on with somebody, and on one that has been a game the moment guard is told in words on the sheet rather than by hiding a control the read cannot see the moment for. **From the Chats list the same swipe reveals *Leave the chat* instead once the game is behind the reader** — [ADR-0168](../../adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md) §5, §1.3 — a member's own exit from the room that moves no seat |
-| **Call it off** | on a court that has been a game: **any player on the court** (ADR-0165 §5) | the withdraw's route and the withdraw's sheet, reworded — `the-words.md` §22.9; the game is called off in the act and the challenge reads `CALLED_OFF`, not `WITHDRAWN` ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1). **The control is the game screen's** (§5.1): this read carries no fact for whether a court has been a game — the row above — so #428 draws no end act on this arm at all, and the game's own screen, reached from Now, is where it is called off |
+| ~~**Leave the game**~~ | *retired 2026-09-16 from this screen ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4)* | any live member, on a court that was never a game | `POST …/departure` — the seat opens; the same sheet the Chats list's swipe opens (ADR-0165 §6, `the-words.md` §22.10). On a game the control is the game screen's, as #411 rule 8 has it — but the challenge read carries no fact for whether a court has been a game, so #427 draws this on every filling court the reader is on with somebody, and on one that has been a game the moment guard is told in words on the sheet rather than by hiding a control the read cannot see the moment for. **From the Chats list the same swipe reveals *Leave the chat* instead once the game is behind the reader** — [ADR-0168](../../adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md) §5, §1.3 — a member's own exit from the room that moves no seat |
+| ~~**Call it off**~~ | *retired 2026-09-16 for everybody ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §1)* | the withdraw's route and the withdraw's sheet, reworded — `the-words.md` §22.9; the game is called off in the act and the challenge reads `CALLED_OFF`, not `WITHDRAWN` ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1). **The control is the game screen's** (§5.1): this read carries no fact for whether a court has been a game — the row above — so #428 draws no end act on this arm at all, and the game's own screen, reached from Now, is where it is called off |
 
 **⚡ is the entry point, and items 1 and 2 of that ticket had one answer.** Pressing it is *Find a
 game*'s own shape — press, the search runs, the builder arrives with a court on it — which
@@ -695,10 +697,11 @@ two doors: this screen's arm where nobody has joined, and the organiser's row in
 same swipe a conversation row answers with *Leave the game* (ADR-0165 §6). It destroys the
 conversation where one exists (ADR-0142), so it is the second irreversible act in this app that
 reaches other people — and it takes the shape the first one already has. On a court that has been
-a game the same route is **Call it off**, and it is any player's
-([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), ADR-0165 §5) — and it
-records the court's own ending, `CALLED_OFF` with `ended_by` the presser, rather than a withdrawal
-([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §1), so the others' rows read *{name} called the game off* and never *withdrew this*.
+a game the route refuses everybody with `court_has_been_a_game` (amended 2026-09-16, [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+§1): *Call it off* rode it for a season ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md),
+ADR-0165 §5, ADR-0172 §1) and is gone — such a court ends by its seats or by its hour, and the
+others' rows read *{name} left* or *Nobody filled the seat*, never *withdrew this* and never
+*called the game off*.
 
 **A sheet, on `SH.propose`'s exact shape**: a real modal (9.1) with `accessibilityViewIsModal`,
 hidden siblings and Android back; a title naming the **moment** rather than the act, so the act is
@@ -1402,15 +1405,15 @@ the same game depending which day they tap it.
 
 | Arm | What it shows | Primary act |
 | --- | --- | --- |
-| **Planning** | the card at the top, the court's pairing, the plan **editable** — chips, counter, lock, the panel inside | **Open the chat** |
-| **Game on** | the same layout, the plan whole and the lock live | **Open the chat** |
-| **Needs a player** | the same layout with the empty seat on the card and an *Open seat* row on the players card, no forecast (the pairing omits it), the plan still editable — and **no *We played*** while the seat is open ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #418); **Fill the seat** where *We played* would be, **Call it off** for whoever holds the exit ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) | **Fill the seat** — while the agreed moment is ahead; **Open the chat** otherwise |
+| **Planning** | the card at the top, the court's pairing, the plan **editable** — chips, counter, lock, the panel inside | none — *Open the chat* is the Now card's bubble and the tab since [ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4 |
+| **Game on** | the same layout, the plan whole and the lock live | none |
+| **Needs a player** | the same layout with the empty seat on the card and an *Open seat* row on the players card, no forecast (the pairing omits it), the plan still editable — and **no *We played*** while the seat is open ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #418); **Fill the seat** directly under the card ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4; *Call it off* is retired, §1 there) | **Fill the seat** — while the agreed moment is ahead; nothing past it, and the hour calls it off |
 | **Needs result** | the plan, and how long is left to say you played | **We played** |
 | **Confirm the result** ×4 | built — #314, untouched | built |
 | **Counted** | the agreed score, the outcome, the worth line | none |
 | **Uncounted** | *an evening, not evidence* | none |
 | **Never played** | *It never happened* | none |
-| **Called off** | **the ending block, keyed by how it ended** (amended 2026-09-15, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §8; it read *It was called off* and named nobody until then): heading **`The game was called off for lack of players`** with a body naming the leaver — *{name} left, so the singles game is called off…* / *{name} was the last to leave, so the doubles game is called off…* — or heading **`{name} called the game off`** (the reader's own: `You called the game off`) with *Nobody is marked for it — not you, not any of the others.*; a departure told from a press by whether `called_off_by` still holds a seat on the game. `the-words.md` §22.9 has the sentences. No plan editing, no doors and no act on the court; drawn as *Never played* is ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) | none |
+| **Called off** | **the ending block, keyed by how it ended** (amended 2026-09-15, [ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §8; it read *It was called off* and named nobody until then): heading **`The game was called off for lack of players`** with a body naming the leaver — *{name} left, so the singles game is called off…* / *{name} was the last to leave, so the doubles game is called off…* — or, where the hour called it off and `called_off_by` is null ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §3), the same heading over *Nobody filled the seat in time, so the … game is called off…*; the press's heading, *{name} called the game off*, went with the press. `the-words.md` §22.9 has the sentences. No plan editing, no doors and no act on the court; drawn as *Never played* is ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) | none |
 
 **The plan-lead layout, since [#414](https://github.com/Raketa02/Raketa/issues/414)** — the two
 rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
@@ -1419,6 +1422,7 @@ rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
 ‹  DOUBLES · COUNTED                         ← the eyebrow, and no title (10.3 as amended)
 ┌ the Now card, doors={false} ───────────────┐   the tag, the sport word, the slots, the court
 └────────────────────────────────────────────┘
+[             Fill the seat                 ]   ← Button primary, lg — Needs a player only, while the moment is ahead; directly under the card (ADR-0175 §4)
 ┌ BALANCE FORECAST ──────────────────────────┐   the court's pairing, §5.5 — absent entirely without a forecast
 │ 2,70            gap −0,01            2,71  │
 │ [ You + Zofia ▓▓▓▓▓░░░░░ Kuba + Ola ]      │
@@ -1437,12 +1441,9 @@ rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
 │ └──────────────────────────────────────────┘
 │ [ Lock the plan ]  (greyed below three)    │
 └────────────────────────────────────────────┘
-[              Open the chat                ]   ← Button dark, lg — in the scroll, nothing pinned
-[                We played                  ]   ← Button secondary — withheld while a seat is open
-[             Fill the seat                 ]   ← Button primary, lg — Needs a player only, while the moment is ahead (#419)
-[              Call it off                  ]   ← Button secondary — Needs a player only, for whoever holds the exit (#419)
-[            Leave this game                ]   ← Button secondary, last — while the agreed moment is ahead (#418)
+[                We played                  ]   ← Button secondary — in the scroll, nothing pinned; withheld while a seat is open
 (the star card, when a rating is waiting)
+   — no Open the chat, no Call it off, no Leave this game (amended 2026-09-16, ADR-0175 §1, §4)
 ```
 
 **The eyebrow is the format and the kind** — `DOUBLES · COUNTED`, `SINGLES · FRIENDLY` — read off
@@ -1473,39 +1474,29 @@ short court, and a game with a gap in it is not one anybody could have played. I
 answer (`actsOffered`) rather than the screen's, so the card's door and the screen's control cannot
 disagree about it.
 
-***Leave this game* is the last thing on the plan lead**
-([#418](https://github.com/Raketa02/Raketa/issues/418), #411 rules 1 and 8): a `secondary` control
-under *We played*, behind a sheet on the withdraw's shape (`the-words.md` §22.8), drawn **only while
-the agreed moment is ahead** — the server refuses a departure past it with `game_moment_has_passed`,
-and the client mirrors the rule off the same instant rather than offering a control the act would
-refuse. The rung alone cannot say it, because *Needs a player* outranks *Needs result*. It is a
-**challenge** act reached from a game — the seat that reopens is the challenge's — so the control
-is `features/challenges`', composed by `features/plans` into a fourth slot on the screen
-(`courtActs`), the shape the chat doors already take; *Fill the seat* and *Call it off* sit in the
-same slot. Pending, never optimistic; on success the games, the plans and the rooms are
-re-read and the screen goes back — the card is gone from the rail because the server no longer
-lists it. A stale tap re-reads the games list and says nothing; `challenge_not_found` leaves;
-`account_held` is said as every write in that feature says it. Not on the card, not in the chat.
-
-**On *Needs a player* the slot holds two more, and they are the reopened court's whole account**
-([#419](https://github.com/Raketa02/Raketa/issues/419), #411 rules 3 and 4,
-[ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)). ***Fill the seat*** is the
-arm's primary act, drawn where *We played* would be: it runs the challenge screen's own fill —
+**The plan lead draws one act for the court, directly under the card** (amended 2026-09-16,
+[ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4). ***Fill the seat*** — the reopened court's one act
+([#419](https://github.com/Raketa02/Raketa/issues/419), #411 rule 3,
+[ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) — sits between the card
+that says *needs a player* and the players card: it runs the challenge screen's own fill —
 `POST /lineups` naming the challenge and nothing else, the people **the game's seats** hold read as
 accepted — and pushes the builder under the challenge, whose send pops back to this screen; the
-newcomer's yes re-seats the same game, and the nudge re-reads it. Drawn only while the agreed
-moment is ahead, with the leave, because nobody may be seated into a game whose moment is gone. It
-is the same control as the card's wide door — `features/challenges`' `FillTheSeat`, composed by
-`features/plans` into both — so the two cannot say two things about one press. ***Call it off*** is
-the withdraw grown to a reopened court: `secondary`, above the leave, behind the withdraw's sheet
-reworded (`the-words.md` §22.9), for **the organiser — or, once the organiser's own seat is open,
-any remaining player** — a challenge fact, joined off the challenge list the tab bar already holds
-(ADR-0149 §3's shape; nothing is added to `GET /games` for it), failing soft into no control. Only
-while a seat is open, and **not** only while the moment is ahead: the withdraw is not guarded by
-the moment, so on a short court past it this is the one act left. Pending, never optimistic; on
-success the games, the plans, the rooms and the challenges are re-read and the screen **stays**,
-re-folding into the *Called off* arm off the games list. A stale tap re-reads and says nothing;
-`challenge_not_found` leaves; `account_held` is said.
+newcomer's yes re-seats the same game, and the nudge re-reads it. Drawn only while a seat is open
+and the agreed moment is ahead, because nobody may be seated into a game whose moment is gone;
+past the moment nothing is drawn for the court, and the hour calls it off ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §3). It is the
+same control as the card's wide door — `features/challenges`' `FillTheSeat`, composed by
+`features/plans` into both, into the screen's `fill` slot — so the two cannot say two things about
+one press. Pending, never optimistic; a stale tap re-reads the games list and says nothing;
+`challenge_not_found` leaves; `account_held` is said as every write in that feature says it.
+
+**Three controls stood here and are gone.** ***Leave this game***
+([#418](https://github.com/Raketa02/Raketa/issues/418)) — leaving is the Chats row's swipe alone,
+where every seat is given up ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4). ***Call it off*** ([#419](https://github.com/Raketa02/Raketa/issues/419),
+ADR-0163, ADR-0165 §5) — exists for nobody: no player's single decision ends a game for the
+others, and a court still short of a player is called off by its seats or by its hour ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+§1–§3). ***Open the chat*** — the Now card's bubble and the Chats tab both reach the room, and
+the screen no longer reaches `features/conversations` for it. The `courtActs` slot they shared
+became `fill`.
 
 ### 5.2 Which door each card opens, in full
 
@@ -1542,13 +1533,13 @@ sentence the card must not carry.
 | — | **Called off** | Now card | the trash — `Remove this card` | nowhere: **it writes** — `POST /games/{id}/dismissal`, then the card leaves the rail on the reply; no sheet ([ADR-0172](../../adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §5) |
 | — | every live card | Now card | the bubble | `/chats/conversation/[conversationId]` |
 | — | the conversation | Details | — | `/chats/conversation/[id]/details`, the arm the standing derives |
-| — | **Planning** · **Game on** | the game screen | `Open the chat` — `dark`, `lg`, full width | `/chats/conversation/[conversationId]` — the join, failing soft |
+| — | **Planning** · **Game on** | the game screen | ~~`Open the chat`~~ — retired 2026-09-16 ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4); the Now card's bubble and the tab reach the room | — |
 | — | **Planning** · **Game on** | the game screen | `We played` — `secondary`, beneath | the score grid, opened over the plan; the pinned footer returns with it |
 | — | **Needs a player** | Now card | `Fill the seat` — `arranging`, the dot's own colour; while the agreed moment is ahead, none past it | `/games/[gameId]`, the arm whose primary act is the fill — like every other door, it navigates and runs nothing ([#429](https://github.com/Raketa02/Raketa/issues/429) F1; [#419](https://github.com/Raketa02/Raketa/issues/419) had it run the fill and land in the builder) |
-| — | **Needs a player** | the game screen | `Open the chat` — and **no `We played`** while the seat is open | `/chats/conversation/[conversationId]` |
-| — | **Needs a player** | the game screen | `Fill the seat` — `primary`, `lg`, where *We played* would be, while the agreed moment is ahead | the same fill and the same builder, popping back to the screen (#419) |
-| — | **Needs a player** | the game screen | `Call it off` — `secondary`, above the leave, for whoever holds the exit | the sheet, then `POST /challenges/{id}/withdrawal`, then **stays** — the screen re-folds into *Called off* off the re-read ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) |
-| — | **Planning** · **Game on** · **Needs a player** | the game screen | `Leave this game` — `secondary`, **last**, while the agreed moment is ahead | the sheet, then `POST /challenges/{id}/departure`, then back — **not a door: it writes**, like the plan's chips above it ([#418](https://github.com/Raketa02/Raketa/issues/418)) |
+| — | **Needs a player** | the game screen | ~~`Open the chat`~~ — retired ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4) — and **no `We played`** while the seat is open | — |
+| — | **Needs a player** | the game screen | `Fill the seat` — `primary`, `lg`, **directly under the card** ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4), while a seat is open and the agreed moment is ahead | the same fill and the same builder, popping back to the screen (#419) |
+| — | **Needs a player** | the game screen | ~~`Call it off`~~ — retired 2026-09-16 for everybody ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §1): a court short of a player ends by its seats or by its hour | — |
+| — | **Planning** · **Game on** · **Needs a player** | the game screen | ~~`Leave this game`~~ — retired 2026-09-16 ([ADR-0175](../../adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4): the Chats row's swipe is the one place a game is left from | — |
 
 **Fourteen cards, one route each side of the seam, and no deep-link parameter.** *The grid is the
 screen*: `GameScreen` is state-keyed, so the verb names what you arrive at and the standing

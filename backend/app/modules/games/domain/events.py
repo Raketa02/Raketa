@@ -127,17 +127,19 @@ class LineUpReseated:
 
 @dataclass(frozen=True)
 class GameCalledOff:
-    """Somebody on the court ended the game while a seat was open.
+    """The game was ended while a seat was open.
 
-    Told by ``challenges`` in the transaction of the act that ended the court
-    (``docs/adr/0163`` §2, ``docs/adr/0172`` §1) — *Call it off*, or the
-    departure that left one player on it — so the ``CALLED_OFF`` on the
-    challenge and the end on the game commit together or neither does. It
-    carries **who**: the presser, or the leaver whose departure emptied the
-    court, and since ``docs/adr/0172`` §4 that name crosses the wire as
-    ``called_off_by`` — the leaver's seat is vacated by then, so the court
-    cannot supply it, and a departure is told from a press by whether the
-    named player still holds a seat.
+    Told by ``challenges`` in the transaction of what ended the court
+    (``docs/adr/0163`` §2, ``docs/adr/0172`` §1, ``docs/adr/0175``) — the
+    departure that left at most one player on it, or the hour that found it
+    still short of a player — so the ``CALLED_OFF`` on the challenge and the
+    end on the game commit together or neither does. It carries **who**: the
+    leaver whose departure emptied the court, and since ``docs/adr/0172`` §4
+    that name crosses the wire as ``called_off_by`` — the leaver's seat is
+    vacated by then, so the court cannot supply it — or **nobody**, when the
+    hour called it off (``0175`` §3). Nobody presses it any more; a payload
+    written while somebody could still decodes, at version 1, with the field
+    widened to nullable.
 
     **It is the fourth end and the only one an event reaches.** The standing
     reads it first, before the clock; a game already ended by its clock is never
@@ -146,7 +148,7 @@ class GameCalledOff:
     """
 
     game_id: UUID
-    called_by: UUID
+    called_by: UUID | None
     occurred_at: datetime
 
 

@@ -168,9 +168,12 @@ export function standingLine(facts: StandingFacts): string {
  *
  * `endingIsTheReadersOwn` is the domain's one answer to *is this sentence about the reader*, read
  * here for the words and in `othersOn` for the faces, so a row never draws a face its sentence
- * does not name. Which own sentence it is: the announced endings say the act — *You called the
- * game off*, *You withdrew this*, and *You left* for the departure that called a game off — and
- * the folded ones say what the reader's own seat did.
+ * does not name. Which own sentence it is: the announced endings say the act — *You withdrew
+ * this*, and *You left* for the departure that called a game off — and the folded ones say what
+ * the reader's own seat did. **A `CALLED_OFF` court is ended by a departure or by the hour and
+ * by nothing else** ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §1–§3): *{name} left* names the last leaver, and *Nobody filled the seat* is the hour's, whose
+ * `ended_by` is nobody by design. *{name} called the game off* is retired with the press.
  */
 function endingLine(facts: EndedFacts): string {
   const own = endingIsTheReadersOwn(facts);
@@ -178,8 +181,8 @@ function endingLine(facts: EndedFacts): string {
 
   switch (facts.standing) {
     case 'CALLED_OFF':
-      if (own) return facts.byADeparture ? OWN_ACT.LEFT : 'You called the game off';
-      return facts.byADeparture ? `${name} left` : `${name} called the game off`;
+      if (facts.byNobody === true) return NOBODY_FILLED_THE_SEAT;
+      return own ? OWN_ACT.LEFT : `${name} left`;
     case 'DECLINED':
       if (own)
         return ownAct(facts.ownAnswer) ?? (facts.byADeparture ? OWN_ACT.LEFT : OWN_ACT.DECLINED);
@@ -475,6 +478,13 @@ export function rowHasAClockOfYours(challenge: Challenge, playerId: string): boo
  * Look *A* on the mock; a quiet tag, a recessed ground and a red sentence were the alternatives.
  */
 export const CALLED_OFF_TAG = 'Called off';
+
+/**
+ * **The hour's sentence** — a `CALLED_OFF` row the platform ended, still short of a player when
+ * its moment passed ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §3). Nobody's act, so nobody is named; short, and it says whose fault it wasn't.
+ */
+export const NOBODY_FILLED_THE_SEAT = 'Nobody filled the seat';
 
 /**
  * **The word behind a swiped `Called off` row** — the dismissal, the Now card's trash met from

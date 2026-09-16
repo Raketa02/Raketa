@@ -1,16 +1,19 @@
 /**
  * ***Remove this row* from the Chats list, walked the way the one left behind walks it**: the real
  * route tree, the real shell, the real rows, a finger on one of them, and only `fetch` faked
- * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)).
+ * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md),
+ * [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §5).
  *
  * The court both readings fit (ADR-0172 §7): my padel four, everybody said yes, and the three of
  * them left one by one — so the row reads *tomek.p left* under a `Called off` tag, and I am alone
- * on it with a day to wait. The row now swipes to reveal *Remove this row*, which posts the game
- * card's dismissal — no sheet — and the row is gone on the reply before any re-read, with the
- * Now card's list dropped and both lists re-read; a refusal re-reads and says nothing; the
- * revealed button is reachable by the row's accessibility action as well as by the swipe; and
- * every other ending's row, and the leaver's own, still reveals nothing. The card's own trash is
- * `nowRail.test.tsx`'s.
+ * on it with a day to wait. The row swipes to reveal *Remove this row*, which posts the
+ * challenge's own dismissal door — no sheet — and the row is gone on the reply before any
+ * re-read, with the Now card's list dropped and both lists re-read; a refusal re-reads and says
+ * nothing; the revealed button is reachable by the row's accessibility action as well as by the
+ * swipe; the invitee still deciding when the court was called off, and the hour's row naming
+ * nobody, have the same door; and every other ending's row still reveals nothing. The card's own
+ * trash is `nowRail.test.tsx`'s.
  *
  * The finger is `test-support/swipe.ts`'. The words are the deck's — `challengePresentation.ts`.
  */
@@ -43,7 +46,7 @@ import {
 } from '@/test-support/transport';
 
 import { REMOVE_THE_CHALLENGE } from './challengeDetailPresentation';
-import { CALLED_OFF_TAG, REMOVE_THIS_ROW } from './challengePresentation';
+import { CALLED_OFF_TAG, NOBODY_FILLED_THE_SEAT, REMOVE_THIS_ROW } from './challengePresentation';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -56,7 +59,7 @@ const LAPSED = 'ffffffff-0000-4000-8000-000000000008';
 const GAME = 'aaaaaaaa-0000-4000-8000-00000000000a';
 const OTHER_GAME = 'aaaaaaaa-0000-4000-8000-00000000000b';
 
-const DISMISSAL_PATH = `${GAMES_PATH}/${GAME}/dismissal`;
+const DISMISSAL_PATH = `${CHALLENGES_PATH}/${LEFT_ALONE}/dismissal`;
 const READ_AT = '2026-09-12T09:00:00Z';
 const ENDED_AT = '2026-09-12T08:00:00Z';
 const REVEAL = theme.size.swipeRow.reveal;
@@ -104,6 +107,45 @@ const PRESSED_ROW: Wire['ChallengeSchema'] = {
   seats: [
     { side: 'A', player_id: OLA, answer: 'ACCEPTED', name: 'ola.k' },
     { side: 'B', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+  ],
+};
+
+/**
+ * Ewa's tennis: she asked me to fill a seat somebody left and then left herself, the last on it,
+ * so the court was called off while I was still deciding — a row, and never a card.
+ */
+const ASKED = 'ffffffff-0000-4000-8000-000000000009';
+const ASKED_ROW: Wire['ChallengeSchema'] = {
+  challenge_id: ASKED,
+  sport: 'TENNIS',
+  organiser_id: EWA,
+  standing: 'CALLED_OFF',
+  opened_at: '2026-09-11T06:00:00Z',
+  ended_at: ENDED_AT,
+  ended_by: EWA,
+  game_id: 'aaaaaaaa-0000-4000-8000-00000000000c',
+  seats: [
+    { side: 'A', player_id: EWA, answer: 'LEFT', name: 'ewa.m' },
+    { side: 'B', player_id: ME, answer: null, answer_by: '2026-09-13T08:00:00Z', name: 'me_' },
+  ],
+};
+
+/** Ola's padel four the hour called off: nobody filled Tomek's seat by the day. */
+const THE_HOURS = 'ffffffff-0000-4000-8000-00000000000a';
+const THE_HOURS_ROW: Wire['ChallengeSchema'] = {
+  challenge_id: THE_HOURS,
+  sport: 'PADEL',
+  organiser_id: OLA,
+  standing: 'CALLED_OFF',
+  opened_at: '2026-09-10T06:00:00Z',
+  ended_at: ENDED_AT,
+  ended_by: null,
+  game_id: 'aaaaaaaa-0000-4000-8000-00000000000d',
+  seats: [
+    { side: 'A', player_id: OLA, answer: 'ACCEPTED', name: 'ola.k' },
+    { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+    { side: 'B', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+    { side: 'B', player_id: TOMEK, answer: 'LEFT', name: 'tomek.p' },
   ],
 };
 
@@ -212,6 +254,38 @@ describe('the swipe', () => {
     await openChats();
 
     expect(swipe(pressed(), -REVEAL)).toBe(true);
+    expect(await screen.findByRole('button', { name: REMOVE_THIS_ROW })).toBeTruthy();
+  });
+
+  /**
+   * The reader the challenge's door exists for (ADR-0175 §5): asked to fill a seat, still deciding
+   * when the last departure called the court off — a row, never a card.
+   */
+  it('reveals it to the invitee the court was called off on while they were deciding', async () => {
+    await openChats([LEFT_ALONE_ROW, ASKED_ROW]);
+    const askedPath = `${CHALLENGES_PATH}/${ASKED}/dismissal`;
+    transport.on('POST', askedPath, () => {
+      stubChallenges(transport, [LEFT_ALONE_ROW], READ_AT);
+      return noContent();
+    });
+
+    const row = screen.getByLabelText(/^ewa\.m, Tennis/);
+    expect(swipe(row, -REVEAL)).toBe(true);
+    fireEvent.press(await screen.findByRole('button', { name: REMOVE_THIS_ROW }));
+
+    await waitFor(() => expect(transport.requestsTo('POST', askedPath)).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByLabelText(/^ewa\.m, Tennis/)).toBeNull());
+    expect(leftAlone()).toBeTruthy();
+  });
+
+  /** The hour's row names nobody, draws the people the reader waited with, and has the same door. */
+  it('reveals it on the row the hour called off, which says nobody filled the seat', async () => {
+    await openChats([LEFT_ALONE_ROW, THE_HOURS_ROW]);
+
+    const row = await screen.findByLabelText(/^ola\.k and ewa\.m, Padel/);
+    expect(row.props.accessibilityLabel).toContain(NOBODY_FILLED_THE_SEAT);
+    expect(row.props.accessibilityLabel).not.toMatch(/tomek\.p/);
+    expect(swipe(row, -REVEAL)).toBe(true);
     expect(await screen.findByRole('button', { name: REMOVE_THIS_ROW })).toBeTruthy();
   });
 

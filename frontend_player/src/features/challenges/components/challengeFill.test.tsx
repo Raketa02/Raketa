@@ -44,28 +44,13 @@ import {
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
-import {
-  errorResponse,
-  installTransport,
-  json,
-  type Transport,
-  type Wire,
-} from '@/test-support/transport';
-
-import { AppError } from '@/shared/errors';
+import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 
-import { challengeErrorMessage } from './challengeErrorMessage';
 import { standingLine } from './challengePresentation';
 import { FILL_THE_SEATS, REMOVE_THE_CHALLENGE } from './challengeDetailPresentation';
-import {
-  leavingEndsLine,
-  LEAVE_SHEET_CLOSE_LABEL,
-  LEAVE_SHEET_TITLE,
-  LEAVE_THE_GAME,
-  leaveRefusalMessage,
-} from './leaveGamePresentation';
+import { LEAVE_THE_GAME } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
 const BEA = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -219,10 +204,6 @@ const filledCourt = (): Wire['LineupResponse'] => ({
   },
 });
 
-/** The shape the code table reads — the `code`, never the backend's own message. */
-const refusal = (code: string): AppError =>
-  new AppError('conflict', 'business-conflict', 'test failure', { code });
-
 let transport: Transport;
 
 beforeEach(() => {
@@ -342,28 +323,29 @@ async function pressSend() {
   fireEvent.press(screen.getByLabelText(SEND_CHALLENGE_LABEL));
 }
 
-describe('the three controls', () => {
+describe('the two controls', () => {
   /**
-   * ADR-0150 §1, ADR-0165 §4. Growing a court and ending one are different acts, and a court
-   * somebody has joined is nobody's to end for the others: the organiser has the fill and the
-   * leave like anybody else, and **neither *Remove* nor *Withdraw*** — the acceptance criterion
-   * [#428](https://github.com/Raketa02/Raketa/issues/428) names for once somebody has joined.
+   * ADR-0150 §1, ADR-0165 §4, ADR-0175 §4. Growing a court and ending one are different acts,
+   * and a court somebody has joined is nobody's to end for the others: the organiser has the fill
+   * like anybody else, and **neither *Remove* nor *Withdraw*** — the acceptance criterion
+   * [#428](https://github.com/Raketa02/Raketa/issues/428) names for once somebody has joined —
+   * and no leave either, which is the Chats row's swipe alone.
    */
-  it('offers the fill to any live member, and the organiser no way to end it', async () => {
+  it('offers the fill to any live member, and the organiser no way to end or leave it', async () => {
     await openTheChallenge();
 
     expect(await screen.findByRole('button', { name: FILL_THE_SEATS })).toBeTruthy();
-    expect(screen.getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
     expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
     expect(screen.queryByText(/withdraw/i)).toBeNull();
     expect(screen.queryByLabelText(/withdraw/i)).toBeNull();
   });
 
-  it('offers a member who is not the organiser the same two acts', async () => {
+  it('offers a member who is not the organiser the same act', async () => {
     await openTheChallenge(detail({ organiser_id: BEA }), row({ organiser_id: BEA }));
 
     expect(await screen.findByRole('button', { name: FILL_THE_SEATS })).toBeTruthy();
-    expect(screen.getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
     expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
   });
 
@@ -413,121 +395,6 @@ describe('the three controls', () => {
     expect(screen.getByRole('button', { name: FILL_THE_SEATS }).props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );
-  });
-});
-
-describe('*Leave the game*', () => {
-  const DEPARTURE_PATH = `${DETAIL_PATH}/departure`;
-  const CLOSES_THE_COURT_FOR_BEA = leavingEndsLine({
-    court: 'never-a-game',
-    theOneLeft: { kind: 'player', name: 'bea_k' },
-  });
-
-  /**
-   * **A yes can be taken back before the court is whole** (ADR-0165 §1,
-   * [#427](https://github.com/Raketa02/Raketa/issues/427)): any member of a filling court has the
-   * door, the organiser included — the organiser is a player in that rule — and it is the same
-   * sheet the Chats list's swipe opens.
-   */
-  it('is drawn for any member of a filling court, the organiser included', async () => {
-    await openTheChallenge();
-
-    expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
-    expect(screen.getByRole('button', { name: FILL_THE_SEATS })).toBeTruthy();
-  });
-
-  it('is drawn for a member who is not the organiser', async () => {
-    await openTheChallenge(detail({ organiser_id: BEA }), row({ organiser_id: BEA }));
-
-    expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
-  });
-
-  /**
-   * **The sheet says what the leaving does** (ADR-0172 §9): on this court the reader and Bea are
-   * the only two in, nobody is deciding and it never became a game — so the line says the leaving
-   * closes the court for her, read off the row the list holds.
-   */
-  it('opens the sheet that names the consequence, and sends nothing until confirmed', async () => {
-    await openTheChallenge();
-
-    fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
-
-    expect(await screen.findByText(LEAVE_SHEET_TITLE)).toBeTruthy();
-    expect(screen.getByText(CLOSES_THE_COURT_FOR_BEA)).toBeTruthy();
-    expect(transport.requestsTo('POST', DEPARTURE_PATH)).toEqual([]);
-  });
-
-  /**
-   * **The reply is the exit** ([#429](https://github.com/Raketa02/Raketa/issues/429)). The act
-   * took the reader off the court and the row they came in by goes from the inbox on the same
-   * reply; the screen used to redraw into §13.1's *You left* with nothing to press — a stop on
-   * the way out of a thing they had just stopped being part of. Now it leaves, and the list
-   * underneath is what is left: no row for this court, in either section.
-   */
-  it('leaves the screen on the reply, landing on Chats with the row gone', async () => {
-    const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: ME, answer: 'LEFT', name: 'me_' },
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
-      { side: 'B' },
-      { side: 'B' },
-    ];
-    transport.on('POST', DEPARTURE_PATH, () => json(row({ seats: left })));
-
-    await openTheChallenge();
-    fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
-    // One label on the control and on the sheet's act, and what is under the sheet is hidden
-    // while it is up — so the second press can only reach the act.
-    await screen.findByText(CLOSES_THE_COURT_FOR_BEA);
-    // What the list reads on its return: the seat is `LEFT`, and a departure of one's own goes.
-    stubChallenges(transport, [row({ seats: left })], READ_AT);
-    fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
-
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-    await waitFor(() => expect(screen.queryByLabelText(/, Padel, /)).toBeNull());
-    expect(screen.queryByText(LEAVE_SHEET_TITLE)).toBeNull();
-  });
-
-  /**
-   * The screen still resolves for a stale route — a departed seat is still a seat — and says
-   * §13.1's sentence then, with nothing to press. What went is the stop on the way out.
-   */
-  it('still says You left, with nothing to press, to a reader who opens it afterwards', async () => {
-    const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: ME, answer: 'LEFT', name: 'me_' },
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
-      { side: 'B' },
-      { side: 'B' },
-    ];
-
-    await openTheChallengeByRoute(detail({ seats: left }), row({ seats: left }));
-
-    expect(
-      await screen.findByText(
-        standingLine({
-          side: 'organiser',
-          standing: 'LINE_UP_INCOMPLETE',
-          accepted: 1,
-          open: 3,
-          ownAnswer: 'LEFT',
-        }),
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByRole('button', { name: FILL_THE_SEATS })).toBeNull();
-    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
-  });
-
-  /** A refusal is said on the sheet, in the departure's own words, and the screen stays. */
-  it('says why on the sheet when the departure is refused', async () => {
-    transport.on('POST', DEPARTURE_PATH, () => errorResponse(409, 'game_moment_has_passed'));
-
-    await openTheChallenge();
-    fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
-    await screen.findByText(CLOSES_THE_COURT_FOR_BEA);
-    fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
-
-    expect(await screen.findByRole('alert')).toBeTruthy();
-    expect(screen.getByText(leaveRefusalMessage(refusal('game_moment_has_passed')))).toBeTruthy();
-    expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`);
   });
 });
 
@@ -730,38 +597,5 @@ describe('the send', () => {
     await pressSend();
 
     await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
-  });
-});
-
-describe('a refusal belongs to the press that caused it', () => {
-  /**
-   * A mutation's `error` outlives its flight, so the sentence under the controls is read off
-   * whichever act still holds one — and without a clear on every press, a fill refused a minute
-   * ago would state its sentence under a sheet about a different act. The leave's door clears
-   * the screen's acts when it opens, as the withdraw's control did before it left this arm.
-   */
-  it('drops the sentence a previous act left behind when a door is opened', async () => {
-    transport.on('POST', LINEUPS_PATH, () => errorResponse(403, 'account_held'));
-
-    await openTheChallenge();
-
-    fireEvent.press(await screen.findByRole('button', { name: FILL_THE_SEATS }));
-    expect(await screen.findByText(challengeErrorMessage(refusal('account_held')))).toBeTruthy();
-
-    fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
-    await screen.findByText(LEAVE_SHEET_TITLE);
-
-    // The clear is the observer's, and it lands on the next tick; the sheet is up over a screen
-    // that no longer says it, and it is still gone once the sheet is dismissed.
-    await waitFor(() =>
-      expect(
-        screen.queryByText(challengeErrorMessage(refusal('account_held')), {
-          includeHiddenElements: true,
-        }),
-      ).toBeNull(),
-    );
-    fireEvent.press(screen.getByRole('button', { name: LEAVE_SHEET_CLOSE_LABEL }));
-    await waitFor(() => expect(screen.queryByText(LEAVE_SHEET_TITLE)).toBeNull());
-    expect(screen.queryByText(challengeErrorMessage(refusal('account_held')))).toBeNull();
   });
 });

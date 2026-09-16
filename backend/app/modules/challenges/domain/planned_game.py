@@ -16,19 +16,21 @@ whether its seats may still change, and ``game_of_court.py`` asks which game a
 court became.
 
 **It fires at the instant a line-up completes, again at the instant somebody
-leaves the game it became** (``docs/adr/0162``), **again at the instant a
-court that has been a game is called off** (``docs/adr/0163``,
-``docs/adr/0172`` §1), **and again when a departure leaves one player on the
-court** (``docs/adr/0165`` §3), which calls the game off on the same sentence
-*Call it off* uses — each recording the court's own ending beside it. The first
-hand-over used to be the only one — *every seat accepted, nobody left to answer,
-and the membership settled for good* — and the membership is no longer settled
-for good: a player may leave a game that has not happened, the seat opens on
-both records, and the **next** completed line-up hands over a re-seat of the same
-game rather than the opening of another. Which of the two a completion is, is
-the other side's to say: this context hands over the court and learns back an
-id, or nothing. And a reopened court's exit is *Call it off*, which reaches the
-game: it is **called off**, the fourth end, in the act's own transaction.
+leaves the game it became** (``docs/adr/0162``), **again when a departure
+leaves at most one player on the court** (``docs/adr/0165`` §3,
+``docs/adr/0175`` §2), **again when the hour finds a court still short of a
+player** (``docs/adr/0175`` §3) — each of those two recording the court's own
+ending beside it (``docs/adr/0172`` §1) — **and once for the reader's own
+act**, the dismissal of a called-off court's row (``docs/adr/0175`` §5). The
+first hand-over used to be the only one — *every seat accepted, nobody left to
+answer, and the membership settled for good* — and the membership is no longer
+settled for good: a player may leave a game that has not happened, the seat
+opens on both records, and the **next** completed line-up hands over a re-seat
+of the same game rather than the opening of another. Which of the two a
+completion is, is the other side's to say: this context hands over the court
+and learns back an id, or nothing. Nobody presses a call-off any more
+(``0175`` §1): a reopened court ends by its seats or by its hour, and the game
+is **called off**, the fourth end, in that transaction.
 
 **Inline, in the transaction of the act**, and not through the outbox.
 ``docs/adr/0003`` is this repository's convention for side effects and is right
@@ -111,23 +113,40 @@ class PlannedGameHandover(Protocol):
         ...
 
     async def call_off(
-        self, *, challenge_id: UUID, by: UUID, occurred_at: Instant
+        self, *, challenge_id: UUID, by: UUID | None, occurred_at: Instant
     ) -> None:
         """This court has been ended with a seat open, and it had become a game.
         **That game is called off.**
 
         Called only on a court that has been a game, on two occasions, and on
         each the challenge has already recorded the court's own ending
-        (``docs/adr/0172`` §1). After the aggregate has recorded *Call it off*
-        and decided whose act it is — ``by`` is a player on the court
-        (``docs/adr/0165`` §5), the same actor ``ChallengeCalledOff`` names.
-        And after a departure that left one player on the court with nobody
-        deciding (``docs/adr/0165`` §3), right after :meth:`vacate_seat` for
-        the same person — ``by`` is the leaver, whose departure is what ended
-        it. The other side reads no moment guard for this; what it decides on
-        its own is that **a game already ended by its clock stays the end it
-        is** (``docs/adr/0163`` §6) — a ghost is not un-ghosted, and the act
-        still ends the challenge with the presser on its record. It does
+        (``docs/adr/0172`` §1). After a departure that deserted the court
+        (``docs/adr/0165`` §3, ``docs/adr/0175`` §2), right after
+        :meth:`vacate_seat` for the same person — ``by`` is the leaver, whose
+        departure is what ended it, the same actor ``ChallengeCalledOff``
+        names. And after the hour found the court still short of a player
+        (``docs/adr/0175`` §3) — ``by`` is ``None``, because nobody's act
+        ended it. The other side reads no moment guard for this; what it
+        decides on its own is that **a game already ended by its clock stays
+        the end it is** (``docs/adr/0163`` §6) — a ghost is not un-ghosted,
+        and the court's own ending still stands on its record. It does
         **not** commit.
+        """
+        ...
+
+    async def dismiss(
+        self, *, challenge_id: UUID, by: UUID, occurred_at: Instant
+    ) -> None:
+        """This reader clears the called-off court this challenge became from
+        their own lists (``docs/adr/0175`` §5). **The game records it**, on the
+        court's word that they were asked.
+
+        The reader's own act and nobody else's fact — the same event the
+        rail's trash writes on the game's stream, reached from the Chats row
+        for everybody the court asked, seated on the game or not. The challenge
+        has already been loaded as one of the reader's and found ``CALLED_OFF``
+        before this is called; the other side asks only that the game agrees.
+        Once per player: a second dismissal writes nothing. It does **not**
+        commit.
         """
         ...

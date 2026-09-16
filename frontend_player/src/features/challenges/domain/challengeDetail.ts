@@ -281,51 +281,45 @@ export type ChallengeArm =
    * it draws the same card block and the same sentence and three controls besides, which is a
    * different reading of the fold and therefore a different arm.
    *
-   * **The way out is one of two doors, never both**
+   * **The way out here is the removal, and only the organiser's**
    * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
-   * §1, §4): `mayLeave` is {@link onACourtWithSomebody}'s answer, and `mayRemove` is `mayRemove`'s
-   * — the organiser's, exactly while nobody besides them holds an accepted seat. For the organiser
-   * the two are one question asked from two sides — is anybody on this court with you — so a court
-   * of one is removed and a court with somebody is left; an invitee never removes.
+   * §4): `mayRemove` is `mayRemove`'s — the organiser's, exactly while nobody besides them holds
+   * an accepted seat and the court has never been a game. Leaving is the Chats row's swipe alone
+   * since [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+   * §4, so this screen draws no leave and the fold asks nothing about it.
    */
   | {
       readonly kind: 'arranging';
       readonly facts: StandingFacts;
-      readonly mayLeave: boolean;
       readonly mayRemove: boolean;
     }
   /**
-   * **A half-built court, and the three things a live member does about one** — grow · talk ·
-   * leave, in that order ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md),
+   * **A half-built court, and the two things a live member does about one** — grow · talk, in
+   * that order ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md),
    * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
    * §4).
    *
    * *"`LINE_UP_INCOMPLETE` is not a waiting room"*: the people who are in are in, and a
    * conversation between them is already open. **Any live member may complete the line-up, and
    * nobody ends it for the others**: a court somebody has joined is not the organiser's to remove,
-   * so the organiser leaves it like anybody else and it ends by itself when one is left. There is
-   * no end act on this arm at all — the one a court that has been a game has, *Call it off*, is
-   * drawn on the **game** screen, because this read carries no fact for whether the court has been
-   * one ([#428](https://github.com/Raketa02/Raketa/issues/428)).
+   * so the organiser leaves it from Chats like anybody else and it ends by itself when nobody is
+   * on it, or one is with nobody deciding. There is no end act on this arm at all, and no leave
+   * either (ADR-0175 §1, §4): a court that has been a game ends by its seats or by its hour.
    *
    * The reader who has **left** such a court is not here: they are `stated`, on §13.1's own
    * sentences. The row that explains it must stay because a departed seat is still a seat — **not
    * because the pair rule still binds them**, which it does not
    * ([#393](https://github.com/Raketa02/Raketa/issues/393)).
    */
-  | {
-      readonly kind: 'filling';
-      readonly facts: StandingFacts;
-      /** Whether *Leave the game* is drawn — {@link onACourtWithSomebody}. */
-      readonly mayLeave: boolean;
-    }
+  | { readonly kind: 'filling'; readonly facts: StandingFacts }
   /**
    * **The ended court** — the row's sentence over every seat and what each person did, and no
    * arm at all ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
    * §7): a `CALLED_OFF` court, and a `DECLINED` one that a **departure** ended. Nothing on it is
    * an act the server would refuse — no fill, no chat door, no leave, no remove — and the two are
    * one drawing because they are one story: somebody joined, and the last of them walked out, or
-   * pressed the button. A court everybody merely declined, a lapse and a removal stay `stated`:
+   * the hour passed with a seat still open (ADR-0175 §3). A court everybody merely declined, a
+   * lapse and a removal stay `stated`:
    * their sentence names the one person the row is about, and there was never a court to show.
    */
   | { readonly kind: 'ended'; readonly facts: EndedFacts; readonly court: readonly SeatDid[] }
@@ -391,12 +385,7 @@ export function challengeArm(detail: ChallengeDetail, playerId: string): Challen
   // *anybody* is awaiting — so it reaches the same question `LINE_UP_INCOMPLETE` asks below.
   if (facts.standing === 'AWAITING_ANSWERS') {
     if (hasLeft(seat)) return { kind: 'stated', facts };
-    return {
-      kind: 'arranging',
-      facts,
-      mayLeave: onACourtWithSomebody(detail, playerId),
-      mayRemove: mayRemove(detail, playerId),
-    };
+    return { kind: 'arranging', facts, mayRemove: mayRemove(detail, playerId) };
   }
 
   // The one reading §2.5 had to close: a court still filling draws a card block, three controls
@@ -405,11 +394,11 @@ export function challengeArm(detail: ChallengeDetail, playerId: string): Challen
     if (hasLeft(seat)) {
       return { kind: 'stated', facts };
     }
-    return { kind: 'filling', facts, mayLeave: onACourtWithSomebody(detail, playerId) };
+    return { kind: 'filling', facts };
   }
 
   if (hasEnded(facts) && endedOnTheCourt(facts)) {
-    return { kind: 'ended', facts, court: whatEachDid(detail, playerId, facts) };
+    return { kind: 'ended', facts, court: whatEachDid(detail, playerId) };
   }
 
   return { kind: 'stated', facts };
@@ -425,28 +414,24 @@ function endedOnTheCourt(facts: EndedFacts): boolean {
 }
 
 /**
- * **What each person on the court did** — one word per seat, read off the seat's own answer, and
- * off `ended_by` for the one word the seats cannot say: the presser's seat still reads `ACCEPTED`,
- * and *called it off* is theirs alone.
+ * **What each person on the court did** — one word per seat, read off the seat's own answer and
+ * off nothing else. *Called it off* was the one word the seats could not say — the presser's seat
+ * still read `ACCEPTED` — and it is retired with the press
+ * ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §1): nobody's seat says it any more.
  *
  * Occupied seats only, in court order: an empty seat did nothing and is nobody, and a court lists
  * people. The reader is `you`, so the row reads *You · in* rather than their own name back to them.
  */
-function whatEachDid(
-  detail: ChallengeDetail,
-  playerId: string,
-  facts: EndedFacts,
-): readonly SeatDid[] {
+function whatEachDid(detail: ChallengeDetail, playerId: string): readonly SeatDid[] {
   return detail.seats.flatMap((seat) => {
     if (seat.playerId === undefined) return [];
-    const pressed =
-      facts.standing === 'CALLED_OFF' && !facts.byADeparture && seat.playerId === detail.endedBy;
 
     return [
       {
         playerId: seat.playerId,
         who: seat.playerId === playerId ? { kind: 'you' } : seatName(seat),
-        did: pressed ? 'called-it-off' : DID[seat.answer ?? 'ACCEPTED'],
+        did: seat.answer === undefined ? 'asked' : DID[seat.answer],
       },
     ];
   });
@@ -455,8 +440,8 @@ function whatEachDid(
 /**
  * A seat's answer as the ended court says it — keyed by the union, so a fifth answer fails
  * `pnpm typecheck` here rather than drawing a court with a seat that did nothing. An unanswered
- * seat cannot be on an ended court that was deserted (nobody is deciding), and reads as *in*
- * rather than inventing a word.
+ * seat **can** be on an ended court since ADR-0175 §2 — the last departure calls a game off
+ * whoever is still deciding — and reads as *asked*, which is what happened to them.
  */
 const DID: Readonly<Record<SeatAnswer, SeatWord>> = {
   ACCEPTED: 'in',
@@ -466,7 +451,7 @@ const DID: Readonly<Record<SeatAnswer, SeatWord>> = {
 };
 
 /** What one person on an ended court did — the code, keyed to its word in `challengeDetailPresentation.ts`. */
-export type SeatWord = 'in' | 'left' | 'said-no' | 'ran-out' | 'called-it-off';
+export type SeatWord = 'in' | 'left' | 'said-no' | 'ran-out' | 'asked';
 
 /** One person on an ended court: who, and what they did. */
 export interface SeatDid {
@@ -493,35 +478,6 @@ export function asTheRowSays(detail: ChallengeDetail, row: Challenge | undefined
     ...(row.endedBy === undefined ? {} : { endedBy: row.endedBy }),
     ...(row.gameId === undefined ? {} : { gameId: row.gameId }),
   };
-}
-
-/**
- * **Whether *Leave the game* is drawn** — the reader is on a court that is not whole, and so is
- * somebody else ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
- * §1, [#427](https://github.com/Raketa02/Raketa/issues/427)).
- *
- * Asked only on the two live arms, whose reader holds an accepted seat by construction — the
- * organiser's from birth, an invitee's by their yes — so what is left to ask is the second half:
- * **is anybody on this court with them?** A yes taken back opens a seat the others can fill, and
- * that is the whole of what the act means; a court of one has nobody to keep the seat open for. The
- * organiser alone, with every invitee still deciding or already out, is on no court with anybody,
- * and their way out there is *Remove the challenge* (ADR-0165 §4, #428) — drawing *Leave the game*
- * beside it would be two doors out of an empty room.
- *
- * The organiser is a **player** in this rule and not a role: once somebody has joined, they leave
- * like anybody else, and the withdraw's own question — `mayRemove`, in `challenge.ts` — answers
- * *yes* exactly where this one answers *no* for them.
- *
- * It says nothing about whether the court has been a game. On a court that has, the same act is
- * the game screen's *Leave this game* and this control posts the same route; the moment guard the
- * server keeps there is answered by the words on the sheet rather than by hiding a control this
- * read cannot see the moment for.
- */
-function onACourtWithSomebody(detail: ChallengeDetail, playerId: string): boolean {
-  return detail.seats.some(
-    (seat) =>
-      seat.playerId !== undefined && seat.playerId !== playerId && seat.answer === 'ACCEPTED',
-  );
 }
 
 /**

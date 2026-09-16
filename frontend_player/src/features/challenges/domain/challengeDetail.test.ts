@@ -227,12 +227,12 @@ describe('a half-built court', () => {
     {},
   ];
 
-  it('lets any live member fill it and leave it, and offers the organiser no end', () => {
+  it('lets any live member fill it, and offers the organiser no end', () => {
     const invitee = challengeArm(detail('LINE_UP_INCOMPLETE', HALF_BUILT, BEA), ME);
     const organiser = challengeArm(detail('LINE_UP_INCOMPLETE', HALF_BUILT, ME), ME);
 
-    expect(invitee).toEqual({ kind: 'filling', facts: expect.anything(), mayLeave: true });
-    expect(organiser).toEqual({ kind: 'filling', facts: expect.anything(), mayLeave: true });
+    expect(invitee).toEqual({ kind: 'filling', facts: expect.anything() });
+    expect(organiser).toEqual({ kind: 'filling', facts: expect.anything() });
   });
 
   /**
@@ -271,13 +271,11 @@ describe('a half-built court', () => {
 
 describe('the way out before the court is whole', () => {
   /**
-   * **A yes can be taken back before the court is whole**
-   * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
-   * §1), and the door is drawn on both live standings — for an accepted invitee waiting on the
-   * others as much as for a member of a court that is filling. The organiser is a player in that
-   * rule: once somebody has joined, they leave like anybody else.
+   * **Leaving is the Chats row's swipe alone** (ADR-0175 §4), so the arm asks nothing about it;
+   * what it asks is the removal's question, `mayRemove` — the organiser's, exactly while nobody
+   * besides them holds an accepted seat (ADR-0165 §4).
    */
-  it('is offered to an accepted invitee still waiting on the others, and to the organiser beside them', () => {
+  it('offers nobody a leave, and the removal to no invitee', () => {
     const waiting: readonly DetailSeat[] = [
       { playerId: BEA, answer: 'ACCEPTED' },
       { playerId: ME, answer: 'ACCEPTED', card: A_CARD },
@@ -288,27 +286,16 @@ describe('the way out before the court is whole', () => {
     const invitee = challengeArm(detail('AWAITING_ANSWERS', waiting, BEA), ME);
     const organiser = challengeArm(detail('AWAITING_ANSWERS', waiting, ME), ME);
 
-    expect(invitee).toEqual({
-      kind: 'arranging',
-      facts: expect.anything(),
-      mayLeave: true,
-      mayRemove: false,
-    });
-    expect(organiser).toEqual({
-      kind: 'arranging',
-      facts: expect.anything(),
-      mayLeave: true,
-      mayRemove: false,
-    });
+    expect(invitee).toEqual({ kind: 'arranging', facts: expect.anything(), mayRemove: false });
+    expect(organiser).toEqual({ kind: 'arranging', facts: expect.anything(), mayRemove: false });
   });
 
   /**
-   * **A court of one has nothing to leave, and is the organiser's to remove.** The organiser
-   * alone, with everybody still deciding, is on no court with anybody — their exit there is
-   * *Remove the challenge* (ADR-0165 §4, [#428](https://github.com/Raketa02/Raketa/issues/428)),
-   * and a *Leave the game* beside it would be two doors out of an empty room.
+   * **A court of one is the organiser's to remove.** The organiser alone, with everybody still
+   * deciding or already out, is on no court with anybody — their exit there is *Remove the
+   * challenge* (ADR-0165 §4, [#428](https://github.com/Raketa02/Raketa/issues/428)).
    */
-  it('is not offered to an organiser nobody has joined yet, who may remove it instead', () => {
+  it('offers the removal to an organiser nobody has joined yet', () => {
     const arm = challengeArm(
       detail('AWAITING_ANSWERS', [
         { playerId: ME, answer: 'ACCEPTED' },
@@ -317,15 +304,10 @@ describe('the way out before the court is whole', () => {
       ME,
     );
 
-    expect(arm).toEqual({
-      kind: 'arranging',
-      facts: expect.anything(),
-      mayLeave: false,
-      mayRemove: true,
-    });
+    expect(arm).toEqual({ kind: 'arranging', facts: expect.anything(), mayRemove: true });
   });
 
-  it('is not offered to an organiser whose every invitee has already given the seat up, who may remove it', () => {
+  it('offers the removal to an organiser whose every invitee has already given the seat up', () => {
     const arm = challengeArm(
       detail('AWAITING_ANSWERS', [
         { playerId: ME, answer: 'ACCEPTED' },
@@ -336,35 +318,7 @@ describe('the way out before the court is whole', () => {
       ME,
     );
 
-    expect(arm).toEqual({
-      kind: 'arranging',
-      facts: expect.anything(),
-      mayLeave: false,
-      mayRemove: true,
-    });
-  });
-
-  /** The two are one question asked from two sides: the organiser removes or leaves, never both. */
-  it('never offers the organiser both doors, on any court', () => {
-    const courts: readonly (readonly DetailSeat[])[] = [
-      [
-        { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: BEA, answerBy: '2026-09-07T09:00:00Z' },
-      ],
-      [
-        { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: BEA, answer: 'ACCEPTED' },
-        { playerId: CYRYL, answerBy: '2026-09-07T09:00:00Z' },
-        {},
-      ],
-    ];
-
-    for (const seats of courts) {
-      const arm = challengeArm(detail('AWAITING_ANSWERS', seats), ME);
-      expect(arm.kind).toBe('arranging');
-      if (arm.kind !== 'arranging') continue;
-      expect(arm.mayLeave && arm.mayRemove).toBe(false);
-    }
+    expect(arm).toEqual({ kind: 'arranging', facts: expect.anything(), mayRemove: true });
   });
 });
 
@@ -476,13 +430,17 @@ describe('the ended court', () => {
     });
   });
 
-  /** The presser's seat still reads `ACCEPTED`; `ended_by` is what says they *called it off*. */
-  it('marks the presser as having called it off, and the others still seated as in', () => {
+  /**
+   * **Every word is the seat's own** (ADR-0175 §1, §2): nobody's seat says *called it off* any
+   * more, a seat still deciding when the court closed reads *asked*, and the hour's court —
+   * nobody named — reads the same seats the same way.
+   */
+  it('reads each seat’s own word, a seat still deciding as asked, and never a presser', () => {
     const court = {
       ...detail('CALLED_OFF', [
         named(ME, 'me.p', 'ACCEPTED'),
-        named(BEA, 'bea.k', 'ACCEPTED'),
-        named(CYRYL, 'cyryl.w', 'ACCEPTED'),
+        named(BEA, 'bea.k', 'LEFT'),
+        { playerId: CYRYL, name: 'cyryl.w' },
         named(DIETER, 'dieter.s', 'LEFT'),
       ]),
       endedBy: BEA,
@@ -492,17 +450,24 @@ describe('the ended court', () => {
     const arm = challengeArm(court, ME);
     expect(arm.kind === 'ended' ? arm.court.map((seat) => seat.did) : []).toEqual([
       'in',
-      'called-it-off',
-      'in',
+      'left',
+      'asked',
       'left',
     ]);
-    // And the reader's own press reads *You · called it off*.
-    const mine = challengeArm({ ...court, endedBy: ME }, ME);
-    expect(mine.kind === 'ended' ? mine.court[0] : undefined).toEqual({
+    expect(arm.kind === 'ended' ? arm.court[0] : undefined).toEqual({
       playerId: ME,
       who: { kind: 'you' },
-      did: 'called-it-off',
+      did: 'in',
     });
+
+    const { endedBy: _nobody, ...theHours } = court;
+    const byTheHour = challengeArm(theHours, ME);
+    expect(byTheHour.kind === 'ended' ? byTheHour.court.map((seat) => seat.did) : []).toEqual([
+      'in',
+      'left',
+      'asked',
+      'left',
+    ]);
   });
 
   it('is drawn for a court that never became a game and ended on a departure, with a no and a lapse said', () => {

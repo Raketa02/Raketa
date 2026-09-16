@@ -98,25 +98,35 @@ export const GIVES_UP_THE_SEAT: Readonly<Record<SeatAnswer, boolean>> = {
  *
  * The four endings share one payload because they are keyed one way: **by whose act ended the
  * court and by that person's own seat**, which the wire names as `ended_by` and this fold turns
- * into a name. A seat that `LEFT` reads *left* wherever it is named — on a `CALLED_OFF` court it
- * tells the last leaver from the presser, on a `DECLINED` one the departure that deserted a
- * half-built court from the no that did — and `byADeparture` is that one reading, made once.
+ * into a name. A seat that `LEFT` reads *left* wherever it is named — on a `DECLINED` court it
+ * tells the departure that deserted a half-built court from the no that did — and `byADeparture`
+ * is that one reading, made once.
  *
  * **`endedBy` is `you` where the reader's own act ended it** — their own *no*, their own *left*,
- * their own removal, their own press — which is what lets one deck say *You called the game off*
- * and *{name} called the game off* off one field. The two folded endings read the reader's own
- * seat as well: §13's invitee column — *You said no*, *Your day ran out* — is true of a seat that
- * gave up whoever's act closed the court after it, and `ownAnswer` carries that seat.
+ * their own removal — which is what lets one deck say *You left* and *{name} left* off one
+ * field. The two folded endings read the reader's own seat as well: §13's invitee column — *You
+ * said no*, *Your day ran out* — is true of a seat that gave up whoever's act closed the court
+ * after it, and `ownAnswer` carries that seat.
+ *
+ * **And one ending is nobody's** ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §3): a `CALLED_OFF` court the hour ended, still short of a player when its moment passed. The
+ * wire names nobody on it by design, and `byNobody` is that reading — told apart from `unknown`,
+ * which is a name the wire owed and could not give.
  */
 export interface EndingFacts {
   /**
    * The player whose act ended it — `ended_by`, as a sentence names them. `unknown` where the
-   * wire named nobody or named a seat `users` can no longer answer for: the row draws `?` and
-   * never a name this app picked by walking the seats.
+   * wire named a seat `users` can no longer answer for, or named nobody on an ending that owes
+   * a name: the row draws `?` and never a name this app picked by walking the seats.
    */
   readonly endedBy: NamedPlayer;
-  /** Whether `ended_by`'s seat reads `LEFT`: the ending was a departure, not a no, a lapse or a press. */
+  /** Whether `ended_by`'s seat reads `LEFT`: the ending was a departure, not a no or a lapse. */
   readonly byADeparture: boolean;
+  /**
+   * The wire named nobody: the hour's call-off, the one ending that is nobody's act. Present
+   * exactly there, absent on every ending somebody's act made.
+   */
+  readonly byNobody?: true;
   /**
    * What the **reader's own seat** says where they gave it up — a no, a day run out, a yes taken
    * back. Absent where they are in, or hold no seat.

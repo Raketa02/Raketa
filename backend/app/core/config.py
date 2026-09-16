@@ -413,6 +413,21 @@ class Settings(BaseSettings):
     CHALLENGE_LAPSE_ENABLED: bool = True
     CHALLENGE_LAPSE_INTERVAL_SECONDS: float = 60 * 60
 
+    # --- the hour loop (docs/adr/0175 §3)
+    #
+    # **The second loop that appends a challenge event, and the first one
+    # correctness depends on.** A court that has been a game and is still short
+    # of a player when its agreed hour passes is called off by the platform —
+    # nobody's decision, since nobody presses *Call it off* any more — and the
+    # challenge's fold cannot reach that ending on its own: the hour is the
+    # plan's, which the challenge cannot read. Until this runs, such a row reads
+    # *needs a player* with nothing to press; so the interval is how long that
+    # dead minute lasts, and a minute is what it is chosen to be. The candidate
+    # read is every court somebody ever left, over an unindexed column, and the
+    # cost is stated there; finer than a minute buys nothing a player would see.
+    UNFILLED_COURT_ENABLED: bool = True
+    UNFILLED_COURT_INTERVAL_SECONDS: float = 60
+
     # --- the rating catch-up (docs/adr/0139)
     #
     # **The second job that appends a domain event, and the first whose absence a

@@ -71,21 +71,18 @@
  * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
  * §4 **a court somebody has joined is nobody's to end for the others**: *Withdraw* has left the
  * filling arm ([#428](https://github.com/Raketa02/Raketa/issues/428)), the organiser leaves it
- * like anybody else, and it ends by itself when one is left with nobody deciding. The end a court
- * that has been a game keeps — *Call it off*, any player's — is drawn on the **game** screen and
- * not here, because this read carries no fact for whether a court has been a game.
+ * like anybody else, and it ends by itself when nobody is on it, or one is with nobody deciding
+ * (ADR-0175 §2). A court that has been a game has no end anybody presses at all
+ * ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §1): it ends by its seats or by its hour.
  *
- * ## And it is left here — by anybody, before the court is whole
+ * ## And it is not left here — leaving is the Chats row's swipe, only
  *
- * ***Leave the game*** on both live arms
- * (ADR-0165 §1, [#427](https://github.com/Raketa02/Raketa/issues/427)): an accepted seat waiting
- * on the others, and a member of a court that is filling — the organiser included, because the
- * organiser is a player in that rule. Whether it is drawn is the fold's `mayLeave`, and the one
- * case it withholds is a court of one: the organiser nobody has joined has nothing to leave, and
- * their exit there is the removal below. It is the same door the Chats list's swipe reveals —
- * `DepartureDoor`, this feature's own, which draws the sheet and holds the act — so the act is
- * met once, however the reader arrived at it. **Last among the controls**, on the game screen's
- * own order: the act that ends it for everybody sits above the act that takes one person out.
+ * ***Leave the game*** stood on both live arms (ADR-0165 §1,
+ * [#427](https://github.com/Raketa02/Raketa/issues/427)) and is gone (ADR-0175 §4): every court
+ * a player has said yes to has a conversation row on Chats, and that row's swipe is the one
+ * place a seat is given up, so a player who wants out goes where every seat is left from. The
+ * fold's `mayLeave` went with it.
  *
  * ## Or removed here — by the organiser, while nobody has joined
  *
@@ -95,8 +92,8 @@
  * name the record gives it now, and it is met as a **door** rather than as the control this
  * screen used to draw: `RemovalDoor`, the same one the organiser's Chats row reveals, which draws
  * the withdrawal's sheet in the removal's words and says a refusal on it. Whether it is drawn is
- * the fold's `mayRemove`, which is `mayLeave`'s question asked from the other side — a court of
- * one is removed, a court with somebody is left, and the organiser never sees both.
+ * the fold's `mayRemove` — a court of one is removed, and a court with somebody is nobody's to
+ * end, so the organiser leaves it from Chats like anybody else.
  *
  * **⚡ runs the fill and pushes the builder; the send is a separate press, on that screen, and it
  * pops back here** — which is why nothing in this flow calls `resetShellStack`. `landOnNow`'s
@@ -175,7 +172,6 @@ import type { SeatAnswerAct } from '../use-cases/answerSeat';
 import { actOnRefusal } from './actOnRefusal';
 import { ChallengeCard } from './ChallengeCard';
 import { challengeErrorMessage } from './challengeErrorMessage';
-import { DepartureDoor } from './DepartureDoor';
 import { EndedCourt } from './EndedCourt';
 import {
   FILL_THE_SEATS,
@@ -439,47 +435,14 @@ function Arrangement({
     );
 
   /**
-   * ***Leave the game***, or nothing — the departure's door, on the two arms whose reader holds a
-   * seat on a court that is not whole and is on it with somebody (`mayLeave`). `secondary`:
-   * taking yourself off a court is never the primary act on a screen about arranging one. The
-   * sheet, the act, its words and its refusals are `DepartureDoor`'s — the same door a Chats row
-   * reveals — and what this screen adds is its own answer to a refusal: the detail re-read, so a
-   * court that ended under the press re-folds into its ending's sentence. **And its own answer to
-   * the reply: it leaves.** The act took the reader off the court, and the row they came in by
-   * has gone from the inbox on the same reply; what this screen would draw them is §13.1's *You
-   * left* with nothing to press, a stop on the way out of a thing they have just stopped being
-   * part of ([#429](https://github.com/Raketa02/Raketa/issues/429)). The screen still resolves
-   * for a stale route, and says that sentence then.
-   */
-  const leave =
-    (arm.kind === 'arranging' || arm.kind === 'filling') && arm.mayLeave ? (
-      <DepartureDoor challengeId={detail.challengeId} onRefusal={actOn} onDone={router.back}>
-        {(door) => (
-          <View ref={door.control}>
-            <Button
-              label={door.label}
-              variant="secondary"
-              disabled={!online || fill.isPending}
-              onPress={() => {
-                beginAnAct();
-                door.open();
-              }}
-            />
-          </View>
-        )}
-      </DepartureDoor>
-    ) : null;
-
-  /**
    * ***Remove the challenge***, or nothing — the removal's door, on the arranging arm to the
-   * organiser nobody has joined (`mayRemove`). `secondary` too, and **above the leave** where
-   * both could stand: the act that ends it for everybody sits above the act that takes one person
-   * out — though on this arm the fold never draws both. The sheet, the act, its words and its
-   * refusals are `RemovalDoor`'s — the same door the organiser's Chats row reveals — and the
-   * detail re-read after a refusal is this screen's, as it is for the leave: *somebody's in now*
-   * re-folds the arm into the one that offers *Leave the game* instead. And on the reply it
-   * leaves, as the departure does and for its reason: *You withdrew this* with nothing to press
-   * is the same stop on the way out.
+   * organiser nobody has joined (`mayRemove`). `secondary`: ending a court is never the primary
+   * act on a screen about arranging one. The sheet, the act, its words and its refusals are
+   * `RemovalDoor`'s — the same door the organiser's Chats row reveals — and the detail re-read
+   * after a refusal is this screen's: *somebody's in now* re-folds the arm into one with no end
+   * act on it. And on the reply it leaves: *You withdrew this* with nothing to press is a stop on
+   * the way out of a thing the reader has just ended
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429)).
    */
   const remove =
     arm.kind === 'arranging' && arm.mayRemove ? (
@@ -505,7 +468,7 @@ function Arrangement({
    * remove, whatever room the list may still hold for a beat — and an arm with no act of its own
    * and no door has nothing to pin either.
    */
-  const nothingToPin = arm.kind === 'ended' || (door === null && leave === null && remove === null);
+  const nothingToPin = arm.kind === 'ended' || (door === null && remove === null);
 
   return (
     <ShellScreen
@@ -514,11 +477,11 @@ function Arrangement({
       onBack={router.back}
       action={
         arm.kind === 'filling' ? (
-          /* **Grow · talk · leave**, in that order, and everybody on the court sees the three
+          /* **Grow · talk**, in that order, and everybody on the court sees the two
              ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
              §1, ADR-0165 §4). `LINE_UP_INCOMPLETE` *is not a waiting room*: the people who are in
              are in, so what this arm offers is finishing the court rather than waiting for it —
-             and nobody ends it for the others.
+             and nobody ends it for the others. Leaving it is the Chats row's (ADR-0175 §4).
 
              ***Open the chat*** is the middle one, and it is the conversation's own door: the
              words are that feature's, so the three surfaces that draw one cannot say three
@@ -540,8 +503,6 @@ function Arrangement({
             />
 
             {door}
-
-            {leave}
           </View>
         ) : arm.kind === 'answer' ? (
           <View style={s.answers}>
@@ -578,16 +539,14 @@ function Arrangement({
         ) : nothingToPin ? undefined : (
           /* The arms with no act of their own — an accepted seat waiting on the others, a court
              that is on, the organiser waiting on answers — and a room the list holds. The door is
-             what they offer, and only while it exists; the arranging arm offers the way out
-             beside it: the removal to the organiser nobody has joined, the leave to a reader on a
-             court with somebody, and never both. */
+             what they offer, and only while it exists; the arranging arm offers the removal
+             beside it, to the organiser nobody has joined. */
           <View style={s.answers}>
-            {/* The greyed controls this arm can hold are the two doors, so the note that says
-                why is drawn only where one is. */}
-            {leave === null && remove === null ? null : offline}
+            {/* The greyed control this arm can hold is the removal, so the note that says why
+                is drawn only where it is. */}
+            {remove === null ? null : offline}
             {door}
             {remove}
-            {leave}
           </View>
         )
       }

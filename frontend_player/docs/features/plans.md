@@ -409,3 +409,11 @@ front of it; a refusal is that hook's own re-read of the rail and says nothing �
 the act lives beside the list it touches, so the card hands it no `onReRead`. `ACCENT['called-off']`
 is the one row whose button is not `settled`: a green door under a red tag would be a card whose
 colours disagreed about it. **Not seen on a device** — the action row is asked for a look.
+
+**The game screen composes one act, directly under the card** ([ADR-0175](../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4). `GameScreenWithPlan`
+hands `FillTheSeat` into the screen's `fill` slot — offered while a seat is open and the moment
+is ahead, `momentHasPassed` over the plan this composition holds — and nothing else for the
+court: `CallOff` and `LeaveGame` are deleted from `features/challenges`, so the composition
+never imports them, and `mayLeave` became `momentAhead`, the fill's half of its rule. Past the
+moment the screen draws nothing for the court, and the hour calls it off. The trash on the
+called-off card is unchanged; the row it clears on Chats is ADR-0173's.

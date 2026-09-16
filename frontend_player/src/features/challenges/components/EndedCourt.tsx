@@ -64,15 +64,16 @@ export function EndedCourt({ court }: EndedCourtProps) {
 
 /**
  * The word's ink, by meaning — a `Record` over the union so a sixth word cannot arrive without
- * deciding its colour. The two ways out of a game are 1.3's *ended badly*; being in is settled;
- * a no and a lapse are quiet facts about a court that never became one.
+ * deciding its colour. Leaving a game is 1.3's *ended badly*; being in is settled; a no, a lapse
+ * and a seat still deciding when the court closed are quiet facts about a court that never
+ * became one, or stopped being one.
  */
 const DID_INK: Readonly<Record<SeatWord, { readonly color: string }>> = {
   in: { color: theme.color.mintInk },
   left: { color: theme.color.red },
   'said-no': { color: theme.color.muted },
   'ran-out': { color: theme.color.muted },
-  'called-it-off': { color: theme.color.red },
+  asked: { color: theme.color.muted },
 };
 
 const s = StyleSheet.create({

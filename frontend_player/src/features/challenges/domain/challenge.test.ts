@@ -198,6 +198,23 @@ describe('who may remove the challenge', () => {
     expect(mayRemove(aloneAgain, ME)).toBe(true);
   });
 
+  /** A court that became a game is nobody's to remove, the organiser alone again on it included (ADR-0175 §1). */
+  it('is nobody’s on a court that has been a game', () => {
+    const aloneAgain: Challenge = {
+      ...justSent,
+      standing: 'AWAITING_ANSWERS',
+      gameId: 'g1',
+      seats: [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: BEA, answer: 'LEFT' },
+        { playerId: CYRYL, answer: 'LEFT' },
+        { playerId: 'dorota', answerBy: '2026-09-06T09:00:00Z' },
+      ],
+    };
+
+    expect(mayRemove(aloneAgain, ME)).toBe(false);
+  });
+
   it('is nobody’s once the challenge has ended, or on a standing this build cannot read', () => {
     for (const standing of ['DECLINED', 'LAPSED', 'WITHDRAWN'] as const) {
       expect(mayRemove({ ...justSent, standing }, ME)).toBe(false);
@@ -208,8 +225,8 @@ describe('who may remove the challenge', () => {
 });
 
 /**
- * **Who may clear a called-off court** — anybody still seated on it, on `CALLED_OFF` and nothing
- * else (ADR-0173). The row's reveal decision for the one ending that moves.
+ * **Who may clear a called-off court** — everybody the court closed on, on `CALLED_OFF` and
+ * nothing else (ADR-0173, ADR-0175 §5). The row's reveal decision for the one ending that moves.
  */
 describe('who may clear a called-off court', () => {
   const GAME = 'g1';
@@ -232,33 +249,50 @@ describe('who may clear a called-off court', () => {
     expect(mayDismiss(leftAloneOn, 'dorota')).toBe(false);
   });
 
-  it('is everybody still seated’s when somebody pressed Call it off, the presser included', () => {
-    const pressed = {
+  /** The hour's court: everybody still seated may clear it, and so may whoever's day ran out on it. */
+  it('is everybody still seated’s where the hour called it off, and a lapsed invitee’s', () => {
+    const theHours = {
       ...challenge('CALLED_OFF', [
         { playerId: ME, answer: 'ACCEPTED' },
         { playerId: BEA, answer: 'ACCEPTED' },
         { playerId: CYRYL, answer: 'LEFT' },
-        { playerId: 'dorota', answer: 'ACCEPTED' },
+        { playerId: 'dorota', answer: 'LAPSED' },
       ]),
       gameId: GAME,
-      endedBy: BEA,
     };
 
-    expect(mayDismiss(pressed, ME)).toBe(true);
-    expect(mayDismiss(pressed, BEA)).toBe(true);
-    expect(mayDismiss(pressed, CYRYL)).toBe(false);
-    expect(mayDismiss(pressed, 'stranger')).toBe(false);
+    expect(mayDismiss(theHours, ME)).toBe(true);
+    expect(mayDismiss(theHours, BEA)).toBe(true);
+    expect(mayDismiss(theHours, CYRYL)).toBe(false);
+    expect(mayDismiss(theHours, 'dorota')).toBe(true);
+    expect(mayDismiss(theHours, 'stranger')).toBe(false);
   });
 
-  it('is nobody’s on any other standing, or on a court with no game behind it', () => {
+  /** The invitee still deciding when the last departure called it off has a row and may clear it (ADR-0175 §2, §5). */
+  it('is the invitee still deciding’s too, and never a decliner’s', () => {
+    const closedOnThem = {
+      ...challenge('CALLED_OFF', [
+        { playerId: ME, answer: 'LEFT' },
+        { playerId: BEA, answer: 'LEFT' },
+        { playerId: CYRYL, answerBy: '2026-09-06T09:00:00Z' },
+        { playerId: 'dorota', answer: 'DECLINED' },
+      ]),
+      gameId: GAME,
+      endedBy: ME,
+    };
+
+    expect(mayDismiss(closedOnThem, CYRYL)).toBe(true);
+    expect(mayDismiss(closedOnThem, 'dorota')).toBe(false);
+    expect(mayDismiss(closedOnThem, ME)).toBe(false);
+  });
+
+  it('is nobody’s on any other standing', () => {
     for (const standing of STANDINGS) {
       if (standing === 'CALLED_OFF') continue;
       expect(mayDismiss({ ...leftAloneOn, standing }, ME)).toBe(false);
     }
     const { standing: _unread, ...unreadable } = leftAloneOn;
     expect(mayDismiss(unreadable, ME)).toBe(false);
-    const { gameId: _none, ...neverAGame } = leftAloneOn;
-    expect(mayDismiss(neverAGame, ME)).toBe(false);
   });
 });
 

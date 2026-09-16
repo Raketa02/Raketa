@@ -45,6 +45,9 @@ from app.bootstrap.composition import (
     build_image_transcoder,
     build_interest_ledger,
     build_lapsing_challenge_query,
+    build_left_court_query,
+    build_planned_game_handover,
+    build_seatable_game_query,
     build_photo_review,
     build_photo_storage,
     build_play_intent_declaration_repository,
@@ -68,6 +71,9 @@ from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
     DatabaseCandidateSource,
 )
 from app.modules.matchmaking.infrastructure.scale_instruments import ScoringMeter
+from app.modules.challenges.application.call_off_unfilled_courts import (
+    CallOffUnfilledCourts,
+)
 from app.modules.challenges.application.lapse_expired_seats import (
     LapseExpiredSeats,
 )
@@ -138,6 +144,13 @@ INTEREST_EXPIRY_JOB = "interest-expiry"
 #: count rather than a change anybody can see.
 CHALLENGE_LAPSE_JOB = "challenge-lapse"
 
+#: The hour loop (``docs/adr/0175`` §3). The **second** job that appends a
+#: challenge event, and the first one on this list a challenge's standing
+#: depends on: a court still short of a player when its hour passes reads
+#: *needs a player* until this writes ``CALLED_OFF`` on it, because the hour is
+#: the plan's and the challenge cannot read a plan.
+UNFILLED_COURT_JOB = "unfilled-court"
+
 #: The rating catch-up. The **second** job that writes a domain event, and the
 #: only one on this list whose output a player would miss: a confirmation is a
 #: clock passing and announces nothing (``docs/adr/0137``), so without this a
@@ -198,6 +211,7 @@ def build_scheduled_jobs(
         or settings.CANDIDATE_INDEX_ENABLED
         or settings.INTEREST_EXPIRY_ENABLED
         or settings.CHALLENGE_LAPSE_ENABLED
+        or settings.UNFILLED_COURT_ENABLED
         or settings.RATING_CATCH_UP_ENABLED
         or settings.CONVERSATION_SWEEP_ENABLED
     ):
@@ -239,6 +253,12 @@ def build_scheduled_jobs(
         if settings.CHALLENGE_LAPSE_ENABLED:
             jobs.append(
                 build_challenge_lapse_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.UNFILLED_COURT_ENABLED:
+            jobs.append(
+                build_unfilled_court_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -486,6 +506,57 @@ def build_challenge_lapse_job(
     return PeriodicJob(
         name=CHALLENGE_LAPSE_JOB,
         interval_seconds=settings.CHALLENGE_LAPSE_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_unfilled_court_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Call off every game court still short of a player once its hour has
+    passed (``docs/adr/0175`` §3).
+
+    **Idempotent and safe beside itself with no lock**, on the lapse loop's
+    terms: the aggregate writes nothing on a court that is not half built, a
+    genuine race is caught by the stream version, and the loser steps over that
+    one court and keeps going.
+
+    **Correctness depends on it running**, which the lapse loop's does not: the
+    challenge's fold cannot read the plan whose hour this is, so the ending is
+    recorded here or not at all. What it buys the people on such a court is the
+    exit nobody presses — no ghost charged to them, their pair released, the
+    room destroyed and the row given its day.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            called_off = await CallOffUnfilledCourts(
+                clock=clock,
+                challenges=build_challenge_repository(
+                    event_store=build_domain_event_store(session),
+                    events=build_event_publisher(session),
+                ),
+                left=build_left_court_query(session),
+                games=build_seatable_game_query(session),
+                planned_games=build_planned_game_handover(session),
+                unit_of_work=build_unit_of_work(session),
+            ).execute()
+        logger.info(
+            "unfilled court loop finished",
+            extra={
+                "job": UNFILLED_COURT_JOB,
+                "courts": called_off.courts,
+                "conflicts": called_off.conflicts,
+            },
+        )
+
+    return PeriodicJob(
+        name=UNFILLED_COURT_JOB,
+        interval_seconds=settings.UNFILLED_COURT_INTERVAL_SECONDS,
         run=run,
     )
 

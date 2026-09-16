@@ -210,6 +210,24 @@ export function postWithdrawal(challengeId: string): Promise<ChallengeSchema> {
 }
 
 /**
+ * ***Remove this row*** — clear a called-off court from your own two lists, met from the Chats row
+ * ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §5). The same act `POST /games/{id}/dismissal` is from the Now card, recorded on the same game
+ * and read by both lists (ADR-0173) — this door for everybody the court asked, seated on the game
+ * or not, because an invitee still deciding when the court was called off has a row and never
+ * had a card. A `204`: nothing is answered because the thing a redraw would draw is the thing
+ * removed. Admitted on `CALLED_OFF` and refused with `court_is_not_called_off` on every other
+ * standing; a second press writes nothing and answers the same.
+ */
+export function postDismissal(challengeId: string): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `/api/v1/challenges/${challengeId}/dismissal`,
+    authenticated: true,
+  });
+}
+
+/**
  * *I'm leaving this game.* **A noun and not a verb, like the withdrawal**: what this creates is
  * the departure. The reply is the challenge as it now stands — `LINE_UP_INCOMPLETE`, with the
  * caller's seat `LEFT` — and the game it became keeps its id with that seat open (ADR-0162).

@@ -171,14 +171,17 @@ export const REMOVE_SHEET_CLOSE_LABEL = 'Keep it open';
  * `somebody_has_joined` is the one a stale row invites: somebody said yes between the read and
  * the press, and the court is nobody's to end for the others any more. `challenge_is_over` is the
  * departure's sentence, borrowed rather than respelled — it is the same fact about the same court,
- * whichever door met it. The route documents three more, and none of them reaches this sheet from
- * a row drawn by `mayRemove`: `withdraw_is_the_organisers` needs a reader who is not the
- * organiser, `not_a_half_built_line_up` a court that has been a game, and `challenge_not_found` a
- * seat the reader does not hold — so they fall through to the feature's sentence rather than
- * earning words nobody can reach.
+ * whichever door met it. `court_has_been_a_game` is the third a stale row can meet
+ * ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §1): the line-up completed between the read and the press, and such a court is nobody's to end
+ * — it ends by its players leaving or by its hour. The route documents two more, and neither
+ * reaches this sheet from a row drawn by `mayRemove`: `withdraw_is_the_organisers` needs a reader
+ * who is not the organiser, and `challenge_not_found` a seat the reader does not hold — so they
+ * fall through to the feature's sentence rather than earning words nobody can reach.
  */
 export const REMOVE_REFUSED: Readonly<Record<string, string>> = {
   somebody_has_joined: "Somebody's in now, so it's no longer yours to remove.",
+  court_has_been_a_game: "This one became a game, so it's not yours to remove any more.",
   challenge_is_over: THIS_ONE_IS_OVER,
 };
 
@@ -207,19 +210,20 @@ export const THE_COURT_HEADING = 'The court';
 /**
  * **What each person on an ended court did, one word each** — keyed by the domain's code as a
  * `Record`, so a sixth thing a seat can have done fails to compile here rather than drawing a
- * seat with nothing after its name. *Called it off* is the button's word in the past tense and
- * *left* is the departure's — one word for each act, the same word the row uses.
+ * seat with nothing after its name. *Left* is the departure's word and *was still deciding* is
+ * the invitee's whom the last departure or the hour closed the court on (ADR-0175 §2) — one word
+ * for each thing, the same word the row uses. *Called it off* went with the press (§1).
  */
 export const SEAT_WORD: Readonly<Record<SeatWord, string>> = {
   in: 'in',
   left: 'left',
   'said-no': 'said no',
   'ran-out': 'day ran out',
-  'called-it-off': 'called it off',
+  asked: 'was still deciding',
 };
 
 /**
- * `You · in` · `Javier Fabregat · left` · `Oscar Bertran · called it off` — one seat of the ended
+ * `You · in` · `Javier Fabregat · left` · `Oscar Bertran · was still deciding` — one seat of the ended
  * court, drawn and spoken alike: a middot between a name and one word is a join the ear can take
  * as a pause, and the reader's own seat says *You* rather than their name back to them.
  */

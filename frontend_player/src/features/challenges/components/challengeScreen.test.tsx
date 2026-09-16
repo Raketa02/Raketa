@@ -59,7 +59,7 @@ import {
   saidYesOnPlayersLine,
   seatDidLine,
 } from './challengeDetailPresentation';
-import { LEAVE_FROM_THE_LIST_BODY, LEAVE_THE_GAME } from './leaveGamePresentation';
+import { LEAVE_THE_GAME } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
 const EWA = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -487,7 +487,8 @@ describe('the arms with nothing to press', () => {
  * **The ended court** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
  * §7): the row's tap lands on the sentence, every seat's word, and nothing to press — no fill, no
  * chat door, no leave, no remove. `ended_by` is the row's, because the detail read does not carry
- * it, and it is what tells the presser's *called it off* from the reader's *in*.
+ * it. Since ADR-0175 a `CALLED_OFF` court is ended by the last departure — whoever is still
+ * deciding, whose seat reads *was still deciding* — or by the hour, which names nobody.
  */
 describe('the ended court', () => {
   const TOMEK = 'cccccccc-0000-4000-8000-000000000003';
@@ -505,11 +506,15 @@ describe('the ended court', () => {
       answer,
     }));
 
-  /** Ewa's doubles: Tomek pressed *Call it off* after Ola left; I was in, and still am on the record. */
-  const OSCAR_PRESSED = seats([
-    [EWA, 'ewa.m', 'ACCEPTED'],
+  /**
+   * Ewa's doubles: Ola left, Tomek was asked to fill her seat and was still deciding when Ewa
+   * — the last of us besides me — left, which called it off with me alone on the record. The
+   * row names Ewa; I was in, and still am on the record.
+   */
+  const EWA_LEFT_LAST = seats([
+    [EWA, 'ewa.m', 'LEFT'],
     [ME, 'me_', 'ACCEPTED'],
-    [TOMEK, 'tomek.p', 'ACCEPTED'],
+    [TOMEK, 'tomek.p', null],
     [OLA, 'ola.k', 'LEFT'],
   ]);
 
@@ -518,6 +523,7 @@ describe('the ended court', () => {
     standing: 'CALLED_OFF' | 'DECLINED',
     court: readonly Wire['DetailSeatSchema'][],
     endedBy: string,
+    rowNames: RegExp = /^tomek\.p, Padel/,
   ) {
     const listed = row({
       sport: 'PADEL',
@@ -554,30 +560,30 @@ describe('the ended court', () => {
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
 
-    fireEvent.press(await screen.findByLabelText(/^tomek\.p, Padel/));
+    fireEvent.press(await screen.findByLabelText(rowNames));
     await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
   }
 
   it('lands from the row on the sentence, every seat’s word, and nothing to press', async () => {
-    await openTheEndedCourt('CALLED_OFF', OSCAR_PRESSED, TOMEK);
+    await openTheEndedCourt('CALLED_OFF', EWA_LEFT_LAST, EWA, /^ewa\.m, Padel.*Called off$/);
 
     expect(
       await screen.findByText(
         standingLine({
           side: 'invitee',
           standing: 'CALLED_OFF',
-          endedBy: { kind: 'player', name: 'tomek.p' },
-          byADeparture: false,
+          endedBy: { kind: 'player', name: 'ewa.m' },
+          byADeparture: true,
         }),
       ),
     ).toBeTruthy();
     expect(screen.getByText(THE_COURT_HEADING)).toBeTruthy();
     expect(
-      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'ewa.m' }, 'in')),
+      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'ewa.m' }, 'left')),
     ).toBeTruthy();
     expect(screen.getByLabelText(seatDidLine({ kind: 'you' }, 'in'))).toBeTruthy();
     expect(
-      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'tomek.p' }, 'called-it-off')),
+      screen.getByLabelText(seatDidLine({ kind: 'player', name: 'tomek.p' }, 'asked')),
     ).toBeTruthy();
     expect(
       screen.getByLabelText(seatDidLine({ kind: 'player', name: 'ola.k' }, 'left')),
@@ -858,9 +864,8 @@ describe('the door on later visits', () => {
   });
 });
 
-describe('*Leave the game* on the arranging arm', () => {
+describe('no *Leave the game* on the arranging arm', () => {
   const OLA = 'dddddddd-0000-4000-8000-000000000003';
-  const DEPARTURE_PATH = `${DETAIL_PATH}/departure`;
 
   /** A padel four with the organiser and me in, and two seats still deciding. */
   const waitingOnTwo = {
@@ -875,11 +880,11 @@ describe('*Leave the game* on the arranging arm', () => {
   };
 
   /**
-   * **A yes can be taken back before the court is whole** (ADR-0165 §1,
-   * [#427](https://github.com/Raketa02/Raketa/issues/427)): an accepted seat still waiting on the
-   * others has the door, and it opens the same sheet the Chats list's swipe does.
+   * **Leaving is the Chats row's swipe alone** (ADR-0175 §4): an accepted seat still waiting on
+   * the others, and the organiser once somebody has joined, are drawn no door here — the
+   * conversation row on Chats is where every seat is given up.
    */
-  it('is drawn for an accepted seat still waiting on the others, and opens the sheet', async () => {
+  it('is not drawn for an accepted seat still waiting on the others', async () => {
     stubChallenges(transport, [row(waitingOnTwo)], READ_AT);
     transport.on('GET', DETAIL_PATH, () => json(detail(waitingOnTwo)));
 
@@ -889,14 +894,13 @@ describe('*Leave the game* on the arranging arm', () => {
     fireEvent.press(await screen.findByLabelText(/^ewa\.m.*, Padel, You/));
     await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
 
-    fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
-
-    expect(await screen.findByText(LEAVE_FROM_THE_LIST_BODY)).toBeTruthy();
-    expect(transport.requestsTo('POST', DEPARTURE_PATH)).toEqual([]);
+    // The arm has landed once the standing sentence is up; the card block's own suite reads it.
+    expect(await screen.findByText(/^You're in/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
+    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
   });
 
-  /** The organiser is a player in that rule: once somebody has joined, they leave like anybody. */
-  it('is drawn for the organiser once somebody has joined', async () => {
+  it('is not drawn for the organiser once somebody has joined', async () => {
     const joined = { ...waitingOnTwo, organiser_id: ME };
     stubChallenges(transport, [row(joined)], READ_AT);
     transport.on('GET', DETAIL_PATH, () => json(detail(joined)));
@@ -907,29 +911,13 @@ describe('*Leave the game* on the arranging arm', () => {
     fireEvent.press(await screen.findByLabelText(/, Padel, Waiting/));
     await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
 
-    expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
-  });
-
-  /**
-   * **A court of one has nothing to leave.** The organiser nobody has joined yet is drawn no such
-   * door — their exit there is #428's *Remove the challenge*.
-   */
-  it('is not drawn for an organiser nobody has joined yet', async () => {
-    const mySend = {
-      organiser_id: ME,
-      seats: [
-        { side: 'A' as const, player_id: ME, answer: 'ACCEPTED' as const, name: 'me_' },
-        { side: 'B' as const, player_id: EWA, answer: null, answer_by: at(20), name: 'ewa.m' },
-      ],
-    };
-    await openTheChallenge(detail(mySend), row(mySend));
-
     expect(
       await screen.findByText(
         standingLine({ side: 'organiser', standing: 'AWAITING_ANSWERS', awaiting: 1 }),
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
+    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
   });
 
   /** And never to a reader who has an answer to give: their two acts are the whole of the arm. */
@@ -1039,10 +1027,15 @@ describe('*Remove the challenge* on the arranging arm', () => {
    * **Once somebody has joined, neither *Remove* nor *Withdraw*** — the acceptance criterion in
    * as many words. The organiser is a player now, and the arm offers the player's door instead.
    */
-  it('is not drawn once somebody has joined, and neither is any withdraw', async () => {
+  it('is not drawn once somebody has joined, and neither is any withdraw or leave', async () => {
     await openMySend(joined);
 
-    expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    expect(
+      await screen.findByText(
+        standingLine({ side: 'organiser', standing: 'AWAITING_ANSWERS', awaiting: 1 }),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
     expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
     expect(screen.queryByText(/withdraw/i)).toBeNull();
     expect(screen.queryByLabelText(/withdraw/i)).toBeNull();
@@ -1058,7 +1051,7 @@ describe('*Remove the challenge* on the arranging arm', () => {
 
   /**
    * **A refusal is said on the sheet, and the detail is re-read once it is dismissed**: somebody
-   * said yes under the finger, so the arm re-folds into the one that offers *Leave the game*.
+   * said yes under the finger, so the arm re-folds into one with no end act on it.
    */
   it('says why on the sheet when somebody has joined under the finger, and re-folds on Keep it open', async () => {
     transport.on('POST', WITHDRAWAL_PATH, () => {
@@ -1079,8 +1072,15 @@ describe('*Remove the challenge* on the arranging arm', () => {
 
     fireEvent.press(screen.getByRole('button', { name: REMOVE_SHEET_CLOSE_LABEL }));
 
-    expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull(),
+    );
+    expect(
+      await screen.findByText(
+        standingLine({ side: 'organiser', standing: 'AWAITING_ANSWERS', awaiting: 1 }),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
     expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`);
   });
 });

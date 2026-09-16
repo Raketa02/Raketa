@@ -14,23 +14,24 @@
  *
  * ## Two surfaces, one control
  *
- * The Now card's wide door on *Needs a player* and the primary act on the game screen's arm for
- * it are the same press, so they are the same component — composed by `features/plans` into the
- * card's footer as the door, and into the screen's `courtActs` slot as the act, the shape
- * `LeaveGame` takes. What differs is how it is drawn, and that is the card's to say: the door
- * takes the card's accent and its width, and the act takes the screen's. The word is
- * `theActsWords.ts`' — read here and on the card, and it cannot live in either feature.
+ * The Now card's wide door on *Needs a player* and the primary act on the game screen for it are
+ * the same press, so they are the same component — composed by `features/plans` into the card's
+ * footer as the door, and into the screen's `fill` slot directly under the card
+ * ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §4). What differs is how it is drawn, and that is the card's to say: the door takes the card's
+ * accent and its width, and the act takes the screen's. The word is `theActsWords.ts`' — read
+ * here and on the card, and it cannot live in either feature.
  *
  * ## Only while the agreed moment is ahead
  *
  * Nobody may be seated into a game whose moment has passed: the builder's send would be refused
  * with `game_moment_has_passed`, and the newcomer's yes with the same. So the door stands down
- * with *Leave this game*, off the same instant (`momentHasPassed`), rather than opening a builder
- * that cannot send. On the screen it is a prop and not a mount, for `LeaveGame`'s reason: a fill
- * in flight whose rule flips under it still pushes the builder its answer earned. On the card the
- * footer's own rule — no wide door, and the row is not drawn — unmounts it instead, and what such
- * a fill loses is only its push: the search is recorded either way, and a rail is not a screen
- * anybody was waiting on.
+ * off that instant (`momentHasPassed`) rather than opening a builder that cannot send — and a
+ * court still short of a player then is the hour's to call off (ADR-0175 §3). On the screen it
+ * is a prop and not a mount: a fill in flight whose rule flips under it still pushes the builder
+ * its answer earned. On the card the footer's own rule — no wide door, and the row is not drawn
+ * — unmounts it instead, and what such a fill loses is only its push: the search is recorded
+ * either way, and a rail is not a screen anybody was waiting on.
  *
  * ## What a refusal costs — `actRefusal`'s fold
  *

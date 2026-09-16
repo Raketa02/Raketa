@@ -733,6 +733,30 @@ class LapsingChallengeQuery(Protocol):
         ...
 
 
+class LeftCourtQuery(Protocol):
+    """*Which courts has somebody left?* — the hour's candidates
+    (``docs/adr/0175`` §3).
+
+    The second port here that answers with candidates, on
+    :class:`LapsingChallengeQuery`'s terms: over-naming is free and
+    under-naming is not. A court is short of a player only if somebody left
+    it — a departure is the one act that reopens a seat on a court that has
+    been a game — so a stream with no ``SeatLeft`` on it has nothing for the
+    sweep, and one with any is named whether or not it is still short, still
+    a game, or a game at all. The sweep loads what it is named and asks the
+    fold; this read filters on nothing the fold answers.
+    """
+
+    async def courts_somebody_left(self) -> tuple[UUID, ...]:
+        """Every challenge whose stream holds a departure, in one stable order,
+        oldest first — the determinism demand
+        :meth:`LapsingChallengeQuery.may_have_lapsed` states, for its reason.
+        No clock: which of them are past their hour is a question about a
+        plan, asked one layer up of the game each became.
+        """
+        ...
+
+
 #: How many answering counterparts one player's history crosses with, most
 #: recent first.
 #:

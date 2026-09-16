@@ -39,14 +39,14 @@ class VacateSeatCommand:
 @dataclass(frozen=True, slots=True)
 class CallOffGameCommand:
     """The court was ended with a seat open, so the game it became is called
-    off. ``challenges`` sends this in the transaction of the withdrawal, or of
-    the departure that left one player on the court (``docs/adr/0165`` §3), and
-    nothing else does. ``called_by`` is whoever held the exit — any player on
-    the court (``docs/adr/0165`` §5) — or the leaver whose departure emptied
-    the court."""
+    off. ``challenges`` sends this in the transaction of the departure that
+    left at most one player on the court (``docs/adr/0165`` §3), or of the
+    hour that found the court still short of a player (``docs/adr/0175``
+    §3), and nothing else does. ``called_by`` is the leaver, or ``None`` for
+    the hour."""
 
     challenge_id: UUID
-    called_by: UUID
+    called_by: UUID | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,4 +72,14 @@ class DismissGameCommand:
     (``docs/adr/0172`` §5)."""
 
     game_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class DismissGameOfCourtCommand:
+    """*Remove this row.* The reader's own, on the called-off game this
+    challenge became — sent by ``challenges`` for anybody it had asked, seated
+    on the game or not (``docs/adr/0175`` §5)."""
+
+    challenge_id: UUID
     player_id: UUID

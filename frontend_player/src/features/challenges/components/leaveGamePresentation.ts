@@ -36,15 +36,6 @@ import type { LeavingEnds } from '../domain/challenge';
 
 import { challengeErrorMessage } from './challengeErrorMessage';
 
-/**
- * The control, on the game screen — **quiet, destructive, and last**, behind the sheet below.
- *
- * The visible label is the whole sentence, so it is the accessible name too: unlike the retired
- * `Withdraw`, which said one word and named what it withdrew to a listener, there is no shorter
- * form that a reader would want.
- */
-export const LEAVE_THIS_GAME = 'Leave this game';
-
 /** The departure while it is in flight, on the control that carries it out. */
 export const LEAVING = 'Leaving…';
 
@@ -117,17 +108,6 @@ export function leavingEndsLine(ends: LeavingEnds): string {
  */
 export function leaveFromTheListBody(ends: LeavingEnds | undefined): readonly string[] {
   return [ends === undefined ? LEAVE_FROM_THE_LIST_BODY : leavingEndsLine(ends)];
-}
-
-/**
- * **What the game screen's sheet says** — its three lines, with the first replaced by the ending
- * line where the leaving would call the game off. See {@link leavingEndsLine} for why it
- * replaces rather than precedes.
- */
-export function leaveThisGameBody(ends: LeavingEnds | undefined): readonly string[] {
-  if (ends === undefined) return LEAVE_SHEET_BODY;
-  const [, ...stillTrue] = LEAVE_SHEET_BODY;
-  return [leavingEndsLine(ends), ...stillTrue];
 }
 
 /**

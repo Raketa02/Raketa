@@ -52,24 +52,24 @@
  *
  * ## And a fourth, which is another feature's act
  *
- * [#418](https://github.com/Raketa02/Raketa/issues/418) added *Leave this game* under the doors —
- * a **challenge** act reached from a game, because the seat that reopens is the challenge's
- * ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
- * So the control, its sheet and its words are `features/challenges`', read through its
- * `types.ts` the way `useChatDoors` is, and this is where they are handed into the screen's
- * `courtActs` slot — and where the one rule about *whether* is applied: only while the agreed
- * moment is ahead, which is the ladder's `momentHasPassed` over the plan this composition already
- * holds and the games list's own instant. On a stale tap the control asks this composition to
- * re-read the games list, because that read is the one clock every fold on the screen is against.
+ * *Fill the seat* — the challenge screen's ⚡, handed the people **the game's** seats hold
+ * (`seatedOthers`) — a **challenge** act reached from a game, because the seat that fills is the
+ * challenge's ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md),
+ * [#419](https://github.com/Raketa02/Raketa/issues/419)). So the control and its words are
+ * `features/challenges`', read through its `types.ts` the way `useChatDoors` is, and this is where
+ * it is handed into the screen's `fill` slot — directly under the card that says *needs a player*
+ * ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §4) — and where the two rules about *whether* are applied: a seat is open, and the agreed moment
+ * is ahead, which is the ladder's `momentHasPassed` over the plan this composition already holds
+ * and the games list's own instant. On a stale tap the control asks this composition to re-read
+ * the games list, because that read is the one clock every fold on the screen is against.
  *
- * [#419](https://github.com/Raketa02/Raketa/issues/419) filled the same slot with the reopened
- * court's other two acts, both that feature's for the same reason: *Fill the seat* — the
- * challenge screen's ⚡, handed the people **the game's** seats hold (`seatedOthers`) and the same
- * moment rule as the leave — and *Call it off*, the withdraw grown to a reopened court
- * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)), handed the
- * one rule this composition can state, that a seat is open. **Who may call it off is not stated
- * here**: the organiser is a challenge fact, and the control joins it off that feature's own list
- * — so this file never learns what an organiser is, and `GET /games` never carries one.
+ * Two acts stood beside it and are gone (ADR-0175 §1, §4). *Leave this game* — #418's — is the
+ * Chats row's swipe alone now, so a player who wants out goes where every seat is left from. And
+ * *Call it off* — the withdraw grown to a reopened court
+ * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)) — no
+ * longer exists for anybody: a game with a seat open ends by its seats or by its hour, never by
+ * one person's decision over the others.
  *
  * **A plan read still in flight leads with the plan, and that is the same answer as nothing
  * agreed.** *Not yet arrived* and *three empty slots* reach `entryLeadOf` identically — which is
@@ -81,7 +81,7 @@
  */
 
 import { useCurrentUser } from '@/features/auth/types';
-import { CallOff, FillTheSeat, LeaveGame } from '@/features/challenges/types';
+import { FillTheSeat } from '@/features/challenges/types';
 import { useChatDoors } from '@/features/conversations/types';
 import { CourtPairing, GameScreen, openSeats, seatedOthers, useGame } from '@/features/games/types';
 
@@ -107,17 +107,15 @@ export function GameScreenWithPlan({ gameId }: GameScreenWithPlanProps) {
 
   const entryLead = game === undefined ? 'the-score' : entryLeadOf(game, plan);
   /**
-   * **Leaving is offered only while the agreed moment is ahead** (#411 rule 1) — the ladder's
+   * **The fill is offered only while the agreed moment is ahead** (#411 rule 1) — the ladder's
    * own test, read off the plan and the games list's instant, mirroring the rule the server
-   * enforces with `game_moment_has_passed`. The rung cannot say it alone: *Needs a player*
-   * outranks *Needs result*, so a short court past its moment is on this lead with no act left.
+   * enforces with `game_moment_has_passed`: nobody may be seated into a game whose moment is
+   * gone. The rung cannot say it alone: *Needs a player* outranks *Needs result*, so a short
+   * court past its moment is on this lead with no act left — and the hour calls it off
+   * (ADR-0175 §3).
    */
-  const mayLeave = game !== undefined && !momentHasPassed(plan, game.readAt);
-  /**
-   * **A seat is open** — the one rule about *Call it off* that is this composition's to state
-   * (#411 rule 4, ADR-0163): a full court that will not play lets its window lapse instead. Who
-   * may is `features/challenges`' rule, and the control answers it itself off its own list.
-   */
+  const momentAhead = game !== undefined && !momentHasPassed(plan, game.readAt);
+  /** **A seat is open** — the other half of whether there is anything to fill. */
   const seatOpen = game !== undefined && openSeats(game.seats).length > 0;
 
   /** What a stale tap on any of the acts costs: this composition's own games read, again. */
@@ -155,28 +153,21 @@ export function GameScreenWithPlan({ gameId }: GameScreenWithPlanProps) {
           <GamePlan game={game} plan={plan} />
         )
       }
-      courtActs={
-        // Challenge acts reached from a game (ADR-0162, ADR-0163, #419): the controls are
-        // `features/challenges`', composed here as the chat doors are, and the re-read each asks
+      fill={
+        // The one challenge act reached from a game (ADR-0162, #419, ADR-0175 §4): the control
+        // is `features/challenges`', composed here as the chat doors are, and the re-read it asks
         // for on a stale tap is this component's own games read — the one clock every fold on
-        // the screen is against. Each rule is handed in as `offered` rather than applied as a
-        // mount, so an act in flight is not unmounted from under its own reply. In the design's
-        // order: the fill is the primary act on a court with a seat open, and it stands down
-        // with the leave once the moment has passed — nobody may be seated into a game whose
-        // moment is gone; the call-off sits above the leave, the act that ends the game for
-        // everybody before the one that takes one person out of it.
+        // the screen is against. The rule is handed in as `offered` rather than applied as a
+        // mount, so an act in flight is not unmounted from under its own reply: a seat open, and
+        // the moment ahead.
         game === undefined || playerId === undefined ? null : (
-          <>
-            <FillTheSeat
-              challengeId={game.challengeId}
-              sport={game.sport}
-              accepted={seatedOthers(game.seats, playerId)}
-              offered={seatOpen && mayLeave}
-              onReRead={reRead}
-            />
-            <CallOff challengeId={game.challengeId} offered={seatOpen} onReRead={reRead} />
-            <LeaveGame challengeId={game.challengeId} offered={mayLeave} onReRead={reRead} />
-          </>
+          <FillTheSeat
+            challengeId={game.challengeId}
+            sport={game.sport}
+            accepted={seatedOthers(game.seats, playerId)}
+            offered={seatOpen && momentAhead}
+            onReRead={reRead}
+          />
         )
       }
     />

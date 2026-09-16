@@ -48,6 +48,7 @@ from app.modules.challenges.application.leave_game import LeaveGame
 from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
+from app.modules.challenges.application.dismiss_court import DismissCourt
 from app.modules.challenges.application.withdraw_challenge import WithdrawChallenge
 from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
 from app.modules.challenges.domain.ports import (
@@ -238,15 +239,9 @@ def get_withdraw_challenge(
     challenges: ChallengeRepositoryDep,
     court_games: GameOfCourtQueryDep,
 ) -> WithdrawChallenge:
-    """The withdraw: the decline's collaborators, and the hand-over.
-
-    **The hand-over is here because the route reaches a game**
-    (``docs/adr/0163``, ``docs/adr/0172`` §1): a court that has been a game is
-    called off through this route and the game is called off in the same
-    transaction. It is the same seam the accept and the departure hold, built
-    the same way, so the three acts that tell the game cannot come to two
-    wirings of it.
-    """
+    """The withdraw: the decline's collaborators, and no hand-over — the route
+    reaches no game since ``docs/adr/0175`` §1 refused it a court that has
+    been one."""
 
     return WithdrawChallenge(
         challenges=challenges,
@@ -254,11 +249,31 @@ def get_withdraw_challenge(
         court_games=court_games,
         uow=uow,
         clock=clock,
-        planned_games=build_planned_game_handover(db),
     )
 
 
 WithdrawChallengeDep = Annotated[WithdrawChallenge, Depends(get_withdraw_challenge)]
+
+
+def get_dismiss_court(
+    db: DbSession,
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    challenges: ChallengeRepositoryDep,
+) -> DismissCourt:
+    """The row's dismissal: the challenge loaded as one of the reader's, and
+    the hand-over — because the act is recorded on the game
+    (``docs/adr/0175`` §5), on the same seam the departure tells it through."""
+
+    return DismissCourt(
+        challenges=challenges,
+        planned_games=build_planned_game_handover(db),
+        uow=uow,
+        clock=clock,
+    )
+
+
+DismissCourtDep = Annotated[DismissCourt, Depends(get_dismiss_court)]
 
 
 def get_leave_game(

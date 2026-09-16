@@ -28,8 +28,11 @@ from __future__ import annotations
 from typing import final
 
 from app.application.ports import UnitOfWork
-from app.kernel import Clock, instant
-from app.modules.games.application.commands import DismissGameCommand
+from app.kernel import Clock, Instant, instant, invariant
+from app.modules.games.application.commands import (
+    DismissGameCommand,
+    DismissGameOfCourtCommand,
+)
 from app.modules.games.domain.errors import YouWereNotOnThisCourt
 from app.modules.games.domain.ports import GameRepository
 
@@ -65,4 +68,33 @@ class DismissGame:
         await self._uow.commit()
 
 
-__all__ = ["DismissGame"]
+@final
+class DismissGameOfCourt:
+    """*Remove this row* → the game this court became records that this
+    reader has cleared it, on the court's word that they were asked
+    (``docs/adr/0175`` §5).
+
+    The hand-over's fourth command, and the first that is the reader's own
+    act rather than the court's: ``challenges`` has loaded the challenge as
+    one of the reader's and found it ``CALLED_OFF``, so what is left to ask is
+    this side's own — that the game agrees it is called off — and the event
+    written is the one the rail's trash writes. **It does not commit**; the
+    transaction is the challenge route's, like the other three.
+    """
+
+    def __init__(self, *, games: GameRepository) -> None:
+        self._games = games
+
+    async def execute(
+        self, command: DismissGameOfCourtCommand, *, occurred_at: Instant
+    ) -> None:
+        game = invariant(
+            await self._games.for_challenge(command.challenge_id),
+            f"a dismissal of a court that has been a game, with no game behind "
+            f"it: {command.challenge_id}",
+        )
+        game.dismiss_for_the_court(by=command.player_id, occurred_at=occurred_at)
+        await self._games.save(game)
+
+
+__all__ = ["DismissGame", "DismissGameOfCourt"]

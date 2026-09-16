@@ -7,7 +7,11 @@
   `GET /challenges` subtracts its reader off the same set `GET /games` does, and a `CALLED_OFF`
   row the reader is still seated on swipes to reveal *Remove this row*, which posts this same
   dismissal. §5's *"nothing else reads [the set]"* gains that one reader; §7's *no arm* on the
-  tap stands, as does everything else here.
+  tap stands, as does everything else here — **and four sentences superseded 2026-09-16 by
+  [ADR-0175](0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)**: §1's second act is the hour and not a press, §3's *every ending names whose act* has
+  one exception that names nobody, §7's presser row and its two sentences are retired, and §8's
+  heading is the shortage's alone. §5's admission is widened from the row to everybody the court
+  asked. The two-streams shape, the seventh standing, the tag, the face and the shelf stand.
 - **Date:** 2026-09-15
 - **Narrows, by named sentence:**
   [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) §2's title — *"a court

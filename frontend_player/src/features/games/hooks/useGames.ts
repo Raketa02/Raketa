@@ -40,6 +40,7 @@ import { dismissGame } from '../use-cases/dismissGame';
 import { readGames } from '../use-cases/readGames';
 import { stateResult, type StatedResult } from '../use-cases/stateResult';
 
+import { dropCardOfGame } from './gameCache';
 import { gameKeys } from './gameKeys';
 
 export function useGames() {
@@ -109,8 +110,9 @@ export function useAcceptResult() {
  * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)):
  * a called-off court is one fact on two of the reader's lists, and `GET /challenges` now
  * subtracts its reader off the same set — so the row is dropped on the reply through the one
- * write that list lets another feature make, and re-read as well. One act, met from the Now
- * card's trash or from the Chats row's swipe, with one cache effect declared here.
+ * write that list lets another feature make, and re-read as well. The Chats row's swipe meets
+ * the same act through a door of its own since ADR-0175 §5 (`useDismissCourt`, one feature
+ * over), which drops this list's card through `dropCardOfGame` in turn.
  *
  * **A refusal re-reads both lists and says nothing**: `game_is_not_called_off` means the card the
  * reader pressed is not the card the server holds, and the fold the re-read lands on is the
@@ -124,9 +126,7 @@ export function useDismissGame() {
   return useMutation<void, AppError, string>({
     mutationFn: dismissGame,
     onSuccess: (_nothing, gameId) => {
-      client.setQueryData<readonly Game[] | undefined>(gameKeys.list(), (held) =>
-        held?.filter((game) => game.gameId !== gameId),
-      );
+      dropCardOfGame(client, gameId);
       dropCourtOfGame(client, gameId);
       void client.invalidateQueries({ queryKey: gameKeys.list() });
       void client.invalidateQueries({ queryKey: challengeKeys.list() });

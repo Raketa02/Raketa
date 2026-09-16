@@ -113,10 +113,11 @@ class Conclusion:
 
     Folded by the aggregate off ``ChallengeWithdrawn`` — the organiser, read off
     the stream, since the event carries no player — and off
-    ``ChallengeCalledOff``, whose ``called_by`` is the leaver or the presser. It
-    is what the fold reads **first**, on the reason ``docs/adr/0142`` §3 gave for
-    the withdraw: every other answer is still *yes*, so a fold that read the
-    seats first would answer with the standing somebody has just ended.
+    ``ChallengeCalledOff``, whose ``called_by`` is the leaver, or **nobody**
+    when the hour called the court off (``docs/adr/0175`` §3). It is what the
+    fold reads **first**, on the reason ``docs/adr/0142`` §3 gave for the
+    withdraw: every other answer is still *yes*, so a fold that read the seats
+    first would answer with the standing somebody has just ended.
 
     **The value object is the guard.** A fold handed ``DECLINED`` as a recorded
     conclusion would be a second place for a derived standing to be true, so
@@ -125,7 +126,9 @@ class Conclusion:
 
     standing: Standing
     at: Instant
-    by: UUID
+    #: Whose act it was — or ``None``, for the one conclusion that is nobody's:
+    #: the hour calling an unfilled court off.
+    by: UUID | None
 
     def __post_init__(self) -> None:
         invariant(
@@ -268,8 +271,19 @@ def standing_of(
 
 
 def deserted(seats: Iterable[Seat], *, now: Instant) -> bool:
-    """Whether at most one player is on this court and no seat is awaiting an
-    answer — **the ending rule** (``docs/adr/0165`` §3), organiser-blind.
+    """Whether this court is over by its seats — **the ending rule**
+    (``docs/adr/0165`` §3, narrowed by ``docs/adr/0175`` §2), organiser-blind:
+    **nobody is on it**, whatever seats are still deciding; or **one player is
+    on it and no seat is awaiting an answer**.
+
+    The first clause is the narrowing. A court with nobody on it is nobody's
+    game, and an invitee still deciding on it would be deciding to join
+    nobody — so the last player to leave ends it, before a game and on one,
+    and the pending invitation is over with it. The second clause is
+    ``0165`` §3 as written: one player alone with somebody still deciding is a
+    court that may yet be a game, and a newcomer's *no* that leaves them alone
+    is not a departure — the court stands for them to fill again, and its hour
+    ends it if nobody does (``0175`` §3).
 
     One function with two readers, and that is the point. Before a game the
     fold reads it and reaches one of the two endings; on a game the fold does
@@ -289,7 +303,9 @@ def deserted(seats: Iterable[Seat], *, now: Instant) -> bool:
 
     seats = tuple(seats)
     on_it = sum(1 for seat in seats if seat.is_accepted())
-    return on_it <= 1 and not any(seat.is_awaiting_at(now) for seat in seats)
+    if on_it == 0:
+        return True
+    return on_it == 1 and not any(seat.is_awaiting_at(now) for seat in seats)
 
 
 #: The two answers that are somebody's judgement about this court: a no, and

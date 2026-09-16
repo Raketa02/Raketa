@@ -24,8 +24,10 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.games.application.call_off_game import CallOffGame
+from app.modules.games.application.dismiss_game import DismissGameOfCourt
 from app.modules.games.application.commands import (
     CallOffGameCommand,
+    DismissGameOfCourtCommand,
     OpenPlannedGameCommand,
     VacateSeatCommand,
 )
@@ -37,17 +39,20 @@ from app.modules.games.application.vacate_seat import VacateSeat
 class GamesPlannedGame:
     """*Everybody accepted* → the ``games`` command that records the arrangement;
     *somebody left* → the one that opens their seat; *the court is called off* →
-    the one that calls the game off."""
+    the one that calls the game off; *this reader cleared it* → the one that
+    records their dismissal on the game."""
 
     def __init__(
         self,
         games: OpenPlannedGame,
         departures: VacateSeat,
         withdrawals: CallOffGame,
+        dismissals: DismissGameOfCourt,
     ) -> None:
         self._games = games
         self._departures = departures
         self._withdrawals = withdrawals
+        self._dismissals = dismissals
 
     async def open_planned_game(
         self,
@@ -79,9 +84,17 @@ class GamesPlannedGame:
         )
 
     async def call_off(
-        self, *, challenge_id: UUID, by: UUID, occurred_at: Instant
+        self, *, challenge_id: UUID, by: UUID | None, occurred_at: Instant
     ) -> None:
         await self._withdrawals.execute(
             CallOffGameCommand(challenge_id=challenge_id, called_by=by),
+            occurred_at=occurred_at,
+        )
+
+    async def dismiss(
+        self, *, challenge_id: UUID, by: UUID, occurred_at: Instant
+    ) -> None:
+        await self._dismissals.execute(
+            DismissGameOfCourtCommand(challenge_id=challenge_id, player_id=by),
             occurred_at=occurred_at,
         )

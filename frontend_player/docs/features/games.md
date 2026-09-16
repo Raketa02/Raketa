@@ -262,3 +262,17 @@ answer one round trip early, then the list is re-read; a refusal re-reads and sa
 the fold the re-read lands on is the answer. `RemoveCard` is the control — Feather `trash-2`,
 spoken _Remove this card_, on `ChatDoor`'s shape — exported for `features/plans`' card and drawn
 nowhere else. **Not seen on a device.**
+
+**The dismissal clears the row too, and the hour's ending names nobody** ([ADR-0173](../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md), [ADR-0175](../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)).
+`useDismissGame`'s cache effect touches two lists since ADR-0173 — the card through
+`dropCardOfGame`, the row through `challenges`' `dropCourtOfGame` — and `dropCardOfGame` is
+exported as the one write the games list lets another feature make, for the row's own door.
+**The press is gone** (ADR-0175 §1): `CalledOffEnding` is a departure, named, or `the-hour`,
+which names nobody — `called_off_by` null is the platform's act and no longer a broken promise,
+so `IT_WAS_CALLED_OFF` and `calledTheGameOff` are retired and the ending's heading is
+`CALLED_OFF_FOR_LACK_OF_PLAYERS` alone, over a body that names the leaver or says _Nobody
+filled the seat in time_. A record naming somebody still seated folds as a departure. **The
+screen draws one act**: `GameScreen`'s `courtActs` slot became `fill`, drawn directly under the
+card on the plan lead and stood down with the doors while the grid is open; `OpenTheChat` is
+gone from the screen, and with it this feature's reach into `features/conversations` — the
+seam ADR-0149 §3 named is back to its one importer.

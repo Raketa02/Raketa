@@ -128,7 +128,9 @@ def build_lifespan(settings: Settings):
             or settings.CANDIDATE_INDEX_ENABLED
             or settings.INTEREST_EXPIRY_ENABLED
             or settings.CHALLENGE_LAPSE_ENABLED
+            or settings.UNFILLED_COURT_ENABLED
             or settings.RATING_CATCH_UP_ENABLED
+            or settings.CONVERSATION_SWEEP_ENABLED
         ):
             session_factory = build_background_session_factory(get_engine())
 

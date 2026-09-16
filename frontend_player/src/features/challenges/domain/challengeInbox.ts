@@ -329,10 +329,12 @@ export type OccupiedSeat = ChallengeSeat & { readonly playerId: string };
  * to one and the tap answers *which court*; the faces that left one by one never come back on
  * the row that ends it; and an ended row is never blank, which is the failure the previous rule
  * — *an ended court names everybody it asked* — was written against and the one before it had.
- * Where the sentence is about the **reader's own act** — *Your day ran out*, *You called the
- * game off* — it names nobody else, so the row draws the people still on the court: the seats
- * not given up, which is the filling rule read once more, and on an ended court is never empty
- * (whoever ended it left somebody on it, or is on it themselves).
+ * Where the sentence is about the **reader's own act** — *Your day ran out*, *You left* — it
+ * names nobody else, so the row draws the people still on the court: the seats not given up,
+ * which is the filling rule read once more, and on an ended court is never empty (whoever ended
+ * it left somebody on it, or is on it themselves). The hour's row — *Nobody filled the seat*,
+ * ADR-0175 §3 — draws the same people, for the same reason: the sentence is about the court
+ * they were waiting on together.
  *
  * A completed line-up and a standing this build cannot read name everybody but the reader, as
  * before: neither is being filled, and neither has ended.
@@ -345,11 +347,16 @@ export function othersOn(challenge: Challenge, playerId: string): readonly Occup
   if (ended && !aboutTheReader) {
     const seat = whoEndedIt(challenge);
     if (seat !== undefined && occupied(seat)) return [seat];
-    // The wire named nobody, or somebody who holds no seat — a promise broken, not a row to
-    // leave blank: everybody the court asked, which is what the row drew before it could name.
+    // The wire named somebody who holds no seat — a promise broken, not a row to leave blank:
+    // everybody the court asked, which is what the row drew before it could name. Where it named
+    // nobody by design — the hour's call-off (ADR-0175 §3), *Nobody filled the seat* — the
+    // sentence is about the people the reader was waiting with, so the row draws them: the
+    // seats not given up, which is the filling rule read once more.
   }
 
-  const stillOnIt = facts !== undefined && (STILL_BEING_ARRANGED[facts.standing] || aboutTheReader);
+  const nobodys = ended && facts.byNobody === true;
+  const stillOnIt =
+    facts !== undefined && (STILL_BEING_ARRANGED[facts.standing] || aboutTheReader || nobodys);
 
   return challenge.seats.filter(
     (seat): seat is OccupiedSeat =>
