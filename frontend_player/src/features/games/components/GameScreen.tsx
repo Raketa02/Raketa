@@ -111,13 +111,17 @@
  * plan-lead rungs ([#414](https://github.com/Raketa02/Raketa/issues/414)): an eyebrow and **no
  * title**, the Now card at the top with its doors left off, the court's pairing — the forecast
  * block and the players card, filled by [#415](https://github.com/Raketa02/Raketa/issues/415)
- * with this feature's own `CourtPairing` — the chat's editable plan card,
- * *Open the chat* dark and full width, *We played* quiet beneath it. So the one slot became
- * **three** — `card`, `court`, `plan` — and every one of them is a `ReactNode` this screen draws in
- * order and cannot read, for the same reason the first was. A **fourth**, `courtActs`, arrived with
- * [#418](https://github.com/Raketa02/Raketa/issues/418): the acts on the court itself, drawn last
- * — *Leave this game*, and #419's fill and call-off — every one a **challenge** act reached from a
- * game, so it is composed onto this screen exactly as the plan is. The eyebrow is `formatEyebrow`'s —
+ * with this feature's own `CourtPairing` — the chat's editable plan card, *We played* quiet
+ * beneath it. So the one slot became **three** — `card`, `court`, `plan` — and every one of them
+ * is a `ReactNode` this screen draws in order and cannot read, for the same reason the first was.
+ * A **fourth**, `fill`, sits **directly under the card** since
+ * [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §4: the one act on the court itself this screen still draws — *Fill the seat*, a **challenge**
+ * act reached from a game, composed onto this screen exactly as the plan is. It arrived as
+ * `courtActs` with [#418](https://github.com/Raketa02/Raketa/issues/418), drawn last with *Leave
+ * this game* and *Call it off*; both of those are gone — leaving is the Chats row's swipe alone,
+ * and nobody calls a game off — and the fill moved to where the card that says *needs a player*
+ * is. The eyebrow is `formatEyebrow`'s —
  * the format off the seats and the kind off the game, *Doubles · Counted* — because the card names
  * the people and the plan names the day, so `gameEyebrow`'s handles and *arranged n ago* would be
  * the same facts twice on one screen; it keeps the other arms. **The standing line and the
@@ -125,18 +129,14 @@
  * today's screen whole — its standing line, its read-only plan child and its pinned footer — and
  * the result arms are untouched.
  *
- * **The two doors are in the scroll, and there is no pinned footer while the grid is closed.** The
+ * **One door is in the scroll, and there is no pinned footer while the grid is closed.** The
  * design pins nothing on this lead, and a plan arm asks for nothing, so nothing on it wears the one
- * accent: the chat door is 6.1's `dark` — *a filled action with no meaning attached*, and the first
- * one this app draws — which is exactly what a wide door on a screen that is not asking needs to
- * be. It is the same join ADR-0149 §3 settles — the player's rooms, read as such — drawn here
- * rather than in the plan child because the design puts it under the plan card and beside *We
- * played*, and it fails soft: no room, no door. **That widens the seam the ADR named** — *the game
- * screen reads a list belonging to a context it is forbidden to know about* — by one importer:
- * this feature now reaches `features/conversations` for the word, the route and the join, where
- * before only `features/plans` did on its behalf. Said here because the ADR asked the next person
- * to say so. `We played` opens the grid over the plan exactly as before, and the moment it is open
- * the pinned footer is back with *Send this score* and the way out.
+ * accent. *Open the chat* was the other door here, dark and full width, and it is gone
+ * (ADR-0175 §4): the Now card's bubble and the Chats tab both reach the room, and this feature no
+ * longer reaches `features/conversations` for the word, the route or the join — the seam
+ * ADR-0149 §3 named is back to its one importer, `features/plans`. `We played` opens the grid
+ * over the plan exactly as before, and the moment it is open the pinned footer is back with
+ * *Send this score* and the way out.
  */
 
 import { useState, type ReactNode } from 'react';
@@ -144,7 +144,6 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useCurrentUser } from '@/features/auth/types';
-import { CONVERSATION_ROUTE, OPEN_THE_CHAT, useChatDoor } from '@/features/conversations/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { ShellScreen } from '@/features/shell/types';
 import { StarCardSection } from '@/features/sportsmanship/types';
@@ -235,20 +234,19 @@ export interface GameScreenProps {
    */
   readonly entryLead: EntryLead;
   /**
-   * **The acts on the court itself, drawn last on the plan lead** — *Leave this game*
-   * ([#418](https://github.com/Raketa02/Raketa/issues/418)), and the fill and the call-off
-   * [#419](https://github.com/Raketa02/Raketa/issues/419) adds beside it. A slot, because every
-   * one of them is a **challenge** act reached from a game (ADR-0162): the seat that reopens is
-   * the challenge's, so the control, its sheet and its words are that feature's, and whoever
-   * composes this screen hands them in — exactly as the plan is handed in, and for the same
-   * reason. Whether one is drawn at all is the composer's rule (the agreed moment, read off the
-   * plan this screen may not know); `null` is a court with no act to offer. Drawn under *We
-   * played*, in the scroll, and stood down with the doors while the grid is open.
+   * **The fill, directly under the card on the plan lead** — *Fill the seat*
+   * ([#419](https://github.com/Raketa02/Raketa/issues/419), placed by ADR-0175 §4). A slot,
+   * because it is a **challenge** act reached from a game (ADR-0162): the seat that fills is the
+   * challenge's, so the control and its words are that feature's, and whoever composes this
+   * screen hands it in — exactly as the plan is handed in, and for the same reason. Whether it
+   * is drawn at all is the composer's rule (a seat open, and the agreed moment ahead, read off
+   * the plan this screen may not know); `null` is a court with nothing to fill. Under the card
+   * that says *needs a player*, and stood down with the doors while the grid is open.
    */
-  readonly courtActs: ReactNode;
+  readonly fill: ReactNode;
 }
 
-export function GameScreen({ gameId, card, court, plan, entryLead, courtActs }: GameScreenProps) {
+export function GameScreen({ gameId, card, court, plan, entryLead, fill }: GameScreenProps) {
   const { game, isPending, error } = useGame(gameId);
   const me = useCurrentUser().data?.id;
 
@@ -276,7 +274,7 @@ export function GameScreen({ gameId, card, court, plan, entryLead, courtActs }: 
       court={court}
       plan={plan}
       entryLead={entryLead}
-      courtActs={courtActs}
+      fill={fill}
     />
   );
 }
@@ -291,7 +289,7 @@ function Argument({
   court,
   plan,
   entryLead,
-  courtActs,
+  fill,
 }: {
   readonly game: Game;
   readonly playerId: string;
@@ -299,7 +297,7 @@ function Argument({
   readonly court: ReactNode;
   readonly plan: ReactNode;
   readonly entryLead: EntryLead;
-  readonly courtActs: ReactNode;
+  readonly fill: ReactNode;
 }) {
   const argument = resultArgument(game, playerId);
   const state = useStateResult();
@@ -509,9 +507,12 @@ function Argument({
           which this lead's is not. */}
       {planLead ? null : <Text style={s.line}>{standingLine(argument, game.readAt)}</Text>}
 
-      {/* The plan lead's head: the Now card without its doors, and the court's pairing under it.
-          Two slots this screen draws in order and cannot read. */}
+      {/* The plan lead's head: the Now card without its doors, the fill directly under it where
+          the card says *needs a player* (ADR-0175 §4), and the court's pairing under both. Three
+          slots this screen draws in order and cannot read; the fill stands down with the doors
+          while the grid is open. */}
       {planLead ? card : null}
+      {planLead && doorsInTheScroll ? fill : null}
       {planLead ? court : null}
 
       {/* The plan, high on the page, because on two of the four entry arms it is what the player
@@ -520,23 +521,16 @@ function Argument({
           about an evening that has already happened. */}
       {entryArm ? plan : null}
 
-      {/* The two doors, on the plan lead: the chat's, dark and full width, and *We played* quiet
-          beneath it — in the scroll, because nothing is pinned here. Both stand down while the
-          grid is open, when the pinned footer carries the send and the way out. *We played* is
-          the domain's to offer, and it withholds it while a seat is open (#411 rule 5). Under
-          them, last, the acts on the court itself — handed in, and not read. */}
-      {doorsInTheScroll ? (
-        <>
-          <OpenTheChat challengeId={game.challengeId} />
-          {acts.includes('enter') ? (
-            <Button
-              label={WE_PLAYED}
-              variant="secondary"
-              onPress={() => edit(emptyDraft(game.sport))}
-            />
-          ) : null}
-          {courtActs}
-        </>
+      {/* The one door on the plan lead: *We played*, quiet, in the scroll, because nothing is
+          pinned here. It stands down while the grid is open, when the pinned footer carries the
+          send and the way out. It is the domain's to offer, and it withholds it while a seat is
+          open (#411 rule 5). */}
+      {doorsInTheScroll && acts.includes('enter') ? (
+        <Button
+          label={WE_PLAYED}
+          variant="secondary"
+          onPress={() => edit(emptyDraft(game.sport))}
+        />
       ) : null}
 
       {rule === undefined ? null : <Text style={s.body}>{rule}</Text>}
@@ -647,30 +641,6 @@ function Argument({
 /** The pinned slot's own column, so the sentences above the buttons keep the slot's gap. */
 function Footer({ children }: { readonly children: ReactNode }) {
   return <View style={s.footer}>{children}</View>;
-}
-
-/**
- * **The chat door on the plan lead** — dark, full width, and the join ADR-0149 §3 settles: the
- * player's rooms, read as such, over the list the Chats tab fetches anyway. **Fails soft**: a
- * conversation opens on the first acceptance and is destroyed when the episode ends, so no room
- * draws no door rather than a dead one. Its own component so the join is read exactly where the
- * door is drawn, and `Argument` holds no hook for a control three of its arms never draw; the
- * list itself is one Query and the composition already reads it for the card's faces, so this
- * costs no request of its own.
- */
-function OpenTheChat({ challengeId }: { readonly challengeId: string }) {
-  const conversationId = useChatDoor(challengeId);
-
-  if (conversationId === undefined) return null;
-
-  return (
-    <Button
-      label={OPEN_THE_CHAT}
-      variant="dark"
-      size="lg"
-      onPress={() => router.push({ pathname: CONVERSATION_ROUTE, params: { conversationId } })}
-    />
-  );
 }
 
 const s = StyleSheet.create({

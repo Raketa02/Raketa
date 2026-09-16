@@ -6,8 +6,9 @@
  * | `useChallenge` | `GET /challenges/{id}` — the arrangement, the people and the pairing |
  * | `useAnswerSeat` | `POST …/accept` and `…/decline` — **pending, never optimistic** |
  * | `useInviteSeats` | `POST …/seats` — ⚡'s send, from the builder this screen pushes |
- * | `useWithdrawChallenge` | `POST …/withdrawal` — ***Remove the challenge***, the organiser's while nobody has joined; **on a court that has been a game, *Call it off*, any player's: the court reads `CALLED_OFF` with `ended_by` the presser and the game is called off in the act** (ADR-0165 §4–§5, ADR-0172 §1) |
- * | `useLeaveGame` | `POST …/departure` — any player's: from the **game** screen while the moment is ahead, and from a **Chats** row or the challenge screen before the court is whole (#427) |
+ * | `useWithdrawChallenge` | `POST …/withdrawal` — ***Remove the challenge***, the organiser's while nobody has joined and the court has never been a game (ADR-0165 §4, ADR-0175 §1) |
+ * | `useLeaveGame` | `POST …/departure` — any player's, from a **Chats** conversation row (#427, ADR-0175 §4) |
+ * | `useDismissCourt` | `POST …/dismissal` — ***Remove this row***, the reader's own on a called-off court, for everybody the court asked (ADR-0175 §5) |
  * | `useReReadCourtLists` | what a **refused** departure re-reads, once its words have been read — the two lists a court is drawn on |
  *
  * ## The offer may expire under the finger, and it is let to
@@ -65,13 +66,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AppError } from '@/shared/errors';
 
 import { conversationKeys, dropRoomOfChallenge } from '@/features/conversations/types';
-import { gameKeys } from '@/features/games/types';
+import { dropCardOfGame, gameKeys } from '@/features/games/types';
 import { planKeys } from '@/features/plans/types';
 
 import type { Challenge } from '../domain/challenge';
 import type { AnsweredChallenge, ChallengeDetail } from '../domain/challengeDetail';
 import { redrawnFrom, rowRedrawnFrom } from '../domain/challengeDetail';
 import { answerSeat, type AnswerSeatAsk } from '../use-cases/answerSeat';
+import { dismissCourt } from '../use-cases/dismissCourt';
 import { inviteSeats, type InviteSeatsAsk } from '../use-cases/inviteSeats';
 import { leaveGame } from '../use-cases/leaveGame';
 import { readChallenge } from '../use-cases/readChallenge';
@@ -192,14 +194,12 @@ export function useInviteSeats() {
 
 /**
  * **The withdrawal** — ***Remove the challenge*** from the organiser's Chats row and the challenge
- * screen while nobody has joined, and ***Call it off*** on the game screen, which is the same
- * route on a court that has been a game and a different ending
- * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md),
- * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
- * §4–§5, [ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
- * §1): `WITHDRAWN` on a court that was never a game, `CALLED_OFF` with `ended_by` the presser on
- * one that has been, and which act a court gets is the fold's to say on the server, never this
- * client's.
+ * screen while nobody has joined
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4): `WITHDRAWN`, on a court that was never a game. *Call it off* rode this route for a season
+ * and is gone ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §1): a court that has been a game is refused with `court_has_been_a_game`, and `mayRemove`
+ * never offers it.
  *
  * Pending, never optimistic: the route returns the challenge as it now stands, so the screen
  * redraws from the reply exactly as the two answers do, and `redrawnFrom` drops the card block by
@@ -207,24 +207,16 @@ export function useInviteSeats() {
  *
  * **The reply is written into the challenge list too** ([#428](https://github.com/Raketa02/Raketa/issues/428)),
  * on `useLeaveGame`'s line: the inbox drops an own removal at once (`belongsOnTheInbox`), so the
- * organiser's row is gone the moment the reply lands and not a round trip later — and on a
- * call-off the presser's row reads *You called the game off* under its tag on the reply, with
- * `ended_by` and `game_id` carried by `rowRedrawnFrom`, which the re-read confirms.
+ * organiser's row is gone the moment the reply lands and not a round trip later.
  *
  * **The conversation is gone, not delisted**, so the Chats list is **invalidated rather than
  * patched** ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)):
  * there is nothing in this reply about a room, and a client that removed the row itself would be
  * asserting a deletion it was not told about. The same argument the accept above makes in the
  * other direction — and the one place it differs from the departure, whose reply *does* say the
- * reader is out of the room.
- *
- * **And the game, and its plan** — since a withdraw can reach a court that has been a game and
- * call it off in the act, and neither list is in the reply. Declared here rather than at the one
- * call site that knows it was a game, because a hook that declares its cache effect declares all
- * of it (`useLeaveGame`'s own line): the game screen stays where it is and re-folds into the
- * called-off arm off the re-read, and the card shelves itself from `called_off_at`. On a court
- * that was never a game the two re-reads find nothing changed, which is the honest cost of one
- * declaration instead of two.
+ * reader is out of the room. The games and the plans are re-read as well, on the line that a hook
+ * declaring its cache effect declares all of it; on a court that was never a game they find
+ * nothing changed, which is the honest cost of one declaration instead of two.
  */
 export function useWithdrawChallenge() {
   const client = useQueryClient();
@@ -253,19 +245,17 @@ export function useWithdrawChallenge() {
 }
 
 /**
- * ***Leave this game*, and *Leave the game*** — the departure, met on the game screen, on a Chats
- * row, and on the challenge screen before the court is whole
- * ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md),
+ * ***Leave the game*** — the departure, met on a Chats conversation row and nowhere else since
+ * [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §4 ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md),
  * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
- * §1, §6). Where the leaver was the last other player on a game, the reply reads `CALLED_OFF`
- * with `ended_by` the leaver (ADR-0172 §1) — the court ended with its game — and the row written
- * from it goes at once as every own *left* does.
+ * §1, §6). Where the leaver was the last seated player on a game — whoever is still deciding —
+ * the reply reads `CALLED_OFF` with `ended_by` the leaver (ADR-0172 §1, ADR-0175 §2): the court
+ * ended with its game, and the row written from it goes at once as every own *left* does.
  *
- * The act lands on the challenge — that is where the seat reopens — and it is reached from the
- * game, which carries its `challengeId`, from a room, which carries it too, and from the challenge
- * itself; so the hook is here, behind the `LeaveGame` control and the `DepartureDoor` that
- * `types.ts` exports, and those are composed onto the surfaces that draw them the way
- * `useChatDoors` is.
+ * The act lands on the challenge — that is where the seat reopens — and it is reached from a
+ * room, which carries its `challengeId`; so the hook is here, behind the `DepartureDoor` that
+ * `types.ts` exports, and that is composed onto the row the way `useChatDoors` is.
  *
  * **Pending, never optimistic**, and `CHALLENGE_MUTATION_OPTIONS` spread whole: a departure is
  * dated exactly, and the moment guard is read against the tap — one queued for a reconnect could
@@ -309,6 +299,47 @@ export function useLeaveGame() {
       void client.invalidateQueries({ queryKey: gameKeys.list() });
       void client.invalidateQueries({ queryKey: planKeys.list() });
       void client.invalidateQueries({ queryKey: conversationKeys.list() });
+    },
+  });
+}
+
+/**
+ * ***Remove this row*** — the dismissal, met from a `Called off` row on Chats, and **the row and
+ * the card leave on the reply**
+ * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md),
+ * [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §5).
+ *
+ * The same act the Now card's trash sends, through a door of the challenge's own — because the
+ * row is drawn for everybody the court asked, and an invitee still deciding when the court was
+ * called off has a row and never had a card, whom the game's door answers as a stranger. It is
+ * recorded on the game all the same, so `GET /challenges` and `GET /games` subtract the reader
+ * off one set; a list without this court is exactly the next read's answer, arriving early.
+ *
+ * So the row is dropped from this list on the reply, keyed by the challenge — the id the act
+ * has — and the card from the games list through the one write that list lets another feature
+ * make, keyed by the game the row carries (ADR-0172 §4); both are then re-read, because the
+ * reply is one court and the lists are every court. **A refusal re-reads both lists and says
+ * nothing**, the trash's posture: the row under the finger is not the row the server holds, and
+ * the fold the re-read lands on is the answer. Pending, never optimistic, and it pauses offline
+ * like every act here: nothing about a dismissal is fixed by the moment it is tapped.
+ */
+export function useDismissCourt() {
+  const client = useQueryClient();
+
+  return useMutation<void, AppError, { readonly challengeId: string; readonly gameId?: string }>({
+    mutationFn: ({ challengeId }) => dismissCourt(challengeId),
+    onSuccess: (_nothing, { challengeId, gameId }) => {
+      client.setQueryData<readonly Challenge[] | undefined>(challengeKeys.list(), (held) =>
+        held?.filter((row) => row.challengeId !== challengeId),
+      );
+      if (gameId !== undefined) dropCardOfGame(client, gameId);
+      void client.invalidateQueries({ queryKey: challengeKeys.list() });
+      void client.invalidateQueries({ queryKey: gameKeys.list() });
+    },
+    onError: () => {
+      void client.invalidateQueries({ queryKey: challengeKeys.list() });
+      void client.invalidateQueries({ queryKey: gameKeys.list() });
     },
   });
 }

@@ -344,30 +344,27 @@ describe('the plan is read-only on the score lead', () => {
   });
 });
 
-describe('the two acts on an entry arm', () => {
+describe('the one act on an entry arm', () => {
   /**
-   * §5.1: *always drawn, whichever door you came in by* — arriving from Now it is the point, and
-   * arriving from Details it is the way back. Drawing it conditionally would make the surface
-   * depend on its door.
+   * *Open the chat* is gone from this screen (ADR-0175 §4), whichever door the reader came in
+   * by and whether or not a room stands behind the game: the Now card's bubble and the Chats
+   * tab both reach the room.
    */
-  it('draws Open the chat coming in from Now', async () => {
+  it('draws no chat door coming in from Now', async () => {
     await openFromNow({ plans: [WHOLE] });
 
-    fireEvent.press(await screen.findByText(OPEN_THE_CHAT));
-    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+    expect(await screen.findByText(PLAN_PANEL.title)).toBeTruthy();
+    expect(screen.queryByText(OPEN_THE_CHAT)).toBeNull();
   });
 
-  it('draws Open the chat coming in from the room', async () => {
+  it('draws no chat door coming in from the room', async () => {
     await openFromTheRoom({ plans: [WHOLE] });
 
-    expect(await screen.findByText(OPEN_THE_CHAT)).toBeTruthy();
+    expect(await screen.findByText(PLAN_PANEL.title)).toBeTruthy();
+    expect(screen.queryByText(OPEN_THE_CHAT)).toBeNull();
   });
 
-  /**
-   * ADR-0149 §3's join fails soft: a conversation is destroyed when the episode ends, so a game
-   * with no room draws **no door** rather than a dead one.
-   */
-  it('draws no door where there is no room left to open', async () => {
+  it('draws no chat door with no room at all', async () => {
     await openFromNow({ plans: [WHOLE], room: false });
 
     expect(await screen.findByText(PLAN_PANEL.title)).toBeTruthy();

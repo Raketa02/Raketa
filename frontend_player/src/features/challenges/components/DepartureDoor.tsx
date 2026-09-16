@@ -1,28 +1,27 @@
 /**
- * **The departure's door** — *Leave the game*, met from a **list row** or from the **challenge
- * screen**, before the court is whole or after ([#427](https://github.com/Raketa02/Raketa/issues/427),
+ * **The departure's door** — *Leave the game*, met from a **conversation row** on Chats, before
+ * the court is whole or after ([#427](https://github.com/Raketa02/Raketa/issues/427),
  * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
- * §1, §6).
+ * §1, §6) — and since
+ * [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §4 **the one place a game is left from**: the game screen's *Leave this game* and the
+ * challenge screen's door are gone, so a player who wants out goes where every seat is left.
  *
- * **The same act as `LeaveGame`, met somewhere else — and named for the shape rather than the
- * word**, because two components an article apart would be one name. `LeaveGame` is the control
- * at the bottom of the game screen's plan lead; this is a *door*: what a Chats row reveals when it
- * is swiped, and what the challenge screen draws on its two live arms. The act is one —
- * `useLeaveGame`, pending never optimistic — and so is the sheet in front of it; what differs is
- * where the reader is standing when they meet it.
+ * **Named for the shape rather than the word.** A *door*: what a Chats row reveals when it is
+ * swiped. The act is `useLeaveGame`, pending never optimistic, and the sheet in front of it is
+ * `LeaveSheet`.
  *
  * ## It hands the surface a door and draws the sheet itself
  *
  * A render prop rather than a control, because the surface that carries it decides what a door
- * looks like there — a control behind a swiped card on the list, a `secondary` button among the
- * arm's others on the challenge screen — and this feature never learns which. What every surface
- * gets is the same `ActDoor`: the act's word, a way to open the sheet, the accessibility action a
- * row offers a listener in place of the swipe, and the ref the sheet returns focus to. The sheet is
- * rendered **here**, as a sibling of whatever the surface drew, so the act's whole shape — words,
- * pending, refusal — is one file's whether it is met on a row or on a screen. And what the surface
- * drew is hidden from a screen reader while the sheet is up (`behindOverlay`), on `CallOff`'s
- * line: one label on the door and on the sheet's act, so the first press can only reach the door
- * and the second can only reach the act.
+ * looks like there — a control behind a swiped card on the list — and this feature never learns
+ * which. What the surface gets is an `ActDoor`: the act's word, a way to open the sheet, the
+ * accessibility action a row offers a listener in place of the swipe, and the ref the sheet
+ * returns focus to. The sheet is rendered **here**, as a sibling of whatever the surface drew, so
+ * the act's whole shape — words, pending, refusal — is one file's. And what the surface drew is
+ * hidden from a screen reader while the sheet is up (`behindOverlay`): one label on the door and
+ * on the sheet's act, so the first press can only reach the door and the second can only reach
+ * the act.
  *
  * ## What is the door's and what is the act's
  *
@@ -42,10 +41,9 @@
  * §9): the reader is the only other accepted seat and nobody is deciding, which is the ending
  * rule read a move ahead, and `game_id` says whether that *calls the game off — for {name} too*
  * or *closes this court for {name}*. The rule is `leavingWouldEnd`'s, read off the challenge's
- * row on the list this feature already holds for the tab bar (`useLeavingWouldEnd`) — the same
- * row whichever surface the door is met on, so the list's swipe, the challenge screen's button
- * and the game screen's control cannot say different things about one court. The row can be a beat behind the server; the
- * server's answer is what happens, said on the sheet as every refusal here is.
+ * row on the list this feature already holds for the tab bar (`useLeavingWouldEnd`). The row can
+ * be a beat behind the server; the server's answer is what happens, said on the sheet as every
+ * refusal here is.
  */
 
 import type { ReactNode } from 'react';
@@ -69,15 +67,14 @@ export interface DepartureDoorProps {
   /** The challenge whose seat the reader gives up. */
   readonly challengeId: string;
   /**
-   * The surface's own answer to a refusal, beside the words — the challenge screen re-reads the
-   * detail its arm folds from. Absent on the list, whose reads are the two lists re-read by the
-   * door.
+   * The surface's own answer to a refusal, beside the words. Absent on the list, whose reads are
+   * the two lists re-read by the door — kept on the door's shape (`useActDoor`'s) for a surface
+   * that has a read of its own.
    */
   readonly onRefusal?: (error: AppError) => void;
   /**
    * What the surface does once the reply has landed — `useActDoor`'s: nothing on the list, whose
-   * row goes on the reply; the challenge screen leaves, because the reader is no longer on what
-   * it draws.
+   * row goes on the reply.
    */
   readonly onDone?: () => void;
   /** The surface, drawn around the door it is handed. */

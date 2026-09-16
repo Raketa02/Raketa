@@ -156,12 +156,14 @@ export type ResultArgument =
   | { readonly kind: 'awaiting-entry'; readonly entryClosesAt?: string; readonly seatOpen: boolean }
   | { readonly kind: 'never-played' }
   /**
-   * Called off while a seat was open — an act, and an ending like the ghost's with nobody marked.
-   * **`ending` says whose act, and which of the two** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
-   * §4, §8): absent only where the wire named nobody, which it promises not to, and the screen
-   * then says *It was called off* as it did before the name was on the wire.
+   * Called off while a seat was open — an ending like the ghost's with nobody marked.
+   * **`ending` says how it ended, and by whom where anybody's act did**
+   * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §4, §8; [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+   * §3): the departure that emptied the court, named, or the hour that found it still short of
+   * a player, which names nobody by design.
    */
-  | { readonly kind: 'called-off'; readonly ending?: CalledOffEnding }
+  | { readonly kind: 'called-off'; readonly ending: CalledOffEnding }
   | { readonly kind: 'ours-stands'; readonly proposal: StandingProposal }
   /** `by` is whoever on the other side put it up — the one person a screen here can name. */
   | {
@@ -186,16 +188,21 @@ export type ResultArgument =
 /**
  * **How a game was called off, and by whom** — the game screen's heading and body are keyed on it.
  *
- * `how` is read off the seats and nothing else: the presser still holds a seat and the leaver's
- * is open (ADR-0172 §4). `format` is the court's size, because the departure's body says *the
+ * Two ways and no third since ADR-0175 §1: a **departure** that emptied the court, whose leaver
+ * the wire names, and **the hour**, which found the court still short of a player when its
+ * moment passed and names nobody. `format` is the court's size, because the body says *the
  * singles game* or *the doubles game* — the one sentence on the screen that names the shape.
+ * Nobody presses a call-off any more; a record written while somebody could still folds, as a
+ * departure by the person it names.
  */
-export interface CalledOffEnding {
-  /** Who — `you` for the reader's own press, the whole name, or `?` where `users` lost them. */
-  readonly by: NamedPlayer;
-  readonly how: 'departure' | 'press';
-  readonly format: 'singles' | 'doubles';
-}
+export type CalledOffEnding =
+  | {
+      readonly how: 'departure';
+      /** Who left — `you` for the reader's own, the whole name, or `?` where `users` lost them. */
+      readonly by: NamedPlayer;
+      readonly format: 'singles' | 'doubles';
+    }
+  | { readonly how: 'the-hour'; readonly format: 'singles' | 'doubles' };
 
 /**
  * Which side of the net is yours — **a join, not a rule.**
@@ -242,17 +249,13 @@ export function othersOn(game: Game, reader: string): readonly NamedPlayer[] {
 }
 
 /**
- * The fourth end, as the screen names it: who, told from the reader; how, told off whether that
- * player still holds a seat; and the court's shape, told off its size.
+ * The fourth end, as the screen names it: the hour where the wire named nobody, and otherwise
+ * the departure — who, told from the reader — and the court's shape, told off its size.
  */
-function calledOffEnding(game: Game, reader: string, calledOffBy: CalledOffBy): CalledOffEnding {
-  const stillSeated = game.seats.some((seat) => seat.playerId === calledOffBy.playerId);
-
-  return {
-    by: whoCalledItOff(calledOffBy, reader),
-    how: stillSeated ? 'press' : 'departure',
-    format: game.seats.length <= SINGLES_SEATS ? 'singles' : 'doubles',
-  };
+function calledOffEnding(game: Game, reader: string): CalledOffEnding {
+  const format = game.seats.length <= SINGLES_SEATS ? 'singles' : 'doubles';
+  if (game.calledOffBy === undefined) return { how: 'the-hour', format };
+  return { how: 'departure', by: whoCalledItOff(game.calledOffBy, reader), format };
 }
 
 /**
@@ -297,9 +300,7 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
     case 'NEVER_PLAYED':
       return { kind: 'never-played' };
     case 'CALLED_OFF':
-      return game.calledOffBy === undefined
-        ? { kind: 'called-off' }
-        : { kind: 'called-off', ending: calledOffEnding(game, playerId, game.calledOffBy) };
+      return { kind: 'called-off', ending: calledOffEnding(game, playerId) };
     case 'CONFIRMED':
       return { kind: 'confirmed', score: game.score, outcome: game.outcome };
     case 'UNSCORED':

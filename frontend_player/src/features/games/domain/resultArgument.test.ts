@@ -120,25 +120,32 @@ describe('before anybody has said it happened', () => {
   });
 
   /** The fourth end (ADR-0163): somebody ended it, and nothing anybody is measured on moves. */
-  it('offers nothing once the game has been called off', () => {
+  /**
+   * **The hour's call-off names nobody by design** ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+   * §3): `called_off_by` null is the platform's act, and the court's shape still travels.
+   */
+  it('offers nothing once the game has been called off, and reads a nameless one as the hour’s', () => {
     const argument = resultArgument(game({ standing: 'CALLED_OFF' }), ME);
 
-    expect(argument).toEqual({ kind: 'called-off' });
+    expect(argument).toEqual({
+      kind: 'called-off',
+      ending: { how: 'the-hour', format: 'doubles' },
+    });
     expect(actsOffered(argument)).toEqual([]);
   });
 
   /**
-   * **A departure is told from a press by whether `called_off_by` still holds a seat**
-   * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
-   * §4, §8): the presser does, the leaver's seat is open. No second field says which.
+   * **A named call-off is a departure** (ADR-0172 §4, ADR-0175 §1): nobody presses one any more,
+   * so whoever `called_off_by` names left — the record written while somebody could press
+   * folds the same way, by the person it names, *you* for the reader's own.
    */
-  it('says who called it off and how — a departure, whose seat is open, or a press', () => {
+  it('says who left, singles or doubles, and You for the reader’s own', () => {
     const leaverGone = game({
       standing: 'CALLED_OFF',
       seats: [{ side: 'A', playerId: ME, name: 'me_' }, { side: 'B' }],
       calledOffBy: { playerId: OPPONENT, name: 'tomek.p' },
     });
-    const pressed = game({
+    const doubles = game({
       standing: 'CALLED_OFF',
       seats: [
         { side: 'A', playerId: ME, name: 'me_' },
@@ -153,13 +160,13 @@ describe('before anybody has said it happened', () => {
       kind: 'called-off',
       ending: { by: { kind: 'player', name: 'tomek.p' }, how: 'departure', format: 'singles' },
     });
-    expect(resultArgument(pressed, ME)).toEqual({
+    expect(resultArgument(doubles, ME)).toEqual({
       kind: 'called-off',
-      ending: { by: { kind: 'player', name: 'tomek.p' }, how: 'press', format: 'doubles' },
+      ending: { by: { kind: 'player', name: 'tomek.p' }, how: 'departure', format: 'doubles' },
     });
-    expect(resultArgument({ ...pressed, calledOffBy: { playerId: ME, name: 'me_' } }, ME)).toEqual({
+    expect(resultArgument({ ...doubles, calledOffBy: { playerId: ME, name: 'me_' } }, ME)).toEqual({
       kind: 'called-off',
-      ending: { by: { kind: 'you' }, how: 'press', format: 'doubles' },
+      ending: { by: { kind: 'you' }, how: 'departure', format: 'doubles' },
     });
   });
 

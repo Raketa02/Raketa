@@ -242,32 +242,20 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
 }
 
 /**
- * **The fourth end's title where the wire named nobody** (ADR-0163, #419 §3) — a constant beside
- * the fold that returns it, because the suite that walks *Call it off* one feature over asserts
- * the screen re-folds into this arm and may not spell it: a literal there is a red build for the
- * ticket that rewords it. Since ADR-0172 §4 the wire names who, and the headings below are the
- * ones drawn; this one stands for a reply that breaks that promise.
- */
-export const IT_WAS_CALLED_OFF = 'It was called off';
-
-/**
  * **The ghost's body** — nothing anybody is measured on moves (ADR-0163 §3) — said of a game that
- * never happened and of a call-off the wire named nobody for, so it is named once for the two.
+ * never happened.
  */
 const NOBODY_IS_MARKED_FOR_THAT = 'Nobody is marked for that. Not you, not any of the others.';
 
 /**
- * **The ending block's two headings** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
- * §8): a departure is a shortage and the heading says so without a name — the body names who
- * left — and a press is an act one person took, so the heading names them, *You* for the
- * reader's own, and is not dressed as a shortage. Exported for the suite that walks *Call it off*
- * from `features/challenges` and asserts the re-fold, as `IT_WAS_CALLED_OFF` is.
+ * **The ending block's one heading** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §8, [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §3): both ways a game is called off are a shortage — a departure emptied the court, or the
+ * hour found it still short of a player — and the heading says so without a name; the body says
+ * which. *{name} called the game off* went with the press. Exported for the suite that walks the
+ * ended court one feature over.
  */
 export const CALLED_OFF_FOR_LACK_OF_PLAYERS = 'The game was called off for lack of players';
-
-export function calledTheGameOff(by: NamedPlayer): string {
-  return `${playerName(by)} called the game off`;
-}
 
 /**
  * **The trash's spoken name** — the one control on a called-off card besides *What happened?*,
@@ -277,20 +265,18 @@ export function calledTheGameOff(by: NamedPlayer): string {
  */
 export const REMOVE_THIS_CARD = 'Remove this card';
 
-/** The ending's heading, keyed by how it ended — and the old title where the wire said nothing. */
-function calledOffTitle(ending: CalledOffEnding | undefined): string {
-  if (ending === undefined) return IT_WAS_CALLED_OFF;
-  return ending.how === 'departure' ? CALLED_OFF_FOR_LACK_OF_PLAYERS : calledTheGameOff(ending.by);
-}
-
 /**
- * The ending's body: a departure names who left and says the shape of the game it ended, and
- * the press says the ghost's own fact about the strands — the same fact about the same people
- * (ADR-0163 §3), because a call-off is neither an evening nor a game that never happened.
+ * The ending's body: a departure names who left and says the shape of the game it ended; the
+ * hour says nobody filled the seat and the same shape. Both end with the ghost's own fact about
+ * the strands — the same fact about the same people (ADR-0163 §3), because a call-off is neither
+ * an evening nor a game that never happened.
  */
-function calledOffBody(ending: CalledOffEnding | undefined): string {
-  if (ending === undefined) return NOBODY_IS_MARKED_FOR_THAT;
-  if (ending.how === 'press') return 'Nobody is marked for it — not you, not any of the others.';
+function calledOffBody(ending: CalledOffEnding): string {
+  if (ending.how === 'the-hour') {
+    return ending.format === 'singles'
+      ? 'Nobody filled the seat in time, so the singles game is called off. Nobody is marked for it — not you, not them.'
+      : 'Nobody filled the seat in time, so the doubles game is called off. Nobody is marked for it — not you, not any of them.';
+  }
 
   const name = playerName(ending.by);
   return ending.format === 'singles'
@@ -313,7 +299,7 @@ export function resultTitle(argument: ResultArgument): string {
     case 'never-played':
       return 'It never happened';
     case 'called-off':
-      return calledOffTitle(argument.ending);
+      return CALLED_OFF_FOR_LACK_OF_PLAYERS;
     case 'ours-stands':
       return 'Sent — waiting';
     case 'theirs-stands':

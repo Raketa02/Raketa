@@ -94,3 +94,11 @@ deal's `pool.want_to_play_you`, at one and above and never at nought, so a heade
 waiting has nothing in the slot. `ShellScreen` gained `fill` for the same tab, forwarded and not
 designed: the deck's stage takes the height the phone gives it, with the three round buttons in
 the pinned `action` slot below it.
+
+**Pull to refresh on Chats** (2026-09-16). `ShellScreen` takes an `onRefresh` and draws the
+platform's `RefreshControl` over its page — forwarded, not designed, and absent on every screen
+that says nothing — spinning from the pull until the promise settles, refused or not, and never
+for a refetch the player did not ask for; a second `refresh` in the same tick is read off a ref
+the state could not have rendered yet. `ChatsScreen` hands it both of its lists' keys,
+invalidated and awaited, so what the server now says is what the tab then shows. Walked in
+`chatsRefresh.test.tsx`; the control itself in `ShellScreen.test.tsx`.

@@ -133,20 +133,29 @@ describe('silence confirming, which has to be visible before it happens', () => 
   });
 
   /**
-   * The two words #419 §3 and ADR-0163 fix, where the wire named nobody — which since ADR-0172
-   * §4 it promises not to; the sentence stands for a reply that breaks the promise.
+   * **The hour's ending** ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+   * §3): the wire names nobody by design, the heading is the shortage's, and the body says nobody
+   * filled the seat — singles and doubles differing by one clause — over the ghost's own fact.
    */
-  it('says a called-off game was called off, and names nobody where the wire named nobody', () => {
-    expect(resultTitle({ kind: 'called-off' })).toBe('It was called off');
-    expect(standingLine({ kind: 'called-off' }, READ_AT)).toBe('Called off');
-    expect(resultBody({ kind: 'called-off' })).not.toMatch(/\bby\b|who/);
+  it('heads the hour’s call-off with the shortage and says nobody filled the seat', () => {
+    const singles = { kind: 'called-off', ending: { how: 'the-hour', format: 'singles' } } as const;
+    const doubles = { kind: 'called-off', ending: { how: 'the-hour', format: 'doubles' } } as const;
+
+    expect(resultTitle(singles)).toBe('The game was called off for lack of players');
+    expect(resultBody(singles)).toBe(
+      'Nobody filled the seat in time, so the singles game is called off. Nobody is marked for it — not you, not them.',
+    );
+    expect(resultBody(doubles)).toBe(
+      'Nobody filled the seat in time, so the doubles game is called off. Nobody is marked for it — not you, not any of them.',
+    );
+    expect(standingLine(singles, READ_AT)).toBe('Called off');
+    expect(resultBody(singles)).not.toMatch(/\bby\b|who/);
   });
 
   /**
    * **The ending block, keyed by how it ended** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
    * §8): a departure's heading says the game was called off for lack of players and its body
-   * names who left, singles and doubles differing by one clause; the button's heading names the
-   * presser — *You* for the reader's own — over the ghost's own body.
+   * names who left, singles and doubles differing by one clause.
    */
   it('heads a departure with the shortage and names the leaver in the body', () => {
     const tomek = { kind: 'player', name: 'tomek.p' } as const;
@@ -169,33 +178,17 @@ describe('silence confirming, which has to be visible before it happens', () => 
     );
   });
 
-  it('heads a press with who pressed, You for the reader’s own, over the ghost’s body', () => {
+  it('never says cancel of an ending, and never names a presser', () => {
     const tomek = { kind: 'player', name: 'tomek.p' } as const;
-    const theirs = {
-      kind: 'called-off',
-      ending: { by: tomek, how: 'press', format: 'doubles' },
-    } as const;
-    const mine = {
-      kind: 'called-off',
-      ending: { by: { kind: 'you' }, how: 'press', format: 'doubles' },
-    } as const;
-
-    expect(resultTitle(theirs)).toBe('tomek.p called the game off');
-    expect(resultTitle(mine)).toBe('You called the game off');
-    expect(resultBody(theirs)).toBe('Nobody is marked for it — not you, not any of the others.');
-    expect(resultBody(mine)).toBe(resultBody(theirs));
-    // The card's gloss and the standing line are the one word, whoever's act it was.
-    expect(standingLine(theirs, READ_AT)).toBe('Called off');
-  });
-
-  it('never says cancel of an ending', () => {
-    const tomek = { kind: 'player', name: 'tomek.p' } as const;
-    for (const how of ['departure', 'press'] as const) {
-      const argument = {
-        kind: 'called-off',
-        ending: { by: tomek, how, format: 'singles' },
-      } as const;
-      expect(`${resultTitle(argument)} ${resultBody(argument)}`).not.toMatch(/cancel/i);
+    const endings = [
+      { by: tomek, how: 'departure', format: 'singles' },
+      { how: 'the-hour', format: 'singles' },
+    ] as const;
+    for (const ending of endings) {
+      const argument = { kind: 'called-off', ending } as const;
+      expect(`${resultTitle(argument)} ${resultBody(argument)}`).not.toMatch(
+        /cancel|called the game off/i,
+      );
     }
   });
 
@@ -240,7 +233,8 @@ describe('nobody is penalised, which is a sentence and not an omission', () => {
    * rather than leaving the reader to wonder whether calling it off cost them.
    */
   it('says so on the game that was called off', () => {
-    expect(resultBody({ kind: 'called-off' })).toContain('Nobody is marked');
+    const ending = { how: 'the-hour', format: 'doubles' } as const;
+    expect(resultBody({ kind: 'called-off', ending })).toContain('Nobody is marked');
   });
 
   it('says so on the disagreement, on both sides of it', () => {

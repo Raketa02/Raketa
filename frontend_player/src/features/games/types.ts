@@ -43,18 +43,16 @@ export { CourtPairing, type CourtPairingProps } from './components/CourtPairing'
  *
  * `gamePlan.test.tsx` asserts which lead draws the court's pairing, and a test spelling *Balance
  * forecast* as a literal is a red build for the ticket that rewords it — `findAGamePresentation`'s
- * rule, the one every copy deck in this app is read through. `IT_WAS_CALLED_OFF` crosses for the
- * same reason one feature over: `callOff.test.tsx` asserts the screen re-folds into the fourth
- * end. Nothing in `src/` outside this feature reads any of them.
+ * rule, the one every copy deck in this app is read through. `CALLED_OFF_FOR_LACK_OF_PLAYERS`
+ * crosses for the same reason one feature over: the ended court's suite asserts the screen's
+ * heading. Nothing in `src/` outside this feature reads any of them.
  */
 export {
   BALANCE_FORECAST,
   CALLED_OFF_FOR_LACK_OF_PLAYERS,
-  IT_WAS_CALLED_OFF,
   OPEN_SEAT,
   PLAYERS,
   REMOVE_THIS_CARD,
-  calledTheGameOff,
   recordLabel,
 } from './components/gamePresentation';
 
@@ -67,15 +65,14 @@ export {
 export { RemoveCard, type RemoveCardProps } from './components/RemoveCard';
 
 /**
- * **The dismissal itself, for the Chats row** — the same act the trash above sends, met from the
- * other list a called-off court is drawn on
- * ([ADR-0173](../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)).
- * `features/challenges` draws the row and reveals the door; what it cannot own is the act, which
- * is this feature's route and this feature's cache effect — on both lists, declared once. The
- * hook crosses rather than a second control, because the row decides what a door looks like
- * there, as it does for the departure and the removal.
+ * **The one write to this list another feature may make** — dropping a called-off court's card
+ * on the reply that cleared its row
+ * ([ADR-0175](../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §5). `features/challenges` meets the dismissal through a door of its own, for everybody the
+ * court asked; the card it clears is this list's, and which rows a game id touches is decided
+ * here where the row's shape is known — `dropCourtOfGame`'s argument, mirrored.
  */
-export { useDismissGame } from './hooks/useGames';
+export { dropCardOfGame } from './hooks/gameCache';
 
 /**
  * The route's own check on the id it is handed, because a route param is attacker-controlled and

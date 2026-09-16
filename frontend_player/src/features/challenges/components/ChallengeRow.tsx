@@ -81,13 +81,14 @@
  *
  * *Remove this row*
  * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md))
- * — the Now card's dismissal met from this list, behind `DismissalDoor`, which draws no sheet
- * because the act removes the court from the reader's own two lists and nothing from the record.
- * **Which rows move is `mayDismiss`'s answer**: `CALLED_OFF`, a game behind it, and the reader
- * holding an accepted seat — a leaver's own row left at once, and the server answers them as a
- * stranger. Every other challenge row reveals nothing: an invitee's, the organiser's once somebody
- * has joined, any other ending on its shelf — *no dead controls* (#324), and a row handed nothing
- * to reveal does not move at all.
+ * — the Now card's dismissal met from this list through a door of the challenge's own
+ * (ADR-0175 §5), behind `DismissalDoor`, which draws no sheet because the act removes the court
+ * from the reader's own two lists and nothing from the record. **Which rows move is
+ * `mayDismiss`'s answer**: `CALLED_OFF`, and the reader holding a seat the court closed on — an
+ * accepted one, or one still deciding; a leaver's own row left at once. Every other challenge row
+ * reveals nothing: an invitee's on a live court, the organiser's once somebody has joined, any
+ * other ending on its shelf — *no dead controls* (#324), and a row handed nothing to reveal does
+ * not move at all.
  *
  * **A swipe is never the only path.** Either door is the card's `accessibilityAction`, under the
  * act's own word, and the card is what the removal's sheet returns focus to.
@@ -192,10 +193,9 @@ export function ChallengeRow({ challenge, playerId }: ChallengeRowProps) {
     );
   }
 
-  // `mayDismiss` has already required the game; the check is the type's, not a second rule.
-  if (mayDismiss(challenge, playerId) && challenge.gameId !== undefined) {
+  if (mayDismiss(challenge, playerId)) {
     return (
-      <DismissalDoor gameId={challenge.gameId}>
+      <DismissalDoor challengeId={challenge.challengeId} gameId={challenge.gameId}>
         {(door) => (
           <SwipeRow reveal={{ label: door.label, onPress: door.open }}>{card(door)}</SwipeRow>
         )}

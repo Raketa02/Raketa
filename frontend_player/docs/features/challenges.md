@@ -582,3 +582,34 @@ wire says _cancel_, and nothing here does. The mock's hint under the ended court
 press…_) is not drawn: the record does not ask for it, and the sentence above already says what
 took the controls. **Not seen on a device** — the tag, the ended court and the sheet lines are
 asked for a look.
+
+**A `Called off` row swipes to _Remove this row_, and the row goes with the card** ([ADR-0173](../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)).
+The one left behind by three departures had a row with a day to wait and nothing to press,
+while the row above — a send nobody answered — swiped to _Remove the challenge_. The withdraw
+cannot be that act (every ending refuses it), so the swipe is the **dismissal**: `mayDismiss`
+gates it and `DismissalDoor` hands the row an `ActDoor` with no sheet, on ADR-0172 §5's reason.
+`GET /challenges` subtracts its reader off the same set `GET /games` does, so the row and the
+Now card leave on one reply: `dropCourtOfGame` is the one write this list lets `games` make,
+keyed by the game the row carries, on `dropRoomOfChallenge`'s shape. _This row_ and not _the
+challenge_, because that is the withdraw's word and this ends nothing.
+
+**Nobody calls a game off; leaving is the Chats row's swipe; the invitee clears the row too**
+([ADR-0175](../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)). `CallOff`, `callOffPresentation.ts` and the game screen's `LeaveGame` are deleted:
+a court that has been a game ends by its seats or by its hour and never by a press, and
+`mayRemove` reads `gameId` so the removal is never offered on one (`court_has_been_a_game` has
+a sentence for the stale row). _Leave the game_ comes off the challenge screen's two live arms
+and the arms' `mayLeave` with it — the conversation row's `DepartureDoor` is the one place a
+seat is given up. **The hour's row**: a `CALLED_OFF` row whose `ended_by` is null is the
+platform's call-off, read as `byNobody` on `EndingFacts` — present exactly there, so a nameless
+wire on any other ending still reads `?` — and it says _Nobody filled the seat_ over the people
+the reader waited with; _{name} called the game off_ and _You called the game off_ are retired,
+and a `CALLED_OFF` row with a named `ended_by` reads _{name} left_. The ended court reads a seat
+still deciding when the court closed as _was still deciding_ (`asked`), and `called-it-off` is
+gone from `SeatWord`. **The row's door is the challenge's own**: `useDismissCourt` posts
+`POST /challenges/{id}/dismissal` — admitted for everybody the court asked, because the invitee
+still deciding when the last departure called it off has a row and never had a card, whom the
+game's door answers as a stranger — drops the row by challenge and the card by game
+(`dropCardOfGame`, the one write the games list lets this feature make) and re-reads both;
+`mayDismiss` is _`CALLED_OFF`, and the reader holds a seat the court closed on_ — accepted,
+still deciding, or lapsed; never one they gave up. Walked in `dismissFromTheList.test.tsx`,
+`challengeScreen.test.tsx` and `challengeFill.test.tsx`. **Not seen on a device.**

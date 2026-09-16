@@ -970,20 +970,18 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Remove the challenge, or call the game off
-         * @description **Two acts on one route, and which one this is turns on whether the court has been a game.**
+         * Remove the challenge
+         * @description **Remove the challenge** — the organiser's act on a court that was never a game, and admitted exactly while **nobody besides the organiser holds an accepted seat**: before anybody has answered, and again once everybody who joined has left — whatever seats are still deciding. The moment somebody has joined it is refused: a court somebody has joined is nobody's to end for the others, so from then on the organiser leaves it like anybody else, and it is over by itself when nobody is on it, or one player is and nobody is still deciding. The invitees' challenges read `WITHDRAWN` and offer no answer — a yes or a no on a removed challenge is refused with `challenge_is_over` — and an invitation whose day was still running is neither answered nor unanswered: it leaves the record that prices silence, and the lapse loop writes nothing for it.
          *
-         *     **Remove the challenge** — on a court that was never a game. The organiser's, and admitted exactly while **nobody besides the organiser holds an accepted seat**: before anybody has answered, and again once everybody who joined has left — whatever seats are still deciding. The moment somebody has joined it is refused: a court somebody has joined is nobody's to end for the others, so from then on the organiser leaves it like anybody else, and it is over by itself when at most one player is on it and nobody is still deciding. The invitees' challenges read `WITHDRAWN` and offer no answer — a yes or a no on a removed challenge is refused with `challenge_is_over` — and an invitation whose day was still running is neither answered nor unanswered: it leaves the record that prices silence, and the lapse loop writes nothing for it.
-         *
-         *     **Call it off** — on a court that has been a game and lost somebody. The court is half built again, and this is how the game is called off: the challenge records its own ending, `CALLED_OFF` with `ended_by` you — **never `WITHDRAWN`**, which is *Remove the challenge*'s alone — and the game it became reaches its fourth end, `CALLED_OFF` with `called_off_by` you, in the same act: its plan is history, its pairing is history, and it is neither an evening nor a game that never happened, so nothing anybody is measured on moves. **Any player on the court**, the organiser or not, and only while a seat is open with nobody deciding on it: a full court that will not play lets its window lapse into `NEVER_PLAYED`, as it always has. A court whose game's window has already closed is called off all the same, with you on its record, and the game stays the ghost it already is. A court whose game a departure already called off is over, and this meets `challenge_is_over`.
+         *     **A court that has been a game has no exit anybody presses.** *Call it off* lived on this route and is gone: no player's single decision ends a game for the others. Such a court is called off by the departure that leaves at most one player on it, or by its hour when it is still short of a player — `CALLED_OFF`, with `ended_by` the leaver or nobody — and asking this of it is refused with `court_has_been_a_game`.
          *
          *     **Whole-challenge, and it never removes one person.** A withdraw ends the arrangement for everybody on it, and taking one person out of a court that still stands is refused here as it is everywhere else.
          *
          *     **Irreversible.** There is no route back. Asking the same people again is a **new** challenge, with fresh deadlines and its own record of who has answered — which is what it actually is. That a removal can be followed by a resend to the same person, on a fresh clock, is a named and accepted risk with its falsifier written down.
          *
-         *     **What this releases is the people on the court.** A send holds its pairs for as long as an answer is owed, and a reopened court holds its pair until it is re-seated or called off; this is that exit. Somebody who let their day run out needed none: their seat reopened and the open-challenge rule released them with it.
+         *     **What this releases is the people on the court.** A send holds its pairs for as long as an answer is owed; this is that exit. Somebody who let their day run out needed none: their seat reopened and the open-challenge rule released them with it.
          *
-         *     **A noun and not a verb**, because what this creates is the ending — the withdrawal, or the court's call-off — which are the two things in this context that a fold of the seats could never produce. The conversation is destroyed in the act where one exists: there is none before anybody has answered, there may be one the organiser is alone in again, and a court that has been a game has one.
+         *     **A noun and not a verb**, because what this creates is the ending — the withdrawal, one of the two things in this context that a fold of the seats could never produce. The conversation is destroyed in the act where one exists: there is none before anybody has answered, and there may be one the organiser is alone in again.
          */
         post: operations["withdraw_challenge_api_v1_challenges__challenge_id__withdrawal_post"];
         delete?: never;
@@ -1018,6 +1016,32 @@ export interface paths {
          *     **A noun and not a verb**, like the withdrawal: what this creates is the departure.
          */
         post: operations["leave_game_api_v1_challenges__challenge_id__departure_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/challenges/{challenge_id}/dismissal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove this row
+         * @description **Clear a called-off court from your own two lists**, met from the Chats row — the same act `POST /games/{game_id}/dismissal` is from the Now card, recorded on the same game, read by both lists (`docs/adr/0173`, `docs/adr/0175` §5). Yours alone: nobody else's lists move, and the game, its record and the challenge are untouched. It is instant and there is no undo — a mis-tap loses the row and the card and nothing else, which is why there is no sheet.
+         *
+         *     **For everybody the court asked.** The card's trash is admitted for players on the game; the row is drawn for everybody with a seat on the challenge, answered or not — an invitee still deciding on a fill when the court was called off has a row and never had a card — so this door admits anybody holding a seat, and hands the act to the game on the court's word.
+         *
+         *     **Only on a court that is `CALLED_OFF`**, refused with its own code on every other standing.
+         *
+         *     **A noun and not a verb**, like the card's: what this creates is the dismissal, and it answers nothing because the thing a redraw would draw is the thing you removed.
+         */
+        post: operations["dismiss_court_api_v1_challenges__challenge_id__dismissal_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8757,7 +8781,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The challenge is over, and it is returned as it now stands — `WITHDRAWN` on a court that was never a game, `CALLED_OFF` on one that has been, `ended_by` naming you either way — with every seat exactly as it was: a seat still awaiting an answer keeps its question and its deadline, and the standing is read before either. */
+            /** @description The challenge is over, and it is returned as it now stands — `WITHDRAWN`, `ended_by` naming you — with every seat exactly as it was: a seat still awaiting an answer keeps its question and its deadline, and the standing is read before either. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8766,7 +8790,7 @@ export interface operations {
                     "application/json": components["schemas"]["ChallengeSchema"];
                 };
             };
-            /** @description `withdraw_is_the_organisers` — you hold a seat on this court and the act is not yours. On a court that was never a game, removing the challenge is the organiser's alone; on one that has been a game, calling it off is any player's **on the court** — an accepted seat — so somebody who left, the organiser who left, and a newcomer still deciding on a fill are all told this. **Not a 404**: you can already see this challenge, so pretending it is not there while your own seat is drawn on it would be the wrong lie. */
+            /** @description `withdraw_is_the_organisers` — you hold a seat on this court and the act is not yours: removing the challenge is the organiser's alone, and an organiser who left their own seat holds none. **Not a 404**: you can already see this challenge, so pretending it is not there while your own seat is drawn on it would be the wrong lie. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8785,9 +8809,9 @@ export interface operations {
                 };
             };
             /**
-             * @description `somebody_has_joined` — somebody besides you holds an accepted seat on a court that was never a game, so it is no longer yours to remove for the others. Leave it instead (`POST /challenges/{id}/departure`); it ends by itself when one is left with nobody deciding.
+             * @description `court_has_been_a_game` — this court became a game, and such a court is nobody's to end for the others, its organiser included. It ends by its players leaving — the departure that leaves at most one player on it calls the game off — or by its hour, when it is still short of a player as its moment passes.
              *
-             *     `not_a_half_built_line_up` — the court has been a game and has no seat to call it off for: it is whole (`ON`), or a newcomer is still deciding on its open seat (`AWAITING_ANSWERS` after a fill). One code for the two, because they are one sentence and the standing already says which.
+             *     `somebody_has_joined` — somebody besides you holds an accepted seat, so it is no longer yours to remove for the others. Leave it instead (`POST /challenges/{id}/departure`); it ends by itself when nobody is on it, or one is with nobody deciding.
              *
              *     `challenge_is_over` — this challenge has ended, this act included: a second press meets it.
              */
@@ -8821,7 +8845,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in — on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; `DECLINED` where you were the last but one on a court that was never a game and nobody is deciding — **a court is over when at most one player is on it and no seat is awaiting an answer**, and a departure is a no; and `CALLED_OFF` where you were the last but one on a court that has been a game: the court ends with its game, `ended_by` you, and the game is called off in this same request — `GET /games` reads it `CALLED_OFF` with `called_off_by` you, and the room is gone. */
+            /** @description Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in — on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; `DECLINED` where the court was never a game and your leaving deserted it — **a court is over when nobody is on it, or one player is and no seat is awaiting an answer** — and a departure is a no; and `CALLED_OFF` where your leaving deserted a court that has been a game: the last but one with nobody deciding, or the last, whoever is still deciding — the court ends with its game, `ended_by` you, and the game is called off in this same request — `GET /games` reads it `CALLED_OFF` with `called_off_by` you, and the room is gone. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8881,6 +8905,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dismiss_court_api_v1_challenges__challenge_id__dismissal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                challenge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The court is cleared from your Chats — and its card from your Now, where it had one — on this device and every other, and nothing else moves. A second press answers the same and writes nothing. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `court_is_not_called_off` — only a called-off court's row can be removed. A live court's row is the court, and the other endings' rows are the record for the day they stay. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

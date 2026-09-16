@@ -223,10 +223,11 @@ export function holdsTheExit(challenge: Pick<Challenge, 'seats'>, playerId: stri
  * **Whether this reader may remove the challenge** — the withdraw while nobody has joined
  * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
  * §4, [#428](https://github.com/Raketa02/Raketa/issues/428)): the reader is the organiser, the
- * challenge is still being arranged, and **nobody besides them holds an accepted seat** —
- * whatever seats are still deciding, before any answer included, and again once everybody who
- * joined has left. The moment somebody is in it is nobody's to end for the others, and from then
- * on the organiser leaves like anybody else.
+ * challenge is still being arranged, **it has never been a game**, and **nobody besides them
+ * holds an accepted seat** — whatever seats are still deciding, before any answer included, and
+ * again once everybody who joined has left. The moment somebody is in it is nobody's to end for
+ * the others, and from then on the organiser leaves like anybody else; a court that became a
+ * game stays nobody's to end (ADR-0175 §1).
  *
  * It is the row's reveal decision on the Chats list and the arranging arm's on the challenge
  * screen, so it is one function read twice rather than a swipe and a button remembering the same
@@ -236,35 +237,51 @@ export function holdsTheExit(challenge: Pick<Challenge, 'seats'>, playerId: stri
  * act.
  */
 export function mayRemove(
-  challenge: Pick<Challenge, 'organiserId' | 'standing' | 'seats'>,
+  challenge: Pick<Challenge, 'organiserId' | 'standing' | 'seats' | 'gameId'>,
   playerId: string,
 ): boolean {
   if (playerId !== challenge.organiserId) return false;
   if (challenge.standing === undefined || ENDED[challenge.standing]) return false;
+  // A court that has been a game is nobody's to remove, the organiser alone again on it with a
+  // fill still deciding included: it ends by its seats or by its hour (ADR-0175 §1), and the
+  // server refuses the press with `court_has_been_a_game`.
+  if (challenge.gameId !== undefined) return false;
   return nobodyHasJoined(challenge);
 }
 
 /**
  * **Whether this reader may clear a called-off court from their lists** — the row on Chats and
  * the card on Now, which are one court and go together
- * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)):
- * the challenge is `CALLED_OFF`, it has a game (every called-off court does — the standing is
- * reached only once a line-up completed), and the reader is **still on it**, holding an accepted
- * seat. A leaver's seat reads `LEFT` and their own row left the inbox at once; the server answers
- * them as a stranger, so the row never offers what it would refuse.
+ * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md),
+ * [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §5): the challenge is `CALLED_OFF`, and the reader holds a seat **the court closed on** — an
+ * accepted one, or one still deciding when the last departure or the hour ended it. A seat given
+ * up — `LEFT`, `DECLINED` — is a row that left the inbox at once, an own act the reader has
+ * nothing to clear; a lapsed one is a day that ran out on a court that then ended, which is news
+ * for a day and theirs to clear like the rest.
  *
- * The act behind it is the game card's dismissal, unchanged in what it sends — one act, one fact,
- * and the challenge list subtracts its reader off the same set the rail does. It is the one row
- * on the ended shelf that moves, because it is the one ending whose row carries nothing the
- * reader is owed for a day: the news is theirs alone, and they have read it.
+ * The act behind it is the game card's dismissal, met through the challenge's own door so the
+ * invitee who never held a seat on the game is admitted — one act, one fact, and both lists
+ * subtract their reader off the same set. It is the one row on the ended shelf that moves,
+ * because it is the one ending whose row carries nothing the reader is owed for a day: the news
+ * is theirs alone, and they have read it.
  */
 export function mayDismiss(
-  challenge: Pick<Challenge, 'standing' | 'seats' | 'gameId'>,
+  challenge: Pick<Challenge, 'standing' | 'seats'>,
   playerId: string,
 ): boolean {
-  if (challenge.standing !== 'CALLED_OFF' || challenge.gameId === undefined) return false;
-  return challenge.seats.some((seat) => seat.playerId === playerId && seat.answer === 'ACCEPTED');
+  if (challenge.standing !== 'CALLED_OFF') return false;
+  const seat = challenge.seats.find((one) => one.playerId === playerId);
+  return seat !== undefined && (seat.answer === undefined || !GIVEN_UP[seat.answer]);
 }
+
+/** A seat the reader gave up themselves — their row left with the act, and there is nothing to clear. */
+const GIVEN_UP: Readonly<Record<SeatAnswer, boolean>> = {
+  ACCEPTED: false,
+  DECLINED: true,
+  LAPSED: false,
+  LEFT: true,
+};
 
 /**
  * **Nobody besides the organiser holds an accepted seat** — the court is the organiser's alone,
@@ -391,7 +408,9 @@ function countAwaiting(challenge: Challenge): number {
  * `you` where the id is the reader's; the seat's whole name where it is somebody else's; and
  * `unknown` where the wire named nobody, or named a seat `users` no longer answers for. A
  * departure is read off that seat's own answer — `LEFT` — and off nothing else, so the sentence
- * is always true of the person it names whichever of two the server's bound picked.
+ * is always true of the person it names whichever of two the server's bound picked. **Nobody**
+ * is read off the wire naming nobody, which on a `CALLED_OFF` court is the hour's call-off
+ * (ADR-0175 §3) and on any other ending a promise the wire broke.
  */
 function endingFacts(challenge: Challenge, playerId: string): EndingFacts {
   const seat = whoEndedIt(challenge);
@@ -400,6 +419,11 @@ function endingFacts(challenge: Challenge, playerId: string): EndingFacts {
   return {
     endedBy: seat?.playerId === playerId ? { kind: 'you' } : seatName(seat),
     byADeparture: seat?.answer === 'LEFT',
+    // Nobody's act is a fact of one ending only: on any other, a nameless wire is a promise
+    // broken, and the sentence names `?` rather than inventing an hour that ended it.
+    ...(challenge.endedBy === undefined && challenge.standing === 'CALLED_OFF'
+      ? { byNobody: true as const }
+      : {}),
     ...(ownAnswer === undefined ? {} : { ownAnswer }),
   };
 }

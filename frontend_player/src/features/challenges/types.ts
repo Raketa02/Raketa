@@ -145,22 +145,16 @@ export { LATER, MATCHED_WORD, matchedAnnouncement } from './components/yesScreen
  */
 export type { ProposedCourt } from './mappers/challengeMappers';
 /**
- * **The departure, for the game screen** — a challenge act reached from a game, composed by
- * `features/plans` onto `features/games`' screen (ADR-0162). The control and its sheet; the words
- * stay with them, because the screen that draws them may not know what they say.
- */
-export { LeaveGame, type LeaveGameProps } from './components/LeaveGame';
-
-/**
- * **The departure's door, for a Chats row** — the same act met from the list
- * ([#427](https://github.com/Raketa02/Raketa/issues/427), ADR-0165 §6). A door rather than a
- * control: the row decides what a door looks like there — the button a swipe reveals, and the
- * accessibility action a listener takes in its place — and this hands it the word, the way to
- * open the sheet, and the sheet itself, drawn beside whatever the row drew. **Composed by the
- * shell** into the conversations section rather than imported by it, on ADR-0149's shape: the act
- * is this feature's and the row is that one's, and a feature importing a feature that imports it
- * is the cycle Part 1 calls a defect. The challenge screen takes the same door on its two live
- * arms, so the act is met once, three ways.
+ * **The departure's door, for a Chats row** — the one place a game is left from
+ * ([#427](https://github.com/Raketa02/Raketa/issues/427), ADR-0165 §6,
+ * [ADR-0175](../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §4). A door rather than a control: the row decides what a door looks like there — the button a
+ * swipe reveals, and the accessibility action a listener takes in its place — and this hands it
+ * the word, the way to open the sheet, and the sheet itself, drawn beside whatever the row drew.
+ * **Composed by the shell** into the conversations section rather than imported by it, on
+ * ADR-0149's shape: the act is this feature's and the row is that one's, and a feature importing
+ * a feature that imports it is the cycle Part 1 calls a defect. The game screen's *Leave this
+ * game* and the challenge screen's door are gone: leaving is one gesture in one place.
  */
 export { DepartureDoor, type DepartureDoorProps } from './components/DepartureDoor';
 
@@ -168,28 +162,20 @@ export { DepartureDoor, type DepartureDoorProps } from './components/DepartureDo
  * **The fill, for the game screen and the Now card** — the challenge screen's ⚡ pressed on a game
  * ([#419](https://github.com/Raketa02/Raketa/issues/419)): the same search, the same builder under
  * the challenge, and the seats already taken read off the game by whoever composes it. One
- * control for the card's wide door and the screen's primary act, because they are one press.
+ * control for the card's wide door and the act directly under the card on the screen (ADR-0175
+ * §4), because they are one press.
  */
 export { FillTheSeat, type FillTheSeatProps } from './components/FillTheSeat';
 
 /**
- * **The call-off, for the game screen** — the withdraw grown to a reopened court
- * ([ADR-0163](../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419), on
- * `LeaveGame`'s seam. It answers *who may* itself, off this feature's own list, so the composer
- * hands in only what is its own to say: that a seat is open.
- */
-export { CallOff, type CallOffProps } from './components/CallOff';
-
-/**
- * **The two controls' words, exported for the suite that walks the plan lead from `plans`.**
+ * **The departure's word, exported for the suite that walks the plan lead from `plans`.**
  *
- * `gameScreenPlanLead.test.tsx` asserts where on the arm each act sits, and a test spelling *Leave
- * this game* as a literal is a red build for the ticket that rewords it — `findAGamePresentation`'s
- * rule, the one every copy deck in this app is read through. Nothing in `src/` outside this
- * feature reads either.
+ * `gameScreenPlanLead.test.tsx` asserts that the game screen draws no leave and no call-off any
+ * more (ADR-0175 §1, §4), and a test spelling *Leave the game* as a literal is a red build for
+ * the ticket that rewords it — `findAGamePresentation`'s rule, the one every copy deck in this
+ * app is read through. Nothing in `src/` outside this feature reads it otherwise.
  */
-export { CALL_IT_OFF } from './components/callOffPresentation';
-export { LEAVE_THIS_GAME } from './components/leaveGamePresentation';
+export { LEAVE_THE_GAME } from './components/leaveGamePresentation';
 
 /**
  * **This feature's list key, and the one write to it another feature may make** — crossed for the

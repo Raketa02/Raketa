@@ -5,7 +5,7 @@
  * [#414](https://github.com/Raketa02/Raketa/issues/414)'s acceptance criteria are assertions in
  * this file and opinions nowhere else — the eyebrow is the format and the kind with no title
  * under it, the card at the top is the Now card with its doors left off, the plan card is the
- * chat's editable one with the panel inside it, *Open the chat* is dark and full width from both
+ * chat's editable one with the panel inside it, no chat door on the screen since ADR-0175 §4,
  * routes, *We played* is a quiet secondary beneath it, the standing line and the checklist are
  * gone, and *Game on* is drawn by the same layout.
  *
@@ -17,7 +17,7 @@
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Image, Text } from 'react-native';
 
-import { CALL_IT_OFF, LEAVE_THIS_GAME } from '@/features/challenges/types';
+import { LEAVE_THE_GAME } from '@/features/challenges/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { BALANCE_FORECAST, OPEN_SEAT, PLAYERS } from '@/features/games/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -280,17 +280,17 @@ describe('the head of the screen', () => {
 describe('the card at the top', () => {
   /**
    * The Now card with `doors={false}`: the tag, the sport word, the slots and the court, and
-   * **neither door** — the screen is where both go. The one *Open the chat* on the screen is the
-   * screen's own dark button, never the bubble.
+   * **neither door** — and since ADR-0175 §4 no *Open the chat* anywhere on the screen either:
+   * the Now card's bubble and the Chats tab both reach the room.
    */
-  it('is the Now card without its doors', async () => {
+  it('is the Now card without its doors, and the screen draws no chat door', async () => {
     await openFromNow();
 
     expect(await screen.findByText(CARD_TAG.planning!)).toBeTruthy();
     expect(screen.getByLabelText(/Padel/)).toBeTruthy();
     expect(screen.queryByText(FINISH_THE_PLAN)).toBeNull();
-    expect(screen.getAllByLabelText(OPEN_THE_CHAT)).toHaveLength(1);
-    expect(screen.getByText(OPEN_THE_CHAT)).toBeTruthy();
+    expect(screen.queryByLabelText(OPEN_THE_CHAT)).toBeNull();
+    expect(screen.queryByText(OPEN_THE_CHAT)).toBeNull();
   });
 
   /** The same faces join as the rail's, over the same list. */
@@ -454,22 +454,8 @@ describe('the plan card, editable here', () => {
   });
 });
 
-describe('the two doors', () => {
-  it('opens the room from Open the chat, coming in from Now', async () => {
-    await openFromNow();
-
-    fireEvent.press(await screen.findByText(OPEN_THE_CHAT));
-    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
-  });
-
-  it('opens the room from Open the chat, coming in from the room’s Details', async () => {
-    await openFromTheRoom();
-
-    fireEvent.press(await screen.findByText(OPEN_THE_CHAT));
-    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
-  });
-
-  /** ADR-0149 §3's join fails soft: no room, no door — and the rest of the screen stands. */
+describe('the one door', () => {
+  /** The chat door is gone from this screen (ADR-0175 §4), with a room behind the game or not. */
   it('draws no chat door where there is no room, and keeps everything else', async () => {
     await openFromNow({ room: false });
 
@@ -478,11 +464,18 @@ describe('the two doors', () => {
     expect(screen.getByText(WE_PLAYED)).toBeTruthy();
   });
 
+  it('draws no chat door coming in from the room either', async () => {
+    await openFromTheRoom();
+
+    expect(await screen.findByText(PLAN_PANEL.title)).toBeTruthy();
+    expect(screen.queryByText(OPEN_THE_CHAT)).toBeNull();
+  });
+
   /** *We played* stays beneath, and still opens the score — a game can be played before it is planned. */
   it('keeps We played beneath, opening the score over the plan', async () => {
     await openFromNow();
 
-    await screen.findByText(OPEN_THE_CHAT);
+    await screen.findByText(WE_PLAYED);
     expect(screen.queryByText('Send this score')).toBeNull();
 
     fireEvent.press(screen.getByText(WE_PLAYED));
@@ -509,10 +502,11 @@ describe('what went', () => {
 
 /**
  * **A seat somebody left** (#411 rules 5 and 6, ADR-0162): the screen is the plan lead — the seat
- * outranks the clock — with the empty seat on the card, an *Open seat* row on the players card,
- * the plan still editable, the chat door still there, and no *We played*, because a game with a
- * gap in it cannot be recorded. The forecast is absent because #416's pairing omits it, and the
- * block is drawn off the pairing alone — nothing here special-cases the seat.
+ * outranks the clock — with the empty seat on the card, *Fill the seat* directly under it
+ * (ADR-0175 §4), an *Open seat* row on the players card, the plan still editable, and no *We
+ * played*, because a game with a gap in it cannot be recorded. The forecast is absent because
+ * #416's pairing omits it, and the block is drawn off the pairing alone — nothing here
+ * special-cases the seat.
  */
 describe('an open seat', () => {
   const SHORT: Wire['GameSchema']['seats'] = [
@@ -536,30 +530,31 @@ describe('an open seat', () => {
     ],
   };
 
-  it('withholds We played, and keeps the chat door', async () => {
+  it('withholds We played', async () => {
     await openFromNow({ games: [game({ seats: SHORT })], plans: [WHOLE] });
 
     expect(await screen.findByText(CARD_TAG['needs-a-player']!)).toBeTruthy();
-    expect(screen.getByText(OPEN_THE_CHAT)).toBeTruthy();
     expect(screen.queryByText(WE_PLAYED)).toBeNull();
   });
 
   /**
-   * **The arm's acts, in the design's order** (#419): the chat door, then *Fill the seat* as the
-   * primary act where *We played* would be, then the court's acts — *Call it off* for whoever
-   * may, which here is nobody, since the challenge list holds no row — and *Leave this game*
-   * last. On the full-court rungs there is no fill at all. The acts themselves are walked in
-   * `features/challenges` (`fillTheSeat.test.tsx`, `callOff.test.tsx`).
+   * **The one act on the court, directly under the card** (#419, ADR-0175 §4): *Fill the seat*
+   * sits between the card that says *needs a player* and the players card, and nothing else is
+   * drawn for the court — no *Leave this game*, no *Call it off*, no chat door. The act itself is
+   * walked in `features/challenges` (`fillTheSeat.test.tsx`).
    */
-  it('offers Fill the seat as the primary act, between the chat door and Leave this game', async () => {
+  it('offers Fill the seat directly under the card, and no leave, call-off or chat door', async () => {
     await openFromNow({ games: [game({ seats: SHORT })], plans: [WHOLE] });
 
-    await screen.findByRole('button', { name: FILL_THE_SEAT });
-    const buttons = screen.getAllByRole('button').map((one) => one.props.accessibilityLabel);
+    const fill = await screen.findByRole('button', { name: FILL_THE_SEAT });
+    const inOrder = screen.root.findAll(() => true);
+    const at = (node: (typeof inOrder)[number]) => inOrder.indexOf(node);
 
-    expect(buttons.indexOf(OPEN_THE_CHAT)).toBeLessThan(buttons.indexOf(FILL_THE_SEAT));
-    expect(buttons.indexOf(FILL_THE_SEAT)).toBeLessThan(buttons.indexOf(LEAVE_THIS_GAME));
-    expect(screen.queryByRole('button', { name: CALL_IT_OFF })).toBeNull();
+    expect(at(screen.getByText(CARD_TAG['needs-a-player']!))).toBeLessThan(at(fill));
+    expect(at(fill)).toBeLessThan(at(screen.getByRole('header', { name: PLAYERS })));
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
+    expect(screen.queryByText(/call it off/i)).toBeNull();
+    expect(screen.queryByText(OPEN_THE_CHAT)).toBeNull();
   });
 
   it('offers no fill on a full court', async () => {
@@ -638,7 +633,6 @@ describe('Game on', () => {
     expect(lock.props.accessibilityState.disabled).toBe(false);
 
     expect(screen.getByText(PLAN_PANEL.title)).toBeTruthy();
-    expect(screen.getByText(OPEN_THE_CHAT)).toBeTruthy();
     expect(screen.getByText(WE_PLAYED)).toBeTruthy();
   });
 

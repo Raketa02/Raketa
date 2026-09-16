@@ -1029,14 +1029,15 @@ only what this client had to invent to draw what is happening today and next
   one card that carries it. **The body is not a door.** _Avoid_: a pressable body, a disabled
   control where a card offers nothing, a door that writes, a third door, and the trash on any
   other ending.
-- **The court's acts** — the game screen's fourth slot, `courtActs`, drawn last on the plan lead:
-  every one a **challenge** act reached from a game, composed by `plans` through
-  `challenges/types.ts` and handed its one rule as `offered`. `Fill the seat` (primary, where
-  _We played_ would be, while the moment is ahead), `Call it off` (secondary, while a seat is open,
-  for **any player on the court** — an accepted seat, a fact `CallOff` joins off the challenge
-  list itself; ADR-0165 §5), `Leave this game` (last, while the moment is ahead). _Avoid_: `plans`
-  learning what a seat's answer is, an act mounted and unmounted by its rule rather than handed
-  it, and any of these on the card or in the chat.
+- **The fill** — the game screen's fourth slot, `fill`, drawn **directly under the card** on
+  the plan lead ([ADR-0175](../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+  §4): a **challenge** act reached from a game, composed by `plans` through
+  `challenges/types.ts` and handed its rule as `offered` — a seat open, and the moment ahead. It
+  is the one act the screen draws for the court: `Call it off` is gone for everybody, `Leave
+  this game` is the Chats row's swipe alone, and `Open the chat` is the Now card's bubble and
+  the tab. The slot was `courtActs`, drawn last with the three. _Avoid_: `plans` learning what
+  a seat's answer is, an act mounted and unmounted by its rule rather than handed it, any of
+  these on the card or in the chat, and a leave or a call-off anywhere on the screen.
 
 ### The sportsmanship card
 

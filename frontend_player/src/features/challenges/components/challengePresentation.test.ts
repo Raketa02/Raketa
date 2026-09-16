@@ -21,6 +21,7 @@ import {
 } from '../domain/standing';
 
 import {
+  NOBODY_FILLED_THE_SEAT,
   CHALLENGES_HEADING,
   CHALLENGE_SCREEN_TITLE,
   MUTUAL_YES,
@@ -245,13 +246,29 @@ describe('an ended row names whose act ended it', () => {
     );
   });
 
-  it('says who called the game off, and *You* where it was the reader', () => {
-    expect(standingLine({ side: 'invitee', standing: 'CALLED_OFF', ...BY_SOMEBODY })).toBe(
-      'niepokonany called the game off',
+  /**
+   * **The hour's sentence** ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+   * §3): the wire names nobody by design, and the row says nobody filled the seat — to the
+   * organiser and to an invitee alike, since it is nobody's act.
+   */
+  it('says nobody filled the seat where the hour called it off', () => {
+    const theHour = { endedBy: { kind: 'unknown' }, byADeparture: false, byNobody: true } as const;
+    expect(standingLine({ side: 'organiser', standing: 'CALLED_OFF', ...theHour })).toBe(
+      NOBODY_FILLED_THE_SEAT,
     );
-    expect(standingLine({ side: 'invitee', standing: 'CALLED_OFF', ...BY_ME })).toBe(
-      'You called the game off',
+    expect(standingLine({ side: 'invitee', standing: 'CALLED_OFF', ...theHour })).toBe(
+      NOBODY_FILLED_THE_SEAT,
     );
+  });
+
+  /** *{name} called the game off* went with the press (ADR-0175 §1): nobody's seat says it. */
+  it('never says anybody called the game off', () => {
+    for (const facts of [BY_SOMEBODY, BY_ME, left]) {
+      expect(standingLine({ side: 'invitee', standing: 'CALLED_OFF', ...facts })).not.toMatch(
+        /called the game off/,
+      );
+    }
+    expect(standingLine({ side: 'invitee', standing: 'CALLED_OFF', ...BY_ME })).toBe('You left');
   });
 
   it('says who left and that nobody else is coming, on a court that never became a game', () => {

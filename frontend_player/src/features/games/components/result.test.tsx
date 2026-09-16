@@ -12,7 +12,7 @@
  * is the deck's to change and the rules are not.
  */
 
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { AppError } from '@/shared/errors';
 
@@ -38,6 +38,7 @@ import {
 
 import {
   ACCEPT_LABEL,
+  CALLED_OFF_FOR_LACK_OF_PLAYERS,
   CANCEL_LABEL,
   COUNTER_IS_THEIR_SCORE,
   COUNTER_LABEL,
@@ -55,7 +56,6 @@ import {
   submitLabel,
 } from './gamePresentation';
 import { gameErrorMessage } from './gameErrorMessage';
-import { gameKeys } from '../hooks/gameKeys';
 
 const GAME_ID = '8f14e45f-ceea-467a-9dd1-4bd9c39d4a58';
 const CHALLENGE_ID = 'cccccccc-0000-4000-8000-000000000003';
@@ -585,6 +585,7 @@ describe('the ends', () => {
    * line the ticket fixes, the ghost's own body — nothing anybody is measured on moves — and
    * nothing to press: no plan, no doors, no act on the court, and no pairing asked for, because
    * the read is `enabled` on `AWAITING_ENTRY` alone and answers `pairing_is_history` anyway.
+   * With `called_off_by` null it is the hour's (ADR-0175 §3), and the body says so.
    */
   it('reads a called-off game as its fourth end and offers nothing', async () => {
     await openGame(
@@ -595,9 +596,10 @@ describe('the ends', () => {
       }),
     );
 
-    expect(screen.getByText(resultTitle({ kind: 'called-off' }))).toBeTruthy();
-    expect(screen.getByText(standingLine({ kind: 'called-off' }, READ_AT))).toBeTruthy();
-    expect(screen.getByText(resultBody({ kind: 'called-off' })!)).toBeTruthy();
+    const ending = { how: 'the-hour', format: 'singles' } as const;
+    expect(screen.getByText(resultTitle({ kind: 'called-off', ending }))).toBeTruthy();
+    expect(screen.getByText(standingLine({ kind: 'called-off', ending }, READ_AT))).toBeTruthy();
+    expect(screen.getByText(resultBody({ kind: 'called-off', ending })!)).toBeTruthy();
     expect(screen.queryByText(WE_PLAYED)).toBeNull();
     expect(screen.queryByText(ENTER_LABEL)).toBeNull();
     expect(screen.queryByText(/Open the chat/)).toBeNull();
@@ -641,7 +643,7 @@ describe('the ends', () => {
       const ending = { by: tomek, how: 'departure', format: 'singles' } as const;
       expect(screen.getByText(resultTitle({ kind: 'called-off', ending }))).toBeTruthy();
       expect(screen.getByText(resultBody({ kind: 'called-off', ending })!)).toBeTruthy();
-      expect(screen.getByText(standingLine({ kind: 'called-off' }, READ_AT))).toBeTruthy();
+      expect(screen.getByText(standingLine({ kind: 'called-off', ending }, READ_AT))).toBeTruthy();
     });
 
     it('says a doubles game was called off for lack of players, and who was the last to leave', async () => {
@@ -662,7 +664,12 @@ describe('the ends', () => {
       expect(screen.getByText(resultBody({ kind: 'called-off', ending })!)).toBeTruthy();
     });
 
-    it('names the presser in the heading where the button ended it, and You for the reader', async () => {
+    /**
+     * **Whoever `called_off_by` names, the heading is the shortage's** (ADR-0175 §1): nobody
+     * presses a call-off any more, and a record naming somebody still seated — written while
+     * somebody could — folds as a departure by the person it names.
+     */
+    it('never heads the ending with a presser', async () => {
       const court: Wire['GameSchema']['seats'] = [
         { side: 'A', player_id: ME, name: 'me_' },
         { side: 'A', player_id: PARTNER, name: 'kasia_w' },
@@ -671,17 +678,8 @@ describe('the ends', () => {
       ];
       await openGame(calledOff(court, { player_id: OPPONENT, name: THEIR_HANDLE }));
 
-      const theirs = { by: tomek, how: 'press', format: 'doubles' } as const;
-      expect(screen.getByText(resultTitle({ kind: 'called-off', ending: theirs }))).toBeTruthy();
-      expect(screen.getByText(resultBody({ kind: 'called-off', ending: theirs })!)).toBeTruthy();
-
-      stubGames(transport, [calledOff(court, { player_id: ME, name: 'me_' })], READ_AT);
-      await act(() => queryClient.invalidateQueries({ queryKey: gameKeys.list() }));
-
-      const mine = { by: { kind: 'you' }, how: 'press', format: 'doubles' } as const;
-      expect(
-        await screen.findByText(resultTitle({ kind: 'called-off', ending: mine })),
-      ).toBeTruthy();
+      expect(screen.getByText(CALLED_OFF_FOR_LACK_OF_PLAYERS)).toBeTruthy();
+      expect(screen.queryByText(/called the game off/)).toBeNull();
     });
   });
 
