@@ -190,3 +190,18 @@ export { CallOff, type CallOffProps } from './components/CallOff';
  */
 export { CALL_IT_OFF } from './components/callOffPresentation';
 export { LEAVE_THIS_GAME } from './components/leaveGamePresentation';
+
+/**
+ * **This feature's list key, and the one write to it another feature may make** — crossed for the
+ * dismissal, the act on `games` that clears a called-off court from the reader's two lists at once
+ * ([ADR-0173](../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)).
+ *
+ * The **key** crosses on `gameKeys`' argument in the other direction: what `features/games` owes
+ * this list is the statement that it is now out of date, and spelling `['challenges']` at the call
+ * site would be the same coupling with nothing holding the two spellings equal. The **drop**
+ * crosses on `dropRoomOfChallenge`'s: the reply has told the client the row is gone, so it goes on
+ * the reply, and which rows a game id touches is decided here where the row's shape is known. The
+ * query does not cross — a game act has no business reading a challenge.
+ */
+export { dropCourtOfGame } from './hooks/challengeCache';
+export { challengeKeys } from './hooks/challengeKeys';

@@ -477,6 +477,17 @@ export function rowHasAClockOfYours(challenge: Challenge, playerId: string): boo
 export const CALLED_OFF_TAG = 'Called off';
 
 /**
+ * **The word behind a swiped `Called off` row** — the dismissal, the Now card's trash met from
+ * the other list a called-off court is drawn on
+ * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)).
+ * *This row* and not *the challenge*: the withdraw's word is *Remove the challenge* and ends a
+ * court for the people asked; this ends nothing and removes what the reader is looking at, on
+ * every device, for good. Named by what it does on the surface it is pressed from, as *Remove
+ * this card* is on the card — one act, two words, each exact where it is read.
+ */
+export const REMOVE_THIS_ROW = 'Remove this row';
+
+/**
  * Which standing wears the tag — **the standing, and nothing else**: whose act it was and whether
  * the reader is the presser change the sentence, never the tag. A `Record` keyed by the union, so
  * an eighth standing decides here whether it wears one rather than inheriting *no*. It and the

@@ -32,6 +32,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
+import { challengeKeys, dropCourtOfGame } from '@/features/challenges/types';
 
 import type { Game } from '../domain/game';
 import { acceptResult } from '../use-cases/acceptResult';
@@ -104,7 +105,14 @@ export function useAcceptResult() {
  * round trip earlier — `useLeaveGame`'s argument for the leaver's own rows, one feature over.
  * The list is then re-read as well, because the reply is one card and the list is every card.
  *
- * **A refusal re-reads the list and says nothing**: `game_is_not_called_off` means the card the
+ * **And the challenge row goes with the card**
+ * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)):
+ * a called-off court is one fact on two of the reader's lists, and `GET /challenges` now
+ * subtracts its reader off the same set — so the row is dropped on the reply through the one
+ * write that list lets another feature make, and re-read as well. One act, met from the Now
+ * card's trash or from the Chats row's swipe, with one cache effect declared here.
+ *
+ * **A refusal re-reads both lists and says nothing**: `game_is_not_called_off` means the card the
  * reader pressed is not the card the server holds, and the fold the re-read lands on is the
  * answer, as it is for a stale fill. Pending, never optimistic — the card stays until the reply
  * says it is gone — and it pauses offline like every act in this feature: nothing about a
@@ -119,10 +127,13 @@ export function useDismissGame() {
       client.setQueryData<readonly Game[] | undefined>(gameKeys.list(), (held) =>
         held?.filter((game) => game.gameId !== gameId),
       );
+      dropCourtOfGame(client, gameId);
       void client.invalidateQueries({ queryKey: gameKeys.list() });
+      void client.invalidateQueries({ queryKey: challengeKeys.list() });
     },
     onError: () => {
       void client.invalidateQueries({ queryKey: gameKeys.list() });
+      void client.invalidateQueries({ queryKey: challengeKeys.list() });
     },
   });
 }

@@ -6,11 +6,13 @@
  *
  * ## Why no sheet
  *
- * The act removes a card and not a fact: the challenge row and the screen behind it keep the news
- * for their day, the record is untouched, and nobody else's rail moves. A confirmation would put
- * the withdraw's ceremony on the least consequential act in the app. It is instant, and the card
- * leaves the rail on the reply — a mis-tap loses the card and nothing else, which the record names
- * as the cost and accepts.
+ * The act removes a court from the reader's own lists and not a fact: the record is untouched,
+ * and nobody else's rail moves. A confirmation would put the withdraw's ceremony on the least
+ * consequential act in the app. It is instant, and the card leaves the rail on the reply — and
+ * the challenge's Chats row with it, since
+ * [ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md):
+ * a mis-tap loses the card and the row and nothing else, which the record names as the cost and
+ * accepts. The row's own swipe reveals the same act under *Remove this row*.
  *
  * ## The second icon-only button in the app, on the first one's shape
  *

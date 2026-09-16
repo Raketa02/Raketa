@@ -67,6 +67,17 @@ export {
 export { RemoveCard, type RemoveCardProps } from './components/RemoveCard';
 
 /**
+ * **The dismissal itself, for the Chats row** — the same act the trash above sends, met from the
+ * other list a called-off court is drawn on
+ * ([ADR-0173](../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)).
+ * `features/challenges` draws the row and reveals the door; what it cannot own is the act, which
+ * is this feature's route and this feature's cache effect — on both lists, declared once. The
+ * hook crosses rather than a second control, because the row decides what a door looks like
+ * there, as it does for the departure and the removal.
+ */
+export { useDismissGame } from './hooks/useGames';
+
+/**
  * The route's own check on the id it is handed, because a route param is attacker-controlled and
  * this one becomes a path that appends a score to somebody's stream — and **where that route is**,
  * for the feature that pushes it.

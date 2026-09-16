@@ -11,6 +11,7 @@ import {
   challengeStands,
   holdsTheExit,
   leavingWouldEnd,
+  mayDismiss,
   mayRemove,
   pairAlreadyPlaying,
   playersStillIn,
@@ -203,6 +204,61 @@ describe('who may remove the challenge', () => {
     }
     const { standing: _unread, ...unreadable } = justSent;
     expect(mayRemove(unreadable, ME)).toBe(false);
+  });
+});
+
+/**
+ * **Who may clear a called-off court** — anybody still seated on it, on `CALLED_OFF` and nothing
+ * else (ADR-0173). The row's reveal decision for the one ending that moves.
+ */
+describe('who may clear a called-off court', () => {
+  const GAME = 'g1';
+
+  /** The court both readings fit: my four, everybody accepted, and the three of them left. */
+  const leftAloneOn = {
+    ...challenge('CALLED_OFF', [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: BEA, answer: 'LEFT' },
+      { playerId: CYRYL, answer: 'LEFT' },
+      { playerId: 'dorota', answer: 'LEFT' },
+    ]),
+    gameId: GAME,
+    endedBy: 'dorota',
+  };
+
+  it('is the one left behind’s, and not a leaver’s', () => {
+    expect(mayDismiss(leftAloneOn, ME)).toBe(true);
+    expect(mayDismiss(leftAloneOn, BEA)).toBe(false);
+    expect(mayDismiss(leftAloneOn, 'dorota')).toBe(false);
+  });
+
+  it('is everybody still seated’s when somebody pressed Call it off, the presser included', () => {
+    const pressed = {
+      ...challenge('CALLED_OFF', [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: BEA, answer: 'ACCEPTED' },
+        { playerId: CYRYL, answer: 'LEFT' },
+        { playerId: 'dorota', answer: 'ACCEPTED' },
+      ]),
+      gameId: GAME,
+      endedBy: BEA,
+    };
+
+    expect(mayDismiss(pressed, ME)).toBe(true);
+    expect(mayDismiss(pressed, BEA)).toBe(true);
+    expect(mayDismiss(pressed, CYRYL)).toBe(false);
+    expect(mayDismiss(pressed, 'stranger')).toBe(false);
+  });
+
+  it('is nobody’s on any other standing, or on a court with no game behind it', () => {
+    for (const standing of STANDINGS) {
+      if (standing === 'CALLED_OFF') continue;
+      expect(mayDismiss({ ...leftAloneOn, standing }, ME)).toBe(false);
+    }
+    const { standing: _unread, ...unreadable } = leftAloneOn;
+    expect(mayDismiss(unreadable, ME)).toBe(false);
+    const { gameId: _none, ...neverAGame } = leftAloneOn;
+    expect(mayDismiss(neverAGame, ME)).toBe(false);
   });
 });
 

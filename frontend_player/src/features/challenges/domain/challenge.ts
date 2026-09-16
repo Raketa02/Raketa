@@ -245,6 +245,28 @@ export function mayRemove(
 }
 
 /**
+ * **Whether this reader may clear a called-off court from their lists** — the row on Chats and
+ * the card on Now, which are one court and go together
+ * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)):
+ * the challenge is `CALLED_OFF`, it has a game (every called-off court does — the standing is
+ * reached only once a line-up completed), and the reader is **still on it**, holding an accepted
+ * seat. A leaver's seat reads `LEFT` and their own row left the inbox at once; the server answers
+ * them as a stranger, so the row never offers what it would refuse.
+ *
+ * The act behind it is the game card's dismissal, unchanged in what it sends — one act, one fact,
+ * and the challenge list subtracts its reader off the same set the rail does. It is the one row
+ * on the ended shelf that moves, because it is the one ending whose row carries nothing the
+ * reader is owed for a day: the news is theirs alone, and they have read it.
+ */
+export function mayDismiss(
+  challenge: Pick<Challenge, 'standing' | 'seats' | 'gameId'>,
+  playerId: string,
+): boolean {
+  if (challenge.standing !== 'CALLED_OFF' || challenge.gameId === undefined) return false;
+  return challenge.seats.some((seat) => seat.playerId === playerId && seat.answer === 'ACCEPTED');
+}
+
+/**
  * **Nobody besides the organiser holds an accepted seat** — the court is the organiser's alone,
  * whatever seats are still deciding and whoever has already given theirs up.
  *

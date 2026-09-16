@@ -823,7 +823,9 @@ export interface paths {
          *
          *     **The standing is derived, never stored.** It is folded from the seats and the clock at the moment you asked, so a seat whose day ran out reads as lapsed whether or not anything has swept it yet.
          *
-         *     **Ended challenges are here too**, carrying `DECLINED`, `LAPSED` or `WITHDRAWN`. A list that quietly dropped this morning's is a list that lies.
+         *     **Ended challenges are here too**, carrying `DECLINED`, `LAPSED`, `WITHDRAWN` or `CALLED_OFF`. A list that quietly dropped this morning's is a list that lies.
+         *
+         *     **Except the one you cleared yourself.** A `CALLED_OFF` row whose game you dismissed (`POST /games/{game_id}/dismissal`) is left off this list as it is left off `GET /games`: one court, one act, and both of your lists read the same set. Nobody else's list moves.
          *
          *     **This is also the remedy for `open_challenge_stands`.** A refused send names nobody; read this to find out which of your own open games is in the way.
          */
@@ -1305,9 +1307,9 @@ export interface paths {
         put?: never;
         /**
          * Remove this card
-         * @description **Clear a called-off game's card from your own rail** (`docs/adr/0172` §5). Yours alone: nobody else's rail moves, the game and its record are untouched, and the challenge's row and the screen behind it keep the news for their day. It is instant and there is no undo — a mis-tap loses the card and nothing else, which is why there is no sheet.
+         * @description **Clear a called-off court from your own two lists** — the game's card from Now and the challenge's row from Chats (`docs/adr/0172` §5, `docs/adr/0173`). Yours alone: nobody else's lists move, and the game, its record and the challenge are untouched. It is instant and there is no undo — a mis-tap loses the card and the row and nothing else, which is why there is no sheet.
          *
-         *     **Recorded on the game, once per player**, so the card is gone on your other phone and after a reinstall; `GET /games` subtracts it on every read rather than keeping a list.
+         *     **Recorded on the game, once per player**, so the card and the row are gone on your other phone and after a reinstall; `GET /games` and `GET /challenges` each subtract it on every read rather than keeping a list.
          *
          *     **Only on a game that is `CALLED_OFF`**, and only for somebody on its court — the presser, or the players the leaver left; the leaver's seat is open and the card was never on their rail.
          *
