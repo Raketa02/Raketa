@@ -29,8 +29,8 @@
  * per branch.
  */
 
-import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader, theme } from '@/shared/ui';
@@ -76,6 +76,15 @@ export interface ShellScreenProps {
    * opt-in.
    */
   readonly onBack?: () => void;
+  /**
+   * **Pull to refresh**, for a screen whose page is a list the server moves — **forwarded, not
+   * designed.** The screen says what a pull re-reads and this draws the control: the platform's
+   * own, over the page, spinning from the pull until the promise settles and never for a refetch
+   * the player did not ask for — the *refreshing* state the query rule keeps apart from initial
+   * load and background refresh. Absent everywhere the page is not such a list, which is what
+   * keeps the gesture meaning something where it is offered.
+   */
+  readonly onRefresh?: () => Promise<unknown>;
   readonly children: ReactNode;
 }
 
@@ -94,13 +103,52 @@ export function ShellScreen({
   fill = false,
   action,
   onBack,
+  onRefresh,
   children,
 }: ShellScreenProps) {
+  /**
+   * Whether a pull is in flight — the pull's own state, never the queries': a background refetch
+   * must not spin the control, and a pull must spin it until everything it asked for has landed,
+   * refused or not. Route-local, because it is a fact about a gesture. The ref is the guard and
+   * the state is the drawing: a second `refresh` event in the same tick reads the ref, which is
+   * already set, where the state it would read has not rendered yet.
+   */
+  const [refreshing, setRefreshing] = useState(false);
+  const inFlight = useRef(false);
+
+  async function pull(): Promise<void> {
+    if (onRefresh === undefined || inFlight.current) return;
+    inFlight.current = true;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } catch {
+      // A refused re-read is the queries' own to say, on the sections that read them; the
+      // control's one job is to stop spinning.
+    } finally {
+      inFlight.current = false;
+      setRefreshing(false);
+    }
+  }
+
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <ScreenHeader title={title} eyebrow={eyebrow} lead={lead} right={right} onBack={onBack} />
 
-      <ScrollView contentContainerStyle={[s.content, fill ? s.fill : undefined]}>
+      <ScrollView
+        contentContainerStyle={[s.content, fill ? s.fill : undefined]}
+        refreshControl={
+          onRefresh === undefined ? undefined : (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void pull()}
+              tintColor={theme.color.muted}
+              colors={[theme.color.muted]}
+              progressBackgroundColor={theme.color.paper}
+            />
+          )
+        }
+      >
         {children}
       </ScrollView>
 

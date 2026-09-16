@@ -27,6 +27,14 @@
  * the game screen (ADR-0149 §1): the section says what a row needs from an act, the challenges
  * feature exports a component that satisfies it, and neither names the other.
  *
+ * **A pull re-reads both lists, and the control spins until both have answered.** The two
+ * queries already re-read on return and on focus; what a pull adds is the player asking, on a
+ * screen where a row they are waiting for arrives from somebody else's act. The tab says *what*
+ * — the two keys its sections read, marked stale and awaited — and `ShellScreen` draws the
+ * control, so a screen that is not such a list draws nothing. Invalidated rather than refetched
+ * by name: the sections own their queries, and a mounted query marked stale is re-read by the
+ * hook that holds it.
+ *
  * The panel stays last: it explains the limit rather than announcing it, so it belongs under what
  * a player came here to read rather than above it.
  *
@@ -34,16 +42,26 @@
  * with a glyph, and the right register for a sentence about how the product works.
  */
 
-import { ChallengesSection, DepartureDoor } from '@/features/challenges/types';
-import { ConversationsSection } from '@/features/conversations/types';
+import { useQueryClient } from '@tanstack/react-query';
+
+import { ChallengesSection, DepartureDoor, challengeKeys } from '@/features/challenges/types';
+import { ConversationsSection, conversationKeys } from '@/features/conversations/types';
 import { Note } from '@/shared/ui';
 
 import { ShellScreen } from './ShellScreen';
 import { CHATS_COPY } from './shellCopy';
 
 export function ChatsScreen() {
+  const client = useQueryClient();
+
+  const reReadBothLists = () =>
+    Promise.all([
+      client.invalidateQueries({ queryKey: challengeKeys.list() }),
+      client.invalidateQueries({ queryKey: conversationKeys.list() }),
+    ]);
+
   return (
-    <ShellScreen title={CHATS_COPY.title}>
+    <ShellScreen title={CHATS_COPY.title} onRefresh={reReadBothLists}>
       <ChallengesSection empty={CHATS_COPY.emptyChallenges} />
       <ConversationsSection empty={CHATS_COPY.emptyConversations} act={DepartureDoor} />
 

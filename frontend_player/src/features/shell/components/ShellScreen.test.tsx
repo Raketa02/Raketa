@@ -9,9 +9,9 @@
  * rather than as a bug.
  */
 
-import { render, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Children, type ReactNode } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { RefreshControl, ScrollView, Text } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, type Metrics } from 'react-native-safe-area-context';
 
 import { ShellScreen } from './ShellScreen';
@@ -102,5 +102,89 @@ describe('the safe area', () => {
     // and this is the app's decision: the screen asks for the top inset and asks for no
     // other. The bottom one is the bar's, and `TabBar` has its own suite proving it takes it.
     expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).toEqual(['top']);
+  });
+});
+
+/**
+ * **Pull to refresh is forwarded, not designed**: a screen that says what a pull re-reads gets
+ * the platform's control over its page, spinning from the pull until what it asked for has
+ * settled; a screen that says nothing gets no control at all, so the gesture means something
+ * where it is offered. The spinner is the pull's own — never a background refetch's.
+ */
+describe('pull to refresh', () => {
+  function renderRefreshing(onRefresh?: () => Promise<unknown>) {
+    return render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <ShellScreen title="Chats" onRefresh={onRefresh}>
+          <Text>the page</Text>
+        </ShellScreen>
+      </SafeAreaProvider>,
+    );
+  }
+
+  const control = () => screen.UNSAFE_getByType(RefreshControl);
+
+  it('draws no control on a screen that re-reads nothing', () => {
+    renderRefreshing();
+
+    expect(scroller().props.refreshControl).toBeUndefined();
+  });
+
+  it('spins from the pull until what it asked for has settled, refused or not', async () => {
+    let settle: () => void = () => {};
+    const onRefresh = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    renderRefreshing(onRefresh);
+    expect(control().props.refreshing).toBe(false);
+
+    await act(async () => {
+      fireEvent(control(), 'refresh');
+    });
+
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(control().props.refreshing).toBe(true);
+
+    await act(async () => {
+      settle();
+    });
+    expect(control().props.refreshing).toBe(false);
+
+    // A refusal settles it too — a spinner that never stopped would be a lie about the read.
+    const refused = jest.fn(() => Promise.reject(new Error('refused')));
+    screen.unmount();
+    renderRefreshing(refused);
+    await act(async () => {
+      fireEvent(control(), 'refresh');
+    });
+    expect(control().props.refreshing).toBe(false);
+  });
+
+  it('asks once for one pull, however many times the gesture fires while it is in flight', async () => {
+    let settle: () => void = () => {};
+    const onRefresh = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    renderRefreshing(onRefresh);
+
+    await act(async () => {
+      fireEvent(control(), 'refresh');
+      fireEvent(control(), 'refresh');
+    });
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      settle();
+    });
+    await act(async () => {
+      fireEvent(control(), 'refresh');
+    });
+    expect(onRefresh).toHaveBeenCalledTimes(2);
   });
 });
