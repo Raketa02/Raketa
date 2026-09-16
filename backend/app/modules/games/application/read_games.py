@@ -14,7 +14,10 @@ whose seat is vacated and cannot supply the name.
 
 **And the rail subtracts its reader** (``docs/adr/0172`` §5): a game the reader
 has dismissed is left off their list, derived on every read off the set the
-aggregate folds. Nobody else's list moves, and nothing else reads that set.
+aggregate folds. Nobody else's list moves. The one other read of that set is the
+challenge inbox's, which subtracts the same reader off the same set so the row
+goes with the card (``docs/adr/0173``) — asked through ``challenges``' own port
+as one membership, never handed the set.
 """
 
 from __future__ import annotations

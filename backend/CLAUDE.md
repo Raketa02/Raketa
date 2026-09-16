@@ -685,8 +685,9 @@ Rules to preserve:
   answers `204`, admitted on a `CALLED_OFF` game for somebody on its court and refused with
   `game_is_not_called_off` on every other standing; `GameDismissed` is recorded once per
   player (`games.dismissed`, a second press writes nothing), the aggregate folds the set,
-  and `ReadGames` subtracts its reader — nothing else reads it, and the room it might have
-  reached is gone before a card can be dismissed. **Three ends
+  and `ReadGames` subtracts its reader — as does `ReadChallenges`, through `GameOfCourtQuery`'s
+  `dismissed_of`, so the challenge row goes with the card (ADR-0173); nothing else reads it,
+  and the room it might have reached is gone before a card can be dismissed. **Three ends
   are folded from the record and the clock and the fourth is announced, and all four are
   never stored** — there is no `ResultConfirmed`, no sweep and no job, because a derived
   standing has exactly one place to be true, and `GameCalledOff` may announce its end

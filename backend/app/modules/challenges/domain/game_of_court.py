@@ -17,6 +17,16 @@ is asked of ``games`` at the read, on the arrow that already carries three
 reads, and asked **only about the courts the fold says have been a game**: a
 list with none costs nothing, and ``null`` is the fold's answer rather than the
 other context's.
+
+**And one second question, the reader's own** (``docs/adr/0173``): which of
+these courts has *this reader* cleared? A called-off court is one fact drawn on
+two of the reader's lists — the row on Chats and the card on Now — and the
+dismissal ADR-0172 §5 recorded on the game is the act that clears it. The row
+goes with the card because they are one court, so the inbox subtracts its reader
+off the same set the rail does, and asks about it here rather than folding a
+second copy. It is a question about the reader and never about the game: what
+crosses is *yes or no for you*, not who else has cleared it, and not the game's
+standing, its court or its ending, which the challenge's own fold answers.
 """
 
 from __future__ import annotations
@@ -48,6 +58,25 @@ class GameOfCourtQuery(Protocol):
         is a broken store rather than a state, and it is the caller's to refuse.
         A read that cannot complete raises, and the read that holds it decides
         what that costs.
+        """
+        ...
+
+    async def dismissed_of(
+        self, challenge_ids: Collection[UUID], *, by: UUID
+    ) -> frozenset[UUID]:
+        """Which of these courts' games this player has dismissed, keyed by
+        challenge id — the reader's own act, read for the reader's own inbox
+        (``docs/adr/0173``).
+
+        **Bulk, keyed by challenge, and about one person**, on ``games_of``'s
+        argument for the first two: the caller's question is about courts it
+        minted, and the answer comes back in the same currency. About one person
+        because a dismissal is *their act, and nobody else's fact*
+        (``docs/adr/0172`` §5): the inbox is one reader's, and who else has
+        cleared a card is nothing it may act on. A court with no game behind it,
+        or whose game this player has not cleared, is simply absent; the caller
+        asks only about courts whose fold says ``CALLED_OFF``, the one standing
+        a dismissal is admitted on, so a list with none costs nothing.
         """
         ...
 

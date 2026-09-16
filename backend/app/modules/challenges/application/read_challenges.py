@@ -16,6 +16,14 @@ quietly dropped it would be the same class of lie as a read-back that got shorte
 There is no filter parameter: a client that wants only the live ones has the
 standing on every row.
 
+**Except the one the reader cleared themselves** (``docs/adr/0173``). A called-off
+court is one fact on two of the reader's lists, and the dismissal ADR-0172 §5
+recorded on its game — *their act, and nobody else's fact* — clears both: this
+read subtracts its reader off the same set ``GET /games`` does, asked of ``games``
+about the ``CALLED_OFF`` rows only, since that is the one standing a dismissal is
+admitted on. Nobody else's inbox moves, and the row a reader has not cleared keeps
+its day like every ending.
+
 **It is also the remedy for a refused send.** When a send is refused on the pair
 rule the client re-reads this, because an open game of the organiser's was always
 theirs to read — so naming the pair here costs nothing the refusal was protecting.
@@ -185,6 +193,17 @@ def been_a_game(challenges: Iterable[Challenge]) -> list[UUID]:
     return sorted(one.id for one in challenges if one.has_become_a_game())
 
 
+def called_off(rows: Iterable[StandingChallenge]) -> list[UUID]:
+    """The ids of the courts the fold says are ``CALLED_OFF``, sorted — the only
+    ones ``games`` is asked about a dismissal on, for ``been_a_game``'s reason
+    and on its rule: a dismissal is admitted on that standing alone
+    (``docs/adr/0172`` §5), so nothing else can be cleared."""
+
+    return sorted(
+        row.challenge.id for row in rows if row.standing is Standing.CALLED_OFF
+    )
+
+
 @final
 class ReadChallenges:
     """Every challenge this player holds a seat in, newest first."""
@@ -223,7 +242,12 @@ class ReadChallenges:
         that is what changes silently.
 
         **One game read for the whole list too**, over the courts the fold says
-        have been a game and no others (``docs/adr/0172`` §4).
+        have been a game and no others (``docs/adr/0172`` §4) — **and one more,
+        about the reader**, over the rows the fold says are ``CALLED_OFF`` and
+        no others: which of them they have cleared (``docs/adr/0173``). The
+        subtraction is here and nowhere else, after the fold, because the
+        standing decides what to ask about and a dismissal exists on nothing
+        but a called-off game.
         """
 
         now = instant(self._clock.now())
@@ -239,7 +263,11 @@ class ReadChallenges:
             )
         )
         games = await self._court_games.games_of(been_a_game(found))
-        return now, tuple(
+        rows = tuple(
             StandingChallenge.folded(challenge, now=now, names=names, games=games)
             for challenge in found
         )
+        cleared = await self._court_games.dismissed_of(
+            called_off(rows), by=command.reader_id
+        )
+        return now, tuple(row for row in rows if row.challenge.id not in cleared)

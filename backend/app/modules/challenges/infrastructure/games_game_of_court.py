@@ -8,11 +8,14 @@ was built to make the opening idempotent inside the accept's own transaction —
 the same lookup with the id read off the end. A second read declaring the same
 join would be a second place for *one arrangement is one game* to be true.
 
-**It translates a game into its id and nothing else.** What crosses this seam
-is which of the ids the caller asked about stand for which game; the game's
-standing, its court and its ending do not cross, because a challenge read given
-them would eventually act on them — and the challenge's own copy of the ending
-is the one the row reads (``docs/adr/0172`` §1).
+**It translates a game into its id, and into one reader's yes-or-no, and
+nothing else.** What crosses this seam is which of the ids the caller asked
+about stand for which game, and — since ``docs/adr/0173`` — whether the one
+reader asking has dismissed that game; the game's standing, its court and its
+ending do not cross, because a challenge read given them would eventually act
+on them — and the challenge's own copy of the ending is the one the row reads
+(``docs/adr/0172`` §1). The dismissal crosses because it is the reader's act
+and not the game's fact, and it crosses as a membership rather than as the set.
 """
 
 from __future__ import annotations
@@ -52,6 +55,22 @@ class GamesGameOfCourt:
             if game is not None:
                 games[challenge_id] = game.game_id
         return games
+
+    async def dismissed_of(
+        self, challenge_ids: Collection[UUID], *, by: UUID
+    ) -> frozenset[UUID]:
+        """The courts among these whose game this player has cleared — the same
+        walk as :meth:`games_of`, over the called-off subset the inbox hands it,
+        reading the set the game folds and answering for one person off it
+        (``docs/adr/0173``). The set itself does not cross: it is read here and
+        one membership leaves."""
+
+        cleared: set[UUID] = set()
+        for challenge_id in sorted(set(challenge_ids)):
+            game = await self._games.for_challenge(challenge_id)
+            if game is not None and by in game.dismissed:
+                cleared.add(challenge_id)
+        return frozenset(cleared)
 
 
 __all__ = ["GamesGameOfCourt"]

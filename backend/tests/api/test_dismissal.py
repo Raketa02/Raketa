@@ -4,8 +4,10 @@ every read (``docs/adr/0172`` §5).
 **The first test is #448's tenth story.** Rafa clears the called-off card: it
 leaves his rail on the reply and stays cleared on every device, because it is
 recorded on the game and subtracted on every read of ``GET /games`` — and
-nobody else's rail moves, the record is untouched, and the challenge's row keeps
-its day.
+nobody else's rail moves and the record is untouched. **The challenge's row goes
+with the card** (``docs/adr/0173``): one act clears one court from the reader's
+two lists, so ``GET /challenges`` subtracts its reader off the same set, and the
+others' rows keep their day.
 
 Everything after it is what the record decided: that a second press answers the
 same and writes nothing; that a live game, a ghost and a played game each refuse
@@ -67,15 +69,33 @@ async def _withdraw(client, token: str, challenge_id: str):
     )
 
 
+async def _row(client, token: str, challenge_id: str) -> dict | None:
+    """This court's row on this reader's inbox, or ``None`` because the inbox
+    does not list it."""
+
+    response = await client.get("/api/v1/challenges", headers=world.auth(token))
+    assert response.status_code == 200, response.text
+    return next(
+        (
+            one
+            for one in response.json()["challenges"]
+            if one["challenge_id"] == challenge_id
+        ),
+        None,
+    )
+
+
 async def test_the_dismissal_clears_the_card_for_its_reader_and_nobody_else(
     client, session_factory, candidate_source, searcher, clock
 ):
     """One of a four leaves and another presses *Call it off*, so the organiser
     is left with a called-off card. Clearing it answers ``204`` and nothing; the
-    game is gone from **their** rail on the next read and on every read after —
-    and the two others still on the court when it ended still read it, the
-    challenge row still reads ``CALLED_OFF`` for its day naming the presser, and
-    the record is one event longer and otherwise untouched."""
+    game is gone from **their** rail on the next read and on every read after,
+    and so is the challenge row from **their** inbox — the same act, the same
+    set, read on the other list (``docs/adr/0173``). The two others still on the
+    court when it ended still read both: their card, and their row reading
+    ``CALLED_OFF`` for its day naming the presser. The record is one event
+    longer and otherwise untouched."""
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
@@ -101,17 +121,14 @@ async def test_the_dismissal_clears_the_card_for_its_reader_and_nobody_else(
         game = await _the_game(client, who["token"], challenge_id)
         assert game["standing"] == "CALLED_OFF", "nobody else's rail moves"
         assert game["called_off_by"]["player_id"] == str(people["bo"]["id"])
-    (row,) = [
-        one
-        for one in (
-            await client.get(
-                "/api/v1/challenges", headers=world.auth(searcher["token"])
-            )
-        ).json()["challenges"]
-        if one["challenge_id"] == challenge_id
-    ]
-    assert row["standing"] == "CALLED_OFF", "the row keeps the news for its day"
-    assert row["ended_by"] == str(people["bo"]["id"])
+    assert await _row(client, searcher["token"], challenge_id) is None, (
+        "the row goes with the card"
+    )
+    for who in (people["ana"], people["bo"]):
+        row = await _row(client, who["token"], challenge_id)
+        assert row is not None, "nobody else's inbox moves"
+        assert row["standing"] == "CALLED_OFF", "and their row keeps its day"
+        assert row["ended_by"] == str(people["bo"]["id"])
     assert await _game_stream(session_factory, before["game_id"]) == [
         "games.planned",
         "games.seat_vacated",
@@ -143,6 +160,48 @@ async def test_a_second_press_answers_the_same_and_writes_nothing(
     assert second.status_code == 204, second.text
     assert await _games(client, sender["token"]) == []
     assert (await _game_stream(session_factory, before["game_id"])).count(
+        "games.dismissed"
+    ) == 1
+
+
+async def test_the_one_left_behind_clears_the_row_the_departures_left_them(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """The court both readings fit (``docs/adr/0172`` §7): the organiser sent a
+    four, everybody accepted, and the three of them left one by one — the
+    third departure called the game off, and the organiser is alone on a row
+    reading *{name} left* under a ``Called off`` tag, with a day to wait. The
+    dismissal is theirs: the row is gone from their inbox on the next read and
+    on every read after, the game is gone from their rail, and the leavers —
+    whose own rows left at once and whose seats were vacated — are answered as
+    strangers, as before."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
+    game = await _the_game(client, searcher["token"], challenge_id)
+    for name in ("cy", "bo"):
+        assert (
+            await _leave(client, people[name]["token"], challenge_id)
+        ).status_code == 200
+    last = await _leave(client, people["ana"]["token"], challenge_id)
+    assert last.status_code == 200 and last.json()["standing"] == "CALLED_OFF"
+    before = await _row(client, searcher["token"], challenge_id)
+    assert before is not None and before["standing"] == "CALLED_OFF"
+    assert before["ended_by"] == str(people["ana"]["id"])
+
+    dismissed = await _dismiss(client, searcher["token"], game["game_id"])
+
+    assert dismissed.status_code == 204, dismissed.text
+    assert await _row(client, searcher["token"], challenge_id) is None
+    assert await _row(client, searcher["token"], challenge_id) is None, (
+        "and on every read after"
+    )
+    assert await _games(client, searcher["token"]) == []
+    for name in ("ana", "bo", "cy"):
+        refused = await _dismiss(client, people[name]["token"], game["game_id"])
+        assert refused.status_code == 403, refused.text
+        assert _refusal(refused)["code"] == "you_were_not_on_this_court"
+    assert (await _game_stream(session_factory, game["game_id"])).count(
         "games.dismissed"
     ) == 1
 

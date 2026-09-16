@@ -104,10 +104,14 @@ class RecordingHandles:
 
 class NoCourtHasAGame:
     """``GameOfCourtQuery`` for courts none of which has completed: the fold
-    never asks about one, and this answers nobody if it did."""
+    never asks about one, and this answers nobody if it did — and nobody has
+    cleared what was never a game."""
 
     async def games_of(self, challenge_ids):
         return {}
+
+    async def dismissed_of(self, challenge_ids, *, by):
+        return frozenset()
 
 
 def _reading(
@@ -181,9 +185,7 @@ async def test_the_list_is_newest_first(session_factory):
 
     async with session_factory() as session:
         first = await _record(session, a_tennis_challenge(invitee=ALICE, sent_at=at()))
-        second = await _record(
-            session, a_tennis_challenge(invitee=BOB, sent_at=at(2))
-        )
+        second = await _record(session, a_tennis_challenge(invitee=BOB, sent_at=at(2)))
 
         _, mine = await _reading(session, now=at(3)).execute(
             ReadChallengesCommand(reader_id=ORGANISER)

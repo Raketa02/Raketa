@@ -10,10 +10,12 @@ effect derived against the record on every read. A per-user *hidden games*
 table would be a projection with no fold behind it, and the first list this
 context kept that its aggregates did not.
 
-**It removes a card, not a fact.** The challenge row and the screen behind it
-keep the news for their day, the record is untouched, nobody else's rail moves,
-and there is no undo — which is why the trash has no sheet, and why this
-answers nothing: the thing a redraw would draw is the thing that was removed.
+**It removes a court from the reader's own lists, not a fact.** The record is
+untouched, nobody else's rail moves, and there is no undo — which is why the
+trash has no sheet, and why this answers nothing: the thing a redraw would draw
+is the thing that was removed. The challenge's row goes with the card
+(``docs/adr/0173``): the inbox subtracts its reader off the same set this
+writes to, so one act clears one court from both lists.
 
 **The permission is the one rule every act here shares** — the people who may
 act are the people on the court — and a stranger is refused as one, on the
