@@ -348,20 +348,20 @@ function travelled(): void {
 }
 
 /**
- * The view has **landed** at a width: a ±, a flight or a pinch has ended and the store holds
- * it. Read off the store rather than the counter, because the counter prints *10 km across*
- * for a fifth of a kilometre either side of ten and would let a walk assert the closer state
- * while the field is still a hair wide of it.
+ * The view has **landed** at a width: a ±, a flight or a pinch has run to its end, and the
+ * counter says so. Only after the clock has been driven past the flight: the counter prints
+ * *10 km across* for a fifth of a kilometre either side of ten, so read mid-flight it would let
+ * a walk assert the closer state while the field is still a hair wide of it.
  */
 function landedAt(km: number): void {
   travelled();
-  expect(useRadarView.getState().view?.widthKm).toBe(km);
+  expect(screen.getByText(widthAcross(km))).toBeTruthy();
 }
 
-/** ◉ has landed: nothing kept, which is home. */
+/** ◉ has landed: the opening width, and the whole cast in view. */
 function atHome(): void {
-  travelled();
-  expect(useRadarView.getState().view).toBeUndefined();
+  landedAt(18);
+  expect(screen.getByText(offScreen(0))).toBeTruthy();
 }
 
 /** Every string a node draws, in order — what a listener would hear the element say. */
@@ -459,8 +459,14 @@ describe('the reading', () => {
     expect(screen.getByText(widthAcross(10))).toBeTruthy();
     expect(cards()).toHaveLength(0);
     expect(screen.queryByRole('button', { name: FILIP_TILE })).toBeNull();
-    // The padel selection is kept for padel, and read by no other sport.
-    expect(useRadarView.getState().selection).toEqual({ sport: 'padel', playerId: FILIP });
+
+    // The padel selection was kept for padel: back on it, Filip's card is the one card at 10.
+    fireEvent.press(screen.getByLabelText('Padel'));
+    await screen.findByRole('button', { name: FILIP_TILE });
+    expect(cards()).toHaveLength(1);
+    expect(textOf(screen.getByRole('button', { name: FILIP_TILE }))).toContain(
+      TAP_FOR_THE_FULL_CARD,
+    );
   });
 });
 
@@ -537,8 +543,6 @@ describe('tapping, flying, selecting', () => {
     fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
 
     landedAt(FLY_TO_WIDTH_KM);
-    expect(screen.getByText(widthAcross(FLY_TO_WIDTH_KM))).toBeTruthy();
-    expect(useRadarView.getState().selection).toEqual({ sport: 'padel', playerId: FILIP });
     // At 3 km across everybody is a card, Filip among them.
     expect(cards()).toHaveLength(CAST.length);
     expect(textOf(screen.getByRole('button', { name: FILIP_TILE }))).toContain(
@@ -586,17 +590,13 @@ describe('tapping, flying, selecting', () => {
     fireEvent.press(screen.getByTestId('radar-field-empty', HIDDEN_TOO));
 
     await waitFor(() => expect(cards()).toHaveLength(0));
-    expect(useRadarView.getState().selection).toBeUndefined();
     // The zoom stays.
     expect(screen.getByText(widthAcross(10))).toBeTruthy();
-    expect(useRadarView.getState().view?.widthKm).toBe(10);
 
     home();
 
     atHome();
-    expect(screen.getByText(widthAcross(18))).toBeTruthy();
-    expect(useRadarView.getState().selection).toBeUndefined();
-    expect(screen.getByText(offScreen(0))).toBeTruthy();
+    expect(cards()).toHaveLength(0);
   });
 
   it('switches selection and flies when another face is tapped', async () => {
@@ -612,7 +612,6 @@ describe('tapping, flying, selecting', () => {
     fireEvent.press(screen.getByRole('button', { name: MAREK_TILE }));
 
     landedAt(FLY_TO_WIDTH_KM);
-    expect(useRadarView.getState().selection).toEqual({ sport: 'padel', playerId: MAREK });
     zoomOut();
     landedAt(5.4);
     zoomOut();
@@ -633,8 +632,14 @@ describe('tapping, flying, selecting', () => {
     fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
 
     expect(screen.getByText(widthAcross(FLY_TO_WIDTH_KM))).toBeTruthy();
-    expect(useRadarView.getState().view?.widthKm).toBe(FLY_TO_WIDTH_KM);
-    expect(useRadarView.getState().selection).toEqual({ sport: 'padel', playerId: FILIP });
+    // Selected at once too: zoomed out, and Filip's card is the one card.
+    zoomOut();
+    zoomOut();
+    expect(screen.getByText(widthAcross(10))).toBeTruthy();
+    expect(cards()).toHaveLength(1);
+    expect(textOf(screen.getByRole('button', { name: FILIP_TILE }))).toContain(
+      TAP_FOR_THE_FULL_CARD,
+    );
   });
 
   it('opens the record sheet from a card, read-only, and closes back to the field', async () => {
@@ -749,7 +754,6 @@ describe('the view is kept while the app lives', () => {
     expect(textOf(screen.getByRole('button', { name: FILIP_TILE }))).toContain(
       TAP_FOR_THE_FULL_CARD,
     );
-    expect(useRadarView.getState().view?.widthKm).toBe(10);
   });
 });
 
@@ -816,22 +820,21 @@ describe('the pinch and the drag', () => {
 
     expect(screen.getByText(offScreen(2))).toBeTruthy();
     expect(screen.getByText(playersInView(3))).toBeTruthy();
+    // A drag is a drag and not a zoom.
     expect(screen.getByText(widthAcross(18))).toBeTruthy();
-    const kept = useRadarView.getState().view;
-    expect(kept?.widthKm).toBe(18);
-    expect(kept?.centre.y).toBeLessThan(0);
   });
 
   it('rubber-bands at the reach’s edge: a drag past it settles back to it', async () => {
     await openRadar();
 
-    // 600 pt of drag at 18 km across is nearly 28 km — past a 10 km reach.
+    // 600 pt of drag at 18 km across is nearly 28 km — past a 10 km reach. Followed all the
+    // way, the whole cast would be under the footer; settled back to the edge, the viewer sits
+    // 10 km below the focus and everybody is still inside the box.
     drag(field(), [200, 100], [200, 700]);
 
     travelled();
-    const kept = useRadarView.getState().view;
-    expect(kept).toBeDefined();
-    expect(Math.hypot(kept?.centre.x ?? 0, kept?.centre.y ?? 0)).toBeCloseTo(10, 5);
+    expect(screen.getByText(offScreen(0))).toBeTruthy();
+    expect(screen.getByText(playersInView(CAST.length))).toBeTruthy();
   });
 });
 

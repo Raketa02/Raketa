@@ -103,14 +103,19 @@ export function RadarPane({ onPane, rated, sport, onChooseSport, reachKm }: Rada
     if (rows !== undefined && held !== undefined && selectedId === undefined) deselect();
   }, [rows, held, selectedId, deselect]);
 
+  // A held reading is drawn whatever else is happening; with none held, a read on its way —
+  // the first, or *Try again*'s — is *Looking around…*, and a refusal is the failure. The
+  // refetch is read before the error, so the retry's own wait is not spent under the sentence
+  // it is meant to answer.
   const status = useMemo<RadarStatus>(() => {
     if (reading.data !== undefined) {
       return {
         kind: 'read',
         rows: reading.data.rows,
-        reachKm: reading.data.envelope.pool.radiusKmUsed,
+        radiusKmUsed: reading.data.envelope.pool.radiusKmUsed,
       };
     }
+    if (reading.isFetching) return { kind: 'loading' };
     if (reading.error !== null) return { kind: 'failed', onTryAgain: () => void reading.refetch() };
     return { kind: 'loading' };
   }, [reading]);

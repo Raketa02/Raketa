@@ -17,16 +17,19 @@ import {
   betweenTransforms,
   boundCentre,
   containerTransform,
+  dragged,
   flyToView,
   homeView,
   inView,
   nextStopIn,
   nextStopOut,
   openingWidthKm,
+  pinched,
   pointOf,
   ptPerKm,
   ringsFor,
   rubberBand,
+  toKm,
   toScreen,
   viewFromTransform,
   widestWidthKm,
@@ -275,5 +278,68 @@ describe('the transform read backwards', () => {
     expect(betweenTransforms(from, to, 0)).toEqual(from);
     expect(betweenTransforms(from, to, 1)).toEqual(to);
     expect(betweenTransforms(from, to, 0.5)).toEqual({ scale: 3.5, x: -50, y: 25 });
+  });
+});
+
+describe('a drag', () => {
+  const home = homeView(10);
+
+  it('follows the finger exactly, with no inertia: the field moves, so the centre moves the other way', () => {
+    const start = { at: { x: 200, y: 300 }, view: home };
+    const view = dragged(start, { x: 200 + 390 / 18, y: 300 }, FIELD, 10);
+    // One kilometre of field dragged to the right: the centre is one kilometre to the west.
+    expect(view.centre.x).toBeCloseTo(-1);
+    expect(view.centre.y).toBeCloseTo(0);
+    expect(view.widthKm).toBe(18);
+    // Dragged down: the centre moves north.
+    expect(dragged(start, { x: 200, y: 300 + 390 / 18 }, FIELD, 10).centre.y).toBeCloseTo(1);
+  });
+
+  it('gives a little past the reach and no more', () => {
+    const start = { at: { x: 200, y: 300 }, view: home };
+    const far = dragged(start, { x: 200 - 20 * (390 / 18), y: 300 }, FIELD, 10);
+    expect(far.centre.x).toBeGreaterThan(10);
+    expect(far.centre.x).toBeLessThan(20);
+  });
+});
+
+describe('a pinch', () => {
+  const home = homeView(10);
+  const bounds = { reachKm: 10, widestKm: 30 };
+
+  it('halves the width when the fingers spread to twice their distance, and doubles it when they close', () => {
+    const start = { spread: 100, mid: { x: 195, y: 252 }, view: home };
+    expect(pinched(start, { spread: 200, mid: start.mid }, FIELD, bounds).widthKm).toBeCloseTo(9);
+    expect(pinched(start, { spread: 50, mid: start.mid }, FIELD, bounds).widthKm).toBeCloseTo(30);
+  });
+
+  it('is held between the floor and the widest stop', () => {
+    const start = { spread: 100, mid: { x: 195, y: 252 }, view: home };
+    expect(pinched(start, { spread: 10, mid: start.mid }, FIELD, bounds).widthKm).toBe(30);
+    expect(pinched(start, { spread: 5000, mid: start.mid }, FIELD, bounds).widthKm).toBe(
+      WIDTH_FLOOR_KM,
+    );
+  });
+
+  it('zooms around the fingers: the point under their first midpoint stays under their midpoint', () => {
+    const mid = { x: 300, y: 150 };
+    const start = { spread: 100, mid, view: home };
+    const view = pinched(start, { spread: 200, mid }, FIELD, bounds);
+    const before = toKm(mid, home, FIELD);
+    const after = toKm(mid, view, FIELD);
+    expect(after.x).toBeCloseTo(before.x);
+    expect(after.y).toBeCloseTo(before.y);
+  });
+
+  it('follows the fingers’ midpoint as well as their spread', () => {
+    const start = { spread: 100, mid: { x: 195, y: 252 }, view: home };
+    const view = pinched(start, { spread: 100, mid: { x: 195 + 390 / 18, y: 252 } }, FIELD, bounds);
+    expect(view.widthKm).toBe(18);
+    expect(view.centre.x).toBeCloseTo(-1);
+  });
+
+  it('leaves the view alone while a spread is nought', () => {
+    const start = { spread: 0, mid: { x: 195, y: 252 }, view: home };
+    expect(pinched(start, { spread: 100, mid: start.mid }, FIELD, bounds)).toEqual(home);
   });
 });

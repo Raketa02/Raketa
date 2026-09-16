@@ -93,7 +93,7 @@ describe('the footer', () => {
 
   it('says the loading and the failure', () => {
     expect(LOOKING_AROUND).toBe('Looking around…');
-    expect(RADAR_FAILED).toBe('The radar couldn’t load');
+    expect(RADAR_FAILED).toBe("The radar couldn't load");
     expect(TRY_AGAIN).toBe('Try again');
   });
 });

@@ -70,26 +70,25 @@ import { theme, useCollapsedPresentation } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import {
-  WIDTH_FLOOR_KM,
   betweenTransforms,
   boundCentre,
   containerTransform,
+  dragged,
   flyToView,
-  focusOf,
   homeView,
   inView,
   nextStopIn,
   nextStopOut,
+  pinched,
   pointOf,
-  ptPerKm,
   ringsFor,
-  rubberBand,
-  toKm,
   toScreen,
   viewFromTransform,
   widestWidthKm,
   zoomState,
+  type DragStart,
   type FieldBox,
+  type PinchStart,
   type RadarView,
   type ScreenPoint,
   type ZoomState,
@@ -109,7 +108,12 @@ import { YouTile } from './YouTile';
 export type RadarStatus =
   | { readonly kind: 'loading' }
   | { readonly kind: 'failed'; readonly onTryAgain: () => void }
-  | { readonly kind: 'read'; readonly rows: readonly RadarRow[]; readonly reachKm: number };
+  | {
+      readonly kind: 'read';
+      readonly rows: readonly RadarRow[];
+      /** The pool's own `radius_km_used` — the empty sentence's number, as the words say. */
+      readonly radiusKmUsed: number;
+    };
 
 export interface RadarFieldProps {
   readonly status: RadarStatus;
@@ -140,8 +144,8 @@ const NO_ROWS: readonly RadarRow[] = [];
 /** How often, at most, the JavaScript side redraws the rings and the words during a flight: a frame. */
 const WORDS_FRAME_MS = 16;
 
-/** How far a finger travels before the field claims a drag — the swipe row's own number. */
-const INTENT = theme.size.deckSwipe.intent;
+/** How far a finger travels before the field claims a drag — the swipe row's own number, as the deck reads it. */
+const INTENT = theme.size.swipeRow.intent;
 
 export function RadarField({
   status,
@@ -254,10 +258,7 @@ export function RadarField({
   }).current;
 
   /** The gesture in hand: where it started, and — for a pinch — the fingers' first spread. */
-  const gesture = useRef<{
-    pan?: { at: ScreenPoint; view: RadarView };
-    pinch?: { spread: number; mid: ScreenPoint; view: RadarView };
-  }>({});
+  const gesture = useRef<{ pan?: DragStart; pinch?: PinchStart }>({});
 
   const responder = useRef(
     PanResponder.create({
@@ -279,25 +280,13 @@ export function RadarField({
 
         if (touches.length >= 2) {
           const [a, b] = touches as [ScreenPoint, ScreenPoint];
-          const spread = Math.hypot(a.x - b.x, a.y - b.y);
-          const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-          const pinch = gesture.current.pinch ?? { spread, mid, view: held };
-          gesture.current = { pinch };
-          if (pinch.spread === 0) return;
-          // Continuous between the floor and the widest stop, around the fingers: the point
-          // that was under their first midpoint stays under their midpoint now.
-          const widthKm = Math.min(
-            widestKm,
-            Math.max(WIDTH_FLOOR_KM, (pinch.view.widthKm * pinch.spread) / spread),
-          );
-          const under = toKm(pinch.mid, pinch.view, field);
-          const s = ptPerKm(field, widthKm);
-          const focus = focusOf(field);
-          const centre = {
-            x: under.x - (mid.x - focus.x) / s,
-            y: under.y + (mid.y - focus.y) / s,
+          const fingers = {
+            spread: Math.hypot(a.x - b.x, a.y - b.y),
+            mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
           };
-          apply({ centre: rubberBand(centre, reach), widthKm });
+          const pinch = gesture.current.pinch ?? { ...fingers, view: held };
+          gesture.current = { pinch };
+          apply(pinched(pinch, fingers, field, { reachKm: reach, widestKm }));
           return;
         }
 
@@ -307,12 +296,7 @@ export function RadarField({
         // not jump to where the first finger would have dragged it alone.
         const pan = gesture.current.pan ?? { at: finger, view: held };
         gesture.current = { pan };
-        const s = ptPerKm(field, pan.view.widthKm);
-        const centre = {
-          x: pan.view.centre.x - (finger.x - pan.at.x) / s,
-          y: pan.view.centre.y + (finger.y - pan.at.y) / s,
-        };
-        apply({ centre: rubberBand(centre, reach), widthKm: pan.view.widthKm });
+        apply(dragged(pan, finger, field, reach));
       },
       onPanResponderRelease: () => settle(),
       onPanResponderTerminate: () => settle(),
@@ -388,11 +372,13 @@ export function RadarField({
 
   const rows = useMemo(() => (status.kind === 'read' ? status.rows : NO_ROWS), [status]);
 
-  // The words: how many points are inside the box between the header and the footer.
+  // The words: how many points are inside the box between the header and the footer. The
+  // point is where the field **draws** it — under the field's own focus — and only the box it
+  // is tested against stops at the footer's top edge.
   const counted = useMemo(() => {
     if (box === undefined) return { inView: 0, offScreen: 0 };
     const visible = { width: box.width, height: Math.max(0, box.height - footerHeight) };
-    const seen = rows.filter((row) => inView(toScreen(pointOf(row), live, visible), visible));
+    const seen = rows.filter((row) => inView(toScreen(pointOf(row), live, box), visible));
     return { inView: seen.length, offScreen: rows.length - seen.length };
   }, [box, footerHeight, rows, live]);
 
@@ -402,7 +388,7 @@ export function RadarField({
       : status.kind === 'failed'
         ? { kind: 'failed', onTryAgain: status.onTryAgain }
         : rows.length === 0
-          ? { kind: 'empty', reachKm: status.reachKm, sportName }
+          ? { kind: 'empty', reachKm: status.radiusKmUsed, sportName }
           : { kind: 'reading', inView: counted.inView, offScreen: counted.offScreen, zoom };
 
   const rings = box === undefined ? [] : ringsFor(box, live.widthKm);

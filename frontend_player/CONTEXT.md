@@ -141,40 +141,40 @@ review comment and a test description all use the same word.
   answers _who is available and even on Thursday?_ _Avoid_: "Around", which no longer exists;
   "Match me", which survives as a word only in _Matched!_; "the deck tab" — the tab is Players
   and the deck is what is on it.
-- **Radar** — the second pane of the Players tab, behind the toggle, **built** since
-  [ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md): every
-  player rated in the picked sport within the viewer's Reach, drawn at their distance and
-  bearing from the viewer's tile with **no judgement** — no ranking, no filtering, no order —
-  on the app's third dark surface, with rings in kilometres, a face far out, the level beneath
-  it closer and a card closest. A pane and not a route, so the tab can never open on it; its
-  view is kept for the life of the process (`store/radarView`) and a cold start opens at home.
-  _Avoid_: "the map" — there is no basemap, no street and no address, by property and not by
-  promise; `radar` the glyph, which is still not drawn (ADR-0135); "the radar tab".
-- **Reading** — **what `POST /radar` answers**: every player the radar may draw for the viewer
-  in one sport, each row the deal's candidate shape plus its position, ordered by drawn
-  distance then id, under one `search_id`. A recorded search and a prior disclosure, so the
-  record sheet opens from every card it drew — and **not a deal**: it enters no dealt memory
-  and notes no exposure, so a look on Monday hides nobody from Tuesday's deck (ADR-0174 §1,
-  §4). Held five minutes and refetched on a pane opened past the window, a sport switch and a
-  cold start; never appended to, never polled (`hooks/useReading`). _Avoid_: "the radar deal";
-  "the radar's hand"; a reading that "spends" anything.
-- **Reach** — **the viewer's own search radius, read as how far the radar draws**: the same
-  box-then-circle the deck deals inside, measured cell to cell, and there is no city and no
-  count cap (ADR-0174 §1). The ladder's two bounds are derived from it — the widest stop is the
-  first at or above 2,2 × the reach, the opening stop the first at or above 1,8 × — and a pan
-  rubber-bands when its edge reaches the field's focus. _Avoid_: "range", which is the pool's
-  word for the count; "the city".
-- **Drawn spot** — **the one fixed point inside a player's own cell** the radar draws them at:
-  the cell's centre offset by an amount and a direction from a stable digest of their id, never
-  leaving the cell, the same for every viewer (ADR-0174 §2). The viewer has one and sits at the
-  origin. _Neighbourhood-true, building-false._ The server works the spots out; the client
-  computes no geometry beyond scaling. _Avoid_: "their location", "their position" — nobody's
-  exact place exists; a spot that moves between readings.
-- **Bearing** — `bearing_deg`, **the compass direction from the viewer's Drawn spot to
-  theirs**: 0–359, north 0, clockwise, a whole degree, served on a reading's row beside
-  `distance_km` and never inside `player_card`, because its value depends on who is looking
-  (ADR-0107's rule, ADR-0174 §2). North is up on the field and the field never rotates.
-  _Avoid_: "heading", "direction" as a field name; a bearing derived on the client.
+- **Radar** — the root's term ([`CONTEXT.md`](../CONTEXT.md)): the second pane of the Players
+  tab, behind the toggle, **built** since
+  [ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md). What is
+  the client's: it is a pane and not a route, so the tab can never open on it — `RadarPane`
+  inside `DeckScreen`, its own frame on the app's third dark surface with no scroller, because
+  the field takes the drag; its view and selection are `store/radarView`'s for the life of the
+  process and a cold start opens at home; its geometry is `domain/radarGeometry`'s pure
+  functions and the field's tiles ride one native-driven transform. _Avoid_: "the map" — there
+  is no basemap, no street and no address; `radar` the glyph, which is still not drawn
+  (ADR-0135); "the radar tab".
+- **Reading** — the root's term: what `POST /radar` answers. On the client it is `Reading` in
+  `domain/reading` — the envelope and `RadarRow[]`, each row the deal's `Candidate` plus a
+  required `distanceKm` and `bearingDeg` and `ratings[]` — held under `searchKeys.reading(sport)`
+  with **no radius in the key**, stale after five minutes, refetched on a pane opened past the
+  window, on a sport switch (a new key) and on a cold start, and **never appended to** — a
+  reading is not a hand (`hooks/useReading`). A row the wire gives no spot is dropped at the
+  mapper. _Avoid_: "the radar deal"; "the radar's hand"; a reading that "spends" anything.
+- **Reach** — the root's term: the viewer's own search radius, read as how far the radar draws.
+  On the client it arrives twice and is named for each: `reachKm` off the profile surface, known
+  before the reading is and what the geometry is built on — the ladder's widest stop is the
+  first at or above 2,2 × it, the opening stop the first at or above 1,8 ×, and a pan
+  rubber-bands when its edge reaches the field's focus (`boundCentre`) — and `radiusKmUsed` off
+  the pool, which is the empty sentence's number, as the words say. _Avoid_: "range", which is
+  the pool's word for the count; "the city".
+- **Drawn spot** — the root's term: the one fixed point inside a player's cell the radar draws
+  them at, worked out by the server. The client **computes no geometry beyond scaling**: it
+  places a row from its served `distanceKm` and `bearingDeg` (`pointOf`, north up) and never
+  derives, rounds or moves a spot. _Avoid_: "their location", "their position" — nobody's exact
+  place exists; a spot computed on the client.
+- **Bearing** — the root's term: `bearing_deg`, the compass direction from the viewer's drawn
+  spot to theirs. On the client it is `bearingDeg` on a `RadarRow`, **required** there and on no
+  other candidate — a reading's row only, never inside the card (ADR-0107's rule) — and the one
+  input beside `distanceKm` a point is drawn from. North is up on the field and the field never
+  rotates. _Avoid_: "heading", "direction" as a field name; a bearing derived on the client.
 - **The reset** — `resetShellStack`, the shell's only navigation move: throw the stack away
   and lay a new one down. Four tabs lay down one screen and ⚡Play lays down two, which is
   why back from Play's entry leaves Play rather than walking it. **A Play session ends

@@ -249,6 +249,64 @@ export function rubberBand(centre: KmPoint, reachKm: number): KmPoint {
   return { x: bound.x + (centre.x - bound.x) * RUBBER, y: bound.y + (centre.y - bound.y) * RUBBER };
 }
 
+/** Where a drag started: the finger's first point, and the view under it. */
+export interface DragStart {
+  readonly at: ScreenPoint;
+  readonly view: RadarView;
+}
+
+/**
+ * The view under a finger that has moved from where a drag started — **no inertia**: the field
+ * follows the finger exactly, and past the reach's edge it gives a little (`rubberBand`) until
+ * the finger lifts (§7.6).
+ */
+export function dragged(
+  start: DragStart,
+  finger: ScreenPoint,
+  field: FieldBox,
+  reachKm: number,
+): RadarView {
+  const scale = ptPerKm(field, start.view.widthKm);
+  const centre = {
+    x: start.view.centre.x - (finger.x - start.at.x) / scale,
+    y: start.view.centre.y + (finger.y - start.at.y) / scale,
+  };
+  return { centre: rubberBand(centre, reachKm), widthKm: start.view.widthKm };
+}
+
+/** Where a pinch started: the fingers' first spread and midpoint, and the view under them. */
+export interface PinchStart {
+  readonly spread: number;
+  readonly mid: ScreenPoint;
+  readonly view: RadarView;
+}
+
+/**
+ * The view under two fingers that have moved from where a pinch started — continuous between
+ * the floor and the widest stop, and **around the fingers**: the kilometre point that was under
+ * their first midpoint stays under their midpoint now (§7.3, §7.6).
+ */
+export function pinched(
+  start: PinchStart,
+  fingers: { readonly spread: number; readonly mid: ScreenPoint },
+  field: FieldBox,
+  bounds: { readonly reachKm: number; readonly widestKm: number },
+): RadarView {
+  if (start.spread === 0 || fingers.spread === 0) return start.view;
+  const widthKm = Math.min(
+    bounds.widestKm,
+    Math.max(WIDTH_FLOOR_KM, (start.view.widthKm * start.spread) / fingers.spread),
+  );
+  const under = toKm(start.mid, start.view, field);
+  const scale = ptPerKm(field, widthKm);
+  const focus = focusOf(field);
+  const centre = {
+    x: under.x - (fingers.mid.x - focus.x) / scale,
+    y: under.y + (fingers.mid.y - focus.y) / scale,
+  };
+  return { centre: rubberBand(centre, bounds.reachKm), widthKm };
+}
+
 /** Where a tap on a face flies: centred on the row, at the 3 km stop (§7.5). */
 export function flyToView(row: RowPosition): RadarView {
   return { centre: pointOf(row), widthKm: FLY_TO_WIDTH_KM };

@@ -116,9 +116,10 @@ export function formatDistanceKm(value: number): string {
  * kilometres and a whole number at ten and above
  * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §26).
  *
- * The ladder's own stops spell themselves this way — *1,5 · 3 · 5,4 · 10 · 18 · 30 · 55 · 110* —
- * and a pinch resting between two stops prints at the same precision its neighbours do, so the
- * counter never gains a decimal because a finger stopped somewhere. Not `formatDistanceKm`: a
+ * The ladder's stops print this way — *1,5 · 3,0 · 5,4 · 10 · 18 · 30 · 55 · 110*, and mock 3
+ * prints *5,0 km across* for the whole stop below ten — and a pinch resting between two stops
+ * prints at the same precision its neighbours do, so the counter never gains a decimal because
+ * a finger stopped somewhere. Not `formatDistanceKm`: a
  * distance is a served figure printed as served, and a width is a rule about how much of the
  * map is on screen, rounded here because nothing served it. Here for the comma's one home.
  */

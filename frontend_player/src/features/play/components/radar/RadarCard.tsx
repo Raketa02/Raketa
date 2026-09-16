@@ -50,8 +50,8 @@ import {
   FIT_WORD,
   RELIABILITY_WORD,
   TAP_FOR_THE_FULL_CARD,
-  UNWATCHED_MARK,
   cardDistance,
+  reliabilityFigure,
   tagsInCommon,
 } from '../radarPresentation';
 
@@ -109,7 +109,7 @@ export function RadarCard({ row, sport, accessibilityLabel, onPress }: RadarCard
         {/* One sentence for a reader — `88 reliability` — drawn as a mono figure and a word, so
             the number is tabular as every number is (1.4) and the word is the pill's own role. */}
         <View style={s.reliability}>
-          <Text style={s.reliabilityFigure}>{row.card.playerScore ?? UNWATCHED_MARK}</Text>
+          <Text style={s.reliabilityFigure}>{reliabilityFigure(row.card.playerScore)}</Text>
           <Text style={s.reliabilityWord}>{RELIABILITY_WORD}</Text>
         </View>
       </View>
@@ -156,7 +156,8 @@ const s = StyleSheet.create({
     padding: theme.space.md,
     gap: theme.space.sm,
   },
-  pressed: { opacity: 0.85 },
+  // 6.6's declared press on a fill-less surface: the chip's and the segment's own dim.
+  pressed: { opacity: 0.7 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   who: { flex: 1, gap: theme.space.xxs },
   name: { ...theme.type.h2, color: theme.color.ink },

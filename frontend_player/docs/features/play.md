@@ -938,10 +938,13 @@ closest so a ± landing on a stop always lands in the state the stop names, and 
 held survives until the width is 3 % past the line — which is the one reading of _about 3 %_
 that never contradicts the ladder; the ring rule (radius ≥ 26 pt and ≤ 3,5 field widths from 1 ·
 2 · 5 · 10 · 20 · 50, two or three at every stop and never a bullseye); a row's point from its
-distance and bearing, north up; `inView` on the **point**, never the card; the flight's target
-(the 3 km stop, centred on the row); the reach's edge (`boundCentre`, `rubberBand`); and the
-field's one transform, `containerTransform`, with its inverse `viewFromTransform` and the flight's
-`betweenTransforms`, held to `toScreen` for any view by the test. **The view is two
+distance and bearing, north up; `inView` on the **point**, never the card — the point where the field
+draws it, tested against the box that stops at the footer's top edge; the flight's target (the
+3 km stop, centred on the row); the reach's edge (`boundCentre`, `rubberBand`); the drag
+(`dragged`, no inertia) and the pinch (`pinched`, around the fingers, between the floor and the
+widest stop) as functions of where each started; and the field's one transform,
+`containerTransform`, with its inverse `viewFromTransform` and the flight's `betweenTransforms`,
+held to `toScreen` for any view by the test. **The view is two
 kilometre-facts and nothing in points** — the kilometre point at the field's **focus** (42 % of
 the height, where the viewer sits at home and ±, the pinch and the flight zoom around; zooming
 around the true centre would walk the viewer down the screen on every press) and the width in
@@ -1014,8 +1017,14 @@ failing readings, the view across a tab switch, the pinch and its snap, the drag
 band, reduced motion, and the record sheet from a card. **Not seen on a device** — the author
 checks the build against the sixteen mocks at three widths; the counter-scaled anchors under a
 pinch, the rings' JavaScript frame beside the tiles' native one, and touches landing on a face
-hung off a 0 × 0 anchor on Android are the three things to look at first. **Three calls the
-records did not make**, each one sentence in one place: the empty reading's hint keeps the
-privacy line first (user story 26's _always_) with the widen sentence after it; the card draws no
-tags line where the engine compared nothing; the face's corner is `PlayerPhoto`'s third of the
-box rather than the spec's 6 pt, because that rule has one owner.
+hung off a 0 × 0 anchor on Android are the three things to look at first. **Four calls the
+records did not make**, each one sentence in one place, for the author to keep or reverse: the
+empty reading's hint keeps the privacy line first (user story 26's _always_) with the widen
+sentence after it; the card draws no tags line where the engine compared nothing; the face's
+corner is `PlayerPhoto`'s third of the box rather than the spec's 6 pt, because that rule has
+one owner; and ± and the flight zoom around the **focus** — the viewer's 42 % — where §7.6 says
+_the screen's centre_, because a zoom about the centre walks the viewer up the screen with every
+press and mocks 5 and 7 hold the tile still across two widths. The root spec is not this app's
+to amend; the sentence stands there until it is. **A retry** reads _Looking around…_ while it
+is on its way, not the failure it answers — the spec is silent, and a wait spent under the
+sentence it is meant to answer is the wrong one.

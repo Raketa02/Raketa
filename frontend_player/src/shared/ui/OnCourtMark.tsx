@@ -161,7 +161,7 @@ export function OnCourtMark({ on }: OnCourtMarkProps) {
         style={[
           placement.words,
           s.words,
-          on === 'radar' ? undefined : s.onMedia,
+          placement.onMedia ? s.onMedia : undefined,
           { color: placement.colour },
           placement.case,
         ]}
@@ -191,6 +191,8 @@ interface Placement {
   readonly row: { readonly justifyContent?: 'center'; readonly flexShrink?: number };
   /** A panel is a fixed box and caps the words; the deck card is not, and does not. */
   readonly cap?: number;
+  /** Over media the words carry the on-media shadow; on paper they carry none. */
+  readonly onMedia: boolean;
 }
 
 const PLACEMENT: Readonly<Record<OnCourtMarkPlacement, Placement>> = {
@@ -200,6 +202,7 @@ const PLACEMENT: Readonly<Record<OnCourtMarkPlacement, Placement>> = {
     case: { textTransform: 'uppercase' },
     row: { justifyContent: 'center' },
     cap: ON_COURT_MAX_SCALE.card,
+    onMedia: true,
   },
   record: {
     words: theme.type.tag,
@@ -207,6 +210,7 @@ const PLACEMENT: Readonly<Record<OnCourtMarkPlacement, Placement>> = {
     case: { textTransform: 'uppercase' },
     row: { justifyContent: 'center' },
     cap: ON_COURT_MAX_SCALE.record,
+    onMedia: true,
   },
   // Top-right of the deck card, opposite the Level, in the row the card gives it; the mock draws
   // *on court* in lower case after its tick.
@@ -215,6 +219,7 @@ const PLACEMENT: Readonly<Record<OnCourtMarkPlacement, Placement>> = {
     colour: theme.color.surface,
     case: { textTransform: 'lowercase' },
     row: { flexShrink: 1 },
+    onMedia: true,
   },
   // The radar card's identity row, on paper — where the deck would draw it, read on a 34 pt
   // face with no photograph to stand over ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
@@ -226,6 +231,7 @@ const PLACEMENT: Readonly<Record<OnCourtMarkPlacement, Placement>> = {
     colour: theme.color.mintInk,
     case: { textTransform: 'uppercase' },
     row: { flexShrink: 1 },
+    onMedia: false,
   },
 };
 

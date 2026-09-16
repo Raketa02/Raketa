@@ -62,8 +62,14 @@ export const RELIABILITY_WORD = 'reliability';
 /** What the chip prints where the platform has watched nothing. */
 export const UNWATCHED_MARK = '—';
 
+/** The chip's figure — the score, or the dash. The card draws it in mono beside the word. */
+export function reliabilityFigure(playerScore: number | undefined): string {
+  return playerScore === undefined ? UNWATCHED_MARK : String(playerScore);
+}
+
+/** The chip as one sentence — `88 reliability` · `— reliability` — which is what the card says. */
 export function reliabilityChip(playerScore: number | undefined): string {
-  return `${playerScore === undefined ? UNWATCHED_MARK : playerScore} ${RELIABILITY_WORD}`;
+  return `${reliabilityFigure(playerScore)} ${RELIABILITY_WORD}`;
 }
 
 /** `2 tags in common` · `1 tag in common` · `no tags in common` — a count, never a list. */
@@ -116,7 +122,7 @@ export function emptyHint(): string {
 export const LOOKING_AROUND = 'Looking around…';
 
 /** The failed reading's headline, and the retry in the hint's place. */
-export const RADAR_FAILED = 'The radar couldn’t load';
+export const RADAR_FAILED = "The radar couldn't load";
 export const TRY_AGAIN = 'Try again';
 
 /** ± and ◉, spoken. */

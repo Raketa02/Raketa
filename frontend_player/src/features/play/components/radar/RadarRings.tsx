@@ -63,34 +63,38 @@ export function RadarRings({ centre, rings }: RadarRingsProps) {
         ))}
       </Svg>
       {rings.map((ring) => (
-        <Text
+        // Centred over the top of the circle: a row as wide as two fields, its own centre on
+        // the ring's centre line, letting the label take whatever width its words want.
+        <View
           key={ring.km}
           style={[
-            s.label,
+            s.labelRow,
             {
-              // Centred over the top of the circle, sitting on it: the label's box is one line
-              // tall and half its width either side of the centre line.
-              left: centre.x - LABEL_HALF_WIDTH,
+              left: centre.x - FIELD_SPAN,
+              width: 2 * FIELD_SPAN,
               top: centre.y - ring.radiusPt - theme.num.tiny.lineHeight,
             },
           ]}
-          numberOfLines={1}
         >
-          {ringLabel(ring.km)}
-        </Text>
+          <Text style={s.label} numberOfLines={1}>
+            {ringLabel(ring.km)}
+          </Text>
+        </View>
       ))}
     </View>
   );
 }
 
-/** Half the box a label is centred in — wide enough for `50 km` at `num.tiny`. */
-const LABEL_HALF_WIDTH = 30;
+/**
+ * Half the row a label is centred in. Wider than any field, so the row's centre — the ring's
+ * centre line — is where the label sits whatever the label's own width; the row is not an
+ * element and clips nothing.
+ */
+const FIELD_SPAN = 1000;
 
 const s = StyleSheet.create({
+  labelRow: { position: 'absolute', alignItems: 'center' },
   label: {
-    position: 'absolute',
-    width: LABEL_HALF_WIDTH * 2,
-    textAlign: 'center',
     ...theme.num.tiny,
     ...theme.tabular,
     color: theme.color.onDarkEyebrow,
