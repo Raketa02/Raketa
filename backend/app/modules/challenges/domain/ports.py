@@ -473,9 +473,10 @@ class CourtPairing:
     different readings of one number — and the alternative, printing no Fit,
     throws away the number the screen exists to give.
 
-    ``distance_km`` is whole kilometres and ``None`` when the distance term stood
-    down, which is **omitted** on the wire and never a zero: somebody whose
-    distance could not be read is not next door.
+    ``distance_km`` is one decimal, spot to spot — the number every other
+    candidate prints (``docs/adr/0174`` §2) — and ``None`` when the distance
+    term stood down, which is **omitted** on the wire and never a zero: somebody
+    whose distance could not be read is not next door.
     """
 
     fit: float
@@ -488,7 +489,7 @@ class CourtPairing:
     #: — a side with nobody on it is not a side, and a court whose whole far side
     #: has declined is one nothing can be forecast about.
     forecast: PairingForecast | None = None
-    distance_km: int | None = None
+    distance_km: float | None = None
     at_stake: LevelDeltas | None = None
 
 

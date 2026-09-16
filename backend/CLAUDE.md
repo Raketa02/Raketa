@@ -524,7 +524,7 @@ Rules to preserve:
   gender — are re-evaluated live, so a row they no longer admit **keeps its place and states
   that it is withheld** while naming no gate and carrying no person. That is why both routes
   render `SearchRecord` through one function and why the row records the card, the concerns,
-  the whole-kilometre distance and the at-stake block: what a read-back cannot reproduce off
+  the one-decimal distance and the at-stake block: what a read-back cannot reproduce off
   the row, it would have to re-read from sources that have moved on.
 - **The fill names the challenge it completes, and the gate steps aside for that one court**
   ([ADR-0150](../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)).

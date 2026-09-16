@@ -102,9 +102,17 @@ at all**: it is not a photograph and has nothing to have passed.
 > what the player themselves put there. Putting it on the card would make it the single field
 > whose value changes depending on who is looking.
 >
-> It is an **integer**, and it is **omitted** rather than `0` when the distance term stood down —
-> the two spellings of absence ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)
-> §4), which is what lets *Closest* sort a stood-down row last instead of first.
+> It is **one decimal, measured between two drawn spots** since 2026-09-16
+> ([ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2,
+> [`the-radar.md`](the-radar.md) §4) — one fixed point inside each player's cell, derived from a
+> stable digest of who they are, so *1,9 km* where the card said *2 km* and *0,6 km* for somebody
+> in the searcher's own cell, never below *0,1*. The Fit does not read it: the distance term and
+> the radius gate keep measuring cell to cell, which is why a player at the very edge may print
+> *10,3 km* inside a 10 km reach. It is **omitted** rather than `0` when the distance term stood
+> down — the two spellings of absence
+> ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §4),
+> which is what lets *Closest* sort a stood-down row last instead of first. *Closest* reads the
+> print, so it can now tell two people in one cell apart — by the same fiction the card prints.
 
 > **`range` is on the card for the same reason `distance_km` is not.** It is the **likely
 > range** — μ ± σ as `rating` published it — and it is a fact about that person alone, which

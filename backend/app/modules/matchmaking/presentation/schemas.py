@@ -949,14 +949,19 @@ class CandidateSchema(BaseModel):
             "asked to trust. It contains no Liveness."
         ),
     )
-    distance_km: int = Field(
+    distance_km: float = Field(
         default=OMITTED,
         description=(
-            "Whole kilometres between the two coarse areas. **Promoted out of "
-            "the distance evidence** so the *Closest* sort reads a field rather "
-            "than reaching into a variant, and **omitted** rather than sent as "
-            "zero when the distance term stood down — which is what lets a "
-            "stood-down row sort last instead of first."
+            "Kilometres to one decimal, measured between the two **drawn "
+            "spots** — one fixed point inside each player's coarse area, the "
+            "same for every viewer — and never below `0.1`. The Fit does not "
+            "read it: the distance term and the radius gate measure cell to "
+            "cell, so a player at the very edge may print `10.3` inside a "
+            "10 km reach. **Promoted out of the distance evidence** so the "
+            "*Closest* sort reads a field rather than reaching into a variant, "
+            "and **omitted** rather than sent as zero when the distance term "
+            "stood down — which is what lets a stood-down row sort last "
+            "instead of first."
         ),
     )
     player_card: PlayerCardSchema

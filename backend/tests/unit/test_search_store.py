@@ -90,7 +90,7 @@ def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
         reliability_penalty_applied=False,
         reliability_penalty_decisive=False,
         concerns=("SOCIAL_VIBE",),
-        distance_km=4,
+        distance_km=3.7,
         # The card is recorded on the row that showed it, so a near miss — shown
         # to nobody — carries none, and neither does it carry a counted game's
         # price.
@@ -241,7 +241,7 @@ async def test_the_whole_row_that_was_shown_comes_back(store):
         3.04,
     ), "a Level read back without the range it was shown with"
     assert row.concerns == ("SOCIAL_VIBE",)
-    assert row.distance_km == 4
+    assert row.distance_km == 3.7, "the one-decimal print, read back as printed"
     assert row.at_stake == AtStake(win_delta=0.07, loss_delta=-0.05)
     # The record block, which is on the row for the same reason: a Player Score
     # moves, a run of form gains a game, and a counted-game count only grows.

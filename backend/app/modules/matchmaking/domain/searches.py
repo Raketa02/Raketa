@@ -379,10 +379,12 @@ class SearchCandidateRecord:
     #: the ruleset this row is stamped with, and re-deriving it under a later one
     #: would answer a question about a search that never ran.
     concerns: tuple[str, ...]
-    #: Whole kilometres, as the wire carried it. ``None`` when the distance term
-    #: stood down — which is **omitted** on the wire and not a zero, and is what
-    #: lets a stood-down row sort last instead of first.
-    distance_km: int | None
+    #: One decimal, spot to spot, as the wire carried it (``docs/adr/0174`` §2).
+    #: ``None`` when the distance term stood down — which is **omitted** on the
+    #: wire and not a zero, and is what lets a stood-down row sort last instead
+    #: of first. Recorded because a read-back cannot re-derive it: the drawn
+    #: spot is fixed per player but the cell under it moves.
+    distance_km: float | None
     #: The card as it was shown. Present on a ``RETURNED`` row and absent on a
     #: near miss, which was never shown to anybody — a biconditional, so *a
     #: returned row with nobody on it* is unrepresentable rather than merely

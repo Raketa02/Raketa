@@ -4266,9 +4266,9 @@
             "description": "The printed number, out of a hundred, and the only one a player is asked to trust. It contains no Liveness."
           },
           "distance_km": {
-            "type": "integer",
+            "type": "number",
             "title": "Distance Km",
-            "description": "Whole kilometres between the two coarse areas. **Promoted out of the distance evidence** so the *Closest* sort reads a field rather than reaching into a variant, and **omitted** rather than sent as zero when the distance term stood down \u2014 which is what lets a stood-down row sort last instead of first."
+            "description": "Kilometres to one decimal, measured between the two **drawn spots** \u2014 one fixed point inside each player's coarse area, the same for every viewer \u2014 and never below `0.1`. The Fit does not read it: the distance term and the radius gate measure cell to cell, so a player at the very edge may print `10.3` inside a 10 km reach. **Promoted out of the distance evidence** so the *Closest* sort reads a field rather than reaching into a variant, and **omitted** rather than sent as zero when the distance term stood down \u2014 which is what lets a stood-down row sort last instead of first."
           },
           "player_card": {
             "$ref": "#/components/schemas/PlayerCardSchema"
@@ -5225,9 +5225,9 @@
             "description": "The Fit, in your own direction. **The only number here you are asked to trust**, and it contains no Liveness offset."
           },
           "distance_km": {
-            "type": "integer",
+            "type": "number",
             "title": "Distance Km",
-            "description": "Whole kilometres between your two areas. **Omitted and never zero** when the distance term stood down: somebody whose distance could not be read is not next door."
+            "description": "Kilometres to one decimal, measured between your two **drawn spots** \u2014 the same number every other candidate prints, never below `0.1`. **Omitted and never zero** when the distance term stood down: somebody whose distance could not be read is not next door."
           },
           "terms": {
             "items": {

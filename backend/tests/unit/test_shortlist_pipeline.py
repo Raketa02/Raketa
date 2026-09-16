@@ -177,10 +177,24 @@ def test_a_sort_that_would_reorder_nothing_is_not_offered():
     alone = _run(build.context((build.row(1),)))
     assert _offered(alone.returned) == ()
 
-    identical = _run(build.context(tuple(build.row(n) for n in range(1, 4))))
+    identical = _run(build.context(build.rows_printing_one_distance(3)))
     assert SortOption.CLOSEST not in _offered(identical.returned), (
-        "three candidates at the same address cannot be sorted by distance"
+        "three candidates whose cards print one distance cannot be sorted by it"
     )
+
+
+def test_closest_reads_the_print_and_the_print_is_spot_to_spot():
+    """Three people in one cell **can** be told apart by *Closest* now, exactly
+    when their one-decimal prints differ (``docs/adr/0174`` §2). Offerability is
+    a claim about what the client could do with the rows it holds, and the
+    client holds the print — so the control follows the number on the card and
+    never the cell the term read."""
+
+    returned = _run(build.context(tuple(build.row(n) for n in range(1, 21)))).returned
+    prints = [row.shown_distance_km for row in returned]
+
+    assert len(set(prints)) > 1, "twenty ids in one cell all printed one number"
+    assert SortOption.CLOSEST in _offered(returned)
 
 
 def test_a_sort_whose_readings_are_all_equal_is_never_offered():
@@ -195,10 +209,8 @@ def test_a_sort_whose_readings_are_all_equal_is_never_offered():
     is what makes the naive check say *yes* here.
     """
 
-    descending = (
-        build.row(1, mu=build.SEARCHER_MU - 0.4),
-        build.row(2, mu=build.SEARCHER_MU - 0.2),
-        build.row(3, mu=build.SEARCHER_MU),
+    descending = build.rows_printing_one_distance(
+        3, mus=(build.SEARCHER_MU - 0.4, build.SEARCHER_MU - 0.2, build.SEARCHER_MU)
     )
     returned = _run(build.context(descending)).returned
 
@@ -210,7 +222,7 @@ def test_a_sort_whose_readings_are_all_equal_is_never_offered():
         "the reliability term stands down for everybody, so nothing tells these "
         "rows apart"
     )
-    assert SortOption.CLOSEST not in offered, "they are all at the same address"
+    assert SortOption.CLOSEST not in offered, "their cards all print one distance"
 
 
 def test_closest_is_offered_when_it_would_actually_reorder():

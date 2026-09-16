@@ -298,9 +298,11 @@ class SearchCandidateORM(Base):
     #: rather than re-derived because the judgement belongs to the ruleset this
     #: row is stamped with.
     concerns: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
-    #: Whole kilometres, as the wire carried it. Null when the distance term
-    #: stood down, which is **omitted** on the wire and is not a zero.
-    distance_km: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: One decimal, spot to spot, as the wire carried it (``docs/adr/0174`` §2;
+    #: whole kilometres cell to cell before revision ``0026``). Null when the
+    #: distance term stood down, which is **omitted** on the wire and is not a
+    #: zero.
+    distance_km: Mapped[float | None] = mapped_column(Float, nullable=True)
     #: The card **as it was shown**, so a read-back answers the search that ran
     #: rather than the one that would run now. It holds a ``photo_id`` and never
     #: the link: a presigned URL is dead within the hour and this row is kept

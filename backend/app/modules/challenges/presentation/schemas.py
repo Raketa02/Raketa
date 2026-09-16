@@ -572,12 +572,14 @@ class CourtPairingSchema(BaseModel):
             "asked to trust**, and it contains no Liveness offset."
         ),
     )
-    distance_km: int = Field(
+    distance_km: float = Field(
         OMITTED,
         description=(
-            "Whole kilometres between your two areas. **Omitted and never zero** "
-            "when the distance term stood down: somebody whose distance could "
-            "not be read is not next door."
+            "Kilometres to one decimal, measured between your two **drawn "
+            "spots** — the same number every other candidate prints, never "
+            "below `0.1`. **Omitted and never zero** when the distance term "
+            "stood down: somebody whose distance could not be read is not next "
+            "door."
         ),
     )
     terms: list[CourtScoredTermSchema] = Field(

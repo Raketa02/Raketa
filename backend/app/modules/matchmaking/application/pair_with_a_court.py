@@ -72,20 +72,19 @@ from app.modules.matchmaking.domain.fence import (
     area_of,
     combine_group_sigma,
     searcher_of,
-    slots_of,
 )
 from app.modules.matchmaking.domain.geography import distance_km as measure_distance
 from app.modules.matchmaking.domain.lineups import seats_per_side
-from app.modules.matchmaking.domain.measurements import overlap_of
 from app.modules.matchmaking.domain.search_context import SearchContext
 from app.modules.matchmaking.domain.searches import (
     SearchInitiation,
     SearchSurface,
 )
 from app.modules.matchmaking.domain.shortlist import (
-    Generated,
     Generation,
+    admitted_of,
     score_all,
+    viewer_spot_of,
 )
 
 
@@ -353,15 +352,17 @@ def _the_court(context: SearchContext, court_ids: tuple[UUID, ...]) -> Generatio
     """
 
     centre = context.searcher.area
+    viewer = viewer_spot_of(context)
     searcher_slots = context.searcher.grid.slots
     today = iso_weekday(context.now.isoweekday())
     wanted = {str(player_id) for player_id in court_ids}
     admitted = tuple(
-        Generated(
-            row=row,
+        admitted_of(
+            row,
             distance_km=measure_distance(centre, area_of(row)),
-            overlap=overlap_of(searcher_slots, slots_of(row), today),
-            player_uuid=UUID(row.player_id),
+            viewer=viewer,
+            searcher_slots=searcher_slots,
+            today=today,
         )
         for row in context.snapshot.rows
         if row.player_id in wanted

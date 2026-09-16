@@ -72,13 +72,17 @@ class Sortable:
 
     player_id: str
     fit: float
-    #: **Whole kilometres, as the wire carries them** — not the measurement.
+    #: **The print, as the wire carries it** — one decimal, spot to spot
+    #: (``docs/adr/0174`` §2) — and never the measurement the term read.
     #: Offerability is a claim about what the *client* could do with the rows it
-    #: holds, and the client holds an integer: two candidates 3.2 km and 3.4 km
-    #: away are one distance to it, so a control promising to tell them apart
-    #: would reorder nothing it could show. It is also what makes the read-back
-    #: agree with the search, which records the same integer.
-    distance_km: int | None
+    #: holds, and the client holds the print: two candidates whose cards both
+    #: say *3,2 km* are one distance to it, so a control promising to tell them
+    #: apart would reorder nothing it could show. It is also what makes the
+    #: read-back agree with the search, which records the same number. That the
+    #: print is spot to spot is what lets *Closest* tell two people in one cell
+    #: apart at all — by a fiction inside the cell, and the card says the same
+    #: fiction, which is the whole of what a sort is allowed to promise.
+    distance_km: float | None
     #: The **published** Player Score, not the matcher's blend, because *Most
     #: reliable*'s promise is *these are the people your own screens call
     #: reliable*.
@@ -88,7 +92,7 @@ class Sortable:
 def of_scored(row: Scored) -> Sortable:
     """What the search that just ran reads its own rows as.
 
-    The distance is ``Scored``'s own — the whole kilometres the wire carries,
+    The distance is ``Scored``'s own — the one-decimal print the wire carries,
     absent when the term stood down — rather than the measurement, so a
     stood-down row sorts last here exactly as it does on the wire.
     """

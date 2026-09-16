@@ -309,8 +309,10 @@ additions.** The card is attached by the **backend** after `matchfit` returns �
 family with a different author, for the same reason as `at_stake` — and its contents are a closed
 list with two permanent refusals in it, a bio and activity recency
 ([ADR-0107](../../adr/0107-the-player-card-is-assembled-outside-the-engine.md)). `distance_km` is
-promoted out of the distance term's evidence and is an **integer**, so the *Closest* sort reads a
-field rather than reaching into a variant. `concerns` is the engine's own statement that a term is
+promoted out of the distance term's evidence, so the *Closest* sort reads a field rather than
+reaching into a variant — an integer until 2026-09-16, and **one decimal between two drawn
+spots** since ([ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+§2; the term still reads cell to cell). `concerns` is the engine's own statement that a term is
 genuinely weak — §12's warning line, judged where the weights are rather than by a client
 thresholding a value. Detail in [`the-play-screens.md`](the-play-screens.md) §1.
 

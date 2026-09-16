@@ -520,6 +520,25 @@ there; they are not repeated here.
   is silent for exactly as long as nobody releases a ruleset with a new kind
   ([ADR-0106](../docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)).
   _Avoid_: "terms blob" for it — the store is open where the wire is closed, on purpose.
+- **Drawn distance** vs **cell distance** — the two kilometre figures a search holds about
+  one pair, and only one of them is a measurement. The **cell distance** is haversine
+  between two coarse centroids (`geography.distance_km`); it is what the `OUTSIDE_RADIUS`
+  gate applies and what the distance term reads, and its evidence prints it whole. The
+  **drawn distance** is the same haversine between the pair's two
+  [**Drawn spots**](../CONTEXT.md) — `geography.drawn_spot`, SHA-256 over the id's bytes,
+  the top 53 bits of each eight-byte half as one exact fraction, a bearing and an amount
+  along it to the square's edge in **degrees** — rounded half-to-even to one decimal and
+  floored at `0.1` by `geography.shown_kilometres`; it is what `distance_km` carries on
+  every candidate, what the record keeps and what *Closest* sorts
+  ([ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2).
+  `Generated` carries both and `admitted_of` is its one constructor;
+  `Scored.shown_distance_km` derives the print once for the response, the row and the sort;
+  `shortlist_determinism_probe` prints it under two hash seeds; and
+  `tests/unit/test_the_drawn_spot_prints_and_never_scores.py` walks `app/engines/`,
+  `gates.py` and `fence.py` for the word `drawn_spot` — a term or a gate that read it would
+  move a Fit with a digest. _Avoid_: "whole kilometres" for the wire — nothing prints one
+  since 2026-09-16 — and computing the drawn distance in `fence.py`, which is where
+  everything the scorer sees is assembled and where this one number must never be.
 
 - **Tail reader** — `CandidateIndexTail`, the **candidate index's only writer**. It
   subscribes to `event_store` in `sequence_no` order and **not** to the outbox, and the two
