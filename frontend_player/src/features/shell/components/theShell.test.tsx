@@ -212,11 +212,12 @@ describe('the placeholder', () => {
     pressTab('You');
 
     expect(await screen.findByText(AREA_UPDATES_LINE)).toBeTruthy();
-    // The declared row is the profile block; the email is the account panel. Read off the
-    // rendered tree in order, so *under* and *above* are positions and not a guess.
+    // The declared row is the profile block; the email is the account panel. Positions are
+    // read off the drawn text nodes in tree order, so *under* and *above* are what a reader
+    // meets and not a guess.
     await screen.findByText(intentLabel('FOR_FUN'));
-    const tree = JSON.stringify(screen.toJSON());
-    const at = (text: string) => tree.indexOf(text);
+    const drawn = screen.getAllByText(/./);
+    const at = (text: string) => drawn.indexOf(screen.getByText(text));
     expect(at(intentLabel('FOR_FUN'))).toBeGreaterThan(-1);
     expect(at(AREA_UPDATES_LINE)).toBeGreaterThan(at(intentLabel('FOR_FUN')));
     expect(at(GATE_USER.email)).toBeGreaterThan(at(AREA_UPDATES_LINE));

@@ -120,10 +120,10 @@ describe('a cold start', () => {
   });
 
   /**
-   * *In your area* follows the projection, and the profile read is the client's copy of what
-   * the profile holds — so it is marked stale rather than left to say where the player was.
-   * Asserted on the cache flag: nothing on Now observes the read, so a request count would
-   * pass with or without the invalidation.
+   * The profile read is the client's copy of what the profile holds, so it is marked stale
+   * rather than left to say where the player was — which is what makes it follow the day the
+   * read grows the area. Asserted on the cache flag: nothing on Now observes the read, so a
+   * request count would pass with or without the invalidation.
    */
   it('invalidates the profile surface once the write has landed', async () => {
     await coldStart();

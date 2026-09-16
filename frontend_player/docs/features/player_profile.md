@@ -130,12 +130,18 @@ day**: `foregroundRefreshDue` in `domain/locationRefresh` is the whole rule — 
 background reads again when more than 24 h have passed since the last _attempt_, whatever came
 of it, and a plain foreground reads nothing, which the author refused as tracking. The instant
 is a `ref`, a per-device convenience nothing else reads, gone with the process — which is what
-makes the next launch a cold start. **Nothing resets**: the deck's held deal stands, the radar's
-held reading refetches on its own rule, and the profile surface is invalidated so _In your area_
-follows the projection the moment a surface reads it; a failed write is silence, and the next
-cold start writes again. A player still in onboarding is never refreshed — the location step is
-where their area is being asked for, with a prompt and a sentence, and the step's own read and
-tests are untouched. **You** carries the one written trace, `AreaUpdatesNote` — `the-words.md`
+makes the next launch a cold start; the tree also mounts on the way out of onboarding, and that
+third read of the cell the commit stored seconds earlier is left alone rather than special-cased
+— same cell, no event, `204`. **Nothing resets**: the deck's held deal stands, and its cards' _In
+your area_ is the envelope's own `my_area_code` until the next hand; the radar's held reading
+refetches on its own rule; the profile surface is invalidated — it carries no area today, and
+the invalidation is what makes it follow the day the read grows the field. The write is a
+`useMutation` like the feature's three others, for the query client's own reason: paused
+offline and resumed on reconnect, so a cold start on a dead connection lands when the phone
+does; a failed write is silence, and the next cold start writes again. A player still in
+onboarding is never refreshed — the location step is where their area is being asked for, with
+a prompt and a sentence, and the step's own read, its re-read on foreground and its tests are
+untouched. **You** carries the one written trace, `AreaUpdatesNote` — `the-words.md`
 §26's _Your area updates each time you open Raketa; it is never finer than about a kilometre._,
 static, `tiny` in `muted`, under the profile block and above the account panel — because silent
 motion with no written trace is the one thing that would surprise a careful player, and the

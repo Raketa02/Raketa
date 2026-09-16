@@ -20,28 +20,42 @@
  * ## Once on the way in, and then only after a day
  *
  * The cold start is the **mount**: the `(app)` tree mounts once per launch for a signed-in
- * player, and once more after a sign-in, and either is the moment the ADR names. Every
- * return from the background after that is measured against the last attempt by
- * `foregroundRefreshDue`, so a player who flips to Messages and back is not read — which
- * the author refused as tracking — and one back from two days away is. The instant is a
- * `ref`: a per-device convenience that nothing else reads, held for the life of this tree
- * and gone with the process, which is exactly what makes the next launch a cold start.
+ * player, once more after a sign-in, and once on the way out of onboarding — a sibling route
+ * group, so finishing the second part mounts this tree too. The third is a read of the cell
+ * the commit stored seconds earlier, and it is left alone rather than special-cased: a fix
+ * that rounds to the stored cell records nothing and answers `204`, which is what makes a
+ * write on every launch free. Every return from the background after the mount is measured
+ * against the last attempt by `foregroundRefreshDue`, so a player who flips to Messages and
+ * back is not read — which the author refused as tracking — and one whose last read is more
+ * than a day old is. The instant is a `ref`: a per-device convenience that nothing else
+ * reads, held for the life of this tree and gone with the process, which is exactly what
+ * makes the next launch a cold start.
  *
- * ## Nothing resets
+ * ## Nothing resets, and the write is a mutation
  *
- * The deck's held deal is not thrown away and the radar's held reading refetches on its own
- * rule; what is invalidated is the profile surface, so *In your area* follows the projection
- * the moment a surface reads it. A failed write is left in silence — nobody pressed anything,
- * so there is nothing to report, and the next cold start writes again.
+ * The deck's held deal is not thrown away — its cards' *In your area* is the envelope's
+ * `my_area_code`, and the next hand's envelope carries the new cell — and the radar's held
+ * reading refetches on its own rule. What is invalidated is the profile surface: the read
+ * carries no area today, and this is what makes it follow the moment the profile read grows
+ * the field, which the contract books for the day *You* is built.
+ *
+ * The write goes through `useMutation` as the feature's three other writes do, and for the
+ * query client's own reason: paused while offline and resumed on reconnect. A cold start on a
+ * dead connection — the trip case — is then a write that lands when the phone does, rather
+ * than one dropped until the next launch. `retry: false` is the app's default and right here.
+ * A failed write is left in silence — nobody pressed anything, so there is nothing to report,
+ * and the next cold start writes again.
  */
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 
+import type { AppError } from '@/shared/errors';
 import { useLocation, useOnForeground } from '@/shared/lib/platform';
 
 import { areaAround } from '../domain/locationArea';
 import { foregroundRefreshDue } from '../domain/locationRefresh';
+import type { LocationArea } from '../domain/ProfileDraft';
 import { changeLocation } from '../use-cases/changeLocation';
 
 import { playerProfileKeys } from './playerProfileKeys';
@@ -57,6 +71,12 @@ export function useLocationRefresh(inTheApp: boolean): void {
   /** When the phone was last asked, on this device's clock. `undefined` until the cold start. */
   const lastRefreshAt = useRef<number | undefined>(undefined);
 
+  // No `onError`: `mutate` reports a failure to nobody, which is the silence the ADR asks for.
+  const { mutate: move } = useMutation<void, AppError, LocationArea>({
+    mutationFn: (area) => changeLocation(area),
+    onSuccess: () => client.invalidateQueries({ queryKey: playerProfileKeys.surface() }),
+  });
+
   const refresh = useCallback(async () => {
     // Stamped at the attempt, whatever comes of it: a refused permission or an empty fix is
     // still the phone having been asked, and asking again on the next foreground would be
@@ -67,16 +87,8 @@ export function useLocationRefresh(inTheApp: boolean): void {
     const fix = await location.readFix();
     if (fix === null) return;
     // The reading is coarsened here and the fix goes out of scope with this function.
-    const area = areaAround(fix.latitude, fix.longitude);
-
-    try {
-      await changeLocation(area);
-    } catch {
-      // Silence: nobody pressed anything, and the next cold start writes again.
-      return;
-    }
-    await client.invalidateQueries({ queryKey: playerProfileKeys.surface() });
-  }, [location, client]);
+    move(areaAround(fix.latitude, fix.longitude));
+  }, [location, move]);
 
   useEffect(() => {
     if (!inTheApp || lastRefreshAt.current !== undefined) return;
