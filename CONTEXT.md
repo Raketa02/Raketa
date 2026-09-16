@@ -1367,14 +1367,19 @@ anything about how good anybody is — that is the rating context reading this o
 - **Ghost game** — a plan whose entry window closed with nobody ever saying it happened. Kept
   distinguishable from a played game, because familiarity is about people who actually played.
   A **called-off** game is not one: the window did not close on silence, somebody ended it.
-- **Dismissal** — a player clearing a **called-off** game's card from their own Now
-  ([ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)). The reader's own act, admitted on a game that is *Called off* and on no
-  other standing, and only for somebody on its court; **recorded once per player on the game's
-  stream, and its effect derived on every read** — the reader's Now omits a game they have
-  dismissed, on the shape the room's *Leaving the chat* has. It removes a card, not a fact: the
-  game, its record, the challenge row and the screen behind it are untouched, nobody else's Now
-  moves, and there is no undo. The player-facing name is *Remove this card*. _Avoid_: *hide*,
-  *archive*, *delete the game* — the first two do not exist and the third is not what happens.
+- **Dismissal** — a player clearing a **called-off** court from their own two lists: the
+  game's card from Now and the challenge's row from Chats
+  ([ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §5,
+  [ADR-0173](docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)). The
+  reader's own act, admitted on a game that is *Called off* and on no other standing, and only
+  for somebody on its court; **recorded once per player on the game's stream, and its effect
+  derived on every read** — the reader's Now omits a game they have dismissed and their Chats
+  omits its row, both read off the one set, on the shape the room's *Leaving the chat* has. It
+  removes a court from the reader's lists, not a fact: the game, its record and the challenge are
+  untouched, nobody else's Now or Chats moves, and there is no undo. The player-facing name is
+  *Remove this card* on the card and *Remove this row* on the row — one act, named by what goes
+  where it is pressed. _Avoid_: *hide*, *archive*, *delete the game*, *remove the challenge* —
+  the first two do not exist, the third is not what happens, and the fourth is the withdraw.
 
 **Invariants**
 

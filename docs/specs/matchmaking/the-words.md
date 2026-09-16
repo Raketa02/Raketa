@@ -2139,7 +2139,9 @@ somebody ended it. **The card names nobody, and the screen behind it does** (ame
 §8; it read *It was called off — nobody is named* while `called_off_by` was on no wire): where a
 live card has its wide door the card offers **`What happened?`**, opening the game screen, and
 beside it a square button with the trash glyph, spoken **`Remove this card`**, that clears the
-card from Now at once — §22.9 has the screen's headings and the trash's rule.
+card from Now at once — and, since [ADR-0173](../../adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md),
+the court's Chats row with it, whose own swipe reveals **`Remove this row`** for the same act —
+§22.9 has the screen's headings and the trash's rule.
 
 **Nothing offline gets a third sentence.** `does-not-resume` is the shared value, unchanged, and
 the two values split on **resumption**; a third keyed to the act would break the only distinction
@@ -2262,7 +2264,8 @@ on no wire):
 | The state word | `called off` |
 | The standing line | `Called off` |
 | Under the card's slots | **nothing** — the card names nobody, and offers two things instead of a line |
-| The card's two buttons | `What happened?` — the on-dark fill where a live card has its wide door, opening the game screen · a square button with the trash glyph, spoken `Remove this card`, that clears the card from Now at once, for good, on every device — no sheet, because it removes a card and not a fact: the row and the screen behind it keep the news for their day |
+| The card's two buttons | `What happened?` — the on-dark fill where a live card has its wide door, opening the game screen · a square button with the trash glyph, spoken `Remove this card`, that clears the card from Now at once, for good, on every device — no sheet, because it removes a court from the reader's own lists and not a fact: the record is untouched and nobody else's rail moves. **And the Chats row goes with it** (amended 2026-09-16, [ADR-0173](../../adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)) |
+| The row's revealed control | `Remove this row` — behind a swipe on a `Called off` row the reader is still seated on, the same dismissal met from Chats, no sheet; the row and the card go together. *This row* and not *the challenge*: `Remove the challenge` is the withdraw's word (§22.3) and ends a court for the people asked, and this ends nothing. One act, two words, each naming what the reader sees go from the surface they press it on |
 
 **The screen's ending block, keyed by how it ended** — a departure told from a press by whether
 `called_off_by` still holds a seat on the game (the leaver's is vacated):

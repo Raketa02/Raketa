@@ -1,6 +1,13 @@
 # ADR-0172 — The court ends with the game, the ending says who, and a called-off card can be cleared
 
-- **Status:** Accepted
+- **Status:** Accepted — **§5's *"the challenge row and the screen behind it keep the news for
+  their day"* narrowed 2026-09-16 by
+  [ADR-0173](0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)**: the act still
+  removes no fact, and the challenge row goes with the card for the reader who cleared it —
+  `GET /challenges` subtracts its reader off the same set `GET /games` does, and a `CALLED_OFF`
+  row the reader is still seated on swipes to reveal *Remove this row*, which posts this same
+  dismissal. §5's *"nothing else reads [the set]"* gains that one reader; §7's *no arm* on the
+  tap stands, as does everything else here.
 - **Date:** 2026-09-15
 - **Narrows, by named sentence:**
   [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) §2's title — *"a court

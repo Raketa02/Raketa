@@ -134,6 +134,13 @@ surface that draws the result: the new seats, their fresh deadlines, and a stand
 **Two sections, one obligation and three rooms.** Decided on the prototype `prototype/chats-tab`
 by [#335](https://github.com/Raketa02/Raketa/issues/335), which is that decision's primary source.
 
+**A pull re-reads both lists** (added 2026-09-16). The two queries already re-read on return and
+on focus; what the pull adds is the player asking, on the one tab where the row they are waiting
+for arrives from somebody else's act. The platform's own control, over the page, spinning from the
+pull until **both** lists have answered — refused or not — and never for a refetch the player did
+not ask for; a second pull while one is in flight asks nothing more. The tab says what a pull
+re-reads and the shell draws the control, so a tab that is not such a list draws none.
+
 ### 1.1 The two sections
 
 | | Heading | Holds |
@@ -178,7 +185,9 @@ it. **The rule that dropped the row of a court ended by somebody else's departur
 existed for one day because the only sentence §13 could say of that court was *? said no*, and
 `the-words.md` §13 now has the sentence — *{name} left — nobody else is coming* — so the row stays
 and says it. What still leaves at once is the reader's **own** act: their own *no*, their own
-*left*, their own removal. The presser's own row — *You called the game off* — is not one of those
+*left*, their own removal — **and, since [ADR-0173](../../adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md), their own dismissal**: a `CALLED_OFF` row goes the moment the
+reader clears the court, from this row's swipe or from the Now card's trash, because the server
+subtracts it from their list as it subtracts the card. The presser's own row — *You called the game off* — is not one of those
 and stays its day, because the court behind it, every seat with what each person did, is theirs to
 read too.
 
@@ -270,9 +279,17 @@ an act the server would refuse. §2.1 has the arm.
 ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
 §6, [#428](https://github.com/Raketa02/Raketa/issues/428)) — §1.3's gesture on this row, and the
 same sheet §2.6 describes; the rule that decides whether a row moves is the withdraw's own (§2.6),
-read off the row the list already holds. Every other challenge row reveals nothing and does not
-move: an invitee's, the organiser's once somebody has joined, an ended one on its shelf. An own
-removal leaves the inbox at once, as an own *no* and an own *left* do (§2.5).
+read off the row the list already holds. **A `Called off` row the reader is still seated on
+swipes left to reveal *Remove this row*** (amended 2026-09-16,
+[ADR-0173](../../adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md) §3) — the
+Now card's dismissal met from this list, the same act and the same `POST /games/{id}/dismissal`,
+with **no sheet** for the reason §4.2 gives the trash: it removes the court from the reader's own
+two lists and nothing from the record. The rule that decides whether the row moves is
+`mayDismiss`: `CALLED_OFF`, a game behind it, and the reader's seat still accepted — a leaver's
+own row left at once, and the server refuses them as a stranger. The row goes on the reply, and
+the card with it. Every other challenge row reveals nothing and does not move: an invitee's, the
+organiser's once somebody has joined, any other ending on its shelf. An own removal leaves the
+inbox at once, as an own *no* and an own *left* do (§2.5).
 
 ### 1.3 The conversation row
 
@@ -1267,9 +1284,14 @@ a live card, **a square button with the Feather trash glyph**, spoken **`Remove 
 **dismisses** the card — `POST /games/{id}/dismissal`, the reader's own act, admitted on a
 `CALLED_OFF` game and refused on every other standing — so the card leaves the rail on the reply,
 at once, for good, and on every device, because the server omits a dismissed game from that
-reader's `GET /games`. **No sheet**: the act removes a card and not a fact — the challenge row and
-the screen behind it keep the news for their day, and nobody else's rail moves. Pending, never
-optimistic, as every write in this feature. The trash is on this card and on no other ending's.
+reader's `GET /games`. **No sheet**: the act removes a court from the reader's own lists and not
+a fact — the record is untouched, and nobody else's rail moves. **And the challenge row goes with
+the card** (amended 2026-09-16,
+[ADR-0173](../../adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md) §1, §3):
+the server subtracts the reader's dismissed courts from `GET /challenges` as it does from
+`GET /games`, so the trash here clears the Chats row too, and the row's own swipe (§1.2) clears
+this card — one act, both lists, on the reply. Pending, never optimistic, as every write in this
+feature. The trash is on this card and on no other ending's.
 
 **The card body is not pressable.** The two buttons are the only doors, which reverses §5.2's *the
 card body goes wherever the button goes*: there is nothing left for a body door to agree or
