@@ -18,6 +18,7 @@ type ChangeAvailabilityRequest = components['schemas']['ChangeAvailabilityReques
 type AvailabilityResponse = components['schemas']['AvailabilityResponse'];
 type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
 type ChangeSearchRadiusRequest = components['schemas']['ChangeSearchRadiusRequest'];
+type ChangeLocationRequest = components['schemas']['ChangeLocationRequest'];
 type SearchRadiusResponse = components['schemas']['SearchRadiusResponse'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
 type WireSport = components['schemas']['Sport'];
@@ -223,6 +224,36 @@ export function changeSearchRadius({
   return httpRequest<SearchRadiusResponse>({
     method: 'PUT',
     path: '/api/v1/players/me/search-radius',
+    body,
+    authenticated: true,
+  });
+}
+
+export interface ChangeLocationOptions {
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
+/**
+ * Move this player's Location area to where the phone is. **The cold start's write, and no
+ * screen's** ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §6).
+ *
+ * A `204` and no body: the route rounds what it is sent to the cell about a kilometre across
+ * before anything is recorded, a fix that rounds to the cell already stored records nothing
+ * and still answers `204`, and no route on this surface serves the area back. What this app
+ * sends is already that cell — `areaAround` is applied the moment the fix is read, as it is
+ * for the commit — so the precise fix does not cross the wire either.
+ *
+ * **Unkeyed, and no `signal`**, for the radius write's two reasons: a `PUT` that lands the
+ * same state twice has nothing to deduplicate — which is what makes a write on every launch
+ * free — and a cancelled write leaves the client unable to say whether it landed.
+ */
+export function changeLocation({ latitude, longitude }: ChangeLocationOptions): Promise<void> {
+  const body: ChangeLocationRequest = { latitude, longitude };
+  return httpRequest<void>({
+    method: 'PUT',
+    path: '/api/v1/players/me/location',
     body,
     authenticated: true,
   });

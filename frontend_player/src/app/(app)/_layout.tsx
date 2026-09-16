@@ -36,7 +36,7 @@ import {
   useEndOnboardingPass,
   useEntryDecision,
 } from '@/features/onboarding/types';
-import { SOCIAL_STEPS_ENTRY } from '@/features/player_profile/types';
+import { SOCIAL_STEPS_ENTRY, useLocationRefresh } from '@/features/player_profile/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 
 export default function AppLayout() {
@@ -48,6 +48,10 @@ export default function AppLayout() {
   // someone has to remember on each of the several ways out of the flow. Called before the
   // returns below, because a hook may not be conditional.
   useEndOnboardingPass(entry.kind === 'app');
+  // And the location moves on a cold start, for the same branch and the same reason: this is
+  // the one site that knows a player is signed in and past onboarding. The feature owns what
+  // happens; this file owns the moment (ADR-0174 §6).
+  useLocationRefresh(entry.kind === 'app');
 
   // Can't happen in practice — `BootstrapGate` renders nothing until the sequence
   // resolves, so no route tree exists while the status is still `bootstrapping`. It is

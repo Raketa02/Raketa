@@ -70,6 +70,15 @@ export {
 } from './hooks/useProfileSurface';
 
 /**
+ * **The location moves on a cold start** — silently, after a day in the background, never on
+ * a plain foreground ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §6). Called by the `(app)` layout with the entry gate's own answer, because that is the
+ * branch that knows a player is signed in and past onboarding; the feature owns the read, the
+ * coarsening and the write, and the layout owns nothing but the moment.
+ */
+export { useLocationRefresh } from './hooks/useLocationRefresh';
+
+/**
  * **The You tab's first real section** — one row per rated sport, and what each one has
  * declared ([#296](https://github.com/Raketa02/Raketa/issues/296)).
  *
@@ -79,6 +88,16 @@ export {
  * `PROFILE_SCREEN`, the one value of `PlayIntentSurface` that had no client behind it.
  */
 export { PlayIntentsSection } from './components/PlayIntentsSection';
+
+/**
+ * **You's one sentence about the Location area** — that it moves on a launch, and how coarse
+ * it is — under the section above and above the account panel
+ * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §6). Named by `shell`'s `YouScreen` and by nothing else; the sentence itself is
+ * `AREA_UPDATES_LINE`, exported beside it for the suite that holds the tab to the words.
+ */
+export { AreaUpdatesNote } from './components/AreaUpdatesNote';
+export { AREA_UPDATES_LINE } from './components/locationPresentation';
 
 /**
  * The bounds a Search radius is held inside, and the words the figure is read with.

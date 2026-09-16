@@ -15,6 +15,7 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { authKeys } from '@/features/auth/types';
 import { onboardingKeys } from '@/features/onboarding/types';
 import { FIND_A_GAME_TITLE, modeControlLabel, usePlaySession } from '@/features/play/types';
+import { AREA_UPDATES_LINE } from '@/features/player_profile/types';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -38,7 +39,7 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
-import { declarationOptionLabel } from '@/shared/vocabulary/playIntentPresentation';
+import { declarationOptionLabel, intentLabel } from '@/shared/vocabulary/playIntentPresentation';
 
 import { CHATS_COPY, NOW_COPY, PLACEHOLDER_COPY } from './shellCopy';
 
@@ -198,6 +199,27 @@ describe('the placeholder', () => {
     await launchIntoTheApp();
 
     expect(screen.queryByText(/nothing is happening/i)).toBeNull();
+  });
+
+  /**
+   * **The one written trace of the cold-start refresh** (ADR-0174 §6, #462): the area moves
+   * silently, so the tab says the rule once — under the profile block, above the way out.
+   * The words are `locationPresentation.test.ts`'s; this is the tab drawing them.
+   */
+  it('says how the area moves, under the profile block and above the account panel', async () => {
+    await launchIntoTheApp();
+
+    pressTab('You');
+
+    expect(await screen.findByText(AREA_UPDATES_LINE)).toBeTruthy();
+    // The declared row is the profile block; the email is the account panel. Read off the
+    // rendered tree in order, so *under* and *above* are positions and not a guess.
+    await screen.findByText(intentLabel('FOR_FUN'));
+    const tree = JSON.stringify(screen.toJSON());
+    const at = (text: string) => tree.indexOf(text);
+    expect(at(intentLabel('FOR_FUN'))).toBeGreaterThan(-1);
+    expect(at(AREA_UPDATES_LINE)).toBeGreaterThan(at(intentLabel('FOR_FUN')));
+    expect(at(GATE_USER.email)).toBeGreaterThan(at(AREA_UPDATES_LINE));
   });
 
   it('keeps the way out of a session on You, where it belongs', async () => {

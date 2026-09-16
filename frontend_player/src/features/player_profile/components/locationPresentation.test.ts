@@ -9,6 +9,7 @@
  */
 
 import {
+  AREA_UPDATES_LINE,
   LOCATION_SAVED,
   USE_MY_LOCATION,
   WHY_BODY,
@@ -53,5 +54,20 @@ describe('the control that continues', () => {
   it('says what continuing costs when there is no area', () => {
     expect(continueLabel(undefined)).toBe(WITHOUT_AN_AREA_LABEL);
     expect(continueLabel(AN_AREA)).toBe(WITH_AN_AREA_LABEL);
+  });
+});
+
+describe('the one written trace of the cold-start refresh', () => {
+  /**
+   * `the-words.md` §26's sentence for You, verbatim: silent motion with no written trace is
+   * the one thing that would surprise a careful player, so the tab says it once, statically
+   * (ADR-0174 §6). Both halves are properties of the code — the refresh on launch, and the
+   * coarsening `locationArea` applies — and the sentence may be re-worded only while it keeps
+   * saying both.
+   */
+  it('says when the area moves and how coarse it is, as the words have it', () => {
+    expect(AREA_UPDATES_LINE).toBe(
+      'Your area updates each time you open Raketa; it is never finer than about a kilometre.',
+    );
   });
 });

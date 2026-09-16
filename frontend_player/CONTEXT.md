@@ -1152,7 +1152,13 @@ it.
   while the player is elsewhere is a movement trail, a different privacy class from the
   one anybody agreed to, and nothing in this app asks for it. A fix is **coarsened the
   moment it is read** — the Location area is what the app keeps, and the fix itself does
-  not outlive the function that asked for it.
+  not outlive the function that asked for it. **Read again on a cold start** and after a day
+  in the background, through the same port and with the same accuracy, by `useLocationRefresh`
+  — never merely on foreground, and never with a prompt: the refresh checks the permission
+  and asks nobody, so a revoked one leaves the stored area where it is
+  ([ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §6).
+  _Avoid_: "refresh on foreground" — a read on every return is a movement trail taken one
+  foreground at a time, which is what the day was chosen against.
 - **Foregrounded** — the app coming back to the front, as `useOnForeground` reports it:
   `AppState` becoming `active`, read through the focus manager `wireFocusManager` already
   feeds. One listener for the whole app (docs/architecture.md Part 13), so _foreground_ has

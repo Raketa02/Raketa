@@ -94,3 +94,9 @@ deal's `pool.want_to_play_you`, at one and above and never at nought, so a heade
 waiting has nothing in the slot. `ShellScreen` gained `fill` for the same tab, forwarded and not
 designed: the deck's stage takes the height the phone gives it, with the three round buttons in
 the pinned `action` slot below it.
+
+**You draws one more of another feature's sections: the Location area sentence**
+([#462](https://github.com/Raketa02/Raketa/issues/462)). `AreaUpdatesNote` sits under
+`PlayIntentsSection` and above the account panel, composed exactly as the section above it is;
+the sentence, the refresh it is the trace of and the reasons are the profile feature's
+([`player_profile.md`](player_profile.md)).

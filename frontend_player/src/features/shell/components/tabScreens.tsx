@@ -20,7 +20,7 @@
 
 import { AccountPanel } from '@/features/auth/types';
 import { GamesRail } from '@/features/plans/types';
-import { PlayIntentsSection } from '@/features/player_profile/types';
+import { AreaUpdatesNote, PlayIntentsSection } from '@/features/player_profile/types';
 
 import { PlaceholderScreen } from './PlaceholderScreen';
 import { ShellScreen } from './ShellScreen';
@@ -60,13 +60,19 @@ export function NowScreen() {
  * unbuilt, so the line above stays exactly as it is — it names what this tab becomes, and two
  * thirds of that is still owed.
  *
- * Both children are other features' sections composed by the shell, which is what this tab has
- * always been: it owns the citation and nothing that is drawn under it.
+ * **One sentence about the Location area sits under the profile block**
+ * ([#462](https://github.com/Raketa02/Raketa/issues/462), ADR-0174 §6): the area moves
+ * silently on a cold start, and this is the one written trace of it. Static, and the profile
+ * feature's own words.
+ *
+ * All three children are other features' sections composed by the shell, which is what this
+ * tab has always been: it owns the citation and nothing that is drawn under it.
  */
 export function YouScreen() {
   return (
     <PlaceholderScreen copy={PLACEHOLDER_COPY.you}>
       <PlayIntentsSection />
+      <AreaUpdatesNote />
       <AccountPanel />
     </PlaceholderScreen>
   );

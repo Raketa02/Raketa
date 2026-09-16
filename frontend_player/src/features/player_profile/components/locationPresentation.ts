@@ -111,3 +111,17 @@ export function continueLabel(area: LocationArea | undefined): string {
 export function captureLabel(area: LocationArea | undefined): string {
   return area === undefined ? USE_MY_LOCATION : LOCATION_SAVED;
 }
+
+/**
+ * **The one written trace of the cold-start refresh** — You's sentence, `the-words.md` §26.
+ *
+ * The area moves silently: on every launch and after a day in the background, the app reads
+ * the phone again and puts the cell, with no prompt and no toast
+ * ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §6). Silent motion with no written trace is the one thing that would surprise a careful
+ * player, so the tab says it once, statically — and it says the coarseness in the same
+ * breath, because *updates each time you open* on its own reads as tracking, and the
+ * kilometre is what makes it not.
+ */
+export const AREA_UPDATES_LINE =
+  'Your area updates each time you open Raketa; it is never finer than about a kilometre.';

@@ -113,3 +113,32 @@ the tags and the photo, and becomes editable the day all three do (ADR-0170 §5)
 device**: whether four lines is the right ceiling for the box, whether the counter sits right
 under it, and whether the action bar rises cleanly over the iOS keyboard, are the author's to
 check.
+
+**The location moves on a cold start — silently, after a day in the background, never on a
+plain foreground, and You says so** ([#462](https://github.com/Raketa02/Raketa/issues/462),
+[ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §6).
+A location was written once, at the end of onboarding, and nothing moved it — a radar that
+draws people where onboarding left them draws a city as it was. `useLocationRefresh` is the
+first writer of `change_location` after the commit: called by the `(app)` layout with the entry
+gate's own answer, because that is the one site that knows a player is signed in and past
+onboarding, it reads one fix through the same `LocationPort` the location step uses —
+foreground only, balanced accuracy — coarsens it on arrival with `areaAround`, and `PUT
+/players/me/location` carries the **cell**, never the fix, exactly as the commit does. **It
+never asks**: `getPermission()` only, so a permission revoked in Settings means no prompt, no
+request and no sentence, and the stored cell stays. **Once on the mount, then only after a
+day**: `foregroundRefreshDue` in `domain/locationRefresh` is the whole rule — a return from the
+background reads again when more than 24 h have passed since the last _attempt_, whatever came
+of it, and a plain foreground reads nothing, which the author refused as tracking. The instant
+is a `ref`, a per-device convenience nothing else reads, gone with the process — which is what
+makes the next launch a cold start. **Nothing resets**: the deck's held deal stands, the radar's
+held reading refetches on its own rule, and the profile surface is invalidated so _In your area_
+follows the projection the moment a surface reads it; a failed write is silence, and the next
+cold start writes again. A player still in onboarding is never refreshed — the location step is
+where their area is being asked for, with a prompt and a sentence, and the step's own read and
+tests are untouched. **You** carries the one written trace, `AreaUpdatesNote` — `the-words.md`
+§26's _Your area updates each time you open Raketa; it is never finer than about a kilometre._,
+static, `tiny` in `muted`, under the profile block and above the account panel — because silent
+motion with no written trace is the one thing that would surprise a careful player, and the
+kilometre in the same breath is what keeps _updates each time you open_ from reading as
+tracking. **Not seen on a device**: the read on a real cold start against the OS, and the
+sentence's fit on the tab, are the author's to check.
