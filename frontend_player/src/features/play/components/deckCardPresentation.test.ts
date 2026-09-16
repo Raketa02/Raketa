@@ -19,22 +19,22 @@ const HERE = 'A+050612+0019938';
 describe('the meta line', () => {
   it('adds *around this week* after the kilometres when the deal said so', () => {
     expect(
-      deckMetaLine({ km: 2, theirAreaCode: HERE, myAreaCode: HERE, aroundThisWeek: true }),
-    ).toBe('In your area · 2 km · around this week');
-    expect(deckMetaLine({ km: 7, theirAreaCode: HERE, aroundThisWeek: true })).toBe(
-      '7 km · around this week',
+      deckMetaLine({ km: 1.9, theirAreaCode: HERE, myAreaCode: HERE, aroundThisWeek: true }),
+    ).toBe('In your area · 1,9 km · around this week');
+    expect(deckMetaLine({ km: 7.2, theirAreaCode: HERE, aroundThisWeek: true })).toBe(
+      '7,2 km · around this week',
     );
   });
 
   it('says nothing about the week when the code is absent — never *active now*', () => {
     const line = deckMetaLine({
-      km: 2,
+      km: 1.9,
       theirAreaCode: HERE,
       myAreaCode: HERE,
       aroundThisWeek: false,
     });
 
-    expect(line).toBe('In your area · 2 km');
+    expect(line).toBe('In your area · 1,9 km');
     expect(line).not.toMatch(/active|today|now/);
   });
 

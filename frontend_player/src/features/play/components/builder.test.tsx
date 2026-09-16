@@ -959,6 +959,9 @@ describe('who this person is', () => {
     // And the `@nickname` under the name — drawn on the record and the You tab, and nowhere
     // else on the court or its cards (ADR-0171 §4).
     expect(screen.getByText('@cyryl')).toBeTruthy();
+    // The seat's own `distance_km`, to one decimal — the identity line the own-record case
+    // below asserts the absence of, so that absence is of something this sheet does draw.
+    expect(screen.getByText('4,0 km')).toBeTruthy();
   });
 
   /**
@@ -1048,7 +1051,7 @@ describe('who this person is', () => {
     expect(await screen.findByText(`me_myself ${YOU_MARK}`)).toBeTruthy();
     // Neither half of the identity line: nought kilometres from yourself is not a fact, and
     // neither is being in your own area.
-    expect(screen.queryByText('4 km')).toBeNull();
+    expect(screen.queryByText('4,0 km')).toBeNull();
     expect(screen.queryByText(new RegExp(IN_YOUR_AREA))).toBeNull();
     expect(transport.requestsTo('GET', OWN_RECORD)).toHaveLength(1);
   });

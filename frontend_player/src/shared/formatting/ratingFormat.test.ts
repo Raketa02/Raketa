@@ -9,6 +9,7 @@
  */
 
 import {
+  formatDistanceKm,
   formatLevel,
   formatPercent,
   formatRange,
@@ -98,5 +99,36 @@ describe('a percentage', () => {
     // being read as "28,4% sure", and nothing on any screen compares two of them.
     expect(formatPercent(28)).toBe('28%');
     expect(formatPercent(28.4)).toBe('28%');
+  });
+});
+
+describe('a distance', () => {
+  /**
+   * **One decimal, a comma, and the unit** — the number the deck card, the record's identity
+   * line and the why-fit sentence all print for one person (ADR-0174 §2). The server serves it
+   * to one place already, measured spot to spot; this is the print and nothing else.
+   */
+  it('writes one decimal with a comma and the unit', () => {
+    expect(formatDistanceKm(1.9)).toBe('1,9 km');
+    expect(formatDistanceKm(0.6)).toBe('0,6 km');
+  });
+
+  /** A whole number of kilometres is still written to its one place: nothing prints `12 km`. */
+  it('keeps the trailing nought rather than printing a whole kilometre', () => {
+    expect(formatDistanceKm(12)).toBe('12,0 km');
+  });
+
+  it('rounds rather than truncating, so a float that arrived as 1.85 is not written as 1,8', () => {
+    expect(formatDistanceKm(1.85)).toBe('1,9 km');
+    expect(formatDistanceKm(1.96)).toBe('2,0 km');
+  });
+
+  /**
+   * The floor is the **server's** — `distance_km` is never served below `0.1` — and the print
+   * neither raises it nor lowers it: the smallest number a screen can say is `0,1 km`, and it
+   * is said as served.
+   */
+  it('prints the floor as served', () => {
+    expect(formatDistanceKm(0.1)).toBe('0,1 km');
   });
 });

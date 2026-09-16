@@ -45,10 +45,21 @@ describe('the identity line', () => {
     identityLine({ ...facts, isSelf: false });
 
   it('states the area only where two codes actually match', () => {
-    expect(about({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 1 })).toBe(
-      `${IN_YOUR_AREA} · 1 km`,
+    expect(about({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 0.6 })).toBe(
+      `${IN_YOUR_AREA} · 0,6 km`,
     );
-    expect(about({ areaCode: HERE, viewerAreaCode: THERE, distanceKm: 4 })).toBe('4 km');
+    expect(about({ areaCode: HERE, viewerAreaCode: THERE, distanceKm: 4.3 })).toBe('4,3 km');
+  });
+
+  /**
+   * **One decimal, everywhere** (ADR-0174 §2). The kilometres are the spot-to-spot number the
+   * server serves to one place, and the line prints it through the one formatter the deck card
+   * and the why-fit sentence use — so a person in the reader's own cell reads *In your area ·
+   * 0,6 km*, and a served whole number still carries its decimal rather than printing a whole
+   * kilometre.
+   */
+  it('prints the kilometres to one decimal, never whole', () => {
+    expect(about({ areaCode: HERE, viewerAreaCode: THERE, distanceKm: 4 })).toBe('4,0 km');
   });
 
   /**
@@ -57,7 +68,7 @@ describe('the identity line', () => {
    * are in it, and must not be told they are not either.
    */
   it('makes no claim at all where the reader’s own area is unknown', () => {
-    expect(about({ areaCode: HERE, distanceKm: 4 })).toBe('4 km');
+    expect(about({ areaCode: HERE, distanceKm: 4.3 })).toBe('4,3 km');
   });
 
   /**
@@ -79,7 +90,7 @@ describe('the identity line', () => {
   });
 
   it('never prints the area code itself, which is a coordinate and not a name', () => {
-    expect(about({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 4 })).not.toContain(HERE);
+    expect(about({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 4.3 })).not.toContain(HERE);
   });
 });
 
@@ -192,10 +203,10 @@ describe('the header, as one element', () => {
         name: 'Bea Kowalczyk',
         handle: '@bea_k',
         onCourt: true,
-        identity: 'In your area · 4 km',
+        identity: 'In your area · 0,6 km',
         sports: ['Padel 2,75'],
       }),
-    ).toBe('Bea Kowalczyk. @bea_k. Photo checked: on court. In your area · 4 km. Padel 2,75');
+    ).toBe('Bea Kowalczyk. @bea_k. Photo checked: on court. In your area · 0,6 km. Padel 2,75');
 
     expect(
       recordHeaderLabel({
@@ -217,10 +228,10 @@ describe('the header, as one element', () => {
         handle: '@bea_k',
         onCourt: false,
         intro: introLine('Will travel for a hard game.'),
-        identity: '4 km',
+        identity: '4,3 km',
         sports: ['Padel 2,75'],
       }),
-    ).toBe('Bea Kowalczyk. @bea_k. “Will travel for a hard game.”. 4 km. Padel 2,75');
+    ).toBe('Bea Kowalczyk. @bea_k. “Will travel for a hard game.”. 4,3 km. Padel 2,75');
   });
 
   /**
@@ -234,10 +245,10 @@ describe('the header, as one element', () => {
         name: 'Bea Kowalczyk',
         handle: '@bea_k',
         onCourt: false,
-        identity: '4 km',
+        identity: '4,3 km',
         sports: [],
       }),
-    ).toBe('Bea Kowalczyk. @bea_k. 4 km');
+    ).toBe('Bea Kowalczyk. @bea_k. 4,3 km');
   });
 });
 

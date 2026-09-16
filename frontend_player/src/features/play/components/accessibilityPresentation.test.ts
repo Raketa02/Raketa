@@ -31,7 +31,7 @@ const MAREK = {
   name: 'Marek',
   fit: 78,
   level: { level: 2.71, band: 'Established', range: { low: 2.55, high: 2.87 } },
-  meta: { km: 4, theirAreaCode: 'A+050612+0019938', myAreaCode: 'A+050612+0019938' },
+  meta: { km: 4.3, theirAreaCode: 'A+050612+0019938', myAreaCode: 'A+050612+0019938' },
   reasons: ['0,12 above you', '3 slots you both ticked · next Tue evening'],
   concerns: ['A long way out'],
 } as const;
@@ -46,7 +46,7 @@ describe('the candidate card', () => {
       label.indexOf('Marek'),
       label.indexOf('Fit 78'),
       label.indexOf('Established'),
-      label.indexOf('4 km'),
+      label.indexOf('4,3 km'),
       label.indexOf('0,12 above you'),
       label.indexOf('A long way out'),
     ];
@@ -65,7 +65,7 @@ describe('the candidate card', () => {
     expect(marked.indexOf('Photo checked: on court')).toBeGreaterThan(
       marked.indexOf('Established'),
     );
-    expect(marked.indexOf('Photo checked: on court')).toBeLessThan(marked.indexOf('4 km'));
+    expect(marked.indexOf('Photo checked: on court')).toBeLessThan(marked.indexOf('4,3 km'));
     expect(candidateCardLabel(MAREK)).not.toContain('Photo checked');
     expect(candidateCardLabel(MAREK)).not.toMatch(/\.\s*\./);
   });

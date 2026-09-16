@@ -64,18 +64,33 @@ describe('the level row', () => {
 
 describe('the meta line', () => {
   it('is the distance alone when the two areas differ', () => {
-    expect(metaLine({ km: 7, theirAreaCode: ELSEWHERE, myAreaCode: HERE })).toBe('7 km');
+    expect(metaLine({ km: 7.2, theirAreaCode: ELSEWHERE, myAreaCode: HERE })).toBe('7,2 km');
   });
 
   it('says they are in your area when the two codes match', () => {
     // A comparison between two codes is exactly what ADR-0021 licenses a client to compute.
-    expect(metaLine({ km: 2, theirAreaCode: HERE, myAreaCode: HERE })).toBe('In your area · 2 km');
+    expect(metaLine({ km: 1.9, theirAreaCode: HERE, myAreaCode: HERE })).toBe(
+      'In your area · 1,9 km',
+    );
+  });
+
+  /**
+   * **One decimal, everywhere** (ADR-0174 §2). The distance is the spot-to-spot number the server
+   * serves to one place, and the card prints it through the one formatter — so somebody in the
+   * reader's own cell reads *In your area · 0,6 km* rather than a whole kilometre, and a served
+   * whole number still carries its decimal.
+   */
+  it('prints the distance to one decimal, never a whole kilometre', () => {
+    expect(metaLine({ km: 0.6, theirAreaCode: HERE, myAreaCode: HERE })).toBe(
+      'In your area · 0,6 km',
+    );
+    expect(metaLine({ km: 4, theirAreaCode: ELSEWHERE, myAreaCode: HERE })).toBe('4,0 km');
   });
 
   it('never prints the code itself, in either branch', () => {
     const lines = [
-      metaLine({ km: 7, theirAreaCode: ELSEWHERE, myAreaCode: HERE }),
-      metaLine({ km: 2, theirAreaCode: HERE, myAreaCode: HERE }),
+      metaLine({ km: 7.2, theirAreaCode: ELSEWHERE, myAreaCode: HERE }),
+      metaLine({ km: 1.9, theirAreaCode: HERE, myAreaCode: HERE }),
     ];
 
     for (const line of lines) expect(line).not.toMatch(/A\+\d/);
@@ -84,7 +99,7 @@ describe('the meta line', () => {
   it('says nothing about when they were last here', () => {
     // `active {x}` is the other slot with nothing behind it, and it is the one ADR-0106 §5
     // withholds rather than the one nobody has built.
-    const line = metaLine({ km: 7, theirAreaCode: ELSEWHERE, myAreaCode: HERE });
+    const line = metaLine({ km: 7.2, theirAreaCode: ELSEWHERE, myAreaCode: HERE });
 
     expect(line).not.toMatch(/active|today|online|ago/i);
   });

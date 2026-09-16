@@ -884,3 +884,28 @@ counter's second half now. **Not seen on a device** — the author checks the bu
 nine mocks under `game_card_and_details/players/`, and the wash's legibility over a photograph at
 the name, the stamps' volt stroke over a photograph's top, and the counter straddling the card's
 foot are the three things to look at first.
+
+**One decimal everywhere — the deck card, the record's identity line and the why-fit sentence
+print the same distance** ([#461](https://github.com/Raketa02/Raketa/issues/461),
+[ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2).
+`distance_km` is a one-decimal number now on every candidate — measured between two **drawn
+spots**, one fixed point inside each player's coarse area, never below `0.1`, still omitted when
+the distance term stood down — and Filip's card reads _In your area · 1,9 km · around this week_
+where it read _2 km_. One formatter prints it, `formatDistanceKm` beside the level's in
+`shared/formatting/ratingFormat` — one decimal, the comma, the unit, the trailing nought kept —
+because the decimal comma has one home and _the same number for the same person_ is only true
+while every surface prints it through the same function: `metaLine`, and so the social card, the
+deck card, the challenge card's row and every spoken label composed over it; the record's
+`identityLine`; and the why-fit sheet's `distanceReason`. **The sheet's sentence reads the
+candidate's `distanceKm` and never the evidence's `km`**: the evidence's kilometres are the
+engine's input — whole, cell to cell, what the Fit was scored on — and they stay whole on the
+wire, so a sheet that printed them would say _4 km away_ under a card saying _4,3 km_, which is
+the disagreement the rule exists to remove. `reasonLine` therefore takes the pair beside the
+evidence (`PairFacts`, one field), required rather than optional so the `saysSomething` that
+selects a line and the `reasonLines` that prints it cannot answer from different facts; a fired
+distance term with no `distanceKm` — a row the contract does not produce — says nothing rather
+than falling back to the engine's number. _In your area_ is still code equality and nothing
+else on the card, the record or the sheet moves. Nothing prints a whole kilometre any more, and
+the tests moved by value: the mock's own _1,9 km_ on the deck, _0,6 km_ for somebody in the
+reader's cell on the record, and a sheet fixture whose candidate says `4.3` over an evidence
+saying `4`, so the wrong number has somewhere to be read from.

@@ -13,7 +13,7 @@
  * ([`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md) §5, §10).
  *
  * **The label is optional because two of the four rows are whole sentences.** `2,71 ·
- * Established · likely 2,55 – 2,87` and `In your area · 4 km` name what they are; *You
+ * Established · likely 2,55 – 2,87` and `In your area · 4,3 km` name what they are; *You
  * overlap* and *Predicted balance* do not, and a label over the first two would be the
  * restatement §10 forbids in the one place it is easiest to write.
  *

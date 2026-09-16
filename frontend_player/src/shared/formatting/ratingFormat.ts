@@ -26,6 +26,9 @@ const DECIMALS = 2;
 /** What the platform publishes a star average to — see {@link formatStars}. */
 const STAR_DECIMALS = 1;
 
+/** What the platform serves a distance to — see {@link formatDistanceKm}. */
+const DISTANCE_DECIMALS = 1;
+
 /**
  * **U+2212, never the hyphen** — `the-words.md` §6.2's *"two decimals, decimal comma, U+2212
  * minus"*, which is §B16 read at the one place a figure on this scale can be negative.
@@ -79,6 +82,25 @@ export function formatSignedLevel(value: number): string {
  */
 export function formatStars(value: number): string {
   return value.toFixed(STAR_DECIMALS).replace('.', ',');
+}
+
+/**
+ * A **distance** — `1,9 km`, `12,0 km`, `0,1 km`. One decimal, the comma, the unit; the trailing
+ * nought is never trimmed.
+ *
+ * **One function, every caller** ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §2): the deck card's meta line, the record's identity line and the why-fit sentence print the
+ * same number for the same person, and that is only true while they print it through the same
+ * function. `distance_km` is served to one place already — measured between two **drawn spots**,
+ * and never below `0.1` — so this rounds nothing the server did not, and the floor is printed
+ * as served rather than enforced here. Nothing prints a whole kilometre any more.
+ *
+ * Here rather than in a `distanceFormat` of its own for `formatStars`' reason: the decimal
+ * comma is a house convention with one home, and a second `replace('.', ',')` is the drift this
+ * module's note names.
+ */
+export function formatDistanceKm(value: number): string {
+  return `${value.toFixed(DISTANCE_DECIMALS).replace('.', ',')} km`;
 }
 
 export function formatRange(range: { readonly low: number; readonly high: number }): string {

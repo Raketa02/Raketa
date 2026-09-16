@@ -20,7 +20,8 @@
  * So the range carries a word of its own and the band keeps its name. *Fact · mechanism*,
  * §F1 rule 4's shape — the level and its plain-language meaning, then the caveat.
  *
- * ## The meta line — **`{km} km`, or `In your area · {km} km`**, and nothing else.
+ * ## The meta line — **`{km} km`, or `In your area · {km} km`**, and nothing else — the
+ * kilometres to one decimal, through the one formatter.
  *
  * §B11 draws it as `"{area} · {km} · active {x}"`, and **two of those three slots have
  * nothing behind them**
@@ -44,6 +45,7 @@
 
 import { counted } from '@/shared/formatting/counted';
 import {
+  formatDistanceKm,
   formatLevel,
   formatPercent,
   formatRange,
@@ -80,7 +82,14 @@ export function levelRow(facts: LevelRowFacts): string {
   return `${formatLevel(facts.level)} · ${facts.band} · likely ${formatRange(facts.range)}`;
 }
 
-/** Whole kilometres, as the contract sends them — the client rounds nothing. */
+/**
+ * Kilometres **to one decimal**, as the contract sends them — the client rounds nothing.
+ *
+ * The number is measured between two **drawn spots**, one fixed point inside each player's
+ * coarse area, and it is the same number the record's identity line and the why-fit sentence
+ * print for the same person ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §2). Nothing prints a whole kilometre any more.
+ */
 export interface MetaLineFacts {
   readonly km: number;
   /** Their coarse area, as a machine code. **Never printed.** */
@@ -98,7 +107,7 @@ export interface MetaLineFacts {
 }
 
 export function metaLine(facts: MetaLineFacts): string {
-  const distance = `${facts.km} km`;
+  const distance = formatDistanceKm(facts.km);
   // `undefined === undefined` would be true, so the absence is tested rather than compared:
   // a card with no area of its own must not tell twenty strangers they are in it.
   if (facts.myAreaCode === undefined) return distance;

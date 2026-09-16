@@ -124,7 +124,9 @@ function candidate(over: Partial<Candidate> = {}): Candidate {
   return {
     playerId: PLAYER,
     fit: 78,
-    distanceKm: 4,
+    // One decimal, spot to spot (ADR-0174 §2) — and not the evidence's whole `4`, which is
+    // the engine's input and is never printed.
+    distanceKm: 4.3,
     card: {
       name: 'Marek',
       photoUrl: PHOTO,
@@ -158,7 +160,7 @@ function wireRow(over: Partial<Wire['CandidateSchema']> = {}): Wire['CandidateSc
   return {
     player_id: PLAYER,
     fit: 78,
-    distance_km: 4,
+    distance_km: 4.3,
     player_card: {
       name: 'Marek',
       area_code: THEIR_AREA,
@@ -337,7 +339,7 @@ describe('one contract, three shapes', () => {
     // The one sentence a client is licensed to compute here is a comparison between two
     // codes (ADR-0021), and `area_code` is a coordinate string no card may print.
     drawSocial();
-    expect(screen.getByText('4 km')).toBeTruthy();
+    expect(screen.getByText('4,3 km')).toBeTruthy();
     expect(screen.queryByText(new RegExp(THEIR_AREA, 'i'))).toBeNull();
     screen.unmount();
 
@@ -350,7 +352,7 @@ describe('one contract, three shapes', () => {
         onWhyFit={noop}
       />,
     );
-    expect(screen.getByText('In your area · 4 km')).toBeTruthy();
+    expect(screen.getByText('In your area · 4,3 km')).toBeTruthy();
   });
 
   it('draws the forecast as a band with its word on the competitive card', () => {
@@ -429,7 +431,7 @@ describe('each card’s drawn set', () => {
 
     for (const line of [
       '3 slots you both ticked · next Tue evening',
-      '4 km away',
+      '4,3 km away',
       "They're here to compete too",
     ]) {
       expect(screen.queryByText(line)).toBeNull();
@@ -1170,7 +1172,7 @@ describe('what each control announces', () => {
 
     expect(
       screen.getByLabelText(
-        'Marek. Fit 78 out of 100. 2,83 · Established · likely 2,55 – 2,87. 4 km. ' +
+        'Marek. Fit 78 out of 100. 2,83 · Established · likely 2,55 – 2,87. 4,3 km. ' +
           'Forecast 74% even · 66% sure. ' +
           "They're here to compete too. Both of you: Plays to win.",
       ),

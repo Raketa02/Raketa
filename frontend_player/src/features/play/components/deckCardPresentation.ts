@@ -9,11 +9,13 @@
  *
  * ## The meta line gains one clause, and it is a liveness code's own words
  *
- * The mocks write *Grzegórzki · 1,9 km · active now*, and none of those three has a producer
+ * The mocks write *Grzegórzki · 1,9 km · active now*, and two of those three have no producer
  * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
- * §7): the area code is never printed, the distance is whole kilometres between coarse areas,
- * and *active now* is activity recency, which ADR-0107 §3 refused on any card. What the line
- * draws instead is `metaLine`'s one licensed clause and the kilometres, plus **`RECENT_ACTIVITY`'s
+ * §7): the area code is never printed, and *active now* is activity recency, which ADR-0107 §3
+ * refused on any card. The *1,9 km* is real since
+ * [ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §2 — one decimal, spot to spot, served — and `metaLine` prints it. What the line draws is
+ * `metaLine`'s one licensed clause and the kilometres, plus **`RECENT_ACTIVITY`'s
  * existing words** — *around this week*, deliberately un-datable — drawn when, and only when,
  * the deal's liveness reasons carry the code. It is the same sentence `livenessLine` writes for
  * the reason list, lower-cased because it sits mid-line after a middle dot; the test holds the
@@ -70,7 +72,7 @@ export interface DeckMetaLineFacts extends Omit<MetaLineFacts, 'km'> {
 }
 
 /**
- * `In your area · 2 km · around this week`, or as much of it as is true — and nothing at all
+ * `In your area · 1,9 km · around this week`, or as much of it as is true — and nothing at all
  * where neither the distance nor the week is known.
  *
  * With no distance the clause stands alone in the code's own sentence case, because it starts

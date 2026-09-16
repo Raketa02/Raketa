@@ -24,6 +24,7 @@
 
 import { counted } from '@/shared/formatting/counted';
 import {
+  formatDistanceKm,
   formatLevel,
   formatPercent,
   formatRange,
@@ -108,7 +109,12 @@ export function recordHandle(name: string, isSelf: boolean): string {
 export const IN_YOUR_AREA = 'In your area';
 
 export interface IdentityFacts {
-  /** Whole kilometres, as the contract sends them. */
+  /**
+   * Kilometres **to one decimal**, as the contract sends them — spot to spot, and the same
+   * number the deck card and the why-fit sentence print for this person
+   * ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §2). Absent where the surface that opened the record holds none.
+   */
   readonly distanceKm?: number;
   /** Their coarse area, as a machine code. **Never printed.** */
   readonly areaCode: string;
@@ -125,7 +131,7 @@ export function identityLine(facts: IdentityFacts): string {
     facts.viewerAreaCode !== undefined && facts.viewerAreaCode === facts.areaCode
       ? [IN_YOUR_AREA]
       : [];
-  const far = facts.distanceKm === undefined ? [] : [`${facts.distanceKm} km`];
+  const far = facts.distanceKm === undefined ? [] : [formatDistanceKm(facts.distanceKm)];
 
   return [...near, ...far].join(' · ');
 }

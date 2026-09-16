@@ -69,7 +69,9 @@ function candidate(over: Partial<Candidate> = {}): Candidate {
   return {
     playerId: 'aaaaaaaa-0000-4000-8000-000000000001',
     fit: 65,
-    distanceKm: 4,
+    // Deliberately not the evidence's `4`: the two are different numbers, and the sheet must
+    // print this one — see *the distance sentence* below.
+    distanceKm: 4.3,
     card: {
       name: 'Marek Z.',
       areaCode: 'A+050612+0019938',
@@ -160,6 +162,20 @@ describe('the term rows', () => {
     draw();
 
     expect(screen.getAllByText(WEIGHT_BASIS)).toHaveLength(1);
+  });
+
+  /**
+   * **The distance sentence prints the candidate's `distanceKm`, never the evidence's `km`**
+   * (ADR-0174 §2). The evidence's kilometres are what the engine scored — whole, cell to cell —
+   * and stay whole on the wire; the candidate's is the one-decimal spot-to-spot number the deck
+   * card and the record print for the same person. One number for one person, everywhere: a
+   * sheet saying *4 km away* under a card saying *4,3 km* is the disagreement this removes.
+   */
+  it('prints the candidate’s one-decimal distance and not the evidence’s whole kilometres', () => {
+    draw();
+
+    expect(screen.getByText('4,3 km away')).toBeTruthy();
+    expect(screen.queryByText(/\b4 km\b/)).toBeNull();
   });
 
   /**

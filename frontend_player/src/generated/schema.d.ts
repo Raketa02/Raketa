@@ -404,6 +404,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/me/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Move this player's Location area to where the phone is
+         * @description **The cold start's write, and no screen's.** The client re-reads the phone's position on every cold start and on return from the background after more than 24 hours — never merely on foreground — with the accuracy onboarding used, and puts it here silently. A revoked permission sends nothing: the stored area stays.
+         *
+         *     **What is sent is never what is kept.** The fix is rounded to the cell about a kilometre across before anything is recorded, exactly as the profile commit rounds it, so the precise fix never reaches the platform's records. A fix that rounds to the cell already stored records nothing and still answers `204` — which is what makes a write on every launch free, and why there is no `Idempotency-Key`.
+         *
+         *     **Nothing else moves.** A trip is a trip: the next deal deals around the new area, the radar refetches, *In your area* answers for the new cell — and nothing is reset, no radius changes and no prompt is raised. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.
+         */
+        put: operations["change_location_api_v1_players_me_location_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/play-intents/{sport}": {
         parameters: {
             query?: never;
@@ -750,6 +774,38 @@ export interface paths {
          *     **Nobody is told**, and nothing is returned. The only place a reset shows is your own next deal.
          */
         post: operations["show_them_again_api_v1_deck_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/radar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read the radar
+         * @description Every player rated in this sport inside your reach, at their distance and bearing — the population the deck deals from, with the deck's reach and none of its judgement.
+         *
+         *     **The sport is the whole ask.** No mode (every pairing scores under the deck's ruler), no radius (the reach is your own Search radius — there is no city), no position (the server holds your area), no week.
+         *
+         *     **Five gates and nothing after them.** Blocked either way, under a hold, disabled, a gender preference either way, and rated in the sport — then everyone inside the circle is drawn, each with a `fit` printed as served. No level band, no quality floor, no cool-off, no pass memory, no dealt memory: somebody you have a court with, somebody you said *not today* to and somebody you are matched with are all on the radar.
+         *
+         *     **Each row carries `bearing_deg` beside `distance_km`** — north `0`, clockwise, spot to spot, served and never derived — and `ratings[]`, every sport the player is rated in with their Level. Both are on the row and never inside `player_card`. The rows are ordered by distance and then by id, so a position means something.
+         *
+         *     **`pool.want_to_play_you` is the deck's number.** Computed by the deck's own rule — its gates and its exclusions — so the chip here and the chip on the deck are one number; omitted at zero. Somebody who said yes to you whom the deck would never deal is still drawn, carrying `inclusion_reason: INTEREST_LIFT`, and is not counted.
+         *
+         *     **A reading is not a deal.** It never enters the dealt memory: browse on Monday and do nothing, and Tuesday's deck deals the same people. Only an answer reaches the deck — `POST /interest` and `POST /passes` take this `search_id` exactly as they take a deal's — and after either the person **stays on the radar**.
+         *
+         *     **Read it back** through `GET /api/v1/searches/{id}`, in this same shape, minus the chip — it is true of the moment the reading ran.
+         */
+        post: operations["read_the_radar_api_v1_radar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1881,7 +1937,8 @@ export interface components {
          *     Three field families have a **different author** from the rest and are
          *     attached by the backend after the scorer returns — the card, the at-stake
          *     block and the distance. None of them is a fact the scorer may see, and none
-         *     may be computed by the client.
+         *     may be computed by the client. **On a reading two more join them**, the
+         *     bearing and the sport chips, on the same argument.
          *
          *     On a read-back this row means *the live gates still admit this person*, and
          *     it says so: ``withheld`` is ``false``, positively, rather than absent. A row
@@ -1911,6 +1968,16 @@ export interface components {
              * @description Kilometres to one decimal, measured between the two **drawn spots** — one fixed point inside each player's coarse area, the same for every viewer — and never below `0.1`. The Fit does not read it: the distance term and the radius gate measure cell to cell, so a player at the very edge may print `10.3` inside a 10 km reach. **Promoted out of the distance evidence** so the *Closest* sort reads a field rather than reaching into a variant, and **omitted** rather than sent as zero when the distance term stood down — which is what lets a stood-down row sort last instead of first.
              */
             distance_km?: number;
+            /**
+             * Bearing Deg
+             * @description **On a reading only.** The compass bearing from your drawn spot to theirs — north `0`, east `90`, clockwise, a whole degree — measured spot to spot beside `distance_km`, so the two place one point on the radar. **Served, never derived**: the client computes no geometry beyond scaling. On the row and never inside `player_card`, because its value depends on who is looking. Omitted on every other surface.
+             */
+            bearing_deg?: number;
+            /**
+             * Ratings
+             * @description **On a reading only.** Every sport this player is rated in, with the Level held there, in the sport registry's order — the card's sport chips. `player_card.level` is the same number for the reading's own sport. Omitted on every other surface.
+             */
+            ratings?: components["schemas"]["RatedSportSchema"][];
             player_card: components["schemas"]["PlayerCardSchema"];
             /** Concerns */
             concerns: components["schemas"]["ConcernSchema"][];
@@ -2131,6 +2198,29 @@ export interface components {
              * @description Every cell still ticked. **The list is the week** — what is absent is unticked — and an empty list clears it, which is a legal value rather than a refusal.
              */
             availability: components["schemas"]["AvailabilitySlotResource"][];
+        };
+        /**
+         * ChangeLocationRequest
+         * @description The phone's fix, on a cold start.
+         *
+         *     **What is sent is never what is kept.** The client sends the fix its device
+         *     gave it, with the accuracy onboarding used; the platform rounds it to the
+         *     cell about a kilometre across before anything is recorded, exactly as the
+         *     commit does, and a fix that rounds to the cell already stored records
+         *     nothing (``docs/adr/0174`` §6). Nothing comes back: no route on this
+         *     surface serves the area yet — the profile read grows the field when *You*
+         *     is built — and a silent write on every launch is not the one to start.
+         *
+         *     The bounds are the world's, as they are on the commit's ``location`` —
+         *     read from the value object rather than spelled again. A fix outside them
+         *     is a broken reading and not a place, refused at the boundary rather than
+         *     rounded into a cell at the pole.
+         */
+        ChangeLocationRequest: {
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
         };
         /**
          * ChangeSearchRadiusRequest
@@ -5073,7 +5163,7 @@ export interface components {
             remaining?: number;
             /**
              * Want To Play You
-             * @description **On a deal only.** How many people have a live *Let's play* towards you in this sport that would be dealt to you: every gate passed, not passed on by you within the pass window, not cooling off after a court you shared, and not already mutual. Somebody dealt this morning and unanswered still counts — the dealt memory is not applied. **A count and never a list**: nothing on any route names who. `0` is a measured nought, so a chip drawn from it is drawn at one and above.
+             * @description **On a deal, and on a reading.** How many people have a live *Let's play* towards you in this sport that **the deck would deal** to you: every one of the deck's gates passed, not passed on by you within the pass window, not cooling off after a court you shared, and not already mutual. Somebody dealt this morning and unanswered still counts — the dealt memory is not applied. **On a reading it is the deck's number, computed by the deck's rule**, so the chip on either pane of Players is one number — and somebody the radar draws whom the deck would never deal is not in it, though their card says they said yes. **A count and never a list**: nothing on any route names who. On a deal `0` is a measured nought; on a reading it is omitted at zero, so a chip is drawn at one and above either way.
              */
             want_to_play_you?: number;
         };
@@ -5229,6 +5319,20 @@ export interface components {
             high: number;
         };
         /**
+         * RatedSportSchema
+         * @description One sport somebody is rated in, and the Level they hold there — a card's
+         *     sport chip (``docs/adr/0174`` §2). The Level and nothing else: the record
+         *     is where a band, a range and a certainty are drawn.
+         */
+        RatedSportSchema: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Level
+             * @description Their Level in that sport, as published
+             */
+            level: number;
+        };
+        /**
          * RatingResponse
          * @description One sport's Skill rating.
          *
@@ -5264,6 +5368,23 @@ export interface components {
         RatingsResponse: {
             /** Ratings */
             ratings: components["schemas"]["RatingResponse"][];
+        };
+        /**
+         * ReadRadarRequest
+         * @description What a reading is asked for. **The sport, and that is the whole
+         *     contract** (``the-radar.md`` §2).
+         *
+         *     **There is no `mode`**, because there is none: the radar scores every
+         *     pairing under the deck's ruler, and a mode on this body would be the field
+         *     the telemetry constraint refuses. **There is no radius**, because the reach
+         *     is your own Search radius and there is no city; the slider on Find a game
+         *     is where it moves. **There is no position**, because the server holds your
+         *     area and puts it on a cold start. And **there is no week**: a reading ranks
+         *     nobody, so there is nothing for a grid to rank on.
+         */
+        ReadRadarRequest: {
+            /** @description Which sport this reading is for */
+            sport: components["schemas"]["Sport"];
         };
         /**
          * RecordLikelyRangeSchema
@@ -5776,7 +5897,7 @@ export interface components {
              */
             at: string;
             surface: components["schemas"]["SearchSurface"];
-            /** @description Null exactly on the deck, which has no mode. */
+            /** @description Null exactly on the deck and the radar, which have no mode and score every pairing under one ruler. */
             mode: components["schemas"]["SearchMode"] | null;
             /**
              * My Area Code
@@ -5887,18 +6008,20 @@ export interface components {
         };
         /**
          * SearchSurface
-         * @description Which terminal stage ran. Four values, and pooling their rates is how
+         * @description Which terminal stage ran. Five values, and pooling their rates is how
          *     every number the engine is judged by becomes meaningless — ``FILL_SEATS`` is
-         *     not even optimising for the searcher.
+         *     not even optimising for the searcher, and ``RADAR`` ranks nobody at all.
          *
-         *     ``SHORTLIST`` and ``DECK`` can be written today; the two line-up surfaces
-         *     arrive with their route. All four were declared before any of them could be
-         *     written, because ``surface`` is a stored column and a vocabulary that grows
-         *     one value per ticket is a vocabulary whose old rows cannot be read against
-         *     the new ones.
+         *     ``SHORTLIST`` and ``DECK`` could be written from the start; the two line-up
+         *     surfaces arrived with their route, and the **reading** with the radar
+         *     (``docs/adr/0174`` §1). The first four were declared before any of them
+         *     could be written, because ``surface`` is a stored column and a vocabulary
+         *     that grows one value per ticket is a vocabulary whose old rows cannot be
+         *     read against the new ones — and the fifth is the one surface that was
+         *     argued for after the column existed, which is what an ADR is for.
          * @enum {string}
          */
-        SearchSurface: "SHORTLIST" | "LINEUP" | "DECK" | "FILL_SEATS";
+        SearchSurface: "SHORTLIST" | "LINEUP" | "DECK" | "FILL_SEATS" | "RADAR";
         /**
          * SeatAnswer
          * @description What the person in this seat did about being asked — or, having said yes,
@@ -7653,6 +7776,55 @@ export interface operations {
             };
         };
     };
+    change_location_api_v1_players_me_location_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     declare_play_intent_api_v1_play_intents__sport__put: {
         parameters: {
             query?: never;
@@ -8305,6 +8477,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_the_radar_api_v1_radar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadRadarRequest"];
+            };
+        };
+        responses: {
+            /** @description One reading: every player the radar may draw for you in this sport, ordered by distance and then id, sharing one `search_id`. **An empty reading is also a 200** — nobody rated in this sport inside your reach is an answer, and the pool it came from is described either way. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShortlistResponse"];
+                };
+            };
+            /** @description `account_held` — this account is under a live hold. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `sport_not_rated` — you hold no rating for this sport.
+             *
+             *     `player_profile_not_committed` — there is no profile to read a radius or an area from.
+             *
+             *     **Never `play_intent_not_declared`**: like the deck, the radar reads no declaration.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded` — four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*. A gate that cannot be evaluated refuses the whole reading rather than drawing anybody it could not check. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

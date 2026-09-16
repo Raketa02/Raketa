@@ -132,7 +132,9 @@ function card(
   return {
     player_id: playerId,
     fit: 78,
-    distance_km: 4,
+    // One decimal, spot to spot (ADR-0174 §2) — the evidence's `km` below stays the engine's
+    // whole input, and the card prints this one.
+    distance_km: 1.9,
     player_card: {
       name,
       area_code: HERE,
@@ -498,13 +500,13 @@ describe('what the deck deals', () => {
     await screen.findByLabelText(MAREK_CARD);
 
     const line = deckMetaLine({
-      km: 4,
+      km: 1.9,
       theirAreaCode: HERE,
       myAreaCode: HERE,
       aroundThisWeek: true,
     });
 
-    expect(line).toBe('In your area · 4 km · around this week');
+    expect(line).toBe('In your area · 1,9 km · around this week');
     expect(screen.getByText(line ?? '')).toBeTruthy();
   });
 
@@ -514,10 +516,10 @@ describe('what the deck deals', () => {
     await openDeck();
     await screen.findByLabelText(MAREK_CARD);
 
-    expect(deckMetaLine({ km: 4, theirAreaCode: HERE, aroundThisWeek: true })).toBe(
-      '4 km · around this week',
+    expect(deckMetaLine({ km: 1.9, theirAreaCode: HERE, aroundThisWeek: true })).toBe(
+      '1,9 km · around this week',
     );
-    expect(screen.getByText('4 km · around this week')).toBeTruthy();
+    expect(screen.getByText('1,9 km · around this week')).toBeTruthy();
   });
 
   /**

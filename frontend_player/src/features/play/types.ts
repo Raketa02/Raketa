@@ -87,7 +87,7 @@ export type {
 } from './domain/vocabulary';
 
 export { termLabel } from './components/termPresentation';
-export { reasonLine } from './components/reasonPresentation';
+export { reasonLine, type PairFacts } from './components/reasonPresentation';
 export { concernLine } from './components/concernPresentation';
 export {
   BALANCE_ROW_LABEL,

@@ -116,8 +116,10 @@ export function ChallengeCard({ playerId, card, seats }: ChallengeCardProps) {
       livenessReasons: [],
       // A row this build cannot read says nothing on a card: §3 drops a code wherever the
       // screen states no total it belongs to, and this card shows three reasons out of eight.
-      saysSomething: (row) => row.evidence !== null && reasonLine(row.evidence) !== undefined,
+      saysSomething: (row) =>
+        row.evidence !== null && reasonLine(row.evidence, pairing) !== undefined,
     }),
+    pairing,
   );
 
   // The rule and its sentences are both Play's, and both cross whole: a second spelling of

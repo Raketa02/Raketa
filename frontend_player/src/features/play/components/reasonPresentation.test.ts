@@ -9,6 +9,7 @@
 
 import type {
   AvailabilityOverlapEvidence,
+  DistanceEvidence,
   IntentAlignmentEvidence,
   PlayingStyleEvidence,
   SocialVibeEvidence,
@@ -236,37 +237,44 @@ describe('the two tag terms', () => {
 });
 
 describe('how far', () => {
-  it('states the distance', () => {
-    expect(
-      distanceReason({
-        kind: 'distance',
-        km: 7,
-        areaCode: 'A+050612+0019938',
-        outsideTheirRadius: false,
-      }),
-    ).toBe('7 km away');
+  const HOW_FAR = (km: number, outsideTheirRadius = false): DistanceEvidence => ({
+    kind: 'distance',
+    km,
+    areaCode: 'A+050612+0019938',
+    outsideTheirRadius,
+  });
+
+  /**
+   * **The sentence prints the candidate's `distanceKm`, never the evidence's `km`**
+   * (ADR-0174 §2). The evidence's kilometres are the engine's input — whole, cell to cell, the
+   * number the Fit was scored on — and they stay whole on the wire; what the sentence says is
+   * the one-decimal spot-to-spot distance the deck card and the record print for the same
+   * person, so the three surfaces cannot disagree about how far away somebody is.
+   */
+  it('states the pair’s one-decimal distance and not the evidence’s whole kilometres', () => {
+    expect(distanceReason(HOW_FAR(7), { distanceKm: 7.2 })).toBe('7,2 km away');
+    expect(distanceReason(HOW_FAR(7), { distanceKm: 7 })).toBe('7,0 km away');
   });
 
   it('says when the searcher is outside the ring they set, rather than removing them', () => {
-    expect(
-      distanceReason({
-        kind: 'distance',
-        km: 24,
-        areaCode: 'A+050612+0019938',
-        outsideTheirRadius: true,
-      }),
-    ).toBe('24 km away — outside the ring they set');
+    expect(distanceReason(HOW_FAR(24, true), { distanceKm: 24.4 })).toBe(
+      '24,4 km away — outside the ring they set',
+    );
+  });
+
+  /**
+   * A fired distance term always carries the pair's distance — `distance_km` is omitted only
+   * when the term stood down — so this is a row the contract does not produce. It says nothing
+   * rather than reaching for the evidence's whole kilometres: the one number the sentence may
+   * print is the one every other surface prints, and inventing it from the engine's input is
+   * the disagreement the rule exists to remove.
+   */
+  it('says nothing where the pair holds no distance, rather than printing the evidence’s', () => {
+    expect(distanceReason(HOW_FAR(7), {})).toBeUndefined();
   });
 
   it('never prints the area code', () => {
-    const line = distanceReason({
-      kind: 'distance',
-      km: 7,
-      areaCode: 'A+050612+0019938',
-      outsideTheirRadius: false,
-    });
-
-    expect(line).not.toMatch(/A\+/);
+    expect(distanceReason(HOW_FAR(7), { distanceKm: 7.2 })).not.toMatch(/A\+/);
   });
 });
 
@@ -292,7 +300,10 @@ describe('the register, across every line this build can write', () => {
       playingStyleReason(TAGS({ matched: ['PLAYS_TO_WIN'] })),
       playingStyleReason(TAGS({})),
       socialVibeReason(VIBE({})),
-      distanceReason({ kind: 'distance', km: 7, areaCode: 'A', outsideTheirRadius: false }),
+      distanceReason(
+        { kind: 'distance', km: 7, areaCode: 'A', outsideTheirRadius: false },
+        { distanceKm: 7.2 },
+      ),
     ];
 
     for (const line of everyLine) {
@@ -306,13 +317,18 @@ describe('the register, across every line this build can write', () => {
 
 describe('the one entry point', () => {
   it('dispatches on kind, so a surface never branches on a term', () => {
-    expect(reasonLine(OVERLAP({ sharedCount: 2, nextSlot: null }))).toBe('2 slots you both ticked');
-    expect(reasonLine({ kind: 'distance', km: 3, areaCode: 'A', outsideTheirRadius: false })).toBe(
-      '3 km away',
+    expect(reasonLine(OVERLAP({ sharedCount: 2, nextSlot: null }), {})).toBe(
+      '2 slots you both ticked',
     );
+    expect(
+      reasonLine(
+        { kind: 'distance', km: 3, areaCode: 'A', outsideTheirRadius: false },
+        { distanceKm: 3.4 },
+      ),
+    ).toBe('3,4 km away');
   });
 
   it('says nothing for the evidence that is not a reason', () => {
-    expect(reasonLine(INTENT({ theirIntent: 'FOR_FUN', aligned: false }))).toBeUndefined();
+    expect(reasonLine(INTENT({ theirIntent: 'FOR_FUN', aligned: false }), {})).toBeUndefined();
   });
 });

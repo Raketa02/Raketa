@@ -49,7 +49,8 @@
  *
  * ## The identity line is a comparison and never a place name
  *
- * `In your area · 4 km`, or the kilometres alone, or nothing. An `area_code` is a coordinate
+ * `In your area · 0,6 km`, or the kilometres alone, or nothing — the kilometres to one decimal,
+ * through the one formatter every surface prints a distance with (ADR-0174 §2). An `area_code` is a coordinate
  * string; the only sentence a client is licensed to write from two of them is *these two are in
  * the same square*, and a reader whose own area is unknown gets no claim in either direction.
  * On your own record the **whole line** is gone rather than the distance alone — the two codes
@@ -92,7 +93,7 @@ export interface RecordHeaderProps {
   readonly record: PlayerRecord;
   /** Whose poster to draw where there is no photograph — a fact about an id. */
   readonly playerId: string;
-  /** Whole kilometres, as the contract sends them. Absent on your own record, always. */
+  /** Kilometres to one decimal, as the contract sends them. Absent on your own record, always. */
   readonly distanceKm?: number;
   /** The reader's own coarse area, for the one comparison this line is allowed to make. */
   readonly viewerAreaCode?: string;

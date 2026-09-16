@@ -126,7 +126,10 @@ export interface CourtPerson {
 export interface CourtPairing {
   /** Out of a hundred, and drawn as served. Nothing on this side rounds or rescales it. */
   readonly fit: number;
-  /** Whole kilometres, **omitted rather than zero** when the distance term stood down. */
+  /**
+   * Kilometres to one decimal, spot to spot (ADR-0174 §2), **omitted rather than zero** when
+   * the distance term stood down.
+   */
   readonly distanceKm?: number;
   /** Every term that fired, **ranked by contribution**. Nothing on this side sorts. */
   readonly terms: readonly ScoredTerm[];

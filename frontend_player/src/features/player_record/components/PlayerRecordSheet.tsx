@@ -117,7 +117,10 @@ export interface PlayerRecordSheetProps {
    * states which it chose.
    */
   readonly sport?: Sport;
-  /** Whole kilometres. Absent where no search is behind the entry point — and on your own record. */
+  /**
+   * Kilometres to one decimal, the candidate's own. Absent where no search is behind the entry
+   * point — and on your own record.
+   */
   readonly distanceKm?: number;
   /** The reader's own coarse area, for the one comparison a client is licensed to make. */
   readonly viewerAreaCode?: string;

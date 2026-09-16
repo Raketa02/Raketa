@@ -97,7 +97,9 @@ function candidate(
   return {
     playerId: PLAYER,
     fit: 76,
-    distanceKm: 2,
+    // The mock's own *1,9 km* — one decimal, spot to spot (ADR-0174 §2) — and not the
+    // evidence's whole `2`, which is the engine's input and is never printed.
+    distanceKm: 1.9,
     card: {
       name: 'Filip N.',
       photoUrl: PHOTO,
@@ -166,7 +168,7 @@ describe('what the deck card draws, in the mock’s order', () => {
       'Padel',
       ON_COURT_MARK,
       'Filip N.',
-      'In your area · 2 km · around this week',
+      'In your area · 1,9 km · around this week',
       '“Two games in. Moved here in September, still learning the city.”',
       SHARED_CHIP,
       PLAYS_TO_WIN_CHIP,
@@ -227,7 +229,7 @@ describe('the meta line', () => {
   it('says *around this week* on the liveness code alone', () => {
     draw({ livenessReasons: [] });
 
-    expect(screen.getByText('In your area · 2 km')).toBeTruthy();
+    expect(screen.getByText('In your area · 1,9 km')).toBeTruthy();
     expect(screen.queryByText(/around this week/)).toBeNull();
   });
 

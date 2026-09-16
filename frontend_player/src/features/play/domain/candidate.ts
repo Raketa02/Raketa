@@ -200,9 +200,14 @@ export interface Candidate {
   /** Out of a hundred, and drawn as served. Nothing on this side rounds or rescales it. */
   readonly fit: number;
   /**
-   * Whole kilometres, **omitted** rather than zero when the distance term stood down.
+   * Kilometres **to one decimal**, **omitted** rather than zero when the distance term stood
+   * down.
    *
-   * The two spellings of absence (ADR-0106 §4), and it is what lets *Closest* sort a
+   * Measured between two **drawn spots** — one fixed point inside each player's coarse area —
+   * and served, never derived; it is the number every surface prints for this person, and it is
+   * **not** the distance evidence's `km`, which is what the engine scored: whole, cell to cell
+   * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §2). The two spellings of absence (ADR-0106 §4), and it is what lets *Closest* sort a
    * stood-down row last instead of first.
    */
   readonly distanceKm?: number;

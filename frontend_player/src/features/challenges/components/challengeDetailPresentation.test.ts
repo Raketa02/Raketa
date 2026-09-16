@@ -93,8 +93,10 @@ describe('the removal', () => {
 
 describe('the identity row', () => {
   it('states the level, the distance and the score, in that order', () => {
-    expect(identityRow({ person: { ...PERSON, playerScore: 91 }, distanceKm: 3 })).toBe(
-      '2,71 · Established · likely 2,55 – 2,87 · 3 km · Score 91',
+    // The distance is `metaLine`'s one-decimal print — the design's own *3,1 km*, and the
+    // same number every Play surface prints for the same person (ADR-0174 §2).
+    expect(identityRow({ person: { ...PERSON, playerScore: 91 }, distanceKm: 3.1 })).toBe(
+      '2,71 · Established · likely 2,55 – 2,87 · 3,1 km · Score 91',
     );
   });
 
@@ -103,9 +105,9 @@ describe('the identity row', () => {
    * gap, and most people on this platform have no Player Score at all today.
    */
   it('drops the score segment rather than printing a nought', () => {
-    const row = identityRow({ person: PERSON, distanceKm: 3 });
+    const row = identityRow({ person: PERSON, distanceKm: 3.1 });
 
-    expect(row).toBe('2,71 · Established · likely 2,55 – 2,87 · 3 km');
+    expect(row).toBe('2,71 · Established · likely 2,55 – 2,87 · 3,1 km');
     expect(row).not.toContain('Score');
   });
 
@@ -158,7 +160,7 @@ describe("the card's spoken name", () => {
   const FACTS = {
     person: { ...PERSON, playerScore: 91 },
     fit: 78,
-    distanceKm: 3,
+    distanceKm: 3.1,
     reasons: [
       'You both play evenings',
       'A close match on level',
@@ -185,7 +187,8 @@ describe("the card's spoken name", () => {
 
     expect(label).toContain('78');
     expect(label).toContain('2,71');
-    expect(label).toContain('3 km');
+    // Spoken as drawn: one decimal, through the one formatter.
+    expect(label).toContain('3,1 km away');
     expect(label).toContain('91');
   });
 

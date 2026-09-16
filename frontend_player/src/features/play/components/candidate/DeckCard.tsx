@@ -19,7 +19,7 @@
  * **Sport** under it, and top-right the **on-court mark** with its tick — both in `surface`
  * with the text shadow the app already has for text on media, and **no top wash**, because the
  * mock has none. Then the wash, and on it: the **name** in the card's one ~24pt role beside the
- * existing **Fit pill**; the **meta line** — *In your area · 2 km · around this week*, each
+ * existing **Fit pill**; the **meta line** — *In your area · 1,9 km · around this week*, each
  * clause only where it is true; the **intro** in quotes, where they wrote one; up to six
  * **tags**, the shared ones first and volt with *· you too*; and **three tiles**, always three,
  * with a dash where a number is absent. **No** *They already said yes to you* and **no** *Wants

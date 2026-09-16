@@ -171,3 +171,15 @@ your own, and the handle sits under it in `tiny` and `muted` as `atNickname` spe
 may share a name, and this is the screen a friend opens to tell them apart, which is why the
 handle is here and on the reader's own You tab and nowhere else. The header's spoken name says
 both, in the order they are drawn, because a listener is told what a reader is shown.
+
+**The identity line prints the kilometres to one decimal**
+([#461](https://github.com/Raketa02/Raketa/issues/461),
+[ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2).
+_In your area · 0,6 km_ for somebody in the reader's own cell, _4,3 km_ for somebody in another,
+and nothing where the surface that opened the record held no distance — the same
+`formatDistanceKm` the deck card and the why-fit sentence print through, so one person is one
+number on all three. `distance_km` is measured between two drawn spots now, one fixed point
+inside each player's coarse area, which is why a same-cell candidate carries a decimal at all;
+_In your area_ is still the comparison of two codes and nothing else on the header moves. The
+rule that the whole line goes on your own record stands, and so does _In your area_ standing
+alone where the distance is omitted.

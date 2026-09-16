@@ -59,6 +59,7 @@ import type { AtStake } from '@/features/play/types';
 import { PLAYER_SCORE_BLOCK, levelRow, metaLine, stakeClauses } from '@/features/play/types';
 import type { AppError } from '@/shared/errors';
 import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import { formatDistanceKm } from '@/shared/formatting/ratingFormat';
 
 import type { CourtPerson, PairingAbsence, SeatWord } from '../domain/challengeDetail';
 
@@ -236,12 +237,15 @@ function scoreSegment(playerScore: number): string {
 
 export interface IdentityRowFacts {
   readonly person: CourtPerson;
-  /** Whole kilometres. **Absent rather than zero** where the distance term stood down. */
+  /**
+   * Kilometres to one decimal, spot to spot — the same number every Play surface prints for the
+   * same person (ADR-0174 §2). **Absent rather than zero** where the distance term stood down.
+   */
   readonly distanceKm?: number;
 }
 
 /**
- * `2,71 · Established · likely 2,55–2,87 · 3 km · Score 91` — with any segment absent.
+ * `2,71 · Established · likely 2,55–2,87 · 3,1 km · Score 91` — with any segment absent.
  *
  * **`myAreaCode` is not passed and cannot be**: no route serves a player their own area code, so
  * `metaLine`'s *In your area* clause is unavailable here exactly as it is on the deck
@@ -337,7 +341,7 @@ export function challengeCardLabel(facts: ChallengeCardFacts): string {
     facts.person.name,
     `Match score ${facts.fit}`,
     levelRow(facts.person),
-    ...(facts.distanceKm === undefined ? [] : [`${facts.distanceKm} km away`]),
+    ...(facts.distanceKm === undefined ? [] : [`${formatDistanceKm(facts.distanceKm)} away`]),
     ...(facts.person.playerScore === undefined
       ? []
       : [`${PLAYER_SCORE_BLOCK} ${facts.person.playerScore} out of ${PLAYER_SCORE_DENOMINATOR}`]),

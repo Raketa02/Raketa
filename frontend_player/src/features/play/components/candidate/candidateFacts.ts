@@ -40,7 +40,7 @@ import {
   type MetaLineFacts,
   type RecordBlockFacts,
 } from '../playerCardPresentation';
-import { reasonLine } from '../reasonPresentation';
+import { reasonLine, type PairFacts } from '../reasonPresentation';
 
 /**
  * Everything a card reads off one candidate, resolved once.
@@ -292,9 +292,10 @@ function reasonLinesOf(
       // always did. The named gap is the why-fit sheet's, which prints the column.
       saysSomething: (term) =>
         term.evidence !== null &&
-        reasonLine(term.evidence) !== undefined &&
+        reasonLine(term.evidence, candidate) !== undefined &&
         !restatesTheTagRow(term.evidence, socialTags),
     }),
+    candidate,
   );
 }
 
@@ -332,14 +333,17 @@ function restatesTheTagRow(evidence: Evidence, row: SocialTagOverlap | undefined
  * ([#361](https://github.com/Raketa02/Raketa02/issues/361)): a second copy of this `switch` is a
  * second place for a selection arm to be forgotten, and the arm that would be forgotten is
  * `hidden` — the one whose whole job is not printing a blank row.
+ *
+ * The pair is the same one the caller's `saysSomething` handed `reasonLine`: a distance line is
+ * selected and printed from the candidate's own `distanceKm`, never the evidence's kilometres.
  */
-export function reasonLines(selection: ReasonSelection): readonly string[] {
+export function reasonLines(selection: ReasonSelection, pair: PairFacts): readonly string[] {
   switch (selection.kind) {
     case 'terms':
       // `saysSomething` already dropped every row this can decline for, so nothing is lost
       // here — the filter is what keeps the promise of three from printing two.
       return selection.terms.flatMap((term) =>
-        term.evidence === null ? [] : (reasonLine(term.evidence) ?? []),
+        term.evidence === null ? [] : (reasonLine(term.evidence, pair) ?? []),
       );
     case 'liveness':
       return [livenessLine(selection.reason)];
