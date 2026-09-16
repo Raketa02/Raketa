@@ -29,6 +29,8 @@ const STAR_DECIMALS = 1;
 
 /** What the platform serves a distance to — see {@link formatDistanceKm}. */
 const DISTANCE_DECIMALS = 1;
+/** A radar width at or above this many kilometres prints whole — see {@link formatWidthKm}. */
+const WHOLE_WIDTH_FROM_KM = 10;
 
 /**
  * **U+2212, never the hyphen** — `the-words.md` §6.2's *"two decimals, decimal comma, U+2212
@@ -107,6 +109,23 @@ export function formatStars(value: number): string {
  */
 export function formatDistanceKm(value: number): string {
   return `${comma(value, DISTANCE_DECIMALS)} km`;
+}
+
+/**
+ * A **width** of the radar's field — `18 km`, `5,4 km`, `7,8 km`, `23 km`: one decimal below ten
+ * kilometres and a whole number at ten and above
+ * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §26).
+ *
+ * The ladder's own stops spell themselves this way — *1,5 · 3 · 5,4 · 10 · 18 · 30 · 55 · 110* —
+ * and a pinch resting between two stops prints at the same precision its neighbours do, so the
+ * counter never gains a decimal because a finger stopped somewhere. Not `formatDistanceKm`: a
+ * distance is a served figure printed as served, and a width is a rule about how much of the
+ * map is on screen, rounded here because nothing served it. Here for the comma's one home.
+ */
+export function formatWidthKm(value: number): string {
+  return value < WHOLE_WIDTH_FROM_KM
+    ? `${comma(value, DISTANCE_DECIMALS)} km`
+    : `${Math.round(value)} km`;
 }
 
 export function formatRange(range: { readonly low: number; readonly high: number }): string {

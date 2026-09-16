@@ -202,6 +202,18 @@ export const searchKeys = {
    */
   deck: (sport: Sport | undefined, under: DealtUnder | undefined) =>
     [...searchKeys.decks(), sport, under ?? null] as const,
+  readings: () => [...searchKeys.all, 'reading'] as const,
+  /**
+   * **The radar's reading, held by the sport it was asked for** — and by nothing else.
+   *
+   * The deck's key carries the radius because a deal is held for ever and *Widen in You* would
+   * otherwise be ignored by the screen giving it. A reading is held for **five minutes**
+   * (`hooks/useReading`), so a widened radius reaches the radar on its own the next time the
+   * pane is opened past the window — and a reading costs the pool nothing, so the ask is not
+   * the precious thing it is on the deck. The sport is what changes the answer, and the sport
+   * is the key.
+   */
+  reading: (sport: Sport | undefined) => [...searchKeys.readings(), sport] as const,
   forecasts: () => [...searchKeys.all, 'forecast'] as const,
   /**
    * What a four you composed would leave on court, keyed by `(search_id, the set of players)`.

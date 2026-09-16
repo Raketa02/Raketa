@@ -81,6 +81,15 @@ export interface ChipProps {
    * word is a greyed chip saying *you may not* about something that is merely under way.
    */
   readonly busy?: boolean;
+  /**
+   * The chip on the app's third dark surface — the Radar pane's sport chips, under the toggle
+   * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §7). 5.2's repaint, as the tag's `onDark` is: the unselected pill is `onDarkTag` with an
+   * `onDarkHair` edge and a white label, and the selected one inverts to `surface` with `ink` — the same
+   * lightness step the paper chip takes from `surface` to `ink`, read from the other side.
+   * `selected` carries the state either way, and the dot is the sport's on both.
+   */
+  readonly onDark?: boolean;
   /** What the chip reads while it is busy. Defaults to the label, which is rarely what is meant. */
   readonly busyLabel?: string;
   /** Drawn ink-filled and announced as selected. Owned by the caller. */
@@ -102,6 +111,7 @@ export function Chip({
   accessibilityLabel,
   accessibilityHint,
   style,
+  onDark = false,
 }: ChipProps) {
   const blocked = disabled || busy;
   // The accessible name follows what is drawn, exactly as 6.1's does: a chip reading "Saving…"
@@ -126,7 +136,8 @@ export function Chip({
       // (6.6). Immediate, not animated — the prototype's 120ms is a mouse transition.
       style={({ pressed }) => [
         s.chip,
-        selected ? s.selected : undefined,
+        onDark ? s.chipOnDark : undefined,
+        selected ? (onDark ? s.selectedOnDark : s.selected) : undefined,
         pressed && !blocked ? s.pressed : undefined,
         blocked ? s.disabled : undefined,
         style,
@@ -139,7 +150,15 @@ export function Chip({
           importantForAccessibility="no"
         />
       )}
-      <Text style={[s.label, selected ? s.labelSelected : undefined]}>{shown}</Text>
+      <Text
+        style={[
+          s.label,
+          onDark && !selected ? s.labelOnDark : undefined,
+          selected && !onDark ? s.labelSelected : undefined,
+        ]}
+      >
+        {shown}
+      </Text>
     </Pressable>
   );
 }
@@ -165,6 +184,10 @@ const s = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   selected: { backgroundColor: theme.color.ink, borderColor: theme.color.ink },
+  // 5.2's repaint: the on-dark tag's bed under the on-dark hairline, and the selection inverts
+  // to `surface` with `ink` — the paper chip's own step, read from the dark side.
+  chipOnDark: { backgroundColor: theme.color.onDarkTag, borderColor: theme.color.onDarkHair },
+  selectedOnDark: { backgroundColor: theme.color.surface, borderColor: theme.color.surface },
   // Square, and the tag's own square: 6.4 already specified one sport dot and there is no
   // second shape for the same fact. It is drawn on both fills unchanged — a sport's hue is
   // an identity rather than a state, so it does not invert with the pill under it.
@@ -174,6 +197,7 @@ const s = StyleSheet.create({
   // way*, and the label is what tells them apart.
   disabled: { opacity: 0.4 },
   label: { ...theme.type.chip, color: theme.color.ink },
+  labelOnDark: { color: theme.color.surface },
   // `surface` is the app's one white; there is no separate `white` token, deliberately.
   labelSelected: { color: theme.color.surface },
 });

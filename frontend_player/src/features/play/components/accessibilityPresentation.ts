@@ -354,6 +354,31 @@ export function deckCardLabel(facts: DeckCardSpokenFacts): string {
   ]);
 }
 
+/**
+ * A face or a card on the radar, spoken: `Filip N., 1,9 km, Padel 2,60` — the whole name, the
+ * one-decimal distance, the reading's sport and their level in it
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §26).
+ *
+ * **One sentence for the three states.** A face at 24 pt, a face with its level under it and
+ * the card are one person drawn at three widths, and a listener navigates by people rather
+ * than by zoom: the name is what tells the elements apart, and the distance and the level are
+ * what the card prints in full and the face abbreviates. Every face and card is a button — a
+ * face flies to them, a card opens the record — and the sheet is the accessible path to acting
+ * (§7.8): nothing on the field itself answers anybody.
+ *
+ * The level is `formatLevel`'s comma spelling, so the spoken figure is the drawn one; the
+ * sport is the pane's own word for it (`sportLabel`), handed in rather than looked up, because
+ * a label composed here from a code would be a second place the sport is named.
+ */
+export function radarTileLabel(facts: {
+  readonly name: string;
+  readonly distance: string;
+  readonly sportName: string;
+  readonly level: number;
+}): string {
+  return `${facts.name}, ${facts.distance}, ${facts.sportName} ${formatLevel(facts.level)}`;
+}
+
 /** The deck's three buttons. It is §20.3's card with three actions beside it instead of one. */
 export interface DeckAnswerLabels {
   readonly pass: string;

@@ -1,0 +1,129 @@
+/**
+ * Everything the **Radar** pane says — the tile's *you*, a ring's label, the counter between
+ * ±, a level under a face, the card's six lines, the footer's headline and its right-hand
+ * count, the hint by zoom state, the empty reading, *Looking around…*, the failure and its
+ * retry, and the cluster's three spoken names
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §26, drawn by
+ * [ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §7).
+ *
+ * §1's mechanism throughout — code → message, never message → message — and nothing here is a
+ * template inlined in a component. The chip is the deck's own sentence and the deck's own
+ * number (`wantToPlayYouChip`), the widen sentence is §17's (`WIDEN_IN_YOU`), and the radar
+ * writes nothing about people: every word on a card is a figure the platform computed or a
+ * name the player gave.
+ *
+ * ## The privacy line is the one constant
+ *
+ * The hint **always opens** with *Distance and bearing only — never an address, never a
+ * street.* — at every width, while loading, and under the empty reading's headline, where §17's
+ * widen sentence follows it instead of the movement sentence. It switches on the **zoom
+ * state** and never on the selection: a selected card at 18 km across is still a field of faces
+ * to move around. The failure is the one footer with no hint: *Try again* stands in its place.
+ *
+ * ## The counter prints one decimal below 10 and a whole number above
+ *
+ * *5,4 km across* and *18 km across* are the ladder's own spellings; a pinch resting at 7,83
+ * reads *7,8 km across* and one at 23,4 reads *23 km across*. Through the house's comma, which
+ * has one home (`ratingFormat`), and never a template's `.replace`.
+ */
+
+import { formatDistanceKm, formatWidthKm } from '@/shared/formatting/ratingFormat';
+import { counted } from '@/shared/formatting/counted';
+
+import type { ZoomState } from '../domain/radarGeometry';
+
+import { WIDEN_IN_YOU } from './deckPresentation';
+
+/** Under the viewer's tile. Lower case, `tiny`. */
+export const YOU_LABEL = 'you';
+
+/** `5 km` — a ring's label, at the top of the circle. Whole kilometres: the series has no decimal. */
+export function ringLabel(km: number): string {
+  return `${km} km`;
+}
+
+/** `18 km across` · `5,4 km across` — the counter between ±, always drawn. */
+export function widthAcross(widthKm: number): string {
+  return `${formatWidthKm(widthKm)} across`;
+}
+
+/** `1,9 km` — the card's distance, one decimal, never below 0,1. */
+export function cardDistance(distanceKm: number): string {
+  return formatDistanceKm(distanceKm);
+}
+
+/** `✦ {fit} fit` — the Fit pill's word, after the figure the pill already draws. */
+export const FIT_WORD = 'fit';
+
+/** `{score} reliability` · `— reliability` — the reliability chip, labelled, and a dash when unwatched. */
+export const RELIABILITY_WORD = 'reliability';
+
+/** What the chip prints where the platform has watched nothing. */
+export const UNWATCHED_MARK = '—';
+
+export function reliabilityChip(playerScore: number | undefined): string {
+  return `${playerScore === undefined ? UNWATCHED_MARK : playerScore} ${RELIABILITY_WORD}`;
+}
+
+/** `2 tags in common` · `1 tag in common` · `no tags in common` — a count, never a list. */
+export function tagsInCommon(count: number): string {
+  return count === 0 ? 'no tags in common' : `${counted(count, 'tag', 'tags')} in common`;
+}
+
+/** The card's last line — coral; the whole card is the target. */
+export const TAP_FOR_THE_FULL_CARD = 'Tap for the full card ›';
+
+/** `14 players in view` · `1 player in view` — recounted on every move. */
+export function playersInView(count: number): string {
+  return `${counted(count, 'player', 'players')} in view`;
+}
+
+/** `+3 off screen` · `all of them` — so the count is never mistaken for the population. */
+export function offScreen(count: number): string {
+  return count === 0 ? 'all of them' : `+${count} off screen`;
+}
+
+/** The one sentence that stays at every width. */
+export const PRIVACY_LINE = 'Distance and bearing only — never an address, never a street.';
+
+/** The hint's second sentence, by zoom state: how to move while faces are drawn, and what a card leads to once cards are. */
+const HINT_BY_STATE: Readonly<Record<ZoomState, string>> = {
+  wide: 'Drag to move, pinch or use ± to zoom, tap anybody to fly to them.',
+  closer: 'Drag to move, pinch or use ± to zoom, tap anybody to fly to them.',
+  closest: 'Tap a card for the full profile and the two answers.',
+};
+
+/** The footer's hint: the privacy line, then the sentence the zoom state earns. */
+export function radarHint(state: ZoomState): string {
+  return `${PRIVACY_LINE} ${HINT_BY_STATE[state]}`;
+}
+
+/** `Nobody within 10 km plays padel yet` — the reach is `pool.radius_km_used`; the sport in lower case. */
+export function nobodyInReach(facts: {
+  readonly reachKm: number;
+  readonly sportName: string;
+}): string {
+  return `Nobody within ${facts.reachKm} km plays ${facts.sportName.toLowerCase()} yet`;
+}
+
+/** The empty reading's hint: the privacy line, then the deck's own sentence about the slider in You. */
+export function emptyHint(): string {
+  return `${PRIVACY_LINE} ${WIDEN_IN_YOU}`;
+}
+
+/** While the reading is on its way; the privacy line beneath. */
+export const LOOKING_AROUND = 'Looking around…';
+
+/** The failed reading's headline, and the retry in the hint's place. */
+export const RADAR_FAILED = 'The radar couldn’t load';
+export const TRY_AGAIN = 'Try again';
+
+/** ± and ◉, spoken. */
+export const ZOOM_IN_LABEL = 'Zoom in';
+export const ZOOM_OUT_LABEL = 'Zoom out';
+export const BACK_TO_YOU_LABEL = 'Back to you';
+
+/** The glyphs on the cluster's three squares. Marks, never words: the words are the labels above. */
+export const ZOOM_IN_MARK = '+';
+export const ZOOM_OUT_MARK = '−';

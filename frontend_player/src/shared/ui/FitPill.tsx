@@ -102,9 +102,21 @@ export interface FitPillProps {
    * names it (§20.3): a card body on three surfaces, a control's own label on the fourth.
    */
   readonly label?: string;
+  /**
+   * A word **after** the figure — `✦ 76 fit` — the radar card's alone
+   * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §7, `the-words.md` §26).
+   *
+   * The opposite order from `label`, and for a reason of its own: there the pill stands alone
+   * in a header and the word is its noun; here it sits beside a second chip that ends in its
+   * word — *88 reliability* — and the two are read as a pair, *labelled, because two bare
+   * numbers read as one printed twice*. Mock 13 draws the word after, and the record says so.
+   * Never both: a pill with a word at each end is a sentence, and the pill is one number.
+   */
+  readonly trailing?: string;
 }
 
-export function FitPill({ fit, label }: FitPillProps) {
+export function FitPill({ fit, label, trailing }: FitPillProps) {
   // Once, and read by both: the figure printed and the fill behind it are the same number.
   const whole = Math.round(fit);
   const high = whole >= FIT_HIGH;
@@ -115,6 +127,7 @@ export function FitPill({ fit, label }: FitPillProps) {
       {label === undefined ? null : <Text style={[s.label, ink]}>{label}</Text>}
       <Text style={[s.glyph, ink]}>{SPARK}</Text>
       <Text style={[s.value, ink]}>{whole}</Text>
+      {trailing === undefined ? null : <Text style={[s.label, ink]}>{trailing}</Text>}
     </View>
   );
 }

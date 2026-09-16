@@ -44,10 +44,19 @@ describe('the digit inside the mark', () => {
     expect(theme.num.xs.fontFamily).toMatch(/Mono/);
   });
 
-  it('is the smallest mono role there is, so no seventh size step was added for one mark', () => {
-    const sizes = Object.values(theme.num).map((role) => role.fontSize);
+  /**
+   * It was the smallest mono role there was when the badge was drawn, and no seventh step
+   * was added for one mark. `numTiny` arrived beneath it on 2026-09-16 for the radar's four
+   * small figures (Part 16), and the badge **did not move down to it**: its 18 pt box is `xs`'s
+   * 17 pt line box rounded to the grid, and a digit a step smaller would leave the box it
+   * derived. So the role is pinned by name, and the one role below it is named too.
+   */
+  it('is the mono role the badge was derived from, with only the radar’s tiny beneath it', () => {
+    const smaller = Object.entries(theme.num)
+      .filter(([, role]) => role.fontSize < theme.num.xs.fontSize)
+      .map(([name]) => name);
 
-    expect(theme.num.xs.fontSize).toBe(Math.min(...sizes));
+    expect(smaller).toEqual(['tiny']);
   });
 
   it('fits inside the mark with room on every side, at one digit', () => {

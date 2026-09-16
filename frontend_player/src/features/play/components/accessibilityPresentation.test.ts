@@ -21,6 +21,7 @@ import {
   fitSentence,
   poolHeaderLabel,
   provisionalForecastAnnouncement,
+  radarTileLabel,
   searchWeekCellLabel,
   seatLabel,
   whyFitRowLabel,
@@ -331,5 +332,13 @@ describe('the pool header', () => {
 
     expect(said).not.toContain('·');
     expect(said).toContain('You, Karol');
+  });
+});
+
+describe('a face or a card on the radar', () => {
+  it('speaks the whole name, the one-decimal distance, the sport and the level', () => {
+    expect(
+      radarTileLabel({ name: 'Filip N.', distance: '1,9 km', sportName: 'Padel', level: 2.6 }),
+    ).toBe('Filip N., 1,9 km, Padel 2,60');
   });
 });

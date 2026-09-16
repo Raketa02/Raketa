@@ -128,3 +128,22 @@ describe('the ranked-list override of the global defaults', () => {
     expect(RANKED_LIST_QUERY_OPTIONS.gcTime).toBe(Infinity);
   });
 });
+
+/**
+ * **The reading is keyed by the sport and by nothing else** — the radius is deliberately not
+ * in it. A reading is held for five minutes and costs the pool nothing, so a widened radius
+ * reaches the radar on the next open past the window on its own, where the deal — held for
+ * ever, and spent by a second ask — has to carry it.
+ */
+describe('the reading on the radar', () => {
+  it('nests under the feature root and is one question per sport', () => {
+    expect(searchKeys.reading('padel')).toEqual(['play', 'search', 'reading', 'padel']);
+    expect(searchKeys.reading('padel')).toEqual(searchKeys.reading('padel'));
+    expect(searchKeys.reading('padel')).not.toEqual(searchKeys.reading('tennis'));
+  });
+
+  it('carries no radius, so every reading of a sport is found under one key', () => {
+    expect(searchKeys.reading('padel')).toHaveLength(4);
+    expect(searchKeys.readings()).toEqual(['play', 'search', 'reading']);
+  });
+});

@@ -909,3 +909,113 @@ else on the card, the record or the sheet moves. Nothing prints a whole kilometr
 the tests moved by value: the mock's own _1,9 km_ on the deck, _0,6 km_ for somebody in the
 reader's cell on the record, and a sheet fixture whose candidate says `4.3` over an evidence
 saying `4`, so the wrong number has somewhere to be read from.
+
+**The Radar pane — the field, the rings, the three states by width, the ladder, fly-to and
+selection, the card, the footer** ([#463](https://github.com/Raketa02/Raketa/issues/463),
+[ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §1, §3,
+§5 and §7, [`the-radar.md`](../../../docs/specs/matchmaking/the-radar.md) §7, the words §26, the
+sixteen locked mocks). The pane that said _not built_ is the map of the night: Ania at the
+centre, a volt-ringed 34 pt tile labelled _you_ a little above the middle, rings at 2, 5 and 10
+km, fourteen padel faces around her at 18 km across, _3 want to play you_ top-right, _14 players
+in view · all of them_ in the footer over the privacy line. `RADAR_LINE` retires from
+`deckPresentation` and from the public surface; the placeholder's walks in `deck.test.tsx` now
+find the cluster's _Back to you_. **The reading** is `POST /radar` through `api/radarApi`,
+`mappers/readingMappers` (the deal's mapper over the deal's shape, plus `bearing_deg` and
+`ratings[]` — a row with no spot is dropped, a rating in a sport this build cannot name is
+dropped and the row stands), `use-cases/readReading` and `hooks/useReading` — keyed
+`searchKeys.reading(sport)` with **no radius in the key**, because a reading is held five minutes
+and costs the pool nothing where the deal is held for ever and spent by a second ask;
+`refetchOnWindowFocus` and `refetchOnReconnect` off for every ranked list's reason, `retry: false`
+because a reading records a search. The chip is the reading's `pool.want_to_play_you` through
+the deck's own sentence, **the deck's number by the deck's rule** (§5), so the two panes agree by
+the server's arithmetic rather than by sharing a number on the client. **The geometry is pure**
+(`domain/radarGeometry`, 25 assertions without a renderer): the ladder _1,5 · 3 · 5,4 · 10 · 18 ·
+30 · 55 · 110_ with the widest stop the first at or above 2,2 × the reach and the opening the
+first at or above 1,8 × (30 and 18 at 10 km; 30 and 30 at the harness's 12), the floor 1,5;
+`nextStopIn` / `nextStopOut` snapping from wherever a pinch left off and `undefined` at the ends;
+the three states with a **dead-band above each threshold only** — 10 is closer and 5,4 is
+closest so a ± landing on a stop always lands in the state the stop names, and a state already
+held survives until the width is 3 % past the line — which is the one reading of _about 3 %_
+that never contradicts the ladder; the ring rule (radius ≥ 26 pt and ≤ 3,5 field widths from 1 ·
+2 · 5 · 10 · 20 · 50, two or three at every stop and never a bullseye); a row's point from its
+distance and bearing, north up; `inView` on the **point**, never the card; the flight's target
+(the 3 km stop, centred on the row); the reach's edge (`boundCentre`, `rubberBand`); and the
+field's one transform, `containerTransform`, with its inverse `viewFromTransform` and the flight's
+`betweenTransforms`, held to `toScreen` for any view by the test. **The view is two
+kilometre-facts and nothing in points** — the kilometre point at the field's **focus** (42 % of
+the height, where the viewer sits at home and ±, the pinch and the flight zoom around; zooming
+around the true centre would walk the viewer down the screen on every press) and the width in
+kilometres — so the same view on a wider phone sees more of the same picture at the same scale.
+**The field** (`radar/RadarField`) lays every tile out **once** at the home view's scale inside
+one `Animated.View` whose native-driven transform — the scale and the two offsets — carries
+the lot to the live view; every tile counter-scales by one shared `Animated.divide(1, scale)`
+about a 0 × 0 anchor at its point, so a face is always 24 or 30 pt and a card ~190 whatever the
+pinch is doing, and nothing is laid out again until a gesture ends. The rings, the footer's count
+and the cluster's counter are JavaScript's over a `live` view kept in state beside the native
+values — a hairline scaled by twelve is a smear — and during a flight they read the view off the
+**same** linear interpolation of the transform the native side animates, so the two land
+together. Raw touches on `PanResponder`, never on the press (a face and a card are doors): one
+finger past the intent distance is a drag with no inertia that rubber-bands past the reach and
+settles back over `motion.settle`; two fingers is a pinch, continuous between the floor and the
+widest stop, **around the fingers** — the kilometre point under their first midpoint stays under
+their midpoint. A tap on empty field is a hidden background press under the tiles: deselect,
+keep the zoom; ◉ is the accessible way to let somebody go. **The flight** — `motion.flyTo`, 400
+ms, `easeDecel` — lands at 3 km centred on the row and **selects on landing**; under collapsed
+presentation the view is simply there. The parent is told where a gesture, a ±, a flight or ◉
+**ended** and never each frame. **The view is kept while the app lives** — `store/radarView`,
+process-scoped like `playPreferences` because Players opens on Deck every time (ADR-0169 §1)
+and the pane's own state dies with every tab press, which is the one moment the spec wants the
+view to survive; `undefined` is home, because home depends on the reach the store never learns.
+**The selection is kept by sport**, so a sport switch clears it by construction and keeps the
+view, and _a selected player absent from the next reading is deselected silently_ is
+`domain/reading`'s `selectionOn`, applied at read. `drawOrder` paints farther first and the
+selected last, above everybody; `sportRows` lifts the reading's sport to the top of the card's
+rows and keeps the registry order under it. **The frame is the pane's own** (`radar/RadarPane`):
+the same header — `PlayersToggle`, one component for the two panes, the chip, the sport chips —
+over `RadarGround`, the app's **third dark surface**, with no scroller at all, because a page
+that scrolled under a pan would be two things following one finger; the toggle, the chip and the
+chips take their on-dark repaints (`Segment` and `Chip` gain `onDark`, `SportChips` forwards it),
+because mock 1 draws the toggle over the night and the mocks are the design. **The card**
+(`radar/RadarCard`, mocks 10–14) is drawn line for line: a 34 pt face, the name in `h2`, the
+distance in mono `tiny`, the on-court mark in a fourth placement (`radar`: `tag` words in
+`mintInk` on paper, no on-media shadow); a rule; one sport row per rated sport — dot, eyebrow,
+level in `num.s`; the Fit pill with **`fit` after its figure** (`FitPill` gains `trailing`,
+mock 13's order beside a chip that ends in its word) and the reliability chip on `paper2`, a mono
+figure and a word, _—_ where nobody was watched; _N tags in common_ in `mintInk` or _no tags in
+common_ muted, derived by `socialTagOverlap` — **and not drawn at all where the engine compared
+nothing**, because _no tags in common_ is a claim and _we do not know_ is not; _Tap for the full
+card ›_ in `coralInk`. The whole card is one button named by the §26 sentence — `radarTileLabel`
+in `accessibilityPresentation`: _Filip N., 1,9 km, Padel 2,60_ — the same name the face carries
+at the other two widths, so a listener follows one person through every state. A tap opens
+`PlayerRecordSheet` exactly as the deck's _i_ does, with the reading's envelope in hand for the
+Fit sheet; the foot is [#464](https://github.com/Raketa02/Raketa/issues/464)'s. **The footer**
+(`radar/RadarFooter`) is laid over the field so the rings run on beneath it and tells the field
+its height, which is what _between the header and the footer_ means for the count; its four
+states are `radarPresentation`'s sentences — the headline and _+N off screen_ / _all of them_,
+the hint opening with the privacy line at every width and switching on the **zoom state** and
+never the selection, _Nobody within 10 km plays padel yet_ with §17's widen sentence, _Looking
+around…_ over the privacy line with the tile and the rings already drawn, and _The radar couldn't
+load_ with _Try again_ as 6.1's on-dark button in the hint's place. **The cluster**
+(`radar/RadarZoomCluster`) is three 34 pt squares on a bed of its own — `radarControl`, ink at
+half strength, the one dark-on-dark tile in the app, measured off mock 15 — with the counter
+between the first two, `formatWidthKm`'s one decimal below ten and whole above, always drawn;
+± greyed at the ends; ◉ drawn as two circles, since Archivo ships no U+25C9. **The theme** gains
+the two ground colours measured off mock 1 (`radarGroundCentre`, `radarGroundEdge`, hue 199°
+beside the yes ground's and not that ground under a second name — `radarGround.test.ts` derives
+every ratio their comments state), `radarControl`, `num.tiny` (the radar's small mono), `size.radar`
+and `motion.flyTo`. **Tested** through the router harness with a served reading (`radar.test.tsx`,
+the field laid out at its handler because `fireEvent` treats a responder's _no on the press_ as
+disabled — `swipe.ts`'s finding, and `test-support/radarTouch` drives a drag and a two-finger
+pinch the same way): the three states at three widths, ± walking the ladder and greying at the
+ends, a tap flying, landing at 3 km and selecting, the selected card surviving a zoom-out, the
+field deselecting and ◉ homing, the footer's numbers at home and after a flight, the chip, the
+sport chips refetching and clearing the selection while keeping the view, the empty, loading and
+failing readings, the view across a tab switch, the pinch and its snap, the drag and the rubber
+band, reduced motion, and the record sheet from a card. **Not seen on a device** — the author
+checks the build against the sixteen mocks at three widths; the counter-scaled anchors under a
+pinch, the rings' JavaScript frame beside the tiles' native one, and touches landing on a face
+hung off a 0 × 0 anchor on Android are the three things to look at first. **Three calls the
+records did not make**, each one sentence in one place: the empty reading's hint keeps the
+privacy line first (user story 26's _always_) with the widen sentence after it; the card draws no
+tags line where the engine compared nothing; the face's corner is `PlayerPhoto`'s third of the
+box rather than the spec's 6 pt, because that rule has one owner.

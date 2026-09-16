@@ -122,8 +122,8 @@ export const ON_COURT_MAX_SCALE = {
   record: 1.6,
 } as const satisfies Readonly<Record<PhotoPanelSize, number>>;
 
-/** Where the mark is standing: a photo panel at one of its two sizes, or the deck card. */
-export type OnCourtMarkPlacement = PhotoPanelSize | 'deck';
+/** Where the mark is standing: a photo panel at one of its two sizes, the deck card, or the radar card. */
+export type OnCourtMarkPlacement = PhotoPanelSize | 'deck' | 'radar';
 
 /**
  * The tick's box for words at `fontSize` — a share of it, so tick and words read as one line.
@@ -158,7 +158,13 @@ export function OnCourtMark({ on }: OnCourtMarkProps) {
         />
       </Svg>
       <Text
-        style={[placement.words, s.words, { color: placement.colour }, placement.case]}
+        style={[
+          placement.words,
+          s.words,
+          on === 'radar' ? undefined : s.onMedia,
+          { color: placement.colour },
+          placement.case,
+        ]}
         numberOfLines={1}
         {...(placement.cap === undefined ? {} : { maxFontSizeMultiplier: placement.cap })}
       >
@@ -210,6 +216,17 @@ const PLACEMENT: Readonly<Record<OnCourtMarkPlacement, Placement>> = {
     case: { textTransform: 'lowercase' },
     row: { flexShrink: 1 },
   },
+  // The radar card's identity row, on paper — where the deck would draw it, read on a 34 pt
+  // face with no photograph to stand over ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+  // §7): the panel's `tag` words in `mintInk`, which is the mint the paper carries text in
+  // (5,84 on `surface`), uppercased as the panel's are and with no on-media shadow. No cap:
+  // the row wraps its own content.
+  radar: {
+    words: theme.type.tag,
+    colour: theme.color.mintInk,
+    case: { textTransform: 'uppercase' },
+    row: { flexShrink: 1 },
+  },
 };
 
 const s = StyleSheet.create({
@@ -226,5 +243,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: theme.space.xxs,
   },
-  words: { flexShrink: 1, ...theme.shadow.textOnMedia },
+  words: { flexShrink: 1 },
+  onMedia: { ...theme.shadow.textOnMedia },
 });

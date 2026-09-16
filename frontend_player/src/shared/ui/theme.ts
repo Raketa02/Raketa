@@ -203,6 +203,36 @@ const color = {
    *  Nothing else may draw it: the day a second card wears a wash, ADR-0169 §7's fence has
    *  become the rule. */
   deckWash: 'rgba(16,27,32,0.94)',
+
+  /** THE RADAR'S GROUND — the app's THIRD dark surface, and a field rather than a card or a
+   *  screen ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   *  §7, docs/design-system.md Part 16 2026-09-16). One radial glow from the centre value out
+   *  to the edge value, drawn with the SVG the yes ground already uses, under the Players
+   *  header, the field, the zoom cluster and the footer of the Radar pane and nothing else;
+   *  the deck pane beside it is paper. Argued for its own record, as ADR-0167 §2 said the next
+   *  dark surface would be: a map of the night rather than a screen.
+   *
+   *  MEASURED off mock 1 at 1x, as the yes ground was: the brightest ground pixel around the
+   *  viewer's tile is `#1B323D` and the darkest at the bottom edge `#111C22`. Hue 199°–201°,
+   *  which is `night`'s family (194°) at the yes ground's saturation — the two grounds are
+   *  neighbours by design and are NOT one token, because a value is written for what was
+   *  drawn. What sits on them, computed: white 13,37 on the centre and 17,31 on the edge; `volt`
+   *  10,67 / 13,81 (the you tile's ring and the chip); `onDarkTiny` over the centre 7,05 (the
+   *  counter, the footer's hint, a level under a face); `onDarkEyebrow` over the centre 4,80 (a
+   *  ring's label); `onDarkHair` over it 1,61, which is a hairline and not text. `coral` and
+   *  `mint` are 3,43 and 3,28 on the centre and are NOT drawn on it as text: the card is paper
+   *  and every sport dot and tag line sits on that. Derived in radarGround.test.ts. */
+  radarGroundCentre: '#1B323D',
+  radarGroundEdge: '#111C22',
+
+  /** THE ZOOM CLUSTER'S BED — `ink` at .5 over the radar's ground, and the one dark-on-dark
+   *  tile in the app. Mock 15 draws the three squares DARKER than the ground they sit on
+   *  (`#15222A` against `#192D37`), where every on-dark tile so far is lighter (`onDarkTag`,
+   *  `onDarkFill`); `ink` at .5 composites to `#16262E` on the centre value, which is the mock
+   *  within a step. White on it is 15,48 — the `+`, `−` and ◉ are white — and against the ground
+   *  it is 1,16, which is a shape read by its contents and not by its edge. Nothing else may
+   *  draw it. Derived in radarGround.test.ts. */
+  radarControl: 'rgba(16,27,32,0.5)',
 } as const;
 
 /**
@@ -397,6 +427,14 @@ const num = {
   m: { fontFamily: font.mono[600], fontSize: 17, letterSpacing: -0.6, lineHeight: 17 },
   s: { fontFamily: font.mono[500], fontSize: 14, letterSpacing: -0.49, lineHeight: 18 },
   xs: { fontFamily: font.mono[500], fontSize: 13, letterSpacing: -0.46, lineHeight: 17 },
+  /** THE RADAR'S SMALL MONO — a ring's label, a level under a face, the counter between ± and
+   *  the card's distance ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   *  §7, docs/design-system.md Part 16 2026-09-16). `tiny`'s 11 / 16 box in the mono family at
+   *  the inline weight, with the ramp's −0,035em (−0,385): the mocks set every one of those four
+   *  figures at the size the sans secondary text is, and `xs` at 13 is a step too large for a
+   *  label on a hairline. A size and not a scale of `xs`, for 15.3's reason — the pair changes
+   *  together with the record. */
+  tiny: { fontFamily: font.mono[500], fontSize: 11, letterSpacing: -0.385, lineHeight: 16 },
 } as const;
 
 /**
@@ -717,6 +755,30 @@ const size = {
    *  emoji is taller than a line box the height of its font size. 26 is that footprint kept,
    *  so the disc's proportion is still the mock's; not a new number. */
   deckAnswer: { pass: 54, record: 42, accept: 66, ball: 26 },
+  /** THE RADAR — the sizes of the field's drawn objects, every one of them the spec's own
+   *  ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   *  §7, `the-radar.md` §7.2–7.4). Points; the kilometres, the ladder and the thresholds are
+   *  the geometry's and live in `features/play/domain/radarGeometry.ts`, because a stop on a
+   *  ladder is a rule about the map and not a size of anything drawn.
+   *
+   *  `you` is the viewer's tile; `faceWide` and `faceCloser` are a player's face above and at
+   *  10 km across; `face` is the card's identity face — the same 34 the viewer's tile is, which
+   *  is what makes the card read as the tile opened. `card` is the card's width, ~190 in the
+   *  spec and 190 on the grid. `stroke` is the ring around a face and the volt ring around the
+   *  viewer, 2 as the mocks draw it. `cluster` is one of the three squares on the right edge,
+   *  `btn`'s 34 as mock 15 measures. The three rules that read as sizes and are not — a ring is
+   *  drawn at 26 pt of radius or more, at 3,5 field widths or less, and the viewer sits at 42 %
+   *  of the field's height at home — are the geometry's own constants, because each is a rule
+   *  about where something is rather than how big it is drawn. */
+  radar: {
+    you: 34,
+    faceWide: 24,
+    faceCloser: 30,
+    face: 34,
+    card: 190,
+    stroke: 2,
+    cluster: 34,
+  },
   /** THE ON-COURT MARK'S TICK — a small vector check before the words, everywhere the mark is
    *  drawn (ADR-0169 §7, 7.15 as amended). NOT 6.8's 12 × 12: that box beside *ON COURT* at
    *  `type.tag` does not fit a 74pt panel (`onCourtMarkFit.test.ts`). The tick is sized as a
@@ -1118,6 +1180,15 @@ const motion = {
    * presentation, where the card is drawn at rest.
    */
   settle: 160,
+  /**
+   * The radar's flight — a tap on a face carries the view to them, centred, at the 3 km stop
+   * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §7: *about 400 ms*). One beat on the field's own transform, `easeDecel`, and skipped whole
+   * under collapsed presentation, where the view is simply there. The pinch and the drag are not
+   * here: a finger does its own travelling, and only the release back from past the reach's edge
+   * borrows `settle`.
+   */
+  flyTo: 400,
   /**
    * The yes screen's entrance — **one beat, composed of the durations above and no new one**
    * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)

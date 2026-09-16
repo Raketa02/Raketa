@@ -15,7 +15,6 @@ import {
   DEAL_AGAIN_LABEL,
   NOBODY_IN_RANGE_TITLE,
   PANE_LABEL,
-  RADAR_LINE,
   SEEN_EVERYBODY_TITLE,
   SHOW_THEM_AGAIN_LABEL,
   STAMP_WORDS,
@@ -46,13 +45,6 @@ describe('the toggle', () => {
 });
 
 describe('the Radar pane', () => {
-  it('says what it is and that it is not built, in a placeholder’s shape', () => {
-    // The em dash is a dash and not a colon on purpose: *not built yet* is an aside about the
-    // app, not a second clause of the sentence about the pane.
-    expect(RADAR_LINE).toBe('Radar — not built yet');
-    expect(RADAR_LINE).not.toMatch(/coming soon/i);
-  });
-
   it('is where *Try the radar* goes', () => {
     expect(TRY_THE_RADAR_LABEL).toBe('Try the radar');
   });

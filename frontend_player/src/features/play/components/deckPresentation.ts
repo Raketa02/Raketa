@@ -1,7 +1,8 @@
 /**
  * Everything **Players** says around the card: the toggle that is its header, the chip beside
- * it, the Radar pane's one line, the counter pill, the two stamps, the two endings and their
- * buttons, the one toast an answer still raises, and the spoken result of every answer.
+ * it, the counter pill, the two stamps, the two endings and their buttons, the one toast an
+ * answer still raises, and the spoken result of every answer. The Radar pane's own sentences
+ * are `radarPresentation`'s; the toggle's two words and the chip are shared with it.
  *
  * §1's mechanism throughout — code → message, never message → message — and nothing here is a
  * template inlined in a component.
@@ -67,9 +68,6 @@ export const PANE_LABEL = {
 
 /** Which of the two the player is looking at. Component state, never a route (ADR-0169 §1). */
 export type PlayersPane = 'deck' | 'radar';
-
-/** The Radar pane's whole content until it is built. The em dash is an aside, not a colon. */
-export const RADAR_LINE = 'Radar — not built yet';
 
 /**
  * The deck's own version of *no rated sport*.
@@ -150,7 +148,7 @@ export function seenEverybodyLine(facts: {
 /** *Show them again* — `POST /deck/reset`, then a fresh deal. On the one ending it can help. */
 export const SHOW_THEM_AGAIN_LABEL = 'Show them again';
 
-/** *Try the radar* — flips the toggle. The pane says it is not built; the door is real. */
+/** *Try the radar* — flips the toggle to the pane (ADR-0174). */
 export const TRY_THE_RADAR_LABEL = 'Try the radar';
 
 /**

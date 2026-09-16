@@ -75,7 +75,6 @@ import { declarationLine, declarationTitle, modeControlLabel } from './findAGame
 import {
   NOBODY_IN_RANGE_TITLE,
   PANE_LABEL,
-  RADAR_LINE,
   SEEN_EVERYBODY_TITLE,
   SHOW_THEM_AGAIN_LABEL,
   TRY_THE_RADAR_LABEL,
@@ -91,9 +90,11 @@ import { deckMetaLine } from './deckCardPresentation';
 import { SPORT_HEADING } from './SportChips';
 import { CAP_REACHED_SENTENCE, playErrorMessage } from './playErrorMessage';
 import { promptControls, promptCopy } from './promptPresentation';
+import { BACK_TO_YOU_LABEL } from './radarPresentation';
 import { poolDescription } from './searchPresentation';
 
 const DECK = '/api/v1/deck';
+const RADAR = '/api/v1/radar';
 const RESET = '/api/v1/deck/reset';
 const TENNIS_INTENT = '/api/v1/play-intents/TENNIS';
 const INTEREST = '/api/v1/interest';
@@ -419,6 +420,9 @@ beforeEach(() => {
   stubProfileSurface(transport);
   stubInterest(transport, standing(8));
   transport.on('POST', DECK, () => json(deal()));
+  // The Radar pane reads its own surface; an empty reading is enough for the walks here, which
+  // are about the toggle. The pane itself is `radar.test.tsx`'s.
+  transport.on('POST', RADAR, () => json(deal({ candidates: [] })));
   transport.on('POST', INTEREST, () => json(expressed(false), 201));
   transport.on('POST', PASSES, () => noContent());
   transport.on('POST', RESET, () => noContent());
@@ -1557,7 +1561,7 @@ describe('the two endings', () => {
 
     fireEvent.press(screen.getByRole('button', { name: TRY_THE_RADAR_LABEL }));
 
-    expect(await screen.findByText(RADAR_LINE)).toBeTruthy();
+    expect(await screen.findByLabelText(BACK_TO_YOU_LABEL)).toBeTruthy();
     expect(screen.getByRole('button', { name: PANE_LABEL.radar, selected: true })).toBeTruthy();
     expect(screen).toHavePathname('/players');
   });
@@ -1589,13 +1593,13 @@ describe('Players, the tab', () => {
     expect(screen.queryByText(/Match me/)).toBeNull();
   });
 
-  it('flips to a Radar pane that says it is not built, and back', async () => {
+  it('flips to the Radar pane, and back', async () => {
     await openDeck();
     await screen.findByLabelText(MAREK_CARD);
 
     fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.radar }));
 
-    expect(await screen.findByText(RADAR_LINE)).toBeTruthy();
+    expect(await screen.findByLabelText(BACK_TO_YOU_LABEL)).toBeTruthy();
     expect(screen.queryByLabelText(MAREK_CARD)).toBeNull();
     expect(screen.getByRole('button', { name: PANE_LABEL.radar, selected: true })).toBeTruthy();
     // A pane and not a route: the toggle moved and the tab did not.
@@ -1604,7 +1608,7 @@ describe('Players, the tab', () => {
     fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.deck }));
 
     expect(await screen.findByLabelText(MAREK_CARD)).toBeTruthy();
-    expect(screen.queryByText(RADAR_LINE)).toBeNull();
+    expect(screen.queryByLabelText(BACK_TO_YOU_LABEL)).toBeNull();
   });
 
   /** The toggle is the screen's own state, and the screen is remounted on every arrival. */
@@ -1612,7 +1616,7 @@ describe('Players, the tab', () => {
     await openDeck();
     await screen.findByLabelText(MAREK_CARD);
     fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.radar }));
-    await screen.findByText(RADAR_LINE);
+    await screen.findByLabelText(BACK_TO_YOU_LABEL);
 
     fireEvent.press(screen.getByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
@@ -1621,7 +1625,7 @@ describe('Players, the tab', () => {
 
     expect(await screen.findByLabelText(MAREK_CARD)).toBeTruthy();
     expect(screen.getByRole('button', { name: PANE_LABEL.deck, selected: true })).toBeTruthy();
-    expect(screen.queryByText(RADAR_LINE)).toBeNull();
+    expect(screen.queryByLabelText(BACK_TO_YOU_LABEL)).toBeNull();
   });
 
   /**

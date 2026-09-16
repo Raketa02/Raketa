@@ -57,11 +57,27 @@ export interface SegmentProps<K extends string> {
   /** Fires on every press, selected or not. The control reports; the caller decides. */
   readonly onSelect: (key: K) => void;
   readonly style?: StyleProp<ViewStyle>;
+  /**
+   * The same control on the app's third dark surface — the Radar pane's header, where the
+   * *Deck | Radar* toggle stands over the field's ground rather than over paper
+   * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §7). 5.2's repaint read as a control, as `Button`'s `onDark` is: the track takes
+   * `onDarkTag`, the unselected label the on-dark tiny grey, and the raised segment is still
+   * `surface` with `ink` — mock 4 draws it so, and it is the same lightness step the paper
+   * version takes, read from the other side. `selected` carries the state either way.
+   */
+  readonly onDark?: boolean;
 }
 
-export function Segment<K extends string>({ options, selected, onSelect, style }: SegmentProps<K>) {
+export function Segment<K extends string>({
+  options,
+  selected,
+  onSelect,
+  style,
+  onDark = false,
+}: SegmentProps<K>) {
   return (
-    <View style={[s.track, style]}>
+    <View style={[s.track, onDark ? s.trackOnDark : undefined, style]}>
       {options.map((option) => {
         const on = option.key === selected;
 
@@ -84,7 +100,14 @@ export function Segment<K extends string>({ options, selected, onSelect, style }
               pressed ? s.pressed : undefined,
             ]}
           >
-            <Text style={[s.label, on ? s.labelSelected : undefined]} numberOfLines={1}>
+            <Text
+              style={[
+                s.label,
+                onDark && !on ? s.labelOnDark : undefined,
+                on ? s.labelSelected : undefined,
+              ]}
+              numberOfLines={1}
+            >
               {option.label}
             </Text>
           </Pressable>
@@ -113,8 +136,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  trackOnDark: { backgroundColor: theme.color.onDarkTag },
   selected: { backgroundColor: theme.color.surface },
   pressed: { opacity: 0.7 },
   label: { ...theme.type.seg, color: theme.color.muted },
+  labelOnDark: { color: theme.color.onDarkTiny },
   labelSelected: { color: theme.color.ink },
 });

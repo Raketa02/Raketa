@@ -10,9 +10,12 @@
  * deal is what makes that cheap — and **there is no title row**. The header is the *Deck | Radar*
  * toggle, Deck filled, in the header's lead slot, and the **chip** in the right slot — *2 want to
  * play you*, `pool.want_to_play_you` off the deal, and not drawn at nought (§4). The toggle is
- * **component state and not two routes** — Radar is a pane with one muted line until it is built
- * (§9), and a route would make it somewhere the tab could open on. *Try the radar* on the ending
- * flips it.
+ * **component state and not two routes** — Radar is a pane (`radar/RadarPane`, its own frame on
+ * the night since [ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)),
+ * and a route would make it somewhere the tab could open on. *Try the radar* on the ending flips
+ * it. The pane is remounted with the screen and opens on Deck; **where the radar was looking is
+ * not lost with it** — the view and the selection are `store/radarView`'s for the life of the
+ * process (ADR-0174 §7).
  *
  * **Sport chips only when there is a choice.** A player rated in one sport sees the mock
  * exactly; rated in two or more gets the row under the toggle, reading and writing the same
@@ -105,7 +108,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { sportLabel, useSkillRatings } from '@/features/onboarding/types';
 import { useProfileSurface } from '@/features/player_profile/types';
@@ -114,15 +117,7 @@ import { ShellScreen } from '@/features/shell/types';
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { playerName } from '@/shared/formatting/playerName';
 import { showToast } from '@/shared/store/toast.store';
-import {
-  Button,
-  Note,
-  Segment,
-  announce,
-  behindOverlay,
-  moveAccessibilityFocus,
-  theme,
-} from '@/shared/ui';
+import { Button, Note, announce, behindOverlay, moveAccessibilityFocus, theme } from '@/shared/ui';
 
 import type { Candidate } from '../domain/candidate';
 import {
@@ -154,6 +149,7 @@ import { DeckAnswers } from './DeckAnswers';
 import { DeckEnding } from './DeckEnding';
 import { DeckPill } from './DeckPill';
 import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
+import { PlayersToggle } from './PlayersToggle';
 import { PromptSheet } from './PromptSheet';
 import { SportChips } from './SportChips';
 import { DeckCard } from './candidate/DeckCard';
@@ -161,8 +157,6 @@ import {
   DEALING_LABEL,
   DEAL_AGAIN_LABEL,
   NO_RATED_SPORT_LINE,
-  PANE_LABEL,
-  RADAR_LINE,
   deckCounter,
   passedAnnouncement,
   wantToPlayYouChip,
@@ -170,6 +164,7 @@ import {
   type PlayersPane,
 } from './deckPresentation';
 import { CAP_REACHED_SENTENCE, playErrorMessage } from './playErrorMessage';
+import { RadarPane } from './radar/RadarPane';
 import { poolDescription } from './searchPresentation';
 import { WhyFitSheet } from './whyfit/WhyFitSheet';
 
@@ -386,6 +381,21 @@ export function DeckScreen() {
   const chip =
     waiting > 0 ? <DeckPill tone="volt">{wantToPlayYouChip(waiting)}</DeckPill> : undefined;
 
+  // The Radar pane is its own frame — the night, full-bleed, no scroller — with the same
+  // toggle for a header and the same chips for a choice. It reads its own chip off its own
+  // reading, so the two panes agree by the server's rule rather than by sharing a number here.
+  if (pane === 'radar') {
+    return (
+      <RadarPane
+        onPane={setPane}
+        rated={rated}
+        sport={onThisSport}
+        onChooseSport={chooseSport}
+        reachKm={profile?.searchRadiusKm}
+      />
+    );
+  }
+
   return (
     <>
       {/* The sheets are **siblings** of the screen they cover, never children: `behindOverlay`
@@ -400,21 +410,11 @@ export function DeckScreen() {
             segments a width to share. `fill`, so the stage takes the height the phone gives
             the deck rather than the height a card's content happens to want. */}
         <ShellScreen
-          lead={
-            <Segment
-              selected={pane}
-              options={[
-                { key: 'deck', label: PANE_LABEL.deck },
-                { key: 'radar', label: PANE_LABEL.radar },
-              ]}
-              onSelect={setPane}
-              style={s.toggle}
-            />
-          }
-          right={pane === 'deck' ? chip : undefined}
-          fill={pane === 'deck'}
+          lead={<PlayersToggle pane={pane} onSelect={setPane} />}
+          right={chip}
+          fill
           action={
-            pane === 'deck' && showing !== undefined ? (
+            showing !== undefined ? (
               <DeckAnswers
                 name={playerName({ kind: 'player', name: showing.candidate.card.name })}
                 onPass={() => answer('no', showing)}
@@ -425,122 +425,115 @@ export function DeckScreen() {
             ) : undefined
           }
         >
-          {/* The Radar pane: one muted line in a placeholder tab's shape, until it is built. */}
-          {pane === 'radar' ? (
-            <Text style={s.radar}>{RADAR_LINE}</Text>
-          ) : (
-            <>
-              {onThisSport === undefined && ratings.isSuccess ? (
-                <Note>{NO_RATED_SPORT_LINE}</Note>
-              ) : null}
+          <>
+            {onThisSport === undefined && ratings.isSuccess ? (
+              <Note>{NO_RATED_SPORT_LINE}</Note>
+            ) : null}
 
-              {/* Only when there is a choice: a player rated in one sport sees the mock
+            {/* Only when there is a choice: a player rated in one sport sees the mock
                   exactly, and the row would be one chip saying what the card already says. */}
-              {onThisSport !== undefined && rated.length >= 2 ? (
-                <SportChips rated={rated} selected={onThisSport} onChoose={chooseSport} />
-              ) : null}
+            {onThisSport !== undefined && rated.length >= 2 ? (
+              <SportChips rated={rated} selected={onThisSport} onChoose={chooseSport} />
+            ) : null}
 
-              {readError !== null ? (
-                <Note variant="coral" accessibilityRole="alert">
-                  {recoveryMessage(readError)}
-                </Note>
-              ) : null}
+            {readError !== null ? (
+              <Note variant="coral" accessibilityRole="alert">
+                {recoveryMessage(readError)}
+              </Note>
+            ) : null}
 
-              {/* Paused, not failed: `networkMode: 'online'` holds a write rather than refusing
+            {/* Paused, not failed: `networkMode: 'online'` holds a write rather than refusing
                   it, so an offline player would otherwise watch nothing happen. */}
-              {answerPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+            {answerPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
 
-              {/* The failed answer's sentence sits above the card it is about — which is back on
+            {/* The failed answer's sentence sits above the card it is about — which is back on
                   screen, because a refusal returns it. */}
-              {answerError !== null ? (
+            {answerError !== null ? (
+              <Note variant="coral" accessibilityRole="alert">
+                {playErrorMessage(answerError)}
+              </Note>
+            ) : null}
+
+            {deal.error !== null ? (
+              <View style={s.failure}>
                 <Note variant="coral" accessibilityRole="alert">
-                  {playErrorMessage(answerError)}
+                  {playErrorMessage(deal.error)}
                 </Note>
-              ) : null}
+                <Button label={DEAL_AGAIN_LABEL} variant="secondary" onPress={dealAgain} />
+              </View>
+            ) : null}
 
-              {deal.error !== null ? (
-                <View style={s.failure}>
-                  <Note variant="coral" accessibilityRole="alert">
-                    {playErrorMessage(deal.error)}
-                  </Note>
-                  <Button label={DEAL_AGAIN_LABEL} variant="secondary" onPress={dealAgain} />
-                </View>
-              ) : null}
+            {dealing && !answerPaused && showing === undefined ? (
+              <ActivityIndicator accessibilityLabel={DEALING_LABEL} color={theme.color.muted} />
+            ) : null}
 
-              {dealing && !answerPaused && showing === undefined ? (
-                <ActivityIndicator accessibilityLabel={DEALING_LABEL} color={theme.color.muted} />
-              ) : null}
-
-              {showing === undefined ||
-              dealt === undefined ||
-              sportName === undefined ||
-              left === undefined ? null : (
-                <View style={s.deck}>
-                  {/* Never keyed by the card: the stage keeps every card mounted and promotes
+            {showing === undefined ||
+            dealt === undefined ||
+            sportName === undefined ||
+            left === undefined ? null : (
+              <View style={s.deck}>
+                {/* Never keyed by the card: the stage keeps every card mounted and promotes
                       the one behind in place when the top one has gone, so the card under a
                       released swipe is the element it already was — its photograph is not
                       decoded again and nothing fades in over it. The cards are keyed instead,
                       by the person on the deal they came off, and only the top one is the
                       door to the record and the place focus goes. */}
-                  <DeckStage
-                    leaving={
-                      leaving !== undefined && isTheCard(leaving.card, showing)
-                        ? leaving.said
-                        : undefined
-                    }
-                    onAnswer={(said) => answer(said, showing)}
-                    onLeft={() => cardLeft(showing)}
-                    cards={[showing, ...behind].map((card, depth) => ({
-                      key: cardKey(card),
-                      card: (
-                        <DeckCard
-                          candidate={card.candidate}
-                          envelope={dealt.envelope}
-                          sportName={sportName}
-                          {...(depth === 0
-                            ? { bodyRef: body, onLongPress: () => setReading(card.candidate) }
-                            : {})}
-                        />
-                      ),
-                    }))}
-                  />
+                <DeckStage
+                  leaving={
+                    leaving !== undefined && isTheCard(leaving.card, showing)
+                      ? leaving.said
+                      : undefined
+                  }
+                  onAnswer={(said) => answer(said, showing)}
+                  onLeft={() => cardLeft(showing)}
+                  cards={[showing, ...behind].map((card, depth) => ({
+                    key: cardKey(card),
+                    card: (
+                      <DeckCard
+                        candidate={card.candidate}
+                        envelope={dealt.envelope}
+                        sportName={sportName}
+                        {...(depth === 0
+                          ? { bodyRef: body, onLongPress: () => setReading(card.candidate) }
+                          : {})}
+                      />
+                    ),
+                  }))}
+                />
 
-                  {/* The counter, floating over the card's foot: what is left in the whole
+                {/* The counter, floating over the card's foot: what is left in the whole
                       pool, and how many yeses there are to give. */}
-                  <View style={s.counter} pointerEvents="none">
-                    <DeckPill tone="night">
-                      {deckCounter({ left, ...(give === undefined ? {} : { give }) })}
-                    </DeckPill>
-                  </View>
+                <View style={s.counter} pointerEvents="none">
+                  <DeckPill tone="night">
+                    {deckCounter({ left, ...(give === undefined ? {} : { give }) })}
+                  </DeckPill>
                 </View>
-              )}
+              </View>
+            )}
 
-              {hand?.kind === 'seen-everybody' && dealt !== undefined ? (
-                <DeckEnding
-                  kind="seen-everybody"
-                  radiusKm={dealt.pool.radiusKmUsed}
-                  {...(standingHere === undefined ? {} : { ttlDays: standingHere.ttlDays })}
-                  onShowThemAgain={() => reset.mutate()}
-                  onTryTheRadar={() => setPane('radar')}
-                  resetting={reset.isPending}
-                  resetError={reset.error}
-                />
-              ) : null}
+            {hand?.kind === 'seen-everybody' && dealt !== undefined ? (
+              <DeckEnding
+                kind="seen-everybody"
+                radiusKm={dealt.pool.radiusKmUsed}
+                {...(standingHere === undefined ? {} : { ttlDays: standingHere.ttlDays })}
+                onShowThemAgain={() => reset.mutate()}
+                onTryTheRadar={() => setPane('radar')}
+                resetting={reset.isPending}
+                resetError={reset.error}
+              />
+            ) : null}
 
-              {hand?.kind === 'nobody-in-range' &&
-              dealt !== undefined &&
-              sportName !== undefined ? (
-                <DeckEnding
-                  kind="nobody-in-range"
-                  pool={poolDescription({ ...dealt.pool, sportName })}
-                  // *Widen in You* survives here and on no other Play surface — and it is
-                  // gated, because a player already at their own ceiling cannot give what it
-                  // asks for.
-                  mayWiden={!dealt.envelope.radiusClamp}
-                />
-              ) : null}
-            </>
-          )}
+            {hand?.kind === 'nobody-in-range' && dealt !== undefined && sportName !== undefined ? (
+              <DeckEnding
+                kind="nobody-in-range"
+                pool={poolDescription({ ...dealt.pool, sportName })}
+                // *Widen in You* survives here and on no other Play surface — and it is
+                // gated, because a player already at their own ceiling cannot give what it
+                // asks for.
+                mayWiden={!dealt.envelope.radiusClamp}
+              />
+            ) : null}
+          </>
         </ShellScreen>
       </View>
 
@@ -611,8 +604,6 @@ export function DeckScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  toggle: { flex: 1 },
-  radar: { ...theme.type.tiny, color: theme.color.muted },
   // The stage takes what the page leaves, and the counter hangs off its foot.
   deck: { flex: 1, paddingBottom: theme.size.chip / 2 },
   counter: {
