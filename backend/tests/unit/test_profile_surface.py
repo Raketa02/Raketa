@@ -1,4 +1,4 @@
-"""The four use cases behind the profile surface Play reads and writes.
+"""The five use cases behind the profile surface reads and writes.
 
 The **event store** is faked and both repositories are real, for the reason every
 use-case test in this suite works that way: a repository fake would leave the
@@ -18,11 +18,13 @@ from app.kernel import Sport
 from app.modules.player_profile.application.change_availability import (
     ChangeAvailability,
 )
+from app.modules.player_profile.application.change_location import ChangeLocation
 from app.modules.player_profile.application.change_search_radius import (
     ChangeSearchRadius,
 )
 from app.modules.player_profile.application.commands import (
     ChangeAvailabilityCommand,
+    ChangeLocationCommand,
     ChangeSearchRadiusCommand,
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
@@ -43,6 +45,7 @@ from app.modules.player_profile.domain.errors import (
 )
 from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
+    LocationChanged,
     PlayIntentDeclared,
     SearchRadiusChanged,
 )
@@ -73,9 +76,12 @@ from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 PLAYER = new_uuid()
 STRANGER = new_uuid()
 
+#: The fix every profile here is committed with. It rounds to (51.51, -0.13).
+HOME_FIX = (51.5073509, -0.1277583)
+
 
 class Harness:
-    """The four use cases over fakes, each built the way a request builds one."""
+    """The five use cases over fakes, each built the way a request builds one."""
 
     def __init__(self) -> None:
         self.store = InMemoryEventStore()
@@ -105,8 +111,8 @@ class Harness:
             social_tag_ids=["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
             photo_ids=[],
             availability=[(2, "EVENING"), (6, "MORNING")],
-            latitude=51.5073509,
-            longitude=-0.1277583,
+            latitude=HOME_FIX[0],
+            longitude=HOME_FIX[1],
             search_radius_km=SEARCH_RADIUS_BOUNDS.default_km,
             gender=Gender.WOMAN,
             gender_preference=DEFAULT_GENDER_PREFERENCE,
@@ -143,6 +149,17 @@ class Harness:
         ).execute(
             ChangeSearchRadiusCommand(
                 player_id=player_id, search_radius_km=kilometres
+            )
+        )
+
+    async def change_location(
+        self, latitude: float, longitude: float, *, player_id=PLAYER
+    ) -> None:
+        await ChangeLocation(
+            profiles=self._profiles(), uow=self.uow, clock=self.clock
+        ).execute(
+            ChangeLocationCommand(
+                player_id=player_id, latitude=latitude, longitude=longitude
             )
         )
 
@@ -253,6 +270,51 @@ async def test_an_illegal_radius_is_refused_before_the_store_is_asked_anything(
         await harness.change_radius(SEARCH_RADIUS_BOUNDS.maximum_km + 1)
 
     assert harness.store.appends == 0
+    assert harness.uow.commits == 0
+
+
+# ---------------------------------------------------------------------------
+# The location
+# ---------------------------------------------------------------------------
+
+
+async def test_a_fix_in_a_new_cell_records_the_cell_and_never_the_fix(harness):
+    """``docs/adr/0174`` §6: the cold start's write. The aggregate's
+    ``change_location`` has existed since ADR-0089 with no caller in ``app/``;
+    this is its first. What crosses into the stream is the **cell** the fix rounds to —
+    the location value object's own rule, applied here exactly as the commit
+    applies it — so the device's reading is nowhere a replay could recover it."""
+
+    await harness.commit_profile()
+
+    await harness.change_location(52.2297, 21.0122)
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, LocationChanged)
+    assert (released.latitude, released.longitude) == (52.23, 21.01)
+    assert harness.uow.commits == 1
+
+
+async def test_a_fix_rounding_to_the_stored_cell_records_nothing(harness):
+    """The time after that: the phone reads a slightly different fix in the same
+    cell, and the aggregate's no-op rule means nothing is appended. Still
+    committed, for the week's reason — the transaction boundary is the
+    command's, not the change's."""
+
+    await harness.commit_profile()
+
+    await harness.change_location(51.5099, -0.1310)
+
+    assert harness.publisher.published == []
+    assert harness.store.appends == 0
+    assert harness.uow.commits == 1
+
+
+async def test_a_location_written_by_a_player_with_no_profile_is_refused(harness):
+    with pytest.raises(PlayerProfileNotFound):
+        await harness.change_location(52.2297, 21.0122)
+
+    assert harness.publisher.published == []
     assert harness.uow.commits == 0
 
 

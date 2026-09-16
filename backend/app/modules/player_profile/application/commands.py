@@ -137,6 +137,22 @@ class ChangeSearchRadiusCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class ChangeLocationCommand:
+    """The phone's fix, on a cold start (``docs/adr/0174`` §6).
+
+    The **precise fix**, as the device gave it and as the commit carries it —
+    two floats and not a ``LocationArea`` — because the coarsening is the
+    domain's job and it happens exactly once, on the way in
+    (``domain/location.py``). Nothing above the use case ever holds the cell,
+    and nothing below it ever holds the fix.
+    """
+
+    player_id: UUID
+    latitude: float
+    longitude: float
+
+
+@dataclass(frozen=True, slots=True)
 class DeclarePlayIntentCommand:
     """What kind of game this player wants, in one sport.
 

@@ -963,6 +963,66 @@
         ]
       }
     },
+    "/api/v1/players/me/location": {
+      "put": {
+        "tags": [
+          "player-profile"
+        ],
+        "summary": "Move this player's Location area to where the phone is",
+        "description": "**The cold start's write, and no screen's.** The client re-reads the phone's position on every cold start and on return from the background after more than 24 hours \u2014 never merely on foreground \u2014 with the accuracy onboarding used, and puts it here silently. A revoked permission sends nothing: the stored area stays.\n\n**What is sent is never what is kept.** The fix is rounded to the cell about a kilometre across before anything is recorded, exactly as the profile commit rounds it, so the precise fix never reaches the platform's records. A fix that rounds to the cell already stored records nothing and still answers `204` \u2014 which is what makes a write on every launch free, and why there is no `Idempotency-Key`.\n\n**Nothing else moves.** A trip is a trip: the next deal deals around the new area, the radar refetches, *In your area* answers for the new cell \u2014 and nothing is reset, no radius changes and no prompt is raised. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.",
+        "operationId": "change_location_api_v1_players_me_location_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeLocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/play-intents/{sport}": {
       "put": {
         "tags": [
@@ -4564,6 +4624,29 @@
         ],
         "title": "ChangeAvailabilityRequest",
         "description": "The week, replaced whole.\n\n**No floor, and that is the difference from the commit.** An empty list is a\ncleared week and is recorded; ``availability_grid_empty`` refuses the answer\na player is *asked for* at the end of onboarding, not every later edit of it.\n\nRepeated cells are collapsed rather than refused, and the response carries\nthe grid as it was stored \u2014 so a client that sent the same cell twice, or\nsent the week in its own order, can see what the profile now holds."
+      },
+      "ChangeLocationRequest": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "ChangeLocationRequest",
+        "description": "The phone's fix, on a cold start.\n\n**What is sent is never what is kept.** The client sends the fix its device\ngave it, with the accuracy onboarding used; the platform rounds it to the\ncell about a kilometre across before anything is recorded, exactly as the\ncommit does, and a fix that rounds to the cell already stored records\nnothing (``docs/adr/0174`` \u00a76). Nothing comes back: no route on this\nsurface serves the area yet \u2014 the profile read grows the field when *You*\nis built \u2014 and a silent write on every launch is not the one to start.\n\nThe bounds are the world's, as they are on the commit's ``location`` \u2014\nread from the value object rather than spelled again. A fix outside them\nis a broken reading and not a place, refused at the boundary rather than\nrounded into a cell at the pole."
       },
       "ChangeSearchRadiusRequest": {
         "properties": {

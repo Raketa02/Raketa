@@ -28,6 +28,7 @@ from app.bootstrap.composition import (
 from app.modules.player_profile.application.change_availability import (
     ChangeAvailability,
 )
+from app.modules.player_profile.application.change_location import ChangeLocation
 from app.modules.player_profile.application.change_search_radius import (
     ChangeSearchRadius,
 )
@@ -212,6 +213,20 @@ def get_change_search_radius(
 
 
 ChangeSearchRadiusDep = Annotated[ChangeSearchRadius, Depends(get_change_search_radius)]
+
+
+def get_change_location(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangeLocation:
+    # The same three the radius takes: the cell is a fact on the profile's own
+    # stream and nothing else is told, because the projection follows the
+    # event it has always followed (`docs/adr/0174` §6).
+    return ChangeLocation(profiles=profiles, uow=uow, clock=clock)
+
+
+ChangeLocationDep = Annotated[ChangeLocation, Depends(get_change_location)]
 
 
 def get_declare_play_intent(

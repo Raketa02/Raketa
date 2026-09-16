@@ -207,6 +207,7 @@ async def a_searcher(
     *,
     intent: str = "COMPETITIVE",
     sport: Sport = SPORT,
+    location: tuple[float, float] = CENTRE,
 ) -> dict:
     """One player, ready to search: profile, rating and declaration.
 
@@ -218,10 +219,17 @@ async def a_searcher(
     of a mode, so *no preference* is a case it wants at birth. Declaring again
     afterwards would work — the route is unkeyed and re-declaring is an edit —
     but it would put a second event on a stream no test meant to give a history.
+
+    ``location`` is where the profile is committed, for the one kind of test
+    that needs two searchers in two cities: a location that *moves*
+    (``docs/adr/0174`` §6) is asserted through the neighbours it gains and
+    loses, and each of those is a searcher of their own.
     """
 
     player_id, token = await register(client, name)
-    await commit_profile(client, token)
+    await commit_profile(
+        client, token, location={"latitude": location[0], "longitude": location[1]}
+    )
     mu = await rate(client, token, sport)
     await declare_intent(client, token, intent=intent, sport=sport)
     return {"id": player_id, "token": token, "mu": mu}

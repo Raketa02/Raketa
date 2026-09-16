@@ -1,4 +1,4 @@
-"""The profile surface Play reads and writes: one read, one `PUT` per fact.
+"""The profile surface reads and writes: one read, one `PUT` per fact.
 
 The search screen edits three facts — the availability grid, the search radius
 and the per-sport Play intent — and until these routes existed it could read none
@@ -31,12 +31,21 @@ commit — *"the request a player makes once, at the end of six steps, on whatev
 connection they have"* — and a `PUT` that lands the same state twice has nothing
 to deduplicate.
 
-**Read, availability and radius, and nothing else.** The aggregate also has
-`change_social_tags`, `change_photos`, `change_location`, `change_gender` and
+**Read, availability, radius and location, and nothing else.** The aggregate
+also has `change_social_tags`, `change_photos`, `change_gender` and
 `change_gender_preference`, and none of them gets a route here. Those belong to
 *You*, which is not built; this surface is scoped to what the Play screens edit,
 and the read grows the deferred fields when that screen arrives rather than
 acquiring a sibling.
+
+**The location is the exception, and it is not You's — it is the cold start's**
+(``docs/adr/0174`` §6). No screen edits it and no prompt asks for it: the client
+re-reads the phone's position on every cold start and on return from the
+background after more than a day, and puts it here silently. It is the fourth
+unkeyed `PUT` for the first three's reason, and the same-cell no-op is what
+makes a write on every launch free. It answers `204` and no body: no route on
+this surface serves the area yet — the profile read grows the field when *You*
+is built — and a silent write on every launch is not the one to start.
 """
 
 from __future__ import annotations
@@ -46,16 +55,19 @@ from fastapi import APIRouter, status
 from app.core.exception_handlers import ErrorResponse
 from app.modules.player_profile.application.commands import (
     ChangeAvailabilityCommand,
+    ChangeLocationCommand,
     ChangeSearchRadiusCommand,
 )
 from app.modules.player_profile.presentation.dependencies import (
     ChangeAvailabilityDep,
+    ChangeLocationDep,
     ChangeSearchRadiusDep,
     ReadPlayerProfileDep,
 )
 from app.modules.player_profile.presentation.schemas import (
     AvailabilityResponse,
     ChangeAvailabilityRequest,
+    ChangeLocationRequest,
     ChangeSearchRadiusRequest,
     PlayerProfileReadResponse,
     SearchRadiusResponse,
@@ -210,3 +222,44 @@ async def change_search_radius(
         )
     )
     return SearchRadiusResponse.from_domain(profile)
+
+
+@router.put(
+    "/location",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_404_NOT_FOUND: _NO_PROFILE,
+        status.HTTP_409_CONFLICT: _LOST_THE_RACE,
+    },
+    summary="Move this player's Location area to where the phone is",
+    description=(
+        "**The cold start's write, and no screen's.** The client re-reads the "
+        "phone's position on every cold start and on return from the "
+        "background after more than 24 hours — never merely on foreground — "
+        "with the accuracy onboarding used, and puts it here silently. A "
+        "revoked permission sends nothing: the stored area stays.\n\n"
+        "**What is sent is never what is kept.** The fix is rounded to the "
+        "cell about a kilometre across before anything is recorded, exactly as "
+        "the profile commit rounds it, so the precise fix never reaches the "
+        "platform's records. A fix that rounds to the cell already stored "
+        "records nothing and still answers `204` — which is what makes a write "
+        "on every launch free, and why there is no `Idempotency-Key`.\n\n"
+        "**Nothing else moves.** A trip is a trip: the next deal deals around "
+        "the new area, the radar refetches, *In your area* answers for the new "
+        "cell — and nothing is reset, no radius changes and no prompt is "
+        "raised. `204` and no body: no route on this surface serves the area "
+        "yet, and a silent write on every launch is not the one to start."
+    ),
+)
+async def change_location(
+    payload: ChangeLocationRequest,
+    user: CurrentUserDep,
+    use_case: ChangeLocationDep,
+) -> None:
+    await use_case.execute(
+        ChangeLocationCommand(
+            player_id=user.id,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+        )
+    )

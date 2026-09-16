@@ -15,7 +15,15 @@ What is here today:
 - the aggregate, its events, and **the one idempotent commit that creates a
   profile** at ``POST /api/v1/players/me/profile`` — which also carries the one
   line a player may write about themselves, the **intro**, fenced at the write
-  and stored as its own event (``docs/adr/0170``).
+  and stored as its own event (``docs/adr/0170``);
+- the profile surface's unkeyed ``PUT``s — the week, the radius, and **the
+  location, which moves on a cold start** (``docs/adr/0174`` §6): the client
+  puts the phone's position silently on every launch, the fix is rounded to the
+  cell exactly as the commit rounds it, and a fix in the cell already stored
+  records nothing. It is the first caller ``change_location`` ever had in
+  ``app/``, and everything that reads a location — every deck pool, every
+  radar, every *In your area* — follows the candidate projection, which has
+  applied ``LocationChanged`` since it was built (``docs/adr/0110``).
 
 What is deliberately **not** here: the ``player_profiles`` read model. It exists
 for the many-player reads matchmaking will do, and matchmaking does not exist.

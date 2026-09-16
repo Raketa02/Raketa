@@ -1,4 +1,4 @@
-"""The profile surface Play reads and writes: one read, one `PUT` per fact.
+"""The profile surface reads and writes: one read, one `PUT` per fact.
 
 The Play screen edits three facts — the week, the radius and the per-sport Play
 intent — and until these routes existed it could read none of them and write
@@ -6,6 +6,11 @@ none of them. What is asserted here is the shape #226 settled: **one read
 carrying all three**, and **one unkeyed `PUT` per changeable fact**, because a
 blank grid is a legal value and a `PATCH` field that may be `null` would mean
 both *leave my week alone* and *clear my week*.
+
+The fourth `PUT` is the **cold start's** and no screen's: the location
+(``docs/adr/0174`` §6), put silently on every launch, which is why the
+same-cell case answering `204` with nothing appended is the assertion that
+matters most.
 
 The fourth fact a screen needs — *which sports am I rated in* — is
 `GET /api/v1/ratings` and is not re-served here.
@@ -25,6 +30,13 @@ from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
 PROFILE_URL = "/api/v1/players/me/profile"
 AVAILABILITY_URL = "/api/v1/players/me/availability"
 RADIUS_URL = "/api/v1/players/me/search-radius"
+LOCATION_URL = "/api/v1/players/me/location"
+
+#: The fix `a_player` commits with.
+HOME_FIX = {"latitude": 51.5073509, "longitude": -0.1277583}
+#: A fix in another cell entirely, and its cell.
+AWAY_FIX = {"latitude": 52.2297, "longitude": 21.0122}
+AWAY_CELL = (52.23, 21.01)
 
 
 def intents_url(sport: Sport | str) -> str:
@@ -61,7 +73,7 @@ async def a_player(client, name: str = "surface") -> tuple[UUID, dict[str, str]]
                 {"day": 2, "part": "EVENING"},
                 {"day": 6, "part": "MORNING"},
             ],
-            "location": {"latitude": 51.5073509, "longitude": -0.1277583},
+            "location": HOME_FIX,
             "search_radius_km": SEARCH_RADIUS_BOUNDS.default_km,
             "proposals_opt_in": {
                 "accepted": True,
@@ -101,6 +113,16 @@ async def stream_length(session_factory, aggregate_id: UUID) -> int:
                 select(func.count()).where(EventStoreORM.aggregate_id == aggregate_id)
             )
         ).scalar_one()
+
+
+async def stream_of(session_factory, aggregate_id: UUID) -> list[EventStoreORM]:
+    async with session_factory() as session:
+        rows = await session.execute(
+            select(EventStoreORM)
+            .where(EventStoreORM.aggregate_id == aggregate_id)
+            .order_by(EventStoreORM.version)
+        )
+        return list(rows.scalars())
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +365,100 @@ async def test_the_radius_cannot_be_written_without_a_profile(client):
 
 
 # ---------------------------------------------------------------------------
+# The location
+# ---------------------------------------------------------------------------
+
+
+async def test_a_fix_in_a_new_cell_moves_the_area_and_records_one_event(
+    client, session_factory
+):
+    """Filip moved from Podgórze to Nowa Huta; the next launch puts the phone's
+    position. `204` with no body: no route on this surface serves the area yet,
+    and a write made silently on every launch is not the one to start
+    (``docs/adr/0174`` §6)."""
+
+    player_id, headers = await a_player(client)
+    before = await stream_length(session_factory, player_id)
+
+    response = await client.put(LOCATION_URL, json=AWAY_FIX, headers=headers)
+
+    assert response.status_code == 204, response.text
+    assert response.content == b""
+    stream = await stream_of(session_factory, player_id)
+    assert len(stream) == before + 1
+    moved = stream[-1]
+    assert moved.event_type == "player_profile.location_changed"
+    assert (moved.payload["latitude"], moved.payload["longitude"]) == AWAY_CELL
+
+
+async def test_a_fix_rounding_to_the_stored_cell_answers_204_and_records_nothing(
+    client, session_factory
+):
+    """The time after that: a different reading in the same cell. The aggregate's
+    no-op rule is what makes a write on every launch cost nothing, and the
+    route answers as if it had moved — a client cannot tell and need not."""
+
+    player_id, headers = await a_player(client)
+    before = await stream_length(session_factory, player_id)
+
+    response = await client.put(
+        LOCATION_URL,
+        json={"latitude": 51.5099, "longitude": -0.1310},
+        headers=headers,
+    )
+
+    assert response.status_code == 204, response.text
+    assert await stream_length(session_factory, player_id) == before
+
+
+async def test_the_precise_fix_is_nowhere_in_the_stream(client, session_factory):
+    """*The precise fix that produced it is never a shareable value* — asserted
+    against every row of the stream rather than the one event, because the
+    commit and the move are two writers and the rule is the value object's."""
+
+    player_id, headers = await a_player(client)
+    await client.put(LOCATION_URL, json=AWAY_FIX, headers=headers)
+
+    for row in await stream_of(session_factory, player_id):
+        for precise in (*HOME_FIX.values(), *AWAY_FIX.values()):
+            assert precise not in row.payload.values(), (row.event_type, precise)
+
+
+async def test_a_fix_outside_the_world_is_refused_at_the_boundary(client):
+    _, headers = await a_player(client)
+
+    response = await client.put(
+        LOCATION_URL, json={"latitude": 91.0, "longitude": 0.0}, headers=headers
+    )
+
+    assert response.status_code == 422
+
+
+async def test_there_is_no_patch_for_the_location(client):
+    _, headers = await a_player(client)
+
+    response = await client.patch(LOCATION_URL, json=AWAY_FIX, headers=headers)
+
+    assert response.status_code == 405
+
+
+async def test_the_location_cannot_be_written_without_a_profile(client):
+    """A cold start before onboarding's second part: the entry gate is still
+    sending this player into it, and there is no cell to move."""
+
+    headers = await a_signed_in_player(client, "unplaced")
+
+    response = await client.put(LOCATION_URL, json=AWAY_FIX, headers=headers)
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "player_profile_not_found"
+
+
+async def test_the_location_needs_a_token(client):
+    assert (await client.put(LOCATION_URL, json=AWAY_FIX)).status_code == 401
+
+
+# ---------------------------------------------------------------------------
 # The declaration
 # ---------------------------------------------------------------------------
 
@@ -477,13 +593,14 @@ async def test_the_declaration_needs_a_token(client):
     assert response.status_code == 401
 
 
-def test_the_surface_is_a_read_a_week_and_a_radius_and_nothing_else():
+def test_the_surface_is_a_read_a_week_a_radius_a_location_and_nothing_else():
     """Map Decision 12, asserted against the routes rather than against prose.
 
-    Tags, photos, gender, gender preference and location all have aggregate
-    methods and **no route**, deliberately: they belong to You, which is not
-    built. A sixth route appearing under this prefix without that ticket is what
-    this test is here to catch.
+    Tags, photos, gender and gender preference all have aggregate methods and
+    **no route**, deliberately: they belong to You, which is not built. The
+    location is the exception and it is not You's — it is the cold start's
+    (``docs/adr/0174`` §6). A fifth route appearing on this router without its
+    ticket is what this test is here to catch.
     """
 
     from app.modules.player_profile.presentation.profile_surface_routes import router
@@ -492,6 +609,7 @@ def test_the_surface_is_a_read_a_week_and_a_radius_and_nothing_else():
         ("/players/me/profile", ("GET",)),
         ("/players/me/availability", ("PUT",)),
         ("/players/me/search-radius", ("PUT",)),
+        ("/players/me/location", ("PUT",)),
     }
 
 

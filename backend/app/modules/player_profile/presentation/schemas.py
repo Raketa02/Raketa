@@ -42,7 +42,13 @@ from app.modules.player_profile.domain.gender import (
     GenderPreference,
 )
 from app.modules.player_profile.domain.intro import INTRO_MAX_CHARACTERS
-from app.modules.player_profile.domain.location import LocationArea
+from app.modules.player_profile.domain.location import (
+    MAXIMUM_LATITUDE,
+    MAXIMUM_LONGITUDE,
+    MINIMUM_LATITUDE,
+    MINIMUM_LONGITUDE,
+    LocationArea,
+)
 from app.modules.player_profile.domain.play_intent import (
     PlayIntent,
     PlayIntentSurface,
@@ -687,6 +693,27 @@ class SearchRadiusResponse(BaseModel):
     @classmethod
     def from_domain(cls, profile: PlayerProfile) -> "SearchRadiusResponse":
         return cls(search_radius_km=profile.search_radius.kilometres)
+
+
+class ChangeLocationRequest(BaseModel):
+    """The phone's fix, on a cold start.
+
+    **What is sent is never what is kept.** The client sends the fix its device
+    gave it, with the accuracy onboarding used; the platform rounds it to the
+    cell about a kilometre across before anything is recorded, exactly as the
+    commit does, and a fix that rounds to the cell already stored records
+    nothing (``docs/adr/0174`` §6). Nothing comes back: no route on this
+    surface serves the area yet — the profile read grows the field when *You*
+    is built — and a silent write on every launch is not the one to start.
+
+    The bounds are the world's, as they are on the commit's ``location`` —
+    read from the value object rather than spelled again. A fix outside them
+    is a broken reading and not a place, refused at the boundary rather than
+    rounded into a cell at the pole.
+    """
+
+    latitude: float = Field(..., ge=MINIMUM_LATITUDE, le=MAXIMUM_LATITUDE)
+    longitude: float = Field(..., ge=MINIMUM_LONGITUDE, le=MAXIMUM_LONGITUDE)
 
 
 class DeclarePlayIntentRequest(BaseModel):
