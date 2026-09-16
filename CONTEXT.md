@@ -1149,7 +1149,10 @@ where, money, results or the conversation itself belongs here.
   game — the game is told in the same transaction. **The departure that leaves one player on a
   game ends the court**: it records the challenge's ending, *Called off*, with the leaver as the
   one whose act ended it, and calls the game off in the same act ([ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md); the rule is
-  ADR-0165 §3's). Before a game the same rule ends the court as *Declined* — a departure is a no.
+  ADR-0165 §3's, narrowed by [ADR-0175](docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §2: a court is over by its seats when **nobody is on it**,
+  whoever is still deciding, or when one player is and no seat awaits — so the last seated
+  player's departure ends it even with a fill still pending, and that invitation with it).
+  Before a game the same rule ends the court as *Declined* — a departure is a no.
   Any player on the court may leave, the
   organiser included; on a game, while it awaits its entry and its agreed moment is ahead —
   after the moment it is refused, so a no-show cannot vacate a seat to
@@ -1157,6 +1160,7 @@ where, money, results or the conversation itself belongs here.
   a stranger to the others again on the instant. **Recorded and not yet scored.** After the moment,
   the exit that is still open is the room's — **Leaving the chat**, which moves no seat
   ([ADR-0168](docs/adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md)).
+  **Leaving is met in one place**: the conversation row's swipe on Chats ([ADR-0175](docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4).
 - **Organiser** — the player who sent it. They hold a seat like anybody else, and it is
   **accepted from birth**, because they are the one proposing. That is what makes *"every seat
   accepted"* the whole of the completion rule, with no special case for singles.
@@ -1173,11 +1177,12 @@ where, money, results or the conversation itself belongs here.
   again, the pair is held again, and the next completed line-up re-seats the same **Game**.
   **`CALLED_OFF` is the seventh, and the game's fourth end seen from the court**
   ([ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)): a court that has been a game ends **with its game**, by the **Departure**
-  that leaves one player on it or by *Call it off*, and never by its seats alone. It is an ending
-  like the other three — dated, on the inbox's shelf, never re-entered, the pair released — and
-  **every ending names whose act ended it** (`ended_by`): the last leaver or the presser, the
-  organiser who removed it, the seat whose *no* or departure completed the desertion, the seat
-  whose window ran out last.
+  that deserts it or by **the hour** ([ADR-0175](docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §3), and never by its seats alone or by a press.
+  It is an ending like the other three — dated, on the inbox's shelf, never re-entered, the pair
+  released — and **every ending names whose act ended it** (`ended_by`), with one exception that
+  names nobody: the last leaver, the organiser who removed it, the seat whose *no* or departure
+  completed the desertion, the seat whose window ran out last — and *nobody*, where the hour
+  called it off.
 - **Withdraw** — the organiser **removing** a challenge nobody else has joined
   ([ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md),
   its *where* moved by
@@ -1191,23 +1196,26 @@ where, money, results or the conversation itself belongs here.
   same people again is a *new* Challenge, with fresh deadlines and its own record of who has
   answered — and that re-ask is the risk ADR-0142 refused and ADR-0165 accepts with a falsifier.
   **It does not reach a court that has been a game** ([ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md), superseding
-  [ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)'s *it reaches one*): there the act on the same
-  route is **Call off** — any player's on the court — and what it records is `CALLED_OFF`, not
-  `WITHDRAWN`. *Withdrawn* is the ending of a court nobody had joined, and nothing else.
+  [ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)'s *it reaches one*; [ADR-0175](docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §1): such a court is
+  nobody's to end, and the route refuses it with `court_has_been_a_game`. *Withdrawn* is the
+  ending of a court nobody had joined, and nothing else.
   The word is *withdraw* and not **stand down**, which this file owns platform-wide for a term
   that cannot be evaluated; *call off* is the **Game**'s ending and the court's word for it.
-- **Call off** — ending a court that has been a game, **and its game with it**, in one act
-  ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md), [ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)). Two acts
-  reach it: *Call it off*, any player's on the court while a seat is open, and the **Departure**
-  that leaves one player on the game. Each records the challenge's ending — `CALLED_OFF`, with
-  the presser or the leaver as `ended_by` — and hands *call off* to the **Game** in the same
-  transaction, which reaches its fourth end, *Called off*, and says **who** (`called_off_by`, the
-  player and their name); a press is told from a departure by whether that player still holds a
-  seat. Only while a seat is open — a full court that will not play lets its window lapse into
-  *Never played*, as today. The room is destroyed in the act. A game whose window has already
-  closed on the open seat is a ghost, and stays one: the button ends the challenge alone, the
-  presser is on its record, and the ghost is not un-charged. **One word, everywhere** — the
-  tag, the button, the sheet, the row, the screen. _Avoid_: *cancel*, which appears nowhere.
+- **Call off** — ending a court that has been a game, **and its game with it**, in one
+  transaction ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md), [ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md),
+  [ADR-0175](docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)). **Nobody presses it.** Two things reach it and no third: the **Departure** that
+  deserts the game — the leaver as `ended_by` — and **the hour**: a court still short of a player
+  when its agreed moment passes (the end of its horizon, where no day was agreed) is called off
+  by the platform, with `ended_by` and `called_off_by` **nobody**, written by a sweep every
+  minute because the court cannot read the plan whose hour it is. Each records the challenge's
+  ending, `CALLED_OFF`, and hands *call off* to the **Game** in the same transaction, which
+  reaches its fourth end, *Called off*, in neither tally — nobody is charged. Only while a seat
+  is open — a full court that will not play lets its window lapse into *Never played*, as today.
+  The room is destroyed in the act. A game whose window already closed on the open seat is a
+  ghost, and stays one: the hour ends the challenge alone, and the ghost is not un-charged.
+  **One word, everywhere** — the tag, the row, the screen; the row's sentence for the hour is
+  *Nobody filled the seat*. _Avoid_: *cancel*, which appears nowhere; *Call it off*, which was
+  a button and is not.
 - **Answer window** — how long one invitee has to answer, **dated per seat when that seat was
   invited**. Seats filled later start their own day; they cannot inherit a deadline from a send
   they were not part of.
@@ -1343,11 +1351,12 @@ anything about how good anybody is — that is the rating context reading this o
   line-up after a **Departure**, same id, same `planned_at`, same plan, same room
   ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)). It reaches
   **four ends**: three folded from the record and the clock, and a fourth — **Called off** — that
-  an act reaches, told by the challenge while a seat is open — *Call it off*, or the **Departure**
-  that leaves one player on it — **and the fourth end says who**: `called_off_by`, the player
-  whose act it was and their name
+  is announced, told by the challenge while a seat is open — the **Departure** that deserts it,
+  or the hour that finds it still short of a player — **and the fourth end says who**:
+  `called_off_by`, the leaver and their name, or nobody for the hour
   ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md),
-  [ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)).
+  [ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md),
+  [ADR-0175](docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)).
 - **Line-up** — who is on the court and on which side, **frozen until somebody leaves it**
   ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)). An
   acceptance is to the game and not to the side, so the membership is settled the moment the last
@@ -1402,10 +1411,12 @@ anything about how good anybody is — that is the rating context reading this o
   game's card from Now and the challenge's row from Chats
   ([ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §5,
   [ADR-0173](docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)). The
-  reader's own act, admitted on a game that is *Called off* and on no other standing, and only
-  for somebody on its court; **recorded once per player on the game's stream, and its effect
-  derived on every read** — the reader's Now omits a game they have dismissed and their Chats
-  omits its row, both read off the one set, on the shape the room's *Leaving the chat* has. It
+  reader's own act, admitted on a game that is *Called off* and on no other standing — from the
+  Now card's trash for somebody on the game's court, and from the Chats row's swipe for
+  **everybody the court asked**, the invitee still deciding when it was called off included
+  ([ADR-0175](docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §5); **recorded once per player on the game's stream, and its effect derived on every
+  read** — the reader's Now omits a game they have dismissed and their Chats omits its row, both
+  read off the one set, on the shape the room's *Leaving the chat* has. It
   removes a court from the reader's lists, not a fact: the game, its record and the challenge are
   untouched, nobody else's Now or Chats moves, and there is no undo. The player-facing name is
   *Remove this card* on the card and *Remove this row* on the row — one act, named by what goes

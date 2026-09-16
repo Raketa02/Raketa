@@ -1,6 +1,8 @@
 # ADR-0173 — A called-off court is cleared from both lists by one act
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2 and §3 narrowed 2026-09-16 by [ADR-0175](0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §5**: the row is cleared
+  by everybody the court asked whose seat it closed on, through a door of the challenge's own,
+  `POST /challenges/{id}/dismissal`, recording the same event. §1 and §4 stand.
 - **Date:** 2026-09-16
 - **Narrows, by named sentence:**
   [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)

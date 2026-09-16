@@ -11,7 +11,10 @@
   §7's *the challenge is `WITHDRAWN`* (*Call it off* records `CALLED_OFF`, the challenge's
   seventh standing, and `WITHDRAWN` is *Remove the challenge*'s alone — §1 there). The
   Consequences' *who withdrew a court whose game had already ended is not recorded* is recorded
-  now. §2, §3 and §6 stand whole.
+  now. §2, §3 and §6 stand whole — **and §1 is empty and §6's remedy retired 2026-09-16 by
+  [ADR-0175](0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)**: nobody presses *Call it off* any more; a court still short of a player when its
+  hour passes is called off by the platform, with nobody on its record, and a ghosted court
+  the same way. §2 and §3 stand.
 - **Date:** 2026-09-12
 - **Supersedes, by named sentence:**
   [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)'s *"a game reaches exactly
