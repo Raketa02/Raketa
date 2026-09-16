@@ -354,12 +354,17 @@ of the code because this file asks for them in that order.
   forbids *choosing* it, not storing it: the grid it was derived from is the searcher's own and
   they may edit it a minute later, so a window re-derived on read would quietly change what the
   invitee is answering. A proposal that moves after it is sent is not a proposal.
-- **Location area** — where a player plays, held coarsely. The precise fix that produced it
-  is never a shareable value.
+- **Location area** — where a player plays, held coarsely: a cell about a kilometre across,
+  rounded to on the way in. The precise fix that produced it is never a shareable value. **It
+  moves on a cold start**: the app re-reads the phone silently when it is launched, and after a
+  day in the background, and the cell changes if the fix falls outside it — never merely on
+  foreground, never with a prompt, and never when the permission has since been revoked
+  ([ADR-0174](docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §6).
 - **Search radius** — the distance around a player's Location area within which they want to
   find other players. **A filter when the player searches, and a weight when the engine
   proposes** — the same number answering two questions, because who *you* asked to see and
-  who the platform *offers* you are different acts.
+  who the platform *offers* you are different acts. It is also the **Radar**'s **Reach**: the
+  radar draws exactly as far as the deck deals, and there is no city ([ADR-0174](docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §1).
 - **Proposals opt-in** — the player's recorded answer to whether the recommendation engine
   may push games at them. It has **no default**: unanswered is neither yes nor no.
 - **Gender** — `WOMAN`, `MAN` or `PREFER_NOT_TO_SAY`, held on the Player profile. **Per
@@ -759,10 +764,11 @@ appears here.
   search fails, because the id *is* the answer's identity — without it there is no *Why 78?*, no
   **Origin key**, and no way to say *Let's play*
   ([ADR-0104](docs/adr/0104-the-search-record-is-the-answer-and-never-expires.md)).
-- **Surface** — which of the four things a search is: a ranked **shortlist**, a seated
-  **line-up**, the **deck**, or **completing a half-built game**. One engine and one pipeline
-  with different terminal stages; the last is optimised for the existing group and not for the
-  searcher, and says so. Distinct from **initiation**, which is who asked.
+- **Surface** — which of the five things a search is: a ranked **shortlist**, a seated
+  **line-up**, the **deck**, **completing a half-built game**, or the **Radar**'s **Reading**.
+  One engine and one pipeline with different terminal stages; the fourth is optimised for the
+  existing group and not for the searcher, and says so; the fifth ranks nothing and says so.
+  Distinct from **initiation**, which is who asked.
 - **Initiation** — whether a search was run by a person or pushed by the platform. It gates the
   push and never the person: a player who declined proposals still appears in a search another
   player deliberately ran. Orthogonal to **Surface** — the deck has both kinds.
@@ -823,10 +829,32 @@ appears here.
   refusal they cannot predict.
 - **Want to play you** — a **count, never a list**: the number of people whose live **Interest**
   towards a player in a sport *would be dealt to them* — every gate passed, not passed on within
-  the pass window, not in the **Cool-off**, not already mutual. It rides on a deal and names
-  nobody; the chip prints it and is not drawn at zero. The one shape in which an incoming yes
+  the pass window, not in the **Cool-off**, not already mutual. It rides on a deal — and on a
+  **Reading**'s envelope, computed by the deal's own rule so the two chips are one number — and
+  names nobody; the chip prints it and is not drawn at zero. The one shape in which an incoming yes
   crosses to its recipient other than as a lift ([ADR-0169](docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4, narrowing
   [ADR-0109](docs/adr/0109-a-read-back-names-what-it-withholds.md) §2 by this one integer).
+- **Reading** — one invocation of the **Radar**: every player rated in the sport within the
+  viewer's **Reach**, unranked, ordered only by drawn distance so an **Origin key** means
+  something. A recorded **Search** and a prior disclosure, like a deal — and **not a deal**: it
+  spends no hand, and a look never enters the deck's dealt memory; only an answer given on the
+  radar reaches the deck ([ADR-0174](docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §1, §4).
+- **Radar** — the second pane of Players: the viewer at the centre, rings in kilometres, and
+  every player a **Reading** returned drawn at their **Drawn spot**'s distance and **Bearing**
+  — a face far out, a level closer, a card closest. *Who is actually out there?* where the deck
+  asks *who should I play?* **No judgement**: no level band, no fit floor, no pass memory, no
+  Cool-off; it keeps only blocked, held, disabled, the gender preference and *rated in the
+  sport*. It answers with the deck's own yes and pass, and hides nobody for either.
+- **Reach** — how far the Radar draws: the viewer's **Search radius**, measured cell to cell
+  like the deck's. *All of them* means everyone inside it. Not a city — the platform has no
+  borders and would not use one.
+- **Drawn spot** — where a player is drawn: one fixed point inside their **Location area**,
+  offset from the cell's centre by a stable digest of who they are, the same for every viewer
+  and never leaving the cell. *Neighbourhood-true, building-false.* The one-decimal distance
+  every surface prints is measured between two drawn spots; the Fit is not, and does not move.
+- **Bearing** — the direction from the viewer's drawn spot to another's, north 0, clockwise,
+  served on a Reading's rows and never derived by a client. With the distance it is the whole of
+  a position: *distance and bearing only — never an address, never a street.*
 - **Deal** — one invocation of the **deck**: a bounded, ordered batch of cards, shown one at a
   time. The deal is the unit, not the card, because the deck's ordering — the lifted by rank key,
   the person who already said yes to you among them and unmarked, then the rest ([ADR-0169](docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4) — is a
@@ -913,7 +941,8 @@ appears here.
 - **Concern** — the engine's own statement that one term of a match is genuinely weak, keyed to
   that term. *What counts as weak* is a judgement about weights and curves and is made where they
   live; how many to show is the client's. A card shows one, the breakdown shows all of them.
-- **Pass** — *not today*, on a deck card. **Write-only**: it is recorded, it suppresses, and no
+- **Pass** — *not today*, on a deck card or from the **Radar**'s record sheet — the same pass,
+  about the same deck; the radar keeps drawing the person. **Write-only**: it is recorded, it suppresses, and no
   response ever carries one — not to the passer, not as a count. It carries its **Origin key**,
   because the only thing that could prove its suppression window wrong is the pass rate on
   re-shown profiles. **A pass is a statement about my deck, where a Block is a statement about a
@@ -967,6 +996,8 @@ appears here.
   to appear in somebody's inbox
   ([ADR-0109](docs/adr/0109-a-read-back-names-what-it-withholds.md)). **A count is the one
   exception** — **Want to play you**, above — and it names nobody ([ADR-0169](docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4).
+  A tag on a person already being shown is not an inbox — the builder's list draws it, and so
+  does the record sheet reached from the **Radar** ([ADR-0174](docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §4).
 
 **Invariants**
 - **A term that cannot be evaluated stands down. A gate that cannot be evaluated excludes.**

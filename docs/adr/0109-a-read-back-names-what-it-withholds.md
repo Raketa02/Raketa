@@ -2,7 +2,10 @@
 
 - **Status:** Accepted — **§2's *not as a count* superseded 2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §4: one
   integer on the deal envelope, `pool.want_to_play_you`, names nobody and crosses nowhere else.
-  *Not as a list, not as a badge* and §1 stand.
+  *Not as a list, not as a badge* and §1 stand. **Narrowed once more 2026-09-16 by
+  [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)** §4: the record sheet reached from the radar says
+  *Wants to play you* of the one person the reader is already looking at — the builder's tag on
+  one more surface, and no list and no badge.
 - **Date:** 2026-08-26
 
 ## Context

@@ -32,7 +32,9 @@ people rather than ranking one, and [`the-replay-harness.md`](the-replay-harness
 be true before a ruleset ships and why a past search is explainable forever without ever being
 reproducible, and [`the-ruleset-gate.md`](the-ruleset-gate.md), what of that was built — the
 committed synthetic diff, the two scale-trigger instruments, and the fact that nothing anywhere
-reads what they emit.
+reads what they emit, and [`the-radar.md`](the-radar.md), what the Players tab's second pane is
+owed — a reading of the reach, a fixed spot in a cell, a look that is not a deal — with its
+sixteen locked mocks beside it in [`radar-mocks/`](radar-mocks/).
 
 Charted by [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155);
 landed by [Land the matchmaking input documents in the repo](https://github.com/Raketa02/Raketa/issues/156)

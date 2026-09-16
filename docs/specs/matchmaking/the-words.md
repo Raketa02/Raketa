@@ -2700,3 +2700,49 @@ pairing cannot be computed, and *there is deliberately no reason beside the abse
 absent entirely, the tiles with it, and nothing on the screen says *unrated*, *unavailable* or
 anything else. The players card is drawn regardless, because its rows are the court's seats and the
 Level under each is what the pairing adds.
+
+---
+
+## 26. The radar
+
+> Added 2026-09-16 by [ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md);
+> the surface is [`the-radar.md`](the-radar.md) §7. The mocks are locked and these are their
+> sentences; where a mock's figure drifted between screenshots (the prototype was live), the
+> spec's number wins.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The toggle | `Deck` · `Radar` | §10's, unchanged |
+| The chip | `{n} want to play you` · `1 wants to play you` | the deck's own sentence and the deck's own number, on either pane |
+| Under your tile | `you` | lower case, `tiny` |
+| A ring's label | `{n} km` | mono, at the top of the circle |
+| The counter between ± | `{width} km across` | mono, one decimal below 10 (`5,4 km`), whole above; always drawn |
+| Under a face, closer state | `{level}` | mono, the reading's sport, `2,66` |
+| The card's distance | `{distance} km` | one decimal, `1,9 km`; never below `0,1 km` |
+| The card's sport row | `{SPORT}` eyebrow · `{level}` | one row per rated sport, the reading's sport first |
+| The card's two scores | `✦ {fit} fit` · `{score} reliability` · `— reliability` | labelled, because two bare numbers read as one printed twice |
+| The card's tags line | `{n} tags in common` · `1 tag in common` · `no tags in common` | mint when there are any, muted at none; a count, never a list |
+| The card's last line | `Tap for the full card ›` | coral; the whole card is the target |
+| The card's last line, answered | `You said yes ›` · `Not today ›` | in place of the line above; the face never changes |
+| The footer's headline | `{n} players in view` · `1 player in view` | recounted on every move |
+| Beside it | `+{n} off screen` · `all of them` | so the count is never mistaken for the population |
+| The hint, always first | `Distance and bearing only — never an address, never a street.` | the one sentence that stays at every width |
+| The hint, faces or levels | `Drag to move, pinch or use ± to zoom, tap anybody to fly to them.` | |
+| The hint, cards | `Tap a card for the full profile and the two answers.` | switches on zoom state, never on selection |
+| Empty reading, headline | `Nobody within {reach} km plays {sport} yet` | the reach is `pool.radius_km_used` |
+| Empty reading, hint | `Your search radius lives in You. Widening it is what brings more people into range.` | §17's sentence, cited |
+| Loading | `Looking around…` | with the privacy line beneath |
+| Failure | `The radar couldn't load` · `Try again` | |
+| The sheet's foot | `Not today` · `Let's play` | the deck's two words (§20.5), `secondary` and `primary`, the swipe's reading order |
+| The sheet's foot, a liker | `Wants to play you` | above the two buttons; §10's `INTEREST_RECEIVED`, the builder's tag, cited |
+| The sheet's foot, yours given | `You said yes` | beside `Not today` |
+| The sheet's foot, matched | `You're matched` · `Open the chat` | |
+| The sheet's foot, a court | *the court's own line* | §22's ended and standing sentences, cited; no buttons |
+| You, under the profile | `Your area updates each time you open Raketa; it is never finer than about a kilometre.` | static; the one written trace of the cold-start refresh |
+| A face or card, spoken | `{name}, {distance} km, {sport} {level}` | the whole name (ADR-0171) |
+| ± and ◉, spoken | `Zoom in` · `Zoom out` · `Back to you` | |
+
+**What is cited.** The chip, the cap sentence, the mutual toast and the Matched! screen are the
+deck's (ADR-0169 §3–§4, §20.5 here); the widen-in-You sentence is §17's; the court lines are
+§22's; *Wants to play you* and *You said yes* are §10's tags, drawn in the builder. The radar writes nothing about people: every word on a
+card is a figure the platform computed or a name the player gave.

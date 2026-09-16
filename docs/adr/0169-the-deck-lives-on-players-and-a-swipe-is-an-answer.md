@@ -1,6 +1,7 @@
 # ADR-0169 — The deck lives on Players, and a swipe is an answer
 
-- **Status:** Accepted — **§5's reset given its storage by the amendment of 2026-09-15**
+- **Status:** Accepted — **§9's Radar decided and §4's *unmarked liker* narrowed for one sheet
+  2026-09-16 by [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md).** **§5's reset given its storage by the amendment of 2026-09-15**
   ([#440](https://github.com/Raketa02/Raketa/issues/440)): a durable, event-free row per
   press, the fifth of the matchmaking module's ledgers.
 - **Date:** 2026-09-14
@@ -257,6 +258,11 @@ deck the nudge is kept too (§8), because the deck has no label and order is the
 makes the chip's promise findable within a sitting. Two bands, then: lifted and the rest; still
 deterministic, still a fact about the player (ADR-0126).
 
+> **Narrowed 2026-09-16 by [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §4 — for the deck card
+> this stands; the record sheet reached *from the radar* draws *Wants to play you* above its two
+> buttons, because the radar has no order to make the chip's promise findable with. The deck's
+> *i* sheet draws nothing of the kind.
+
 ### 5. A pass can be cleared, and the deck says what is left
 
 **`POST /api/v1/deck/reset` with `{sport}`, `204`.** *Show them again* clears, for that sport
@@ -383,6 +389,10 @@ time, the radar plots them on a map by distance.* The toggle ships; the pane say
 built. A map needs a location precision this platform deliberately does not hold (a coarse area,
 never a point), so the radar is its own spec with its own argument, and `radar` the glyph
 reopens with it (ADR-0135).
+
+> **Decided 2026-09-16 by [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md).** The precision it holds is the
+> one it draws: a fixed spot inside the cell, from a digest of the player. `radar` the glyph did
+> not reopen — the radar is a pane, and ADR-0135's finding stands.
 
 **The other side.** Marek learns of the match from his Chats list, as ADR-0167 §5 left it.
 

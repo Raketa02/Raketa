@@ -540,7 +540,10 @@ durable pass record stays, so a re-shown card is still a re-show (ADR-0169 §5).
 objection is accepted as the cost: `PASS_SUPPRESS`'s falsifier now excludes resets from its
 sample. **Two endings**: *You have seen everybody* (people in range, all excluded) draws the
 mock with the reset and *Try the radar*; *Nobody in range* keeps its own sentence and
-*widen it in You*, without the reset. The sentence's number — *your yeses stay live for 21
+*widen it in You*, without the reset. *Try the radar* opens the Radar pane, which is built —
+[`the-radar.md`](the-radar.md), [ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md).
+**`distance_km` is one decimal on every candidate since 2026-09-16** (ADR-0174 §2), measured
+between two drawn spots; the deck card and the record print it as served. The sentence's number — *your yeses stay live for 21
 days* — is read from `ttl_days` on `GET /interest`'s rows, never held by the client.
 
 **A mutual yes is told to both, and arranging the game is theirs.** The challenge belongs to
@@ -750,6 +753,10 @@ Each item is a standing obligation and none of them expires on being satisfied o
 ---
 
 ## 12. What this file does not decide
+
+- **The Radar** — the second pane of Players, its reading, its reach and the location refresh
+  that keeps it honest: [`the-radar.md`](the-radar.md), decided by
+  [ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md).
 
 - ~~**The `unfilled_reason` vocabulary and the doubles objective**~~ — settled by
   [#180](https://github.com/Raketa02/Raketa/issues/180) in
