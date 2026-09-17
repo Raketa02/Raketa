@@ -62,7 +62,7 @@ import {
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
 import { fakeHaptics } from '@/test-support/platform';
-import { drag, panClaimsAfter, pinch } from '@/test-support/radarTouch';
+import { drag, panClaimsAfter, pinch, pinchLiftingOneFingerFirst } from '@/test-support/radarTouch';
 import {
   errorResponse,
   installTransport,
@@ -72,7 +72,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { FLY_TO_WIDTH_KM } from '../domain/radarGeometry';
+import { FLY_TO_WIDTH_KM, homeView, pinched, widestWidthKm } from '../domain/radarGeometry';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { useRadarView } from '../store/radarView.store';
 import { endPlaySession } from '../store/playSession.store';
@@ -1216,6 +1216,55 @@ describe('the pinch and the drag', () => {
     landedAt(5.4);
     zoomOut();
     landedAt(10);
+  });
+
+  it('lets go where it is when one finger lifts first: the finger that stays is no pinch, and moves nothing', async () => {
+    await openRadar();
+    const from = [
+      [145, 252],
+      [245, 252],
+    ] as const;
+    const to = [
+      [95, 252],
+      [295, 252],
+    ] as const;
+
+    // Android keeps the recogniser active on the finger that stays and reports that finger as
+    // the focal point — a hundred points from the midpoint it was. Read as a pinch, that would
+    // put the kilometre under the old midpoint under the finger: two and a bit kilometres of
+    // jump at 9 km across. It is read as the end of the pinch instead.
+    pinchLiftingOneFingerFirst(from, to, 0);
+    landedAt(9);
+
+    const expected = pinched(
+      { spread: 1, mid: { x: 195, y: 252 }, view: homeView(10) },
+      { spread: 2, mid: { x: 195, y: 252 } },
+      FIELD,
+      { reachKm: 10, widestKm: widestWidthKm(10) },
+    );
+    const landed = useRadarView.getState().view;
+    expect(landed?.widthKm).toBeCloseTo(expected.widthKm, 6);
+    expect(landed?.centre.x).toBeCloseTo(expected.centre.x, 6);
+    expect(landed?.centre.y).toBeCloseTo(expected.centre.y, 6);
+  });
+
+  it('starts the zoom from the spread the recogniser activates at, not from 1', async () => {
+    await openRadar();
+    // Android activates a slop late and reports the ratio it has reached — here 1,2 — with
+    // every later scale measured from the true start. Fingers 100 apart to 200 is still half
+    // the width, 9 km across; measured from 1 it would have been 7,5.
+    pinch(
+      [
+        [145, 252],
+        [245, 252],
+      ],
+      [
+        [95, 252],
+        [295, 252],
+      ],
+      { activatesAt: 1.2 },
+    );
+    landedAt(9);
   });
 
   it('holds the pinch between the floor and the widest stop', async () => {

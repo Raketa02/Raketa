@@ -838,6 +838,13 @@ sessions.
 - **App lifecycle is centralized** in `shared/lib/platform/appState.ts` — Query focus,
   session freshness, privacy screens, observability, reconnect. Not dozens of `AppState`
   listeners across unrelated screens.
+- **Nothing on the UI thread scales a layer to move it.** The radar's tiles are placed by
+  translating a one-point anchor per tile from three shared values; the earlier one scaled
+  transform with counter-scaled tiles was a blur on iOS at the floor, because a 4 700-point
+  layer is rasterised at its unscaled resolution (ADR-0176 §2 as amended). And a pinch on
+  Android does not end when one finger lifts — the recogniser stays active on the one that
+  remains and reports it as the focal point — so a pinch is over on the event's pointer
+  count, never on the recogniser's end (ADR-0177 §1 as amended).
 
 ### The live surface
 

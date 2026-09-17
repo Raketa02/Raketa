@@ -6,33 +6,36 @@
  * §7, [ADR-0176](../../../../../../docs/adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md),
  * [`the-radar.md`](../../../../../../docs/specs/matchmaking/the-radar.md) §7.2–7.7).
  *
- * ## One transform, on the UI thread, and tiles laid out once
+ * ## Three values on the UI thread, and every tile placed from them
  *
- * Every tile is absolutely positioned **once**, at the home view's scale — `domain/radarGeometry`'s
- * `toScreen` under `homeView(reach)` — inside one `Animated.View` whose transform carries the
- * lot to wherever the live view is (`containerTransform`). A pan is that transform's offset
- * moving, a pinch its scale, ± and the flight both, and nothing is laid out again until a
- * gesture ends. The three values — the scale and the two offsets — are Reanimated **shared
- * values**, written by the gestures and the flight on the UI thread and read there by every
- * animated style, so no frame of a drag, a pinch or a flight passes through React or the
- * JavaScript thread at all (ADR-0176 §2). Every tile **counter-scales** by `1 / scale` so a face
- * is always 24 or 30 pt and a card always ~190 whatever the pinch is doing (§7.9). A tile's
- * anchor is a **one-point** view at the point with the drawing hung off it, so the counter-scale
- * is about the point itself: a face stays centred on its spot and a card keeps its top-left
- * there. One point and not none: iOS drops the transform of a view with no size at all
- * (`BaseViewProps::resolveTransform`), which is what let every face grow with the pinch there
- * (ADR-0176 §1).
+ * The live view is three Reanimated **shared values** — the scale and the two offsets of
+ * `containerTransform` against the home view — written by the gestures and the flight on the
+ * UI thread and read there by every animated style, so no frame of a drag, a pinch or a flight
+ * passes through React or the JavaScript thread at all (ADR-0176 §2). **Every tile places
+ * itself from them**: its anchor is a one-point view whose animated style reads the three
+ * values, recovers the view (`viewFromTransform`) and translates the point to where
+ * `toScreen` says the tile's spot is now, with the drawing hung off it — a face centred on
+ * the point, a card's top-left on it. Nothing is laid out by React between gestures, and
+ * **nothing is ever scaled**: a face is 24 or 30 pt and a card ~190 at every width (§7.9)
+ * because no layer is drawn any other size. The field used to carry the lot on one scaled
+ * transform with every tile counter-scaled by `1 / scale`; iOS rasterised that
+ * 4 700-point-wide layer at its unscaled resolution and every tile at the floor was a blur of
+ * a few pixels (ADR-0176 §2, amended 2026-09-17). One point and not none: iOS drops the
+ * transform of a view with no size at all (`BaseViewProps::resolveTransform`), a translation
+ * as much as a scale (ADR-0176 §1).
  *
  * ## What is JavaScript's: which rings, the footer, the counter
  *
  * The rings ride the same three values — each circle's centre and radius are an animated
  * prop, so a hairline is drawn at its live radius rather than scaled into a smear — but **which**
- * rings exist, the footer's count and the cluster's counter are sentences, and sentences are
- * React's. A reaction on the UI thread reads the live view off the transform and tells
- * JavaScript **only when a sentence would change**: the width to a tenth of a kilometre, or the
- * count of points in view. A pan that carries nobody across an edge says nothing; a pinch says
- * a few words a frame; and a re-render is the footer, the counter and a handful of ring labels,
- * never the tiles, which are memoised on what they draw.
+ * rings exist, the footer's count, the cluster's counter and the state every face is drawn in
+ * are sentences, and sentences are React's. A reaction on the UI thread reads the live view off
+ * the three values and tells JavaScript **only when a sentence would change**: the width to a
+ * tenth of a kilometre, the count of points in view, or the zoom state — decided there, per
+ * frame, with its dead-band, so a face changes state at the threshold and never at a release.
+ * A pan that carries nobody across an edge says nothing; a pinch says a few words a frame; and
+ * a re-render is the footer, the counter and a handful of ring labels, never the tiles, which
+ * are memoised on what they draw.
  *
  * ## Gestures on the UI thread, and a tap is still a door
  *
@@ -48,8 +51,12 @@
  * a release has nothing to spring back from; while it lasts the pan only listens, and when one
  * finger lifts the drag is anchored afresh under the one that stays — on the recogniser's
  * **translation**, which stays continuous as fingers land and lift where their position jumps
- * by half a spread — so the field does not jump (ADR-0177 §1). The next ± snaps to the ladder
- * from wherever the pinch left off.
+ * by half a spread — so the field does not jump (ADR-0177 §1). **A pinch is over the moment
+ * there are fewer than two fingers, whatever the recogniser says**: Android's pinch does not
+ * end when one of the two lifts — it stays active on the one that remains and reports *that
+ * finger* as the focal point, half a spread from the midpoint it was — so the hand-off is
+ * made on the event's pointer count, and a one-finger pinch event moves nothing. The next ±
+ * snaps to the ladder from wherever the pinch left off.
  *
  * ## A stack at the floor, and a tap that opens it
  *
@@ -91,7 +98,6 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  type SharedValue,
 } from 'react-native-reanimated';
 
 import { playerName } from '@/shared/formatting/playerName';
@@ -201,10 +207,12 @@ const FAN = {
 /** How far a finger travels before the field claims a drag — the swipe row's own number, as the deck reads it. */
 const INTENT = theme.size.swipeRow.intent;
 
-/** What the UI thread tells JavaScript, and only when it changes: the width and the count. */
+/** What the UI thread tells JavaScript, and only when it changes: the width, the count, the state. */
 interface Heard {
   readonly widthKm: number;
   readonly inView: number;
+  /** Decided on the UI thread with its dead-band, so a release cannot flip it (the module note). */
+  readonly zoom: ZoomState;
 }
 
 export function RadarField({
@@ -241,11 +249,12 @@ export function RadarField({
    */
   const progress = useSharedValue(1);
 
-  /** The words' view of the field: the width and the count, as the UI thread last said them. */
-  const [heard, setHeard] = useState<Heard>({ widthKm: (view ?? base).widthKm, inView: 0 });
-  /** The zoom state held, for the dead-band over the thresholds. */
-  const zoomRef = useRef<ZoomState>(zoomState(heard.widthKm));
-  const zoom = (zoomRef.current = zoomState(heard.widthKm, zoomRef.current));
+  /** The words' view of the field: the width, the count and the state, as the UI thread last said them. */
+  const [heard, setHeard] = useState<Heard>(() => {
+    const widthKm = (view ?? base).widthKm;
+    return { widthKm, inView: 0, zoom: zoomState(widthKm) };
+  });
+  const zoom = heard.zoom;
 
   // The handlers are created once and read the render's values through this.
   const now = useRef({ box, base, collapsed, onViewChange, onSelect, onOpenCard });
@@ -402,11 +411,25 @@ export function RadarField({
       if (active.value > 0) return;
       const held = liveOnUI();
       const bound = boundCentre(held.centre, reach);
-      if (bound.x === held.centre.x && bound.y === held.centre.y) {
+      // A hair, not an equality: a centre the pinch held at the edge comes back through the
+      // transform an ulp outside it, and an ulp is not a band to spring back from.
+      if (Math.abs(bound.x - held.centre.x) < SAME && Math.abs(bound.y - held.centre.y) < SAME) {
         runOnJS(commit)(held);
         return;
       }
       runOnJS(settleTo)({ centre: bound, widthKm: held.widthKm });
+    };
+    /**
+     * The pinch is over — fewer than two fingers, or the recogniser's end, whichever is first —
+     * and the drag, if a finger stays, is anchored afresh at the travel the pan last reported
+     * and the view the pinch left, so the field does not jump to where that finger would have
+     * dragged it alone (ADR-0177 §1). Idempotent: Android's recogniser ends after the fingers do.
+     */
+    const handOff = () => {
+      'worklet';
+      if (pinchStart.value === undefined) return;
+      pinchStart.value = undefined;
+      panStart.value = panning.value ? { at: travelled.value, view: liveOnUI() } : undefined;
     };
 
     const pan = Gesture.Pan()
@@ -440,8 +463,11 @@ export function RadarField({
       .withTestId(RADAR_PINCH_GESTURE)
       .onStart((event) => {
         grab();
+        // The spread the recogniser reports as it activates, not 1: it activates once the
+        // fingers have already moved a slop — a twelfth of their spread on Android — and a
+        // first frame measured from 1 would zoom by that much at once.
         pinchStart.value = {
-          spread: 1,
+          spread: event.scale,
           mid: { x: event.focalX, y: event.focalY },
           view: liveOnUI(),
         };
@@ -449,15 +475,17 @@ export function RadarField({
       .onUpdate((event) => {
         const start = pinchStart.value;
         if (start === undefined || field === undefined) return;
+        // One finger is no pinch: Android's recogniser stays active on the finger that
+        // remains and reports it as the focal point (the module note). Hand off, move nothing.
+        if (event.numberOfPointers < 2) {
+          handOff();
+          return;
+        }
         const fingers = { spread: event.scale, mid: { x: event.focalX, y: event.focalY } };
         applyOnUI(pinched(start, fingers, field, { reachKm: reach, widestKm }));
       })
       .onEnd(() => {
-        pinchStart.value = undefined;
-        // The drag is anchored afresh under the finger that stays — at the travel the pan last
-        // reported and the view the pinch left — so the field does not jump to where that
-        // finger would have dragged it alone (ADR-0177 §1).
-        panStart.value = panning.value ? { at: travelled.value, view: liveOnUI() } : undefined;
+        handOff();
         release();
       });
 
@@ -528,8 +556,16 @@ export function RadarField({
   // The words: the width to a tenth, and how many points are inside the box between the
   // header and the footer — the point where the field **draws** it, tested against the box
   // that stops at the footer's top edge. Said to JavaScript only when either changes.
-  const said = useSharedValue({ tenths: -1, seen: -1, floor: false });
-  const hear = useCallback((widthKm: number, inView: number) => setHeard({ widthKm, inView }), []);
+  const said = useSharedValue<{
+    tenths: number;
+    seen: number;
+    floor: boolean;
+    zoom: ZoomState | undefined;
+  }>({ tenths: -1, seen: -1, floor: false, zoom: undefined });
+  const hear = useCallback(
+    (widthKm: number, inView: number, zoom: ZoomState) => setHeard({ widthKm, inView, zoom }),
+    [],
+  );
   useAnimatedReaction(
     () => ({ scale: scale.value, x: x.value, y: y.value }),
     (t) => {
@@ -544,10 +580,18 @@ export function RadarField({
       // The floor is a sentence too — a stack may stand there — so reaching it is said the
       // moment it is reached, and not a tenth of a kilometre later.
       const floor = atFloor(at.widthKm);
-      if (tenths === said.value.tenths && seen === said.value.seen && floor === said.value.floor)
+      // So is the state a face is drawn in, with its dead-band over the state held — the UI
+      // thread holds it, per frame, and JavaScript never derives it from a width it heard.
+      const zoom = zoomState(at.widthKm, said.value.zoom);
+      if (
+        tenths === said.value.tenths &&
+        seen === said.value.seen &&
+        floor === said.value.floor &&
+        zoom === said.value.zoom
+      )
         return;
-      said.value = { tenths, seen, floor };
-      runOnJS(hear)(at.widthKm, seen);
+      said.value = { tenths, seen, floor, zoom };
+      runOnJS(hear)(at.widthKm, seen, zoom);
     },
     [box, base, footerHeight, points, hear],
   );
@@ -650,7 +694,6 @@ export function RadarField({
       const inOpen = open !== undefined && stackOf.get(row.playerId) === open;
       // Drawn where the row is — or, while its stack is open, where the fan put it.
       const spot = inOpen ? (fanned.get(row.playerId) ?? pointOf(row)) : pointOf(row);
-      const at = toScreen(spot, base, box);
       const label = radarTileLabel({
         name: playerName({ kind: 'player', name: row.card.name }),
         distance: cardDistance(row.distanceKm),
@@ -660,7 +703,7 @@ export function RadarField({
       // The card is the selection's and nobody else's (ADR-0176 §3).
       const state = tileState(zoom, row.playerId === selectedId);
       return (
-        <Anchor key={row.playerId} at={at} scale={scale}>
+        <Anchor key={row.playerId} spot={spot} transform={transform} base={base} field={box}>
           {state === 'card' ? (
             <View style={s.cardAt}>
               <RadarCard
@@ -686,7 +729,7 @@ export function RadarField({
       );
     };
     const marker = (stack: Stack) => (
-      <Anchor key={stack.id} at={toScreen(stack.centre, base, box)} scale={scale}>
+      <Anchor key={stack.id} spot={stack.centre} transform={transform} base={base} field={box}>
         <View style={centred(RADAR_STACK_BOX)}>
           <RadarStack
             members={stack.members.length}
@@ -723,7 +766,7 @@ export function RadarField({
     base,
     sport,
     sportName,
-    scale,
+    transform,
     openCard,
     flyTo,
     stacks,
@@ -735,17 +778,13 @@ export function RadarField({
   const you = useMemo(() => {
     if (box === undefined || me === undefined) return null;
     return (
-      <Anchor at={toScreen({ x: 0, y: 0 }, base, box)} scale={scale}>
+      <Anchor spot={ORIGIN} transform={transform} base={base} field={box}>
         <View style={centred(YOU_BOX)}>
           <YouTile playerId={me.playerId} photoUrl={me.photoUrl} />
         </View>
       </Anchor>
     );
-  }, [box, me, base, scale]);
-
-  const container = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }],
-  }));
+  }, [box, me, base, transform]);
 
   // The field's box.
   const onLayout = (event: LayoutChangeEvent) => {
@@ -775,11 +814,11 @@ export function RadarField({
         )}
 
         {box === undefined ? null : (
-          <Animated.View style={[StyleSheet.absoluteFill, container]} pointerEvents="box-none">
+          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
             {you}
             {/* Farther first, so nearer players paint above; the selected last, above everybody. */}
             {tiles}
-          </Animated.View>
+          </View>
         )}
 
         <RadarZoomCluster
@@ -801,30 +840,44 @@ export function RadarField({
 }
 
 /**
- * A tile's anchor: a one-point view at the point, counter-scaled about it. The drawing hangs
+ * A tile's anchor: a one-point view translated, on the UI thread, to where the live view draws
+ * the tile's kilometre spot — the three values read on every frame, the view recovered from
+ * them and the spot put through `toScreen`, exactly as a ring's centre is. The drawing hangs
  * off it — centred on it for a face, from its top-left for a card — and `overflow: visible` is
  * stated because the anchor has no box of its own for its child to be inside. One point and
- * not none, for the module note's reason.
+ * not none, for the module note's reason; never scaled, for the same note's other reason.
  */
 function Anchor({
-  at,
-  scale,
+  spot,
+  transform,
+  base,
+  field,
   children,
 }: {
-  readonly at: ScreenPoint;
-  readonly scale: SharedValue<number>;
+  readonly spot: KmPoint;
+  readonly transform: RadarTransform;
+  readonly base: RadarView;
+  readonly field: FieldBox;
   readonly children: ReactNode;
 }) {
-  const inverse = useAnimatedStyle(() => ({ transform: [{ scale: 1 / scale.value }] }));
+  const placed = useAnimatedStyle(() => {
+    const live = viewFromTransform(
+      { scale: transform.scale.value, x: transform.x.value, y: transform.y.value },
+      base,
+      field,
+    );
+    const at = toScreen(spot, live, field);
+    return { transform: [{ translateX: at.x - ANCHOR / 2 }, { translateY: at.y - ANCHOR / 2 }] };
+  });
   return (
-    <Animated.View
-      style={[s.anchor, { left: at.x - ANCHOR / 2, top: at.y - ANCHOR / 2 }, inverse]}
-      pointerEvents="box-none"
-    >
+    <Animated.View style={[s.anchor, placed]} pointerEvents="box-none">
       {children}
     </Animated.View>
   );
 }
+
+/** The viewer's kilometre point, which their tile stands on and every ring is centred on. */
+const ORIGIN: KmPoint = { x: 0, y: 0 };
 
 /** The anchor's side: one point, so its centre is the point and its transform is kept. */
 const ANCHOR = 1;
@@ -864,6 +917,13 @@ function sameView(a: RadarView, b: RadarView): boolean {
 
 const s = StyleSheet.create({
   field: { flex: 1, overflow: 'hidden' },
-  anchor: { position: 'absolute', width: ANCHOR, height: ANCHOR, overflow: 'visible' },
+  anchor: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: ANCHOR,
+    height: ANCHOR,
+    overflow: 'visible',
+  },
   cardAt: { position: 'absolute', left: ANCHOR / 2, top: ANCHOR / 2 },
 });

@@ -3,7 +3,10 @@
 - **Status:** Accepted — **§2's *the rubber band at the reach's edge* narrowed 2026-09-17 by
   [ADR-0177](0177-the-pinch-lets-go-where-it-is-and-a-stack-opens-on-a-tap.md) §1** to the
   drag: the pinch is held at the edge, and the drag is anchored on the recogniser's
-  translation rather than the fingers' position. Everything else stands.
+  translation rather than the fingers' position. **§2's *one transform carrying the lot, every
+  tile counter-scaled* replaced 2026-09-17** (§2, amended): every tile places itself on the UI
+  thread from the same three values, and nothing is scaled — an iPhone simulator at the floor
+  showed every tile as a blur of a few pixels. Everything else stands.
 - **Date:** 2026-09-16
 - **Supersedes, by named sentence:**
   - [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §7's *"**Built
@@ -94,6 +97,22 @@ JavaScript **only when a sentence would change**: the width to a tenth of a kilo
 count of points in view. No frame of a drag, a pinch or a flight passes through React. The
 anchor is one point square, for §1's reason.
 
+**Amended 2026-09-17 — placed, not carried.** The one scaled transform went. At the floor on
+the iPhone simulator every tile was a blur: the container is some 4 700 points wide at 1,5 km
+across, and iOS rasterised it at its unscaled resolution and stretched the few pixels each
+34-point face had become — a plain white card included, so it was never the posters. The
+three shared values are the same, the gestures and the flight write them as before, and
+**every tile's anchor reads them itself**: an animated style recovers the view from them
+(`viewFromTransform`) and translates the one-point anchor to where `toScreen` puts the tile's
+spot, exactly as a ring's centre already did. No layer is ever scaled, so a face is 24 or 30 pt
+because it is drawn so and not because a counter-scale undoes a scale; §1's one point stands,
+since iOS drops a translation on a sizeless view as readily as a scale. The cost is forty
+animated styles a frame where there were forty-one; the tiles are still laid out once, and
+nothing passes through React. The same day's look also moved the **zoom state** to the UI
+thread: it is decided per frame with its dead-band and spoken with the width, so a face changes
+state at the threshold and never at a release — JavaScript no longer derives it from a width it
+heard to a tenth.
+
 The gestures are the library's pan and pinch, **simultaneous**: the pan claims nothing until
 the intent distance, the pinch needs two fingers, so a tap still reaches a face, a card or the
 empty ground — they are doors, as they were. Everything the spec says about motion holds
@@ -162,4 +181,7 @@ it. Scattering the members around their rings at the same distances is a backend
   exception, argued from a device; the next one has to be too.
 - **Nothing here has been seen on a device.** The two faults were diagnosed from screenshots
   and the source, the rebuild is tested through the harness, and the author looks on both
-  devices — the drag on Android, the pinch on iOS, one card at a time on both.
+  devices — the drag on Android, the pinch on iOS, one card at a time on both. *(The look came
+  on 2026-09-17: the pinch on iOS showed the blur §2's amendment answers, and the pinch on
+  Android the hand-off ADR-0177 §1's amendment answers. Both were seen fixed on the same two
+  devices.)*

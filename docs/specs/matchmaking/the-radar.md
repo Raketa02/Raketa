@@ -314,14 +314,17 @@ sheet is the accessible path to acting; nothing is answerable from the field its
 ### 7.9 Built with
 
 **`react-native-gesture-handler` for the pan and the pinch, `react-native-reanimated` for the
-field's one transform — on the UI thread** ([ADR-0176](../../adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md)
+field's three values — on the UI thread** ([ADR-0176](../../adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md)
 §2, which is the decision the first version of this section said a stuttering device would
 reopen: two devices did). `react-native-svg` for the rings, their centre and radius animated on
-the same thread; absolutely positioned tiles counter-scaled about a **one-point** anchor so a
-face is always 24 or 30 pt — one point and not none, because iOS draws no transform on a view
-with no size at all. Which rings exist, the footer's count and the counter are React's, told
-only when a sentence would change. The swipe row, the deck's drag and the radius slider stay on
-`PanResponder` (ADR-0165 §6, narrowed to them).
+the same thread; every tile placed the same way, its **one-point** anchor translated on the UI
+thread to where the live view puts its spot, so a face is always 24 or 30 pt because nothing is
+ever scaled (ADR-0176 §2 as amended 2026-09-17: a scaled layer was a blur on iOS) — one point
+and not none, because iOS draws no transform on a view with no size at all. Which rings exist,
+the footer's count, the counter and the state a face is drawn in are React's, told only when a
+sentence would change. A pinch is over the moment an event carries fewer than two fingers,
+whatever the recogniser says (ADR-0177 §1 as amended). The swipe row, the deck's drag and the
+radius slider stay on `PanResponder` (ADR-0165 §6, narrowed to them).
 
 ### 7.10 A stack at the floor — ADR-0177
 

@@ -70,19 +70,26 @@ export function drag(from: Point, to: Point): void {
  * around — and every later event carries the spread as a factor of the first, which is what
  * the recogniser reports.
  */
-export function pinch(from: readonly [Point, Point], to: readonly [Point, Point]): void {
-  const spread = (pair: readonly [Point, Point]) =>
-    Math.hypot(pair[0][0] - pair[1][0], pair[0][1] - pair[1][1]);
-  const mid = (pair: readonly [Point, Point]) => ({
-    focalX: (pair[0][0] + pair[1][0]) / 2,
-    focalY: (pair[0][1] + pair[1][1]) / 2,
-  });
-  const first = spread(from);
-  const scale = first === 0 ? 1 : spread(to) / first;
+/**
+ * A pinch, as either recogniser reports one: began and active at the fingers' first spread,
+ * one move to their last, ended there — both fingers lifting together.
+ *
+ * `activatesAt` is the scale the recogniser has already reached when it activates — 1 by
+ * default, as the jest utilities and iOS report it; Android activates only once the fingers
+ * have moved a slop, so it reports the ratio it has reached by then, and every later scale is
+ * measured from the true start rather than from that activation.
+ */
+export function pinch(
+  from: readonly [Point, Point],
+  to: readonly [Point, Point],
+  options: { readonly activatesAt?: number } = {},
+): void {
+  const activatesAt = options.activatesAt ?? 1;
+  const scale = activatesAt * spreadRatio(from, to);
   act(() => {
     fireGestureHandler<PinchGesture>(getByGestureTestId(RADAR_PINCH_GESTURE), [
       { state: State.BEGAN, scale: 1, velocity: 0, ...mid(from) },
-      { state: State.ACTIVE, scale: 1, velocity: 0, ...mid(from) },
+      { state: State.ACTIVE, scale: activatesAt, velocity: 0, ...mid(from) },
       { scale, velocity: 0, ...mid(to) },
       { state: State.END, scale, velocity: 0, ...mid(to) },
     ] satisfies Partial<PinchGestureHandlerEventPayload & { state: State }>[]);
@@ -90,6 +97,54 @@ export function pinch(from: readonly [Point, Point], to: readonly [Point, Point]
   spoken();
 }
 
+/**
+ * A pinch whose fingers lift one after the other, as **Android** reports it: the recogniser
+ * does not end when the first finger lifts — it stays active on the one that remains, with
+ * one pointer, and reports *that finger* as the focal point, half a spread from the midpoint
+ * it was reporting a frame earlier. `stays` is the index of the finger that lifts last; its
+ * last position is the one-pointer event's focal point, and the end's.
+ */
+export function pinchLiftingOneFingerFirst(
+  from: readonly [Point, Point],
+  to: readonly [Point, Point],
+  stays: 0 | 1,
+): void {
+  const scale = spreadRatio(from, to);
+  const finger = { focalX: to[stays][0], focalY: to[stays][1] };
+  act(() => {
+    fireGestureHandler<PinchGesture>(getByGestureTestId(RADAR_PINCH_GESTURE), [
+      { state: State.BEGAN, scale: 1, velocity: 0, ...mid(from) },
+      { state: State.ACTIVE, scale: 1, velocity: 0, ...mid(from) },
+      { scale, velocity: 0, ...mid(to) },
+      { scale, velocity: 0, numberOfPointers: 1, ...finger },
+      { state: State.END, scale, velocity: 0, numberOfPointers: 1, ...finger },
+    ] satisfies Partial<
+      PinchGestureHandlerEventPayload & { state: State; numberOfPointers: number }
+    >[]);
+  });
+  spoken();
+}
+
+const spread = (pair: readonly [Point, Point]) =>
+  Math.hypot(pair[0][0] - pair[1][0], pair[0][1] - pair[1][1]);
+
+/** The fingers' spread now over their spread at first — the recogniser's `scale`. */
+function spreadRatio(from: readonly [Point, Point], to: readonly [Point, Point]): number {
+  const first = spread(from);
+  return first === 0 ? 1 : spread(to) / first;
+}
+
+/** The fingers' midpoint, as the recogniser reports the focal point while both are down. */
+const mid = (pair: readonly [Point, Point]) => ({
+  focalX: (pair[0][0] + pair[1][0]) / 2,
+  focalY: (pair[0][1] + pair[1][1]) / 2,
+});
+
+/**
+ * Let the field's words land: the UI thread tells JavaScript the width and the count through
+ * `runOnJS`, which under jest is a microtask the fake clock holds until it is advanced — by
+ * nothing at all, since the words are not an animation.
+ */
 function spoken(): void {
   act(() => {
     jest.advanceTimersByTime(0);

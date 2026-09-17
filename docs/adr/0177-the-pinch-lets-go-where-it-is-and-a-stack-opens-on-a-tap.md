@@ -68,6 +68,22 @@ where the field is. And the pinch **holds** its centre inside the reach: `pinche
 `dragged` bands, so a pinch that would carry the centre past the edge stops at the edge, and a
 release has nothing to spring back from. Only a drag rubber-bands, as §7.6 always said.
 
+**Amended 2026-09-17 — the pointer count, not the recogniser's end.** On Android the gesture
+library's pinch does not end when one of the two fingers lifts: it stays active on the finger
+that remains, with one pointer, and reports *that finger* as the focal point — half a spread
+from the midpoint it reported a frame earlier. Read as a pinch, that put the kilometre under
+the old midpoint under the remaining finger: the jump this section was written to remove,
+still on the phone, and *random* because it is half of whatever the spread was, in whichever
+direction the finger that lifted was. iOS's recogniser ends at fewer than two touches, which is
+why the pan-side fix above looked complete there. **The pinch is therefore over the moment an
+event carries fewer than two pointers, whatever the recogniser says**: the hand-off to the
+drag happens on that event, and a one-pointer pinch event moves nothing. Two smaller things
+came with it. The pinch starts from the spread the recogniser *activates at* rather than from
+1 — Android activates a slop late and reports the ratio it has already reached, which measured
+from 1 was a zoom of that much on the first frame. And a release compares the centre to the
+edge within a hair rather than exactly: a centre the pinch held at the edge comes back through
+the transform an ulp outside it, and that started a settle of nothing.
+
 ### 2. A stack at the floor, opened by a tap
 
 At the floor, players whose spots lie nearer than one face is wide — taken across, so A over B
@@ -116,3 +132,6 @@ what they were.
   library's jest utilities**, which end every gesture they fire. §1's anchoring is argued from
   the recogniser's contract and pinned where it can be — the hard bound, in the geometry — and
   the rest is the author's look on both devices. **Nothing here has been seen on a device.**
+  *(It was, on 2026-09-17, and the hand-off failed on Android for the reason §1's amendment
+  records; the suite now plays Android's one-pointer event and the slop-late activation, and
+  both are red on the code as first written.)*
