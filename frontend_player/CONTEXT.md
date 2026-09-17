@@ -217,9 +217,12 @@ profile editor that later edits the same values.
   straight from the entry gate, which is a genuine pass of one sport — and it **ends** in
   one place, when the player reaches the app. Between passes there is **no pass**, and
   that absence is load-bearing: it is what lets a resumed run begin one without adopting a
-  finished walk's queue. **Onboarding happens once, at the beginning** — there is no
-  re-take from inside the app — so a link naming a sport outside the running pass is sent
-  to welcome rather than into the middle of a flow. _Avoid_: **"run"** — that is one
+  finished walk's queue. **Onboarding happens once, at the beginning — and a pass has an
+  origin**: welcome, or the Skill passport's *Add a sport*, which begins a pass of exactly one
+  sport and ends back on the passport
+  ([ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+  §3). A link naming a sport outside the running pass is still sent to welcome rather than
+  into the middle of a flow — a second door is not a shortcut. _Avoid_: **"run"** — that is one
   Assessment, and a pass is a
   sequence of them; **"session"** — that is the auth session, and the two have different
   lifetimes; also "onboarding state", "wizard".

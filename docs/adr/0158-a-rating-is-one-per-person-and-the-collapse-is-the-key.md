@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-08
+- **§6's last sentence and the 2026-09-08 band amendment amended by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5** — the
+  published figure and its count cross to the subject too, and `sportsmanship_band` retires. The
+  subtraction §6 names is accepted, and written beside the reversal.
 
 ## Context
 

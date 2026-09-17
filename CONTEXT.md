@@ -131,6 +131,10 @@ A rating is **never only a number**.
   when the assessment ended on evidence the questionnaire could not resolve. It is a
   statement about the *estimate*, never about the player, and it changes who they are
   matched with, never where they sit.
+- **Skill passport** — the You tab's screen listing every Skill rating a player holds, one
+  result card per sport with the record's blocks under it: a document a player **reads and cannot
+  write**. *Add a sport* on it starts one questionnaire for an unrated sport and ends back on it
+  ([ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §3).
 
 **Invariants**
 - **A level is proved, never declared.** Not by the player, not by staff, not by a club.
@@ -372,8 +376,10 @@ of the code because this file asks for them in that order.
   searches a player wishes to appear in**, not a ruling by the platform on who anybody is:
   `PREFER_NOT_TO_SAY` matches an unconstrained search only, and is an explicit answer rather
   than a null — the same shape as Play intent's `NO_PREFERENCE`. Required at profile creation.
-  **Never rendered on a card and never carried by a response**
-  ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
+  **Never rendered on a card and never carried by a response that describes one player to
+  another** ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md));
+  **the one shape that carries it out is the owner's own profile read**, so the You tab can show
+  a player what they set ([ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §4).
 - **Gender preference** — who a player is willing to be matched with: `WOMEN_ONLY`, `MEN_ONLY`
   or `ANY`. Durable, optional, defaulting to `ANY`. **Mutual, never one-directional** — it
   governs both what a player sees and whether they can be seen, so it protects an inbox and not
@@ -405,7 +411,10 @@ of the code because this file asks for them in that order.
   the fence is at the write: a phone number, an email, a URL or a handle is **refused**, because
   the realistic abuse of a line shown before a game exists is contact leaving the app. It reaches
   a **Player card** and a player record and nowhere a person is merely named; it is never scored
-  ([ADR-0170](docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)). _Avoid_: "bio", "tagline", "about", "status".
+  ([ADR-0170](docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+  **Edited from the You tab**, with the tags and the photos, as one piece of work — a search
+  record already kept quotes the line as it stood at the deal
+  ([ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §6). _Avoid_: "bio", "tagline", "about", "status".
 - **On-court check** — what the platform concluded about whether a photograph shows a racket
   sport, decided at the upload and stored with it
   ([ADR-0129](docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md)). **It soft-warns
@@ -441,6 +450,10 @@ of the code because this file asks for them in that order.
     answer, the copy version shown and the surface; the moment is the event's own.
   - **PlayIntentDeclared** — `player_profile.play_intent_declared` / v1 — the sport, the value
     and the surface it was declared on. Obeys the preference rule, not the consent rule.
+  - **IntroChanged** — `player_profile.intro_changed` / v1 — the line as it now stands, or none:
+    the You tab's edit, and the withdrawal of a line
+    ([ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §6).
+    `IntroWritten` stays the commit's.
 
 **Invariants**
 - **A tag id is permanent.** Ids are persisted on accounts, so retiring a tag means hiding
@@ -1778,11 +1791,12 @@ still means the μ/σ a player holds in a sport.
   different people have an opinion*.
 - **No individual rating is returned to anybody, on any route, in any shape.** Not to the
   subject, not to the rater who gave it. What is published is an **average** beside the
-  count of distinct people behind it; what the **subject** sees about themselves is a coarse
-  band and **no count**, because an average plus a count is a subtraction that names each new
-  rating and they know who they played. The two are **two methods on the published port**, and
-  the subject's one cannot say the figure — a caller that received it would already hold the
-  subtraction, whatever it then drew.
+  count of distinct people behind it — **to every reader, the subject included**, since
+  [ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5.
+  It used to be a coarse band and no count for the subject, because an average plus a count is a
+  subtraction that names each new rating and they know who they played; that cost is accepted by
+  name, and what blunts it is what this context keeps — the collapse, the fifty-rater window, no
+  zero, and the matcher never reading it.
 - **The published figure** — the mean of what other players said, out of five to one decimal,
   beside how many different people it rests on. **From the very first rating**, because the
   count does a minimum's work honestly: `3,0 / 5 · 1 player` visibly reads as one person's
@@ -1791,11 +1805,10 @@ still means the μ/σ a player holds in a sport.
   slots and hand the farming problem back through a side door. **Nothing is trimmed at either
   end**: trimming is the platform deciding which raters were wrong, a larger claim than
   publishing the number.
-- **The band** — the three steps the subject may be told about themselves: **good** from 4,0,
-  **mixed** from 3,0, **poor** below. Whole stars over a one-to-five scale, coarsened from the
-  **published** figure so the two can never disagree at an edge. Deliberately too coarse to be
-  informative about any individual: it says *something is going wrong*, which is the useful
-  half, and never who to blame for it, which is the half that keeps people answering.
+- **The band** — *retired* ([ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5).
+  It was the three steps the subject was told instead of the figure — **good** from 4,0,
+  **mixed** from 3,0, **poor** below, coarsened from the published figure. The subject now reads
+  the figure; the band is one amendment away if honest answering falls off.
 - **The matcher never reads it — the floor and the term.** A reader seeing the figure and
   deciding for themselves is the product working; the app demoting somebody silently on the
   same evidence, with nothing they can answer, is not. An import contract enforces it, because
@@ -1867,11 +1880,10 @@ every fact read through the owning context's published port, and one rule of its
   empty list to head a card with. The four absences on this sheet are four different
   questions: rated in nothing, no counted game ever played, nothing ever fallen due, and
   nobody having said anything.
-- **One zone depends on who is reading, and it is the only one.** *What other players said*
-  crosses as the figure and its count to a reader, and as a coarse band with neither to the
-  person it is about — everything else here is one answer retitled. `is_self` decides which,
-  the record refuses the pair beside it, and the split is on the **port** so the sheet about
-  you asks a question with no figure in its answer.
+- **No zone depends on who is reading.** *What other players said* crossed as a band to its
+  subject until [ADR-0179](docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5;
+  it is now the figure and its count for every reader, and the sheet about you is one answer
+  retitled like every other zone. `is_self` still retitles the sheet and drops the distance.
 - **What people typed sits under its own heading.** The record card promises *counted by the
   system, not written by people*, which is what every metered row under it rests on; the
   sportsmanship figure is the one thing here somebody typed, so it is a second zone rather

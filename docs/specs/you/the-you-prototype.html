@@ -1,0 +1,823 @@
+<title>The You Tab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  /* PROTOTYPE — throwaway. Answers "what does the You tab hold, and what does each row change?"
+     Every colour, size and type role inside the phone is frontend_player/src/shared/ui/theme.ts;
+     the screens compose the design system's own objects (5.5 row, 6.8 grid, 6.9 tiles, 6.10 slider,
+     7.5 level bar, 7.8 ring, 7.13 record block) as the onboarding steps and the record sheet draw them. */
+  :root {
+    --bg: #E9E6DF; --bg-ink: #101B20; --bg-muted: #5C6D73; --bg-line: #D8D3C8; --bg-panel: #F4F2ED; --bg-code: #EDEAE3;
+    /* the app — single look, on purpose */
+    --paper: #F4F2ED; --paper2: #EDEAE3; --surface: #FFFFFF; --ink: #101B20; --night: #0A3441; --night2: #12495B;
+    --muted: #5C6D73; --line: #E5E1D8; --line2: #F0EDE6;
+    --coral: #E8482B; --coral-soft: #FDEBE6; --coral-ink: #B8351C; --coral-line: #F3CFC5;
+    --mint: #0C8F6B; --mint-soft: #E2F3EC; --mint-ink: #0A7355; --mint-line: #CFE7DD;
+    --amber: #8A5E09; --amber-soft: #FBF0DA; --amber-line: #EFDCB8;
+    --red: #B4392C; --red-soft: #FBEAE7;
+    --info: #12495B; --info-soft: #EAF1F4; --info-line: #C7DBE3;
+    --volt: #D9F24B; --on-dark-tiny: rgba(255,255,255,.68); --on-dark-eyebrow: rgba(255,255,255,.52);
+    --on-dark-hair: rgba(255,255,255,.15); --on-dark-fill: rgba(255,255,255,.17); --on-dark-tag: rgba(255,255,255,.14);
+    --photo-scrim: rgba(10,52,65,.70);
+    --band-new: #9AA8AD; --band-new-deep: #7E8C92; --band-new-ink: #657075;
+    --band-dev: #7FB3CC; --band-dev-deep: #4E8FAE; --band-dev-ink: #40758F;
+    --band-est: #6FC5A8; --band-est-deep: #3FA184; --band-est-ink: #307A64;
+    --band-adv: #F0A08A; --band-adv-deep: #D9714F; --band-adv-ink: #A9583E;
+    --padel: #E8482B; --tennis: #0C8F6B; --squash: #12495B; --badminton: #8A5E09;
+    --sans: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0E1F27; --bg-ink: #F4F2ED; --bg-muted: #9FB0B6; --bg-line: #22363F; --bg-panel: #132931; --bg-code: #0A1B21; }
+  }
+  :root[data-theme="dark"] { --bg: #0E1F27; --bg-ink: #F4F2ED; --bg-muted: #9FB0B6; --bg-line: #22363F; --bg-panel: #132931; --bg-code: #0A1B21; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--bg-ink); font-family: var(--sans); font-size: 14px; line-height: 1.45; padding-inline: 16px; padding-block: 20px; }
+  .stage { display: grid; grid-template-columns: 390px minmax(280px, 420px); gap: 28px; justify-content: center; align-items: start; max-width: 900px; margin: 0 auto; }
+  @media (max-width: 760px) { .stage { grid-template-columns: minmax(0, 390px); } }
+  h1.page { font-size: 15px; font-weight: 700; letter-spacing: -.2px; margin: 0 0 6px; }
+  p.lede { color: var(--bg-muted); font-size: 12.5px; margin: 0 0 16px; max-width: 62ch; }
+
+  /* ---- the phone: its own ink, whatever the page's theme ---- */
+  .phone { width: 390px; max-width: 100%; height: 820px; background: var(--paper); color: var(--ink); border-radius: 44px; border: 10px solid #0B151A; box-shadow: 0 30px 60px rgba(10,52,65,.35); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .screen { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 15px 15px; scrollbar-width: thin; }
+  .tabbar { height: 64px; border-top: 1px solid var(--line); background: var(--paper); display: grid; grid-template-columns: repeat(5, 1fr); flex-shrink: 0; }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--muted); font-size: 9.5px; font-weight: 700; cursor: pointer; border: 0; background: none; font-family: var(--sans); position: relative; }
+  .tab svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tab.on { color: var(--coral); }
+  .tab .disc { width: 38px; height: 38px; border-radius: 12px; background: var(--coral); display: grid; place-items: center; margin-top: -14px; }
+  .tab .disc svg { stroke: #fff; fill: #fff; width: 18px; height: 18px; }
+  .tab .badge { position: absolute; left: 50%; margin-left: 6px; top: 6px; background: var(--coral); color: #fff; font-family: var(--mono); font-size: 8.5px; font-weight: 600; border-radius: 99px; padding: 1px 4px; }
+
+  /* ---- screen header (10.3) ---- */
+  .hd { padding: 8px 0 12px; display: flex; align-items: flex-start; gap: 10px; position: sticky; top: 0; background: var(--paper); z-index: 2; }
+  .hd .back { width: 30px; height: 30px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; cursor: pointer; color: var(--ink); flex-shrink: 0; margin-top: 2px; }
+  .hd .back svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .eyebrow { font-size: 9.5px; letter-spacing: 1.43px; font-weight: 700; text-transform: uppercase; color: var(--muted); line-height: 12px; }
+  .h1 { font-size: 19px; letter-spacing: -.57px; font-weight: 700; line-height: 24px; color: var(--ink); }
+  .sub { font-size: 11px; color: var(--muted); line-height: 16px; margin-top: 2px; }
+
+  /* ---- structure ---- */
+  .sect { font-size: 10.5px; letter-spacing: .95px; font-weight: 700; text-transform: uppercase; color: var(--ink); margin: 16px 0 6px; line-height: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; color: var(--ink); }
+  .card.rows { padding: 2px 12px; }
+  .stack > * + * { margin-top: 9px; }
+  .dark { background: var(--night); color: #fff; border: 0; border-radius: 14px; padding: 12px; }
+  .dark .tiny { color: var(--on-dark-tiny); }
+  .dark .eyebrow { color: var(--on-dark-eyebrow); }
+  .tiny { font-size: 11px; line-height: 16px; color: var(--muted); }
+  .rl-label { font-size: 11.5px; line-height: 16px; font-weight: 400; }
+  .flab { font-size: 10.5px; letter-spacing: .95px; font-weight: 700; text-transform: uppercase; color: var(--ink); line-height: 12px; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 11px 0; cursor: pointer; }
+  .row + .row { border-top: 1px solid var(--line2); }
+  .row .t { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 17px; }
+  .row .s { font-size: 11px; color: var(--muted); line-height: 15px; margin-top: 1px; }
+  .row .chev { color: var(--muted); font-size: 16px; margin-left: auto; }
+  .row .lead { width: 28px; height: 28px; border-radius: 9px; background: var(--paper2); display: grid; place-items: center; color: var(--night2); flex-shrink: 0; }
+  .row .lead svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  /* 5.5 the key-value row */
+  .rl { display: flex; justify-content: space-between; align-items: center; gap: 9px; padding: 6px 0; font-size: 11.5px; line-height: 16px; color: var(--ink); }
+  .rl + .rl, .rl.div { border-top: 1px solid var(--line2); }
+  .rl .v { font-weight: 600; }
+  .dark .rl { color: #fff; } .dark .rl + .rl, .dark .rl.div { border-top-color: var(--on-dark-hair); } .dark .rl .lab { color: var(--on-dark-tiny); }
+  .tag { display: inline-flex; align-items: center; gap: 4px; font-size: 9.5px; font-weight: 700; line-height: 12px; padding: 3px 7px; border-radius: 99px; background: var(--line2); color: var(--ink); white-space: nowrap; }
+  .tag i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; flex-shrink: 0; }
+  .tag.ok { background: var(--mint-soft); color: var(--mint-ink); }
+  .tag.watch { background: var(--amber-soft); color: var(--amber); }
+  .tag.bad { background: var(--red-soft); color: var(--red); }
+  .tag.dk { background: var(--on-dark-tag); color: #fff; }
+  .tag.sport-PADEL i { background: var(--padel); } .tag.sport-TENNIS i { background: var(--tennis); } .tag.sport-SQUASH i { background: var(--squash); } .tag.sport-BADMINTON i { background: var(--badminton); }
+  .note { border-radius: 10px; padding: 9px 11px; font-size: 11px; line-height: 16px; border: 1px solid var(--info-line); background: var(--info-soft); color: var(--info); }
+  .note b { display: block; font-size: 12px; margin-bottom: 2px; color: inherit; }
+  .note.coral { background: var(--coral-soft); border-color: var(--coral-line); color: var(--coral-ink); }
+  .note.mint { background: var(--mint-soft); border-color: var(--mint-line); color: var(--mint-ink); }
+  .note.amber { background: var(--amber-soft); border-color: var(--amber-line); color: var(--amber); }
+  .btn { font-family: var(--sans); font-size: 12px; font-weight: 700; border-radius: 12px; padding: 11px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; width: 100%; text-align: center; }
+  .btn.primary { background: var(--coral); color: #fff; border-color: var(--coral); }
+  .btn.dark { background: var(--night); color: #fff; border-color: var(--night); }
+  .btn.sel { border-color: var(--night); background: var(--paper2); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn .gloss { display: block; font-weight: 400; font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .btns { display: grid; gap: 6px; }
+  .action { padding-top: 12px; display: grid; gap: 6px; }
+  /* 6.2 chip — emoji label, ink when selected */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-family: var(--sans); font-size: 10.5px; font-weight: 600; min-height: 27px; padding: 3px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .chip i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  /* 7.3 meter */
+  .meter { height: 6px; border-radius: 3px; background: var(--line2); overflow: hidden; }
+  .meter i { display: block; height: 100%; border-radius: 3px; background: var(--night); }
+  .meter.good i { background: var(--mint); } .meter.poor i { background: var(--red); }
+  .field { width: 100%; font-family: var(--sans); font-size: 13px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+  .field:focus { outline: 2px solid var(--night2); outline-offset: 1px; }
+  .lab-top { font-size: 10.5px; letter-spacing: .95px; font-weight: 700; text-transform: uppercase; color: var(--ink); margin: 10px 0 5px; }
+  .toast { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--night); color: #fff; font-size: 11.5px; padding: 9px 13px; border-radius: 10px; opacity: 0; transition: opacity .15s; pointer-events: none; white-space: nowrap; max-width: 90%; z-index: 9; }
+  .toast.show { opacity: 1; }
+  .sheet-scrim { position: absolute; inset: 0; background: rgba(10,52,65,.45); display: flex; align-items: flex-end; z-index: 5; }
+  .sheet { background: var(--surface); border-radius: 18px 18px 0 0; padding: 14px 15px 22px; width: 100%; color: var(--ink); }
+  .foot { text-align: center; font-size: 11px; color: var(--muted); margin-top: 14px; }
+  .radio { display: flex; align-items: center; gap: 9px; padding: 9px 0; cursor: pointer; font-size: 12.5px; color: var(--ink); }
+  .radio + .radio { border-top: 1px solid var(--line2); }
+  .radio i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); display: inline-block; flex-shrink: 0; }
+  .radio.on i { border-color: var(--night); background: radial-gradient(circle, var(--night) 45%, transparent 50%); }
+  .info-mark { display: inline-grid; place-items: center; width: 13px; height: 13px; border-radius: 50%; border: 1.3px solid currentColor; font-size: 8.5px; font-weight: 700; line-height: 1; opacity: .75; margin-left: 5px; vertical-align: middle; font-family: var(--sans); }
+
+  /* header card */
+  .me { display: flex; gap: 12px; align-items: center; cursor: pointer; }
+  .me .name { font-size: 16px; font-weight: 700; letter-spacing: -.3px; line-height: 20px; }
+  .me .handle { font-size: 11px; color: var(--on-dark-tiny); font-family: var(--mono); }
+  .me .intro { font-size: 11px; color: var(--on-dark-tiny); margin-top: 3px; font-style: italic; }
+  .pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+
+  /* the generated photograph and the poster (drawn, no images in a prototype) */
+  .court { background: linear-gradient(160deg, #2E7D4F, #1F5E3A); position: relative; }
+  .court::before { content: ""; position: absolute; inset: 10% 14%; border: 2px solid rgba(255,255,255,.55); border-radius: 2px; }
+  .court::after { content: ""; position: absolute; left: 14%; right: 14%; top: 50%; border-top: 2px dashed rgba(255,255,255,.7); }
+  .court.b { background: linear-gradient(200deg, #4A6DA8, #2C4A7C); }
+  .court.b::before { inset: 16% 22%; }
+  .poster { background: linear-gradient(160deg, #6F6CBB, #6360A1); position: relative; overflow: hidden; }
+  .poster svg { position: absolute; left: 12%; bottom: 0; width: 76%; height: 84%; fill: rgba(10,52,65,.55); }
+  /* 7.16 the photo panel — record size 112 × 140, a flat scrim, the mark top-left, the level bottom-left */
+  .panel { width: 112px; height: 140px; border-radius: 16px; overflow: hidden; position: relative; flex-shrink: 0; }
+  .panel .scrim { position: absolute; inset: 0; background: var(--photo-scrim); }
+  .panel .cont { position: absolute; inset: 0; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; }
+  .oc { display: inline-block; background: var(--mint); color: #fff; font-size: 7.5px; font-weight: 800; letter-spacing: .6px; padding: 2px 5px; border-radius: 5px; align-self: flex-start; }
+  .panel .lvl-big { font-family: var(--mono); font-weight: 600; font-size: 30px; line-height: 1; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+  .panel .sp { font-size: 9.5px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: .5px; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+  /* 6.9 the photo tile and picker — three across, 3:4, radius 14, gap 9 */
+  .photo-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+  .ptile { aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden; position: relative; border: 1px solid var(--line); cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .ptile.profile { border-color: var(--ink); }
+  .ptile .fill { position: absolute; inset: 0; }
+  .ptile .strip { position: absolute; left: 0; right: 0; bottom: 0; height: 18px; background: var(--night); color: #fff; font-size: 9.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .ptile .strip.failed { background: var(--red); }
+  .ptile .strip .prog { width: calc(100% - 12px); height: 4px; border-radius: 2px; background: var(--on-dark-hair); overflow: hidden; } .ptile .strip .prog i { display: block; height: 100%; background: #fff; }
+  .ptile .rm { position: absolute; right: 4px; top: 4px; width: 28px; height: 28px; border-radius: 6px; background: var(--night); color: #fff; display: grid; place-items: center; font-size: 15px; font-weight: 700; line-height: 1; }
+  .ptile.add { background: var(--paper2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ink); font-size: 10.5px; font-weight: 600; }
+  .ptile.add .plus { width: 20px; height: 20px; position: relative; } .ptile.add .plus::before, .ptile.add .plus::after { content: ""; position: absolute; background: var(--ink); border-radius: 1px; } .ptile.add .plus::before { left: 0; right: 0; top: 9px; height: 2px; } .ptile.add .plus::after { top: 0; bottom: 0; left: 9px; width: 2px; }
+  .ptile.poster-tile { background: var(--night); cursor: default; }
+  .ptile.empty { border: 0; }
+
+  /* 6.8 the availability grid — days DOWN, parts of the day across, 44pt cells, mint tick */
+  .avail { display: flex; gap: 9px; align-items: flex-end; }
+  .avail .labels { display: grid; gap: 6px; } .avail .labels span { height: 44px; display: flex; align-items: center; }
+  .avail .cells { flex: 1; display: grid; gap: 6px; }
+  .avail .heads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .avail .heads span { text-align: center; }
+  .avail .crow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .avail .cell { height: 44px; border-radius: 10px; background: var(--paper2); border: 0; cursor: pointer; display: grid; place-items: center; padding: 0; }
+  .avail .cell.on { background: var(--mint); }
+  .avail .cell svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .avail-foot { min-height: 32px; margin-top: 12px; } .avail-foot .rule { border-top: 1px solid var(--line); margin-bottom: 9px; }
+
+  /* 7.5 the level bar — base and onDark */
+  .lb { position: relative; height: 36px; margin: 12px 0 0; }
+  .lb .bands { display: flex; gap: 1px; height: 6px; }
+  .lb .bands i { display: block; height: 6px; border-radius: 3px; opacity: .38; }
+  .lb .bands i.on { opacity: 1; }
+  .lb .mark { position: absolute; top: -3px; width: 3px; height: 12px; background: var(--coral); border-radius: 2px; box-shadow: 0 0 0 2px var(--surface); transform: translateX(-1.5px); }
+  .lb.dk .mark { box-shadow: 0 0 0 2px var(--night); }
+  .lb .br { position: absolute; top: 13px; height: 8px; border-left: 2px solid var(--muted); border-right: 2px solid var(--muted); }
+  .lb .br::after { content: ""; position: absolute; left: 0; right: 0; top: 3px; border-top: 2px solid var(--muted); }
+  .lb.dk .br { border-color: var(--on-dark-tiny); } .lb.dk .br::after { border-top-color: var(--on-dark-tiny); }
+  .lb .names { position: absolute; top: 25px; left: 0; right: 0; display: flex; }
+  .lb .names span { font-size: 9px; font-weight: 600; color: var(--muted); text-align: center; white-space: nowrap; }
+  .lb .names span.on { font-weight: 800; }
+  .lb.dk .names span { color: var(--on-dark-tiny); } .lb.dk .names span.on { color: #fff; }
+  .legend { display: flex; gap: 14px; margin-top: 8px; font-size: 9.5px; color: var(--on-dark-tiny); align-items: center; }
+  .legend .lm { width: 3px; height: 10px; background: var(--coral); border-radius: 1px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+  .legend .lbk { display: inline-block; width: 14px; height: 8px; border-left: 2px solid var(--on-dark-tiny); border-right: 2px solid var(--on-dark-tiny); position: relative; margin-right: 5px; vertical-align: middle; } .legend .lbk::after { content: ""; position: absolute; left: 0; right: 0; top: 3px; border-top: 2px solid var(--on-dark-tiny); }
+  .lvl { font-family: var(--mono); font-weight: 600; font-size: 34px; line-height: 1; letter-spacing: -.5px; }
+  .verdict { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .ringbox { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+  /* 7.13 the record block */
+  .run { display: flex; gap: 3px; }
+  .run i { width: 8px; height: 8px; border-radius: 2px; background: var(--muted); display: block; }
+  .run i.w { background: var(--mint); }
+  .blocks { display: flex; gap: 8px; }
+  .box { flex: 1; background: var(--paper2); border-radius: 10px; padding: 6px 9px; display: flex; flex-direction: column; gap: 3px; }
+  .box .l { font-size: 11px; line-height: 16px; color: var(--muted); }
+  .box .f { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* 6.10 the radius slider — the row is the control, night fill, night thumb in a surface ring */
+  .slider-row { height: 44px; display: flex; align-items: center; }
+  input[type=range].radius { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--night) 0 var(--p, 0%), var(--line2) var(--p, 0%) 100%); margin: 0; cursor: pointer; }
+  input[type=range].radius::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--night); box-shadow: 0 0 0 3px var(--surface); border: 0; }
+  input[type=range].radius::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--night); box-shadow: 0 0 0 3px var(--surface); border: 0; }
+  .num-xl { font-family: var(--mono); font-weight: 600; font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+
+  /* ---- the notes panel ---- */
+  .notes { background: var(--bg-panel); border: 1px solid var(--bg-line); border-radius: 16px; padding: 16px; font-size: 12.5px; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; }
+  .notes h2 { font-size: 13px; margin: 0 0 2px; letter-spacing: -.2px; }
+  .notes .k { font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--bg-muted); font-weight: 700; margin: 12px 0 3px; }
+  .notes p { margin: 0; color: var(--bg-ink); }
+  .notes .st { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; margin-top: 4px; }
+  .st.built { background: var(--mint-soft); color: var(--mint-ink); } .st.route { background: var(--info-soft); color: var(--info); } .st.needs { background: var(--amber-soft); color: var(--amber); } .st.decision { background: var(--coral-soft); color: var(--coral-ink); } .st.none { background: var(--bg-code); color: var(--bg-muted); }
+  .notes code { font-family: var(--mono); font-size: 11px; background: var(--bg-code); padding: 1px 4px; border-radius: 4px; }
+  .log { font-family: var(--mono); font-size: 10.5px; background: var(--bg-code); border-radius: 10px; padding: 8px 10px; max-height: 190px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 0; color: var(--bg-ink); }
+  .log .m { color: var(--mint-ink); font-weight: 600; }
+  details summary { cursor: pointer; font-size: 11px; color: var(--bg-muted); margin-top: 10px; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+
+<div class="stage">
+  <div>
+    <h1 class="page">The You tab — a walkable proposal</h1>
+    <p class="lede">Tap any row. Everything editable writes to an in-memory profile and logs the request the real screen would send. Example data, one made-up player.</p>
+    <div class="phone" id="phone">
+      <div class="status"><span class="mono">19:00</span><span>Wed <span class="mono">▮▮▮</span></span></div>
+      <div class="screen" id="screen"></div>
+      <div class="tabbar" id="tabbar"></div>
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+  <aside class="notes" id="notes"></aside>
+</div>
+
+<script>
+/* ============================ example state ============================ */
+const S = {
+  user: { name: 'Tomek Kowalski', nickname: 'tomek.k', email: 'tomek@example.com' },
+  ratings: [
+    { sport: 'PADEL',  level: 2.71, sigma: 0.47, confidence: 61, range: [2.24, 3.18], band: 'established', status: 'calibrating',      counted: 9, lastFive: ['WIN','LOSS','WIN','WIN','LOSS'] },
+    { sport: 'TENNIS', level: 3.10, sigma: 0.88, confidence: 27, range: [2.22, 3.98], band: 'established', status: 'initial_estimate', counted: 0, lastFive: [] },
+    { sport: 'SQUASH', level: 2.30, sigma: 0.91, confidence: 24, range: [1.39, 3.21], band: 'developing',  status: 'initial_estimate', counted: 0, lastFive: [] },
+  ],
+  intents: { PADEL: 'COMPETITIVE', TENNIS: 'FOR_FUN' },
+  week: new Set(['MON-EVE','TUE-EVE','WED-PM','WED-EVE','THU-EVE','FRI-EVE','SAT-AM','SAT-PM','SUN-AM','SUN-PM']),
+  radius: 10,
+  area: { held: true, permission: 'granted' },
+  gender: 'MAN', preference: 'ANY',
+  optIn: { accepted: true, at: '12 Aug', copy: 'proposals-opt-in.v3', surface: 'ONBOARDING' },
+  photos: [ { id: 'ph-1', verdict: 'allowed', look: 'a', upload: 'done' }, { id: 'ph-2', verdict: 'flagged', look: 'b', upload: 'done' } ],
+  tags: ['STAYS_FOR_A_DRINK','PLAYS_TO_WIN','GENEROUS_ON_LINE_CALLS','HERE_FOR_A_REGULAR_GAME'],
+  intro: 'Will travel for a hard game.',
+  reliability: { score: 92, strands: [
+    { k: 'SHOWS_UP', good: 11, opp: 12, pct: 92 },
+    { k: 'ANSWERS_CHALLENGES', good: 6, opp: 7, pct: 86 },
+    { k: 'ANSWERS_RESULTS', good: 5, opp: 5, pct: 100 } ] },
+  variety: { distinct: 14, times: 20 },
+  sportsmanship: { average: 4.3, raters: 12, band: 'GOOD' },
+};
+/* draft state for screens that save explicitly */
+const D = { week: null, tags: null, intro: null, name: null, nick: null, gender: null, pref: null, radius: null, intentOpen: null, photoSheet: null, nameError: null, introError: null, tagsRefused: false };
+const LOG = [];
+
+/* ============================ vocabulary ============================ */
+const SPORT = { PADEL: 'Padel', TENNIS: 'Tennis', SQUASH: 'Squash', BADMINTON: 'Badminton' };
+const SPORT_SHORT = { PADEL: 'Pad', TENNIS: 'Ten', SQUASH: 'Squ', BADMINTON: 'Bad' };
+const BANDS = [
+  { key: 'new', name: 'New', lo: 1.0, hi: 1.55, edge: '1,0–1,5', meaning: 'Learning the basics of the game.' },
+  { key: 'developing', name: 'Developing', lo: 1.55, hi: 2.65, edge: '1,6–2,6', meaning: 'Rallies hold; the shots are coming together.' },
+  { key: 'established', name: 'Established', lo: 2.65, hi: 3.85, edge: '2,7–3,8', meaning: 'A club-level player who competes on any given day.' },
+  { key: 'advanced', name: 'Advanced', lo: 3.85, hi: 5.0, edge: '3,9–5,0', meaning: 'At or above the top of the competitive amateur population.' },
+];
+const BAND_TINT = { new: 'var(--band-new)', developing: 'var(--band-dev)', established: 'var(--band-est)', advanced: 'var(--band-adv)' };
+const BAND_DEEP = { new: 'var(--band-new-deep)', developing: 'var(--band-dev-deep)', established: 'var(--band-est-deep)', advanced: 'var(--band-adv-deep)' };
+const BAND_INK = { new: 'var(--band-new-ink)', developing: 'var(--band-dev-ink)', established: 'var(--band-est-ink)', advanced: 'var(--band-adv-ink)' };
+const STATUS = { initial_estimate: 'Initial estimate', calibrating: 'Calibrating', stable: 'Stable' };
+const INTENTS = ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'];
+const INTENT_LABEL = { COMPETITIVE: 'Competitive', FOR_FUN: 'For fun', NO_PREFERENCE: 'No preference' };
+const INTENT_GLOSS = { COMPETITIVE: 'Keep score, play to win', FOR_FUN: 'A good hit, nobody keeps score', NO_PREFERENCE: 'Either suits me' };
+const DAYS = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+const DAY_LABEL = { MON:'Mon', TUE:'Tue', WED:'Wed', THU:'Thu', FRI:'Fri', SAT:'Sat', SUN:'Sun' };
+const PARTS = [['AM','Morning'],['PM','Afternoon'],['EVE','Evening']];
+const RADIUS = { min: 1, max: 50, step: 1, default: 10 };
+const TAGS = {
+  AFTER_THE_MATCH: ['STAYS_FOR_A_DRINK','STRAIGHT_HOME_AFTER','TALKS_THROUGH_THE_MATCH','SETTLES_UP_ON_THE_SPOT','BOOKS_THE_NEXT_ONE','SHARES_A_LIFT'],
+  ON_THE_COURT: ['PLAYS_TO_WIN','LAUGHS_OFF_MISTAKES','ENCOURAGES_A_PARTNER','GENEROUS_ON_LINE_CALLS','QUIET_AND_FOCUSED','WARMS_UP_PROPERLY'],
+  WHY_YOU_ARE_HERE: ['HERE_TO_IMPROVE','HERE_TO_COMPETE','HERE_FOR_THE_EXERCISE','HERE_TO_MEET_PLAYERS','HERE_FOR_A_REGULAR_GAME','HERE_TO_GET_BACK_INTO_IT','OPEN_TO_MEET_SOMEONE'],
+};
+const TAG_GROUP = { AFTER_THE_MATCH: 'After the match', ON_THE_COURT: 'On the court', WHY_YOU_ARE_HERE: "Why you're here" };
+const TAG_NAME = { STAYS_FOR_A_DRINK:'Stays for a drink', STRAIGHT_HOME_AFTER:'Straight home after', TALKS_THROUGH_THE_MATCH:'Talks through the match', SETTLES_UP_ON_THE_SPOT:'Settles up on the spot', BOOKS_THE_NEXT_ONE:'Books the next one', SHARES_A_LIFT:'Shares a lift', PLAYS_TO_WIN:'Plays to win', LAUGHS_OFF_MISTAKES:'Laughs off mistakes', ENCOURAGES_A_PARTNER:'Encourages a partner', GENEROUS_ON_LINE_CALLS:'Generous on line calls', QUIET_AND_FOCUSED:'Quiet and focused', WARMS_UP_PROPERLY:'Warms up properly', HERE_TO_IMPROVE:'Here to improve', HERE_TO_COMPETE:'Here to compete', HERE_FOR_THE_EXERCISE:'Here for the exercise', HERE_TO_MEET_PLAYERS:'Here to meet players', HERE_FOR_A_REGULAR_GAME:'Here for a regular game', HERE_TO_GET_BACK_INTO_IT:'Here to get back into it', OPEN_TO_MEET_SOMEONE:'Open to meet someone' };
+const TAG_EMOJI = { STAYS_FOR_A_DRINK:'🍻', STRAIGHT_HOME_AFTER:'🚪', TALKS_THROUGH_THE_MATCH:'💬', SETTLES_UP_ON_THE_SPOT:'💸', BOOKS_THE_NEXT_ONE:'📅', SHARES_A_LIFT:'🚗', PLAYS_TO_WIN:'🏆', LAUGHS_OFF_MISTAKES:'😄', ENCOURAGES_A_PARTNER:'👏', GENEROUS_ON_LINE_CALLS:'🤝', QUIET_AND_FOCUSED:'🎯', WARMS_UP_PROPERLY:'🤸', HERE_TO_IMPROVE:'📈', HERE_TO_COMPETE:'🔥', HERE_FOR_THE_EXERCISE:'💪', HERE_TO_MEET_PLAYERS:'👋', HERE_FOR_A_REGULAR_GAME:'🔁', HERE_TO_GET_BACK_INTO_IT:'🌱', OPEN_TO_MEET_SOMEONE:'💘' };
+const tagLabel = (t) => `${TAG_EMOJI[t]} ${TAG_NAME[t]}`;
+const TAG_BOUNDS = { min: 2, max: 6 };
+const STRAND = { SHOWS_UP: 'Shows up', ANSWERS_CHALLENGES: 'Answers challenges', ANSWERS_RESULTS: 'Answers about results' };
+const BAND_WORD = { GOOD: 'Good', MIXED: 'Mixed', POOR: 'Poor' };
+const INTRO_CAP = 100;
+const TAKEN_NICKNAMES = ['marek', 'ania', 'raketa'];
+
+/* ============================ formatting (docs/value-formatting.md) ============================ */
+const lvl = (n) => n.toFixed(2).replace('.', ',');
+const pct = (n) => `${n}%`;
+const stars = (n) => n.toFixed(1).replace('.', ',');
+const range = (r) => `${lvl(r[0])}–${lvl(r[1])}`;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const initials = (name) => name.split(/[ .]/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+const radiusWords = (km) => km <= 2 ? 'just your own neighbourhood' : km <= 5 ? 'a short ride away' : km <= 15 ? 'across your town' : km <= 30 ? 'your town and the ones around it' : 'a long drive out';
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const tone = (n) => n < 70 ? 'poor' : n < 90 ? 'neutral' : 'good';
+
+/* ============================ drawn objects ============================ */
+function ring(value, size, stroke, color, track, opts = {}) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const dash = (value / 100) * c;
+  let tick = '';
+  if (opts.ceiling !== undefined) {
+    const a = (opts.ceiling / 100) * 2 * Math.PI - Math.PI / 2;
+    const x1 = size / 2 + Math.cos(a) * (r - stroke / 2), y1 = size / 2 + Math.sin(a) * (r - stroke / 2);
+    const x2 = size / 2 + Math.cos(a) * (r + stroke / 2 + 3), y2 = size / 2 + Math.sin(a) * (r + stroke / 2 + 3);
+    tick = `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2"/>`;
+  }
+  return `<svg width="${size + 6}" height="${size + 6}" viewBox="-3 -3 ${size + 6} ${size + 6}" role="img" aria-label="${opts.label || ''}" style="overflow:visible">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${track}" stroke-width="${stroke}"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${dash} ${c - dash}" transform="rotate(-90 ${size/2} ${size/2})"/>
+    ${tick}
+    <text x="${size/2}" y="${size/2}" dy="${opts.sub ? '-1' : '5'}" text-anchor="middle" fill="#fff" font-family="IBM Plex Mono, monospace" font-weight="600" font-size="${opts.fs || 16}">${opts.figure ?? value}</text>
+    ${opts.sub ? `<text x="${size/2}" y="${size/2}" dy="11" text-anchor="middle" fill="rgba(255,255,255,.52)" font-family="Archivo, sans-serif" font-weight="700" font-size="7" letter-spacing="1">${opts.sub}</text>` : ''}
+  </svg>`;
+}
+function levelBar(level, rng, bandKey, dark = false, legend = false) {
+  const x = (v) => ((Math.min(Math.max(v, 1), 5) - 1) / 4) * 100;
+  const bands = BANDS.map((b) => `<i class="${b.key === bandKey ? 'on' : ''}" style="flex:${(b.hi - b.lo).toFixed(2)};background:${b.key === bandKey ? BAND_DEEP[b.key] : BAND_TINT[b.key]}"></i>`).join('');
+  const names = BANDS.map((b) => `<span class="${b.key === bandKey ? 'on' : ''}" style="flex:${(b.hi - b.lo).toFixed(2)};${b.key === bandKey && !dark ? 'color:' + BAND_INK[b.key] : ''}">${b.name}</span>`).join('');
+  const leg = legend ? `<div class="legend"><span><i class="lm"></i>Your level</span><span><i class="lbk"></i>Likely range</span></div>` : '';
+  return `<div class="lb ${dark ? 'dk' : ''}"><div class="bands">${bands}</div><div class="mark" style="left:${x(level)}%"></div><div class="br" style="left:${x(rng[0])}%;width:${x(rng[1]) - x(rng[0])}%"></div><div class="names">${names}</div></div>${leg}`;
+}
+const runOfForm = (r) => `<div class="run" aria-label="${r.filter((x) => x === 'WIN').length} of the last ${r.length} won">${r.map((x) => `<i class="${x === 'WIN' ? 'w' : ''}"></i>`).join('')}</div>`;
+const meter = (p) => `<div class="meter ${tone(p)}"><i style="width:${p}%"></i></div>`;
+const pill = (r) => `<span class="tag sport-${r.sport}"><i></i>${SPORT[r.sport]} <span class="mono">${lvl(r.level)}</span></span>`;
+const pillDark = (r) => `<span class="tag dk sport-${r.sport}"><i></i>${SPORT_SHORT[r.sport]} <span class="mono">${lvl(r.level)}</span></span>`;
+const POSTER_SVG = '<svg viewBox="0 0 100 100"><path d="M52 8a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM40 30c8-6 20-6 27 2l6 22-9 3-4-12-2 15 14 40H60L50 68l-8 32H30l12-40-6-14-10 8-6-7z"/><path d="M70 12l14-8 8 12-10 10z" opacity=".8"/></svg>';
+function face(w, h, radius) {
+  const p = S.photos[0];
+  if (!p) return `<div class="poster" style="width:${w}px;height:${h}px;border-radius:${radius}px">${POSTER_SVG}</div>`;
+  return `<div class="court ${p.look}" style="width:${w}px;height:${h}px;border-radius:${radius}px;overflow:hidden"></div>`;
+}
+/* 7.16 the record's photo panel — the level and sport of the resolved panel, the mark if the photo passed */
+function photoPanel(rating) {
+  const p = S.photos[0];
+  const ground = p ? `<div class="court ${p.look} fill" style="position:absolute;inset:0"></div>` : `<div class="poster" style="position:absolute;inset:0">${POSTER_SVG}</div>`;
+  const onCourt = p && p.verdict === 'allowed';
+  return `<div class="panel">${ground}<div class="scrim"></div><div class="cont">${onCourt ? '<span class="oc">ON COURT</span>' : '<span></span>'}${rating ? `<div><div class="lvl-big">${lvl(rating.level)}</div><div class="sp">${SPORT[rating.sport]}</div></div>` : ''}</div></div>`;
+}
+const chev = '<span class="chev">›</span>';
+const infoMark = '<span class="info-mark" aria-hidden="true">i</span>';
+const TICK_SVG = '<svg viewBox="0 0 12 12"><path d="M 2.5 6.5 L 5 9 L 9.5 3.5"/></svg>';
+const ICON = {
+  passport: '<svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><circle cx="12" cy="10" r="3"/><path d="M8 18c1-2 7-2 8 0"/></svg>',
+  score: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  intent: '<svg viewBox="0 0 24 24"><path d="M6 3l12 9-12 9z"/></svg>',
+  week: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  radius: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></svg>',
+  area: '<svg viewBox="0 0 24 24"><path d="M12 22s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+  gender: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6M15 20c0-3 1-4 3-4s3 1 3 4"/></svg>',
+  optin: '<svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>',
+  record: '<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  photos: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>',
+  tags: '<svg viewBox="0 0 24 24"><path d="M3 12l9-9h9v9l-9 9z"/><circle cx="16" cy="8" r="1.5"/></svg>',
+  intro: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg>',
+  name: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>',
+};
+
+/* ============================ chrome ============================ */
+function head(eyebrow, title, opts = {}) {
+  const back = opts.back === false ? '' : `<button class="back" data-act="back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>`;
+  return `<div class="hd">${back}<div><div class="eyebrow">${eyebrow}</div><div class="h1">${title}</div>${opts.sub ? `<div class="sub">${opts.sub}</div>` : ''}</div></div>`;
+}
+const sect = (t) => `<div class="sect">${t}</div>`;
+const row = (act, icon, title, sub) => `<div class="row" data-act="go" data-v="${act}" role="button"><span class="lead">${ICON[icon] || ''}</span><span style="flex:1;min-width:0"><span class="t" style="display:block">${title}</span><span class="s" style="display:block">${sub}</span></span>${chev}</div>`;
+const note = (title, body, tone = '') => `<div class="note ${tone}">${title ? `<b>${title}</b>` : ''}${body}</div>`;
+const rl = (label, value, divided = false, extra = '') => `<div class="rl ${divided ? 'div' : ''}" ${extra}><span class="lab">${label}</span><span class="v">${value}</span></div>`;
+const statBoxes = (score, lastFive, counted) => `<div class="blocks">
+  ${score === undefined ? '' : `<div class="box"><div class="l">Player reliability</div><div class="f">${score}</div></div>`}
+  ${lastFive && lastFive.length ? `<div class="box"><div class="l">Last 5</div><div style="padding:4px 0">${runOfForm(lastFive)}</div></div>` : ''}
+  ${counted === undefined ? '' : `<div class="box"><div class="l">Counted</div><div class="f">${counted}</div></div>`}</div>`;
+
+/* ============================ live lines for the list ============================ */
+const L = {
+  passport: () => S.ratings.map((r) => `${SPORT[r.sport]} <span class="mono">${lvl(r.level)}</span>`).join(' · '),
+  score: () => S.reliability ? `<span class="mono">${S.reliability.score}</span> of 100 · ${S.reliability.strands.length} things counted` : 'Nothing counted yet',
+  intent: () => S.ratings.map((r) => `${SPORT[r.sport]} ${S.intents[r.sport] ? INTENT_LABEL[S.intents[r.sport]] : '<span style="color:var(--coral-ink)">not set</span>'}`).join(' · '),
+  week: () => S.week.size === 0 ? 'Nothing ticked — we do not know when you play' : `${S.week.size} slot${S.week.size === 1 ? '' : 's'} ticked`,
+  radius: () => `<span class="mono">${S.radius} km</span> · ${radiusWords(S.radius)}`,
+  area: () => 'Area set · updates when you open Raketa',
+  gender: () => `Matched with ${{ ANY: 'anyone', WOMEN_ONLY: 'women only', MEN_ONLY: 'men only' }[S.preference]}`,
+  optin: () => S.optIn.accepted ? `Yes — since ${S.optIn.at}` : `No — since ${S.optIn.at}`,
+  record: () => 'Your player record, as a stranger reads it',
+  photos: () => S.photos.length === 0 ? 'None — a court poster stands in' : `${S.photos.length} of 3 · profile photo ${S.photos[0].verdict === 'allowed' ? 'on court' : 'not checked as on court'}`,
+  tags: () => `${S.tags.length} of ${TAG_BOUNDS.max} · ${S.tags.slice(0, 2).map((t) => TAG_NAME[t]).join(', ')}${S.tags.length > 2 ? `, +${S.tags.length - 2}` : ''}`,
+  intro: () => S.intro ? `“${esc(S.intro)}”` : 'None — say it in your own words',
+  name: () => `${esc(S.user.name)} · <span class="mono">@${esc(S.user.nickname)}</span>`,
+};
+
+/* ============================ screens ============================ */
+const V = {};
+
+V.you = () => {
+  const r = S.reliability;
+  let h = head('Player profile', 'You', { back: false });
+  h += `<div class="dark me" data-act="go" data-v="record" role="button">
+    <div style="position:relative;flex-shrink:0">${face(64, 80, 12)}${S.photos[0] && S.photos[0].verdict === 'allowed' ? '<span class="oc" style="position:absolute;left:4px;top:4px">ON COURT</span>' : ''}</div>
+    <div style="flex:1;min-width:0">
+      <div class="name">${esc(S.user.name)}</div>
+      <div class="handle">@${esc(S.user.nickname)}</div>
+      ${S.intro ? `<div class="intro">“${esc(S.intro)}”</div>` : ''}
+      <div class="pills">${S.ratings.map(pillDark).join('')}</div>
+    </div>
+    ${r ? ring(r.score, 56, 5, 'var(--volt)', 'rgba(255,255,255,.15)', { fs: 15, sub: 'SCORE', label: `Player reliability ${r.score} out of 100` }) : ''}
+  </div>`;
+  h += sect('Playing') + `<div class="card rows">
+    ${row('passport', 'passport', 'Skill passport', L.passport())}
+    ${row('score', 'score', 'Player reliability', L.score())}
+    ${row('intent', 'intent', 'What kind of game', L.intent())}
+  </div>`;
+  h += sect('Finding players') + `<div class="card rows">
+    ${row('week', 'week', 'Your week', L.week())}
+    ${row('radius', 'radius', 'How far to look', L.radius())}
+    ${row('area', 'area', 'Where you play', L.area())}
+    ${row('gender', 'gender', 'Who you play with', L.gender())}
+    ${row('optin', 'optin', 'Game suggestions', L.optin())}
+  </div>`;
+  h += sect('On your card') + `<div class="card rows">
+    ${row('record', 'record', 'How others see you', L.record())}
+    ${row('photos', 'photos', 'Photos', L.photos())}
+    ${row('tags', 'tags', 'Tags', L.tags())}
+    ${row('intro', 'intro', 'Intro', L.intro())}
+    ${row('name', 'name', 'Name', L.name())}
+  </div>`;
+  h += `<div class="action" style="padding-top:18px"><button class="btn dark" data-act="signout">Sign out</button></div>`;
+  h += `<div class="foot">Raketa · local · prototype</div>`;
+  return h;
+};
+
+/* ---- 3.1 Skill passport — the onboarding result card per sport, the record's three blocks under each ---- */
+V.passport = () => {
+  let h = head('Playing', 'Skill passport');
+  h += '<div class="stack">';
+  S.ratings.forEach((r) => {
+    const band = BANDS.find((b) => b.key === r.band);
+    h += `<div class="dark">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span class="tag dk sport-${r.sport}"><i></i>${SPORT[r.sport]}</span>
+        <span class="tag ${r.status === 'stable' ? 'ok' : r.status === 'calibrating' ? 'watch' : 'dk'}">${STATUS[r.status]}</span>
+      </div>
+      <div class="verdict">
+        <div>
+          <div class="eyebrow">Your level${infoMark}</div>
+          <div class="lvl" style="margin:6px 0 4px">${lvl(r.level)}</div>
+          <div class="tiny"><span class="mono" style="color:#fff;font-weight:600">${range(r.range)}</span> likely range${infoMark}</div>
+        </div>
+        <div class="ringbox">
+          ${ring(r.confidence, 72, 6, 'var(--volt)', 'rgba(255,255,255,.15)', { figure: pct(r.confidence), fs: 15, ceiling: r.status === 'initial_estimate' ? 30 : undefined, label: `Confidence ${pct(r.confidence)}` })}
+          <div class="eyebrow">Confidence${infoMark}</div>
+        </div>
+      </div>
+      ${levelBar(r.level, r.range, r.band, true, true)}
+      <div style="margin-top:12px;border-top:1px solid var(--on-dark-hair)">
+        ${rl('Band', band.name)}
+        ${rl('Rating status', STATUS[r.status])}
+      </div>
+    </div>
+    ${statBoxes(S.reliability ? S.reliability.score : undefined, r.lastFive, r.counted)}`;
+  });
+  const unrated = Object.keys(SPORT).filter((s) => !S.ratings.some((r) => r.sport === s));
+  if (unrated.length) h += `<div class="card"><div style="font-size:13px;font-weight:700">Add a sport</div><div class="tiny" style="margin:2px 0 8px">One questionnaire, one rating. Nothing you already hold changes.</div>
+    <div class="chips">${unrated.map((s) => `<button class="chip" data-act="add-sport" data-v="${s}"><i style="background:var(--${s.toLowerCase()})"></i>Rate ${SPORT[s]}</button>`).join('')}</div></div>`;
+  h += `<div class="card"><div class="eyebrow" style="margin-bottom:4px">The ladder</div>${BANDS.map((b, i) => {
+    const mine = S.ratings.filter((r) => r.band === b.key).map((r) => SPORT[r.sport].toLowerCase());
+    return `<div class="rl ${i ? 'div' : ''}" style="align-items:flex-start;${mine.length ? '' : 'opacity:.55'}"><b class="mono" style="width:54px;flex-shrink:0;font-size:11px;color:${BAND_INK[b.key]}">${b.edge}</b><span style="flex:1"><b>${b.name}${mine.length ? ' · you (' + mine.join(', ') + ')' : ''}</b><span class="tiny" style="display:block">${b.meaning}</span></span></div>`;
+  }).join('')}</div>`;
+  h += '</div>';
+  return h;
+};
+
+/* ---- 3.2 Player reliability — the ring, and the record card's rows ---- */
+V.score = () => {
+  let h = head('Playing', 'Player reliability');
+  const r = S.reliability;
+  if (!r) return h + note('', 'Nothing has fallen due for you yet — no plan has settled and nobody has asked you anything with a deadline. There is no score to draw, and that is not a low one.');
+  h += `<div class="stack"><div class="dark" style="display:flex;align-items:center;gap:14px">
+    ${ring(r.score, 74, 7, 'var(--volt)', 'rgba(255,255,255,.15)', { fs: 20, label: `Player reliability ${r.score} out of 100` })}
+    <div style="flex:1"><b style="font-size:13px">${r.score >= 90 ? 'Reliable' : r.score >= 70 ? 'Holding' : 'Under the bar'}</b><div class="tiny" style="margin-top:2px">Out of 100</div></div></div>`;
+  h += `<div class="card">${r.strands.map((s, i) => `<div style="${i ? 'border-top:1px solid var(--line2)' : ''}">
+      ${rl(STRAND[s.k], `<span class="mono">${s.good} of ${s.opp}</span>`)}
+      <div style="padding-bottom:8px">${meter(s.pct)}</div></div>`).join('')}
+    ${rl('Opponent variety', `<span class="mono">${pct(Math.round((S.variety.distinct / S.variety.times) * 100))} · ${S.variety.distinct} of ${S.variety.times}</span>`, true)}
+    ${rl('Sportsmanship, by players', `<span class="mono">${stars(S.sportsmanship.average)} / 5 · ${S.sportsmanship.raters} players</span>`, true)}
+  </div></div>`;
+  return h;
+};
+
+/* ---- 3.3 Play intent ---- */
+V.intent = () => {
+  let h = head('Playing', 'What kind of game', { sub: 'This changes how people find you' });
+  h += `<div class="card rows">` + S.ratings.map((r, i) => {
+    const cur = S.intents[r.sport], open = D.intentOpen === r.sport;
+    return `<div style="${i ? 'border-top:1px solid var(--line2)' : ''}">
+      <div class="rl" style="padding:11px 0;cursor:pointer" data-act="intent-open" data-v="${r.sport}"><span class="lab" style="color:var(--muted)">${SPORT[r.sport]}</span><span class="v" style="color:${cur ? 'var(--ink)' : 'var(--coral-ink)'}">${cur ? INTENT_LABEL[cur] : 'Not set'}</span></div>
+      ${open ? `<div class="btns" style="margin:0 0 10px">${INTENTS.map((it) => `<button class="btn ${cur === it ? 'sel' : ''}" data-act="intent-set" data-v="${r.sport}|${it}">${INTENT_LABEL[it]}<span class="gloss">${INTENT_GLOSS[it]}</span></button>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('') + `</div>`;
+  if (S.ratings.some((r) => !S.intents[r.sport])) h += `<div class="tiny" style="margin-top:6px">A sport with no answer cannot be searched in until you give one.</div>`;
+  return h;
+};
+
+/* ---- 3.4 Your week — AvailabilityGrid as the social step draws it ---- */
+V.week = () => {
+  if (!D.week) D.week = new Set(S.week);
+  const dirty = D.week.size !== S.week.size || [...D.week].some((c) => !S.week.has(c));
+  let h = head('Finding players', 'Your week');
+  h += `<div class="card"><div class="avail">
+    <div class="labels">${DAYS.map((d) => `<span class="flab">${DAY_LABEL[d]}</span>`).join('')}</div>
+    <div class="cells"><div class="heads">${PARTS.map(([, p]) => `<span class="flab">${p}</span>`).join('')}</div>
+      ${DAYS.map((d) => `<div class="crow">${PARTS.map(([p, name]) => `<button class="cell ${D.week.has(d + '-' + p) ? 'on' : ''}" data-act="week-toggle" data-v="${d}-${p}" role="checkbox" aria-checked="${D.week.has(d + '-' + p)}" aria-label="${DAY_LABEL[d]} ${name.toLowerCase()}">${D.week.has(d + '-' + p) ? TICK_SVG : ''}</button>`).join('')}</div>`).join('')}
+    </div></div>
+    <div class="avail-foot"><div class="rule"></div><div class="rl-label" style="color:var(--muted)">${D.week.size === 0 ? 'Nothing ticked means we do not know when you play, never that you are unavailable.' : `${D.week.size} slot${D.week.size === 1 ? '' : 's'} ticked. Overlap with another player is counted from these.`}</div></div></div>`;
+  h += `<div class="action"><button class="btn primary" data-act="week-save" ${dirty ? '' : 'disabled'}>${dirty ? 'Save your week' : 'Saved'}</button><button class="btn" data-act="week-clear" ${D.week.size ? '' : 'disabled'}>Clear all</button></div>`;
+  return h;
+};
+
+/* ---- 3.5 Search radius — the 6.10 slider, saved by a button ---- */
+V.radius = () => {
+  if (D.radius === null) D.radius = S.radius;
+  const p = ((D.radius - RADIUS.min) / (RADIUS.max - RADIUS.min)) * 100;
+  let h = head('Finding players', 'How far to look');
+  h += `<div class="card"><div class="flab" style="margin-bottom:6px">How far to look</div>
+    <div class="num-xl" id="radius-fig">${D.radius} km</div>
+    <div class="tiny" id="radius-words">${cap(radiusWords(D.radius))}</div>
+    <div class="slider-row"><input type="range" class="radius" id="radius" min="${RADIUS.min}" max="${RADIUS.max}" step="${RADIUS.step}" value="${D.radius}" style="--p:${p}%" aria-label="How far to look, kilometres"></div></div>`;
+  h += `<div class="action"><button class="btn primary" id="radius-save" data-act="radius-save" ${D.radius === S.radius ? 'disabled' : ''}>${D.radius === S.radius ? 'Saved' : 'Save'}</button></div>`;
+  return h;
+};
+
+/* ---- 3.6 Location area ---- */
+V.area = () => {
+  let h = head('Finding players', 'Where you play');
+  h += '<div class="stack">';
+  h += `<div class="card"><span class="tag ok"><i></i>Your area is set</span>
+    <div class="tiny" style="margin-top:8px">Your area updates each time you open Raketa; it is never finer than about a kilometre.</div></div>`;
+  const perm = S.area.permission;
+  if (perm === 'granted') h += `<div class="btns"><button class="btn dark" data-act="area-read">Read my area again</button></div>`;
+  else if (perm === 'refused') h += note('Raketa cannot see where you play', 'Press <i>Use my location</i> again to allow it.', 'coral') + `<div class="btns"><button class="btn dark" data-act="area-allow">Use my location</button></div>`;
+  else h += note('Location is turned off for Raketa', 'Turn it on for Raketa in Settings, then press <i>Use my location</i> again.', 'coral') + `<div class="btns"><button class="btn dark" data-act="area-allow">Open Settings</button></div>`;
+  h += '</div>';
+  h += `<div class="foot">Prototype only: <a href="#" data-act="area-sim" data-v="blocked">pretend location is off</a></div>`;
+  return h;
+};
+
+/* ---- 3.7 Gender and preference ---- */
+V.gender = () => {
+  if (D.gender === null) D.gender = S.gender;
+  if (D.pref === null) D.pref = S.preference;
+  const reach = D.pref === 'WOMEN_ONLY' ? 'You will not be matched with men — and men will not see you at all, even if they are open to anyone.' : D.pref === 'MEN_ONLY' ? 'You will not be matched with women — and women will not see you at all, even if they are open to anyone.' : '';
+  let h = head('Finding players', 'Who you play with');
+  h += `<div class="stack"><div class="card"><div class="lab-top" style="margin-top:0">About you</div>
+    ${[['WOMAN','Woman'],['MAN','Man'],['PREFER_NOT_TO_SAY','Prefer not to say']].map(([v, l]) => `<div class="radio ${D.gender === v ? 'on' : ''}" data-act="gender-pick" data-v="${v}"><i></i>${l}</div>`).join('')}
+    ${D.gender === 'PREFER_NOT_TO_SAY' ? `<div class="tiny" style="margin-top:6px">You will still be matched — but only with players who have not narrowed who they play with.</div>` : ''}
+    <div class="btns" style="margin-top:10px"><button class="btn" data-act="gender-save" ${D.gender === S.gender ? 'disabled' : ''}>${D.gender === S.gender ? 'Saved' : 'Save'}</button></div></div>`;
+  h += `<div class="card"><div class="lab-top" style="margin-top:0">Who we should match you with</div>
+    ${[['ANY','Anyone'],['WOMEN_ONLY','Women only'],['MEN_ONLY','Men only']].map(([v, l]) => `<div class="radio ${D.pref === v ? 'on' : ''}" data-act="pref-pick" data-v="${v}"><i></i>${l}</div>`).join('')}
+    ${reach ? `<div style="margin-top:8px">${note('What this costs you', reach, 'amber')}</div>` : ''}
+    <div class="btns" style="margin-top:10px"><button class="btn" data-act="pref-save" ${D.pref === S.preference ? 'disabled' : ''}>${D.pref === S.preference ? 'Saved' : 'Save'}</button></div></div></div>`;
+  return h;
+};
+
+/* ---- 3.8 Proposals opt-in ---- */
+V.optin = () => {
+  let h = head('Finding players', 'Game suggestions');
+  h += `<div class="stack"><div class="card"><div class="eyebrow" style="margin-bottom:6px">If you say yes</div>
+    ${[['You may receive', 'a singles or doubles game we think fits you'], ['You always accept', 'a game manually — nothing is ever confirmed for you'], ['You can stop', 'any time, from here']].map((p, i) => `<div class="rl ${i ? 'div' : ''}" style="align-items:flex-start"><b style="width:104px;flex-shrink:0">${p[0]}</b><span class="tiny" style="text-align:right">${p[1]}</span></div>`).join('')}
+    <div class="tiny" style="margin-top:8px">If you say no, it doesn’t affect how other players find you. You just won’t receive game suggestions.</div></div>`;
+  h += `<div class="card"><div class="rl" style="padding:0"><span class="lab">Your answer</span><span class="tag ${S.optIn.accepted ? 'ok' : ''}"><i></i>${S.optIn.accepted ? 'Yes' : 'No'}</span></div>
+    <div class="tiny" style="margin-top:4px">Given ${S.optIn.at}, against these words (<span class="mono">${S.optIn.copy}</span>), from ${S.optIn.surface === 'ONBOARDING' ? 'setting up' : 'this screen'}.</div>
+    <div class="btns" style="margin-top:10px"><button class="btn ${S.optIn.accepted ? 'sel' : ''}" data-act="optin-set" data-v="1">Yes — suggest games</button><button class="btn ${S.optIn.accepted ? '' : 'sel'}" data-act="optin-set" data-v="0">No — don’t suggest games</button></div></div></div>`;
+  return h;
+};
+
+/* ---- 3.9 How others see you — PlayerRecordSheet, is_self ---- */
+V.record = () => {
+  const r0 = S.ratings[0], rel = S.reliability;
+  let h = head('On your card', 'How others see you');
+  h += '<div class="stack">';
+  /* RecordHeader: the panel, then name · handle · intro · pills (no distance, no fit — it is your own) */
+  h += `<div style="display:flex;gap:12px;align-items:flex-start">${photoPanel(r0)}
+    <div style="flex:1;min-width:0;display:grid;gap:6px">
+      <div class="h1">${esc(S.user.name)} <span class="tiny">(you)</span></div>
+      <div class="tiny">@${esc(S.user.nickname)}</div>
+      ${S.intro ? `<div class="rl-label" style="color:var(--muted)">“${esc(S.intro)}”</div>` : ''}
+      <div class="chips" style="gap:4px">${S.ratings.map(pill).join('')}</div>
+    </div></div>`;
+  /* SkillCard */
+  h += `<div class="card"><div style="font-size:11.5px;font-weight:600" class="mono-head">${SPORT[r0.sport].toUpperCase()} · <span class="mono">${lvl(r0.level)}</span> · ${pct(r0.confidence)} sure</div>${levelBar(r0.level, r0.range, r0.band)}</div>`;
+  /* RecordBlocks */
+  h += statBoxes(rel ? rel.score : undefined, r0.lastFive, r0.counted);
+  /* RecordCard */
+  if (rel) h += `<div class="card">${rel.strands.map((s, i) => `<div style="${i ? 'border-top:1px solid var(--line2)' : ''}">${rl(STRAND[s.k], `<span class="mono">${s.good} of ${s.opp}</span>`)}<div style="padding-bottom:8px">${meter(s.pct)}</div></div>`).join('')}
+    ${rl('Opponent variety', `<span class="mono">${pct(Math.round((S.variety.distinct / S.variety.times) * 100))} · ${S.variety.distinct} of ${S.variety.times}</span>`, true)}
+    ${rl('Sportsmanship, by players', `<span class="mono">${stars(S.sportsmanship.average)} / 5 · ${S.sportsmanship.raters} players</span>`, true)}</div>`;
+  /* SocialTagRow — every tag as the base Tag, no overlap on your own sheet */
+  h += `<div class="chips" style="gap:6px">${S.tags.map((t) => `<span class="tag" style="font-size:10.5px;padding:4px 8px">${tagLabel(t)}</span>`).join('')}</div>`;
+  h += '</div>';
+  return h;
+};
+
+/* ---- 3.10 Photos — SocialPhotosStep ---- */
+V.photos = () => {
+  let h = head('On your card · On-court only — up to three', 'Your court photos');
+  h += '<div class="stack">';
+  h += note('Rackets mandatory, faces optional', 'Photos on Raketa follow one simple rule: keep it about the racket sports. Show yourself on court or in a racket-sport setting — no casual selfies, party photos, or gym mirrors. Showing your face is optional. The sport context isn’t.');
+  const tiles = [];
+  if (S.photos.length === 0) tiles.push(`<div class="ptile poster-tile"><div class="poster fill" aria-label="A generated court poster, not a photograph — what other players see until you add one.">${POSTER_SVG}</div></div>`);
+  S.photos.forEach((p, i) => {
+    const strip = p.upload === 'uploading' ? `<div class="strip"><div class="prog"><i style="width:${p.progress}%"></i></div></div>` : p.upload === 'failed' ? '<div class="strip failed">Failed</div>' : i === 0 ? '<div class="strip">Profile</div>' : '';
+    tiles.push(`<div class="ptile ${i === 0 ? 'profile' : ''}" data-photo="${i}" role="button" aria-label="Photo ${i + 1} of ${S.photos.length}${i === 0 ? ', profile photo' : ''}"><div class="court ${p.look} fill"></div>${strip}<span class="rm" data-act="photo-remove" data-v="${i}" role="button" aria-label="Remove photo ${i + 1} of ${S.photos.length}">×</span></div>`);
+  });
+  const room = 3 - S.photos.length;
+  if (room > 0) tiles.push(`<div class="ptile add" data-act="photo-add" role="button" aria-label="Add a photo, ${room} slot${room === 1 ? '' : 's'} left"><span class="plus"></span>Add a photo</div>`);
+  while (tiles.length < 3) tiles.push('<div class="ptile empty"></div>');
+  h += `<div class="photo-row">${tiles.join('')}</div>`;
+  if (S.photos.length > 1) h += `<div class="tiny">Tap a photo to make it the profile photo.</div>`;
+  if (S.photos.length > 0) h += `<div class="tiny">Press and hold a photo to replace, add or edit.</div>`;
+  S.photos.forEach((p, i) => { if (p.verdict === 'flagged') h += note(`Photo ${i + 1} of ${S.photos.length} — we could not see a court`, 'The check is automatic, nobody has looked at your photo, and it gets it wrong sometimes. Nothing is blocked — keep it if you are on a court in it, and swap it if you are not.', 'amber'); });
+  h += '</div>';
+  if (D.photoSheet !== null) {
+    const i = D.photoSheet;
+    h += `<div class="sheet-scrim" data-act="photo-sheet-close"><div class="sheet" data-stop="1"><div class="h1" style="font-size:15px">Photo ${i + 1} of ${S.photos.length}${i === 0 ? ', profile photo' : ''}</div>
+      <div class="btns" style="margin-top:10px"><button class="btn" data-act="photo-replace" data-v="${i}">Replace this photo<span class="gloss">Choose a different photo for this spot, and crop it</span></button><button class="btn" data-act="photo-add" ${S.photos.length >= 3 ? 'disabled' : ''}>Add new photo<span class="gloss">Keeps this one and adds another beside it</span></button><button class="btn" data-act="photo-replace" data-v="${i}">Edit<span class="gloss">Opens your photos so you can choose this one again and re-crop it</span></button><button class="btn" data-act="photo-sheet-close">Close</button></div></div></div>`;
+  }
+  return h;
+};
+
+/* ---- 3.11 Tags — SocialTagsStep ---- */
+V.tags = () => {
+  if (!D.tags) D.tags = [...S.tags];
+  const n = D.tags.length, dirty = n !== S.tags.length || D.tags.some((t) => !S.tags.includes(t));
+  let h = head(`On your card · Pick ${TAG_BOUNDS.min} to ${TAG_BOUNDS.max}`, 'What kind of player are you?');
+  Object.keys(TAGS).forEach((g) => {
+    h += `<div class="lab-top">${TAG_GROUP[g]}</div><div class="chips">${TAGS[g].map((t) => `<button class="chip ${D.tags.includes(t) ? 'on' : ''}" data-act="tag-toggle" data-v="${t}" aria-label="${TAG_NAME[t]}" aria-pressed="${D.tags.includes(t)}">${tagLabel(t)}</button>`).join('')}</div>`;
+  });
+  const missing = TAG_BOUNDS.min - n;
+  h += `<div class="action">${D.tagsRefused ? note(`${TAG_BOUNDS.max} tags is the most`, 'Nothing changed. Remove one you have already picked to make room for another.', 'amber') : ''}<button class="btn primary" data-act="tags-save" ${dirty && missing <= 0 ? '' : 'disabled'}>${missing > 0 ? `Pick ${missing} more tag${missing === 1 ? '' : 's'} to save` : dirty ? 'Save' : 'Saved'}</button></div>`;
+  return h;
+};
+
+/* ---- 3.12 Intro ---- */
+V.intro = () => {
+  if (D.intro === null) D.intro = S.intro || '';
+  const len = [...D.intro].length, trimmed = D.intro.trim();
+  const shape = len > INTRO_CAP ? 'Keep it under 100 characters.' : /\n/.test(D.intro) ? 'One line, no line breaks.' : '';
+  const dirty = trimmed !== (S.intro || '');
+  let h = head('On your card', 'Intro');
+  h += `<div class="card"><div class="lab-top" style="margin-top:0">Your intro</div>
+    <input class="field" id="intro" value="${esc(D.intro)}" placeholder="Will travel for a hard game." aria-label="Your intro" maxlength="140">
+    <div style="display:flex;justify-content:space-between;margin-top:5px"><span class="tiny">One line, up to ${INTRO_CAP} characters. Optional.</span><span class="tiny mono" style="${len > INTRO_CAP ? 'color:var(--coral-ink)' : ''}">${len} / ${INTRO_CAP}</span></div>
+    ${shape ? `<div style="margin-top:8px">${note('', shape, 'coral')}</div>` : ''}${D.introError ? `<div style="margin-top:8px">${note('', D.introError, 'coral')}</div>` : ''}
+    <div class="tiny" style="margin-top:8px">Other players read this on your card. Leave out phone numbers, emails, links and handles — people reach you in the chat.</div></div>`;
+  h += `<div class="action"><button class="btn primary" data-act="intro-save" ${dirty && !shape && trimmed ? '' : 'disabled'}>${dirty ? 'Save' : 'Saved'}</button>${S.intro ? `<button class="btn" data-act="intro-remove">Remove intro</button>` : ''}</div>`;
+  return h;
+};
+
+/* ---- 3.13 Name — NamingScreen ---- */
+V.name = () => {
+  if (D.name === null) { D.name = S.user.name; D.nick = S.user.nickname; }
+  const nameOk = D.name.trim().replace(/\s+/g, ' ').length >= 2 && D.name.trim().length <= 64;
+  const nickOk = /^[A-Za-z0-9_.-]{2,64}$/.test(D.nick.trim());
+  const dirty = D.name.trim().replace(/\s+/g, ' ') !== S.user.name || D.nick.trim() !== S.user.nickname;
+  let h = head('On your card', 'Name');
+  h += `<div class="card"><div class="lab-top" style="margin-top:0">Name</div><input class="field" id="name" value="${esc(D.name)}" aria-label="Name">
+    <div class="lab-top">Nickname</div><div style="display:flex;align-items:center;gap:6px"><span class="mono" style="color:var(--muted)">@</span><input class="field mono" id="nick" value="${esc(D.nick)}" aria-label="Nickname"></div>
+    ${!nickOk && D.nick ? `<div style="margin-top:8px">${note('', 'Two to sixty-four characters: letters, digits, dot, dash or underscore.', 'coral')}</div>` : ''}${D.nameError ? `<div style="margin-top:8px">${note('', D.nameError, 'coral')}</div>` : ''}</div>`;
+  h += `<div class="action"><button class="btn primary" data-act="name-save" ${dirty && nameOk && nickOk ? '' : 'disabled'}>${dirty ? 'Save' : 'Saved'}</button></div>`;
+  h += `<div class="foot">Prototype: <span class="mono">marek</span>, <span class="mono">ania</span> and <span class="mono">raketa</span> are taken.</div>`;
+  return h;
+};
+
+/* ============================ notes beside the phone ============================ */
+const NOTES = {
+  you: { t: 'The tab', what: 'Three groups over a header card. The header is the record’s own header, compact; tapping it opens <i>How others see you</i>. Group titles are the shell’s; every row from <i>Skill passport</i> down is drawn by <code>player_profile</code> (or <code>player_record</code>, <code>onboarding</code>, <code>auth</code>). Sign out stays where it is today — <code>AccountPanel</code>, at the foot.', reads: '<code>GET /users/me</code> · <code>GET /ratings</code> · <code>GET /players/me/profile</code> (grown) · <code>GET /players/me/record</code>', writes: 'None on this screen.', changes: '—', status: ['built', 'Composition only'], needs: 'The read grows tags, photos, intro, the opt-in and the owner’s gender and preference; see the spec §5.1.' },
+  passport: { t: '3.1 Skill passport', what: 'Per rated sport, the onboarding result’s dark card (<code>ResultScreen</code>’s <code>Verdict</code>): <i>Your level</i>, the figure, the likely range, the confidence ring with the 30 % ceiling tick on an Initial estimate, the on-dark level bar with its legend, then Band and Rating status as rows. Under each card, the record’s three blocks (<code>RecordBlocks</code>: Player reliability · Last 5 · Counted). Then <i>Add a sport</i> and the ladder.', reads: '<code>GET /ratings</code> for the cards; <code>GET /players/me/record?sport=</code> for Last 5 and Counted per sport.', writes: '<b>None on a rating.</b> A level is proved, never declared. <i>Add a sport</i> starts one questionnaire — <code>POST /assessments</code> — through onboarding’s own pass, one sport, ending back here.', changes: 'A confirmed counted result moves the Level; absence widens the range. A new sport adds a rating and asks its Play intent at the tail, as every rating run does.', status: ['route', 'Reads exist · Add a sport reuses the questionnaire'], needs: 'A second door into the onboarding pass — today it begins only at the welcome picker (<code>onboardingPass.ts</code>).' },
+  score: { t: '3.2 Player reliability', what: 'The score ring, then the record card’s rows exactly as <code>RecordCard</code> draws them: three metered strands with their raw pairs, opponent variety, and sportsmanship by players.', reads: '<code>GET /players/me/record</code> — <code>reliability</code>, <code>variety</code>, and the sportsmanship zone. Each is omitted whole when there is nothing, never zeroed.', writes: '<b>None.</b> Only what the player does moves it.', changes: 'Below 70 the card takes a flat dock in other people’s searches. The pill on the card is this number.', status: ['route', 'Read exists · the figure lands with ADR-0179 §5'], needs: '<b>The figure crosses to its subject by decision.</b> Today <code>GET /players/me/record</code> serves <code>sportsmanship_band</code> and omits <code>sportsmanship</code> (ADR-0158 §6); ADR-0179 §5 reverses that, names the cost, and retires the band.' },
+  intent: { t: '3.3 What kind of game', what: '<code>PlayIntentsSection</code> exactly as built (#296), behind a row instead of on the tab.', reads: '<code>GET /ratings</code> ∩ <code>GET /players/me/profile</code>.play_intents', writes: '<code>PUT /play-intents/{sport}</code> with <code>surface: PROFILE_SCREEN</code>, in place, idempotent.', changes: 'The intent-alignment term in every stranger’s search — a weight, never a gate, never relaxed. An undeclared sport cannot be searched in or dealt from.', status: ['built', 'Built'], needs: 'Nothing.' },
+  week: { t: '3.4 Your week', what: '<code>AvailabilityGrid</code> as <code>SocialAvailabilityStep</code> draws it — days down, parts of the day across, the mint tick, the footnote inside the card — with Clear and Save. The commit’s floor of one slot does not bind here.', reads: '<code>GET /players/me/profile</code>.availability', writes: '<code>PUT /players/me/availability</code> — the whole week, every time; the response is the grid as stored. <code>useChangeAvailability</code> exists.', changes: 'The availability-overlap term; the Window a challenge carries; the week Play seeds its working copy from. Blank = the term stands down, never “no overlap”.', status: ['route', 'Route exists · screen missing'], needs: 'The screen.' },
+  radius: { t: '3.5 How far to look', what: 'The 6.10 slider between the served bounds — the row is the control, night fill, night thumb in a surface ring — the figure, the words, and a Save button. Nothing is written by letting go.', reads: '<code>GET /players/me/profile</code>.search_radius_km · bounds from <code>GET /player-profile/options</code>', writes: '<code>PUT /players/me/search-radius</code> on Save; the write path re-snaps and answers with the radius as held. <code>useChangeSearchRadius</code> exists.', changes: 'The edge of every search; how close is priced on proposals; the radar’s reach and the deck’s; the KEEP_THIS_RADIUS prompt stops once the profile holds the wider number.', status: ['route', 'Route exists · screen missing'], needs: 'The screen. Find a game already moves the same number.' },
+  area: { t: '3.6 Where you play', what: '<i>Your area is set</i> — the only state, because onboarding cannot finish without an area — and the control to read it again in its three permission states. No map, no name, no coordinates — nothing can turn the cell into a neighbourhood.', reads: 'Nothing: every committed profile holds an area, so there is no flag to read. The screen branches on the device’s permission state alone.', writes: '<code>PUT /players/me/location</code> — the cold start’s route, called by a person. A fix that rounds to the cell already held records nothing and answers 204.', changes: 'The partition this player is searched from; the distance on every card naming them; <i>In your area</i>; the radar’s centre; the next deal. No radius change, no reset, no prompt.', status: ['route', 'Route exists · screen missing'], needs: 'The screen.' },
+  gender: { t: '3.7 Who you play with', what: 'The gender step’s two radio groups, each with its own Save; the reach sentence at the moment of the press. The list row shows only the preference.', reads: '<b>Needs a decision.</b> The profile read promises never to serve either value (ADR-0096 §6). The owner reading their own answer is not what §6 protects — spec §5.2.', writes: '<code>PUT /players/me/gender</code> · <code>PUT /players/me/gender-preference</code> — neither exists; both aggregate methods do. No-ops on an unchanged value.', changes: 'The mutual gate — before enumeration, never relaxed, never scored. Narrowing hides this player from the excluded side entirely, including from people who searched for anybody.', status: ['route', 'Decided (ADR-0179 §4) · needs two routes and the read'], needs: 'Both values on <code>/players/me/profile</code> only — ADR-0096 §6 amended, §21’s test asserting both halves.' },
+  optin: { t: '3.8 Game suggestions', what: 'The opt-in step’s three promises, the standing answer with its date and copy version, and the two answers.', reads: '<b>Needs</b> <code>proposals_opt_in</code> (accepted, answered_at, copy_version) on the profile read.', writes: 'A write with <code>surface: PROFILE</code> and the copy version on screen. <b>Every press records</b>, re-affirmations included. <code>answer_proposals_opt_in</code> and <code>ConsentSurface.PROFILE</code> exist; the route does not.', changes: 'Whether searches with Initiation = platform may include this player. A no stops the engine pushing and nothing else.', status: ['needs', 'Needs a route and the read'], needs: 'The route, the read, and the promise <i>you can stop any time from your profile</i> made true.' },
+  record: { t: '3.9 How others see you', what: '<code>PlayerRecordSheet</code> with <code>{ kind: "me" }</code>, section for section: <code>RecordHeader</code> (the photo panel with the resolved Level over it, name with <i>(you)</i>, handle, intro, sport pills — no distance and no fit, because it is your own), <code>SkillCard</code>, <code>RecordBlocks</code>, <code>RecordCard</code>, <code>SocialTagRow</code>.', reads: '<code>GET /players/me/record</code> — ungated; a held player’s one screen for finding out how they appear.', writes: 'None. Every field is edited by the rows beneath it on the tab.', changes: '—', status: ['built', 'Built · needs a door'], needs: 'A door from the tab and from the header card. The sportsmanship row carries the same decision as 3.2.' },
+  photos: { t: '3.10 Photos', what: '<code>SocialPhotosStep</code> as it is: the rule note, <code>PhotoRow</code> of three 3:4 tiles (the profile tile bordered in ink, the night foot strip, the remove square), <code>PhotoAddTile</code> with the slots left, the poster tile when there is none, tap to promote, press-and-hold for the <code>BottomSheet</code> (Replace · Add · Edit), the flagged notice.', reads: '<b>Needs</b> the photo ids with their verdicts on the profile read. The record serves the first only.', writes: '<code>POST /photos</code> per picture, then <code>PUT /players/me/photos</code> with the ids in order on every change — <code>change_photos</code>, idempotent. An empty list brings the poster back.', changes: 'The face on every card, seat and radar tile; the ON COURT mark — only a passed check earns it.', status: ['needs', 'Needs a route and the read'], needs: 'One piece of work with tags and intro (ADR-0170 §5).' },
+  tags: { t: '3.11 Tags', what: '<code>SocialTagsStep</code> as it is: the eyebrow with the served bounds, the step’s question as the title, three groups of <code>Chip</code>s with the emoji labels, the ceiling note pinned above the button, and Save shut under the floor with the step’s own words.', reads: '<b>Needs</b> <code>social_tags</code> on the profile read; ids and bounds from <code>GET /player-profile/options</code>.', writes: '<code>PUT /players/me/social-tags</code> — <code>change_social_tags</code>, re-validated against the served bounds. No route yet.', changes: 'The playing-style and social-vibe terms and the tag overlap on every card and record naming this player. A tag is not an intent.', status: ['needs', 'Needs a route and the read'], needs: 'One piece of work with photos and intro.' },
+  intro: { t: '3.12 Intro', what: 'The intro step’s box with counter and rule; the two shape refusals shut Save before anything is sent; <code>contains_contact</code> is the server’s and lands on the reply.', reads: '<b>Needs</b> <code>intro</code> on the profile read (omitted where none).', writes: '<code>PUT /players/me/intro</code> or a removal — <b>neither exists</b>: ADR-0170 §5 defers it to the day tags, photo and intro are edited together. This tab is that day. Needs an <code>IntroChanged</code> event.', changes: 'The line under the name on this player’s card and record. Old search records keep the old line.', status: ['needs', 'Needs an aggregate change and a route'], needs: 'Ships with tags and photos, as one piece of work.' },
+  name: { t: '3.13 Name', what: '<code>NamingScreen</code> (#451) pre-filled: the two fields under their labels, and the taken-nickname refusal in the app’s own words.', reads: '<code>GET /users/me</code>', writes: '<code>PUT /users/me/name</code> — repeatable; keeping your own nickname is admitted; another player’s is <code>409 nickname_already_taken</code> → <i>That nickname is taken. Pick another.</i> Re-reads <code>GET /users/me</code> after.', changes: 'Every sentence, row, card, sheet, toast and seat label naming this player from the next read; the poster’s initials; the handle.', status: ['route', 'Route and screen exist · needs a door'], needs: 'A door. ADR-0171 left the You-tab edit as a follow-up.' },
+};
+
+/* ============================ router + render ============================ */
+const NAV = ['you'];
+const cur = () => NAV[NAV.length - 1];
+function go(s) { NAV.push(s); resetDrafts(); render(); document.getElementById('screen').scrollTop = 0; }
+function back() { if (NAV.length > 1) NAV.pop(); resetDrafts(); render(); }
+function resetDrafts() { Object.keys(D).forEach((k) => { D[k] = k === 'tagsRefused' ? false : null; }); }
+function logWrite(method, path, body) {
+  LOG.unshift({ t: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), method, path, body });
+  if (LOG.length > 40) LOG.pop();
+}
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+function render() {
+  document.getElementById('screen').innerHTML = V[cur()]();
+  document.getElementById('tabbar').innerHTML = [
+    ['now', 'Now', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'],
+    ['players', 'Players', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-4 3-6 7-6s7 2 7 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c3 0 5 2 5 5"/></svg>'],
+    ['play', 'Play', '<span class="disc"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8z"/></svg></span>'],
+    ['chats', 'Chats', '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H8l-5 3 1-5a8 8 0 1 1 17-6z"/></svg><span class="badge">1</span>'],
+    ['you', 'You', '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>'],
+  ].map(([k, l, ic]) => `<button class="tab ${k === 'you' ? 'on' : ''}" data-tab="${k}">${ic}<span>${l}</span></button>`).join('');
+  renderNotes();
+}
+function renderNotes() {
+  const n = NOTES[cur()], st = n.status;
+  const state = JSON.stringify(S, (k, v) => v instanceof Set ? [...v] : v, 1).replace(/\n\s*/g, ' ');
+  document.getElementById('notes').innerHTML = `
+    <h2>${n.t}</h2><span class="st ${st[0]}">${st[1]}</span>
+    <div class="k">What is on the screen</div><p>${n.what}</p>
+    <div class="k">Reads</div><p>${n.reads}</p>
+    <div class="k">How the update happens</div><p>${n.writes}</p>
+    <div class="k">What changes in Raketa</div><p>${n.changes}</p>
+    <div class="k">What it needs</div><p>${n.needs}</p>
+    <div class="k">Requests this prototype sent</div>
+    <pre class="log">${LOG.length ? LOG.map((l) => `<span class="m">${l.method}</span> ${l.path}${l.body !== undefined ? '  ' + esc(JSON.stringify(l.body)) : ''}   <span style="opacity:.55">${l.t}</span>`).join('\n') : 'Nothing yet — change something.'}</pre>
+    <details><summary>The profile as the prototype holds it</summary><pre class="log" style="margin-top:6px;max-height:260px">${esc(state)}</pre></details>
+    <p style="margin-top:12px;font-size:11px;color:var(--bg-muted)">Spec: <code>docs/specs/you/the-you-screen.md</code>. Throwaway prototype, 2026-09-17.</p>`;
+}
+
+/* ============================ actions ============================ */
+const phone = document.getElementById('phone');
+let holdTimer = null, held = false;
+phone.addEventListener('pointerdown', (e) => {
+  const tile = e.target.closest('[data-photo]');
+  if (!tile || e.target.closest('[data-act]')) return;
+  held = false;
+  holdTimer = setTimeout(() => { held = true; D.photoSheet = Number(tile.dataset.photo); render(); }, 450);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => phone.addEventListener(ev, () => { clearTimeout(holdTimer); }));
+phone.addEventListener('click', (e) => {
+  const tab = e.target.closest('[data-tab]');
+  if (tab) { if (tab.dataset.tab !== 'you') toast('Only the You tab is in this prototype.'); else { NAV.length = 1; resetDrafts(); render(); } return; }
+  const tile = e.target.closest('[data-photo]');
+  if (tile && !e.target.closest('[data-act]')) {
+    if (held) { held = false; return; }
+    const i = Number(tile.dataset.photo);
+    if (S.photos[i].upload === 'failed') { S.photos[i].upload = 'uploading'; S.photos[i].progress = 40; logWrite('POST', '/api/v1/photos', { file: '…' }); settleUpload(S.photos[i].id); render(); return; }
+    if (i > 0) { const [p] = S.photos.splice(i, 1); S.photos.unshift(p); writePhotos(); toast('Profile photo changed'); render(); }
+    return;
+  }
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  if (el.tagName === 'A') e.preventDefault();
+  const act = el.dataset.act, v = el.dataset.v;
+  if (act === 'photo-sheet-close' && e.target.closest('[data-stop]') && e.target.closest('[data-act]') !== el) return;
+  e.stopPropagation();
+  switch (act) {
+    case 'go': go(v); break;
+    case 'back': back(); break;
+    case 'toast': toast(v); break;
+    case 'add-sport': logWrite('POST', '/api/v1/assessments', { sport: v }); toast(`Starting the ${SPORT[v]} questionnaire — one pass, one sport, back here after`); renderNotes(); break;
+    case 'intent-open': D.intentOpen = D.intentOpen === v ? null : v; render(); break;
+    case 'intent-set': { const [sport, intent] = v.split('|'); if (S.intents[sport] !== intent) { S.intents[sport] = intent; logWrite('PUT', `/api/v1/play-intents/${sport}`, { intent, surface: 'PROFILE_SCREEN' }); toast(`${SPORT[sport]}: ${INTENT_LABEL[intent]}`); } D.intentOpen = null; render(); break; }
+    case 'week-toggle': if (D.week.has(v)) D.week.delete(v); else D.week.add(v); render(); break;
+    case 'week-clear': D.week = new Set(); render(); break;
+    case 'week-save': S.week = new Set(D.week); logWrite('PUT', '/api/v1/players/me/availability', { availability: [...S.week].map((c) => { const [day, part] = c.split('-'); return { day, part_of_day: { AM: 'MORNING', PM: 'AFTERNOON', EVE: 'EVENING' }[part] }; }) }); toast(S.week.size ? `Week saved · ${S.week.size} slots` : 'Week cleared'); render(); break;
+    case 'radius-save': S.radius = D.radius; logWrite('PUT', '/api/v1/players/me/search-radius', { search_radius_km: S.radius }); toast(`Saved · ${S.radius} km`); render(); break;
+    case 'area-read': S.area.held = true; logWrite('PUT', '/api/v1/players/me/location', { latitude: '…rounded…', longitude: '…rounded…' }); toast('Location saved'); render(); break;
+    case 'area-allow': S.area.permission = 'granted'; render(); break;
+    case 'area-sim': S.area.permission = 'blocked'; render(); break;
+    case 'gender-pick': D.gender = v; render(); break;
+    case 'pref-pick': D.pref = v; render(); break;
+    case 'gender-save': S.gender = D.gender; logWrite('PUT', '/api/v1/players/me/gender', { gender: S.gender }); toast('Saved'); render(); break;
+    case 'pref-save': S.preference = D.pref; logWrite('PUT', '/api/v1/players/me/gender-preference', { gender_preference: S.preference }); toast('Saved — applies to every search'); render(); break;
+    case 'optin-set': { const accepted = v === '1'; S.optIn = { accepted, at: 'today', copy: 'proposals-opt-in.v3', surface: 'PROFILE' }; logWrite('PUT', '/api/v1/players/me/proposals-opt-in', { accepted, copy_version: 'proposals-opt-in.v3', surface: 'PROFILE' }); toast(accepted ? 'Recorded: yes' : 'Recorded: no'); render(); break; }
+    case 'photo-sheet-close': D.photoSheet = null; render(); break;
+    case 'photo-remove': { S.photos.splice(Number(v), 1); D.photoSheet = null; writePhotos(); toast(S.photos.length ? 'Photo removed' : 'No photos — the poster stands in'); render(); break; }
+    case 'photo-replace': { const i = Number(v); const id = 'ph-' + Math.random().toString(36).slice(2, 6); S.photos[i] = { id, verdict: 'unchecked', look: i % 2 ? 'a' : 'b', upload: 'uploading', progress: 35 }; D.photoSheet = null; logWrite('POST', '/api/v1/photos', { file: '…' }); settleUpload(id); render(); break; }
+    case 'photo-add': { if (S.photos.length >= 3) { toast('Three is the ceiling'); break; } const id = 'ph-' + Math.random().toString(36).slice(2, 6); S.photos.push({ id, verdict: 'unchecked', look: S.photos.length % 2 ? 'b' : 'a', upload: 'uploading', progress: 35 }); D.photoSheet = null; logWrite('POST', '/api/v1/photos', { file: '…' }); settleUpload(id); render(); break; }
+    case 'tag-toggle': { const i = D.tags.indexOf(v); if (i >= 0) { D.tags.splice(i, 1); D.tagsRefused = false; } else if (D.tags.length >= TAG_BOUNDS.max) { D.tagsRefused = true; } else { D.tags.push(v); D.tagsRefused = false; } render(); break; }
+    case 'tags-save': S.tags = Object.values(TAGS).flat().filter((t) => D.tags.includes(t)); logWrite('PUT', '/api/v1/players/me/social-tags', { social_tags: S.tags }); toast(`Tags saved · ${S.tags.length} of ${TAG_BOUNDS.max}`); render(); break;
+    case 'intro-save': { const line = D.intro.trim(); if (/(@\w|https?:|www\.|\S+@\S+\.\S+|\d[\d\s-]{6,}\d)/i.test(line)) { D.introError = 'Leave out phone numbers, emails, links and handles — people reach you in the chat.'; logWrite('PUT', '/api/v1/players/me/intro', { intro: line }); logWrite('↩ 422', 'intro_not_admitted · contains_contact'); render(); break; } S.intro = line; D.introError = null; logWrite('PUT', '/api/v1/players/me/intro', { intro: line }); toast('Intro saved'); render(); break; }
+    case 'intro-remove': S.intro = ''; D.intro = ''; logWrite('DELETE', '/api/v1/players/me/intro'); toast('Intro removed'); render(); break;
+    case 'name-save': { const name = D.name.trim().replace(/\s+/g, ' '), nick = D.nick.trim(); logWrite('PUT', '/api/v1/users/me/name', { name, nickname: nick }); if (TAKEN_NICKNAMES.includes(nick.toLowerCase()) && nick !== S.user.nickname) { D.nameError = 'That nickname is taken. Pick another.'; logWrite('↩ 409', 'nickname_already_taken'); render(); break; } S.user.name = name; S.user.nickname = nick; D.nameError = null; logWrite('GET', '/api/v1/users/me'); toast('Saved'); render(); break; }
+    case 'signout': logWrite('POST', '/api/v1/auth/logout'); toast('Signed out (prototype stays here)'); renderNotes(); break;
+  }
+});
+function writePhotos() { logWrite('PUT', '/api/v1/players/me/photos', { photo_ids: S.photos.map((p) => p.id) }); }
+function settleUpload(id) {
+  setTimeout(() => { const p = S.photos.find((x) => x.id === id); if (p && p.upload === 'uploading') { p.progress = 80; if (cur() === 'photos') render(); } }, 500);
+  setTimeout(() => { const p = S.photos.find((x) => x.id === id); if (!p) return; p.upload = 'done'; p.verdict = Math.random() < 0.7 ? 'allowed' : 'flagged'; writePhotos(); if (cur() === 'photos' || cur() === 'you') render(); }, 1300);
+}
+phone.addEventListener('input', (e) => {
+  const id = e.target.id;
+  if (id === 'radius') { D.radius = Number(e.target.value); const p = ((D.radius - RADIUS.min) / (RADIUS.max - RADIUS.min)) * 100; e.target.style.setProperty('--p', `${p}%`); document.getElementById('radius-fig').textContent = `${D.radius} km`; document.getElementById('radius-words').textContent = cap(radiusWords(D.radius)); const b = document.getElementById('radius-save'); b.disabled = D.radius === S.radius; b.textContent = D.radius === S.radius ? 'Saved' : 'Save'; }
+  if (id === 'intro') { D.intro = e.target.value; D.introError = null; const pos = e.target.selectionStart; render(); const f = document.getElementById('intro'); f.focus(); f.setSelectionRange(pos, pos); }
+  if (id === 'name' || id === 'nick') { if (id === 'name') D.name = e.target.value; else D.nick = e.target.value; D.nameError = null; const pos = e.target.selectionStart; render(); const f = document.getElementById(id); f.focus(); f.setSelectionRange(pos, pos); }
+});
+/* a hash opens a screen directly — #passport, #record … — handy for a screenshot or a link */
+{ const first = location.hash.slice(1); if (first && first !== 'you' && V[first]) NAV.push(first); }
+render();
+</script>

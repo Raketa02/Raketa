@@ -2,6 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-14
+- **§5's *not editable yet* ended by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §6** — the You tab is the surface that
+  edits the intro, the tags and the photos as one piece of work; `IntroChanged` joins the stream.
 - **Amends** [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md) §2's closed
   list by one field, **`intro`**, and takes §3's first refusal — *"No bio, and no free-text field
   of any kind on a card. If a player is ever to write a sentence about themselves, that is its own

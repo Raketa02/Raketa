@@ -2762,3 +2762,60 @@ Level under each is what the pairing adds.
 deck's (ADR-0169 §3–§4, §20.5 here); the widen-in-You sentence is §17's; the court lines are
 §22's; *Wants to play you* and *You said yes* are §10's tags, drawn in the builder. The radar writes nothing about people: every word on a
 card is a figure the platform computed or a name the player gave.
+
+## 27. The You tab
+
+> Added 2026-09-17 by [ADR-0179](../../adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md);
+> the surface is [`../you/the-you-screen.md`](../you/the-you-screen.md) and the prototype beside
+> it, which is locked. **This section is short on purpose.** Every editing screen on the tab is
+> the onboarding step it came from and every read-only screen is the result card or the record
+> sheet, so their sentences are already written — the steps' copy in `player_profile`, the
+> result's in `onboarding`, the sheet's in §25 — and are cited here, never respelled. What is
+> new is the tab's own words: the titles, the live lines, and the few sentences a screen gained
+> or lost on the way from a step to a row.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The tab | `You` · eyebrow `Player profile` | the shell's, as today |
+| The three group titles | `Playing` · `Finding players` · `On your card` | `flab`, uppercase by style; the shell's |
+| The rows, Playing | `Skill passport` · `Player reliability` · `What kind of game` | |
+| The rows, Finding players | `Your week` · `How far to look` · `Where you play` · `Who you play with` · `Game suggestions` | *How far to look* is the radius step's own label |
+| The rows, On your card | `How others see you` · `Photos` · `Tags` · `Intro` · `Name` | *How others see you* is §25's `OWN_RECORD_TITLE`, cited |
+| Live line, passport | `{sport} {level}` joined by ` · ` | one per rating, the registry's order |
+| Live line, reliability | `{score} of 100 · {n} things counted` · `Nothing counted yet` | |
+| Live line, kind of game | `{sport} {intent}` joined by ` · `, `not set` for a sport with no answer | the intent words are `playIntentPresentation`'s |
+| Live line, week | `{n} slots ticked` · `Nothing ticked — we do not know when you play` | |
+| Live line, radius | `{n} km · {the step's words}` | `radiusWords`, cited |
+| Live line, area | `Area set · updates when you open Raketa` | the one state — a profile cannot be committed without an area |
+| Live line, who you play with | `Matched with anyone` · `… women only` · `… men only` | **the preference only** — the gender is drawn on its own screen and nowhere else on the tab |
+| Live line, suggestions | `Yes — since {date}` · `No — since {date}` | |
+| Live line, record | `Your player record, as a stranger reads it` | |
+| Live line, photos | `{n} of 3 · profile photo on court` · `{n} of 3 · profile photo not checked as on court` · `None — a court poster stands in` | |
+| Live line, tags | `{n} of 6 · {first}, {second}, +{rest}` | the names, not the emoji |
+| Live line, intro | `“{intro}”` · `None — say it in your own words` | the second quotes the step's title |
+| Live line, name | `{name} · @{nickname}` | the tab is one of the two places the handle is drawn (§15) |
+| Passport, a card's status chip | `Initial estimate` · `Calibrating` · `Stable` | `ratingStatusLabel`, cited; drawn as a `Tag`, not a row — the result card's *Rating status* row stays under the bar as well |
+| Passport, add a sport | `Add a sport` · `One questionnaire, one rating. Nothing you already hold changes.` · chip `Rate {sport}` | the chip begins a pass of one sport (ADR-0179 §3) |
+| Passport, the ladder | `The ladder` · `{edges}` · `{band} · you ({sports})` · *the band's meaning* | `bandPresentation`'s meanings, cited |
+| Reliability, the word by the ring | `Reliable` from 90 · `Holding` from 70 · `Under the bar` below · `Out of 100` | the tone ladder's three steps, said |
+| Reliability, with no record | `Nothing has fallen due for you yet — no plan has settled and nobody has asked you anything with a deadline. There is no score to draw, and that is not a low one.` | |
+| What kind of game, under the title | `This changes how people find you` | replaces the section's heading and body; the footnote for an undeclared sport is #296's, cited |
+| Your week, the buttons | `Save your week` · `Saved` · `Clear all` | the grid's footnote is the step's, cited |
+| How far to look, the button | `Save` · `Saved` | nothing writes on release |
+| Where you play | `Your area is set` · *the area-updates sentence* (§26) · `Read my area again` | the permission states are the step's, cited |
+| Who you play with | *the step's headings, labels, cost line and reach sentence* · `Save` · `Saved` | the scope sentences are not repeated |
+| Game suggestions, the third promise | `You can stop` — `any time, from here` | the step says *from your profile*; on the profile it says *here* |
+| Game suggestions, the answer | `Your answer` · `Yes` / `No` · `Given {date}, against these words ({copy version}), from setting up` / `… from this screen` | |
+| Photos | *the step's, whole* | title `Your court photos`; eyebrow `On-court only — up to three`; no *Continue* |
+| Tags, the button | `Save` · `Saved` · `Pick {n} more tag(s) to save` | the step's *to continue* becomes *to save* |
+| Intro, the buttons | `Save` · `Saved` · `Remove intro` | |
+| Name, the refusal | `That nickname is taken. Pick another.` | `authErrorMessage`'s, cited; the server's code |
+| The foot | `Sign out` | the account panel's, as today |
+
+**What is cited.** The steps' eyebrows lose their *Step N of 8* and keep their bounds; the
+result card's every word is the onboarding result's; the record sheet's every word is §25's;
+the area screen's permission states are the location step's; the reach sentence is the gender
+step's. **What is dropped** is recorded in ADR-0179 §9 so nobody restores it as a gap: the
+tab's placeholder line, the declaration section's heading and body, the week's promise note,
+the radius' *what this distance does*, the location's *why we ask*, the gender step's scope
+sentences, the opt-in's *every answer is recorded*, and every explanatory card of the first draft.

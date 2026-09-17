@@ -2,6 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-15
+- **The You-tab edit this record did not decide is decided by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §7** — the same
+  act, from the *Name* row, refused by the server with the same code.
 - **Supersedes one sentence of [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md)
   §4** — *"every sentence naming somebody uses the whole handle or names nobody"* — with ***the
   whole name or nobody***. §4's argument stands whole: the client may never *invent* a familiar
