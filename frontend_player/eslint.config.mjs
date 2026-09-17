@@ -458,8 +458,9 @@ export default [
     // Jest's setup file runs *inside* the test environment, where the runner injects
     // `jest` as a global. Nothing in the file's location tells ESLint that, and the
     // test-file block above is keyed on `*.test.*` — which a setup file deliberately is
-    // not, because `testMatch` would then try to run it as a suite.
-    files: ['jest.setup.js'],
+    // not, because `testMatch` would then try to run it as a suite. The second file is
+    // the configuration's too: what `jest.config.js` maps reanimated's mock to.
+    files: ['jest.setup.js', 'src/test-support/reanimatedActual.js'],
     languageOptions: { globals: { jest: 'readonly' } },
   },
 

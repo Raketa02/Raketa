@@ -14,7 +14,8 @@
  * ## Built on `PanResponder`, and it must not take the list's scroll
  *
  * React Native's own responder system, as the radius slider already drags — neither
- * `react-native-gesture-handler` nor `reanimated` is added for it (ADR-0165 §6). The row **never
+ * `react-native-gesture-handler` nor `reanimated` is used for it (ADR-0165 §6; both are in the
+ * app since ADR-0176, for the radar's field alone). The row **never
  * claims the touch when it lands**: the card under the finger is a door, and a tap has to reach it.
  * It claims on a *move*, and only once `swipeRowGeometry`'s rule says the finger has travelled the
  * intent distance across and further across than down — until then every move is the list's, and a

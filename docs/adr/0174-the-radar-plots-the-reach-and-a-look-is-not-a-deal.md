@@ -1,6 +1,16 @@
 # ADR-0174 — The radar plots the reach, and a look is not a deal
 
-- **Status:** Accepted
+- **Status:** Accepted — **§7's *Built with*, *Three states by width* and *Tapping*
+  superseded in part 2026-09-16 by
+  [ADR-0176](0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md)**, from the first
+  look on two devices: the field moves on `react-native-gesture-handler` and
+  `react-native-reanimated` — the decision this record said a stuttering device would reopen —
+  and **the card is the selection's alone at every width**; the closest width draws faces with
+  their level, a tap flies at the 3 km stop or the narrower width already held, and mocks 3, 9
+  and 10 no longer bind where they draw several cards. **§8's *Clustering* superseded
+  2026-09-17 by [ADR-0177](0177-the-pinch-lets-go-where-it-is-and-a-stack-opens-on-a-tap.md)
+  §2**: at the floor only, players too close to tell apart fold into a stack a tap opens;
+  above it the blob is still the truth. §1–§6, the rest of §7 and the rest of §8 stand.
 - **Date:** 2026-09-16
 - **Supersedes, by named sentence:**
   - [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §9's *"The toggle

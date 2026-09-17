@@ -3,7 +3,15 @@
 > **Decided by [ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)**
 > (2026-09-16), the spec issue is [#457](https://github.com/Raketa02/Raketa/issues/457), and
 > the sixteen mocks in [`radar-mocks/`](radar-mocks/) are **locked**: where a mock and a record
-> disagree, the record is amended. This file is what the backend serves and what the Players
+> disagree, the record is amended. **Amended by
+> [ADR-0176](../../adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md)** (2026-09-16,
+> from the first look on two devices): the field moves on the UI thread (§7.9), and **the card
+> is the selection's alone** — mocks 3, 9 and 10 no longer bind where they draw several cards
+> at once (§7.3–7.5, §7.7). **Amended by
+> [ADR-0177](../../adr/0177-the-pinch-lets-go-where-it-is-and-a-stack-opens-on-a-tap.md)**
+> (2026-09-17, from the second look): the pinch is held at the reach's edge and never banded
+> (§7.6), and **at the floor, players too close to tell apart fold into a stack a tap opens**
+> (§7.10). This file is what the backend serves and what the Players
 > tab's second pane is owed by it, in the shape of
 > [`the-play-screens.md`](the-play-screens.md); every sentence the pane says is in
 > [`the-words.md`](the-words.md) §26.
@@ -221,7 +229,12 @@ the field's bottom edge, above the tab bar.
 | --- | --- | --- |
 | **Wide** | above 10 km | a **24 pt** face — photo or poster, a 6 pt corner — and nothing else |
 | **Closer** | ≤ 10 km | a **30 pt** face with their level in the reading's sport beneath, mono `tiny` (*2,66*) |
-| **Closest** | ≤ 5,4 km | the **card** (7.4) |
+| **Closest** | ≤ 5,4 km | the closer face, for everybody but the selected player; the hint changes (7.7) |
+
+**The card (7.4) is the selection's alone, at every width** (ADR-0176 §3): at most one player
+is a card, the one tapped, and nobody else is one however close the view. Mocks 3, 9 and 10
+drew the closest width as a field of cards; on a device the cards lay on one another and no tap
+reached the one wanted, and the author ruled the card a thing one player has at a time.
 
 Thresholds carry a small dead-band (about 3 %) so a pinch resting on one does not flicker.
 
@@ -243,28 +256,32 @@ A paper card, ~190 pt wide, radius 13, anchored so its top-left sits at the play
 6. **The last line** — *Tap for the full card ›* in coral; or *You said yes ›* / *Not today ›*
    after an answer (§5). **The whole card is the target.**
 
-Nearer players are drawn above farther ones; the selected above all.
+Nearer players are drawn above farther ones; the selected — the one card — above all.
 
 ### 7.5 Tapping, flying, selecting — mocks 2, 3
 
 | Tap | Effect |
 | --- | --- |
-| a face (wide or closer) | the view **flies** to them (~400 ms ease; instant under reduced motion), centres on them, lands at the **3 km** stop, and they are **selected** |
+| a face (at any width) | the view **flies** to them (~400 ms ease; instant under reduced motion), centres on them, lands at the **3 km** stop — **or at the width already held where that is narrower** (ADR-0176 §3), so a tap at 1,5 km across never zooms out — and they are **selected**: their card is drawn |
 | a card | the record sheet, with §5's foot; no flight |
 | the field | deselect; the zoom stays |
 | ◉ | home: centred on you, the opening width, deselected |
 | a face while another is selected | switch selection and fly |
 
-A selected player **keeps their card** when the view zooms back out past 5,4 km, drawn at the
-face's position above every face; tapping that card opens the sheet. A sport switch clears the
+A selected player **keeps their card** through every zoom, in and out, drawn at the face's
+position above every face; tapping that card opens the sheet. A sport switch clears the
 selection and keeps position and zoom; a selected player absent from the next reading is
 deselected silently.
 
 ### 7.6 Moving — mock 1
 
 Drag anywhere; the field follows the finger with **no inertia** and settles where it is let
-go. Panning **rubber-bands** when the reach's edge reaches the screen's centre. ± and the
-fly-to zoom around the screen's centre; the pinch around the fingers. No haptic on the radar.
+go. Panning **rubber-bands** when the reach's edge reaches the screen's centre — **and only
+panning**: the pinch is *held* at the edge and never banded, so lifting the fingers moves
+nothing (ADR-0177 §1). The drag is anchored on the fingers' travel and never on their
+position, so a pinch that ends as a one-finger drag continues from where the field is. ± and
+the fly-to zoom around the screen's centre; the pinch around the fingers. No haptic on the
+radar.
 
 The view — position, zoom, selection — is **kept while the app lives**: across the Deck |
 Radar toggle and across tabs. A cold start opens at home.
@@ -276,8 +293,8 @@ Radar toggle and across tabs. A cold start opens at home.
   Beside it, right-aligned, *+N off screen* or *all of them*, so the count is never mistaken for
   the population.
 - **Hint**: always opens with the privacy line — *Distance and bearing only — never an
-  address, never a street.* — then, while faces or levels are drawn, *Drag to move, pinch or use
-  ± to zoom, tap anybody to fly to them.*; once cards are drawn, *Tap a card for the full
+  address, never a street.* — then, wide and closer, *Drag to move, pinch or use ± to zoom, tap
+  anybody to fly to them.*; closest, *Tap anybody for their card, and the card for the full
   profile and the two answers.* The hint switches on the **zoom state**, never on selection.
 - **Empty reading**: headline *Nobody within {reach} km plays {sport} yet*; hint the deck's own
   *Your search radius lives in You. Widening it is what brings more people into range.* The
@@ -289,16 +306,45 @@ Radar toggle and across tabs. A cold start opens at home.
 ### 7.8 Accessibility
 
 Every face and card carries a spoken label — *{name}, {distance} km, {sport} {level}* — and
-acts as a button. The footer's headline and hint are read. ± and ◉ are labelled (*Zoom in*,
-*Zoom out*, *Back to you*). The sheet is the accessible path to acting; nothing is answerable
-from the field itself.
+acts as a button. A stack is a button too — *{n} players close together*, with a hint saying
+whether a tap spreads them or folds them back, and `expanded` carrying which. The footer's
+headline and hint are read. ± and ◉ are labelled (*Zoom in*, *Zoom out*, *Back to you*). The
+sheet is the accessible path to acting; nothing is answerable from the field itself.
 
 ### 7.9 Built with
 
-Raw touches for the pan and the two-finger pinch, the field's transform on the native driver,
-`react-native-svg` for the rings, absolutely positioned tiles counter-scaled so a face is
-always 24 or 30 pt. **No gesture or animation library** (ADR-0165 §6); a device that stutters
-reopens that as its own decision.
+**`react-native-gesture-handler` for the pan and the pinch, `react-native-reanimated` for the
+field's one transform — on the UI thread** ([ADR-0176](../../adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md)
+§2, which is the decision the first version of this section said a stuttering device would
+reopen: two devices did). `react-native-svg` for the rings, their centre and radius animated on
+the same thread; absolutely positioned tiles counter-scaled about a **one-point** anchor so a
+face is always 24 or 30 pt — one point and not none, because iOS draws no transform on a view
+with no size at all. Which rings exist, the footer's count and the counter are React's, told
+only when a sentence would change. The swipe row, the deck's drag and the radius slider stay on
+`PanResponder` (ADR-0165 §6, narrowed to them).
+
+### 7.10 A stack at the floor — ADR-0177
+
+At the **floor** — 1,5 km across, and at no other width — players whose drawn spots lie
+**nearer than one face is wide** (34 pt: the closer face and its ring, which is 0,131 km on a
+390 pt phone and less on a wider one) are folded into a **stack**, taken across, so A over B
+and B over C is one stack of three. The stack is one marker at the mean of their spots — a
+face-sized paper square, the count in mono (*3*) — spoken *3 players close together*; its
+members are not drawn. The footer's headline still counts their spots: a stack of three is
+three players in view. While a stack stands, the hint gains *A number is players too close to
+tell apart; tap it to spread them.*
+
+| Tap | Effect |
+| --- | --- |
+| the marker | **opens** it: the members fan out on rings around it — the first ring 44 pt from the marker, each face 42 pt apart and each ring 42 pt further out, from north clockwise, the next ring when one is full — each a face at its usual size with a hairline back to the marker; the marker turns volt and says it is open |
+| a fanned face | flies to where the fan put them, at the floor, and selects them: their card opens at the fanned spot, the fan still standing |
+| the open marker again · the field · a zoom off the floor | folds them back; the selection is kept |
+
+A selected member of a folded stack is still their card, drawn at their own spot above the
+marker — the one card is the one card (ADR-0176 §3). Nobody moves: a fanned face is drawn
+somewhere else for as long as the fan is open, and its distance and bearing are what they
+were. Above the floor there is no stack; closer is the answer there, and the blob at 18 km is
+the truth (ADR-0174 §8, narrowed).
 
 ---
 
@@ -316,10 +362,13 @@ projection moved. Prior art: the deck's `run_deck_deal` tests, the fence tests, 
 profile-surface route tests.
 
 **Client.** The radar's geometry — km → pt, the ladder and its bounds from the reach, the state
-by width, ring selection, in-view counting, the fly-to target — is a set of pure functions
-tested without rendering. The pane is tested through the router harness with a served reading:
-the three states, a tap flying and selecting, the selected card surviving a zoom-out, the
-footer's numbers, the chips refetching, the empty and failing readings. The sheet's foot is
+by width, the one-card rule, ring selection, in-view counting, the fly-to target, the stack
+rule and the fan — is a set of pure functions tested without rendering. The pane is tested
+through the router harness with a served reading and the gesture library's own utilities for
+the pan and the pinch: the three states, a tap flying and selecting, the selected card
+surviving a zoom out and a zoom in, the footer's numbers, the chips refetching, the empty and
+failing readings, a stack folding at the floor and dissolving above it, opening on a tap and
+folding back. The sheet's foot is
 tested per relation. The cold-start refresh is tested through the platform location port's fake
 and the profile API mock: cold start puts; foreground under 24 h does not; revoked does nothing.
 Prior art: `deck.test.tsx`, `promptSheet.test.tsx`, `useLocationStep`'s tests.
@@ -328,7 +377,7 @@ Prior art: `deck.test.tsx`, `promptSheet.test.tsx`, `useLocationStep`'s tests.
 
 ## 9. Out of scope
 
-Venues (the mocks' ◎). Clustering — faces fold into nothing; the blob is the truth for this
-work. A location picker. Blocking from the radar (`RADAR` is the block's fifth surface when a
+Venues (the mocks' ◎). Clustering **above the floor** — there, faces fold into nothing and the
+blob is the truth; the stack at the floor is §7.10's (ADR-0177). A location picker. Blocking from the radar (`RADAR` is the block's fifth surface when a
 client calls the route). Moving the radius slider to You. Polling or live updates. Edge arrows
 for off-screen players. A dormancy fade.

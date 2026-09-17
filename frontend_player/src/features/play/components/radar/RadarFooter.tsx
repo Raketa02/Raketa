@@ -47,6 +47,8 @@ export type RadarFooterState =
       readonly inView: number;
       readonly offScreen: number;
       readonly zoom: ZoomState;
+      /** Whether a stack stands on the field — the hint's third sentence (ADR-0177 §2). */
+      readonly stacked: boolean;
     }
   | { readonly kind: 'empty'; readonly reachKm: number; readonly sportName: string }
   | { readonly kind: 'loading' }
@@ -94,7 +96,7 @@ function headline(state: RadarFooterState): string {
 function hint(state: Exclude<RadarFooterState, { kind: 'failed' }>): string {
   switch (state.kind) {
     case 'reading':
-      return radarHint(state.zoom);
+      return radarHint(state.zoom, state.stacked);
     case 'empty':
       return emptyHint();
     case 'loading':

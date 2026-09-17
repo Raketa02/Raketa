@@ -8,16 +8,20 @@
  *
  * - **The reading is asked for on the pane, per sport, and held**: one `POST /radar` per sport,
  *   none on a flip back inside the window.
- * - **The three states at three widths**: a face at 18 km across, a face with its level at 10,
- *   the card at 5,4 — and ± walks the ladder and greys at the ends.
- * - **A tap on a face flies, lands at 3 km and selects**; the selected card survives a zoom
- *   out; the field deselects; ◉ homes.
+ * - **The three states at three widths**: a face at 18 km across, a face with its level at 10
+ *   and at 5,4 — and ± walks the ladder and greys at the ends. **The card is the selection's
+ *   alone** (ADR-0176 §3): nobody is a card until they are tapped, at any width.
+ * - **A tap on a face flies, lands at 3 km — or the width already held if narrower — and
+ *   selects**; the selected card survives a zoom out and a zoom in; the field deselects; ◉
+ *   homes.
  * - **The footer counts points in view and off screen**, switches its hint on the zoom state,
  *   and says the empty, loading and failing sentences.
  * - **The chip is the reading's own number** through the deck's own sentence.
  * - **The sport chips refetch and clear the selection**, keeping the view.
  * - **The view survives a tab switch**; a cold start opens at home.
- * - **The pinch is continuous and the next ± snaps**; a drag moves the view and recounts.
+ * - **The pinch is continuous and the next ± snaps**; a drag moves the view and recounts. Both
+ *   are `react-native-gesture-handler`'s, fired through its own jest utilities
+ *   (`test-support/radarTouch`), and the pan claims nothing short of the intent distance.
  * - **A card opens the record sheet, with the foot the relation demands** (ADR-0174 §4,
  *   [#464](https://github.com/Raketa02/Raketa/issues/464)): the two buttons for a stranger, a
  *   liker's line above them, the reader's own yes beside *Not today*, a match with its chat
@@ -30,6 +34,7 @@
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { AccessibilityInfo } from 'react-native';
+import { Line } from 'react-native-svg';
 
 import { onlineManager } from '@tanstack/react-query';
 
@@ -57,7 +62,7 @@ import {
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
 import { fakeHaptics } from '@/test-support/platform';
-import { claimsThePress, drag, pinch } from '@/test-support/radarTouch';
+import { drag, panClaimsAfter, pinch } from '@/test-support/radarTouch';
 import {
   errorResponse,
   installTransport,
@@ -104,6 +109,8 @@ import {
   radarHint,
   reliabilityChip,
   ringLabel,
+  stackHint,
+  stackLabel,
   tagsInCommon,
   widthAcross,
 } from './radarPresentation';
@@ -442,7 +449,6 @@ async function openRadar() {
   await screen.findByLabelText(FILIP_TILE);
 }
 
-const field = () => screen.getByTestId('radar-field');
 const readingBodies = () => transport.requestsTo('POST', RADAR).map((request) => request.body);
 const zoomIn = () => fireEvent.press(screen.getByLabelText(ZOOM_IN_LABEL));
 const zoomOut = () => fireEvent.press(screen.getByLabelText(ZOOM_OUT_LABEL));
@@ -459,6 +465,9 @@ const cards = () => screen.queryAllByText(TAP_FOR_THE_FULL_CARD);
 function travelled(): void {
   act(() => {
     jest.advanceTimersByTime(theme.motion.flyTo + theme.motion.settle);
+    // The landing is spoken to JavaScript through `runOnJS` — a microtask the fake clock
+    // holds until it next moves, however little.
+    jest.advanceTimersByTime(0);
   });
 }
 
@@ -586,7 +595,7 @@ describe('the reading', () => {
 });
 
 describe('the three states by width', () => {
-  it('is faces at 18, faces with their level at 10, and cards at 5,4 — and ± walks the ladder', async () => {
+  it('is faces at 18, faces with their level at 10 and at 5,4 — never a card untapped — and ± walks the ladder', async () => {
     await openRadar();
     // Wide: a face and nothing else. `2,60` is the level — under no face at this width.
     expect(screen.queryByText('2,60')).toBeNull();
@@ -606,11 +615,13 @@ describe('the three states by width', () => {
     zoomIn();
     landedAt(5.4);
     expect(screen.getByText(widthAcross(5.4))).toBeTruthy();
-    // Closest: every row is a card, and the hint says what a card leads to.
-    expect(cards().length).toBeGreaterThanOrEqual(4);
+    // Closest: still faces with their level — the card is the selection's and nobody is
+    // selected — and the hint says a tap is what earns one.
+    expect(cards()).toHaveLength(0);
+    expect(screen.getAllByText('2,60').length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText(radarHint('closest'))).toBeTruthy();
-    expect(screen.getAllByText(reliabilityChip(88).split(' ')[1] ?? '').length).toBeGreaterThan(0);
-    expect(screen.getAllByText(tagsInCommon(1)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(reliabilityChip(88).split(' ')[1] ?? '')).toBeNull();
+    expect(screen.queryByText(tagsInCommon(1))).toBeNull();
   });
 
   it('greys ± at the ends of the ladder: 30 at the widest for a 10 km reach, 1,5 at the floor', async () => {
@@ -634,11 +645,12 @@ describe('the three states by width', () => {
 
   it('draws the card line for line: face, name, distance, one sport row per rated sport, the two scores, the tags, the door', async () => {
     await openRadar();
-    zoomIn();
-    landedAt(10);
-    zoomIn();
-    landedAt(5.4);
+    fireEvent.press(screen.getByRole('button', { name: MAREK_TILE }));
+    landedAt(FLY_TO_WIDTH_KM);
 
+    // The one card on the field is his; everybody else is a face.
+    expect(cards()).toHaveLength(1);
+    expect(screen.getAllByText(reliabilityChip(88).split(' ')[1] ?? '')).toHaveLength(1);
     const marek = textOf(screen.getByRole('button', { name: MAREK_TILE }));
     expect(marek).toContain('Marek Z.');
     expect(marek).toContain(cardDistance(4.8));
@@ -658,9 +670,12 @@ describe('tapping, flying, selecting', () => {
     fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
 
     landedAt(FLY_TO_WIDTH_KM);
-    // At 3 km across everybody is a card, Filip among them.
-    expect(cards()).toHaveLength(CAST.length);
+    // At 3 km across Filip is the one card; everybody else is a face with their level.
+    expect(cards()).toHaveLength(1);
     expect(textOf(screen.getByRole('button', { name: FILIP_TILE }))).toContain(
+      TAP_FOR_THE_FULL_CARD,
+    );
+    expect(textOf(screen.getByRole('button', { name: KAROL_TILE }))).not.toContain(
       TAP_FOR_THE_FULL_CARD,
     );
     // Centred on Filip at 130 pt per km: Karol, 1,2 km from the viewer, is still inside the
@@ -669,11 +684,17 @@ describe('tapping, flying, selecting', () => {
     expect(screen.getByText(playersInView(2))).toBeTruthy();
   });
 
-  it('keeps the selected card when the view zooms back out, above every face', async () => {
+  it('keeps the selected card when the view zooms in and back out, above every face', async () => {
     await openRadar();
     fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
     landedAt(FLY_TO_WIDTH_KM);
 
+    zoomIn();
+    landedAt(1.5);
+    expect(cards()).toHaveLength(1);
+
+    zoomOut();
+    landedAt(3);
     zoomOut();
     landedAt(5.4);
     zoomOut();
@@ -736,6 +757,24 @@ describe('tapping, flying, selecting', () => {
       TAP_FOR_THE_FULL_CARD,
     );
     expect(textOf(screen.getByRole('button', { name: FILIP_TILE }))).not.toContain(
+      TAP_FOR_THE_FULL_CARD,
+    );
+  });
+
+  it('flies to a face at the width already held when that is narrower than 3 km', async () => {
+    await openRadar();
+    fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
+    landedAt(FLY_TO_WIDTH_KM);
+    zoomIn();
+    landedAt(1.5);
+
+    // Karol is 1,2 km from the viewer and Filip 1,9: at 260 pt per km the two are 300 pt
+    // apart, so Karol is on the field from Filip's spot. A tap on him centres on him and
+    // stays at 1,5 — the field never zooms out to show a card.
+    fireEvent.press(screen.getByRole('button', { name: KAROL_TILE }));
+    landedAt(1.5);
+    expect(cards()).toHaveLength(1);
+    expect(textOf(screen.getByRole('button', { name: KAROL_TILE }))).toContain(
       TAP_FOR_THE_FULL_CARD,
     );
   });
@@ -1149,28 +1188,25 @@ describe('the view is kept while the app lives', () => {
 });
 
 describe('the pinch and the drag', () => {
-  it('never claims the press: a face and a card are doors', async () => {
+  it('never claims the press: a face and a card are doors, and the pan waits the intent distance', async () => {
     await openRadar();
-    expect(claimsThePress(field(), [200, 300])).toBe(false);
+    expect(panClaimsAfter()).toBe(theme.size.swipeRow.intent);
   });
 
   it('pinches continuously around the fingers, and the next ± snaps to the ladder', async () => {
     await openRadar();
 
     // Two fingers 100 pt apart spread to 200: half the width, 9 km across.
-    expect(
-      pinch(
-        field(),
-        [
-          [145, 252],
-          [245, 252],
-        ],
-        [
-          [95, 252],
-          [295, 252],
-        ],
-      ),
-    ).toBe(true);
+    pinch(
+      [
+        [145, 252],
+        [245, 252],
+      ],
+      [
+        [95, 252],
+        [295, 252],
+      ],
+    );
 
     landedAt(9);
     expect(screen.getByText(widthAcross(9))).toBeTruthy();
@@ -1186,7 +1222,6 @@ describe('the pinch and the drag', () => {
     await openRadar();
     // Fingers closing from 200 to 10 apart would ask for 360 km across; the widest is 30.
     pinch(
-      field(),
       [
         [95, 252],
         [295, 252],
@@ -1207,7 +1242,7 @@ describe('the pinch and the drag', () => {
 
     // The field dragged 200 pt up — the view moves south by 8,6 km, inside the reach — carries
     // Marek and Piotr, the two north of the viewer, off the top; the count says so.
-    expect(drag(field(), [200, 500], [200, 300])).toBe(true);
+    drag([200, 500], [200, 300]);
 
     expect(screen.getByText(offScreen(2))).toBeTruthy();
     expect(screen.getByText(playersInView(3))).toBeTruthy();
@@ -1221,11 +1256,117 @@ describe('the pinch and the drag', () => {
     // 600 pt of drag at 18 km across is nearly 28 km — past a 10 km reach. Followed all the
     // way, the whole cast would be under the footer; settled back to the edge, the viewer sits
     // 10 km below the focus and everybody is still inside the box.
-    drag(field(), [200, 100], [200, 700]);
+    drag([200, 100], [200, 700]);
 
     travelled();
     expect(screen.getByText(offScreen(0))).toBeTruthy();
     expect(screen.getByText(playersInView(CAST.length))).toBeTruthy();
+  });
+});
+
+/**
+ * **A stack at the floor** — players too close to tell apart, folded into one marker and
+ * spread out again by a tap (ADR-0177 §2, `the-radar.md` §7.10).
+ */
+describe('a stack at the floor', () => {
+  const OLA = 'aaaaaaaa-0000-4000-8000-000000000007';
+  const OLA_TILE = tile('Ola K.', 1.95);
+  /** Filip and Ola are about 60 m apart — 16 pt at the floor, under one face — and Karol is 2 km off. */
+  const CROWDED = [
+    row('Karol T.', KAROL, 1.2, 130),
+    row('Filip N.', FILIP, 1.9, 47),
+    row('Ola K.', OLA, 1.95, 48),
+  ];
+  const marker = () => screen.queryByRole('button', { name: stackLabel(2) });
+  /** The hairlines from the marker to each fanned face — SVG lines, the only ones on the field. */
+  const legs = () => screen.UNSAFE_queryAllByType(Line);
+
+  beforeEach(() => {
+    transport.on('POST', RADAR, () => json(reading({ candidates: CROWDED })));
+  });
+
+  it('folds two players a face apart into one marker at the floor, and nowhere above it', async () => {
+    await openRadar();
+    expect(marker()).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
+    landedAt(FLY_TO_WIDTH_KM);
+    // At 3 km across the two are 32 pt apart: two faces, no stack, the plain hint.
+    expect(marker()).toBeNull();
+    expect(screen.getByRole('button', { name: OLA_TILE })).toBeTruthy();
+    expect(screen.getByText(radarHint('closest'))).toBeTruthy();
+
+    zoomIn();
+    landedAt(1.5);
+    // At the floor they are one marker that says two; Filip, selected, is still his card.
+    expect(marker()).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: OLA_TILE })).toBeNull();
+    expect(cards()).toHaveLength(1);
+    expect(screen.getByText(radarHint('closest', true))).toBeTruthy();
+    // Karol, 2 km off, is a face of his own.
+    expect(screen.getByRole('button', { name: KAROL_TILE })).toBeTruthy();
+
+    // Deselected, Filip folds into the marker too.
+    fireEvent.press(screen.getByTestId('radar-field-empty', HIDDEN_TOO));
+    await waitFor(() => expect(cards()).toHaveLength(0));
+    expect(screen.queryByRole('button', { name: FILIP_TILE })).toBeNull();
+    expect(marker()).toBeTruthy();
+
+    // Off the floor the stack dissolves and the two are faces again.
+    zoomOut();
+    landedAt(3);
+    expect(marker()).toBeNull();
+    expect(screen.getByRole('button', { name: FILIP_TILE })).toBeTruthy();
+    expect(screen.getByRole('button', { name: OLA_TILE })).toBeTruthy();
+  });
+
+  it('opens on a tap — the members fan out and can be tapped — and folds on a second tap or on empty field', async () => {
+    await openRadar();
+    fireEvent.press(screen.getByRole('button', { name: FILIP_TILE }));
+    landedAt(FLY_TO_WIDTH_KM);
+    fireEvent.press(screen.getByTestId('radar-field-empty', HIDDEN_TOO));
+    await waitFor(() => expect(cards()).toHaveLength(0));
+    zoomIn();
+    landedAt(1.5);
+    expect(marker()!.props.accessibilityHint).toBe(stackHint(false));
+    expect(marker()!.props.accessibilityState).toEqual({ expanded: false });
+
+    expect(legs()).toHaveLength(0);
+
+    fireEvent.press(marker()!);
+
+    // Spread: both faces are back, each a button, a leg from the marker to each, with the
+    // marker saying it is open.
+    expect(screen.getByRole('button', { name: FILIP_TILE })).toBeTruthy();
+    expect(screen.getByRole('button', { name: OLA_TILE })).toBeTruthy();
+    expect(legs()).toHaveLength(2);
+    expect(marker()!.props.accessibilityState).toEqual({ expanded: true });
+    expect(marker()!.props.accessibilityHint).toBe(stackHint(true));
+
+    // A fanned face flies to where it is drawn, at the floor, and is selected there: the one
+    // card, with the fan still standing.
+    fireEvent.press(screen.getByRole('button', { name: OLA_TILE }));
+    landedAt(1.5);
+    expect(cards()).toHaveLength(1);
+    expect(textOf(screen.getByRole('button', { name: OLA_TILE }))).toContain(TAP_FOR_THE_FULL_CARD);
+    expect(screen.getByRole('button', { name: FILIP_TILE })).toBeTruthy();
+    expect(marker()!.props.accessibilityState).toEqual({ expanded: true });
+
+    // A second tap folds them back: Ola, selected, stays her card; Filip is the marker's.
+    fireEvent.press(marker()!);
+    expect(legs()).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: FILIP_TILE })).toBeNull();
+    expect(cards()).toHaveLength(1);
+    expect(marker()!.props.accessibilityState).toEqual({ expanded: false });
+
+    // Open again, then a tap on empty field folds it and deselects.
+    fireEvent.press(marker()!);
+    expect(screen.getByRole('button', { name: FILIP_TILE })).toBeTruthy();
+    fireEvent.press(screen.getByTestId('radar-field-empty', HIDDEN_TOO));
+    await waitFor(() => expect(cards()).toHaveLength(0));
+    expect(screen.queryByRole('button', { name: FILIP_TILE })).toBeNull();
+    expect(marker()!.props.accessibilityState).toEqual({ expanded: false });
   });
 });
 

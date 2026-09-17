@@ -21,5 +21,10 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // `expo-router/testing-library` quietly `jest.mock`s reanimated with the library's inert
+    // mock the moment it is imported, and registers it after anything a test file could
+    // hoist. The radar's field is real reanimated under test, so the mock's module name is
+    // pointed at a file that hands back the real one — see `src/test-support/reanimatedActual.js`.
+    '^react-native-reanimated/mock$': '<rootDir>/src/test-support/reanimatedActual.js',
   },
 };

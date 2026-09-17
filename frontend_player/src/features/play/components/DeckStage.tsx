@@ -17,7 +17,8 @@
  * ## Built on the responder the app already drags with
  *
  * React Native's own `PanResponder` and `Animated` with the native driver — **no
- * `react-native-gesture-handler`, no `react-native-reanimated`** — because the chat row and the
+ * `react-native-gesture-handler`, no `react-native-reanimated`** for the stage, though both are
+ * in the app for the radar's field (ADR-0176) — because the chat row and the
  * radius slider prove the pattern. The stage **never claims the touch when it lands**: the card
  * under the finger is a door — a long press opens the record — and a tap and a hold have to
  * reach it. It claims on a *move*, once `deckStageGeometry` says the finger has travelled the

@@ -329,7 +329,8 @@ The gesture was refused **not on cost** — `RadiusSlider` already drags on the
 built-in `PanResponder` — but because _Show them again_ was struck, leaving `PASS_SUPPRESS` at
 thirty days with nothing that reverses one: a swipe would put the cheapest gesture in the app
 on the most durable act in it. **No `react-native-gesture-handler` and no
-`react-native-reanimated` are added**, the leaving animation stays a leaving animation, and
+`react-native-reanimated` are added** _(both are in the app since ADR-0176, for the radar's
+field alone; the deck's drag is still on `PanResponder`)_, the leaving animation stays a leaving animation, and
 `deck.test.tsx` asserts both absences — the second against `package.json`, because that is
 where a build session reaching for a swipe reaches first. Answering is **optimistic** so the
 next card is already there to receive the focus that moves onto it, and **a refusal puts the
@@ -773,7 +774,8 @@ font file is the author's call at the look.
 **A swipe is an answer, and the buttons remain the path** (ADR-0169 §3). `DeckStage` is
 rewritten on `PanResponder` and `Animated` with the native driver — no
 `react-native-gesture-handler`, no `react-native-reanimated`, as the swipe row and the slider
-already prove — and it never claims the press: the card is a door (a long press opens the
+already prove _(and still none for the stage after ADR-0176 brought both in for the radar's
+field)_ — and it never claims the press: the card is a door (a long press opens the
 record), and it claims a move that has travelled the swipe row's own intent across and further
 across than down, in either direction. The card follows the finger and turns; the two stamps —
 _LET'S PLAY_ in volt top-left, _NOT TODAY_ in white top-right, the buttons' own words uppercased
@@ -957,7 +959,10 @@ pinch is doing, and nothing is laid out again until a gesture ends. The rings, t
 and the cluster's counter are JavaScript's over a `live` view kept in state beside the native
 values — a hairline scaled by twelve is a smear — and during a flight they read the view off the
 **same** linear interpolation of the transform the native side animates, so the two land
-together. Raw touches on `PanResponder`, never on the press (a face and a card are doors): one
+together. _(The mechanism in this sentence and the next — the native driver, the 0 × 0 anchor,
+the `live` state, `PanResponder` — is what the first look on two devices disproved and ADR-0176
+replaced; the shape survives and the thread does not, in the paragraph at the end of this
+section.)_ Raw touches on `PanResponder`, never on the press (a face and a card are doors): one
 finger past the intent distance is a drag with no inertia that rubber-bands past the reach and
 settles back over `motion.settle`; two fingers is a pinch, continuous between the floor and the
 widest stop, **around the fingers** — the kilometre point under their first midpoint stays under
@@ -1096,3 +1101,79 @@ refusal taking the mark back, a mutual naming a challenge pushing the yes route,
 none toasting, the cap settling a stranger and flying a liker, and the chip counting down on a
 liker's mutual given from either pane; `deck.test.tsx` holds the deck's _i_ and long press to no
 foot. **Not seen on a device** — one yes, one pass and one mutual are asked for a look.
+
+**The field moves on the UI thread, and the card is the selection's alone**
+([ADR-0176](../../../docs/adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md),
+[`the-radar.md`](../../../docs/specs/matchmaking/the-radar.md) §7.3–7.5, §7.9, the words §26).
+The first look, on an iPhone simulator and an Android phone, found the field's mechanism and not
+its shape: on iOS every face grew with the pinch, because React Native draws **no transform on a
+view with no size** (`BaseViewProps::resolveTransform`, the new architecture) and every tile's
+counter-scale hung off a 0 × 0 anchor; on Android a drag came apart, because the `live` view was
+written to React state on every frame, the whole field re-rendered per frame, and a re-rendered
+`Animated.View` swaps its animated node — restored to the identity, re-pushed a frame later.
+`RadarField` keeps its shape and changes its thread: the three values of the one transform are
+**Reanimated shared values**, written by `react-native-gesture-handler`'s pan and pinch
+(simultaneous; the pan waits the swipe row's intent distance, so a face, a card and the empty
+ground are still doors) and by the flight — `withTiming` on all three under `easeDecel`, which is
+the transform interpolated linearly, with a fourth value, 0 to 1, for the landing, because a
+value already at its target is finished the moment it is asked — and read on the UI thread by
+every tile's `1 / scale` counter-scale about a **one-point** anchor and by every ring's centre
+and radius (`RadarRings`, `useAnimatedProps` on the circle). JavaScript hears the field through
+one `useAnimatedReaction`, and only when a sentence would change: the width to a tenth of a
+kilometre, or the count of points in view; a landing tells it the exact stop, which is what greys
+± at the ladder's ends. Which rings exist is React's, from the width last spoken. The parent is
+still told only where a gesture, a ±, a flight or ◉ ended. The swipe row, the deck's drag and the
+radius slider stay on `PanResponder`; `GestureHandlerRootView` is the outermost view of the root
+layout, the touch system's and not a provider's. **One card at a time**: `tileState` in
+`domain/radarGeometry` draws the closest width as the closer face for everybody but the selected
+player, who is the card at every width — a tap on a face flies at the 3 km stop **or the
+narrower width already held** (`flyToView(row, widthKm)`), so a tap at 1,5 km across never zooms
+out — and the closest hint reads _Tap anybody for their card, and the card for the full profile
+and the two answers._ Mocks 3, 9 and 10 no longer bind where they draw several cards. **Under
+test** both libraries are real: `jest.setup.js` runs the gesture library's setup and reanimated's
+`setUpTests`, `jest.config.js` maps `react-native-reanimated/mock` — which
+`expo-router/testing-library` quietly `jest.mock`s the module with, after anything a test could
+hoist — to `test-support/reanimatedActual.js`, and `test-support/radarTouch` fires the pan and
+the pinch through `fireGestureHandler` by the gestures' test ids, flushing the `runOnJS`
+microtask the fake clock holds; `radar.test.tsx` holds the one-card rule, the flight at the
+floor, the selected card through a zoom in, and the pan's intent distance in place of _never
+claims the press_. The domain's geometry carries `'worklet'` directives — a build fact in a
+domain module, the functions unchanged and tested as before. **Not seen on a device** — the
+drag on Android, the pinch on iOS and one card at a time on both are asked for a look. The
+clumps the look also found are the seed's — every member of a ring in one cell on the centre's
+meridian — and are a backend ticket.
+
+**The pinch lets go where it is, and a stack opens on a tap**
+([ADR-0177](../../../docs/adr/0177-the-pinch-lets-go-where-it-is-and-a-stack-opens-on-a-tap.md),
+[`the-radar.md`](../../../docs/specs/matchmaking/the-radar.md) §7.6, §7.10, the words §26).
+The second look found the field jumping when a pinch let go, for two reasons the field's: the
+pan that runs beside the pinch was anchored on the fingers' **position** — their average, which
+moves by half a spread the moment one of two lifts — and `pinched` bound its centre with the
+drag's rubber band, so a pinch past the reach's edge sprang back on release. `RadarField`
+anchors the drag on the recogniser's **translation** (`event.translationX/Y`, which the
+library keeps continuous as fingers land and lift), keeps the last travel seen while a pinch is
+live, and re-anchors at that travel and the pinch's last view when the pinch ends with a finger
+down; `pinched` binds with `boundCentre` where `dragged` bands, pinned in
+`radarGeometry.test.ts`. The hand-off itself cannot be driven through `fireGestureHandler`,
+which ends every gesture it fires; it is argued from the recogniser's contract and asked for a
+look. **A stack at the floor**: `stacksAt` in `domain/radarGeometry` folds, at 1,5 km across
+and at no other width, players whose spots lie nearer than one face is wide on this field —
+`radarFaceBox('closer').width`, 34 pt, 0,131 km on a 390 pt phone — taken across by a
+union–find, into a `Stack` with a stable id (the members' ids joined, served order) and a
+centre at the mean of the spots; the field draws `RadarStack` there — the closer face's 30 pt
+square on paper with the count in `num.s`, volt while open, a `button` named `stackLabel`
+with `stackHint` and `expanded` — and its members not at all, unless one is the selection,
+whose card stands at its own spot above the marker. `fanOut` seats an open stack's members on
+rings from `theme.size.minTouch` out, `faceBox + space.sm` apart and between rings, north
+clockwise, as kilometre points at the floor's scale so a fanned face is a tile like any other;
+`RadarLegs` draws a hairline from the marker to each on the UI thread, as the rings are drawn,
+because a line inside the transform would smear. A fanned face's tap flies to the fanned spot
+at the width held (`flyTo(row, at)`) and selects there; the marker again, the empty-field press
+or a zoom off the floor folds the fan, and the open stack — the field's own `useState`, by id —
+dies with its stack. The reaction that speaks to JavaScript adds _at the floor_ to its dedupe,
+so the floor is heard the moment it is reached and not a tenth of a kilometre later; the footer
+gains `stacked` and the hint its third sentence. `radar.test.tsx` walks a cast with two players
+60 m apart: no stack at 3 km, one marker saying _2_ at the floor with the selected one still a
+card, the fold on deselect, the dissolve at 3 km; and the open — both faces back, two legs, the
+marker `expanded` — the flight to a fanned face, the fold on a second tap and on empty field.
+**Not seen on a device.**

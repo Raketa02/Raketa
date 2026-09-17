@@ -240,6 +240,14 @@ above Query so a session change can reach the cache. **Do not add a global provi
 feature** — that is a hidden dependency and a root rerender. Feature dependencies are
 plain modules, hooks, or route-scoped providers.
 
+One view sits outside this order and is not a provider: `GestureHandlerRootView`, the
+outermost element of the root layout since
+[ADR-0176](../../docs/adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md).
+It is `react-native-gesture-handler`'s root — the touch system every `GestureDetector` in
+the tree delivers through, and on Android one that is missing is one that silently never
+fires — added for the radar's field, which is the one surface on the library; the swipe
+row, the deck's drag and the radius slider stay on React Native's own responder.
+
 ---
 
 ## Part 4 — The HTTP client

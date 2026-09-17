@@ -28,6 +28,9 @@ import {
   radarHint,
   reliabilityChip,
   ringLabel,
+  stackCount,
+  stackHint,
+  stackLabel,
   tagsInCommon,
   widthAcross,
 } from './radarPresentation';
@@ -85,9 +88,25 @@ describe('the footer', () => {
       'Distance and bearing only — never an address, never a street. Drag to move, pinch or use ± to zoom, tap anybody to fly to them.',
     );
     expect(radarHint('closer')).toBe(radarHint('wide'));
+    // The closest widths say what a tap earns there: the card is the selection's (ADR-0176 §3).
     expect(radarHint('closest')).toBe(
-      'Distance and bearing only — never an address, never a street. Tap a card for the full profile and the two answers.',
+      'Distance and bearing only — never an address, never a street. Tap anybody for their card, and the card for the full profile and the two answers.',
     );
+  });
+
+  it('adds the stacked sentence after the zoom state’s while a stack stands, at any state', () => {
+    expect(radarHint('closest', true)).toBe(
+      `${radarHint('closest')} A number is players too close to tell apart; tap it to spread them.`,
+    );
+    expect(radarHint('closest', false)).toBe(radarHint('closest'));
+  });
+
+  it('names a stack by its count, and says what a tap does to it', () => {
+    expect(stackCount(3)).toBe('3');
+    expect(stackLabel(2)).toBe('2 players close together');
+    expect(stackLabel(12)).toBe('12 players close together');
+    expect(stackHint(false)).toBe('Spreads them out so each can be tapped.');
+    expect(stackHint(true)).toBe('Folds them back together.');
   });
 
   it('says the empty reading with the reach and the sport, and the deck’s own widen sentence', () => {

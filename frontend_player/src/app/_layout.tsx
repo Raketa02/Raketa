@@ -4,7 +4,8 @@
  *
  * docs/architecture.md Part 3 fixes the order — reporting wraps everything so it can see
  * failures, and auth sits above Query so a session change can reach the cache. Each
- * provider joins as its slice lands; a feature never adds a global one.
+ * provider joins as its slice lands; a feature never adds a global one. The gesture
+ * system's root view stands outside the order because it is not a provider (ADR-0176 §2).
  *
  * The session has no provider of its own: `shared/lib/auth` is an external store, read
  * through `useSessionStatus`. A context would make the status unreadable from the
@@ -15,6 +16,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback } from 'react';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { authKeys, refreshTokens, restoreSession } from '@/features/auth/types';
@@ -61,37 +64,49 @@ export default function RootLayout() {
   );
 
   return (
-    // `initialMetrics` lets the first frame use real insets instead of measuring one
-    // frame later — the same reflow the fonts are awaited to avoid.
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <StatusBar style="dark" />
-      <QueryClientProvider client={queryClient}>
-        {/*
-         * One subscription to the OS's reduced-motion switch, for every screen. It was a hook
-         * per consumer while the consumers were two overlays; the Play tab's always-mounted
-         * surfaces — a press transform, the fill's staggered seats — are what its own docstring
-         * named as the moment it becomes the context Part 13 describes.
-         */}
-        <ReducedMotionProvider>
-          <BootstrapGate run={run}>
-            <Slot />
-            {/*
-             * A sibling of the route tree rather than part of it, so the badge is on every
-             * screen without a screen having to know it exists — and inside the gate, so
-             * it reads config only after bootstrap has validated it. Nothing at all in
-             * production.
-             */}
-            <EnvironmentBadge />
-            {/*
-             * design-system 9.3's single root-level overlay host, and its first occupant.
-             * `zIndex` is scoped to the parent in React Native, so a toast raised from inside
-             * a card renders inside that card — mounting it once here is what makes the layer
-             * order mean anything. One host, one queue: `shared/store/toast.store.ts`.
-             */}
-            <ToastHost />
-          </BootstrapGate>
-        </ReducedMotionProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    // The gesture system's root: every `GestureDetector` in the tree — today the radar's field
+    // alone (ADR-0176 §2) — delivers its touches through this view, and on Android one that
+    // is not here is one that silently never fires. Outermost, because it is the touch
+    // system and not a provider a feature composes; `flex: 1` because it is the screen.
+    <GestureHandlerRootView style={s.root}>
+      {/*
+       * `initialMetrics` lets the first frame use real insets instead of measuring one
+       * frame later — the same reflow the fonts are awaited to avoid.
+       */}
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <StatusBar style="dark" />
+        <QueryClientProvider client={queryClient}>
+          {/*
+           * One subscription to the OS's reduced-motion switch, for every screen. It was a hook
+           * per consumer while the consumers were two overlays; the Play tab's always-mounted
+           * surfaces — a press transform, the fill's staggered seats — are what its own docstring
+           * named as the moment it becomes the context Part 13 describes.
+           */}
+          <ReducedMotionProvider>
+            <BootstrapGate run={run}>
+              <Slot />
+              {/*
+               * A sibling of the route tree rather than part of it, so the badge is on every
+               * screen without a screen having to know it exists — and inside the gate, so
+               * it reads config only after bootstrap has validated it. Nothing at all in
+               * production.
+               */}
+              <EnvironmentBadge />
+              {/*
+               * design-system 9.3's single root-level overlay host, and its first occupant.
+               * `zIndex` is scoped to the parent in React Native, so a toast raised from inside
+               * a card renders inside that card — mounting it once here is what makes the layer
+               * order mean anything. One host, one queue: `shared/store/toast.store.ts`.
+               */}
+              <ToastHost />
+            </BootstrapGate>
+          </ReducedMotionProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+});

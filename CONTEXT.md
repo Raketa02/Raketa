@@ -841,7 +841,9 @@ appears here.
   radar reaches the deck ([ADR-0174](docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §1, §4).
 - **Radar** — the second pane of Players: the viewer at the centre, rings in kilometres, and
   every player a **Reading** returned drawn at their **Drawn spot**'s distance and **Bearing**
-  — a face far out, a level closer, a card closest. *Who is actually out there?* where the deck
+  — a face far out, a level closer, and the card for the one player tapped, at any width
+  ([ADR-0176](docs/adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md) §3).
+  *Who is actually out there?* where the deck
   asks *who should I play?* **No judgement**: no level band, no fit floor, no pass memory, no
   Cool-off; it keeps only blocked, held, disabled, the gender preference and *rated in the
   sport*. It answers with the deck's own yes and pass, and hides nobody for either.

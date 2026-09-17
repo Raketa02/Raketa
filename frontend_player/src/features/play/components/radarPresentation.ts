@@ -1,9 +1,9 @@
 /**
  * Everything the **Radar** pane says — the tile's *you*, a ring's label, the counter between
  * ±, a level under a face, the card's six lines and its answered last line, the footer's
- * headline and its right-hand count, the hint by zoom state, the empty reading, *Looking
- * around…*, the failure and its retry, the cluster's three spoken names, and the record sheet's
- * foot
+ * headline and its right-hand count, the hint by zoom state and the stacked sentence, a
+ * stack's count and its spoken name, the empty reading, *Looking around…*, the failure and its
+ * retry, the cluster's three spoken names, and the record sheet's foot
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §26, drawn by
  * [ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
  * §7).
@@ -20,7 +20,8 @@
  * street.* — at every width, while loading, and under the empty reading's headline, where §17's
  * widen sentence follows it instead of the movement sentence. It switches on the **zoom
  * state** and never on the selection: a selected card at 18 km across is still a field of faces
- * to move around. The failure is the one footer with no hint: *Try again* stands in its place.
+ * to move around, and the closest widths say what a tap earns there — a card, one at a time
+ * (ADR-0176 §3). The failure is the one footer with no hint: *Try again* stands in its place.
  *
  * ## The sheet's foot cites, and writes one line of its own
  *
@@ -141,16 +142,48 @@ export function offScreen(count: number): string {
 /** The one sentence that stays at every width. */
 export const PRIVACY_LINE = 'Distance and bearing only — never an address, never a street.';
 
-/** The hint's second sentence, by zoom state: how to move while faces are drawn, and what a card leads to once cards are. */
+/**
+ * The hint's second sentence, by zoom state: how to move while the field is faces, and — at
+ * the closest widths, where a tap no longer flies anywhere far — that a tap is what earns a
+ * card and the card is what leads to the profile (ADR-0176 §3: the card is the selection's).
+ */
 const HINT_BY_STATE: Readonly<Record<ZoomState, string>> = {
   wide: 'Drag to move, pinch or use ± to zoom, tap anybody to fly to them.',
   closer: 'Drag to move, pinch or use ± to zoom, tap anybody to fly to them.',
-  closest: 'Tap a card for the full profile and the two answers.',
+  closest: 'Tap anybody for their card, and the card for the full profile and the two answers.',
 };
 
-/** The footer's hint: the privacy line, then the sentence the zoom state earns. */
-export function radarHint(state: ZoomState): string {
-  return `${PRIVACY_LINE} ${HINT_BY_STATE[state]}`;
+/** A third sentence at the floor, while a stack stands: what a numbered square is, and what a tap does to it. */
+const STACKED_HINT = 'A number is players too close to tell apart; tap it to spread them.';
+
+/**
+ * The footer's hint: the privacy line, then the sentence the zoom state earns — and, while a
+ * stack is drawn, the stacked sentence after it (ADR-0177 §2). A stack is a fact of the width
+ * and the reading, never of the selection, so the rule *switches on the zoom state and never
+ * on selection* holds.
+ */
+export function radarHint(state: ZoomState, stacked = false): string {
+  const hint = `${PRIVACY_LINE} ${HINT_BY_STATE[state]}`;
+  return stacked ? `${hint} ${STACKED_HINT}` : hint;
+}
+
+// ---------------------------------------------------------------------------
+// A stack at the floor
+// ---------------------------------------------------------------------------
+
+/** `3` — what the marker prints: the count, mono, and nothing else. */
+export function stackCount(members: number): string {
+  return String(members);
+}
+
+/** `3 players close together` — a stack, spoken. */
+export function stackLabel(members: number): string {
+  return `${counted(members, 'player', 'players')} close together`;
+}
+
+/** What a tap on the marker does, spoken after the name: spread them, or fold them back. */
+export function stackHint(open: boolean): string {
+  return open ? 'Folds them back together.' : 'Spreads them out so each can be tapped.';
 }
 
 /** `Nobody within 10 km plays padel yet` — the reach is `pool.radius_km_used`; the sport in lower case. */

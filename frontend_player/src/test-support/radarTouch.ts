@@ -1,161 +1,103 @@
 /**
  * Fingers on the radar's field, as a test can move them — one for a drag, two for a pinch.
  *
- * `swipe.ts`'s discipline, over a surface that reads **two** touches: Jest does no hit testing
- * and moves no finger, so the field's `PanResponder` handlers are called directly, in the order
- * the responder system calls them — the capture negotiation on the touch down, the capture and
- * bubble on each move (the field claims on a move, never on the press, because a face and a
- * card are doors), the grant, the moves, the release. The field reads the fingers off
- * `nativeEvent.touches` and the responder reads its own arithmetic off `touchHistory`, so both
- * are built for every event.
+ * The field's pan and pinch are `react-native-gesture-handler`'s (ADR-0176 §2), and Jest does
+ * no hit testing and moves no finger, so the two gestures are fired through the library's own
+ * `fireGestureHandler`, found by the test ids the field gives them, in the order the recogniser
+ * would call them: began, active, the moves, ended. Under reanimated's jest setup every
+ * callback runs on the JavaScript thread against the same shared values the field draws from,
+ * so what a walk reads afterwards is the field as the gesture left it.
  *
- * Page coordinates are field coordinates here: the field measures its place in the window
- * through `measureInWindow`, which the renderer never answers, so the origin stays at nought.
+ * The pan claims a touch only after the intent distance, and where it is claimed is where the
+ * drag is anchored (§7.6): a `drag` therefore lands its first active event one step past the
+ * intent distance along the drag's own line, and the travel that moves the view is `to` less
+ * that step — the recogniser's own arithmetic, kept so a walk's kilometres mean what they say.
  *
  * Not app code — nothing under `src/` outside tests imports this.
  */
 
-import { act, type screen } from '@testing-library/react-native';
-
-/** A rendered node, as the queries hand one back. */
-type Node = ReturnType<typeof screen.getByTestId>;
-
-type Responder =
-  | 'onStartShouldSetResponderCapture'
-  | 'onStartShouldSetResponder'
-  | 'onMoveShouldSetResponderCapture'
-  | 'onMoveShouldSetResponder'
-  | 'onResponderGrant'
-  | 'onResponderMove'
-  | 'onResponderRelease';
+import { act } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import type {
+  PanGesture,
+  PinchGesture,
+  PanGestureHandlerEventPayload,
+  PinchGestureHandlerEventPayload,
+} from 'react-native-gesture-handler';
 
 export type Point = readonly [number, number];
 
-let tick = 0;
+/** The field's two gestures, by the test ids `radar/RadarField` gives them. */
+const RADAR_PAN_GESTURE = 'radar-pan';
+const RADAR_PINCH_GESTURE = 'radar-pinch';
 
-/** Every finger on the glass, each having travelled from its `from` to its `to`. */
-function fingers(moves: readonly (readonly [Point, Point])[]) {
-  tick += 1;
-  const touches = moves.map(([, to]) => ({ pageX: to[0], pageY: to[1] }));
-  const [first] = touches;
-  return {
-    nativeEvent: {
-      pageX: first?.pageX ?? 0,
-      pageY: first?.pageY ?? 0,
-      touches,
-      changedTouches: touches,
-    },
-    touchHistory: {
-      touchBank: moves.map(([from, to]) => ({
-        touchActive: true,
-        currentPageX: to[0],
-        currentPageY: to[1],
-        currentTimeStamp: tick,
-        previousPageX: from[0],
-        previousPageY: from[1],
-        previousTimeStamp: tick - 1,
-        startPageX: from[0],
-        startPageY: from[1],
-        startTimeStamp: 0,
-      })),
-      numberActiveTouches: moves.length,
-      indexOfSingleActiveTouch: moves.length === 1 ? 0 : -1,
-      mostRecentTimeStamp: tick,
-    },
-  };
-}
+/** The step past the intent distance at which the pan is claimed and the drag anchored. */
+const CLAIMED_AT = 13;
 
-function deliver(field: Node, name: Responder, event: ReturnType<typeof fingers>): unknown {
-  let answer: unknown;
-  act(() => {
-    answer = (field.props[name] as (e: unknown) => unknown)(event);
-  });
-  return answer;
-}
-
-/** The touch lands, and the field is asked in the capture phase — where it resets what it knows. */
-function down(field: Node, at: readonly Point[]): void {
-  deliver(field, 'onStartShouldSetResponderCapture', fingers(at.map((p) => [p, p] as const)));
-}
-
-/**
- * A move, and whether it makes the touch the field's own.
- *
- * @returns whether the field claimed it.
- */
-function claim(field: Node, moves: readonly (readonly [Point, Point])[]): boolean {
-  deliver(field, 'onMoveShouldSetResponderCapture', fingers(moves));
-  return deliver(field, 'onMoveShouldSetResponder', fingers(moves)) === true;
-}
-
-/**
- * One finger, dragged from `from` to `to` and lifted there.
- *
- * The claiming move is the first step; the field anchors the pan where it is granted, so the
- * travel that moves the view is `to` less that step. `steps` between the two lets a walk assert
- * a resting position mid-drag by reading the field between calls.
- *
- * @returns whether the field claimed the drag.
- */
-export function drag(field: Node, from: Point, to: Point): boolean {
-  down(field, [from]);
+/** One finger, dragged from `from` to `to` and lifted there. */
+export function drag(from: Point, to: Point): void {
   const dx = to[0] - from[0];
   const dy = to[1] - from[1];
   const way = Math.hypot(dx, dy);
-  if (way === 0) return false;
-  // A step past the intent distance, along the drag's own line.
-  const step: Point = [from[0] + (dx / way) * 13, from[1] + (dy / way) * 13];
-  if (!claim(field, [[from, step]])) return false;
-  deliver(field, 'onResponderGrant', fingers([[from, step]]));
-  deliver(field, 'onResponderMove', fingers([[from, step]]));
-  deliver(field, 'onResponderMove', fingers([[step, to]]));
-  deliver(field, 'onResponderRelease', fingers([[to, to]]));
-  return true;
+  if (way === 0) return;
+  const step: Point = [from[0] + (dx / way) * CLAIMED_AT, from[1] + (dy / way) * CLAIMED_AT];
+  const at = (point: Point) => ({
+    x: point[0],
+    y: point[1],
+    absoluteX: point[0],
+    absoluteY: point[1],
+    translationX: point[0] - from[0],
+    translationY: point[1] - from[1],
+    velocityX: 0,
+    velocityY: 0,
+  });
+  act(() => {
+    fireGestureHandler<PanGesture>(getByGestureTestId(RADAR_PAN_GESTURE), [
+      { state: State.BEGAN, ...at(from) },
+      { state: State.ACTIVE, ...at(step) },
+      at(to),
+      { state: State.END, ...at(to) },
+    ] satisfies Partial<PanGestureHandlerEventPayload & { state: State }>[]);
+  });
+  spoken();
 }
 
 /**
  * Two fingers, from one spread to another, and lifted.
  *
- * The first finger lands alone; the second joins on the first move, which is the move that
- * claims the touch for the field (two fingers claim at once, however little they travelled).
- * The field records the pair's first spread and midpoint on its first move as the responder,
- * and every later move is read against them.
- *
- * @returns whether the field claimed the pinch.
+ * The pinch is claimed where the fingers first are — their midpoint is the point the zoom is
+ * around — and every later event carries the spread as a factor of the first, which is what
+ * the recogniser reports.
  */
-export function pinch(
-  field: Node,
-  from: readonly [Point, Point],
-  to: readonly [Point, Point],
-): boolean {
-  down(field, [from[0]]);
-  const rest = [
-    [from[0], from[0]],
-    [from[1], from[1]],
-  ] as const;
-  if (!claim(field, rest)) return false;
-  deliver(field, 'onResponderGrant', fingers(rest));
-  deliver(field, 'onResponderMove', fingers(rest));
-  deliver(
-    field,
-    'onResponderMove',
-    fingers([
-      [from[0], to[0]],
-      [from[1], to[1]],
-    ]),
-  );
-  deliver(
-    field,
-    'onResponderRelease',
-    fingers([
-      [to[0], to[0]],
-      [to[1], to[1]],
-    ]),
-  );
-  return true;
+export function pinch(from: readonly [Point, Point], to: readonly [Point, Point]): void {
+  const spread = (pair: readonly [Point, Point]) =>
+    Math.hypot(pair[0][0] - pair[1][0], pair[0][1] - pair[1][1]);
+  const mid = (pair: readonly [Point, Point]) => ({
+    focalX: (pair[0][0] + pair[1][0]) / 2,
+    focalY: (pair[0][1] + pair[1][1]) / 2,
+  });
+  const first = spread(from);
+  const scale = first === 0 ? 1 : spread(to) / first;
+  act(() => {
+    fireGestureHandler<PinchGesture>(getByGestureTestId(RADAR_PINCH_GESTURE), [
+      { state: State.BEGAN, scale: 1, velocity: 0, ...mid(from) },
+      { state: State.ACTIVE, scale: 1, velocity: 0, ...mid(from) },
+      { scale, velocity: 0, ...mid(to) },
+      { state: State.END, scale, velocity: 0, ...mid(to) },
+    ] satisfies Partial<PinchGestureHandlerEventPayload & { state: State }>[]);
+  });
+  spoken();
 }
 
-/** Whether the field answers the press itself — it never does; a face and a card are doors. */
-export function claimsThePress(field: Node, at: Point): boolean {
-  return deliver(field, 'onStartShouldSetResponder', fingers([[at, at]])) === true;
+function spoken(): void {
+  act(() => {
+    jest.advanceTimersByTime(0);
+  });
+}
+
+/** How far a finger has to travel before the pan claims it — a press is never claimed. */
+export function panClaimsAfter(): number | undefined {
+  const pan = getByGestureTestId(RADAR_PAN_GESTURE) as PanGesture;
+  return pan.config.minDist;
 }

@@ -2739,8 +2739,12 @@ Level under each is what the pairing adds.
 | The footer's headline | `{n} players in view` · `1 player in view` | recounted on every move |
 | Beside it | `+{n} off screen` · `all of them` | so the count is never mistaken for the population |
 | The hint, always first | `Distance and bearing only — never an address, never a street.` | the one sentence that stays at every width |
-| The hint, faces or levels | `Drag to move, pinch or use ± to zoom, tap anybody to fly to them.` | |
-| The hint, cards | `Tap a card for the full profile and the two answers.` | switches on zoom state, never on selection |
+| The hint, wide and closer | `Drag to move, pinch or use ± to zoom, tap anybody to fly to them.` | |
+| The hint, closest | `Tap anybody for their card, and the card for the full profile and the two answers.` | switches on zoom state, never on selection; the card is the selection's alone (ADR-0176 §3) |
+| The hint, while a stack stands | `A number is players too close to tell apart; tap it to spread them.` | after the state's sentence, at the floor only (ADR-0177 §2) |
+| A stack's marker | `{n}` | mono; the count and nothing else |
+| A stack, spoken | `{n} players close together` · `1 player close together` never — a stack is two or more | a button; the hint beneath says which |
+| A stack's hint | `Spreads them out so each can be tapped.` · `Folds them back together.` | folded · open |
 | Empty reading, headline | `Nobody within {reach} km plays {sport} yet` | the reach is `pool.radius_km_used` |
 | Empty reading, hint | `Your search radius lives in You. Widening it is what brings more people into range.` | §17's sentence, cited |
 | Loading | `Looking around…` | with the privacy line beneath |

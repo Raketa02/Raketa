@@ -106,7 +106,8 @@ caller's. **6.15's swipe row is the first control that moves a row**
 ([#427](https://github.com/Raketa02/Raketa/issues/427),
 [ADR-0165](../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
 §6): a list row that slides left on React Native's own `PanResponder` — as the radius slider
-already drags, and with neither `react-native-gesture-handler` nor `reanimated` added — to
+already drags, and with neither `react-native-gesture-handler` nor `reanimated` added _(both are
+in the app since ADR-0176, for the radar's field alone; the row stays where it is)_ — to
 reveal **one** control at its full height, and nothing else. The control is 6.1 `dark`'s fill,
 `night`, and **not coral**: §1.2's list is closed, and the act a swipe reveals is the one the
 screens draw `secondary`. #231 §3's argument against a swipe on the deck is kept by construction,

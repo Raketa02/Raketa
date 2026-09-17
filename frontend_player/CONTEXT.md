@@ -148,7 +148,15 @@ review comment and a test description all use the same word.
   inside `DeckScreen`, its own frame on the app's third dark surface with no scroller, because
   the field takes the drag; its view and selection are `store/radarView`'s for the life of the
   process and a cold start opens at home; its geometry is `domain/radarGeometry`'s pure
-  functions and the field's tiles ride one native-driven transform. **Its record sheet has a
+  functions — worklets, since
+  [ADR-0176](../docs/adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md) — and
+  the field's tiles ride one transform whose three values live on the UI thread, written by
+  `react-native-gesture-handler`'s pan and pinch and read by `react-native-reanimated`'s
+  animated styles: the one surface in the app on either library. **At the floor a stack** —
+  players whose spots lie nearer than one face is wide, folded into one marker a tap opens
+  ([ADR-0177](../docs/adr/0177-the-pinch-lets-go-where-it-is-and-a-stack-opens-on-a-tap.md)):
+  `domain/radarGeometry`'s `Stack`, the field's own open state by id, and no term of the
+  root's, because it is a drawing of spots the server already served. **Its record sheet has a
   foot** — _Not today_ · _Let's play_, or what the spec's §5 table calls the standing relation,
   which on the client is `domain/standingRelation`'s fold of the row's admitting code, the
   reader's two interest lists and the challenges feature's court, in the order matched › court ›

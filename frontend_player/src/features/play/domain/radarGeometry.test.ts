@@ -27,7 +27,11 @@ import {
   pinched,
   pointOf,
   ptPerKm,
+  atFloor,
+  fanOut,
   ringsFor,
+  stacksAt,
+  tileState,
   rubberBand,
   toKm,
   toScreen,
@@ -196,11 +200,114 @@ describe('in view', () => {
   });
 });
 
+describe('one player, drawn', () => {
+  it('is a face — wide, or with the level — for everybody but the selected, who is the card at every width', () => {
+    expect(tileState('wide', false)).toBe('wide');
+    expect(tileState('closer', false)).toBe('closer');
+    // The closest width hands nobody a card: a field of cards was a field nobody could use.
+    expect(tileState('closest', false)).toBe('closer');
+    for (const zoom of ['wide', 'closer', 'closest'] as const) {
+      expect(tileState(zoom, true)).toBe('card');
+    }
+  });
+});
+
 describe('the flight', () => {
+  it('lands at the width already held when that is narrower than 3 km — never zooming out to show a card', () => {
+    const row = { distanceKm: 1.2, bearingDeg: 130 };
+    expect(flyToView(row, 1.5).widthKm).toBe(1.5);
+    expect(flyToView(row, 3).widthKm).toBe(3);
+    expect(flyToView(row, 18).widthKm).toBe(3);
+    expect(flyToView(row, 1.5).centre).toEqual(pointOf(row));
+  });
+
   it('lands at the 3 km stop, centred on the row', () => {
     expect(FLY_TO_WIDTH_KM).toBe(3);
     const row = { distanceKm: 9, bearingDeg: 90 };
     expect(flyToView(row)).toEqual({ centre: pointOf(row), widthKm: 3 });
+  });
+});
+
+describe('stacks at the floor', () => {
+  // On the 390 pt field at the floor a kilometre is 260 pt; a 34 pt face is 0,131 km.
+  const FACE = 34;
+  const near = (id: string, distanceKm: number, bearingDeg: number) => ({
+    playerId: id,
+    distanceKm,
+    bearingDeg,
+  });
+  // Filip and Ola are 60 m apart; Karol is 1,2 km from both.
+  const filip = near('filip', 1.9, 47);
+  const ola = near('ola', 1.95, 48);
+  const karol = near('karol', 1.2, 130);
+
+  it('folds players whose faces would lie on one another at the floor, and nobody else', () => {
+    const stacks = stacksAt([karol, filip, ola], WIDTH_FLOOR_KM, FIELD, FACE);
+    expect(stacks).toHaveLength(1);
+    expect(stacks[0]?.members).toEqual(['filip', 'ola']);
+    expect(stacks[0]?.id).toBe('filip+ola');
+  });
+
+  it('forms no stack above the floor: closer is always the answer there', () => {
+    expect(stacksAt([filip, ola], 3, FIELD, FACE)).toEqual([]);
+    expect(stacksAt([filip, ola], WIDTH_FLOOR_KM * 1.02, FIELD, FACE)).toEqual([]);
+    expect(atFloor(WIDTH_FLOOR_KM)).toBe(true);
+    expect(atFloor(1.6)).toBe(false);
+  });
+
+  it('is exactly one face: 0,13 km apart at the floor is a stack and 0,14 is not', () => {
+    const a = near('a', 2, 0);
+    const within = near('b', 2.13, 0);
+    const beyond = near('c', 2.14, 0);
+    expect(stacksAt([a, within], WIDTH_FLOOR_KM, FIELD, FACE)).toHaveLength(1);
+    expect(stacksAt([a, beyond], WIDTH_FLOOR_KM, FIELD, FACE)).toHaveLength(0);
+  });
+
+  it('takes the relation across: A over B and B over C is one stack of three', () => {
+    const a = near('a', 2, 0);
+    const b = near('b', 2.1, 0);
+    const c = near('c', 2.2, 0);
+    const stacks = stacksAt([a, b, c], WIDTH_FLOOR_KM, FIELD, FACE);
+    expect(stacks).toHaveLength(1);
+    expect(stacks[0]?.members).toEqual(['a', 'b', 'c']);
+    // Centred on the mean of the three spots.
+    expect(stacks[0]?.centre.y).toBeCloseTo(2.1);
+    expect(stacks[0]?.centre.x).toBeCloseTo(0);
+  });
+
+  it('opens on a ring a touch target from the marker, a step apart, from north clockwise', () => {
+    const stack = stacksAt([filip, ola], WIDTH_FLOOR_KM, FIELD, FACE)[0]!;
+    const layout = { clearPt: 44, stepPt: 42 };
+    const fanned = fanOut(stack, FIELD, layout);
+    expect(fanned.map((f) => f.playerId)).toEqual(['filip', 'ola']);
+    const scale = ptPerKm(FIELD, WIDTH_FLOOR_KM);
+    const [first, second] = fanned;
+    // North of the centre, and south of it, each 44 pt away.
+    expect((first!.at.y - stack.centre.y) * scale).toBeCloseTo(44);
+    expect((first!.at.x - stack.centre.x) * scale).toBeCloseTo(0);
+    expect((second!.at.y - stack.centre.y) * scale).toBeCloseTo(-44);
+  });
+
+  it('fills a second ring once the first is full, and no two fanned faces overlap', () => {
+    const many = Array.from({ length: 12 }, (_, i) => near(`p${i}`, 2 + i * 0.001, 0));
+    const stack = stacksAt(many, WIDTH_FLOOR_KM, FIELD, FACE)[0]!;
+    const layout = { clearPt: 44, stepPt: 42 };
+    const fanned = fanOut(stack, FIELD, layout);
+    expect(fanned).toHaveLength(12);
+    const scale = ptPerKm(FIELD, WIDTH_FLOOR_KM);
+    const radii = fanned.map(
+      (f) => Math.hypot(f.at.x - stack.centre.x, f.at.y - stack.centre.y) * scale,
+    );
+    // The first ring holds six at 44 pt (2π·44 / 42); the rest sit on the next at 86.
+    expect(radii.filter((r) => Math.abs(r - 44) < 1e-6)).toHaveLength(6);
+    expect(radii.filter((r) => Math.abs(r - 86) < 1e-6)).toHaveLength(6);
+    for (let a = 0; a < fanned.length; a += 1) {
+      for (let b = a + 1; b < fanned.length; b += 1) {
+        const apart =
+          Math.hypot(fanned[a]!.at.x - fanned[b]!.at.x, fanned[a]!.at.y - fanned[b]!.at.y) * scale;
+        expect(apart).toBeGreaterThanOrEqual(FACE);
+      }
+    }
   });
 });
 
@@ -341,5 +448,15 @@ describe('a pinch', () => {
   it('leaves the view alone while a spread is nought', () => {
     const start = { spread: 0, mid: { x: 195, y: 252 }, view: home };
     expect(pinched(start, { spread: 100, mid: start.mid }, FIELD, bounds)).toEqual(home);
+  });
+
+  it('holds the centre inside the reach and never bands it, so a release has nothing to spring back from', () => {
+    // Zooming in around fingers 14 km east of the viewer at 30 km across (13 pt per km) asks
+    // the centre to travel there; the reach is 10 km, and the centre stops at its edge.
+    const wide = { centre: { x: 0, y: 0 }, widthKm: 30 };
+    const mid = { x: 195 + 14 * (390 / 30), y: 252 };
+    const view = pinched({ spread: 100, mid, view: wide }, { spread: 400, mid }, FIELD, bounds);
+    expect(Math.hypot(view.centre.x, view.centre.y)).toBeCloseTo(10);
+    expect(boundCentre(view.centre, 10)).toEqual(view.centre);
   });
 });

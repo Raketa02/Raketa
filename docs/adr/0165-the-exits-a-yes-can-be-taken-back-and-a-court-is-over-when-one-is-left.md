@@ -14,7 +14,11 @@
   is written there (§7): *{name} left*. **§5 superseded whole and §3's rule narrowed
   2026-09-16 by [ADR-0175](0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)**: *Call it off* exists for nobody — a game ends by its seats or by its
   hour — and a court is over by its seats when nobody is on it, whoever is still deciding, or
-  one player is and no seat awaits. §1, §2, §4 and §6 stand.
+  one player is and no seat awaits. §1, §2, §4 and §6 stand. **§6's *"with neither
+  `react-native-gesture-handler` nor `reanimated` added"* narrowed 2026-09-16 by
+  [ADR-0176](0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md) §2**: both are in
+  the app now, for the radar's field alone; the swipe row, the deck's drag and the radius
+  slider stay on `PanResponder`, and §6's argument for the swipe stands as written.
 - **Date:** 2026-09-13
 - **Supersedes, by named sentence:**
   [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) §1's *"a court that
