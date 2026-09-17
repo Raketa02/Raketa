@@ -23,7 +23,20 @@ What is here today:
   records nothing. It is the first caller ``change_location`` ever had in
   ``app/``, and everything that reads a location — every deck pool, every
   radar, every *In your area* — follows the candidate projection, which has
-  applied ``LocationChanged`` since it was built (``docs/adr/0110``).
+  applied ``LocationChanged`` since it was built (``docs/adr/0110``);
+- **the owner's own read, grown for the You tab** (``docs/adr/0179`` §4 and
+  §8). ``GET /players/me/profile`` was scoped to what the Play screens edit and
+  promised the rest would land on it rather than on a sibling; it now carries
+  the tags in the vocabulary's order, the photos in the player's order **each
+  with the verdict its uploader is owed** — the three-valued reading, passed,
+  flagged, *nobody looked*, read off the store at one ``HEAD`` per photograph —
+  the intro, the standing opt-in answer, and the two values no other shape may
+  carry: the owner's gender and preference. That is ADR-0096 §6's fence
+  **moved, not lowered** — *no response shape carries a gender value out*
+  became *no shape a stranger reads* — and the contract walk asserts it from
+  both sides, refused everywhere else and present on that one shape. The
+  location area stays off the wire, and no ``has_location`` stands in for it:
+  a profile cannot be committed without one.
 
 What is deliberately **not** here: the ``player_profiles`` read model. It exists
 for the many-player reads matchmaking will do, and matchmaking does not exist.

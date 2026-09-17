@@ -276,6 +276,17 @@ Rules to preserve:
   `RecordedCard` stores the code, so the read-back draws the shield that *was* drawn
   (ADR-0109) — the mirror of `photo_url`, which cannot be stored because it dies within the
   hour. `GET /photos/{id}` is untouched, and the note still crosses on no route at all.
+  **And the owner reads what stands beside each of their own photographs on the profile
+  read** ([ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+  §8, #466): `GET /players/me/profile` carries `photos[].review` — the same three-valued
+  reading, one `HEAD` per photograph the profile holds, at most three, gathered — beside
+  the tags, the intro, the standing opt-in answer and **the two values no other shape may
+  carry, the owner's own `gender` and `gender_preference`** (§4). That is ADR-0096 §6's
+  fence moved rather than lowered: `tests/unit/test_no_response_carries_a_forbidden_fact.py`
+  admits the two words on that one schema by name (`PERMITTED_ON`) and asserts from both
+  sides — refused on every other shape, and *present* on that one, so the admission can
+  neither widen nor lapse unnoticed. The location area is still not served, and no
+  `has_location` stands in for it.
 - **Background work is an `asyncio` loop in the API process, and a job must be safe to
   run beside itself** ([ADR-0092](../docs/adr/0092-periodic-jobs-as-embedded-loops.md)).
   `PeriodicJob` (`app/infrastructure/jobs/`) is the whole mechanism — the outbox worker

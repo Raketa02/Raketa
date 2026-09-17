@@ -31,21 +31,27 @@ commit — *"the request a player makes once, at the end of six steps, on whatev
 connection they have"* — and a `PUT` that lands the same state twice has nothing
 to deduplicate.
 
-**Read, availability, radius and location, and nothing else.** The aggregate
-also has `change_social_tags`, `change_photos`, `change_gender` and
-`change_gender_preference`, and none of them gets a route here. Those belong to
-*You*, which is not built; this surface is scoped to what the Play screens edit,
-and the read grows the deferred fields when that screen arrives rather than
-acquiring a sibling.
+**The read is the You tab's too, and it grew rather than acquiring a sibling**
+(``docs/adr/0179`` §8). It was scoped to what the Play screens edit and promised
+that the deferred facts — tags, photos, the intro, the opt-in — would land on
+this same route when *You* was built, and that is what happened: one read now
+carries every fact a player declared, and the tab draws every row's live line
+from it. Two of them are served to the owner and to nobody else — the gender and
+the preference, the one shape ADR-0096 §6's fence admits (ADR-0179 §4), and the
+contract walk asserts it is the only one. The writes those rows need —
+`change_social_tags`, `change_photos`, the intro, `change_gender`,
+`change_gender_preference`, the opt-in from `PROFILE` — are the six `PUT`s of
+ADR-0179 §8, on this surface's argument; the read lands first and they follow.
 
 **The location is the exception, and it is not You's — it is the cold start's**
 (``docs/adr/0174`` §6). No screen edits it and no prompt asks for it: the client
 re-reads the phone's position on every cold start and on return from the
 background after more than a day, and puts it here silently. It is the fourth
 unkeyed `PUT` for the first three's reason, and the same-cell no-op is what
-makes a write on every launch free. It answers `204` and no body: no route on
-this surface serves the area yet — the profile read grows the field when *You*
-is built — and a silent write on every launch is not the one to start.
+makes a write on every launch free. It answers `204` and no body, and **the read
+does not serve the area either, nor a flag for it**: a profile cannot be
+committed without one, so `has_location` could never be false, and the tab
+branches on the phone's permission state instead.
 """
 
 from __future__ import annotations
@@ -102,14 +108,18 @@ _LOST_THE_RACE = {
 @router.get(
     "/profile",
     response_model=PlayerProfileReadResponse,
+    response_model_exclude_unset=True,
     status_code=status.HTTP_200_OK,
     responses={status.HTTP_404_NOT_FOUND: _NO_PROFILE},
-    summary="The week, the radius and the Play intent this player declared",
+    summary="Every fact this player declared — what the Play screens and You read",
     description=(
-        "One read for the three facts the Play screens hold, across the two "
-        "aggregates that own them. The fourth fact a search screen needs — "
-        "**which sports am I rated in** — is `GET /api/v1/ratings` and is not "
-        "re-served here.\n\n"
+        "One read for everything a player declared, across the two aggregates "
+        "that own it: the week, the radius and the per-sport Play intent the "
+        "Play screens edit, and — since the *You* tab — the tags, the photos "
+        "with their verdicts, the intro, the standing proposals answer, and "
+        "the owner's own gender and preference. The one fact a search screen "
+        "still needs from elsewhere — **which sports am I rated in** — is "
+        "`GET /api/v1/ratings` and is not re-served here.\n\n"
         "**`play_intents` holds only what was declared.** An undeclared sport is "
         "absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there "
         "is no unanswered value to send. *Rated but undeclared* is a set "
@@ -117,18 +127,24 @@ _LOST_THE_RACE = {
         "the declaration interstitial **before** a search is refused with "
         "`play_intent_not_declared` rather than after.\n\n"
         "**An empty `availability` is a real answer.** A player may clear their "
-        "week; it means *we do not know when they play* and never *never*.\n\n"
-        "## What this response does not carry\n\n"
-        "**`gender` and `gender_preference` are withheld and always will be.** "
-        "Neither value ever comes back out of this API — the profile commit says "
-        "so, and this route does not weaken it.\n\n"
-        "**Social tags, photos and location are not served *yet*.** They are "
-        "deferred rather than refused, and this is the route that grows them "
-        "when the *You* screen is built — there will be no second endpoint for "
-        "them. The one to be careful with is **photos**: a profile may legally "
-        "hold none, so an absent photo list here must not be read as *this "
-        "player has no photographs*. Tags and a location are required at commit, "
-        "so their absence cannot be mistaken for an answer either way."
+        "week; it means *we do not know when they play* and never *never*. "
+        "**An empty `photos` list is one too**: a profile may hold none.\n\n"
+        "**Absent means omitted, never `null`.** `intro` is omitted where no "
+        "line was written; a photo's `review` is omitted where nobody looked — "
+        "which is not `allowed`; `gender` is omitted on a profile committed "
+        "before the question existed — which is not `PREFER_NOT_TO_SAY`.\n\n"
+        "## Who is told what\n\n"
+        "**`gender` and `gender_preference` are withheld from everybody but "
+        "their owner.** No response that describes one player to another "
+        "carries either — not a card, not a record, not a seat — and that "
+        "walk is asserted over the whole emitted contract. This route is the "
+        "one shape that carries them, to the person who set them, so the "
+        "screen that asks *who should we match you with* can open on the "
+        "answer already given (`docs/adr/0179` §4).\n\n"
+        "**The location area is not served, and neither is a flag for it.** "
+        "A profile cannot be committed without an area, so `has_location` "
+        "could never be false; the tab branches on the phone's permission "
+        "state, which is the device's."
     ),
 )
 async def read_player_profile(

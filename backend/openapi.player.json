@@ -787,8 +787,8 @@
         "tags": [
           "player-profile"
         ],
-        "summary": "The week, the radius and the Play intent this player declared",
-        "description": "One read for the three facts the Play screens hold, across the two aggregates that own them. The fourth fact a search screen needs \u2014 **which sports am I rated in** \u2014 is `GET /api/v1/ratings` and is not re-served here.\n\n**`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial **before** a search is refused with `play_intent_not_declared` rather than after.\n\n**An empty `availability` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*.\n\n## What this response does not carry\n\n**`gender` and `gender_preference` are withheld and always will be.** Neither value ever comes back out of this API \u2014 the profile commit says so, and this route does not weaken it.\n\n**Social tags, photos and location are not served *yet*.** They are deferred rather than refused, and this is the route that grows them when the *You* screen is built \u2014 there will be no second endpoint for them. The one to be careful with is **photos**: a profile may legally hold none, so an absent photo list here must not be read as *this player has no photographs*. Tags and a location are required at commit, so their absence cannot be mistaken for an answer either way.",
+        "summary": "Every fact this player declared \u2014 what the Play screens and You read",
+        "description": "One read for everything a player declared, across the two aggregates that own it: the week, the radius and the per-sport Play intent the Play screens edit, and \u2014 since the *You* tab \u2014 the tags, the photos with their verdicts, the intro, the standing proposals answer, and the owner's own gender and preference. The one fact a search screen still needs from elsewhere \u2014 **which sports am I rated in** \u2014 is `GET /api/v1/ratings` and is not re-served here.\n\n**`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial **before** a search is refused with `play_intent_not_declared` rather than after.\n\n**An empty `availability` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*. **An empty `photos` list is one too**: a profile may hold none.\n\n**Absent means omitted, never `null`.** `intro` is omitted where no line was written; a photo's `review` is omitted where nobody looked \u2014 which is not `allowed`; `gender` is omitted on a profile committed before the question existed \u2014 which is not `PREFER_NOT_TO_SAY`.\n\n## Who is told what\n\n**`gender` and `gender_preference` are withheld from everybody but their owner.** No response that describes one player to another carries either \u2014 not a card, not a record, not a seat \u2014 and that walk is asserted over the whole emitted contract. This route is the one shape that carries them, to the person who set them, so the screen that asks *who should we match you with* can open on the answer already given (`docs/adr/0179` \u00a74).\n\n**The location area is not served, and neither is a flag for it.** A profile cannot be committed without an area, so `has_location` could never be false; the tab branches on the phone's permission state, which is the device's.",
         "operationId": "read_player_profile_api_v1_players_me_profile_get",
         "security": [
           {
@@ -7585,7 +7585,7 @@
           "expires_at"
         ],
         "title": "PhotoResponse",
-        "description": "One photo: the id a profile commit will carry, and a URL that reads it.\n\nThe same shape from the upload and from the read, so a client renders a tile\nit has just filled and a tile it is restoring with one code path.\n\n**The URL is not an identifier and must not be stored as one.** It carries a\nsignature and stops working at ``expires_at``; the id is what is permanent.\n\n## The verdict crosses; the evidence does not\n\n``review`` is the on-court check's conclusion and it is a **code**, never a\nsentence: the backend emits codes and the client owns the words\n(``docs/adr/0022``). ``review-note`` \u2014 the model, the prompt-set fingerprint\nand the raw similarity vector \u2014 stays on the object. It is evidence for us\nrather than a fact about the player, and a confidence score on the wire is an\ninvitation to a client that renders one.\n\n**The upload carries it and the read does not**, which is why the field is\noptional and why ``null`` is not ``allowed``. Two reasons, and neither is\nthat the read is harder. A warning belongs to the moment a player *chose* a\nphotograph; a tile being restored is a photograph they already kept, and\nsaying it again is a screen re-litigating a decision the player made. And the\nread would have to pay for it: ``GET /photos/{id}`` proves existence and signs\na URL, and no part of it looks at what the store holds beside the bytes \u2014 the\nverdict is user metadata, which every S3-compatible store answers with a\nrequest per object. So the shape stays one shape and the tile stays one code\npath, exactly as the paragraph above promises; what differs is whether this\nresponse has anything to say about the check.\n\n**The upload can also carry nothing, and that is not the read's ``null``**\n(``docs/adr/0138``). A reviewer that could not be asked concludes nothing, so\nan outage answers ``null`` here rather than ``allowed``: fail-open used to\nspell *nothing to warn about* with the only word it had, and that word now\nmeans *checked and passed* somewhere else \u2014 on a player card, to somebody who\nis not this photograph's owner. Both absences reach a client as *say\nnothing*, which is what makes the collapse safe on this route and the\ndistinction load-bearing on the other one."
+        "description": "One photo: the id a profile commit will carry, and a URL that reads it.\n\nThe same shape from the upload and from the read, so a client renders a tile\nit has just filled and a tile it is restoring with one code path.\n\n**The URL is not an identifier and must not be stored as one.** It carries a\nsignature and stops working at ``expires_at``; the id is what is permanent.\n\n## The verdict crosses; the evidence does not\n\n``review`` is the on-court check's conclusion and it is a **code**, never a\nsentence: the backend emits codes and the client owns the words\n(``docs/adr/0022``). ``review-note`` \u2014 the model, the prompt-set fingerprint\nand the raw similarity vector \u2014 stays on the object. It is evidence for us\nrather than a fact about the player, and a confidence score on the wire is an\ninvitation to a client that renders one.\n\n**The upload carries it and the read does not**, which is why the field is\noptional and why ``null`` is not ``allowed``. Two reasons, and neither is\nthat the read is harder. A warning belongs to the moment a player *chose* a\nphotograph; a tile being restored is a photograph they already kept, and\nsaying it again is a screen re-litigating a decision the player made. And the\nread would have to pay for it: ``GET /photos/{id}`` proves existence and signs\na URL, and no part of it looks at what the store holds beside the bytes \u2014 the\nverdict is user metadata, which every S3-compatible store answers with a\nrequest per object. So the shape stays one shape and the tile stays one code\npath, exactly as the paragraph above promises; what differs is whether this\nresponse has anything to say about the check. Where the owner reads what\n**stands** beside each of their photographs is the profile read's ``photos``\nlist (`ProfilePhotoResource`, ``docs/adr/0179`` \u00a78) \u2014 the one screen whose\nquestion is the check's answer, paying that request for at most three\nobjects rather than per tile.\n\n**The upload can also carry nothing, and that is not the read's ``null``**\n(``docs/adr/0138``). A reviewer that could not be asked concludes nothing, so\nan outage answers ``null`` here rather than ``allowed``: fail-open used to\nspell *nothing to warn about* with the only word it had, and that word now\nmeans *checked and passed* somewhere else \u2014 on a player card, to somebody who\nis not this photograph's owner. Both absences reach a client as *say\nnothing*, which is what makes the collapse safe on this route and the\ndistinction load-bearing on the other one."
       },
       "PhotoReviewDecision": {
         "type": "string",
@@ -7878,16 +7878,53 @@
             "type": "object",
             "title": "Play Intents",
             "description": "What this player declared, per sport. **Only sports they have declared in appear** \u2014 an undeclared sport is absent and is never a `null` value, because there is no unanswered Play intent (`NO_PREFERENCE` is an explicit answer).\n\n*Rated but not yet declared* is a set difference the client computes against `GET /ratings`, which it is already fetching to build the sport chips. A search by a player with no declaration for that sport is refused with `play_intent_not_declared`, so this is what lets a client open the one-tap interstitial before the refusal rather than after it."
+          },
+          "social_tags": {
+            "items": {
+              "$ref": "#/components/schemas/SocialTag"
+            },
+            "type": "array",
+            "title": "Social Tags",
+            "description": "The Social tag ids this player holds, **in the vocabulary's order** whatever order the picker sent them in. Required at commit, so never empty and never absent."
+          },
+          "photos": {
+            "items": {
+              "$ref": "#/components/schemas/ProfilePhotoResource"
+            },
+            "type": "array",
+            "title": "Photos",
+            "description": "The photographs, **in the player's order** \u2014 the first is the profile photo \u2014 each with the verdict its uploader is owed. **An empty list is a real answer**: a profile may hold none, and the client draws the generated court poster."
+          },
+          "intro": {
+            "type": "string",
+            "title": "Intro",
+            "description": "The line this player wrote about themselves, as recorded, or **omitted** where none was written. Never an empty string (`docs/adr/0170`)."
+          },
+          "proposals_opt_in": {
+            "$ref": "#/components/schemas/ProposalsOptInResponse",
+            "description": "The standing answer to the proposals question: what was answered, when, against which words and from which surface. Always present \u2014 a profile cannot be committed without one."
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender",
+            "description": "The owner's own answer to the gender question. **Served here and on no other response shape** (`docs/adr/0179` \u00a74) \u2014 what one player is told about another never carries it.\n\n**Omitted** on a profile committed before the question existed, and never read as `PREFER_NOT_TO_SAY`, which is an answer a player gives: a client pre-selects nothing rather than something."
+          },
+          "gender_preference": {
+            "$ref": "#/components/schemas/GenderPreference",
+            "description": "Who the owner is willing to be matched with \u2014 their own setting, served here and on no other response shape (`docs/adr/0179` \u00a74). Always present: it defaults to `ANY` at commit, so there is nothing for its absence to mean."
           }
         },
         "type": "object",
         "required": [
           "availability",
           "search_radius_km",
-          "play_intents"
+          "play_intents",
+          "social_tags",
+          "photos",
+          "proposals_opt_in",
+          "gender_preference"
         ],
         "title": "PlayerProfileReadResponse",
-        "description": "The profile facts the Play screens read, in one round trip.\n\n**Three facts and not the whole profile**, and the two absences are\ndifferent absences:\n\nA **standing refusal.** ``gender`` and ``gender_preference`` never come back\nout of this API \u2014 the commit route already promises it (``docs/adr/0096``\n\u00a76) and this route does not weaken it.\n\nA **deferral.** Social tags, photos and the location area are not refused;\nthey are **not served yet**, and this is the route they land on when *You* is\nbuilt rather than a route that acquires a sibling. The one worth naming is\n**photos**: a profile may legally hold none, so an absent ``photo_ids`` is\nthe single deferral a client could read as *you have none* \u2014 which is exactly\nthe vanished-row lie ADR-0109 exists to prevent, arriving through the field\nnobody would check. Tags and a location are required at commit, so their\nabsence cannot be mistaken for an answer.\n\nIt is prose rather than a machine-readable ``withheld`` list: ADR-0130\nalready struck ADR-0109's *and why* half, and a list here would be a field\nwhose only reader is a human, on a route where no client ever counted a row\nthat could go missing.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would be a fourth fact on a body scoped to\nthree. ``GET /users/me`` is where an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
+        "description": "Every fact a player declared, in one round trip \u2014 what the Play screens\nread and, since ``docs/adr/0179``, what the You tab draws its rows from.\n\n**The gender and the preference are served here, and on no other shape.**\nADR-0096 \u00a76's *no response shape carries a gender value out* is about\nresponses that describe one player to another, and its walk still refuses\nboth words on every one of those. A player reading their own answer on a\nroute scoped to ``me`` is not what that rule protects, and a screen that\nasks *who should we match you with* with nothing pre-selected is a screen a\nplayer cannot trust (``docs/adr/0179`` \u00a74). ``gender`` is **omitted** on a\nprofile committed before the question existed \u2014 never ``PREFER_NOT_TO_SAY``,\nwhich is an answer a player gives.\n\n**The one thing still withheld is the location area**, and nothing stands\nin for it: a profile cannot be committed without an area, so a\n``has_location`` could never be false, and a branch nobody can take is a\nbranch nobody tests.\n\nAbsence has one spelling here and it is **omission** (``OMITTED``): an intro\nnever written, a photograph nobody looked at, a gender never asked. The one\nabsence that is served rather than omitted is **an empty ``photos`` list**,\nbecause a profile may legally hold none and that is a real answer.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would say nothing. ``GET /users/me`` is\nwhere an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
       },
       "PlayerProfileResponse": {
         "properties": {
@@ -7952,7 +7989,7 @@
           "updated_at"
         ],
         "title": "PlayerProfileResponse",
-        "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out**, and that is a rule rather than an\noversight (``docs/adr/0096`` \u00a76): a preference crosses the wire *in*, on a\nsearch; no response shape carries a gender out and no card renders one.\nThis body is only ever the caller's own profile, so nothing here would leak\na third party's answer \u2014 the field is left off anyway, because the moment\none response shape carries it, *which* shapes may is a judgement call made\nper endpoint instead of a line nobody has to re-argue. Nothing reads it back\ntoday: onboarding sends it once, and there is no profile editor. When one\nexists, adding it here is an addition to this document and ADR-0096's\nticket's to make.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
+        "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out of this body**, and that is a rule rather\nthan an oversight (``docs/adr/0096`` \u00a76): a preference crosses the wire\n*in*, on a search; no response that describes one player to another carries\na gender out and no card renders one. This body is only ever the caller's\nown profile, so nothing here would leak a third party's answer \u2014 the field\nis left off anyway, because *which* shapes may carry it is a line rather\nthan a judgement made per endpoint, and the line is **exactly one shape**:\nthe owner's own read, ``PlayerProfileReadResponse`` (``docs/adr/0179`` \u00a74).\nThe profile editor that reads it back is the You tab, and it reads that\nroute; the commit's answer stays what it was.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
       },
       "PlayerRecordResponse": {
         "properties": {
@@ -8181,6 +8218,26 @@
         ],
         "title": "PredictedBalanceEvidence",
         "description": "How even the game is forecast to be, and how sure of that the platform is.\n\n``pct`` is the forecast the player is shown; ``confidence`` is the platform's\nexisting \u03c3 transform and never a second spelling of certainty."
+      },
+      "ProfilePhotoResource": {
+        "properties": {
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Permanent id \u2014 what a photos write carries"
+          },
+          "review": {
+            "$ref": "#/components/schemas/PhotoReviewDecision",
+            "description": "What the on-court check concluded about this photograph, or **omitted** where nobody looked.\n\n**Omitted is not `allowed`.** Three answers, not two: checked and passed, checked and flagged, and *nobody looked* \u2014 a photo that arrived while the reviewer could not be reached, or before the check existed. This is the owner's own reading of the verdict the upload showed them once; `GET /photos/{id}` deliberately carries none. `flagged` blocks nothing \u2014 the photo is stored and shown, and the check is wrong sometimes. The evidence behind the verdict never crosses on any route."
+          }
+        },
+        "type": "object",
+        "required": [
+          "photo_id"
+        ],
+        "title": "ProfilePhotoResource",
+        "description": "One of the owner's photographs, and what the on-court check said about it.\n\n**The same words as ``PhotoResponse``** \u2014 ``photo_id`` and ``review``, the\nsame code under the same name \u2014 so a client keys a tile from this list and\nfrom ``GET /photos/{id}`` by one id and reads one vocabulary, even though the\ntwo shapes spell *no verdict* differently (there ``null``, here omitted).\nWhat differs is which route carries the verdict: the upload says it at\nthe moment the photograph was chosen (``docs/adr/0133``), the per-photo read\nsays nothing, and this list says what **stands** \u2014 because the You tab's\nphotos row is the one screen whose question is *what did the check conclude\nabout mine*, and a warning a player was shown once at upload has to be\nfindable again on the screen that lets them change the answer.\n\nThree answers and only two values (``docs/adr/0138``): ``allowed``,\n``flagged``, and **omitted** for *nobody looked*. Omitted is not\n``allowed`` \u2014 a photograph that arrived while the reviewer was unreachable,\nor before the check existed, has had nothing concluded about it, and a\nclient that drew a tick on the absence would be claiming a check happened.\n``flagged`` blocks nothing: the photo is stored, it is shown, and the check\nis wrong sometimes."
       },
       "Prompt": {
         "type": "string",

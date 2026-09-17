@@ -26,18 +26,34 @@ sport* is a primary-key read rather than a query over their sports — which is
 what the deterministic id buys and why asking it four times is affordable. It is
 sequential rather than gathered because the four reads share one session, and a
 session is not something two coroutines may use at once.
+
+**The third read is the store's, and it is the one that costs a round trip per
+photograph.** The You tab draws each photo with the verdict its uploader is owed
+(``docs/adr/0179`` §8) — the three-valued reading ``docs/adr/0138`` unfolded:
+passed, flagged, *nobody looked* — and that verdict is user metadata on the
+object, which no listing carries and no presign reads, so it is one ``HEAD`` per
+photograph. ``GET /photos/{id}`` refuses to pay it on every tile restored
+(``docs/adr/0133``); this read pays it once, for at most the three photographs a
+profile may hold, on the one screen whose whole question is *what did the check
+say about mine*. A profile holding none asks the store nothing. Unlike the four
+declaration reads these **are** gathered, on the port's own promise that one
+``review_decision`` shares nothing with the next — which is how the card source
+pays for the same answer over twenty rows.
 """
 
 from __future__ import annotations
 
+from asyncio import gather
 from dataclasses import dataclass
 from typing import Mapping
 from uuid import UUID
 
 from app.kernel import Sport
 from app.modules.player_profile.domain.errors import PlayerProfileNotFound
+from app.modules.player_profile.domain.photos import PhotoRef, PhotoReviewDecision
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.ports import (
+    PhotoStorage,
     PlayerProfileRepository,
     PlayIntentDeclarationRepository,
 )
@@ -51,15 +67,25 @@ class PlayerProfileSurface:
     Two objects rather than a flattened bag, because they are two aggregates and
     the boundary is what decides which of each one's fields cross. The
     **withholding is the response's job**, not this one's: an application layer
-    that pre-trimmed the profile would make *what Play sees* a fact about a use
-    case rather than about a contract, and the deferred fields land on the same
-    route when *You* is built.
+    that pre-trimmed the profile would make *what the tab sees* a fact about a
+    use case rather than about a contract — which is what let the deferred
+    fields land on the same route when *You* was built (``docs/adr/0179`` §8)
+    with one addition here, the store's answer about the photographs, and what
+    keeps the location area off the wire today.
     """
 
     profile: PlayerProfile
     #: Only the sports this player has declared in. Absence is *undeclared*, and
     #: there is deliberately no key with a null behind it.
     play_intents: Mapping[Sport, PlayIntent]
+    #: What the on-court check concluded about each of the profile's
+    #: photographs, keyed by photo id — and **only the photographs something
+    #: concluded about**. Absence is *nobody looked*, the same spelling as an
+    #: undeclared sport above and for the same reason: ``PhotoReviewDecision``
+    #: deliberately has no third value (``docs/adr/0138``), so a key with a null
+    #: behind it would be inventing one. The order is the profile's own
+    #: ``photo_ids``; this is the store's answer beside it, never a second list.
+    photo_verdicts: Mapping[UUID, PhotoReviewDecision]
 
 
 class ReadPlayerProfile:
@@ -68,9 +94,11 @@ class ReadPlayerProfile:
         *,
         profiles: PlayerProfileRepository,
         declarations: PlayIntentDeclarationRepository,
+        photos: PhotoStorage,
     ) -> None:
         self._profiles = profiles
         self._declarations = declarations
+        self._photos = photos
 
     async def execute(self, player_id: UUID) -> PlayerProfileSurface:
         profile = await self._profiles.load(player_id)
@@ -85,4 +113,20 @@ class ReadPlayerProfile:
             if declaration is not None:
                 declared[sport] = declaration.intent
 
-        return PlayerProfileSurface(profile=profile, play_intents=declared)
+        # One `HEAD` per photograph the profile holds, and none for a profile
+        # holding none. The owner is in the ref, so the store cannot be asked
+        # about anybody else's photo here.
+        refs = [
+            PhotoRef(owner_id=player_id, photo_id=photo_id)
+            for photo_id in profile.photo_ids
+        ]
+        decisions = await gather(*(self._photos.review_decision(ref) for ref in refs))
+        verdicts = {
+            ref.photo_id: decision
+            for ref, decision in zip(refs, decisions, strict=True)
+            if decision is not None
+        }
+
+        return PlayerProfileSurface(
+            profile=profile, play_intents=declared, photo_verdicts=verdicts
+        )

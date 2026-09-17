@@ -14,17 +14,44 @@ matters most.
 
 The fourth fact a screen needs — *which sports am I rated in* — is
 `GET /api/v1/ratings` and is not re-served here.
+
+**The read is the You tab's too** (``docs/adr/0179`` §8): it grew by the tags,
+the photos with their verdicts, the intro, the standing opt-in answer, and the
+owner's own gender and preference — the one shape those two may cross on (§4).
+What is asserted about it here is each field's spelling of absence, because
+that is what a client branches on: an empty ``photos`` list is served, an
+unwritten intro is omitted, a photograph nobody looked at carries no verdict,
+a pre-question profile carries no gender, and the location is still not there.
 """
 
 from __future__ import annotations
 
-from uuid import UUID
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
 
+from app.bootstrap.events import build_event_runtime
 from app.infrastructure.events.event_store_model import EventStoreORM
+from app.infrastructure.events.sqlalchemy_domain_event_store import (
+    SqlAlchemyEventStore,
+)
 from app.kernel import Sport
+from app.modules.player_profile.domain.events import (
+    PlayerProfileCreated,
+    ProposalsOptInAnswered,
+)
 from app.modules.player_profile.domain.ids import play_intent_declaration_id
+from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
+    PLAYER_PROFILE_AGGREGATE,
+)
+from app.modules.player_profile.domain.photos import (
+    PhotoRef,
+    PhotoReviewUnavailability,
+    review_metadata,
+    verdict_from_similarities,
+    verdict_when_unreviewable,
+)
 from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
 
 PROFILE_URL = "/api/v1/players/me/profile"
@@ -44,8 +71,8 @@ def intents_url(sport: Sport | str) -> str:
     return f"/api/v1/play-intents/{value}"
 
 
-async def a_player(client, name: str = "surface") -> tuple[UUID, dict[str, str]]:
-    """One signed-in player with a committed profile, through the real routes."""
+async def an_account(client, name: str) -> tuple[UUID, dict[str, str]]:
+    """One signed-in account with no profile yet, through the real routes."""
 
     signup = await client.post(
         "/api/v1/users",
@@ -63,28 +90,44 @@ async def a_player(client, name: str = "surface") -> tuple[UUID, dict[str, str]]
     )
     assert login.status_code == 200, login.text
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    return UUID(signup.json()["id"]), headers
 
+
+async def a_committed_profile(
+    client, headers: dict[str, str], name: str, **overrides
+) -> None:
+    """The commit, with the answers every test here gives unless it says otherwise."""
+
+    body = {
+        "social_tag_ids": ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
+        "photo_ids": [],
+        "availability": [
+            {"day": 2, "part": "EVENING"},
+            {"day": 6, "part": "MORNING"},
+        ],
+        "location": HOME_FIX,
+        "search_radius_km": SEARCH_RADIUS_BOUNDS.default_km,
+        "proposals_opt_in": {
+            "accepted": True,
+            "copy_version": "proposals-2026-08",
+        },
+        "gender": "WOMAN",
+    }
+    body.update(overrides)
     commit = await client.post(
         PROFILE_URL,
-        json={
-            "social_tag_ids": ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
-            "photo_ids": [],
-            "availability": [
-                {"day": 2, "part": "EVENING"},
-                {"day": 6, "part": "MORNING"},
-            ],
-            "location": HOME_FIX,
-            "search_radius_km": SEARCH_RADIUS_BOUNDS.default_km,
-            "proposals_opt_in": {
-                "accepted": True,
-                "copy_version": "proposals-2026-08",
-            },
-            "gender": "WOMAN",
-        },
+        json=body,
         headers={**headers, "Idempotency-Key": f"commit-{name}"},
     )
     assert commit.status_code == 201, commit.text
-    return UUID(signup.json()["id"]), headers
+
+
+async def a_player(client, name: str = "surface") -> tuple[UUID, dict[str, str]]:
+    """One signed-in player with a committed profile, through the real routes."""
+
+    player_id, headers = await an_account(client, name)
+    await a_committed_profile(client, headers, name)
+    return player_id, headers
 
 
 async def a_signed_in_player(client, name: str) -> dict[str, str]:
@@ -168,29 +211,161 @@ async def test_a_sport_with_no_declaration_is_absent_rather_than_null(client):
     assert "PADEL" not in body["play_intents"]
 
 
-async def test_the_read_serves_neither_the_refused_fields_nor_the_deferred_ones(
-    client,
-):
-    """Decision 12's scope, and ADR-0096's standing refusal, in one assertion.
+#: The reviewer a stored verdict names, and the two similarity vectors that
+#: decide it one way and the other. What the numbers mean is the domain's.
+MODEL = "openai/clip-vit-base-patch32"
+ON_COURT = [0.9] * 5 + [0.1] * 8
+OFF_COURT = [0.1] * 5 + [0.9] * 8
 
-    `gender` never comes back out of this API. Tags, photos and location are
-    **not served yet** and land here when You is built — which is why the route
-    description names photos, the one absence a client could otherwise read as
-    *you have none*.
+
+def a_photo_held(photo_storage, owner: UUID, metadata: dict[str, str]) -> UUID:
+    """One photograph already in the store under this owner, carrying what a
+    verdict writes — the fixture a *reader* of the verdict wants, not an upload."""
+
+    photo_id = uuid4()
+    photo_storage.already_holding(PhotoRef(owner_id=owner, photo_id=photo_id), metadata)
+    return photo_id
+
+
+async def test_the_read_carries_every_fact_the_you_tab_draws(client, photo_storage):
+    """``docs/adr/0179`` §8: the read grows by the tags, the photos with their
+    verdicts, the intro, the standing opt-in answer, and the owner's own gender
+    and preference (§4). Every row on the tab draws its live line from this one
+    response, and *Who you play with* opens with the right radio pre-selected.
     """
+
+    player_id, headers = await an_account(client, "you")
+    passed = a_photo_held(
+        photo_storage,
+        player_id,
+        review_metadata(verdict_from_similarities(model=MODEL, similarities=ON_COURT)),
+    )
+    flagged = a_photo_held(
+        photo_storage,
+        player_id,
+        review_metadata(verdict_from_similarities(model=MODEL, similarities=OFF_COURT)),
+    )
+    await a_committed_profile(
+        client,
+        headers,
+        "you",
+        social_tag_ids=["HERE_TO_IMPROVE", "PLAYS_TO_WIN"],
+        photo_ids=[str(passed), str(flagged)],
+        intro="Will travel for a hard game.",
+        gender="MAN",
+        gender_preference="ANY",
+    )
+
+    response = await client.get(PROFILE_URL, headers=headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    # The vocabulary's order, whatever order the picker sent them in.
+    assert body["social_tags"] == ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"]
+    assert body["photos"] == [
+        {"photo_id": str(passed), "review": "allowed"},
+        {"photo_id": str(flagged), "review": "flagged"},
+    ]
+    assert body["intro"] == "Will travel for a hard game."
+    assert body["proposals_opt_in"]["accepted"] is True
+    assert body["proposals_opt_in"]["copy_version"] == "proposals-2026-08"
+    assert body["proposals_opt_in"]["answered_at"]
+    assert body["gender"] == "MAN"
+    assert body["gender_preference"] == "ANY"
+
+
+async def test_a_photograph_nobody_looked_at_carries_no_verdict(client, photo_storage):
+    """The uploader's third reading is an **absence** (``docs/adr/0138``): the
+    photograph is listed, in its place, and nothing is claimed about it — never
+    ``allowed``, and never ``null`` either, which would generate a type that
+    says neither thing."""
+
+    player_id, headers = await an_account(client, "outage")
+    unlooked_at = a_photo_held(
+        photo_storage,
+        player_id,
+        review_metadata(verdict_when_unreviewable(PhotoReviewUnavailability.TIMEOUT)),
+    )
+    await a_committed_profile(client, headers, "outage", photo_ids=[str(unlooked_at)])
+
+    body = (await client.get(PROFILE_URL, headers=headers)).json()
+
+    assert body["photos"] == [{"photo_id": str(unlooked_at)}]
+
+
+async def test_no_photographs_is_an_empty_list_and_no_intro_is_no_field(client):
+    """Two absences with two spellings. A profile may legally hold no photo, so
+    the list is **served empty** rather than omitted — the deferral this route
+    used to name as the one a client could read as *you have none*. An intro
+    that was never written is **omitted**, never ``""`` (``docs/adr/0170``)."""
+
+    _, headers = await a_player(client, "bare")
+
+    body = (await client.get(PROFILE_URL, headers=headers)).json()
+
+    assert body["photos"] == []
+    assert "intro" not in body
+
+
+async def test_a_profile_from_before_the_gender_question_omits_the_answer(
+    client, session_factory
+):
+    """Never ``PREFER_NOT_TO_SAY``, which is an answer a player gives
+    (``docs/adr/0179`` §4). No route can commit such a profile any more, so the
+    stream is written as it was then — the field simply unset, no upcaster —
+    and the assertion is on the wire, because *omitted* is a property of the
+    route and not of the model behind it."""
+
+    player_id, headers = await an_account(client, "before-the-question")
+    then = datetime(2026, 8, 25, 9, 0, tzinfo=timezone.utc)
+    async with session_factory() as session:
+        await SqlAlchemyEventStore(session, build_event_runtime().codec).append(
+            aggregate_type=PLAYER_PROFILE_AGGREGATE,
+            aggregate_id=player_id,
+            expected_version=0,
+            events=[
+                PlayerProfileCreated(
+                    player_id=player_id,
+                    social_tags=("PLAYS_TO_WIN", "HERE_TO_IMPROVE"),
+                    photo_ids=(),
+                    availability=("2:EVENING",),
+                    latitude=51.51,
+                    longitude=-0.13,
+                    search_radius_km=SEARCH_RADIUS_BOUNDS.default_km,
+                    idempotency_key="commit-before-the-question",
+                    occurred_at=then,
+                ),
+                ProposalsOptInAnswered(
+                    player_id=player_id,
+                    accepted=True,
+                    copy_version="proposals-2026-08",
+                    surface="ONBOARDING",
+                    occurred_at=then,
+                ),
+            ],
+        )
+        await session.commit()
+
+    response = await client.get(PROFILE_URL, headers=headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert "gender" not in body
+    assert body["gender_preference"] == "ANY"
+
+
+async def test_the_read_serves_no_location_and_no_flag_for_one(client):
+    """The area is still not served, and neither is a ``has_location``: a
+    profile cannot be committed without an area, so the flag could never be
+    false, and a branch nobody can take is a branch nobody tests
+    (``docs/adr/0179`` §8)."""
 
     _, headers = await a_player(client)
 
     body = (await client.get(PROFILE_URL, headers=headers)).json()
 
-    for absent in (
-        "gender",
-        "gender_preference",
-        "social_tag_ids",
-        "photo_ids",
-        "location",
-    ):
-        assert absent not in body
+    assert "location" not in body
+    assert "has_location" not in body
 
 
 async def test_the_read_answers_the_profile_that_is_not_there(client):

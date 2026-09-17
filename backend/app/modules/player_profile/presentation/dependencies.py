@@ -181,11 +181,16 @@ HasPlayerProfileDep = Annotated[HasPlayerProfile, Depends(get_has_player_profile
 def get_read_player_profile(
     profiles: PlayerProfileRepositoryDep,
     declarations: PlayIntentDeclarationRepositoryDep,
+    photos: PhotoStorageDep,
 ) -> ReadPlayerProfile:
     # Both repositories, because the read spans both of this context's
     # aggregates — which is the join ADR-0090's precedent makes cheap, one
-    # context lower than where that record made it.
-    return ReadPlayerProfile(profiles=profiles, declarations=declarations)
+    # context lower than where that record made it. And the store, because the
+    # verdict beside each photograph is metadata on the object and lives
+    # nowhere else (``docs/adr/0179`` §8).
+    return ReadPlayerProfile(
+        profiles=profiles, declarations=declarations, photos=photos
+    )
 
 
 ReadPlayerProfileDep = Annotated[ReadPlayerProfile, Depends(get_read_player_profile)]

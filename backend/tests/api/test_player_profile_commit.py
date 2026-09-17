@@ -433,9 +433,11 @@ async def test_no_gender_value_ever_comes_back_out(client):
     """``docs/adr/0096`` §6, asserted rather than remembered.
 
     The body is only ever the caller's own profile, so nothing here would leak a
-    third party's answer — but the moment one response shape carries it, *which*
-    shapes may becomes a judgement made per endpoint instead of a line nobody
-    has to re-argue. This is that line.
+    third party's answer — but *which* shapes may carry it is a line rather than
+    a judgement made per endpoint, and the line is one shape: the owner's own
+    read (``docs/adr/0179`` §4). The commit's answer is not it, and the walk in
+    ``tests/unit/test_no_response_carries_a_forbidden_fact.py`` holds the
+    whole contract to that.
     """
 
     headers = await auth_headers(client)

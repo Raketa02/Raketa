@@ -12,12 +12,21 @@ act from — rather than by schema validation, which can only say that some fiel
 somewhere was wrong. What is constrained here is what has no served vocabulary
 to disagree with: a weekday is 1–7 because that is what a weekday is, and
 ``Gender`` and ``GenderPreference`` are closed sets fixed by ``docs/adr/0096``
-that no endpoint publishes and no client can hold a different version of.
+that no client can hold a different version of — published on exactly one
+route, the owner's own profile read (``docs/adr/0179`` §4), and no other.
+
+**An omitted field is not a null one** on the profile read. ``OMITTED`` fields
+are absent from the JSON, and the difference is the contract's own: *absent*
+means the field does not apply to this profile — no intro was written, nobody
+looked at this photograph, the gender question did not exist when this profile
+was committed — and ``null`` would mean it applies and the answer is a measured
+nothing. Nothing on that read is ever nulled.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -71,6 +80,19 @@ from app.modules.player_profile.domain.social_tags import (
     SocialTagGroup,
     SocialTagSelectionBounds,
 )
+
+#: The default that spells **omitted** — the same sentinel the shortlist's and
+#: the record's schemas use, spelled here rather than imported for the reason
+#: each of them spells its own: a context declares its own presentation
+#: vocabulary, and it is one line.
+#:
+#: A field carrying it is not in the schema's ``required`` list, so it generates
+#: as ``field?: T``, and the profile read is declared
+#: ``response_model_exclude_unset=True`` so it is genuinely absent from the JSON
+#: rather than present as ``null``. It is typed ``Any`` so the field keeps its
+#: own non-nullable type: a field annotated ``T | None`` *and* defaulted would
+#: generate as ``field?: T | null`` and say neither thing.
+OMITTED: Any = None
 
 
 class SocialTagResource(BaseModel):
@@ -207,7 +229,11 @@ class PhotoResponse(BaseModel):
     verdict is user metadata, which every S3-compatible store answers with a
     request per object. So the shape stays one shape and the tile stays one code
     path, exactly as the paragraph above promises; what differs is whether this
-    response has anything to say about the check.
+    response has anything to say about the check. Where the owner reads what
+    **stands** beside each of their photographs is the profile read's ``photos``
+    list (`ProfilePhotoResource`, ``docs/adr/0179`` §8) — the one screen whose
+    question is the check's answer, paying that request for at most three
+    objects rather than per tile.
 
     **The upload can also carry nothing, and that is not the read's ``null``**
     (``docs/adr/0138``). A reviewer that could not be asked concludes nothing, so
@@ -508,16 +534,16 @@ class PlayerProfileResponse(BaseModel):
     The same body whether the commit created the profile or replayed an earlier
     one, so a client that only wants its profile needs no branch on the status.
 
-    **No gender value comes back out**, and that is a rule rather than an
-    oversight (``docs/adr/0096`` §6): a preference crosses the wire *in*, on a
-    search; no response shape carries a gender out and no card renders one.
-    This body is only ever the caller's own profile, so nothing here would leak
-    a third party's answer — the field is left off anyway, because the moment
-    one response shape carries it, *which* shapes may is a judgement call made
-    per endpoint instead of a line nobody has to re-argue. Nothing reads it back
-    today: onboarding sends it once, and there is no profile editor. When one
-    exists, adding it here is an addition to this document and ADR-0096's
-    ticket's to make.
+    **No gender value comes back out of this body**, and that is a rule rather
+    than an oversight (``docs/adr/0096`` §6): a preference crosses the wire
+    *in*, on a search; no response that describes one player to another carries
+    a gender out and no card renders one. This body is only ever the caller's
+    own profile, so nothing here would leak a third party's answer — the field
+    is left off anyway, because *which* shapes may carry it is a line rather
+    than a judgement made per endpoint, and the line is **exactly one shape**:
+    the owner's own read, ``PlayerProfileReadResponse`` (``docs/adr/0179`` §4).
+    The profile editor that reads it back is the You tab, and it reads that
+    route; the commit's answer stays what it was.
 
     **Fields are only ever added.** A shipped mobile app parses this document for
     months after it stops being built.
@@ -561,33 +587,76 @@ def _grid_resource(grid: AvailabilityGrid) -> list[AvailabilitySlotResource]:
     return [AvailabilitySlotResource.from_cell(cell) for cell in grid.cells]
 
 
+class ProfilePhotoResource(BaseModel):
+    """One of the owner's photographs, and what the on-court check said about it.
+
+    **The same words as ``PhotoResponse``** — ``photo_id`` and ``review``, the
+    same code under the same name — so a client keys a tile from this list and
+    from ``GET /photos/{id}`` by one id and reads one vocabulary, even though the
+    two shapes spell *no verdict* differently (there ``null``, here omitted).
+    What differs is which route carries the verdict: the upload says it at
+    the moment the photograph was chosen (``docs/adr/0133``), the per-photo read
+    says nothing, and this list says what **stands** — because the You tab's
+    photos row is the one screen whose question is *what did the check conclude
+    about mine*, and a warning a player was shown once at upload has to be
+    findable again on the screen that lets them change the answer.
+
+    Three answers and only two values (``docs/adr/0138``): ``allowed``,
+    ``flagged``, and **omitted** for *nobody looked*. Omitted is not
+    ``allowed`` — a photograph that arrived while the reviewer was unreachable,
+    or before the check existed, has had nothing concluded about it, and a
+    client that drew a tick on the absence would be claiming a check happened.
+    ``flagged`` blocks nothing: the photo is stored, it is shown, and the check
+    is wrong sometimes.
+    """
+
+    photo_id: UUID = Field(
+        ..., description="Permanent id — what a photos write carries"
+    )
+    review: PhotoReviewDecision = Field(
+        default=OMITTED,
+        description=(
+            "What the on-court check concluded about this photograph, or "
+            "**omitted** where nobody looked.\n\n"
+            "**Omitted is not `allowed`.** Three answers, not two: checked and "
+            "passed, checked and flagged, and *nobody looked* — a photo that "
+            "arrived while the reviewer could not be reached, or before the "
+            "check existed. This is the owner's own reading of the verdict the "
+            "upload showed them once; `GET /photos/{id}` deliberately carries "
+            "none. `flagged` blocks nothing — the photo is stored and shown, "
+            "and the check is wrong sometimes. The evidence behind the verdict "
+            "never crosses on any route."
+        ),
+    )
+
+
 class PlayerProfileReadResponse(BaseModel):
-    """The profile facts the Play screens read, in one round trip.
+    """Every fact a player declared, in one round trip — what the Play screens
+    read and, since ``docs/adr/0179``, what the You tab draws its rows from.
 
-    **Three facts and not the whole profile**, and the two absences are
-    different absences:
+    **The gender and the preference are served here, and on no other shape.**
+    ADR-0096 §6's *no response shape carries a gender value out* is about
+    responses that describe one player to another, and its walk still refuses
+    both words on every one of those. A player reading their own answer on a
+    route scoped to ``me`` is not what that rule protects, and a screen that
+    asks *who should we match you with* with nothing pre-selected is a screen a
+    player cannot trust (``docs/adr/0179`` §4). ``gender`` is **omitted** on a
+    profile committed before the question existed — never ``PREFER_NOT_TO_SAY``,
+    which is an answer a player gives.
 
-    A **standing refusal.** ``gender`` and ``gender_preference`` never come back
-    out of this API — the commit route already promises it (``docs/adr/0096``
-    §6) and this route does not weaken it.
+    **The one thing still withheld is the location area**, and nothing stands
+    in for it: a profile cannot be committed without an area, so a
+    ``has_location`` could never be false, and a branch nobody can take is a
+    branch nobody tests.
 
-    A **deferral.** Social tags, photos and the location area are not refused;
-    they are **not served yet**, and this is the route they land on when *You* is
-    built rather than a route that acquires a sibling. The one worth naming is
-    **photos**: a profile may legally hold none, so an absent ``photo_ids`` is
-    the single deferral a client could read as *you have none* — which is exactly
-    the vanished-row lie ADR-0109 exists to prevent, arriving through the field
-    nobody would check. Tags and a location are required at commit, so their
-    absence cannot be mistaken for an answer.
-
-    It is prose rather than a machine-readable ``withheld`` list: ADR-0130
-    already struck ADR-0109's *and why* half, and a list here would be a field
-    whose only reader is a human, on a route where no client ever counted a row
-    that could go missing.
+    Absence has one spelling here and it is **omission** (``OMITTED``): an intro
+    never written, a photograph nobody looked at, a gender never asked. The one
+    absence that is served rather than omitted is **an empty ``photos`` list**,
+    because a profile may legally hold none and that is a real answer.
 
     **No ``player_id``.** The resource is ``/players/me``, so the caller is the
-    bearer token and echoing it back would be a fourth fact on a body scoped to
-    three. ``GET /users/me`` is where an id comes from.
+    bearer token and echoing it back would say nothing. ``GET /users/me`` is
+    where an id comes from.
 
     **Fields are only ever added.** A shipped mobile app parses this document for
     months after it stops being built.
@@ -620,14 +689,105 @@ class PlayerProfileReadResponse(BaseModel):
             "refusal rather than after it."
         ),
     )
+    social_tags: list[SocialTag] = Field(
+        ...,
+        description=(
+            "The Social tag ids this player holds, **in the vocabulary's "
+            "order** whatever order the picker sent them in. Required at "
+            "commit, so never empty and never absent."
+        ),
+    )
+    photos: list[ProfilePhotoResource] = Field(
+        ...,
+        description=(
+            "The photographs, **in the player's order** — the first is the "
+            "profile photo — each with the verdict its uploader is owed. "
+            "**An empty list is a real answer**: a profile may hold none, and "
+            "the client draws the generated court poster."
+        ),
+    )
+    intro: str = Field(
+        default=OMITTED,
+        # No `max_length`: the cap binds the write and not the read. A line the
+        # profile holds was admitted when it was written, and a response schema
+        # that refused it after the cap moved would take the tab down for a
+        # fact the platform recorded.
+        description=(
+            "The line this player wrote about themselves, as recorded, or "
+            "**omitted** where none was written. Never an empty string "
+            "(`docs/adr/0170`)."
+        ),
+    )
+    proposals_opt_in: ProposalsOptInResponse = Field(
+        ...,
+        description=(
+            "The standing answer to the proposals question: what was answered, "
+            "when, against which words and from which surface. Always present "
+            "— a profile cannot be committed without one."
+        ),
+    )
+    gender: Gender = Field(
+        default=OMITTED,
+        description=(
+            "The owner's own answer to the gender question. **Served here and "
+            "on no other response shape** (`docs/adr/0179` §4) — what one "
+            "player is told about another never carries it.\n\n"
+            "**Omitted** on a profile committed before the question existed, "
+            "and never read as `PREFER_NOT_TO_SAY`, which is an answer a "
+            "player gives: a client pre-selects nothing rather than something."
+        ),
+    )
+    gender_preference: GenderPreference = Field(
+        ...,
+        description=(
+            "Who the owner is willing to be matched with — their own setting, "
+            "served here and on no other response shape (`docs/adr/0179` §4). "
+            "Always present: it defaults to `ANY` at commit, so there is "
+            "nothing for its absence to mean."
+        ),
+    )
 
     @classmethod
     def from_domain(cls, surface: PlayerProfileSurface) -> "PlayerProfileReadResponse":
-        return cls(
-            availability=_grid_resource(surface.profile.availability),
-            search_radius_km=surface.profile.search_radius.kilometres,
-            play_intents=dict(surface.play_intents),
+        profile = surface.profile
+        # A created profile always carries an answer — see
+        # `PlayerProfileResponse.from_domain`, which makes the same claim on the
+        # same aggregate for the same reason.
+        opt_in = invariant(
+            profile.proposals_opt_in,
+            f"a committed profile with no opt-in answer: {profile.player_id}",
         )
+        fields: dict[str, Any] = {
+            "availability": _grid_resource(profile.availability),
+            "search_radius_km": profile.search_radius.kilometres,
+            "play_intents": dict(surface.play_intents),
+            "social_tags": list(profile.social_tags.tags),
+            "photos": [
+                _profile_photo(photo_id, surface.photo_verdicts.get(photo_id))
+                for photo_id in profile.photo_ids
+            ],
+            "proposals_opt_in": ProposalsOptInResponse.from_domain(opt_in),
+            "gender_preference": profile.gender_preference,
+        }
+        if profile.intro is not None:
+            # Omitted where nothing was written, never `""` (`docs/adr/0170`).
+            fields["intro"] = profile.intro.text
+        if profile.gender is not None:
+            # Absent stays absent: a stream from before the question folds to
+            # `None`, and serving a value would claim an answer nobody gave.
+            fields["gender"] = profile.gender
+        return cls.model_validate(fields)
+
+
+def _profile_photo(
+    photo_id: UUID, review: PhotoReviewDecision | None
+) -> ProfilePhotoResource:
+    # `review` is left **unset** rather than passed as `None`, which is what
+    # `response_model_exclude_unset=True` reads as *omit*.
+    fields: dict[str, Any] = {"photo_id": photo_id}
+    if review is not None:
+        fields["review"] = review
+    return ProfilePhotoResource.model_validate(fields)
 
 
 class ChangeAvailabilityRequest(BaseModel):

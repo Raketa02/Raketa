@@ -154,6 +154,12 @@ class PhotoStorage(Protocol):
         (`decision_on_record`). A caller draws no shield for any of them, which
         is the same act, so telling them apart here would be a distinction
         nothing downstream is allowed to use.
+
+        **Calls are independent and may be gathered.** One answer shares nothing
+        with the next — no session, no cursor, no client a second call would
+        contend for — so a caller with several photographs to ask about may ask
+        concurrently, and both callers do: the card source over a shortlist and
+        the owner's profile read over their own three.
         """
         ...
 

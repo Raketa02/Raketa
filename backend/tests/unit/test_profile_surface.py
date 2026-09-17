@@ -46,12 +46,22 @@ from app.modules.player_profile.domain.errors import (
 from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     LocationChanged,
+    PlayerProfileCreated,
     PlayIntentDeclared,
+    ProposalsOptInAnswered,
     SearchRadiusChanged,
 )
 from app.modules.player_profile.domain.gender import (
     DEFAULT_GENDER_PREFERENCE,
     Gender,
+)
+from app.modules.player_profile.domain.photos import (
+    PhotoRef,
+    PhotoReviewDecision,
+    PhotoReviewUnavailability,
+    review_metadata,
+    verdict_from_similarities,
+    verdict_when_unreviewable,
 )
 from app.modules.player_profile.domain.play_intent import (
     PlayIntent,
@@ -62,8 +72,10 @@ from app.modules.player_profile.infrastructure.event_sourced_play_intent_declara
     EventSourcedPlayIntentDeclarationRepository,
 )
 from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
+    PLAYER_PROFILE_AGGREGATE,
     EventSourcedPlayerProfileRepository,
 )
+from app.modules.player_profile.presentation.schemas import PlayerProfileReadResponse
 from app.shared.ids import new_uuid
 from tests.unit.fake_event_store import (
     CountingUnitOfWork,
@@ -88,6 +100,9 @@ class Harness:
         self.publisher = RecordingPublisher()
         self.uow = CountingUnitOfWork()
         self.clock = FrozenClock()
+        #: One store for the commit and the read: the commit proves each photo
+        #: id against it, and the read asks it what was concluded about each.
+        self.photos = InMemoryPhotoStorage()
 
     # A repository per call, as the request scope makes one: each remembers the
     # stream versions *it* read, and one that outlived its transaction would be
@@ -123,7 +138,7 @@ class Harness:
         arguments.update(overrides)
         await CommitPlayerProfile(
             profiles=self._profiles(),
-            photos=InMemoryPhotoStorage(),
+            photos=self.photos,
             uow=self.uow,
             clock=self.clock,
         ).execute(CommitPlayerProfileCommand(**arguments))
@@ -181,8 +196,19 @@ class Harness:
 
     async def read(self, *, player_id=PLAYER):
         return await ReadPlayerProfile(
-            profiles=self._profiles(), declarations=self._declarations()
+            profiles=self._profiles(),
+            declarations=self._declarations(),
+            photos=self.photos,
         ).execute(player_id)
+
+    def a_photo_held(self, *, metadata: dict[str, str], owner=PLAYER):
+        """One photograph already in the store, carrying what a verdict writes."""
+
+        photo_id = new_uuid()
+        self.photos.already_holding(
+            PhotoRef(owner_id=owner, photo_id=photo_id), metadata
+        )
+        return photo_id
 
 
 @pytest.fixture
@@ -435,3 +461,106 @@ async def test_the_read_refuses_a_player_with_no_profile(harness):
 
     with pytest.raises(PlayerProfileNotFound):
         await harness.read()
+
+
+# ---------------------------------------------------------------------------
+# The read, for the You tab: what the store concluded about each photograph
+# ---------------------------------------------------------------------------
+
+#: The reviewer the stored verdicts name. Any string the note can carry.
+MODEL = "openai/clip-vit-base-patch32"
+#: Thirteen similarities: five on-court prompts high, eight off-court low — and
+#: the reverse. What the numbers are is `verdict_from_similarities`'s business.
+ON_COURT = [0.9] * 5 + [0.1] * 8
+OFF_COURT = [0.1] * 5 + [0.9] * 8
+
+
+async def test_the_read_carries_what_was_concluded_about_each_photograph(harness):
+    """The uploader's three-valued reading, one photo at a time
+    (``docs/adr/0179`` §8): passed, flagged, and *nobody looked* — which is an
+    **absence** from the map, never a third value, exactly as an undeclared
+    sport is absent from ``play_intents``.
+
+    ``GET /photos/{id}`` answers no verdict on purpose (``docs/adr/0133``), so
+    this read is the one place the owner is told what stands beside each of
+    their photographs.
+    """
+
+    passed = harness.a_photo_held(
+        metadata=review_metadata(
+            verdict_from_similarities(model=MODEL, similarities=ON_COURT)
+        )
+    )
+    flagged = harness.a_photo_held(
+        metadata=review_metadata(
+            verdict_from_similarities(model=MODEL, similarities=OFF_COURT)
+        )
+    )
+    unlooked_at = harness.a_photo_held(
+        metadata=review_metadata(
+            verdict_when_unreviewable(PhotoReviewUnavailability.TIMEOUT)
+        )
+    )
+    await harness.commit_profile(photo_ids=[flagged, passed, unlooked_at])
+
+    surface = await harness.read()
+
+    assert surface.profile.photo_ids == (flagged, passed, unlooked_at)
+    assert surface.photo_verdicts == {
+        passed: PhotoReviewDecision.ALLOWED,
+        flagged: PhotoReviewDecision.FLAGGED,
+    }
+
+
+async def test_a_profile_with_no_photographs_asks_the_store_nothing(harness):
+    """A verdict costs a round trip per photograph (``docs/adr/0138``), and a
+    profile holding none has nothing to pay for."""
+
+    await harness.commit_profile(photo_ids=[])
+
+    surface = await harness.read()
+
+    assert surface.photo_verdicts == {}
+    assert harness.photos.decision_reads == []
+
+
+async def test_a_profile_from_before_the_gender_question_omits_the_answer(harness):
+    """Never ``PREFER_NOT_TO_SAY``, which is an answer a player gives. The
+    stream is one written before the question existed — no upcaster, the field
+    simply unset — and the response leaves the key out so a client pre-selects
+    nothing rather than something (``docs/adr/0179`` §4). The preference is
+    the other case: ``ANY`` is what never having expressed one *is*.
+    """
+
+    await harness.store.append(
+        aggregate_type=PLAYER_PROFILE_AGGREGATE,
+        aggregate_id=PLAYER,
+        expected_version=0,
+        events=[
+            PlayerProfileCreated(
+                player_id=PLAYER,
+                social_tags=("PLAYS_TO_WIN", "HERE_TO_IMPROVE"),
+                photo_ids=(),
+                availability=("2:EVENING",),
+                latitude=51.51,
+                longitude=-0.13,
+                search_radius_km=10,
+                idempotency_key="commit-before-the-question",
+                occurred_at=harness.clock.now(),
+            ),
+            ProposalsOptInAnswered(
+                player_id=PLAYER,
+                accepted=True,
+                copy_version="proposals-2026-08",
+                surface=ConsentSurface.ONBOARDING.value,
+                occurred_at=harness.clock.now(),
+            ),
+        ],
+    )
+
+    body = PlayerProfileReadResponse.from_domain(await harness.read()).model_dump(
+        exclude_unset=True, mode="json"
+    )
+
+    assert "gender" not in body
+    assert body["gender_preference"] == "ANY"
