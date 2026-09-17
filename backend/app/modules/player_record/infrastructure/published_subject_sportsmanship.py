@@ -1,18 +1,11 @@
 """``SubjectSportsmanship`` over ``sportsmanship``'s published fold.
 
-**A rename on one method, and a refusal to derive on the other.** What crosses
-for a reader is the figure and the count, translated word for word from
-``PublishedSportsmanship`` into this context's ``WhatPlayersSaid``. What crosses
-for the subject is three steps wide and is fetched **through the provider's own
-band method**, which is the whole point of this file.
-
-**Coarsening the figure here would satisfy the protocol.** It would also mean
-this process had held an average and a count about somebody, one line away from
-the sheet titled *How others see you*, and ``docs/adr/0158``'s rule is about what
-crosses the seam rather than about what is rendered: a caller holding the pair
-can perform the subtraction whatever it draws. So ``band_for`` never touches the
-figure's method, and ``tests/unit/test_player_record_sportsmanship.py`` fails the
-build if it starts to.
+**A rename, and nothing else.** What crosses is the figure and the count,
+translated word for word from ``PublishedSportsmanship`` into this context's
+``WhatPlayersSaid`` — for a reader and for the subject alike, since
+``docs/adr/0179`` §5 served the figure to the person it is about and retired the
+band this file used to fetch through a second method. No arithmetic happens
+here: the mean was taken and rounded once, in the context that owns the scale.
 
 **The name breaks the habit of the four adapters beside it, deliberately.**
 Those are ``<provider><demand>`` — ``GamesSubjectForm``,
@@ -20,10 +13,10 @@ Those are ``<provider><demand>`` — ``GamesSubjectForm``,
 word, so that rule spells ``SportsmanshipSubjectSportsmanship``, which is not a
 name. It is named for the port it reads instead.
 
-**The absence passes straight through, on both methods.** ``None`` from the
-provider is ``None`` here: a player nobody has rated has nothing said about them,
-and every layer between the fold and the response spells that the same way rather
-than turning it into a nought or a bottom band on the way past.
+**The absence passes straight through.** ``None`` from the provider is
+``None`` here: a player nobody has rated has nothing said about them, and every
+layer between the fold and the response spells that the same way rather than
+turning it into a nought on the way past.
 """
 
 from __future__ import annotations
@@ -35,7 +28,6 @@ from app.modules.player_record.domain.record import (
     HIGHEST_AVERAGE,
     LOWEST_AVERAGE,
     RATER_WINDOW,
-    OpinionBand,
     WhatPlayersSaid,
 )
 from app.modules.sportsmanship.domain.ports import PublishedSportsmanshipQuery
@@ -72,7 +64,7 @@ if (LOWEST_AVERAGE, HIGHEST_AVERAGE, RATER_WINDOW) != (
 
 @final
 class PublishedSubjectSportsmanship:
-    """What other players said, in the record's own words — at two resolutions."""
+    """What other players said, in the record's own words."""
 
     def __init__(self, published: PublishedSportsmanshipQuery) -> None:
         self._published = published
@@ -90,17 +82,6 @@ class PublishedSubjectSportsmanship:
         if published is None:
             return None
         return WhatPlayersSaid(average=published.average, raters=published.raters)
-
-    async def band_for(self, player_id: UUID) -> OpinionBand | None:
-        """The subject's coarse band — **read, never derived.**
-
-        The provider coarsens its own figure, so the band a subject is shown
-        cannot land on the other side of an edge from the figure a reader is
-        shown. Two words change; nothing else does.
-        """
-
-        band = await self._published.band_for(player_id)
-        return None if band is None else OpinionBand(band.value)
 
 
 __all__ = ["PublishedSubjectSportsmanship"]

@@ -2,6 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-08
+- **The 2026-09-08 sportsmanship amendment's split amended by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5** — the
+  figure and its count cross to the subject too, `SubjectSportsmanship` has one method,
+  `sportsmanship_band` retires from the record and the invariant beside `is_self` with it.
+  The cost is accepted and written beside the reversal there.
 
 ## Context
 

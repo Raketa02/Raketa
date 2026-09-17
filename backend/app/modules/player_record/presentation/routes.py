@@ -11,12 +11,11 @@ on, and it is load-bearing rather than tidy.
 no second renderer, because two shapes for one sheet is how *How others see you*
 and *how a stranger sees you* stop being the same screen.
 
-**One zone differs by more than a title, and it is the only one.** What other
-players said crosses as a figure and a count to a reader, and as a coarse band to
-the person it is about (``docs/adr/0158``) — an average beside a count in front of
-the subject is a subtraction that names each new rating exactly, and they know who
-they played. It is still one response type: two fields, at most one of them ever
-present, and which one is decided by ``is_self`` on this side.
+**No zone differs by more than a title.** What other players said used to —
+a figure and a count to a reader, a coarse band to the person it is about — and
+since ``docs/adr/0179`` §5 the figure crosses to its subject as to anybody, with
+the cost of that written down there rather than here. One response type, one
+sportsmanship field, whoever is reading.
 
 **One refusal, and it names nothing** (``docs/adr/0159``). Never disclosed to
 you, blocked either way, held, and no such player return the same `404` and the
@@ -120,13 +119,12 @@ SportAsked = Annotated[
         "reading their own record, and a hold does not reach it either — this "
         "is the one screen a held player has for finding out how they appear.\n\n"
         "`is_self` is `true`. Read it rather than comparing ids.\n\n"
-        "**What other players said comes back as a band and never as a "
-        "figure.** `sportsmanship_band` is three steps wide and carries no "
-        "count, and `sportsmanship` is absent — an average beside a count would "
-        "let you subtract each new rating out and name it, and you know who you "
-        "played, so every answer would be identifiable by the one person who "
-        "must never see it. It changes nothing about how you are matched: the "
-        "reliability pill is what the platform acts on.\n\n"
+        "**What other players said comes back as the figure and its count** — "
+        "`sportsmanship.average` and `sportsmanship.raters`, exactly what a "
+        "stranger is served about you. The coarse band that used to stand in "
+        "for it here is retired by ADR-0179 §5, which names what that costs. It "
+        "changes nothing about how you are matched: the reliability pill is "
+        "what the platform acts on.\n\n"
         "**`?sport=` works here too**, and picks which of your own Levels the "
         "skill card draws — the same resolution a stranger's sheet takes."
     ),
@@ -165,9 +163,8 @@ async def read_own_record(
         "never to be answered.\n\n"
         "**Asking about yourself is allowed** and answers `is_self: true` — the "
         "client is told rather than left to compare identifiers. It draws the "
-        "same sheet `/players/me/record` does, **including the coarse "
-        "`sportsmanship_band` in place of the figure**: the rule follows the "
-        "subject and not the route.\n\n"
+        "same sheet `/players/me/record` does, figure for figure: `is_self` "
+        "retitles it and moves nothing on it.\n\n"
         "**`?sport=` chooses what the sheet is about, never who may be seen.** "
         "Send the sport you arrived from; where they are not rated in it you "
         "get their most played, and admission is decided from what the platform "

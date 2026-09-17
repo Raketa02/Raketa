@@ -1630,14 +1630,12 @@ def build_subject_reliability(session: AsyncSession) -> SubjectReliability:
 def build_subject_sportsmanship(
     session: AsyncSession,
 ) -> SubjectSportsmanship:
-    """What other players said about a record's subject — at both resolutions.
+    """What other players said about a record's subject — the figure and its
+    count, whoever is reading (``docs/adr/0179`` §5).
 
     Built over ``sportsmanship``'s **published** port and never over the ledger
     beside it, which is the same fence every other row here takes: the ledger is
-    that context's store and a sheet holding it could write through it. It is
-    also what keeps the figure and the subject's band one fold — the provider
-    coarsens its own number, so a band cannot land on the other side of an edge
-    from the figure a reader is shown.
+    that context's store and a sheet holding it could write through it.
     """
 
     return PublishedSubjectSportsmanship(build_published_sportsmanship(session))
@@ -1669,7 +1667,7 @@ def build_sportsmanship_ledger(session: AsyncSession) -> SportsmanshipLedger:
 def build_published_sportsmanship(
     session: AsyncSession,
 ) -> PublishedSportsmanshipQuery:
-    """What other players said about somebody — the figure, or the coarse band.
+    """What other players said about somebody — the figure and its count.
 
     Built over the session and never over the ledger beside it, which is the
     fence rather than tidiness: the ledger writes, and a read a sheet performs

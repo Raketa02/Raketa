@@ -49,7 +49,6 @@ from uuid import UUID
 from app.kernel import Instant, Sport
 from app.modules.player_record.domain.record import (
     GameOutcome,
-    OpinionBand,
     OpponentVariety,
     ReliabilityPanel,
     SubjectIdentity,
@@ -326,20 +325,14 @@ class SubjectVariety(Protocol):
 
 @runtime_checkable
 class SubjectSportsmanship(Protocol):
-    """What other players said about this person — **at two resolutions.**
+    """What other players said about this person — **one answer, for every
+    reader.**
 
-    The one thing on this sheet the platform did not count for itself, and the
-    only demand here whose answer depends on **who is reading**. Everything else
-    is the same fact retitled; this is two different facts, and the reason is
-    ``docs/adr/0158``'s: a published average beside a published count lets the
-    person it is about subtract, name each new rating exactly, and go and find
-    the one player who could have given it.
-
-    **Two methods and not one answer a caller narrows.** A use case that received
-    the figure and chose to draw a band from it would already be holding the
-    subtraction — the rule is about what crosses the seam, not about what is
-    rendered. So the sheet about *you* calls a method that has no figure in its
-    return type, and the one that does is unreachable from it.
+    The one thing on this sheet the platform did not count for itself. It used
+    to be the only demand here whose answer depended on **who is reading** — a
+    coarse band for the subject, off a second method — until ``docs/adr/0179``
+    §5 served the figure to its subject and retired the band; the cost is
+    written there. This port has one method since, asked whoever reads.
 
     **One player, like every other read on this list.** A record is one
     deliberate tap. A set-shaped version would be a fold over fifty rows per
@@ -355,7 +348,7 @@ class SubjectSportsmanship(Protocol):
     """
 
     async def what_players_said(self, player_id: UUID) -> WhatPlayersSaid | None:
-        """The figure and the count of people behind it — **for a stranger.**
+        """The figure and the count of people behind it.
 
         ``None`` for somebody nobody has rated, which is most people: the sheet
         omits the whole zone rather than drawing a nought, because nobody has
@@ -366,20 +359,6 @@ class SubjectSportsmanship(Protocol):
         figure over one player visibly reads as one person's opinion. Withholding
         it until it looked more authoritative would be the platform waiting to
         sound sure.
-        """
-        ...
-
-    async def band_for(self, player_id: UUID) -> OpinionBand | None:
-        """The coarse band — **for the person it is about, and nobody else.**
-
-        No count and no figure, at any point on the path: this is the whole
-        answer their own sheet may carry. Three steps across the scale tell them
-        that something is going wrong, which is the useful half; who to blame for
-        it is the half that stops people answering honestly.
-
-        ``None`` for a subject nobody has rated — the same absence
-        :meth:`what_players_said` spells, so the sheet omits one field or the
-        other and never draws an empty one.
         """
         ...
 

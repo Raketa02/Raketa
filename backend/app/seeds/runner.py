@@ -1477,10 +1477,10 @@ def _opinion_lines(opinions: SeededOpinions) -> list[str]:
     disagreeing with the fixture would show up in this section rather than on a
     screen nobody looked at.
 
-    And the figure is what a **reader** of that record is shown. The subject is
-    shown a coarse band and no count at all (``docs/adr/0158``) — so signing in
-    as one of these people and opening your own sheet is *not* how to check this
-    section; opening theirs from somebody else's pool is.
+    And the figure is what **every** reader of that record is shown, the subject
+    included (``docs/adr/0179`` §5) — so signing in as one of these people and
+    opening *How others see you* is one way to check this section, and opening
+    theirs from somebody else's pool is the other.
     """
 
     return [

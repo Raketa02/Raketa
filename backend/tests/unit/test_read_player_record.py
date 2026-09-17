@@ -37,7 +37,6 @@ from app.modules.player_record.domain.record import (
     LikelyRange,
     OnCourtVerdict,
     OpponentVariety,
-    OpinionBand,
     ReliabilityPanel,
     StrandRow,
     SubjectIdentity,
@@ -155,27 +154,16 @@ class Variety:
 
 
 class Opinions:
-    """What other players said, at both resolutions. **It records which was
-    asked**, because the whole rule here is which question a sheet is entitled
-    to put."""
+    """What other players said. **It records that it was asked**, because the
+    figure is the one question the sheet puts, whoever is reading."""
 
-    def __init__(
-        self,
-        said: WhatPlayersSaid | None = None,
-        band: OpinionBand | None = None,
-    ) -> None:
+    def __init__(self, said: WhatPlayersSaid | None = None) -> None:
         self.said = said
-        self.band = band
         self.asked_for_the_figure: list[UUID] = []
-        self.asked_for_the_band: list[UUID] = []
 
     async def what_players_said(self, player_id: UUID) -> WhatPlayersSaid | None:
         self.asked_for_the_figure.append(player_id)
         return self.said
-
-    async def band_for(self, player_id: UUID) -> OpinionBand | None:
-        self.asked_for_the_band.append(player_id)
-        return self.band
 
 
 class Admission:
@@ -541,25 +529,20 @@ async def test_a_stranger_is_told_the_figure_and_how_many_people_it_rests_on():
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
     assert record.sportsmanship == WhatPlayersSaid(average=4.7, raters=17)
-    assert record.sportsmanship_band is None
     assert opinions.asked_for_the_figure == [SUBJECT]
-    # The band was not asked for and thrown away — it was not asked for.
-    assert opinions.asked_for_the_band == []
 
 
-async def test_the_subject_is_told_a_band_and_the_figure_is_never_asked_for():
-    """**The rule this branch exists for** (``docs/adr/0159``, ``docs/adr/0158``).
+async def test_the_subject_is_told_the_figure_and_the_count_too():
+    """**The zone no longer turns on who is reading** (``docs/adr/0179`` §5).
 
-    A figure and a count on the sheet titled *How others see you* is a
-    subtraction: moving from 4,80 over ten to 4,73 over eleven names the new
-    rating as a 4, and the subject knows who they played. So the figure is not
-    fetched-and-dropped — the question is never put, and there is nothing in this
-    process to leak.
+    The sheet titled *How others see you* carries the published average and the
+    count of people behind it exactly as a stranger's does — the same question,
+    put to the same port, answered at the same resolution. The subtraction
+    ``docs/adr/0158`` §6 named is accepted by name in that record, and the band
+    that used to stand in for the figure here is gone from the type.
     """
 
-    opinions = Opinions(
-        WhatPlayersSaid(average=4.7, raters=17), band=OpinionBand.GOOD
-    )
+    opinions = Opinions(WhatPlayersSaid(average=4.7, raters=17))
     identities, links = Identities(an_identity()), Links()
 
     record = await ReadOwnRecord(
@@ -573,42 +556,38 @@ async def test_the_subject_is_told_a_band_and_the_figure_is_never_asked_for():
         clock=Clock(),
     ).execute(reader_id=READER)
 
-    assert record.sportsmanship_band is OpinionBand.GOOD
-    assert record.sportsmanship is None
-    assert opinions.asked_for_the_band == [READER]
-    assert opinions.asked_for_the_figure == []
+    assert record.is_self is True
+    assert record.sportsmanship == WhatPlayersSaid(average=4.7, raters=17)
+    assert opinions.asked_for_the_figure == [READER]
 
 
-async def test_asking_about_yourself_by_id_is_answered_with_the_band_too():
-    """The parameterised route reaches the same sheet, so the rule cannot be
-    walked around by naming your own id — ``is_self`` decides this and not which
-    route was called."""
+async def test_asking_about_yourself_by_id_is_answered_with_the_figure_too():
+    """The parameterised route reaches the same sheet, so ``is_self`` decides
+    the title and nothing about which figure is drawn."""
 
-    opinions = Opinions(
-        WhatPlayersSaid(average=2.0, raters=6), band=OpinionBand.POOR
-    )
+    opinions = Opinions(WhatPlayersSaid(average=2.0, raters=6))
     use_case, _, _ = reading(
         admits=True, identity=an_identity(), sportsmanship=opinions
     )
 
     record = await use_case.execute(reader_id=READER, subject_id=READER)
 
-    assert record.sportsmanship is None
-    assert record.sportsmanship_band is OpinionBand.POOR
-    assert opinions.asked_for_the_figure == []
+    assert record.is_self is True
+    assert record.sportsmanship == WhatPlayersSaid(average=2.0, raters=6)
 
 
-async def test_nobody_has_rated_them_leaves_both_fields_empty():
+async def test_nobody_has_rated_them_leaves_the_zone_empty():
     """A **fourth absence**, and it asks a fourth question: rating is a favour,
     ignoring the card costs nothing, and nothing anywhere records that somebody
-    did not answer. Not a nought, and not a bottom band."""
+    did not answer. Not a nought — for a stranger and for the subject alike."""
 
     use_case, _, _ = reading(admits=True, identity=an_identity())
 
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+    own = await use_case.execute(reader_id=READER, subject_id=READER)
 
     assert record.sportsmanship is None
-    assert record.sportsmanship_band is None
+    assert own.sportsmanship is None
 
 
 async def test_a_player_rated_in_nothing_is_still_asked_what_players_said():
@@ -630,46 +609,17 @@ async def test_a_player_rated_in_nothing_is_still_asked_what_players_said():
     assert record.sportsmanship == WhatPlayersSaid(average=5.0, raters=2)
 
 
-def test_a_figure_beside_is_self_is_refused_at_the_record_itself():
-    """**The last line of defence, and it is a type's own.** The branch above is
-    what decides; this is what makes a branch taken the wrong way loud rather
-    than a screen quietly showing somebody the arithmetic of their own
-    ratings."""
+def test_the_record_carries_one_sportsmanship_field_and_no_band():
+    """**The band left the domain with the rule it served** (``docs/adr/0179``
+    §5). One field, present for a reader and for the subject alike, and nothing
+    on the type for ``is_self`` to decide about it — the invariant that refused
+    a figure beside ``is_self`` went with the field it guarded."""
 
-    from app.kernel import InvariantViolated
+    from dataclasses import fields
+
     from app.modules.player_record.domain.record import PlayerRecord
 
-    with pytest.raises(InvariantViolated):
-        PlayerRecord(
-            is_self=True,
-            identity=an_identity(),
-            photo_url=None,
-            sports=(),
-            skill=None,
-            reliability=None,
-            variety=None,
-            sportsmanship=WhatPlayersSaid(average=4.7, raters=17),
-            sportsmanship_band=None,
-        )
+    names = [one.name for one in fields(PlayerRecord)]
 
-
-def test_a_band_on_a_strangers_record_is_refused_the_same_way():
-    """The mirror: the coarse reading exists for the one person the figure is
-    withheld from, and drawing it for anybody else would be a second, worse
-    answer to a question that already has one."""
-
-    from app.kernel import InvariantViolated
-    from app.modules.player_record.domain.record import PlayerRecord
-
-    with pytest.raises(InvariantViolated):
-        PlayerRecord(
-            is_self=False,
-            identity=an_identity(),
-            photo_url=None,
-            sports=(),
-            skill=None,
-            reliability=None,
-            variety=None,
-            sportsmanship=None,
-            sportsmanship_band=OpinionBand.GOOD,
-        )
+    assert "sportsmanship" in names
+    assert not [name for name in names if "band" in name], names

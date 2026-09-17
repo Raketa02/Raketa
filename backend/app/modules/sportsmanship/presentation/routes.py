@@ -162,9 +162,9 @@ async def read_the_open_cards(
         "again. `POST /api/v1/passes` and `POST /api/v1/blocks` are the controls "
         "that do those things, and both are meant to be deliberate.\n\n"
         "**Nobody is told, and no individual answer is ever shown to anybody.** "
-        "What reaches a reader is an average out of five beside how many "
-        "different people it rests on; what reaches the person you rated is a "
-        "coarse band about themselves and no count."
+        "What reaches every reader — the person you rated included — is an "
+        "average out of five beside how many different people it rests on, "
+        "over their fifty most recent raters (ADR-0179 §5)."
     ),
 )
 async def answer_the_card(

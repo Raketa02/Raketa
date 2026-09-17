@@ -255,6 +255,10 @@ players"** — not *by opponents*, which stopped being true when partners starte
 
 ### What the subject sees
 
+> **Reversed on 2026-09-17 by [ADR-0179](../../adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5**:
+> the subject reads the figure and its count as any reader does, and the band is retired.
+> What follows is the decision as it stood, and the cost it names is the one that record accepts.
+
 **A coarse band, and no count.** Not the number.
 
 A published average plus a published count lets the subject subtract: an average moving from

@@ -1064,14 +1064,18 @@ Rules to preserve:
   context publishes outward is a third port and never a method on that one**
   ([ADR-0158](../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)
   amendment, #382): `PublishedSportsmanshipQuery` answers the figure and how many different
-  people it rests on for a reader, and a **coarse band** for the subject — two methods
-  rather than one answer a caller narrows, because a use case that received the figure
-  would already hold the subtraction ADR-0158 §2 refuses, whatever it then drew. The
-  collapse costs that fold nothing, which is what the key bought: one row already is one
-  person, so *the fifty most recent raters* is a `LIMIT` on a total order rather than a
-  read-time collapse, and nothing is trimmed at either end. The band's edges are whole
-  stars, coarsened from the **published** figure so a subject's step cannot land on the
-  other side of an edge from what a reader sees. The word `stars` reaches no wire — the
+  people it rests on — **one method, for every reader, the subject included**
+  ([ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+  §5, #468). It used to answer a second question, a **coarse band** for the subject off a
+  method that could not say the figure; ADR-0179 §5 retired the band with its three
+  whole-star edges and accepted the subtraction ADR-0158 §2 refused, and its Consequences
+  are where that cost is written — cite them, do not restate them. What blunts the cost is
+  what this context keeps, and every fence has its test: the collapse costs that fold nothing, which is what
+  the key bought — one row already is one person, so *the fifty most recent raters* is a
+  `LIMIT` on a total order rather than a read-time collapse — nothing is trimmed at either
+  end, there is no zero on the scale, no individual rating crosses on any route, and the
+  matcher never reads it. The port and the record's demand are each pinned at one method,
+  so a second resolution cannot return quietly. The word `stars` reaches no wire — the
   forbidden-fact sweep refuses that property name — so it crosses as `average` and
   `raters`. There are two reads here and neither touched the silence:
   `GET /api/v1/sportsmanship` lists the courts **waiting** for somebody's stars, as a game
@@ -1177,19 +1181,25 @@ Rules to preserve:
   rather than respells: the engines are the pure layer every context reads and none owns —
   the argument `player_score` already made beside its own import contract — and the codes are
   on the player contract under that spelling already.
-  **What other players said is the fifth fact and the first that depends on who is
-  reading** (#382). Every other zone is one answer retitled for the subject; this is two —
-  the figure and its count for a reader, a **coarse band and neither** for the person it is
-  about, since an average beside a count is a subtraction that names each new rating and
-  they know who they played. The split is on the **port** rather than in the assembler, so
-  the sheet about you asks a question with no figure in its answer, and `PlayerRecord`
-  refuses the pair beside `is_self` outright — the branch decides, the invariant makes a
-  wrong branch loud. It takes **neither a sport nor an instant**, the only demand here that
+  **What other players said is the fifth fact, and it no longer depends on who is
+  reading** (#382, then #468). It was the one zone that did — the figure and its count for
+  a reader, a **coarse band and neither** for the person it is about, split on the **port**
+  so the sheet about you asked a question with no figure in its answer, and `PlayerRecord`
+  refusing the pair beside `is_self`. Since
+  [ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+  §5 the figure crosses to its subject exactly as `GET /players/{id}/record` serves it to
+  a reader — `sportsmanship.{average, raters}` on `GET /players/me/record`,
+  `sportsmanship_band` retired from the domain, the shape and the emitted document, `band_for`
+  gone from both ports, the invariant gone with the field it guarded, and `is_self` back to
+  deciding a title and nothing on the sheet. The cost — a rater becomes nameable by their
+  subject — is accepted by name in that record's Consequences and is not restated here.
+  It takes **neither a sport nor an instant**, the only demand here that
   takes neither: nothing decays, because the window is fifty *people* and not fifty days.
   Its absence is the **fourth**, asking a fourth question — rating is a favour, ignoring a
   card costs nothing, and nothing records the omission, so a nought would publish a verdict
   nobody gave. The matcher reads none of it, held by an `.importlinter` contract, and a
-  test walks the emitted contract to prove the words reach exactly one response type, which
+  test walks the emitted contract to prove the words reach exactly one response type — and
+  that the band's field is on none — which
   is where *it is not on search result cards* stopped being a promise.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
