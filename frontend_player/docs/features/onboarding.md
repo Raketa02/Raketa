@@ -62,3 +62,21 @@ lesson that a shape the gate does not route is a loop. The step itself is `featu
 (its record says why), reached at `/name` through `NAMING_STEP` as the social steps are through
 `SOCIAL_STEPS_ENTRY`; it claims the hardware back like every first step does, and after the
 naming it hands the next destination back to this gate rather than naming welcome itself.
+
+**`Verdict` is the result card, extracted** ([#469](https://github.com/Raketa02/Raketa/issues/469),
+[ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+§2). The dark card the result screen draws — _Your level_, the figure, the likely range, the
+confidence ring, the on-dark level bar with its legend, _Band_ and _Rating status_ as rows, and
+the three information marks — is a component of its own now, because the Skill passport draws
+it once per rating and a player who met their rating on this card recognises it there. It takes
+**a rating** (the fields a finished run and a rating read back both carry), a `top` slot the
+passport fills with the sport tag and a status chip, and the _Questions asked_ row only where
+the caller hands one — the run's own fact, not the passport's. **The marks' popover moved to the
+screen**: the card holds its three refs and hands the pressed one up as `Explaining`, and the
+screen draws one popover as a sibling of its root, so a screen with several cards draws one for
+all of them. `explainers` travels with it, built per rating because the one number in it is the
+served ceiling — and a card whose rating carries none says nothing about a ceiling and draws no
+tick, which is what every passport card does today. The band card under the verdict stayed with
+the result screen (`BandCard`): it is the run's, and the passport draws the ladder instead.
+`useSports` and `ratingStatusLabel` are exported for the passport's _Add a sport_ chips and its
+status chip.

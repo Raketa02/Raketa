@@ -18,11 +18,19 @@
  * change. Spacing between stacked cards is the parent's `gap`, as it is for `Card`.
  *
  * Used for: the onboarding result, the state card on a match, the level card on the
- * passport. The confidence ring appears **only** inside one, because `volt` is legible
- * nowhere else.
+ * passport, and the You tab's header card. The confidence ring appears **only** inside one,
+ * because `volt` is legible nowhere else.
+ *
+ * ## The pressable one is the same card
+ *
+ * `PressableDarkCard` is `PressableCard`'s shape on this surface — one `button`, one spoken
+ * name, the fill, corner and padding read from the same table — for the You tab's header card,
+ * which is one press whose whole content is a fact (ADR-0179 §1). Its pressed state is 6.6's
+ * opacity rather than a second fill: `night` has no darker companion that is not `ink`, and a
+ * border on a dark card would be the first stroke on one.
  */
 
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { theme } from './theme';
@@ -36,10 +44,37 @@ export function DarkCard({ children, style }: DarkCardProps) {
   return <View style={[s.card, style]}>{children}</View>;
 }
 
+export interface PressableDarkCardProps extends DarkCardProps {
+  readonly onPress: () => void;
+  readonly accessibilityLabel: string;
+  readonly accessibilityHint?: string;
+}
+
+export function PressableDarkCard({
+  children,
+  style,
+  onPress,
+  accessibilityLabel,
+  accessibilityHint,
+}: PressableDarkCardProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      onPress={onPress}
+      style={({ pressed }) => [s.card, pressed ? s.pressed : undefined, style]}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 const s = StyleSheet.create({
   card: {
     backgroundColor: theme.color.night,
     borderRadius: theme.radius.cardDark,
     padding: theme.space.lg,
   },
+  pressed: { opacity: 0.7 },
 });

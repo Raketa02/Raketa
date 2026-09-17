@@ -33,6 +33,18 @@ import PoolRoute from '@/app/(app)/(tabs)/play/pool';
 import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
 import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
+import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
+import YouGameSuggestionsRoute from '@/app/(app)/(tabs)/you/game-suggestions';
+import YouIntroRoute from '@/app/(app)/(tabs)/you/intro';
+import YouKindOfGameRoute from '@/app/(app)/(tabs)/you/kind-of-game';
+import YouNameRoute from '@/app/(app)/(tabs)/you/name';
+import YouPassportRoute from '@/app/(app)/(tabs)/you/passport';
+import YouPhotosRoute from '@/app/(app)/(tabs)/you/photos';
+import YouRadiusRoute from '@/app/(app)/(tabs)/you/radius';
+import YouReliabilityRoute from '@/app/(app)/(tabs)/you/reliability';
+import YouTagsRoute from '@/app/(app)/(tabs)/you/tags';
+import YouWeekRoute from '@/app/(app)/(tabs)/you/week';
+import YouWhoYouPlayWithRoute from '@/app/(app)/(tabs)/you/who-you-play-with';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
 import SignUpRoute from '@/app/(auth)/sign-up';
@@ -120,7 +132,23 @@ export const ONBOARDING_ROUTES = {
   // column stays lit behind the room's *Details* and *back* is correct in both directions
   // ([#368](https://github.com/Raketa02/Raketa/issues/368), ADR-0149 §5).
   '(app)/(tabs)/chats/conversation/[conversationId]/details': ConversationGameRoute,
-  '(app)/(tabs)/you': YouRoute,
+  // You is a directory since the tab was built (ADR-0179): the root, and one screen per row
+  // pushed over it, each under the tab's first segment so the column stays lit. Spelled
+  // `you/index` as the file tree spells it, because the shell names the pushed screens to give
+  // them the push transition and `Stack.Screen` matches on the name.
+  '(app)/(tabs)/you/index': YouRoute,
+  '(app)/(tabs)/you/passport': YouPassportRoute,
+  '(app)/(tabs)/you/reliability': YouReliabilityRoute,
+  '(app)/(tabs)/you/kind-of-game': YouKindOfGameRoute,
+  '(app)/(tabs)/you/week': YouWeekRoute,
+  '(app)/(tabs)/you/radius': YouRadiusRoute,
+  '(app)/(tabs)/you/area': YouAreaRoute,
+  '(app)/(tabs)/you/who-you-play-with': YouWhoYouPlayWithRoute,
+  '(app)/(tabs)/you/game-suggestions': YouGameSuggestionsRoute,
+  '(app)/(tabs)/you/photos': YouPhotosRoute,
+  '(app)/(tabs)/you/tags': YouTagsRoute,
+  '(app)/(tabs)/you/intro': YouIntroRoute,
+  '(app)/(tabs)/you/name': YouNameRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
   // Sign-up is in the tree for the one walk that starts before a session exists: an account
@@ -658,6 +686,63 @@ export function stubSportsmanship(
   );
 }
 
+export const OWN_RECORD_PATH = '/api/v1/players/me/record';
+
+/** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
+const GATE_USER_NAME = 'Ada Lovelace';
+const GATE_USER_NICKNAME = 'ada';
+
+/**
+ * Your own record, as `GET /players/me/record` answers — a player rated in one sport with a
+ * record behind them, and the sportsmanship **band**, which is what the route serves its
+ * subject today (ADR-0158 §6; the figure lands with #473).
+ *
+ * The You tab draws it three times over: the header card's face, intro and score, the
+ * reliability row's line, and — with `?sport=` — the passport's blocks under each card. The
+ * transport drops the query string, so one stub answers all three.
+ */
+export const OWN_RECORD_SERVED: Wire['PlayerRecordResponse'] = {
+  is_self: true,
+  name: GATE_USER_NAME,
+  nickname: GATE_USER_NICKNAME,
+  area_code: 'A+050612+0019938',
+  social_tags: ['PLAYS_TO_WIN', 'STAYS_FOR_A_DRINK'],
+  intro: 'Will travel for a hard game.',
+  sports: [{ sport: 'PADEL', level: 2.71, band: 'Established' }],
+  skill: {
+    sport: 'PADEL',
+    level: 2.71,
+    band: 'Established',
+    confidence: 28,
+    counted_games: 9,
+    likely_range: { low: 2.09, high: 3.33 },
+    last_five: ['WIN', 'LOSS', 'WIN', 'WIN', 'LOSS'],
+  },
+  reliability: {
+    player_score: 92,
+    strands: [
+      { strand: 'SHOWS_UP', good: 11, opportunities: 12, pct: 92 },
+      { strand: 'ANSWERS_CHALLENGES', good: 6, opportunities: 7, pct: 86 },
+      { strand: 'ANSWERS_RESULTS', good: 5, opportunities: 5, pct: 100 },
+    ],
+  },
+  variety: { distinct_opponents: 14, times_on_court: 20 },
+  sportsmanship_band: 'GOOD',
+};
+
+/**
+ * Your own record, for any suite that opens the You tab.
+ *
+ * Separate from `stubGate` because the gate does not read it — the tab does, on arrival, and a
+ * suite that never presses the column never asks for it.
+ */
+export function stubOwnRecord(
+  transport: Transport,
+  served: Wire['PlayerRecordResponse'] = OWN_RECORD_SERVED,
+) {
+  transport.on('GET', OWN_RECORD_PATH, () => json(served));
+}
+
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
   /**
@@ -705,8 +790,8 @@ export interface GateStub {
 export const GATE_USER: Wire['UserResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
-  name: 'Ada Lovelace',
-  nickname: 'ada',
+  name: GATE_USER_NAME,
+  nickname: GATE_USER_NICKNAME,
   authority: 'player',
   is_admin: false,
   is_active: true,

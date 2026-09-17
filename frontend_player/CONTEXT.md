@@ -193,12 +193,17 @@ review comment and a test description all use the same word.
   and lay a new one down. Four tabs lay down one screen and ⚡Play lays down two, which is
   why back from Play's entry leaves Play rather than walking it. **A Play session ends
   exactly when it runs.** _Avoid_: "switching tabs" as though it were a push.
-- **A placeholder tab** — a tab with no screen behind it yet, and there is **one**, You. It
-  states what its tab will be and that it is not built, in one sentence, so a player can tell
-  it from a bug; the sentence is a **citation** of a decision taken elsewhere. Four tabs have
-  left the table — Play, Chats and Now by being built, Around by retiring when the deck moved
-  in as Players — and **Now never says nothing is happening** — it is where a send lands.
-  _Avoid_: "empty state" (that is a screen with a real answer of nothing) and "coming soon".
+- **A placeholder tab** — a tab with no screen behind it yet, and **there is none now**. For
+  as long as one existed it stated what its tab would be and that it was not built, in one
+  sentence, so a player could tell it from a bug; the sentence was a **citation** of a decision
+  taken elsewhere. Five tabs left the table and none was deleted: Play, Chats and Now by being
+  built, Around by retiring when the deck moved in as Players, and **You** — the last — by
+  being built as onboarding laid out flat (ADR-0179). The union and the table went with it,
+  because a shape kept for a case that cannot recur is not a fact. What survives is the rule
+  the placeholders were written under: **no sentence the shell writes says nothing is
+  happening**, and `shellCopy.test.ts` still holds every line to it. _Avoid_: "empty state"
+  (that is a screen with a real answer of nothing) and "coming soon" — a screen that lands
+  with its contract says in one line what it is, never that.
 
 ### The onboarding flow
 
@@ -218,7 +223,7 @@ profile editor that later edits the same values.
   one place, when the player reaches the app. Between passes there is **no pass**, and
   that absence is load-bearing: it is what lets a resumed run begin one without adopting a
   finished walk's queue. **Onboarding happens once, at the beginning — and a pass has an
-  origin**: welcome, or the Skill passport's *Add a sport*, which begins a pass of exactly one
+  origin**: welcome, or the Skill passport's _Add a sport_, which begins a pass of exactly one
   sport and ends back on the passport
   ([ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
   §3). A link naming a sport outside the running pass is still sent to welcome rather than
@@ -318,19 +323,23 @@ profile editor that later edits the same values.
   this build has no words for is dropped rather than drawn — the answer `toSport` gives an
   unknown sport. _Avoid_: "config" and "settings"; neither is about this player, and both
   invite something per-player being added to it.
-- **Profile surface** — the **one read** the Play screens hold about the player: the
-  availability grid, the Search radius and the per-sport Play intent, in one round trip across
-  the two aggregates that own them. Deliberately **not the whole profile**, and the two
-  absences on it are different absences — gender and the gender preference are a _standing
-  refusal_ that never comes back out of this API, and tags, photos and the location area are a
-  _deferral_ this same route grows when **You** is built. Its home is `player_profile/`, not
-  `play/`, because the three **writes** are: one unkeyed `PUT` per fact, and a read whose
-  paired writes live in another feature is a read in the wrong feature. Of the three facts
-  only the radius is written from Find a game — a search carries no radius and never will, so
-  the profile is the only place a slider there can mean anything. _Avoid_: "the profile" for
-  this — it is a surface over one, and calling it the profile is how a fourth field gets added
-  to a body scoped to three; also "play screen read", which names a caller rather than the
-  facts.
+- **Profile surface** — the **one read** this app holds about the player's declared facts:
+  the availability grid, the Search radius and the per-sport Play intent, in one round trip
+  across the two aggregates that own them. Deliberately **not the whole profile**, and its
+  absences are of two kinds: tags, photos, the intro, the opt-in and the owner's own gender
+  and preference are what the route **grew** the day **You** was built
+  ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8) and this client
+  reads on #471 and #472, and there is no `has_location`, because a profile cannot be committed
+  without an area and a flag that cannot be false is a branch nobody tests. Its home is
+  `player_profile/`, not `play/`, because the **writes** are: one unkeyed `PUT` per fact, and a
+  read whose paired writes live in another feature is a read in the wrong feature. **Two
+  screens draw it now.** Find a game reads the week and the radius as a search's working copy —
+  and the radius is the one fact written from there, as the first half of pressing the card;
+  the **You** tab reads all three as facts with doors, and its screens write the week and the
+  radius on a **button** and never on release, so a slider on You and the search on Play move
+  one number two ways. _Avoid_: "the profile" for this — it is a surface over one, and calling
+  it the profile is how a field gets added to a body scoped to what the tab draws; also "play
+  screen read", which names one of two callers rather than the facts.
 
 ### The Play tab
 

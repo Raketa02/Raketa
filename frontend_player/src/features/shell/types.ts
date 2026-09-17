@@ -8,8 +8,8 @@
  * under Play: the *Find a game* segment re-entered the tab from inside it, which is **arriving
  * rather than going back** ([#270](https://github.com/Raketa02/Raketa/issues/270)). The segment
  * left with the deck's move to its own tab (ADR-0169 §1), and so did the export — the route
- * table, the reset itself and the placeholder component stay internal too; they re-export the
- * day something outside asks for one.
+ * table and the reset itself stay internal too; they re-export the day something outside asks
+ * for one. The placeholder component went with the last placeholder (ADR-0179).
  *
  * `ShellScreen` is the one that has stopped being internal: Play's *Find a game* is the second
  * screen to wear 10.1's arrangement, and it is a real screen rather than a placeholder, so the
@@ -20,27 +20,40 @@
  * and writes nothing to it, so `api/`, `mappers/`, `schemas/`, `use-cases/` and `hooks/` have
  * nothing to hold — and the uniform-strict rule is *keep the folders, do not invent invariants
  * to fill them* (`_template/README.md`, docs/architecture.md Part 1). What the shell owns is a
- * table of five routes, the rule that reads a tab off a path, the sentences four unbuilt tabs
- * say, and the one function that lays a stack down.
+ * table of five routes, the rule that reads a tab off a path, the sentences the three tabs it
+ * composes say, and the one function that lays a stack down.
  */
 
 export { TabShell } from './components/TabShell';
 export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
 
 /**
- * The one placeholder line, read outside this feature by one thing: the test harness, which
- * asserts *the player is in the app* and needs to know what that looks like now that the landing
- * is the Now tab.
- *
- * `NOW_COPY` is what that harness actually reads since the rail replaced Now's placeholder
- * ([#367](https://github.com/Raketa02/Raketa/issues/367)), and `CHATS_COPY` is beside them for the
- * same reason and one more: each built tab's own suite asserts the tab's sentences rather than
- * string literals, because the wording is this file's to change and the rules the sentences carry
- * are not.
+ * The two built tabs' own sentences, read outside this feature by the test harness — which
+ * asserts *the player is in the app* and needs to know what that looks like now that the
+ * landing is the Now tab ([#367](https://github.com/Raketa02/Raketa/issues/367)) — and by each
+ * tab's own suite, which asserts the tab's sentences rather than string literals, because the
+ * wording is this file's to change and the rules the sentences carry are not.
  */
-export { CHATS_COPY, NOW_COPY, PLACEHOLDER_COPY } from './components/shellCopy';
+export { CHATS_COPY, NOW_COPY } from './components/shellCopy';
 
-export { NowScreen, YouScreen } from './components/tabScreens';
+/**
+ * **The You tab's own sentences** — read outside this feature by the screens behind its rows,
+ * which wear the group title they were opened from as their eyebrow
+ * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §1), and by the suites that hold the tab to its words.
+ */
+export { YOU_COPY } from './components/youCopy';
+
+export { NowScreen } from './components/tabScreens';
+
+/**
+ * The You tab — **a screen rather than a placeholder**
+ * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)).
+ *
+ * The shell's for the reason Now and Chats are: a tab owns its own sentences and composes other
+ * features' rows under them. In a file of its own because it is not thin.
+ */
+export { YouScreen } from './components/YouScreen';
 
 /**
  * The Chats tab — **a screen rather than a placeholder**

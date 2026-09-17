@@ -1,22 +1,14 @@
 import {
   NOT_DECLARED,
   NOT_DECLARED_LINE,
-  PLAY_INTENTS_BODY,
-  PLAY_INTENTS_HEADING,
   declaredValue,
   playIntentRowLabel,
 } from './playIntentsPresentation';
 
 describe('what the You tab says about a declaration', () => {
-  /**
-   * The heading names **who reads it**, because that is the fact that makes the list worth
-   * having and the one a player cannot get from the value.
-   */
-  it('says who the answer is for, and what it is not', () => {
-    expect(PLAY_INTENTS_HEADING).toBe('What other players see');
-    // The confusion this section and the standing line both exist for, said once here.
-    expect(PLAY_INTENTS_BODY).toContain('does not change what you can search for');
-  });
+  // The section's heading and body — *What other players see*, *it does not change what you
+  // can search for* — retired with ADR-0179 §9: the *What kind of game* screen says the one
+  // thing they said in one line under its title, asserted in `youProfilePresentation.test.ts`.
 
   it('gives a rated sport with no answer a word rather than a blank', () => {
     expect(declaredValue(undefined)).toBe(NOT_DECLARED);

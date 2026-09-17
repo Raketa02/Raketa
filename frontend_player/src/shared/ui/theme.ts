@@ -497,6 +497,10 @@ const radius = {
    *  squares of the deleted 6.7 are NOT being restored, and a cell that borrowed their
    *  radius would be the first step back toward a booking grid. */
   availabilityCell: 10,
+  /** The door row's lead square. Between `btn` and `segThumb`: a 28pt square at 10 reads as a
+   *  small button, which it is not — the row is the control and the square is its glyph's
+   *  ground — and at 8 reads as a chip's thumb. Named for the object, as `availabilityCell` is. */
+  rowLead: 9,
   /** **There is no avatar rule in this system, and this is not one.** The formula that
    *  derived a face's corner from its box — `round(size x 0.33)` — went with 7.4's seat
    *  avatar in the 2026-08-25 reset, and #338 refused to bring an avatar back: no Avatar
@@ -576,6 +580,12 @@ const size = {
    *  Geometry and reasoning: docs/design-system.md 7.8. The 30% ceiling the tick marks
    *  is a domain constant, NOT a design value — it does not belong here. */
   ring: 72,
+  /** The ring's two other homes, both still inside a dark card (Part 16, 2026-09-17 — ADR-0179
+   *  §1, §2): the You tab's header card draws the Player Score at 56, and the reliability
+   *  screen draws it at 74 beside the tone ladder's word. Diameters only — the stroke, the tick
+   *  and the overshoot are the one ring's, whichever size it is drawn at. */
+  ringSm: 56,
+  ringLg: 74,
   ringStroke: 6,
   ringTick: 2,
   ringTickOvershoot: 3,
@@ -949,6 +959,13 @@ const size = {
   sportDot: SPORT_DOT,
   infoGlyph: 14,
   tabIcon: 16,
+  /** The door row's lead — 5.5 as amended for the You tab (Part 16, 2026-09-17): a `paper2`
+   *  square before the title with a Feather glyph in it, the one new element on that tab. A
+   *  square rather than a bare glyph so the thirteen rows' leads read as one column whatever
+   *  each glyph's own extent is; 28 keeps the row at 6.5's minimum with `space.sm` above and
+   *  below it, and the glyph is a step under `tabIcon` because it sits inside a fill. */
+  rowLead: 28,
+  rowLeadGlyph: 15,
   /** The ⚡Play disc — 28 until the bar was built, unreferenced by anything, and off the
    *  3pt grid at both values. **30**, which is what #227 drew and measured. */
   fab: 30,

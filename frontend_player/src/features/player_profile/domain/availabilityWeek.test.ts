@@ -12,7 +12,14 @@
  */
 
 import type { AvailabilitySlot } from './ProfileDraft';
-import { WEEK_CELLS, everyCell, isTicked, toggleCell, weekStanding } from './availabilityWeek';
+import {
+  WEEK_CELLS,
+  everyCell,
+  isTicked,
+  sameWeek,
+  toggleCell,
+  weekStanding,
+} from './availabilityWeek';
 
 /** Every cell of the grid, ticked — the far end, and a legal answer like any other. */
 const WHOLE_WEEK: readonly AvailabilitySlot[] = everyCell();
@@ -106,5 +113,34 @@ describe('what a week counts as', () => {
   it('carries the count once anything is ticked', () => {
     expect(weekStanding([{ day: 1, part: 'morning' }])).toEqual({ kind: 'ticked', count: 1 });
     expect(weekStanding(WHOLE_WEEK)).toEqual({ kind: 'ticked', count: WEEK_CELLS });
+  });
+});
+
+/**
+ * **Whether a draft is worth saving** — the You tab's *Your week* holds a draft until its
+ * button, and the button is shut while the draft is the week the profile already holds. The
+ * comparison is by cell and never by order: the profile answers in its own reading order
+ * whatever order the player pressed in, and a week re-sorted is not a week changed.
+ */
+describe('two weeks being the same week', () => {
+  const TUESDAY_EVENING: AvailabilitySlot = { day: 2, part: 'evening' };
+  const SATURDAY_MORNING: AvailabilitySlot = { day: 6, part: 'morning' };
+
+  it('is true of the same cells in any order', () => {
+    expect(sameWeek([TUESDAY_EVENING, SATURDAY_MORNING], [SATURDAY_MORNING, TUESDAY_EVENING])).toBe(
+      true,
+    );
+    expect(sameWeek([], [])).toBe(true);
+  });
+
+  it('is false when a cell is ticked on one side only', () => {
+    expect(sameWeek([TUESDAY_EVENING], [TUESDAY_EVENING, SATURDAY_MORNING])).toBe(false);
+    expect(sameWeek([TUESDAY_EVENING], [])).toBe(false);
+  });
+
+  it('reads a cell pressed twice on the draft as one cell', () => {
+    // A draft is built by `toggleCell`, which never holds a cell twice — but the rule must not
+    // depend on that, because the profile's answer is what it is compared against.
+    expect(sameWeek([TUESDAY_EVENING, TUESDAY_EVENING], [TUESDAY_EVENING])).toBe(true);
   });
 });

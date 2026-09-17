@@ -45,6 +45,44 @@ export { playerRecordKeys } from './hooks/playerRecordKeys';
 export { useOwnFace, type OwnFace } from './hooks/useOwnFace';
 
 /**
+ * **This feature on the You tab**
+ * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §1–§2): the header card that summarises your own record and opens it, the sheet it opens,
+ * the two rows a player cannot change and the door to the sheet, and the two read-only screens
+ * behind those rows — the passport, which is the result card once per rating with the record's
+ * blocks under each, and reliability, which is the record card under a ring. The shell composes
+ * the tab and holds whether the sheet is up; the route files under `(app)/(tabs)/you/` mount
+ * the screens. The words are exported for the suites that hold the tab to them.
+ */
+export { YouHeaderCard, type YouHeaderCardProps } from './components/YouHeaderCard';
+export { OwnRecordSheet, type OwnRecordSheetProps } from './components/OwnRecordSheet';
+export {
+  HowOthersSeeYouRow,
+  PlayerReliabilityRow,
+  SkillPassportRow,
+  type HowOthersSeeYouRowProps,
+  type YouRowProps,
+} from './components/YouRows';
+export { SkillPassportScreen } from './components/SkillPassportScreen';
+export { PlayerReliabilityScreen } from './components/PlayerReliabilityScreen';
+export {
+  ADD_A_SPORT,
+  HOW_OTHERS_SEE_YOU_LINE,
+  HOW_OTHERS_SEE_YOU_TITLE,
+  NOTHING_COUNTED,
+  OUT_OF_100,
+  PLAYER_RELIABILITY_TITLE,
+  SCORE_LABEL,
+  SCORE_TONE_WORD,
+  SKILL_PASSPORT_TITLE,
+  THE_LADDER,
+  passportLine,
+  rateSportChip,
+  reliabilityLine,
+  scoreRingLabel,
+} from './components/youRecordPresentation';
+
+/**
  * The sheet's own words, exported for its suite.
  *
  * A test asserting a sentence it has spelled itself is a test that passes the day the sentence

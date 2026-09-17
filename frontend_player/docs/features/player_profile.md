@@ -148,3 +148,46 @@ motion with no written trace is the one thing that would surprise a careful play
 kilometre in the same breath is what keeps _updates each time you open_ from reading as
 tracking. **Not seen on a device**: the read on a real cold start against the OS, and the
 sentence's fit on the tab, are the author's to check.
+
+**The profile's declarations on the You tab — each row a step's control under the tab's chrome,
+and a draft until _Save_** ([#469](https://github.com/Raketa02/Raketa/issues/469),
+[ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+§2). **The refactor came first**: each step this ticket reuses separates _the control_ from _the
+onboarding around it_. `WeekGrid` is the availability grid drawn from a week — the step's own
+mapping, with the footnote slot the step leaves empty and the tab fills; `SearchRadiusControl`
+is the slider wired to `searchRadius` and `radiusPresentation`, with what a move does left to
+the caller (the step writes the draft, the tab holds one); `useLocationCapture` is the press
+alone — ask at the press, read one fix, coarsen it, hand the cell on — and `useLocationStep`
+composes it with the step's two own rules, the draft and the unasked re-reads on arrival and
+foreground. `locationPresentation` splits each refusal into `ACCESS_HOW_TO` (how to allow it,
+true on every screen) and the step's cost clause about finishing setting up, which the tab does
+not cite because it is not true of anybody on it. The steps' behaviour, copy and suites are
+unchanged. **The rows** (`YouRows.tsx`) read their fact off `GET /players/me/profile` or
+`GET /ratings` and say it through `youProfilePresentation` — _10 slots ticked_, _12 km · Across
+your town_, _Padel Competitive · Squash not set_, the area's one static line — and `liveLine`
+says the recovery sentence where a read failed rather than going quiet. **Your week** is
+`WeekGrid` as the step draws it plus the footnote, a draft until _Save your week_, _Clear all_
+offered, an empty week saved as a legal value (the commit's floor binds the answer a player is
+asked for, not one they change later — ADR-0102); the draft is dropped the moment the save lands
+so the grid draws **the route's answer** — collapsed, re-ordered — and the row's line follows
+the cache. `sameWeek` in `domain/availabilityWeek` is what shuts the button while nothing has
+changed, by cell and never by order. **How far to look** is `SearchRadiusControl` with a
+_Save_, and **nothing writes on release** — the one behavioural difference from Find a game,
+where the radius reaches the server as the first half of pressing the card; the write path
+re-snaps and the slider then shows the radius as held. **Where you play** is _Your area is set_
+in mint with `AreaUpdatesNote` under it — the note moved here from the tab's foot, and the
+row's live line is the short form — and _Read my area again_ through `useReadAreaAgain`: the
+step's press ending in `PUT /players/me/location`, the cold start's route called by a person
+(ADR-0174 §6), in the step's three permission states, nothing read unasked, and the control
+turning `settled` with _Location saved_ once the cell is put. **What kind of game** is
+`PlayIntentsSection` as built, behind a row and under one line — _This changes how people find
+you_ — which replaced the section's heading and body (retired, §9; the undeclared footnote
+stays). **Five rows land with their contract**: Photos, Tags, Intro (#471) and Who you play
+with, Game suggestions (#472) read fields the profile read grows on #466 and this client does
+not read yet; each row draws a line naming what it is and the screen behind it says in one
+`tiny` line what it is and that the edit lands with the read that carries the fact
+(`DEFERRED_ROW`, keyed so a row and its screen cannot come apart) — 10.1's rule, never _coming
+soon_. The gender, opt-in, tags, intro and photos steps are **not** refactored on this ticket:
+their second caller is the ticket that draws them, and a control separated with no caller to
+say its shape would be a guess. **Not seen on a device**: the grid's footnote under a saved
+week, the slider's _Saved_ after a re-snap, and the area screen's notes.

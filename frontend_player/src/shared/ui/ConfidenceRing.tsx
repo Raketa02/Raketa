@@ -41,6 +41,16 @@
  * `progressbar`, and its accessible name has to state both numbers — the confidence
  * reached and the ceiling that applies — because the tick is invisible to a screen reader.
  * Where there is no tick there is no second number, and the name says the one there is.
+ *
+ * ## Two more homes, and the figure they print
+ *
+ * The You tab draws the same ring twice more, still inside a dark card (Part 16, 2026-09-17 —
+ * ADR-0179 §1, §2): the Player Score in the header card at `ringSm`, with `SCORE` beneath, and
+ * on the reliability screen at `ringLg`, with the tone ladder's word beside it and nothing
+ * beneath. A Player Score is *out of a hundred* and not a percentage, so the caller may hand
+ * the figure to print — `92` — where the default is the confidence's `92%`. The size changes
+ * the diameter and nothing else: one stroke, one tick, one overshoot, one type role for the
+ * figure, so the three are one ring drawn three sizes rather than three rings.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -50,31 +60,63 @@ import { theme } from './theme';
 
 const SCALE = 100;
 
-const ring = theme.size.ring;
 const stroke = theme.size.ringStroke;
 const overshoot = theme.size.ringTickOvershoot;
 
-/** The tick overshoots the stroke outward, so the drawing box is wider than the ring. */
-const BOX = ring + 2 * overshoot;
-const CENTRE = BOX / 2;
-const RADIUS = (ring - stroke) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+/** The three diameters the ring is drawn at — 7.8's, and the You tab's two (Part 16). */
+export type ConfidenceRingSize = 'md' | 'sm' | 'lg';
+
+const DIAMETER: Readonly<Record<ConfidenceRingSize, number>> = {
+  md: theme.size.ring,
+  sm: theme.size.ringSm,
+  lg: theme.size.ringLg,
+};
+
+interface Geometry {
+  /** The tick overshoots the stroke outward, so the drawing box is wider than the ring. */
+  readonly box: number;
+  readonly centre: number;
+  readonly radius: number;
+  readonly circumference: number;
+}
+
+function geometry(size: ConfidenceRingSize): Geometry {
+  const ring = DIAMETER[size];
+  const box = ring + 2 * overshoot;
+  const radius = (ring - stroke) / 2;
+  return { box, centre: box / 2, radius, circumference: 2 * Math.PI * radius };
+}
 
 export interface ConfidenceRingProps {
   /** 0–100. Drawn on the full scale, never rescaled to the ceiling. */
   readonly value: number;
   /** Where the tick sits, on the same 0–100 scale. Absent draws no tick. */
   readonly ceiling?: number;
-  /** The eyebrow beneath, drawn uppercase. */
-  readonly label: string;
+  /** The eyebrow beneath, drawn uppercase. Absent draws nothing beneath — see the module note. */
+  readonly label?: string;
+  /**
+   * What is printed in the centre. Defaults to the value as a percentage, which is what a
+   * confidence is; a Player Score is out of a hundred and hands its bare figure.
+   */
+  readonly figure?: string;
+  /** Which of the three diameters. 7.8's own by default. */
+  readonly size?: ConfidenceRingSize;
   /** Names every number drawn — the value reached, and the ceiling if there is one. */
   readonly accessibilityLabel: string;
 }
 
-export function ConfidenceRing({ value, ceiling, label, accessibilityLabel }: ConfidenceRingProps) {
+export function ConfidenceRing({
+  value,
+  ceiling,
+  label,
+  figure,
+  size = 'md',
+  accessibilityLabel,
+}: ConfidenceRingProps) {
+  const { box, centre, radius, circumference } = geometry(size);
   const held = Math.min(Math.max(value, 0), SCALE);
-  const drawn = CIRCUMFERENCE * (held / SCALE);
-  const tick = ceiling === undefined ? undefined : radial(ceiling);
+  const drawn = circumference * (held / SCALE);
+  const tick = ceiling === undefined ? undefined : radial(ceiling, geometry(size));
 
   return (
     <View style={s.ring}>
@@ -86,26 +128,26 @@ export function ConfidenceRing({ value, ceiling, label, accessibilityLabel }: Co
         accessibilityLabel={accessibilityLabel}
         accessibilityValue={{ min: 0, max: SCALE, now: Math.round(held) }}
       >
-        <Svg width={BOX} height={BOX}>
+        <Svg width={box} height={box}>
           <Circle
-            cx={CENTRE}
-            cy={CENTRE}
-            r={RADIUS}
+            cx={centre}
+            cy={centre}
+            r={radius}
             stroke={theme.color.onDarkHair}
             strokeWidth={stroke}
             fill="none"
           />
           <Circle
-            cx={CENTRE}
-            cy={CENTRE}
-            r={RADIUS}
+            cx={centre}
+            cy={centre}
+            r={radius}
             stroke={theme.color.volt}
             strokeWidth={stroke}
             strokeLinecap="butt"
-            strokeDasharray={`${drawn} ${CIRCUMFERENCE}`}
+            strokeDasharray={`${drawn} ${circumference}`}
             fill="none"
             // 12 o'clock, sweeping clockwise: SVG's zero is 3 o'clock.
-            transform={`rotate(-90 ${CENTRE} ${CENTRE})`}
+            transform={`rotate(-90 ${centre} ${centre})`}
           />
           {tick === undefined ? null : (
             <Line
@@ -122,25 +164,25 @@ export function ConfidenceRing({ value, ceiling, label, accessibilityLabel }: Co
         {/* Over the drawing rather than inside it, so the figure scales with the OS text
             setting like every other number on the screen. */}
         <View style={s.centre} pointerEvents="none">
-          <Text style={s.value}>{`${Math.round(held)}%`}</Text>
+          <Text style={s.value}>{figure ?? `${Math.round(held)}%`}</Text>
         </View>
       </View>
 
-      <Text style={s.label}>{label}</Text>
+      {label === undefined ? null : <Text style={s.label}>{label}</Text>}
     </View>
   );
 }
 
 /** The ceiling tick: radial, spanning the stroke and overshooting it outward. */
-function radial(percent: number) {
+function radial(percent: number, { centre, radius }: Geometry) {
   const angle = 2 * Math.PI * (Math.min(Math.max(percent, 0), SCALE) / SCALE);
-  const inner = RADIUS - stroke / 2;
-  const outer = RADIUS + stroke / 2 + overshoot;
+  const inner = radius - stroke / 2;
+  const outer = radius + stroke / 2 + overshoot;
   return {
-    x1: CENTRE + inner * Math.sin(angle),
-    y1: CENTRE - inner * Math.cos(angle),
-    x2: CENTRE + outer * Math.sin(angle),
-    y2: CENTRE - outer * Math.cos(angle),
+    x1: centre + inner * Math.sin(angle),
+    y1: centre - inner * Math.cos(angle),
+    x2: centre + outer * Math.sin(angle),
+    y2: centre - outer * Math.cos(angle),
   };
 }
 

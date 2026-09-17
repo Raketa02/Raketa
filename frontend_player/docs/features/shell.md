@@ -108,3 +108,40 @@ invalidated and awaited, so what the server now says is what the tab then shows.
 `PlayIntentsSection` and above the account panel, composed exactly as the section above it is;
 the sentence, the refresh it is the trace of and the reasons are the profile feature's
 ([`player_profile.md`](player_profile.md)).
+
+**You is a screen, and the last placeholder went with it**
+([#469](https://github.com/Raketa02/Raketa/issues/469),
+[ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+§1). `YouScreen` — in a file of its own, as Chats is, because it is not thin — is a header card
+over three titled groups of rows and _Sign out_ at the foot: **Playing** (Skill passport ·
+Player reliability · What kind of game), **Finding players** (Your week · How far to look ·
+Where you play · Who you play with · Game suggestions), **On your card** (How others see you ·
+Photos · Tags · Intro · Name). Three groups because the rows answer three questions — what has
+the platform concluded about me, what does the matcher read when it looks for a game, what does
+a stranger read about me — and the fourth, the account, is not asked on this tab (§9). **The
+shell owns the tab's own words and composes the rest**: the title, the eyebrow _Player profile_
+and the three group titles are `youCopy`'s, and every row from _Skill passport_ down is the
+feature's whose fact it is — `player_record`'s two read-only facts and the door to the sheet,
+`player_profile`'s declarations, `auth`'s name — each reading its own fact, saying it in a live
+line, and pushing its own screen. What this file decides is which row sits in which group and in
+what order, and `theShell.test.tsx` asserts that as an order. A group is a `flab` title over one
+`Card` of `DoorRow`s (5.5 as amended, Part 16 2026-09-17), and the header card is the record's
+own header, compact. **The one overlay the tab holds** is _How others see you_ — the record
+sheet on `{ kind: 'me' }` — because the header card and the row both open it, so whether it is
+up is this screen's state and both are handed the same press; the sheet is a sibling of the
+screen it covers, as every overlay is. **`PLACEHOLDER_COPY`, `PlaceholderTab` and
+`PlaceholderScreen` are gone**, not emptied: the line _your profile, your radius, your week — not
+built yet_ was the last citation in the table, every column the bar draws has a screen behind it
+now, and an empty union kept for a case that cannot recur is a shape and not a fact.
+`shellCopy.test.ts` keeps the two refusals over every sentence the shell still writes, the group
+titles included, and asserts the placeholder's line absent so it cannot come back as a
+gap-filler. **The pushed screens take the push transition**: `TabShell` names the twelve
+`you/…` routes one by one for `animation: 'default'`, as it names every pushed screen, and the
+harness's route table spells `you/index` as the file tree does. **`ShellScreen` forwards two
+more things, designed nowhere**: `subline`, which _What kind of game_ is the first shell screen
+to wear (its one line replaced the section's heading and body, ADR-0179 §2), and
+`avoidsKeyboard`, which the _Name_ screen is the first shell screen to need — the scroller and
+the pinned action wrapped in `KeyboardAvoidingView` under `KEYBOARD_AVOIDANCE`, as
+`SocialStepLayout` already does, and off everywhere else. **Not seen on a device**: the header
+card's fit beside a long name, the row lead's 28 pt against the chevron, and the push over the
+tab.

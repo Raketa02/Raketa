@@ -5,20 +5,18 @@
  * its likely range, with its Confidence and its Band — two players both showing 3,0 at very
  * different Uncertainties are not the same player, and nothing here may imply they are.
  *
- * **The evidence trail is the point of the screen** and lives in its own component. What
- * this one owns is the verdict above it: the Level, the range, the ring, the bar, the band
- * card, and the three information marks that explain the figures none of which is
- * self-explanatory.
+ * **The evidence trail is the point of the screen** and lives in its own component. So does
+ * the verdict above it — `Verdict`, the dark card with the Level, the range, the ring, the
+ * bar and the three information marks — because the Skill passport draws the same card once
+ * per rating ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2). What this screen owns is what is the run's alone: the *Questions asked* row it hands
+ * the card, the band card under it, the notes, the trail, and where the flow goes next.
  *
  * ## The rules that are easy to break here
  *
  * - **Band boundaries come from the response.** They are deliberately uneven, they were
- *   wrong once already, and this client restates them nowhere. The level bar's own segment
- *   boundaries are drawing values and are never printed.
- * - **Confidence is drawn on the full 0–100 scale with the ceiling marked**, never rescaled
- *   so that a questionnaire's maximum fills the ring. Everyone leaves onboarding at or
- *   below the ceiling; the tick is what stops a short arc reading as failure, and it is
- *   what keeps the same component honest when matches later push Confidence to 75%.
+ *   wrong once already, and this client restates them nowhere. The band card prints the edges
+ *   it was sent.
  * - **Nothing on this screen decides anything about the rating.** Every label and every
  *   figure on the verdict and in the trail is the server's, directions are the engine's,
  *   and the client renders them in the order it was given them.
@@ -53,24 +51,11 @@
  * again — which they did, over what a failed start does.
  */
 
-import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useEffect } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import {
-  behindOverlay,
-  Button,
-  Card,
-  ConfidenceRing,
-  DarkCard,
-  Hairline,
-  InfoMark,
-  LevelBar,
-  Note,
-  Popover,
-  Row,
-  theme,
-} from '@/shared/ui';
+import { behindOverlay, Button, Card, Note, theme } from '@/shared/ui';
 
 import type { AssessmentResult } from '../domain/AssessmentResult';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -82,57 +67,12 @@ import { useOnboardingPass } from '../store/onboardingPass.store';
 import { EvidenceTrail } from './EvidenceTrail';
 import { OnboardingChrome } from './OnboardingChrome';
 import { useHardwareBack } from '@/shared/lib/platform';
-import { BAND_NAMES, bandPresentation, ratingStatusLabel } from './bandPresentation';
+import { bandPresentation } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { passEyebrow } from './passEyebrow';
-import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/ratingFormat';
+import { formatRange } from '@/shared/formatting/ratingFormat';
 import { sportLabel } from './sportPresentation';
-
-type ExplainerKey = 'level' | 'range' | 'confidence';
-
-type Explainers = Readonly<Record<ExplainerKey, { readonly title: string; readonly body: string }>>;
-
-/**
- * The three figures with an information mark. **None of them is self-explanatory**, which
- * is the reason each has one: a player can ask what a term means at the moment they meet
- * it, rather than being expected to have read something first.
- *
- * This is the app's own copy, not the engine's — the wire carries no definition of what a
- * Level *is*. The one number in it is the ceiling, which the engine serves rather than the
- * app knowing, so the copy is built per result instead of being a module constant: retuning
- * the ceiling moves this sentence with it and no release is involved.
- *
- * **With no ceiling served, the sentence naming one goes.** The rest still holds — what
- * Confidence is, and that matches are what raise it — but a rating whose engine has been
- * retired has no number for "at most", and inventing one would say a retired engine was
- * measured against a limit that did not exist when it ran.
- */
-function explainers(ceiling: number | undefined): Explainers {
-  return {
-    level: {
-      title: 'Your Level',
-      body: 'Where you sit on the 1,00\u20135,00 scale for this sport. Your level changes as you play competitive matches.',
-    },
-    range: {
-      title: 'Your likely range',
-      body: 'Where Raketa thinks your level most likely sits, shown by the thin white bracket. A wider range means we are less certain about your level \u2014 not that you are weaker. As you play more, the range narrows and the confidence increases.',
-    },
-    confidence: {
-      title: 'Confidence',
-      body:
-        ceiling === undefined
-          ? 'Shows how confident Raketa is about your level, not how good you are. As you play more, Raketa learns and becomes more certain about your skill level.'
-          : `Shows how confident Raketa is about your level, not how good you are. The questionnaire can provide up to ${ceiling}% confidence. As you play more, Raketa learns and becomes more certain about your skill level.`,
-    },
-  };
-}
-
-/**
- * `MutableRefObject`, not the shared `FocusTarget`: the same ref is handed to `InfoMark`
- * as a *ref* and to `Popover` as a focus target, and `RefObject<View | null>` is covariant
- * — it will not go where a `Ref<View>` is wanted.
- */
-type MarkRefs = Readonly<Record<ExplainerKey, MutableRefObject<View | null>>>;
+import { Verdict, VerdictPopover, useVerdictExplainer } from './Verdict';
 
 /** Raised when the run ended on evidence the questionnaire could not settle. */
 const CALIBRATION_ELEVATED = 'elevated';
@@ -181,16 +121,11 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
   const next = onwards.destination.kind === 'rate' ? onwards.destination.sport : undefined;
   const recordRun = useOnboardingPass((state) => state.record);
 
-  // One ref per mark: the popover anchors to the mark it was opened from and returns
-  // focus to it on close, which is one prop doing both jobs.
-  const [explainer, setExplainer] = useState<ExplainerKey>();
-  const marks: MarkRefs = {
-    level: useRef<View | null>(null),
-    range: useRef<View | null>(null),
-    confidence: useRef<View | null>(null),
-  };
-
   const result = assessment.data?.result;
+
+  // Which mark the popover is open on, if any. The card holds the refs and hands the pressed
+  // one up, so the popover anchors to the mark it was opened from and returns focus to it.
+  const explainer = useVerdictExplainer(result?.confidenceCeiling);
 
   /**
    * A rating exists for this sport, so this run belongs on the summary.
@@ -205,17 +140,6 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
     recordRun({ assessmentId, sport });
   }, [result, recordRun, assessmentId, sport]);
 
-  /**
-   * Which mark the popover belongs to, **held past the close**. Dropping it the moment
-   * `explainer` clears would empty the card while it is still fading out and — the part
-   * that matters — leave the close with no trigger to return accessibility focus to.
-   * Written during render rather than kept in a second state, which could disagree.
-   */
-  const closing = useRef<ExplainerKey>('level');
-  if (explainer !== undefined) closing.current = explainer;
-  const explaining = explainer ?? closing.current;
-  const explained = explainers(result?.confidenceCeiling)[explaining];
-
   return (
     <>
       <SafeAreaView
@@ -223,7 +147,7 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
         edges={['top', 'bottom']}
         // A popover is a real overlay: while one is open nothing behind it is reachable by
         // a screen reader. The popover is a sibling below, never a child.
-        {...behindOverlay(explainer !== undefined)}
+        {...behindOverlay(explainer.open)}
       >
         {/* The eyebrow carries which sport of how many, and nothing else does: the bar
             that used to repeat it under the header measured sports, and sports are no
@@ -258,7 +182,14 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
           ) : null}
 
           {result !== undefined ? (
-            <Verdict result={result} marks={marks} onExplain={setExplainer} />
+            <>
+              <Verdict
+                rating={result}
+                questionsAsked={result.questionsAsked}
+                onExplain={explainer.explain}
+              />
+              <BandCard result={result} />
+            </>
           ) : null}
 
           {result !== undefined ? (
@@ -321,137 +252,35 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
         </View>
       </SafeAreaView>
 
-      <Popover
-        visible={explainer !== undefined}
-        trigger={marks[explaining]}
-        title={explained.title}
-        body={explained.body}
-        closeLabel={`Close ${explained.title}`}
-        onClose={() => setExplainer(undefined)}
-      />
+      <VerdictPopover {...explainer.popover} />
     </>
   );
 }
 
-interface VerdictProps {
-  readonly result: AssessmentResult;
-  readonly marks: MarkRefs;
-  readonly onExplain: (key: ExplainerKey) => void;
-}
-
 /**
- * The upper half: the four figures that have to be read together, then the bar, then the
- * band card whose left rail is the only place a band colour appears outside the bar.
+ * The band card under the verdict — the band's own ink on the left rail, the only place a
+ * band colour appears outside the bar.
+ *
+ * The edges printed here are the response's, never the bar's drawing values, and a band this
+ * build cannot name still shows its name and its numbers. It is the run's and not the card's:
+ * the passport draws the ladder under its cards instead, where every band is named once.
  */
-function Verdict({ result, marks, onExplain }: VerdictProps) {
+function BandCard({ result }: { readonly result: AssessmentResult }) {
   const band = bandPresentation(result.band.name);
-  const level = formatLevel(result.level);
-  const range = formatRange(result.range);
-  const confidence = formatPercent(result.confidence);
 
   return (
-    <>
-      <DarkCard>
-        <View style={s.verdict}>
-          <View style={s.figures}>
-            <View style={s.figureHead}>
-              <Text style={s.eyebrowOnDark}>Your level</Text>
-              <InfoMark
-                ref={marks.level}
-                onDark
-                onPress={() => onExplain('level')}
-                accessibilityLabel="What your Level means"
-              />
-            </View>
-            <Text style={s.level}>{level}</Text>
-
-            <View style={s.figureHead}>
-              <Text style={s.rangeValue}>{range}</Text>
-              <Text style={s.rangeLabel}>likely range</Text>
-              <InfoMark
-                ref={marks.range}
-                onDark
-                onPress={() => onExplain('range')}
-                accessibilityLabel="What your likely range means"
-              />
-            </View>
-          </View>
-
-          <View style={s.ring}>
-            {/* The ceiling is the engine's and arrives with the rating. Absent, the ring
-                draws no tick and its name states the one number it has — see
-                `AssessmentResult.confidenceCeiling`. */}
-            <ConfidenceRing
-              value={result.confidence}
-              ceiling={result.confidenceCeiling}
-              label="Confidence"
-              accessibilityLabel={
-                result.confidenceCeiling === undefined
-                  ? `Confidence ${confidence}`
-                  : `Confidence ${confidence}, out of the ${result.confidenceCeiling}% a questionnaire can prove`
-              }
-            />
-            <InfoMark
-              ref={marks.confidence}
-              onDark
-              onPress={() => onExplain('confidence')}
-              accessibilityLabel="What Confidence means"
-            />
-          </View>
-        </View>
-
-        <View style={s.bar}>
-          <LevelBar
-            level={result.level}
-            range={result.range}
-            band={band?.key}
-            bandNames={BAND_NAMES}
-            variant="onDark"
-            legend={{ mark: 'Your level', bracket: 'Likely range' }}
-            accessibilityLabel={`Level ${level} of 5,00, likely range ${range}, band ${result.band.name}`}
-          />
-        </View>
-
-        <Hairline variant="onDark">
-          <Row
-            variant="onDark"
-            label="Band"
-            value={result.band.name}
-            accessibilityLabel={`Band: ${result.band.name}`}
-          />
-          <Row
-            variant="onDark"
-            divided
-            label="Rating status"
-            value={ratingStatusLabel(result.status)}
-            accessibilityLabel={`Rating status: ${ratingStatusLabel(result.status)}`}
-          />
-          <Row
-            variant="onDark"
-            divided
-            label="Questions asked"
-            value={String(result.questionsAsked)}
-            accessibilityLabel={`Questions asked: ${result.questionsAsked}`}
-          />
-        </Hairline>
-      </DarkCard>
-
-      {/* The band's own ink on the left rail — the only place a band colour appears outside
-          the bar. The edges printed here are the response's, never the bar's drawing
-          values, and a band this build cannot name still shows its name and its numbers. */}
-      <Card
-        style={[
-          s.bandCard,
-          band === undefined ? undefined : { borderLeftColor: theme.band[band.key].ink },
-        ]}
-      >
-        <Text style={s.bandName}>{result.band.name}</Text>
-        <Text style={s.bandEdges}>
-          {`Levels ${formatRange({ low: result.band.lower, high: result.band.upper })}`}
-        </Text>
-        {band === undefined ? null : <Text style={s.bandMeaning}>{band.meaning}</Text>}
-      </Card>
-    </>
+    <Card
+      style={[
+        s.bandCard,
+        band === undefined ? undefined : { borderLeftColor: theme.band[band.key].ink },
+      ]}
+    >
+      <Text style={s.bandName}>{result.band.name}</Text>
+      <Text style={s.bandEdges}>
+        {`Levels ${formatRange({ low: result.band.lower, high: result.band.upper })}`}
+      </Text>
+      {band === undefined ? null : <Text style={s.bandMeaning}>{band.meaning}</Text>}
+    </Card>
   );
 }
 
@@ -463,19 +292,6 @@ const s = StyleSheet.create({
     gap: theme.space.sm,
   },
   failure: { gap: theme.space.sm },
-  verdict: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
-  figures: { flex: 1, gap: theme.space.xxs },
-  figureHead: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
-  eyebrowOnDark: {
-    ...theme.type.eyebrow,
-    color: theme.color.onDarkEyebrow,
-    textTransform: 'uppercase',
-  },
-  level: { ...theme.num.levelHero, ...theme.tabular, color: theme.color.surface },
-  rangeValue: { ...theme.num.s, ...theme.tabular, color: theme.color.surface },
-  rangeLabel: { ...theme.type.tiny, color: theme.color.onDarkTiny },
-  ring: { alignItems: 'center', gap: theme.space.xxs },
-  bar: { marginTop: theme.space.lg },
   // 3pt, as the note's semantic rail is: this is the same object doing the same job.
   bandCard: { borderLeftWidth: 3 },
   bandName: { ...theme.type.cardTitle, color: theme.color.ink },

@@ -34,7 +34,7 @@
 
 import type { LocationArea } from '../domain/ProfileDraft';
 
-import type { LocationAccess } from '../hooks/useLocationStep';
+import type { LocationAccess } from '../hooks/useLocationCapture';
 
 /** The one control that reaches the device — named several times below, so once here. */
 export const USE_MY_LOCATION = 'Use my location';
@@ -70,16 +70,34 @@ export const ACCESS_TITLE: Readonly<
 };
 
 /**
- * What a refusal costs, and what to do about it.
+ * What to do about a refusal — the half of each sentence that is true on every screen.
  *
- * Both sentences end the same way on purpose: the consequence is the same whichever refusal
- * it was, and the player should not have to work out that the two screens they might be
- * looking at mean one thing.
+ * The You tab's *Where you play* cites the step's permission states (ADR-0179 §2), and this
+ * is the part it cites: how to undo the refusal. What it does **not** cite is the cost clause
+ * below, which is about finishing setting up — a player on the tab finished long ago and holds
+ * an area already, so that clause would be a sentence about somebody else.
  */
+export const ACCESS_HOW_TO: Readonly<
+  Record<Exclude<LocationAccess, 'unasked' | 'granted'>, string>
+> = {
+  refused: `Press ${USE_MY_LOCATION} again to allow it.`,
+  blocked: `Turn it on for Raketa in Settings, then press ${USE_MY_LOCATION} again.`,
+};
+
+/**
+ * What a refusal costs **on the step**: the same clause after either refusal, because the
+ * consequence is the same whichever it was and the player should not have to work out that
+ * the two screens they might be looking at mean one thing.
+ */
+const WITHOUT_AN_AREA_COST =
+  'You can finish setting up without an area — but until you set one, you cannot search for ' +
+  'players and no game can be suggested to you.';
+
+/** What a refusal costs, and what to do about it — the step's whole note. */
 export const ACCESS_BODY: Readonly<Record<Exclude<LocationAccess, 'unasked' | 'granted'>, string>> =
   {
-    refused: `Press ${USE_MY_LOCATION} again to allow it. You can finish setting up without an area — but until you set one, you cannot search for players and no game can be suggested to you.`,
-    blocked: `Turn it on for Raketa in Settings, then press ${USE_MY_LOCATION} again. You can finish setting up without an area — but until you set one, you cannot search for players and no game can be suggested to you.`,
+    refused: `${ACCESS_HOW_TO.refused} ${WITHOUT_AN_AREA_COST}`,
+    blocked: `${ACCESS_HOW_TO.blocked} ${WITHOUT_AN_AREA_COST}`,
   };
 
 /** The control that goes where pressing again cannot: the app's own settings page. */

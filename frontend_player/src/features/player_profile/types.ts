@@ -79,25 +79,62 @@ export {
 export { useLocationRefresh } from './hooks/useLocationRefresh';
 
 /**
- * **The You tab's first real section** — one row per rated sport, and what each one has
- * declared ([#296](https://github.com/Raketa02/Raketa/issues/296)).
+ * **This feature's rows on the You tab, and the screens behind them**
+ * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §1–§2). The shell composes the tab and names the rows; the route files under
+ * `(app)/(tabs)/you/` name the screens. Each row is a title, a live line off the read that
+ * carries the fact, and a door; each screen is the onboarding step's control under the tab's
+ * chrome with a *Save* — the week, the radius, the area — or the section as built, behind a
+ * row. Five rows' screens land with their contract (#471, #472) and say so in one line.
  *
- * Named by `shell`'s `YouScreen` and by nothing else. It is here rather than in `play/` for the
- * reason `PlayerProfileSurface` gives about the read it is drawn from: the three writes are
- * this feature's, and *You* was always going to draw the same three facts. It writes with
- * `PROFILE_SCREEN`, the one value of `PlayIntentSurface` that had no client behind it.
- */
-export { PlayIntentsSection } from './components/PlayIntentsSection';
-
-/**
- * **You's one sentence about the Location area** — that it moves on a launch, and how coarse
- * it is — under the section above and above the account panel
+ * `PlayIntentsSection` ([#296](https://github.com/Raketa02/Raketa/issues/296)) is drawn by
+ * `WhatKindOfGameScreen` and stays internal; `AreaUpdatesNote` moved into *Where you play*
  * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
- * §6). Named by `shell`'s `YouScreen` and by nothing else; the sentence itself is
- * `AREA_UPDATES_LINE`, exported beside it for the suite that holds the tab to the words.
+ * §6), and its sentence `AREA_UPDATES_LINE` is exported for the suites that hold the tab to
+ * its words, as the rows' words are.
  */
-export { AreaUpdatesNote } from './components/AreaUpdatesNote';
+export {
+  GameSuggestionsRow,
+  HowFarToLookRow,
+  IntroRow,
+  PhotosRow,
+  TagsRow,
+  WhatKindOfGameRow,
+  WhereYouPlayRow,
+  WhoYouPlayWithRow,
+  YourWeekRow,
+  type YouRowProps,
+} from './components/YouRows';
+export { YourWeekScreen } from './components/YourWeekScreen';
+export { HowFarToLookScreen } from './components/HowFarToLookScreen';
+export { WhereYouPlayScreen } from './components/WhereYouPlayScreen';
+export { WhatKindOfGameScreen } from './components/WhatKindOfGameScreen';
+export {
+  GameSuggestionsScreen,
+  IntroScreen,
+  PhotosScreen,
+  TagsScreen,
+  WhoYouPlayWithScreen,
+} from './components/DeferredYouScreens';
 export { AREA_UPDATES_LINE } from './components/locationPresentation';
+export {
+  AREA_LINE,
+  AREA_SET,
+  CLEAR_ALL,
+  DEFERRED_ROW,
+  HOW_FAR_TO_LOOK_TITLE,
+  KIND_OF_GAME_LINE,
+  READ_AGAIN,
+  SAVE,
+  SAVED,
+  SAVE_YOUR_WEEK,
+  WHAT_KIND_OF_GAME_TITLE,
+  WHERE_YOU_PLAY_TITLE,
+  YOUR_WEEK_TITLE,
+  kindOfGameLine,
+  radiusLine,
+  weekLine,
+} from './components/youProfilePresentation';
 
 /**
  * The bounds a Search radius is held inside, and the words the figure is read with.

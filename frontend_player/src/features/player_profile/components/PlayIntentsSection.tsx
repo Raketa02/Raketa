@@ -23,8 +23,10 @@
  *
  * ## Deliberately narrow
  *
- * It is a section beside `AccountPanel` on a tab that is still a placeholder, not the profile
- * screen. The row list is a projection of two reads and **nothing is copied into a store** —
+ * It is the list behind the You tab's *What kind of game* row, under that screen's one line —
+ * *This changes how people find you* — which replaced the heading and the body this section
+ * used to carry ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2, §9). The row list is a projection of two reads and **nothing is copied into a store** —
  * in particular nothing touches `playPreferences`, so a player who changes a declaration here
  * and then opens Play in a mode that disagrees is the drift backstop's own case, working as
  * designed. An **unrated** sport is not listed at all: a rating is what makes a sport
@@ -62,8 +64,6 @@ import { useDeclarePlayIntent, useProfileSurface } from '../hooks/useProfileSurf
 
 import {
   NOT_DECLARED_LINE,
-  PLAY_INTENTS_BODY,
-  PLAY_INTENTS_HEADING,
   PLAY_INTENTS_ROW_HINT,
   declaredValue,
   playIntentRowLabel,
@@ -109,15 +109,12 @@ export function PlayIntentsSection() {
           declarations,
         );
 
-  // Nothing to list until the ratings land. The tab's own line is still above this, so the
+  // Nothing to list until the ratings land. The screen's own line is still above this, so the
   // section simply is not there yet rather than drawing an empty card.
   if (rated.length === 0) return null;
 
   return (
     <View style={s.section}>
-      <Text style={s.heading}>{PLAY_INTENTS_HEADING}</Text>
-      <Text style={s.body}>{PLAY_INTENTS_BODY}</Text>
-
       {/* The read's own failure, and **no retry beside it**: a retry belongs to the act that
           failed, and nobody performed this read — it is one block on a tab with other content,
           and Query refetches it when the player comes back to the tab. What would be wrong is
@@ -198,9 +195,7 @@ export function PlayIntentsSection() {
 }
 
 const s = StyleSheet.create({
-  section: { gap: theme.space.xs, paddingTop: theme.space.md },
-  heading: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
-  body: { ...theme.type.tiny, color: theme.color.muted },
+  section: { gap: theme.space.xs },
   // 5.5's rule: the divider is drawn from the second row onward, so the first has no rule
   // above it and the last none below it without anybody counting.
   divided: { borderTopWidth: 1, borderTopColor: theme.color.line2 },
