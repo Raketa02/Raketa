@@ -30,12 +30,15 @@
  * the day the ratings read carries the number. A constant 30 here would be the copy the
  * amendment removed.
  *
- * ## *Add a sport* is drawn and inert
+ * ## *Add a sport* is the second door into the onboarding pass
  *
- * One chip per unrated sport in the registry, and pressing one does nothing on this build:
- * the pass a chip begins — one sport, from the question route, ending on the passport — is
- * [#470](https://github.com/Raketa02/Raketa/issues/470)'s, the second door into the
- * onboarding pass (§3). The card is drawn only where there is a sport to add.
+ * One chip per unrated sport in the registry — the registry minus `GET /ratings`, so a player
+ * rated in all four sees no card — and pressing one is onboarding's `useAddASport` (§3): the
+ * sport's assessment starts through the picker's own start, a pass of that one sport begins
+ * at the question route, and the pass ends back here with the new card drawn. The chip says
+ * *Starting…* while the start is in the air, and a failed start is said above the chips with
+ * the chip offered again — the player is still on this screen, and a start that failed began
+ * nothing. Where the pass lands afterwards is the entry gate's, read off the pass's origin.
  *
  * ## The ladder prints the edges it was sent
  *
@@ -55,12 +58,14 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import {
   BAND_NAMES,
+  STARTING_LABEL,
   Verdict,
   VerdictPopover,
   bandPresentation,
   ratingStatusLabel,
   sportColour,
   sportLabel,
+  useAddASport,
   useSkillRatings,
   useSports,
   useVerdictExplainer,
@@ -96,6 +101,7 @@ export function SkillPassportScreen() {
   const router = useRouter();
   const ratings = useSkillRatings();
   const sports = useSports();
+  const addASport = useAddASport();
 
   // One popover for every card, and every card's explainers are the same sentences, because
   // no card has a served ceiling.
@@ -139,14 +145,24 @@ export function SkillPassportScreen() {
             <Card style={s.addASport}>
               <Text style={s.cardTitle}>{ADD_A_SPORT}</Text>
               <Text style={s.tiny}>{ADD_A_SPORT_BODY}</Text>
+              {/* The one thing this card can fail at, said beside the control that retries
+                  it — the chip, offered again. */}
+              {addASport.error !== null ? (
+                <Note variant="coral" accessibilityRole="alert">
+                  {recoveryMessage(addASport.error)}
+                </Note>
+              ) : null}
               <View style={s.chips}>
                 {unrated.map((sport) => (
-                  // Inert on this build — the pass a chip begins is #470's. See the module note.
                   <Chip
                     key={sport}
                     label={rateSportChip(sport)}
                     dot={sportColour(sport)}
-                    onPress={() => {}}
+                    // The start's own word for the wait, cited from onboarding as the status
+                    // chip's is — one spelling, three controls.
+                    busy={addASport.starting === sport}
+                    busyLabel={STARTING_LABEL}
+                    onPress={() => addASport.rate(sport)}
                   />
                 ))}
               </View>

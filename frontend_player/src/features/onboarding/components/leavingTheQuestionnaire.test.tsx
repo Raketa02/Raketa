@@ -416,7 +416,7 @@ describe('abandoning a sport', () => {
     // resumed tennis run then borrowed whatever pass was lying around. It no longer is,
     // and that is the point: an earlier walk's ratings do not follow a player into a run
     // they resumed after it — see the two-passes test below for that case.
-    useOnboardingPass.getState().begin(['padel', 'tennis']);
+    useOnboardingPass.getState().begin(['padel', 'tennis'], 'welcome');
     useOnboardingPass.getState().record({ assessmentId: PADEL_RUN, sport: 'padel' });
 
     // A player who finished setting up long ago and came back for one more sport. Without

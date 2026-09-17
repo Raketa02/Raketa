@@ -18,24 +18,56 @@
  * an effect is soon enough. Beginning is the half that cannot be — the question screen
  * reads a position on its first render — which is why beginning is not done from here.
  *
+ * ## The ended pass is read once, for where it began
+ *
+ * A pass has an origin, and where it ends is read off it
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §3): a pass begun at the Skill passport's *Add a sport* ends **on the passport**, and the
+ * passport is a screen inside the app. Every way out of that pass — *See your ratings*, the
+ * leave sheet's *continue later*, its *abandon* — enters the app exactly as a welcome pass
+ * does, and it is this branch, on ending the pass, that lands it: the origin is handed to
+ * the caller, and the caller — a route file — turns it into a route. Landing from here
+ * rather than from the three exits is the same argument as ending from here: one site, and
+ * the definition rather than a line to remember on each way out. And it is why the store's
+ * `end` *returns* the pass rather than this hook subscribing to it — a gate that re-rendered
+ * on every change to the pass would end the one the chip has just begun, before the
+ * questionnaire mounted.
+ *
  * A deferred run is untouched by this. Its lifetime is the app session, and reaching the
  * app is exactly the moment a deferral has to survive.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
+import type { PassOrigin } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
+
+/**
+ * What the app does with a pass that has just ended, told where it began. Called once per
+ * pass, from the gate's app branch, after the authenticated tree has mounted — so a caller
+ * that navigates inside the tree finds the shell there to navigate.
+ */
+export type PassLanding = (origin: PassOrigin) => void;
 
 /**
  * @param inTheApp whether the entry gate has landed the player in the authenticated tree.
  * Passed rather than read here so the gate keeps one answer, and the caller stays a route
  * file that turns a decision into a route.
+ * @param land where the app puts a player whose pass just ended, by the pass's origin.
  */
-export function useEndOnboardingPass(inTheApp: boolean): void {
+export function useEndOnboardingPass(inTheApp: boolean, land: PassLanding): void {
   const end = useOnboardingPass((state) => state.end);
+
+  // The latest landing, read at the moment of ending rather than closed over: a landing that
+  // reads the current path is a new function per render, and an effect keyed on it would
+  // re-run on every render of the gate — harmlessly, since a second `end` finds nothing, but
+  // the effect's one job is to fire on *arriving*, and its dependencies should say so.
+  const landing = useRef(land);
+  landing.current = land;
 
   useEffect(() => {
     if (!inTheApp) return;
-    end();
+    const ended = end();
+    if (ended !== undefined) landing.current(ended.origin);
   }, [inTheApp, end]);
 }

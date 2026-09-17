@@ -11,7 +11,10 @@
  *
  * - **Continue later** sends nothing. The run stays in progress with every answer intact,
  *   and the gate is told to leave it alone until the next launch, which is what makes this
- *   a way out rather than a redirect back one frame later.
+ *   a way out rather than a redirect back one frame later. It leaves to `/` whichever door
+ *   the pass came in by: the gate ends the pass on arrival and lands one begun at the Skill
+ *   passport back on the passport (ADR-0179 §3), so the deferred run's owner is where they
+ *   were, with the chip offered again.
  * - **Stop rating this sport** abandons the run and then takes whatever the pass says
  *   comes next. The confirm stays open until the flow has somewhere to be, so a failure on
  *   either half lands in front of the player beside the control that retries it.

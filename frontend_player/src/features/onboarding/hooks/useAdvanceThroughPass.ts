@@ -38,6 +38,17 @@
  * One screen further on, one fact read once. Before that, the summary sat on the far side of
  * six more questions and a commit, which put the whole second part between a player and the
  * number they had just spent a minute per sport producing.
+ *
+ * ## A pass begun at the passport ends in the app, and the app lands it on the passport
+ *
+ * `stopDestination` answers *passport* for a pass with that origin
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §3), and this hook turns it into the same route as *app*: `/`. The passport is a screen
+ * inside the authenticated tree, the tree is entered through its gate, and the gate — the one
+ * site that ends a pass — is told the origin as it ends and lays the passport down. So this
+ * hook spells no route it does not own, and the three ways out of a passport pass (*See your
+ * ratings*, *continue later*, *abandon*) reach the passport through one mechanism rather than
+ * three copies of a navigation.
  */
 
 import { useRouter } from 'expo-router';
@@ -106,7 +117,9 @@ export interface PassAdvance {
  * The one place a pass destination becomes a route.
  *
  * `rate` is not here: it needs an assessment started before there is anything to navigate
- * to, which is the whole of what `advance` does beyond this table.
+ * to, which is the whole of what `advance` does beyond this table. `passport` is `/`, the
+ * same door as `app`: the gate reads where the pass began as it ends it, and the passport is
+ * where it puts a pass begun there — see the module note.
  */
 function leavesTo(destination: PassDestination): '/done' | '/' {
   return destination.kind === 'closing' ? '/done' : '/';

@@ -106,7 +106,7 @@ export function statusChipVariant(status: string): TagVariant {
 export const ADD_A_SPORT = 'Add a sport';
 export const ADD_A_SPORT_BODY = 'One questionnaire, one rating. Nothing you already hold changes.';
 
-/** The chip that begins a pass of one sport (ADR-0179 §3 — the pass itself is #470's). */
+/** The chip that begins a pass of one sport (ADR-0179 §3). */
 export function rateSportChip(sport: Sport): string {
   return `Rate ${sportLabel(sport)}`;
 }

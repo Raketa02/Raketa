@@ -65,6 +65,15 @@ export {
 } from './components/YouRows';
 export { SkillPassportScreen } from './components/SkillPassportScreen';
 export { PlayerReliabilityScreen } from './components/PlayerReliabilityScreen';
+
+/**
+ * **Where the passport is**, for the one caller outside this feature that lands on it: the
+ * entry gate's route file, which puts a pass begun at *Add a sport* back on the passport as
+ * the pass ends ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §3). The same seam `NAMING_STEP` and `SOCIAL_STEPS_ENTRY` cross: the feature that owns the
+ * screen spells its address, and the route file turns a decision into it.
+ */
+export { YOU_PASSPORT_ROUTE } from './components/youRecordRoutes';
 export {
   ADD_A_SPORT,
   HOW_OTHERS_SEE_YOU_LINE,

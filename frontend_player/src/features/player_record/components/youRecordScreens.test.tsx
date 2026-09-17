@@ -82,6 +82,8 @@ const TENNIS = rating('TENNIS', {
   band: { name: 'Developing', lower: 1.6, upper: 2.6 },
 });
 
+const SQUASH_RUN = '7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d';
+
 let transport: Transport;
 
 beforeEach(() => {
@@ -175,7 +177,7 @@ describe('the Skill passport', () => {
     expect(screen.getAllByText(COUNTED_BLOCK).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('offers each unrated sport as a chip that does nothing yet', async () => {
+  it('offers each unrated sport as a chip, and a chip begins that sport’s pass', async () => {
     await openThePassport();
 
     expect(await screen.findByText(ADD_A_SPORT)).toBeTruthy();
@@ -183,11 +185,35 @@ describe('the Skill passport', () => {
     expect(screen.getByLabelText(rateSportChip('badminton'))).toBeTruthy();
     expect(screen.queryByLabelText(rateSportChip('padel'))).toBeNull();
 
+    transport.on('POST', '/api/v1/assessments', () =>
+      json<Wire['AssessmentStepResponse']>(
+        {
+          assessment_id: SQUASH_RUN,
+          status: 'in_progress',
+          questions_asked: 0,
+          transcript: [],
+          question: {
+            id: 'q-played',
+            category: 'Recent activity',
+            tier: null,
+            situation: 'Before anything else',
+            text: 'Have you played squash before?',
+            qualifier: 'Any level counts',
+            options: [{ id: 'never', text: 'Never played' }],
+          },
+        },
+        201,
+      ),
+    );
     fireEvent.press(squash);
 
-    // Inert: no assessment started, no screen left. The pass is #470's.
-    expect(transport.requestsTo('POST', '/api/v1/assessments')).toHaveLength(0);
-    expect(screen.getByRole('header', { name: SKILL_PASSPORT_TITLE })).toBeTruthy();
+    // The second door into the onboarding pass (ADR-0179 §3): one start naming the sport,
+    // and the questionnaire opens at its first question — never the picker.
+    await waitFor(() => expect(screen).toHavePathname(`/question/${SQUASH_RUN}`));
+    expect(transport.requestsTo('POST', '/api/v1/assessments').map((r) => r.body)).toEqual([
+      { sport: 'SQUASH' },
+    ]);
+    expect(await screen.findByText('Have you played squash before?')).toBeTruthy();
   });
 
   it('marks the player’s rungs on the ladder, and prints an edge only where a rating served one', async () => {

@@ -46,6 +46,15 @@
  * six social steps used to sit between the last rating and the screen that shows it, and
  * they now sit on the far side of it.
  *
+ * **Except a pass begun at the Skill passport**, whose one control is the same *See your
+ * ratings* and whose ratings are the passport
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §3): the pass ends there, with the new card drawn, and never on the done screen. This
+ * screen does not know which it is showing — the card, the note, the trail and the ceiling
+ * tick are the result's own either way — and the label fits both because both are *your
+ * ratings*. The new rating's Play intent is undeclared until the player declares it, as every
+ * sport's is; nothing here asks.
+ *
  * **None of that is decided here.** `useAdvanceThroughPass` owns the whole transition and
  * the question screen calls the same hook, so the two screens cannot answer differently
  * again — which they did, over what a failed start does.
@@ -72,6 +81,7 @@ import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { passEyebrow } from './passEyebrow';
 import { formatRange } from '@/shared/formatting/ratingFormat';
 import { sportLabel } from './sportPresentation';
+import { STARTING_LABEL } from './startPresentation';
 import { Verdict, VerdictPopover, useVerdictExplainer } from './Verdict';
 
 /** Raised when the run ended on evidence the questionnaire could not settle. */
@@ -236,7 +246,7 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
                 label={`Rate ${sportLabel(next)}`}
                 size="lg"
                 busy={onwards.advancing}
-                busyLabel="Starting…"
+                busyLabel={STARTING_LABEL}
                 accessibilityHint={`Starts the ${sportLabel(next)} questions`}
                 onPress={onwards.advance}
               />

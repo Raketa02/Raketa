@@ -226,8 +226,13 @@ sport's. **No ceiling tick**: `GET /ratings` serves no ceiling and this client h
 the number (7.8 as amended 2026-08-14), so `domain/passport`'s `passportCeiling` — the tick only
 while the status is an Initial estimate — answers nothing until the read carries it; a constant
 30 would be the copy the amendment removed. _Add a sport_ is one `Chip` per unrated sport in the
-served registry, **drawn and inert** — the pass a chip begins is #470's — and not drawn for a
-player rated in every sport. **The ladder** names the four bands with `bandPresentation`'s
+served registry — the registry minus `GET /ratings` — and not drawn for a player rated in every
+sport; **a chip begins a pass of that one sport** through onboarding's `useAddASport`
+([#470](https://github.com/Raketa02/Raketa/issues/470)), says _Starting…_ while the start is in
+the air, and a failed start is a coral note above the chips with the chip offered again — the
+player is still on this screen and a failed start began nothing. Where the pass ends is read off
+its origin by the entry gate, which lands it back here with the You tab beneath; `YOU_PASSPORT_ROUTE`
+is exported for exactly that caller. **The ladder** names the four bands with `bandPresentation`'s
 meanings and the player's own rungs marked (_Established · you (padel)_), the rungs they are
 not on at 7.5's inactive opacity, and **an edge only on a rung a served rating carries** —
 band boundaries come from the response and are restated nowhere on this client, so the two
