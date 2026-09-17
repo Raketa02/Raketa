@@ -287,6 +287,19 @@ Rules to preserve:
   sides — refused on every other shape, and *present* on that one, so the admission can
   neither widen nor lapse unnoticed. The location area is still not served, and no
   `has_location` stands in for it.
+  **And the six writes the tab needs land on the same surface** (ADR-0179 §6, §8, #467):
+  `PUT /players/me/{social-tags,photos,intro,gender,gender-preference,proposals-opt-in}`,
+  one unkeyed `PUT` per fact, each the aggregate's own transition — so *Later changes, from
+  the profile screen* is now a true heading. The intro's is the one that needed a new event,
+  `IntroChanged` (`player_profile.intro_changed` / v1), whose `None` is the withdrawal;
+  `IntroWritten` stays the commit's, the fold keeps the latest of either, and the candidate
+  projection reads both so a card follows the edit and a withdrawal **clears** the column.
+  Each re-validates as the commit re-validates, under the commit's codes; the photos are
+  checked against the same port the upload used, and an empty list clears; **the two gender
+  writes and the intro's answer `204`** so that *served on one route and no other* (§4) and
+  *the card, the record and its author* (ADR-0170 §3) stay literally true of the response
+  shapes — `tests/unit/test_intro.py`'s sweep is what caught the fourth; and the opt-in
+  **always records**, its surface being the route's (`PROFILE`) and never the body's.
 - **Background work is an `asyncio` loop in the API process, and a job must be safe to
   run beside itself** ([ADR-0092](../docs/adr/0092-periodic-jobs-as-embedded-loops.md)).
   `PeriodicJob` (`app/infrastructure/jobs/`) is the whole mechanism — the outbox worker

@@ -208,6 +208,8 @@ async def a_searcher(
     intent: str = "COMPETITIVE",
     sport: Sport = SPORT,
     location: tuple[float, float] = CENTRE,
+    gender: str = "WOMAN",
+    intro: str | None = None,
 ) -> dict:
     """One player, ready to search: profile, rating and declaration.
 
@@ -223,13 +225,23 @@ async def a_searcher(
     ``location`` is where the profile is committed, for the one kind of test
     that needs two searchers in two cities: a location that *moves*
     (``docs/adr/0174`` §6) is asserted through the neighbours it gains and
-    loses, and each of those is a searcher of their own.
+    loses, and each of those is a searcher of their own. ``gender`` and
+    ``intro`` are the same kind of parameter for the You tab's edits
+    (``docs/adr/0179`` §8): a preference that *narrows* is asserted through the
+    searchers it stops finding and the ones that stop finding it, and a line
+    that changes through the card the other searcher is dealt. A photograph is
+    not: it must be held in the store under an id this function has not yet
+    registered, so a searcher with a face is built from the parts.
     """
 
     player_id, token = await register(client, name)
-    await commit_profile(
-        client, token, location={"latitude": location[0], "longitude": location[1]}
-    )
+    profile: dict = {
+        "location": {"latitude": location[0], "longitude": location[1]},
+        "gender": gender,
+    }
+    if intro is not None:
+        profile["intro"] = intro
+    await commit_profile(client, token, **profile)
     mu = await rate(client, token, sport)
     await declare_intent(client, token, intent=intent, sport=sport)
     return {"id": player_id, "token": token, "mu": mu}

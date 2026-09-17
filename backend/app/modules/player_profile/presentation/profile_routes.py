@@ -11,14 +11,15 @@ which are facts about somebody acting in the player app, not about an account.
 The identity behind both is the same ``UserId`` (``../../../../CONTEXT.md`` —
 *Player*), and the noun is the one the domain uses for what is being described.
 
-**The intro rides on this same commit too, and has no route of its own**
-(``docs/adr/0170`` §5): it is not editable until tags and the photo are, so the
-commit is its only write. **The gender answer rides on this same commit** and
-does not get an endpoint of its own (``docs/adr/0096``): it is required at
-profile creation, and profile creation is one request. Which *screen* asks it,
-and where that screen sits in onboarding's second part, is ADR-0096's to design
-and is not decided here — what is decided here is only that the answer arrives
-with the others or the profile is not created.
+**The intro rides on this same commit too**, and is edited afterwards with the
+tags and the photos — ``docs/adr/0170`` §5 held the three back until they could
+be edited together, and ``docs/adr/0179`` §6 is that day, on the profile
+surface next door. **The gender answer rides on this same commit** and its
+correction is the surface's too (``docs/adr/0096``): it is required at profile
+creation, and profile creation is one request. Which *screen* asks it, and where
+that screen sits in onboarding's second part, is ADR-0096's to design and is
+not decided here — what is decided here is only that the answer arrives with
+the others or the profile is not created.
 
 The `Idempotency-Key` header is required rather than optional, deliberately.
 This is the request a player makes once, at the end of six steps, on whatever

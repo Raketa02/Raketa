@@ -46,10 +46,11 @@ class ConsentSurface(StrEnum):
     """Where a player was standing when they answered.
 
     Two values, and both are reachable. ``ONBOARDING`` is the only one the commit
-    can record — the commit *is* the end of onboarding's second part. The profile
-    screen edits the same value later (``docs/adr/0089``), which is what
-    ``PROFILE`` is for; the aggregate transition it uses exists, and the endpoint
-    that drives it does not yet.
+    can record — the commit *is* the end of onboarding's second part. ``PROFILE``
+    is the You tab's ``PUT /players/me/proposals-opt-in`` (``docs/adr/0179`` §8),
+    where the same question is answered again and every press records: the
+    surface is the **route's** and never the body's, because a client that could
+    assert where a consent was gathered could assert one it never gathered.
     """
 
     ONBOARDING = "ONBOARDING"

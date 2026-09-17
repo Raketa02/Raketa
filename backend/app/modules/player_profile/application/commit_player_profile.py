@@ -45,15 +45,16 @@ from app.kernel import Clock, Instant, instant
 from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
 )
+from app.modules.player_profile.application.owned_photos import (
+    check_photos_are_the_callers,
+)
 from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.errors import (
-    PhotoNotFound,
     PlayerProfileAlreadyExists,
     ProposalsOptInNotAnswered,
 )
 from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
-from app.modules.player_profile.domain.photos import PhotoRef
 from app.modules.player_profile.domain.ports import (
     PhotoStorage,
     PlayerProfileRepository,
@@ -125,15 +126,10 @@ class CommitPlayerProfile:
         # been three checks nobody needed.
         photo_ids = photo_order(command.photo_ids)
 
-        for photo_id in photo_ids:
-            # Through the same port and the same ``PhotoRef`` the upload used, so
-            # ownership is the port's contract rather than a check written twice.
-            # Another player's photo id answers exactly as an imaginary one does.
-            found = await self._photos.exists(
-                PhotoRef(owner_id=command.player_id, photo_id=photo_id)
-            )
-            if not found:
-                raise PhotoNotFound()
+        # Through the same port and the same ``PhotoRef`` the upload used, and
+        # the same function the You tab's photos write runs, so ownership is
+        # the port's contract rather than a check written twice.
+        await check_photos_are_the_callers(self._photos, command.player_id, photo_ids)
 
         now = self._now()
         profile = PlayerProfile.create(

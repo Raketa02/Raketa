@@ -1,4 +1,9 @@
-"""The five use cases behind the profile surface reads and writes.
+"""The use cases behind the profile surface reads and writes.
+
+One read and, since ``docs/adr/0179`` §8, nine writes: the week, the radius and
+the location the Play screens and the cold start were already writing, and the
+six the You tab writes — the tags, the photos, the intro, the gender, the
+preference and the opt-in answered again from ``PROFILE``.
 
 The **event store** is faked and both repositories are real, for the reason every
 use-case test in this suite works that way: a repository fake would leave the
@@ -15,17 +20,35 @@ from __future__ import annotations
 import pytest
 
 from app.kernel import Sport
+from app.modules.player_profile.application.answer_proposals_opt_in import (
+    AnswerProposalsOptIn,
+)
 from app.modules.player_profile.application.change_availability import (
     ChangeAvailability,
 )
+from app.modules.player_profile.application.change_gender import ChangeGender
+from app.modules.player_profile.application.change_gender_preference import (
+    ChangeGenderPreference,
+)
+from app.modules.player_profile.application.change_intro import ChangeIntro
 from app.modules.player_profile.application.change_location import ChangeLocation
+from app.modules.player_profile.application.change_photos import ChangePhotos
 from app.modules.player_profile.application.change_search_radius import (
     ChangeSearchRadius,
 )
+from app.modules.player_profile.application.change_social_tags import (
+    ChangeSocialTags,
+)
 from app.modules.player_profile.application.commands import (
+    AnswerProposalsOptInCommand,
     ChangeAvailabilityCommand,
+    ChangeGenderCommand,
+    ChangeGenderPreferenceCommand,
+    ChangeIntroCommand,
     ChangeLocationCommand,
+    ChangePhotosCommand,
     ChangeSearchRadiusCommand,
+    ChangeSocialTagsCommand,
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
 )
@@ -40,21 +63,34 @@ from app.modules.player_profile.application.read_player_profile import (
 )
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.errors import (
+    IntroNotAdmitted,
+    IntroRefusal,
+    PhotoNotFound,
     PlayerProfileNotFound,
     SearchRadiusOutOfBounds,
+    SocialTagSelectionOutOfBounds,
+    TooManyPhotos,
+    UnknownSocialTag,
 )
 from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
+    GenderChanged,
+    GenderPreferenceChanged,
+    IntroChanged,
     LocationChanged,
+    PhotosChanged,
     PlayerProfileCreated,
     PlayIntentDeclared,
     ProposalsOptInAnswered,
     SearchRadiusChanged,
+    SocialTagsChanged,
 )
 from app.modules.player_profile.domain.gender import (
     DEFAULT_GENDER_PREFERENCE,
     Gender,
+    GenderPreference,
 )
+from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.photos import (
     PhotoRef,
     PhotoReviewDecision,
@@ -67,6 +103,7 @@ from app.modules.player_profile.domain.play_intent import (
     PlayIntent,
     PlayIntentSurface,
 )
+from app.modules.player_profile.domain.profile import MAX_PROFILE_PHOTOS
 from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
 from app.modules.player_profile.infrastructure.event_sourced_play_intent_declaration_repository import (  # noqa: E501
     EventSourcedPlayIntentDeclarationRepository,
@@ -93,7 +130,7 @@ HOME_FIX = (51.5073509, -0.1277583)
 
 
 class Harness:
-    """The five use cases over fakes, each built the way a request builds one."""
+    """The use cases over fakes, each built the way a request builds one."""
 
     def __init__(self) -> None:
         self.store = InMemoryEventStore()
@@ -175,6 +212,59 @@ class Harness:
         ).execute(
             ChangeLocationCommand(
                 player_id=player_id, latitude=latitude, longitude=longitude
+            )
+        )
+
+    async def change_social_tags(self, ids, *, player_id=PLAYER):
+        return await ChangeSocialTags(
+            profiles=self._profiles(), uow=self.uow, clock=self.clock
+        ).execute(ChangeSocialTagsCommand(player_id=player_id, social_tag_ids=ids))
+
+    async def change_photos(self, photo_ids, *, player_id=PLAYER):
+        return await ChangePhotos(
+            profiles=self._profiles(),
+            photos=self.photos,
+            uow=self.uow,
+            clock=self.clock,
+        ).execute(ChangePhotosCommand(player_id=player_id, photo_ids=photo_ids))
+
+    async def change_intro(self, intro: str | None, *, player_id=PLAYER) -> None:
+        await ChangeIntro(
+            profiles=self._profiles(), uow=self.uow, clock=self.clock
+        ).execute(ChangeIntroCommand(player_id=player_id, intro=intro))
+
+    async def change_gender(self, gender: Gender, *, player_id=PLAYER) -> None:
+        await ChangeGender(
+            profiles=self._profiles(), uow=self.uow, clock=self.clock
+        ).execute(ChangeGenderCommand(player_id=player_id, gender=gender))
+
+    async def change_gender_preference(
+        self, preference: GenderPreference, *, player_id=PLAYER
+    ) -> None:
+        await ChangeGenderPreference(
+            profiles=self._profiles(), uow=self.uow, clock=self.clock
+        ).execute(
+            ChangeGenderPreferenceCommand(
+                player_id=player_id, gender_preference=preference
+            )
+        )
+
+    async def answer_opt_in(
+        self,
+        accepted: bool,
+        *,
+        copy_version: str = "proposals-2026-09",
+        surface: ConsentSurface = ConsentSurface.PROFILE,
+        player_id=PLAYER,
+    ):
+        return await AnswerProposalsOptIn(
+            profiles=self._profiles(), uow=self.uow, clock=self.clock
+        ).execute(
+            AnswerProposalsOptInCommand(
+                player_id=player_id,
+                accepted=accepted,
+                copy_version=copy_version,
+                surface=surface,
             )
         )
 
@@ -341,6 +431,367 @@ async def test_a_location_written_by_a_player_with_no_profile_is_refused(harness
         await harness.change_location(52.2297, 21.0122)
 
     assert harness.publisher.published == []
+    assert harness.uow.commits == 0
+
+
+# ---------------------------------------------------------------------------
+# The tags (docs/adr/0179 §6, §8)
+# ---------------------------------------------------------------------------
+
+
+async def test_the_tags_are_replaced_whole_and_re_validated_as_the_commit_validates(
+    harness,
+):
+    """Re-validated against the served vocabulary and bounds exactly as the
+    commit re-validates — ``SocialTagSelection.from_ids`` is what both build
+    through — and released as one ``SocialTagsChanged`` carrying the selection
+    in the vocabulary's order, whatever order the picker sent it in."""
+
+    await harness.commit_profile()
+
+    profile = await harness.change_social_tags(["HERE_TO_COMPETE", "QUIET_AND_FOCUSED"])
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, SocialTagsChanged)
+    assert set(released.social_tags) == {"QUIET_AND_FOCUSED", "HERE_TO_COMPETE"}
+    assert profile.social_tags.ids == released.social_tags
+    assert harness.uow.commits == 1
+
+
+async def test_the_same_selection_twice_appends_nothing(harness):
+    await harness.commit_profile()
+
+    profile = await harness.change_social_tags(["HERE_TO_IMPROVE", "PLAYS_TO_WIN"])
+
+    assert harness.publisher.published == []
+    assert harness.store.appends == 0
+    assert set(profile.social_tags.ids) == {"PLAYS_TO_WIN", "HERE_TO_IMPROVE"}
+    assert harness.uow.commits == 1
+
+
+async def test_an_unserved_tag_and_an_out_of_bounds_count_are_refused_before_the_store(
+    harness,
+):
+    """The refusal is pure and the replay is not, so the check comes first —
+    a player with no profile still gets the tag's own code."""
+
+    with pytest.raises(UnknownSocialTag):
+        await harness.change_social_tags(["PLAYS_TO_WIN", "NOT_A_TAG"])
+    with pytest.raises(SocialTagSelectionOutOfBounds):
+        await harness.change_social_tags([])
+
+    assert harness.store.appends == 0
+    assert harness.uow.commits == 0
+
+
+async def test_tags_written_by_a_player_with_no_profile_are_refused(harness):
+    with pytest.raises(PlayerProfileNotFound):
+        await harness.change_social_tags(["PLAYS_TO_WIN", "HERE_TO_IMPROVE"])
+
+    assert harness.uow.commits == 0
+
+
+# ---------------------------------------------------------------------------
+# The photos (docs/adr/0179 §6, §8)
+# ---------------------------------------------------------------------------
+
+
+async def test_the_photos_are_replaced_in_the_order_sent(harness):
+    """Order is meaning — the first is the one a card shows — so promoting the
+    second photograph is a change even though the set is the same, and the
+    event carries the whole list in its new order."""
+
+    first = harness.a_photo_held(metadata={})
+    second = harness.a_photo_held(metadata={})
+    await harness.commit_profile(photo_ids=[first, second])
+
+    profile = await harness.change_photos([second, first])
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, PhotosChanged)
+    assert released.photo_ids == (str(second), str(first))
+    assert profile.photo_ids == (second, first)
+    assert harness.uow.commits == 1
+
+
+async def test_an_empty_list_clears_the_photographs(harness):
+    """A profile may hold none, and the poster returns. Recorded as a change
+    carrying nothing — a fact recorded, not a value missing."""
+
+    photo = harness.a_photo_held(metadata={})
+    await harness.commit_profile(photo_ids=[photo])
+
+    profile = await harness.change_photos([])
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, PhotosChanged)
+    assert released.photo_ids == ()
+    assert profile.photo_ids == ()
+
+
+async def test_the_same_order_twice_appends_nothing(harness):
+    photo = harness.a_photo_held(metadata={})
+    await harness.commit_profile(photo_ids=[photo])
+
+    await harness.change_photos([photo])
+
+    assert harness.publisher.published == []
+    assert harness.store.appends == 0
+    assert harness.uow.commits == 1
+
+
+async def test_a_photograph_that_is_not_the_callers_is_refused(harness):
+    """The commit's check, through the same port and the same ``PhotoRef``:
+    another player's photo id answers exactly as an imaginary one does, and
+    nothing is recorded."""
+
+    await harness.commit_profile()
+    theirs = harness.a_photo_held(metadata={}, owner=STRANGER)
+
+    with pytest.raises(PhotoNotFound):
+        await harness.change_photos([theirs])
+    with pytest.raises(PhotoNotFound):
+        await harness.change_photos([new_uuid()])
+
+    assert harness.publisher.published == []
+    assert harness.store.appends == 0
+
+
+async def test_too_many_photographs_are_refused_before_the_store_is_asked(harness):
+    await harness.commit_profile()
+    checks_before = len(harness.photos.existence_checks)
+
+    with pytest.raises(TooManyPhotos):
+        await harness.change_photos([new_uuid() for _ in range(MAX_PROFILE_PHOTOS + 1)])
+
+    assert harness.store.appends == 0
+    assert harness.uow.commits == 0
+    assert len(harness.photos.existence_checks) == checks_before
+
+
+async def test_photos_written_by_a_player_with_no_profile_are_refused(harness):
+    with pytest.raises(PlayerProfileNotFound):
+        await harness.change_photos([])
+
+    assert harness.uow.commits == 0
+
+
+# ---------------------------------------------------------------------------
+# The intro (docs/adr/0179 §6)
+# ---------------------------------------------------------------------------
+
+
+async def test_the_line_is_replaced_and_trimmed_as_the_commit_trims(harness):
+    await harness.commit_profile(intro="Moved from Wrocław in May.")
+
+    await harness.change_intro("  Will travel for a hard game.  ")
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, IntroChanged)
+    assert released.intro == "Will travel for a hard game."
+    read = await harness.read()
+    assert read.profile.intro == Intro.recorded("Will travel for a hard game.")
+    assert harness.uow.commits == 1
+
+
+async def test_none_withdraws_the_line_and_the_profile_folds_to_none(harness):
+    await harness.commit_profile(intro="Moved from Wrocław in May.")
+
+    await harness.change_intro(None)
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, IntroChanged)
+    assert released.intro is None
+    assert (await harness.read()).profile.intro is None
+
+
+async def test_a_blank_line_is_the_withdrawal_too(harness):
+    """Whitespace is what it is at the commit — *no line* — and here that is
+    a withdrawal rather than a skip."""
+
+    await harness.commit_profile(intro="Moved from Wrocław in May.")
+
+    await harness.change_intro("   ")
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, IntroChanged) and released.intro is None
+    assert (await harness.read()).profile.intro is None
+
+
+async def test_the_same_line_twice_appends_nothing(harness):
+    await harness.commit_profile(intro="Moved from Wrocław in May.")
+
+    await harness.change_intro("Moved from Wrocław in May.")
+
+    assert harness.publisher.published == []
+    assert harness.store.appends == 0
+    assert harness.uow.commits == 1
+
+
+async def test_a_line_carrying_contact_is_refused_before_the_store_is_asked(
+    harness,
+):
+    """The commit's fence, with the commit's reason — and first, so a player
+    with no profile still gets ``intro_not_admitted`` rather than
+    ``player_profile_not_found``, which is the assertion that the check really
+    does come before the replay."""
+
+    with pytest.raises(IntroNotAdmitted) as refused:
+        await harness.change_intro("WhatsApp me on 600 123 456")
+
+    assert refused.value.reason is IntroRefusal.CONTAINS_CONTACT
+    assert harness.store.appends == 0
+    assert harness.uow.commits == 0
+
+
+async def test_an_intro_written_by_a_player_with_no_profile_is_refused(harness):
+    with pytest.raises(PlayerProfileNotFound):
+        await harness.change_intro("Late to the game.")
+
+    assert harness.uow.commits == 0
+
+
+# ---------------------------------------------------------------------------
+# The gender and the preference (docs/adr/0096, docs/adr/0179 §8)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_corrected_gender_is_its_own_event(harness):
+    await harness.commit_profile(gender=Gender.WOMAN)
+
+    await harness.change_gender(Gender.PREFER_NOT_TO_SAY)
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, GenderChanged)
+    assert released.gender == "PREFER_NOT_TO_SAY"
+    assert harness.uow.commits == 1
+
+
+async def test_the_same_gender_twice_appends_nothing(harness):
+    await harness.commit_profile(gender=Gender.WOMAN)
+
+    await harness.change_gender(Gender.WOMAN)
+
+    assert harness.publisher.published == []
+    assert harness.store.appends == 0
+    assert harness.uow.commits == 1
+
+
+async def test_a_first_answer_on_a_pre_question_profile_is_a_change(harness):
+    """ADR-0096's *existing players are asked on next open*, reachable from
+    this route: a stream from before the question folds to no gender, so there
+    is nothing for the first answer to be equal to."""
+
+    await harness.store.append(
+        aggregate_type=PLAYER_PROFILE_AGGREGATE,
+        aggregate_id=PLAYER,
+        expected_version=0,
+        events=[
+            PlayerProfileCreated(
+                player_id=PLAYER,
+                social_tags=("PLAYS_TO_WIN", "HERE_TO_IMPROVE"),
+                photo_ids=(),
+                availability=("2:EVENING",),
+                latitude=51.51,
+                longitude=-0.13,
+                search_radius_km=10,
+                idempotency_key="commit-before-the-question",
+                occurred_at=harness.clock.now(),
+            ),
+            ProposalsOptInAnswered(
+                player_id=PLAYER,
+                accepted=True,
+                copy_version="proposals-2026-08",
+                surface=ConsentSurface.ONBOARDING.value,
+                occurred_at=harness.clock.now(),
+            ),
+        ],
+    )
+
+    await harness.change_gender(Gender.MAN)
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, GenderChanged) and released.gender == "MAN"
+    assert (await harness.read()).profile.gender is Gender.MAN
+
+
+async def test_a_narrowed_preference_is_its_own_event(harness):
+    await harness.commit_profile()
+
+    await harness.change_gender_preference(GenderPreference.WOMEN_ONLY)
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, GenderPreferenceChanged)
+    assert released.gender_preference == "WOMEN_ONLY"
+    read = await harness.read()
+    assert read.profile.gender_preference is GenderPreference.WOMEN_ONLY
+
+
+async def test_the_same_preference_twice_appends_nothing(harness):
+    await harness.commit_profile()
+
+    await harness.change_gender_preference(DEFAULT_GENDER_PREFERENCE)
+
+    assert harness.publisher.published == []
+    assert harness.store.appends == 0
+    assert harness.uow.commits == 1
+
+
+async def test_a_gender_or_a_preference_written_without_a_profile_is_refused(
+    harness,
+):
+    with pytest.raises(PlayerProfileNotFound):
+        await harness.change_gender(Gender.MAN)
+    with pytest.raises(PlayerProfileNotFound):
+        await harness.change_gender_preference(GenderPreference.MEN_ONLY)
+
+    assert harness.uow.commits == 0
+
+
+# ---------------------------------------------------------------------------
+# The opt-in, answered again from PROFILE (docs/adr/0179 §8)
+# ---------------------------------------------------------------------------
+
+
+async def test_the_same_answer_twice_is_recorded_twice_from_profile(harness):
+    """The one write here that is not a no-op when nothing changed — a consent,
+    not a preference — and each answer carries the surface the route names
+    and the words the screen showed."""
+
+    await harness.commit_profile(proposals_opt_in=True)
+
+    await harness.answer_opt_in(True, copy_version="proposals-opt-in.v3")
+    await harness.answer_opt_in(True, copy_version="proposals-opt-in.v3")
+
+    first, second = harness.publisher.published
+    for released in (first, second):
+        assert isinstance(released, ProposalsOptInAnswered)
+        assert released.accepted is True
+        assert released.copy_version == "proposals-opt-in.v3"
+        assert released.surface == ConsentSurface.PROFILE.value
+    assert harness.store.appends == 2
+    assert harness.uow.commits == 2
+
+
+async def test_the_standing_answer_is_the_latest_and_its_surface_is_profile(harness):
+    await harness.commit_profile(proposals_opt_in=True)
+
+    profile = await harness.answer_opt_in(False, copy_version="proposals-opt-in.v3")
+
+    assert profile.proposals_opt_in is not None
+    assert profile.proposals_opt_in.accepted is False
+    assert profile.proposals_opt_in.surface is ConsentSurface.PROFILE
+    assert profile.proposals_opt_in.copy_version == "proposals-opt-in.v3"
+    assert profile.proposals_opt_in.answered_at == harness.clock.now()
+
+
+async def test_an_opt_in_answered_by_a_player_with_no_profile_is_refused(harness):
+    """Always *again*: the commit is the first answer, and there is no profile
+    to answer on before it."""
+
+    with pytest.raises(PlayerProfileNotFound):
+        await harness.answer_opt_in(True)
+
     assert harness.uow.commits == 0
 
 

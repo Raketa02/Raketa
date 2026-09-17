@@ -24,8 +24,10 @@ exactly the kind nobody notices.
 **What is absent is absent on purpose.** ``player_profile.photos_changed`` is not
 here: the player card is assembled outside the engine (``docs/adr/0107``), so no
 photo fact reaches the index at all. ``player_profile.intro_written`` **is**
-here, and it is the one text fact the index holds: a line a player wrote about
-themselves, projected like the tags so the card is assembled from the row
+here, and so is ``player_profile.intro_changed`` — the You tab's edit of the
+same line (``docs/adr/0179`` §6), whose ``None`` clears the column — and it is
+the one text fact the index holds: a line a player wrote about themselves,
+projected like the tags so the card is assembled from the row
 (``docs/adr/0170`` §3), and read by nothing in the scorer — ``fence.py`` copies
 it onto no ``ScorableCandidate``, and the scorer's own fence refuses the word.
 ``users`` is not here either: account state is not a fact a player changes about
@@ -45,6 +47,7 @@ from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
+    IntroChanged,
     IntroWritten,
     LocationChanged,
     PlayerProfileCreated,
@@ -183,10 +186,12 @@ def project(event: DomainEvent) -> tuple[Movement, ...]:
                     changes={"proposals_opt_in": event.accepted},
                 ),
             )
-        case IntroWritten():
+        case IntroWritten() | IntroChanged():
             # The line and **no moment beside it**: nothing reads when it was
             # written, and a stamp would be activity recency by another door
-            # (`docs/adr/0107` §3, which stands).
+            # (`docs/adr/0107` §3, which stands). A withdrawal arrives as
+            # `None` on the second and clears the column — the whole new
+            # value, which here is no value.
             return (
                 PlayerFactsMoved(
                     player_id=event.player_id, changes={"intro": event.intro}
@@ -273,6 +278,7 @@ PROJECTED_CONTRACTS: tuple[Type[DomainEvent], ...] = (
     GenderPreferenceChanged,
     ProposalsOptInAnswered,
     IntroWritten,
+    IntroChanged,
     PlayIntentDeclared,
     RatingInitialised,
     RefreshTokenIssued,

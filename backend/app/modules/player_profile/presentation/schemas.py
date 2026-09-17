@@ -365,6 +365,24 @@ class LocationAreaResource(BaseModel):
         return cls(latitude=area.latitude, longitude=area.longitude)
 
 
+def _copy_version_field() -> Any:
+    """The words' identifier, as both the commit and the profile write take it.
+
+    One definition for the two requests that carry it, so the length a consent
+    record may hold is spelled at the boundary once.
+    """
+
+    return Field(
+        ...,
+        min_length=1,
+        max_length=MAX_COPY_VERSION_LENGTH,
+        description=(
+            "Identifier of the exact copy the player was shown. Not the copy "
+            "itself — the words are the client's and are never stored here."
+        ),
+    )
+
+
 class ProposalsOptInRequest(BaseModel):
     """The answer to the proposals question, and the words it was given against.
 
@@ -388,15 +406,7 @@ class ProposalsOptInRequest(BaseModel):
             "which is refused — it is never read as `false`."
         ),
     )
-    copy_version: str = Field(
-        ...,
-        min_length=1,
-        max_length=MAX_COPY_VERSION_LENGTH,
-        description=(
-            "Identifier of the exact copy the player was shown. Not the copy "
-            "itself — the words are the client's and are never stored here."
-        ),
-    )
+    copy_version: str = _copy_version_field()
 
 
 class CommitPlayerProfileRequest(BaseModel):
@@ -494,10 +504,10 @@ class CommitPlayerProfileRequest(BaseModel):
             "number, an email, a URL or bare domain, or an `@handle` — so the "
             "client can say what to change without the server explaining what "
             "it matched. Nothing else is read.\n\n"
-            "**Not editable yet** (ADR-0170 §5): this commit is its only "
-            "write, with the tags and the photo it sits between. It crosses "
-            "on the player card and on the record, and this response does not "
-            "echo it."
+            "Edited later from the You tab through `PUT /players/me/intro`, "
+            "with the tags and the photos it sits between (ADR-0179 §6). It "
+            "crosses on the player card and on the record, and this response "
+            "does not echo it."
         ),
     )
 
@@ -525,6 +535,24 @@ class ProposalsOptInResponse(BaseModel):
             copy_version=opt_in.copy_version,
             surface=opt_in.surface,
             answered_at=opt_in.answered_at,
+        )
+
+    @classmethod
+    def standing_on(cls, profile: PlayerProfile) -> "ProposalsOptInResponse":
+        """The profile's standing answer — which a committed profile always has.
+
+        `PlayerProfile.create` appends `ProposalsOptInAnswered` with the creating
+        event and there is no path to the created state without it, so every
+        shape that serves the answer asks here: if that ever stops being true
+        this raises rather than serving a profile with a hole where the consent
+        record should be.
+        """
+
+        return cls.from_domain(
+            invariant(
+                profile.proposals_opt_in,
+                f"a committed profile with no opt-in answer: {profile.player_id}",
+            )
         )
 
 
@@ -561,15 +589,6 @@ class PlayerProfileResponse(BaseModel):
 
     @classmethod
     def from_domain(cls, profile: PlayerProfile) -> "PlayerProfileResponse":
-        # A created profile always carries an answer — `PlayerProfile.create`
-        # appends `ProposalsOptInAnswered` with the creating event and there is
-        # no path to the created state without it. If that ever stops being true
-        # this raises here rather than serving a profile with a hole where the
-        # consent record should be.
-        opt_in = invariant(
-            profile.proposals_opt_in,
-            f"a committed profile with no opt-in answer: {profile.player_id}",
-        )
         return cls(
             player_id=profile.player_id,
             social_tag_ids=list(profile.social_tags.tags),
@@ -577,7 +596,7 @@ class PlayerProfileResponse(BaseModel):
             availability=_grid_resource(profile.availability),
             location=LocationAreaResource.from_domain(profile.location),
             search_radius_km=profile.search_radius.kilometres,
-            proposals_opt_in=ProposalsOptInResponse.from_domain(opt_in),
+            proposals_opt_in=ProposalsOptInResponse.standing_on(profile),
             created_at=profile.created_at,
             updated_at=profile.updated_at,
         )
@@ -750,13 +769,6 @@ class PlayerProfileReadResponse(BaseModel):
     @classmethod
     def from_domain(cls, surface: PlayerProfileSurface) -> "PlayerProfileReadResponse":
         profile = surface.profile
-        # A created profile always carries an answer — see
-        # `PlayerProfileResponse.from_domain`, which makes the same claim on the
-        # same aggregate for the same reason.
-        opt_in = invariant(
-            profile.proposals_opt_in,
-            f"a committed profile with no opt-in answer: {profile.player_id}",
-        )
         fields: dict[str, Any] = {
             "availability": _grid_resource(profile.availability),
             "search_radius_km": profile.search_radius.kilometres,
@@ -766,7 +778,7 @@ class PlayerProfileReadResponse(BaseModel):
                 _profile_photo(photo_id, surface.photo_verdicts.get(photo_id))
                 for photo_id in profile.photo_ids
             ],
-            "proposals_opt_in": ProposalsOptInResponse.from_domain(opt_in),
+            "proposals_opt_in": ProposalsOptInResponse.standing_on(profile),
             "gender_preference": profile.gender_preference,
         }
         if profile.intro is not None:
@@ -919,3 +931,156 @@ class PlayIntentDeclarationResponse(BaseModel):
         cls, declaration: PlayIntentDeclaration
     ) -> "PlayIntentDeclarationResponse":
         return cls(sport=declaration.sport, intent=declaration.intent)
+
+
+class ChangeSocialTagsRequest(BaseModel):
+    """The Social tags, replaced whole (``docs/adr/0179`` §8).
+
+    Strings rather than an enum, as the commit carries them: an id outside the
+    served vocabulary is refused by the domain with ``unknown_social_tag``, a
+    count outside the served bounds with ``social_tag_selection_out_of_bounds``,
+    and the client gets a code it can act on rather than a 422.
+    """
+
+    social_tags: list[str] = Field(
+        ...,
+        description=(
+            "Every tag this player now holds, as ids served by "
+            "`GET /player-profile/options`. **The list is the selection** — what "
+            "is absent is dropped. Re-checked against the served vocabulary and "
+            "the served floor and ceiling exactly as the commit re-checks them; "
+            "the same id twice is refused with `duplicate_social_tag`."
+        ),
+    )
+
+
+class SocialTagsResponse(BaseModel):
+    """The tags as the profile now holds them — in the vocabulary's order.
+
+    A body rather than a ``204`` for the week's reason: the order stored is the
+    platform's and not the picker's, so a client that kept what it sent would
+    hold a selection in an order the profile does not.
+    """
+
+    social_tags: list[SocialTag] = Field(
+        ..., description="In the vocabulary's order, whatever order was sent."
+    )
+
+    @classmethod
+    def from_domain(cls, profile: PlayerProfile) -> "SocialTagsResponse":
+        return cls(social_tags=list(profile.social_tags.tags))
+
+
+class ChangePhotosRequest(BaseModel):
+    """The photographs, replaced whole and **in order** (``docs/adr/0179`` §8).
+
+    An empty list is a legal value and clears: a profile may hold none, and the
+    poster returns. There is no *clear my photos* flag for the week's reason —
+    the list is the answer.
+    """
+
+    photo_ids: list[UUID] = Field(
+        ...,
+        description=(
+            f"Ids returned by `POST /photos`, in the order the player arranged "
+            f"them — the first is the one a player card shows. At most "
+            f"{MAX_PROFILE_PHOTOS}; **an empty list is valid and clears**. Every "
+            f"id is checked to exist and to belong to this player, exactly as the "
+            f"commit checks it, and the same id twice is refused with "
+            f"`duplicate_photo`."
+        ),
+    )
+
+
+class PhotosResponse(BaseModel):
+    """The photographs as the profile now holds them, in their order.
+
+    Ids and nothing else: the verdict beside each is the profile read's to
+    serve (`ProfilePhotoResource`), paid for once there rather than on every
+    rearrangement here.
+    """
+
+    photo_ids: list[UUID]
+
+    @classmethod
+    def from_domain(cls, profile: PlayerProfile) -> "PhotosResponse":
+        return cls(photo_ids=list(profile.photo_ids))
+
+
+class ChangeIntroRequest(BaseModel):
+    """The line, replaced — or withdrawn (``docs/adr/0179`` §6).
+
+    **The field is required and nullable**, which is the shape of a value whose
+    absence is a real act: ``null`` withdraws the line, and ``{}`` is a 422 so
+    that a client which forgot the field cannot be clearing lines. No
+    ``max_length``, for the commit's reason: the cap is the domain's, and the
+    domain refuses with `intro_not_admitted` and `reason: too_long`, which is
+    the code a client branches on.
+
+    **Nothing comes back.** The intro reaches the card, the record and its
+    author's own profile read and nowhere else — a sweep in ``tests/unit/
+    test_intro.py`` holds the contract to those three shapes — and a response
+    that echoed the trimmed line would be a fourth. The author reads it back
+    from the profile read, as the two gender writes are read back.
+    """
+
+    intro: str | None = Field(
+        ...,
+        description=(
+            "The new line, or `null` to withdraw it. Trimmed, then held to "
+            f"**at most {INTRO_MAX_CHARACTERS} characters** and **one line** — "
+            "the commit's fence exactly, with the commit's codes: "
+            "`intro_not_admitted` and one coarse `details.reason`, `too_long`, "
+            "`multiline`, or `contains_contact` for a phone number, an email, a "
+            "URL or bare domain, or an `@handle`. Whitespace is `null`: a line "
+            "with nothing in it is withdrawn, never stored empty."
+        ),
+    )
+
+
+class ChangeGenderRequest(BaseModel):
+    """A new answer to the gender question — *self-declared, freely changed*."""
+
+    gender: Gender = Field(
+        ...,
+        description=(
+            "The player's own answer. `PREFER_NOT_TO_SAY` is a first-class "
+            "answer; it matches only unconstrained searches, which costs its "
+            "holder reach, and the client is what says so at the moment of "
+            "asking (`docs/adr/0096`)."
+        ),
+    )
+
+
+class ChangeGenderPreferenceRequest(BaseModel):
+    """A new durable answer to *who am I willing to play with*."""
+
+    gender_preference: GenderPreference = Field(
+        ...,
+        description=(
+            "Who this player is willing to be matched with.\n\n"
+            "**It is mutual and durable.** Narrowing it makes them invisible to "
+            "the excluded side entirely — including to searchers who asked for "
+            "anybody — and the client must say so at the moment of setting; "
+            "learning it from silence is not acceptable. Seats already accepted "
+            "are facts, not candidates: nothing already agreed is undone."
+        ),
+    )
+
+
+class AnswerProposalsOptInRequest(BaseModel):
+    """The proposals question, answered again from the profile screen.
+
+    ``accepted`` is a required ``bool`` and **not** nullable, which is the one
+    place this differs from the commit's `ProposalsOptInRequest`: there,
+    *unanswered* is a state a client can legitimately be in and is refused with
+    a code that says *ask the question*; here the screen **is** the question
+    and pressing is the answer, so ``null`` is a 422 rather than a fact.
+
+    **The surface is not a field.** It is the route's — ``PROFILE`` — and a
+    body naming one is ignored, because a client that could assert where a
+    consent was gathered could assert one it never gathered.
+    """
+
+    accepted: bool = Field(..., description="The player's answer, pressed again.")
+    copy_version: str = _copy_version_field()

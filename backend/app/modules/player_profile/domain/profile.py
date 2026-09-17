@@ -62,6 +62,7 @@ from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
+    IntroChanged,
     IntroWritten,
     LocationChanged,
     PhotosChanged,
@@ -264,7 +265,9 @@ class PlayerProfile:
         return profile
 
     # ------------------------------------------------------------------
-    # Later changes, from the profile screen
+    # Later changes, from the profile screen — one unkeyed PUT per transition
+    # below: the You tab's (docs/adr/0179 §8), the Play screens' for the week
+    # and the radius, and the cold start's for the location (docs/adr/0174 §6)
     # ------------------------------------------------------------------
 
     def change_social_tags(
@@ -326,6 +329,30 @@ class PlayerProfile:
             SearchRadiusChanged(
                 player_id=self.player_id,
                 search_radius_km=radius.kilometres,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def change_intro(self, intro: Intro | None, *, occurred_at: Instant) -> None:
+        """Replace the line the player wrote — or withdraw it.
+
+        ``docs/adr/0179`` §6: the edit ADR-0170 §5 deferred to the day the
+        intro, the tags and the photos are edited together. The line arrives
+        already fenced — ``Intro.written`` refused contact and the shape before
+        it got here, exactly as it does for the commit — and ``None`` is the
+        withdrawal: recorded, and the profile folds to none.
+
+        A preference and not a consent, so the no-op rule holds on both sides
+        of the absence: the line already held records nothing, and withdrawing
+        a line that was never written records nothing either.
+        """
+
+        if intro == self.intro:
+            return
+        self._record_that(
+            IntroChanged(
+                player_id=self.player_id,
+                intro=None if intro is None else intro.text,
                 occurred_at=occurred_at,
             )
         )
@@ -462,6 +489,12 @@ class PlayerProfile:
         if isinstance(event, IntroWritten):
             # Recorded, never re-checked: the cap and the fence bound the write.
             self.intro = Intro.recorded(event.intro)
+            self._touch(event.occurred_at)
+            return
+        if isinstance(event, IntroChanged):
+            # The latest of either event is the line; `None` is the withdrawal
+            # and folds to the absence a skipped step leaves.
+            self.intro = None if event.intro is None else Intro.recorded(event.intro)
             self._touch(event.occurred_at)
             return
         if isinstance(event, ProposalsOptInAnswered):

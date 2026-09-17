@@ -33,8 +33,9 @@ it, and it is never scored: the scorer's fence refuses the word
 (``tests/unit/test_scorable_candidate_fence.py``).
 
 **The write path refuses; the fold accepts.** ``written`` is what the commit
-runs; ``recorded`` is what a replay runs and re-checks neither the cap nor the
-fence, because the cap is a number product may move and a line already on a
+runs, and what the You tab's edit runs (``docs/adr/0179`` §6) — one fence for
+both writes; ``recorded`` is what a replay runs and re-checks neither the cap
+nor the fence, because the cap is a number product may move and a line already on a
 stream was admitted when it was written. Lowering the cap must not un-rehydrate
 every profile above the new one, which is the argument every value object in
 this context makes.
