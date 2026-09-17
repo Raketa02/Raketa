@@ -7,6 +7,8 @@
  * must name what they are and never *coming soon* (10.1's rule).
  */
 
+import { PHOTO_CEILING } from '../domain/photoCollection';
+
 import { RADIUS_LABEL, radiusWords } from './radiusPresentation';
 import {
   AREA_LINE,
@@ -15,12 +17,17 @@ import {
   DEFERRED_ROW,
   HOW_FAR_TO_LOOK_TITLE,
   KIND_OF_GAME_LINE,
+  NO_INTRO_LINE,
   READ_AGAIN,
+  REMOVE_INTRO,
   SAVE,
   SAVED,
   SAVE_YOUR_WEEK,
+  introLine,
   kindOfGameLine,
+  photosLine,
   radiusLine,
+  tagsLine,
   weekLine,
 } from './youProfilePresentation';
 
@@ -55,6 +62,44 @@ describe('the live lines', () => {
   });
 });
 
+describe('the live lines on your card', () => {
+  it('counts the photos against the ceiling and says whether the profile photo passed the check', () => {
+    // *On court* only of a photo the check passed: a flagged one and one nobody looked at
+    // (ADR-0138) both read as not checked, and neither is a claim about the photograph.
+    expect(photosLine([{ photoId: 'a', review: 'allowed' }, { photoId: 'b' }])).toBe(
+      `2 of ${PHOTO_CEILING} · profile photo on court`,
+    );
+    expect(photosLine([{ photoId: 'a', review: 'flagged' }])).toBe(
+      `1 of ${PHOTO_CEILING} · profile photo not checked as on court`,
+    );
+    expect(photosLine([{ photoId: 'a' }, { photoId: 'b', review: 'allowed' }])).toBe(
+      `2 of ${PHOTO_CEILING} · profile photo not checked as on court`,
+    );
+  });
+
+  it('says a court poster stands in where there is no photo', () => {
+    expect(photosLine([])).toBe('None — a court poster stands in');
+  });
+
+  it('counts the tags against the served ceiling and names the first two, the rest as a count', () => {
+    expect(
+      tagsLine(['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'WARMS_UP_PROPERLY', 'HERE_TO_IMPROVE'], 6),
+    ).toBe('4 of 6 · Stays for a drink, Plays to win, +2');
+    expect(tagsLine(['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'], 6)).toBe(
+      '2 of 6 · Stays for a drink, Plays to win',
+    );
+    // The names, never the emoji — a live line is one line of `tiny`.
+    expect(tagsLine(['PLAYS_TO_WIN'], 5)).toBe('1 of 5 · Plays to win');
+    expect(tagsLine(['PLAYS_TO_WIN'], 5)).not.toMatch(/🏆/u);
+  });
+
+  it('quotes the intro, and quotes the step’s title where there is none', () => {
+    expect(introLine('Will travel for a hard game.')).toBe('“Will travel for a hard game.”');
+    expect(introLine(undefined)).toBe(NO_INTRO_LINE);
+    expect(NO_INTRO_LINE).toBe('None — say it in your own words');
+  });
+});
+
 describe('the titles and the buttons', () => {
   it('names the radius row with the step’s own label', () => {
     expect(HOW_FAR_TO_LOOK_TITLE).toBe(RADIUS_LABEL);
@@ -75,9 +120,17 @@ describe('the titles and the buttons', () => {
     expect(AREA_SET).toBe('Your area is set');
     expect(READ_AGAIN).toBe('Read my area again');
   });
+
+  it('withdraws the intro with its own control, beside Save', () => {
+    expect(REMOVE_INTRO).toBe('Remove intro');
+  });
 });
 
-describe('the five rows whose screens land with their contract', () => {
+describe('the two rows whose screens land with their contract', () => {
+  it('are the two #472 draws — the three social edits have their screens', () => {
+    expect(Object.keys(DEFERRED_ROW).sort()).toEqual(['gameSuggestions', 'whoYouPlayWith']);
+  });
+
   /**
    * 10.1's empty-state rule: one present-tense line naming what the thing **is**, and never an
    * apology, a date, or a claim that nothing is happening.

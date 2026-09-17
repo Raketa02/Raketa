@@ -12,6 +12,7 @@ import type { ProfileCommit } from '../domain/profileCommit';
 
 import {
   toCommitRequest,
+  toPhotoAddress,
   toPlayerProfileSurface,
   toProfileOptions,
   toUploadedPhoto,
@@ -251,16 +252,17 @@ describe('what an upload answered', () => {
     expect(toUploadedPhoto(answered('allowed')).review).toBe('allowed');
   });
 
-  it('warns about nothing when the response carried no verdict at all', () => {
-    // `GET /photos/{id}` carries none, and so does any backend older than the one that
-    // added the field. `null` is explicitly not `allowed` on the wire so that this
-    // decision is made here — and *nobody said anything* is not a reason to tell a player
-    // their photograph looks wrong.
-    expect(toUploadedPhoto(answered(null)).review).toBe('allowed');
-    expect(toUploadedPhoto(answered(undefined)).review).toBe('allowed');
+  it('carries no verdict at all when the response carried none — nobody looked', () => {
+    // The reviewer could not be asked, or a backend older than the one that added the
+    // field. `null` is explicitly not `allowed` on the wire so that this decision is made
+    // here: *nobody said anything* is not a reason to tell a player their photograph looks
+    // wrong, and it is not a reason to say it passed either (ADR-0138) — the You tab's row
+    // says *on court* only of a photo the check passed. So the pair is the id alone.
+    expect(toUploadedPhoto(answered(null))).toEqual({ photoId: 'photo-1' });
+    expect(toUploadedPhoto(answered(undefined))).toEqual({ photoId: 'photo-1' });
   });
 
-  it('warns about nothing on a verdict this build has no sentence for', () => {
+  it('carries no verdict on one this build has no sentence for', () => {
     // The phone that has not been updated in eight months, meeting a decision minted
     // after it shipped. A warning the app cannot phrase is one it must not invent — the
     // same answer a tag with no label gets, arrived at the same way.
@@ -272,7 +274,24 @@ describe('what an upload answered', () => {
       review: 'quarantined',
     } as unknown as Wire['PhotoResponse'];
 
-    expect(toUploadedPhoto(fromTheFuture).review).toBe('allowed');
+    expect(toUploadedPhoto(fromTheFuture)).toEqual({ photoId: 'photo-1' });
+  });
+});
+
+describe('where a held photo is read from', () => {
+  it('is the signed address, and nothing else out of the answer', () => {
+    // `GET /photos/{id}` answers the same shape as the upload; what the You tab wants of it
+    // is the one thing the upload's mapping refuses to carry — the address a tile draws —
+    // because a restored photo has no device copy. The expiry stays behind: nothing stores
+    // the address past the screen.
+    expect(
+      toPhotoAddress({
+        photo_id: 'photo-1',
+        url: 'https://store.test/photo-1?signature=whatever',
+        expires_at: '2026-08-25T12:00:00Z',
+        review: null,
+      }),
+    ).toBe('https://store.test/photo-1?signature=whatever');
   });
 });
 
@@ -304,19 +323,59 @@ describe('the week, in the two spellings that exist', () => {
   });
 });
 
-describe('the profile surface Play reads', () => {
+describe('the profile surface Play and You read', () => {
   const SERVED_SURFACE: Wire['PlayerProfileReadResponse'] = {
     availability: [{ day: 2, part: 'EVENING' }],
     search_radius_km: 12,
     play_intents: { PADEL: 'FOR_FUN', TENNIS: 'NO_PREFERENCE' },
+    social_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
+    photos: [{ photo_id: 'photo-1', review: 'allowed' }, { photo_id: 'photo-2' }],
+    intro: 'Will travel for a hard game.',
+    proposals_opt_in: {
+      accepted: true,
+      copy_version: 'proposals-opt-in.v3',
+      surface: 'ONBOARDING',
+      answered_at: '2026-08-12T10:00:00Z',
+    },
+    gender: 'MAN',
+    gender_preference: 'ANY',
   };
 
-  it('carries the three facts and nothing else', () => {
+  it('carries the three facts Play reads and the three You edits, and nothing else', () => {
+    // The opt-in, the gender and the preference are on the wire and are #472's to read;
+    // nothing here defaults or drops them, they are simply not carried yet.
     expect(toPlayerProfileSurface(SERVED_SURFACE)).toEqual({
       week: [{ day: 2, part: 'evening' }],
       searchRadiusKm: 12,
       playIntents: { padel: 'FOR_FUN', tennis: 'NO_PREFERENCE' },
+      socialTagIds: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
+      photos: [{ photoId: 'photo-1', review: 'allowed' }, { photoId: 'photo-2' }],
+      intro: 'Will travel for a hard game.',
     });
+  });
+
+  it('leaves the intro absent where none was written, never an empty string', () => {
+    const { intro: _served, ...noIntro } = SERVED_SURFACE;
+
+    expect(toPlayerProfileSurface(noIntro)).not.toHaveProperty('intro');
+  });
+
+  it('reads no photos as a real answer — the poster stands in', () => {
+    expect(toPlayerProfileSurface({ ...SERVED_SURFACE, photos: [] }).photos).toEqual([]);
+  });
+
+  it('drops a tag this build has no words for, keeping the rest in the served order', () => {
+    // The same answer the options mapping gives: a chip with no words on it is dropped
+    // rather than drawn, and the picker on You still opens on the tags it can name.
+    const fromTheFuture = {
+      ...SERVED_SURFACE,
+      social_tags: ['STAYS_FOR_A_DRINK', 'BRINGS_THE_BALLS', 'PLAYS_TO_WIN'],
+    } as unknown as Wire['PlayerProfileReadResponse'];
+
+    expect(toPlayerProfileSurface(fromTheFuture).socialTagIds).toEqual([
+      'STAYS_FOR_A_DRINK',
+      'PLAYS_TO_WIN',
+    ]);
   });
 
   it('reads a cleared week as an answer rather than as a missing one', () => {

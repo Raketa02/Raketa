@@ -406,11 +406,16 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
 export const PROFILE_SURFACE_PATH = '/api/v1/players/me/profile';
 
 /**
- * The three facts Play's search screen opens on: a week, a radius and one declaration.
+ * The profile as `GET /players/me/profile` serves it: the three facts Play's search screen
+ * opens on — a week, a radius and one declaration — and the facts the read grew for the You
+ * tab ([#466](https://github.com/Raketa02/Raketa/issues/466)): the tags, the photos with their
+ * verdicts, the intro, the opt-in and the owner's own gender and preference.
  *
  * A padel declaration is in it because *rated and undeclared* is a **different screen** —
  * ADR-0094's one-tap interstitial — so a suite that wants the ordinary case has to say a
- * declaration exists, and a suite that wants the interstitial passes a surface without one.
+ * declaration exists, and a suite that wants the interstitial passes a surface without one
+ * (`profileSurface`). Two photos, the first passed and the second flagged, because the row on
+ * You is the one screen whose question is *what did the check conclude about mine*.
  */
 export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
   availability: [
@@ -419,7 +424,31 @@ export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
   ],
   search_radius_km: 12,
   play_intents: { PADEL: 'FOR_FUN' },
+  social_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'WARMS_UP_PROPERLY', 'HERE_TO_IMPROVE'],
+  photos: [
+    { photo_id: 'photo-held-1', review: 'allowed' },
+    { photo_id: 'photo-held-2', review: 'flagged' },
+  ],
+  intro: 'Will travel for a hard game.',
+  proposals_opt_in: {
+    accepted: true,
+    copy_version: 'proposals-opt-in.v3',
+    surface: 'ONBOARDING',
+    answered_at: '2026-08-12T10:00:00Z',
+  },
+  gender: 'MAN',
+  gender_preference: 'ANY',
 };
+
+/**
+ * The served surface with some facts replaced — for the suites about the week, the radius or
+ * the declaration, which vary those three and have nothing to say about the rest.
+ */
+export function profileSurface(
+  overrides: Partial<Wire['PlayerProfileReadResponse']>,
+): Wire['PlayerProfileReadResponse'] {
+  return { ...PROFILE_SURFACE_SERVED, ...overrides };
+}
 
 /**
  * The profile surface, for any suite that renders a screen inside ⚡Play.
@@ -727,7 +756,8 @@ export const OWN_RECORD_SERVED: Wire['PlayerRecordResponse'] = {
     ],
   },
   variety: { distinct_opponents: 14, times_on_court: 20 },
-  sportsmanship_band: 'GOOD',
+  // The figure and its count, to the subject as to anybody (#468, ADR-0179 §5).
+  sportsmanship: { average: 4.3, raters: 12 },
 };
 
 /**

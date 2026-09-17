@@ -84,8 +84,9 @@ export { useLocationRefresh } from './hooks/useLocationRefresh';
  * §1–§2). The shell composes the tab and names the rows; the route files under
  * `(app)/(tabs)/you/` name the screens. Each row is a title, a live line off the read that
  * carries the fact, and a door; each screen is the onboarding step's control under the tab's
- * chrome with a *Save* — the week, the radius, the area — or the section as built, behind a
- * row. Five rows' screens land with their contract (#471, #472) and say so in one line.
+ * chrome with a *Save* — the week, the radius, the tags, the intro — or written on every
+ * change to the row — the photos — or the section as built, behind a row. Two rows' screens
+ * land with their contract (#472) and say so in one line.
  *
  * `PlayIntentsSection` ([#296](https://github.com/Raketa02/Raketa/issues/296)) is drawn by
  * `WhatKindOfGameScreen` and stays internal; `AreaUpdatesNote` moved into *Where you play*
@@ -109,13 +110,10 @@ export { YourWeekScreen } from './components/YourWeekScreen';
 export { HowFarToLookScreen } from './components/HowFarToLookScreen';
 export { WhereYouPlayScreen } from './components/WhereYouPlayScreen';
 export { WhatKindOfGameScreen } from './components/WhatKindOfGameScreen';
-export {
-  GameSuggestionsScreen,
-  IntroScreen,
-  PhotosScreen,
-  TagsScreen,
-  WhoYouPlayWithScreen,
-} from './components/DeferredYouScreens';
+export { PhotosScreen } from './components/PhotosScreen';
+export { TagsScreen } from './components/TagsScreen';
+export { IntroScreen } from './components/IntroScreen';
+export { GameSuggestionsScreen, WhoYouPlayWithScreen } from './components/DeferredYouScreens';
 export { AREA_UPDATES_LINE } from './components/locationPresentation';
 export {
   AREA_LINE,
@@ -123,16 +121,23 @@ export {
   CLEAR_ALL,
   DEFERRED_ROW,
   HOW_FAR_TO_LOOK_TITLE,
+  INTRO_TITLE,
   KIND_OF_GAME_LINE,
+  PHOTOS_TITLE,
   READ_AGAIN,
+  REMOVE_INTRO,
   SAVE,
   SAVED,
   SAVE_YOUR_WEEK,
+  TAGS_TITLE,
   WHAT_KIND_OF_GAME_TITLE,
   WHERE_YOU_PLAY_TITLE,
   YOUR_WEEK_TITLE,
+  introLine,
   kindOfGameLine,
+  photosLine,
   radiusLine,
+  tagsLine,
   weekLine,
 } from './components/youProfilePresentation';
 

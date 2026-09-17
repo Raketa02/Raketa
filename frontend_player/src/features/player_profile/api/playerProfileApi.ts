@@ -20,6 +20,11 @@ type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'
 type ChangeSearchRadiusRequest = components['schemas']['ChangeSearchRadiusRequest'];
 type ChangeLocationRequest = components['schemas']['ChangeLocationRequest'];
 type SearchRadiusResponse = components['schemas']['SearchRadiusResponse'];
+type ChangeSocialTagsRequest = components['schemas']['ChangeSocialTagsRequest'];
+type SocialTagsResponse = components['schemas']['SocialTagsResponse'];
+type ChangePhotosRequest = components['schemas']['ChangePhotosRequest'];
+type PhotosResponse = components['schemas']['PhotosResponse'];
+type ChangeIntroRequest = components['schemas']['ChangeIntroRequest'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
 type WireSport = components['schemas']['Sport'];
 /**
@@ -91,6 +96,27 @@ export function uploadPhoto({
     contentType,
     authenticated: true,
     onProgress,
+    signal,
+  });
+}
+
+export interface GetPhotoOptions extends PlayerProfileApiOptions {
+  readonly photoId: string;
+}
+
+/**
+ * A signed address for one of the caller's own photographs — what a tile on the You tab
+ * draws a photo the profile already holds from, because a restored photo has no device copy.
+ *
+ * Short-lived and signed for one player: not an identifier, never stored past the screen.
+ * `review` is always `null` on this route by design — the verdict crosses on the upload and
+ * on the profile read, never here.
+ */
+export function getPhoto({ photoId, signal }: GetPhotoOptions): Promise<PhotoResponse> {
+  return httpRequest<PhotoResponse>({
+    method: 'GET',
+    path: `/api/v1/photos/${photoId}`,
+    authenticated: true,
     signal,
   });
 }
@@ -254,6 +280,94 @@ export function changeLocation({ latitude, longitude }: ChangeLocationOptions): 
   return httpRequest<void>({
     method: 'PUT',
     path: '/api/v1/players/me/location',
+    body,
+    authenticated: true,
+  });
+}
+
+export interface ChangeSocialTagsOptions {
+  /** Every tag the player now holds. **The list is the selection** — what is absent is dropped. */
+  readonly socialTagIds: readonly string[];
+}
+
+/**
+ * Replace this player's Social tags, whole
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §8). Re-checked against the served vocabulary and bounds exactly as the commit re-checks
+ * them, under the commit's codes.
+ *
+ * It answers with the tags **in the vocabulary's order**, whatever order was sent, and that
+ * is what a caller may draw — the week's rule, on the fact beside it: a client that kept what
+ * it sent would hold a selection in an order the profile does not.
+ *
+ * **Unkeyed, and no `signal`**, for the radius write's two reasons.
+ */
+export function changeSocialTags({
+  socialTagIds,
+}: ChangeSocialTagsOptions): Promise<SocialTagsResponse> {
+  const body: ChangeSocialTagsRequest = { social_tags: [...socialTagIds] };
+  return httpRequest<SocialTagsResponse>({
+    method: 'PUT',
+    path: '/api/v1/players/me/social-tags',
+    body,
+    authenticated: true,
+  });
+}
+
+export interface ChangePhotosOptions {
+  /** Ids from `POST /photos`, in the player's order — the first leads. **Empty clears.** */
+  readonly photoIds: readonly string[];
+}
+
+/**
+ * Replace this player's photographs, whole and **in order** (ADR-0179 §8) — the write the
+ * You tab sends on **every change to the row**: a promotion, a removal, an upload that landed.
+ *
+ * Every id is checked to exist and to belong to the caller, exactly as the commit checks
+ * them; an empty list is legal and brings the poster back. It answers with the ids as the
+ * profile now holds them — ids only, because the verdict beside each is the profile read's
+ * to serve, paid for once there rather than on every rearrangement here.
+ *
+ * **Unkeyed, and no `signal`**: a `PUT` that lands the same state twice has nothing to
+ * deduplicate — which is what makes writing on every change free — and a cancelled write
+ * leaves the client unable to say whether it landed.
+ */
+export function changePhotos({ photoIds }: ChangePhotosOptions): Promise<PhotosResponse> {
+  const body: ChangePhotosRequest = { photo_ids: [...photoIds] };
+  return httpRequest<PhotosResponse>({
+    method: 'PUT',
+    path: '/api/v1/players/me/photos',
+    body,
+    authenticated: true,
+  });
+}
+
+export interface ChangeIntroOptions {
+  /** The new line, or `null` to withdraw it. Trimmed and fenced on the far side, as the commit is. */
+  readonly intro: string | null;
+}
+
+/**
+ * Replace this player's intro — or withdraw it (ADR-0179 §6, the `IntroChanged` ADR-0170 §5
+ * deferred to the day all three of tags, photos and intro were editable).
+ *
+ * **The field is required and nullable**, which is the shape of a value whose absence is a
+ * real act: `null` withdraws the line, and `{}` is a 422 so that a client which forgot the
+ * field cannot be clearing lines. The fence is the commit's exactly — `intro_not_admitted`
+ * with `too_long`, `multiline` or `contains_contact` — and the two shape reasons are
+ * pre-empted on the screen before a send, as the step pre-empts them.
+ *
+ * **Nothing comes back** — a `204`. The intro reaches the card, the record and its author's
+ * own profile read and nowhere else, and a response that echoed the line would be a fourth
+ * shape. The author reads it back from the profile read.
+ *
+ * **Unkeyed, and no `signal`**, for the radius write's two reasons.
+ */
+export function changeIntro({ intro }: ChangeIntroOptions): Promise<void> {
+  const body: ChangeIntroRequest = { intro };
+  return httpRequest<void>({
+    method: 'PUT',
+    path: '/api/v1/players/me/intro',
     body,
     authenticated: true,
   });

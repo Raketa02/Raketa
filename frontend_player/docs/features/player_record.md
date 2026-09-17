@@ -246,3 +246,12 @@ the record has a variety or an opinion. The popover for every card's three marks
 as a sibling of the passport's root as the result screen draws its own. **Not seen on a
 device**: two cards' worth of dark card and blocks scrolling, the ladder's rungs, and the ring
 at 56 beside a wrapped name.
+
+**The band left the wire before its words left this client** ([#471](https://github.com/Raketa02/Raketa/issues/471)
+regenerated the contract; [#468](https://github.com/Raketa02/Raketa/issues/468) retired
+`sportsmanship_band`, ADR-0179 §5). `playerRecordMappers` reads the one `sportsmanship` field for
+every reader, self included, because that is the one field there is; the `band` arm of
+`Opinion`, `OPINION_BANDS`, `OPINION_BAND_NAME` and `RecordCard`'s branch for them are unreachable
+from the wire and stay until [#473](https://github.com/Raketa02/Raketa/issues/473) retires them
+with the words and the record. The reliability screen draws the figure now, being `RecordCard`
+unchanged.

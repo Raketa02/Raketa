@@ -19,11 +19,17 @@ import {
   AREA_LINE,
   DEFERRED_ROW,
   HOW_FAR_TO_LOOK_TITLE,
+  INTRO_TITLE,
+  PHOTOS_TITLE,
+  TAGS_TITLE,
   WHAT_KIND_OF_GAME_TITLE,
   WHERE_YOU_PLAY_TITLE,
   YOUR_WEEK_TITLE,
+  introLine,
   kindOfGameLine,
+  photosLine,
   radiusLine,
+  tagsLine,
   weekLine,
 } from '@/features/player_profile/types';
 import {
@@ -54,6 +60,7 @@ import {
   stubInterest,
   stubProfileSurface,
   OWN_RECORD_SERVED,
+  PROFILE_OPTIONS_SERVED,
   PROFILE_SURFACE_SERVED,
 } from '@/test-support/onboardingRouter';
 import {
@@ -301,18 +308,31 @@ describe('You', () => {
         doorRowLabel(DEFERRED_ROW.gameSuggestions.title, DEFERRED_ROW.gameSuggestions.line),
       ),
     ).toBeTruthy();
-    // On your card — the door to the sheet, the three that land with theirs, and the name.
+    // On your card — the door to the sheet, the three social facts off the read, and the name.
     expect(
       screen.getByLabelText(doorRowLabel(HOW_OTHERS_SEE_YOU_TITLE, HOW_OTHERS_SEE_YOU_LINE)),
     ).toBeTruthy();
     expect(
-      screen.getByLabelText(doorRowLabel(DEFERRED_ROW.photos.title, DEFERRED_ROW.photos.line)),
+      screen.getByLabelText(
+        doorRowLabel(
+          PHOTOS_TITLE,
+          photosLine([{ photoId: 'photo-held-1', review: 'allowed' }, { photoId: 'photo-held-2' }]),
+        ),
+      ),
     ).toBeTruthy();
     expect(
-      screen.getByLabelText(doorRowLabel(DEFERRED_ROW.tags.title, DEFERRED_ROW.tags.line)),
+      screen.getByLabelText(
+        doorRowLabel(
+          TAGS_TITLE,
+          tagsLine(
+            ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'WARMS_UP_PROPERLY', 'HERE_TO_IMPROVE'],
+            PROFILE_OPTIONS_SERVED.social_tag_selection.maximum_tags,
+          ),
+        ),
+      ),
     ).toBeTruthy();
     expect(
-      screen.getByLabelText(doorRowLabel(DEFERRED_ROW.intro.title, DEFERRED_ROW.intro.line)),
+      screen.getByLabelText(doorRowLabel(INTRO_TITLE, introLine(PROFILE_SURFACE_SERVED.intro))),
     ).toBeTruthy();
     expect(
       screen.getByLabelText(
@@ -351,7 +371,9 @@ describe('You', () => {
     // `@nickname` (ADR-0171 §4) — and the intro in the drawing's marks.
     expect(screen.getByText(GATE_USER.name ?? '')).toBeTruthy();
     expect(screen.getByText(`@${GATE_USER.nickname ?? ''}`)).toBeTruthy();
-    expect(screen.getByText(`“${OWN_RECORD_SERVED.intro ?? ''}”`)).toBeTruthy();
+    // Twice on the tab: the card quotes the record's line, and the *Intro* row quotes the
+    // profile read's — the same line, off two reads (#471).
+    expect(screen.getAllByText(`“${OWN_RECORD_SERVED.intro ?? ''}”`)).toHaveLength(2);
   });
 
   it('opens your own record, retitled, from the header card and from the row', async () => {

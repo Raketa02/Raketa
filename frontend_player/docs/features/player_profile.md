@@ -17,8 +17,10 @@ the photo is stored and committed like any other, and offers keeping it before s
 The photo keeps its place, keeps the lead if it had it, is in `photo_ids`, and `Continue` is
 not touched. The step does **not** announce the check up front: that is small print to the
 majority whose photo is fine and reads as a threat to the rest. `null` on the wire means _this
-response said nothing_, which is not `allowed` — the mapper collapses it toward silence, and a
-verdict this build has no words for is collapsed the same way.
+response said nothing_, which is not `allowed` — the mapper carries it as **no verdict**
+(`UploadedPhoto.review` absent, since #471; it folded to `allowed` before the You tab needed
+the difference), and a verdict this build has no words for is carried the same way: the step
+warns about neither, and the tab's row says _on court_ of neither.
 
 **The gender step says what narrowing costs, at the moment of the press.** The preference
 is a **mutual** gate: setting _Women only_ does not only filter what a player sees, it hides
@@ -108,11 +110,11 @@ that names a step is one shape for two kinds — an answer the server found miss
 it would not admit — and the intro's is the one this screen will actually meet. It is drawn as
 the reason's sentence in the failure note, never _try again_, with _Change your intro_ under it
 back to `/intro` and the line still in the box; a reason this build has no words for keeps the
-way back and says `OUT_OF_DATE_GAP`. Nothing is editable after the commit — the intro follows
-the tags and the photo, and becomes editable the day all three do (ADR-0170 §5). **Not seen on a
-device**: whether four lines is the right ceiling for the box, whether the counter sits right
-under it, and whether the action bar rises cleanly over the iOS keyboard, are the author's to
-check.
+way back and says `OUT_OF_DATE_GAP`. The intro became editable with the tags and the photos, as
+one piece of work, on the You tab (#471, ADR-0179 §6 — the day ADR-0170 §5 named); the paragraph
+below says how. **Not seen on a device**: whether four lines is the right ceiling for the box,
+whether the counter sits right under it, and whether the action bar rises cleanly over the iOS
+keyboard, are the author's to check.
 
 **The location moves on a cold start — silently, after a day in the background, never on a
 plain foreground, and You says so** ([#462](https://github.com/Raketa02/Raketa/issues/462),
@@ -182,12 +184,71 @@ step's press ending in `PUT /players/me/location`, the cold start's route called
 turning `settled` with _Location saved_ once the cell is put. **What kind of game** is
 `PlayIntentsSection` as built, behind a row and under one line — _This changes how people find
 you_ — which replaced the section's heading and body (retired, §9; the undeclared footnote
-stays). **Five rows land with their contract**: Photos, Tags, Intro (#471) and Who you play
-with, Game suggestions (#472) read fields the profile read grows on #466 and this client does
-not read yet; each row draws a line naming what it is and the screen behind it says in one
-`tiny` line what it is and that the edit lands with the read that carries the fact
-(`DEFERRED_ROW`, keyed so a row and its screen cannot come apart) — 10.1's rule, never _coming
-soon_. The gender, opt-in, tags, intro and photos steps are **not** refactored on this ticket:
-their second caller is the ticket that draws them, and a control separated with no caller to
-say its shape would be a guess. **Not seen on a device**: the grid's footnote under a saved
-week, the slider's _Saved_ after a re-snap, and the area screen's notes.
+stays). **Two rows land with their contract**: Who you play with and Game suggestions (#472)
+read fields the profile read grows on #466 and this client does not read yet; each row draws a
+line naming what it is and the screen behind it says in one `tiny` line what it is and that the
+edit lands with the read that carries the fact (`DEFERRED_ROW`, keyed so a row and its screen
+cannot come apart) — 10.1's rule, never _coming soon_. Photos, Tags and Intro stood there too
+until #471 (below). The gender and opt-in steps are **not** refactored on this ticket: their
+second caller is the ticket that draws them, and a control separated with no caller to say its
+shape would be a guess. **Not seen on a device**: the grid's footnote under a saved week, the
+slider's _Saved_ after a re-snap, and the area screen's notes.
+
+**Photos, tags and intro edited from You — the three onboarding steps as they are, one piece of
+work** ([#471](https://github.com/Raketa02/Raketa/issues/471),
+[ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+§2, §6, §8 — the day [ADR-0170](../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
+§5 named, when no field is editable while the two beside it are frozen). **The contract came
+first**: `make gen-api` pulled three backend tickets' drift at once, and the read grew
+`socialTagIds`, `photos` (the pairs, id and verdict) and `intro` on `PlayerProfileSurface` (#466);
+the opt-in and the owner's own gender and preference are on the same response and are #472's to
+read. #468's drift came with it — `sportsmanship_band` is off the wire — so `playerRecordMappers`
+reads the one `sportsmanship` field for every reader; the band's words, its arm and the row that
+draws it are #473's to retire. **The refactor came second**, as #469's did: `CourtPhotos` is the
+photos step's body and its hold-for-options sheet with the chrome handed back as a render prop
+(the sheet must be a sibling of whatever carries `behindOverlay`); `SocialTagPicker` and
+`useSocialTagPicker` are the three groups of chips and the press that obeys the served bounds;
+`IntroField` is the box with its counter, hint, rule and the refusal under it. The three steps
+are those components under their own chrome, and their suites are unchanged. **The photo
+workbench has two homes.** `useProfilePhotos` takes a `PhotoBench` — the photos, the photos _as
+they are right now_ for the upload queue that runs between renders, and one change function —
+and the step hands it the draft's (`useDraftPhotoBench`), whose every change derives
+`draft.photoIds`. The tab hands it `useOwnPhotos`'s: a bench in a ref mirrored to state, seeded
+**once** from the profile as first read (`heldPhotos`, each tile drawn from the signed address
+`GET /photos/{id}` answers — `usePhotoAddresses`, read once per open, because a restored photo
+has no device copy), whose every change that moves the **ids** sends `PUT /players/me/photos`
+with the ids in order — a promotion, a removal, an upload that landed; a progress tick or a
+failure moves no id and sends nothing. **A replacement stands in for the photo it replaced
+until it has arrived** (`ProfilePhoto.replacing`, read by `standingPhotos`): the profile still
+holds the old picture in that slot, so nothing is written while the new one is on its way and
+nothing drops the old one if it fails — the review caught a first cut that wrote the row
+without it the moment the picker answered. Writes are serialised, latest list wins: one in flight,
+the bench read again when it settles, so two rearrangements cannot land out of order and a
+`concurrent_modification` never refuses one of our own. There is **no _Save_**, because the step
+never had one and the row is the state; a refused write keeps the row, says why under it, and
+offers _Try again_, which sends the row as it then stands. `mutateAsync` rather than `mutate`
+with callbacks, so an upload that lands after the player has left the screen is still written —
+the step's _an upload outlives the screen_, kept. **The verdict has three states now.**
+`UploadedPhoto.review` is optional: `allowed`, `flagged`, or absent for _nobody looked_
+(ADR-0138), off both the upload (`null`) and the read (omitted); the row's live line says
+_profile photo on court_ only of a photo the check passed, and the flagged notice warns only of a
+flag. **Tags** is the picker under _On your card · Pick 2 to 6_ with the step's question as the
+title, a draft until _Save_ — shut under the floor in the step's own words with the verb changed
+(`socialTagsSaveLabel`, _Pick 1 more tag to save_), shut while the draft is the selection held
+**by membership** (`sameSelection`, because the profile holds tags in the vocabulary's order
+whatever order they were pressed in), the ceiling note pinned above the button; the write
+answers in the vocabulary's order and the picker then draws that. **Intro** is `IntroField`
+under _On your card_, a draft until _Save_ with _Remove intro_ beside it, offered only while a
+line is held: the two shape refusals shut _Save_ before a send, drawn under the box in the
+step's sentences; `contains_contact` lands on the reply and is drawn **in the same place from
+the same table** (`introRefusalSentence`) — one press away here where it was six screens away
+on the step — and clears on the next keystroke; a blank box shuts _Save_, because the way to no
+intro is the control that says so, never a save of nothing; the route answers `204`, so the
+cache holds the trimmed line sent (the same trim the server keeps) or none. **The three writes
+invalidate the player's own record**: the header card draws the face, the intro and the tags
+off `GET /players/me/record`, another feature's read of the same facts, and a tab that read the
+old line after _Save_ would be the one screen the edit was made on saying it did not land —
+invalidated through `playerRecordKeys`, never patched. The live lines are `photosLine`,
+`tagsLine` (against the **served** ceiling, so the row reads the options too) and `introLine`.
+**Not seen on a device**: the row drawn from signed addresses, the sheet over the tab's chrome,
+the write failure pinned under the row, and the intro's action bar over the keyboard.

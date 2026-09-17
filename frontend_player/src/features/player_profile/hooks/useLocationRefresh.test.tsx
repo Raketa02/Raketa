@@ -54,6 +54,8 @@ const HELD_SURFACE: PlayerProfileSurface = {
   week: [],
   searchRadiusKm: 12,
   playIntents: {},
+  socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+  photos: [],
 };
 
 let transport: Transport;

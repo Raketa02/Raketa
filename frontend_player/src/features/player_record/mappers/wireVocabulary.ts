@@ -21,7 +21,7 @@
 import type { components } from '@/generated/schema';
 import type { Exact } from '@/shared/vocabulary/wireAgreement';
 
-import type { OpinionBand, ReliabilityStrand } from '../domain/playerRecord';
+import type { ReliabilityStrand } from '../domain/playerRecord';
 
 /**
  * Exported because a value nothing reads is a value a linter is entitled to delete, and this
@@ -29,8 +29,6 @@ import type { OpinionBand, ReliabilityStrand } from '../domain/playerRecord';
  */
 export const WIRE_VOCABULARY_AGREES: {
   readonly reliabilityStrand: Exact<ReliabilityStrand, components['schemas']['ReliabilityStrand']>;
-  readonly opinionBand: Exact<OpinionBand, components['schemas']['OpinionBand']>;
 } = {
   reliabilityStrand: true,
-  opinionBand: true,
 };

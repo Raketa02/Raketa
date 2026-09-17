@@ -15,24 +15,28 @@
  * through the step's own reading. The one static line is the area's, because the area is the
  * one fact with a single state — a profile cannot be committed without one.
  *
- * ## Five rows land with their contract, and say so
+ * ## Two rows land with their contract, and say so
  *
- * Photos, Tags, Intro, Who you play with and Game suggestions read fields the profile read
- * grows on [#466](https://github.com/Raketa02/Raketa/issues/466) and this client reads on
- * [#471](https://github.com/Raketa02/Raketa/issues/471) and
+ * Who you play with and Game suggestions read fields the profile read grew on
+ * [#466](https://github.com/Raketa02/Raketa/issues/466) and this client reads on
  * [#472](https://github.com/Raketa02/Raketa/issues/472). Until then each row draws a line
  * naming what it is, and the screen behind it says in one `tiny` line what it is and that the
  * edit lands with the read that carries the fact — 10.1's empty-state rule, and never *coming
- * soon*.
+ * soon*. Photos, Tags and Intro drew the same lines until
+ * [#471](https://github.com/Raketa02/Raketa/issues/471) read them; their live lines are below.
  */
 
 import { sportLabel } from '@/features/onboarding/types';
+import { YOU_COPY } from '@/features/shell/types';
 import { counted } from '@/shared/formatting/counted';
 import { intentLabel } from '@/shared/vocabulary/playIntentPresentation';
+import { socialTagName } from '@/shared/vocabulary/socialTagPresentation';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { PlayIntentRow } from '../domain/playIntentRows';
 import { weekStanding } from '../domain/availabilityWeek';
+import { PHOTO_CEILING, type UploadedPhoto } from '../domain/photoCollection';
 
 import { RADIUS_LABEL, radiusFigure, radiusWords } from './radiusPresentation';
 
@@ -87,7 +91,59 @@ export function kindOfGameLine(rows: readonly PlayIntentRow[]): string {
     .join(' · ');
 }
 
+/**
+ * `2 of 3 · profile photo on court`, `1 of 3 · profile photo not checked as on court`, or what
+ * no photo means.
+ *
+ * *On court* only of a profile photo the check **passed**: a flagged one and one nobody looked
+ * at ([ADR-0138](../../../../../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md))
+ * both read as *not checked as on court* — a sentence about the check, never about the
+ * photograph. The ceiling is the row's, cited.
+ */
+export function photosLine(photos: readonly UploadedPhoto[]): string {
+  const leading = photos[0];
+  if (leading === undefined) return 'None — a court poster stands in';
+  const verdict = leading.review === 'allowed' ? 'on court' : 'not checked as on court';
+  return `${photos.length} of ${PHOTO_CEILING} · profile photo ${verdict}`;
+}
+
+/**
+ * `4 of 6 · Stays for a drink, Plays to win, +2` — the count against the **served** ceiling,
+ * the first two by name and the rest as a count. The names and never the emoji: a live line is
+ * one line of `tiny`, and the glyph is what makes a chip findable, not a sentence readable.
+ */
+export function tagsLine(tagIds: readonly SocialTagId[], maximum: number): string {
+  const count = `${tagIds.length} of ${maximum}`;
+  const named = tagIds.slice(0, 2).map(socialTagName);
+  if (named.length === 0) return count;
+  const rest = tagIds.length - named.length;
+  return `${count} · ${named.join(', ')}${rest > 0 ? `, +${rest}` : ''}`;
+}
+
+/** The step's title, quoted, where no line was written. */
+export const NO_INTRO_LINE = 'None — say it in your own words';
+
+/** `“Will travel for a hard game.”` — the line as written, in quotes; or the step's invitation. */
+export function introLine(intro: string | undefined): string {
+  return intro === undefined ? NO_INTRO_LINE : `“${intro}”`;
+}
+
 // --- the screens' own sentences ---------------------------------------------------------------
+
+/**
+ * A screen's eyebrow under *On your card*: the group the row was opened from, and the step's
+ * rule beside it where the step's eyebrow carried one — *On your card · Pick 2 to 6*, *On your
+ * card · On-court only — up to three* — the steps' own composition with the group in place of
+ * the position. The group title alone until a served rule is in, for the tags step's reason.
+ *
+ * The shell's words read inside the function and never at load: this feature's rows are
+ * imported by the shell's surface, and a value taken while that module is still evaluating
+ * would be `undefined`.
+ */
+export function onYourCardEyebrow(rule?: string): string {
+  const group = YOU_COPY.groups.onYourCard;
+  return rule === undefined ? group : `${group} · ${rule}`;
+}
 
 /**
  * The one line under *What kind of game*'s title — what the section's heading and body said,
@@ -101,6 +157,9 @@ export const SAVED = 'Saved';
 export const SAVING = 'Saving…';
 export const SAVE_YOUR_WEEK = 'Save your week';
 export const CLEAR_ALL = 'Clear all';
+/** The intro's withdrawal — beside *Save*, offered only while a line is held (ADR-0179 §6). */
+export const REMOVE_INTRO = 'Remove intro';
+export const REMOVING = 'Removing…';
 
 /** A read that failed offers itself again — the control the failure belongs to. */
 export const TRY_AGAIN = 'Try again';
@@ -109,33 +168,20 @@ export const TRY_AGAIN = 'Try again';
 export const LOADING_WEEK = 'Loading your week';
 export const LOADING_RADIUS = 'Loading your radius';
 export const LOADING_DISTANCES = 'Loading distances';
+export const LOADING_PHOTOS = 'Loading your photos';
+export const LOADING_TAGS = 'Loading tags';
+export const LOADING_YOUR_TAGS = 'Loading your tags';
+export const LOADING_INTRO = 'Loading your intro';
 
 /** *Where you play*'s one state, and the control under it. */
 export const AREA_SET = 'Your area is set';
 export const READ_AGAIN = 'Read my area again';
 
 /**
- * The five rows whose screens land on #471 and #472: the line on the row, and the one line
- * the screen behind it says. Keyed so a screen and its row cannot come apart.
+ * The two rows whose screens land on #472: the line on the row, and the one line the screen
+ * behind it says. Keyed so a screen and its row cannot come apart.
  */
 export const DEFERRED_ROW = {
-  photos: {
-    title: PHOTOS_TITLE,
-    line: 'Up to three, on court',
-    screenLine:
-      'Your court photos — up to three, the first your profile photo — are edited here, ' +
-      'once the profile read carries them.',
-  },
-  tags: {
-    title: TAGS_TITLE,
-    line: 'The tags other players recognise you by',
-    screenLine: 'Your tags are edited here, once the profile read carries them.',
-  },
-  intro: {
-    title: INTRO_TITLE,
-    line: 'One line, in your own words',
-    screenLine: 'Your intro is edited here, once the profile read carries it.',
-  },
   whoYouPlayWith: {
     title: WHO_YOU_PLAY_WITH_TITLE,
     line: 'Who we match you with',

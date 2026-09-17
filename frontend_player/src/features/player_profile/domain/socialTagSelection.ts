@@ -15,10 +15,10 @@
  *
  * ## No renderer, no store, no served response
  *
- * The picker is the first screen to obey these rules and the profile editor will be the
- * second — the same two numbers, the same refusal, a different screen. So the rules are a
- * function of a selection and its bounds, which is also what makes them testable without
- * mounting anything.
+ * The picker is the first screen to obey these rules and the You tab's *Tags* is the second
+ * (ADR-0179 §2) — the same two numbers, the same refusal, a different screen. So the rules
+ * are a function of a selection and its bounds, which is also what makes them testable
+ * without mounting anything.
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
@@ -80,4 +80,16 @@ export function selectionStanding(
 ): SocialTagSelectionStanding {
   const missing = bounds.minimum - selection.length;
   return missing > 0 ? { kind: 'short', missing } : { kind: 'ready' };
+}
+
+/**
+ * Whether two selections are the same answer — **by membership, never by order.**
+ *
+ * The profile holds its tags in the vocabulary's order whatever order the picker pressed
+ * them in, and a draft is appended to in press order; so a draft that re-ordered the same
+ * tags has nothing to save, and *Save* on the You tab is shut by this rather than by an
+ * array comparison that would open it on nothing.
+ */
+export function sameSelection(a: readonly SocialTagId[], b: readonly SocialTagId[]): boolean {
+  return a.length === b.length && a.every((tagId) => b.includes(tagId));
 }

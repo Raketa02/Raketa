@@ -22,6 +22,7 @@ import { doorRowLabel } from '@/shared/ui';
 import {
   PROFILE_SURFACE_PATH,
   launchSignedIn,
+  profileSurface,
   stubGate,
   stubInterest,
   stubOwnRecord,
@@ -59,11 +60,11 @@ function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
 
 /** Rated in three, declared in two — so both halves of a row are on screen at once. */
 const THREE_RATED = [rating('PADEL'), rating('TENNIS'), rating('SQUASH')];
-const DECLARED_IN_TWO: Wire['PlayerProfileReadResponse'] = {
+const DECLARED_IN_TWO = profileSurface({
   availability: [{ day: 2, part: 'EVENING' }],
   search_radius_km: 12,
   play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'NO_PREFERENCE' },
-};
+});
 
 const SQUASH_INTENT = '/api/v1/play-intents/SQUASH';
 /** Asserted against the wire union, so a renamed surface is a red build rather than a red test. */

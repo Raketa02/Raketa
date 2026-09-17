@@ -1,13 +1,16 @@
 /**
- * The three profile facts a Play screen reads, in one round trip.
+ * The profile facts a Play screen reads and the You tab edits, in one round trip.
  *
  * `GET /api/v1/players/me/profile` carries the availability grid, the Search radius and the
  * per-sport Play intent, across the two aggregates that own them
- * ([#246](https://github.com/Raketa02/Raketa/issues/246)). It is **not the whole profile**:
- * gender and the gender preference are a standing refusal, and tags, photos and the location
- * area are a deferral this same route grows when *You* is built. Neither absence is
- * representable here, which is the point — this type is what the route serves, and a field
- * appears the day the route serves one.
+ * ([#246](https://github.com/Raketa02/Raketa/issues/246)) — and, since the route grew for
+ * *You* ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §8), the Social tags,
+ * the photos with their verdicts and the intro, which this client reads on
+ * [#471](https://github.com/Raketa02/Raketa/issues/471). The opt-in and the owner's own gender
+ * and preference are on the same response and appear here the day
+ * [#472](https://github.com/Raketa02/Raketa/issues/472) reads them; there is no
+ * `has_location`, because a profile cannot be committed without an area. This type is what
+ * the route serves and this client reads, and a field appears the day both are true.
  *
  * ## Why this lives in `player_profile` and not in `play`
  *
@@ -28,8 +31,11 @@
  */
 
 import type { PlayIntent } from '@/shared/vocabulary/playIntent';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { Sport } from '@/shared/vocabulary/sport';
 import type { WeekCell } from '@/shared/vocabulary/week';
+
+import type { UploadedPhoto } from './photoCollection';
 
 /**
  * What was **declared**, per sport — and absence means *undeclared*, never `NO_PREFERENCE`.
@@ -53,4 +59,18 @@ export interface PlayerProfileSurface {
   /** Whole kilometres. What the search screen's slider opens at. */
   readonly searchRadiusKm: number;
   readonly playIntents: PlayIntentDeclarations;
+  /**
+   * The Social tags this player holds, **in the vocabulary's order** whatever order the
+   * picker sent them in — required at commit, so never empty. A served id this build has no
+   * words for is dropped on the way in, as the options are.
+   */
+  readonly socialTagIds: readonly SocialTagId[];
+  /**
+   * The photographs in the player's order — the first is the profile photo — each with the
+   * verdict the check concluded, or none where nobody looked. **An empty list is a real
+   * answer**: a profile may hold none, and the poster stands in.
+   */
+  readonly photos: readonly UploadedPhoto[];
+  /** The line this player wrote about themselves, or absent where none was written. Never `''`. */
+  readonly intro?: string;
 }

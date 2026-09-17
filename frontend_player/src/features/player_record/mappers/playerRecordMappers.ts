@@ -17,7 +17,6 @@
  * | `skill.sport` | the **whole panel** goes | the sport is printed on the panel and on the poster beside it; a card that could not say which sport it was about would be a Level with no subject |
  * | `skill.last_five` | the **whole run** goes | its length is a claim: dropping one entry says a counted game fewer than the platform counted, and a third kind of square is a drawing nobody has designed |
  * | `reliability.strands[].strand` | that row is dropped | a metered row with no label is a bar with a fraction beside it and nothing saying what was counted |
- * | `sportsmanship_band` | the **whole block** goes | a band is three words wide and the word *is* the answer; there is nothing else in that block to keep |
  * | `review` | folded to *no mark* | the absence is already a state, and it is the one that draws nothing |
  *
  * A dropped strand row is a **shorter card and not a wrong one**, which is the opposite answer
@@ -26,15 +25,14 @@
  * how many. The figure over it is the server's own blend and is not recomputed from what
  * survived, so the pill goes on being right about a row this build could not name.
  *
- * ## Whose record it is decides which opinion crosses, and the figure never reaches its subject
+ * ## The opinion is one figure for every reader, and the band no longer crosses
  *
- * The contract sends `sportsmanship` and `sportsmanship_band` as two fields and states that
- * they never appear together. `Opinion` is **one value with two arms**, and the arm is chosen
- * here from `is_self` rather than from which field happened to arrive: a published average
- * beside a published count lets the subject subtract each new rating out and name it, and they
- * know who they played, so a response carrying both must draw the band. Folding it here is what
- * makes *your own record drew the figure* unrepresentable rather than merely unlikely — the
- * same argument the verdict's fold below makes about a different disclosure.
+ * The contract served `sportsmanship_band` to a record's subject and `sportsmanship` to anybody
+ * else until [#468](https://github.com/Raketa02/Raketa/issues/468) retired the band (ADR-0179
+ * §5): the figure and its count now cross to the subject as to any reader, and the wire has one
+ * field. So the mapper reads that one field whoever is asking. The `band` arm of `Opinion`, its
+ * words and the row that draws them are retired by
+ * [#473](https://github.com/Raketa02/Raketa/issues/473); nothing here can produce one any more.
  *
  * ## The verdict is folded to a boolean here and is never carried further
  *
@@ -59,10 +57,8 @@ import { GAME_RESULTS, type GameResult } from '@/shared/vocabulary/gameResult';
 import { SOCIAL_TAG_IDS, type SocialTagId } from '@/shared/vocabulary/socialTags';
 
 import {
-  OPINION_BANDS,
   RELIABILITY_STRANDS,
   type Opinion,
-  type OpinionBand,
   type OpponentVariety,
   type PlayerRecord,
   type RatedSport,
@@ -102,18 +98,11 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
 }
 
 /**
- * **What other players said — the band about yourself, the figure about anybody else.**
+ * **What other players said — the figure and its count, for every reader** (#468, ADR-0179 §5).
  *
- * Read off `is_self` and never off which field arrived, for the reason in the module note. The
- * figure is carried whole; the band is narrowed, and a band with no words takes the block with
- * it rather than drawing a code where a word about somebody belongs.
+ * Carried whole, and absent where nobody has said anything: the block is never drawn at nought.
  */
 function opinion(response: PlayerRecordResponse): { readonly opinion?: Opinion } {
-  if (response.is_self) {
-    const band = toOpinionBand(response.sportsmanship_band);
-    return band === undefined ? {} : { opinion: { kind: 'band', band } };
-  }
-
   const said = response.sportsmanship;
   return said === undefined
     ? {}
@@ -206,7 +195,6 @@ function lastFive(served: readonly string[]): { readonly lastFive?: readonly Gam
 const KNOWN_RESULTS = new Set<string>(GAME_RESULTS);
 const KNOWN_TAGS = new Set<string>(SOCIAL_TAG_IDS);
 const KNOWN_STRANDS = new Set<string>(RELIABILITY_STRANDS);
-const KNOWN_BANDS = new Set<string>(OPINION_BANDS);
 
 function toGameResult(served: string): GameResult | undefined {
   return KNOWN_RESULTS.has(served) ? (served as GameResult) : undefined;
@@ -218,9 +206,4 @@ function toSocialTagId(served: string): SocialTagId | undefined {
 
 function toStrand(served: string): ReliabilityStrand | undefined {
   return KNOWN_STRANDS.has(served) ? (served as ReliabilityStrand) : undefined;
-}
-
-/** The one narrowing that takes an absence as well, because the field is optional on the wire. */
-function toOpinionBand(served: string | undefined): OpinionBand | undefined {
-  return served !== undefined && KNOWN_BANDS.has(served) ? (served as OpinionBand) : undefined;
 }

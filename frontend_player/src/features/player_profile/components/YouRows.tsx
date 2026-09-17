@@ -6,9 +6,10 @@
  *
  * The shell composes the tab — its title, the three group titles, which rows sit in which
  * group — and every row from *Skill passport* down is the feature's whose fact it is. These
- * are the profile's: the declaration, the week, the radius, the area, and the five whose
- * screens land with their contract. Each reads the fact off the read that carries it, says it
- * in one line through `youProfilePresentation`, and pushes its own screen.
+ * are the profile's: the declaration, the week, the radius, the area, the photos, the tags,
+ * the intro, and the two whose screens land with their contract. Each reads the fact off the
+ * read that carries it, says it in one line through `youProfilePresentation`, and pushes its
+ * own screen.
  *
  * ## A live line is a read, and a read has three states
  *
@@ -25,7 +26,10 @@
  * | Your week | `GET /players/me/profile`.availability |
  * | How far to look | `GET /players/me/profile`.search_radius_km |
  * | Where you play | nothing — the one state, because a profile cannot be committed without an area |
- * | the five deferred | nothing yet — the fields land on the read with #471 and #472 |
+ * | Photos | `GET /players/me/profile`.photos — the count, and the profile photo's verdict |
+ * | Tags | `GET /players/me/profile`.social_tags ∩ `GET /player-profile/options`.social_tag_selection — the ceiling is served |
+ * | Intro | `GET /players/me/profile`.intro |
+ * | the two deferred | nothing yet — the fields land on the read with #472 |
  */
 
 import { useRouter } from 'expo-router';
@@ -35,6 +39,7 @@ import { liveLine } from '@/shared/errors';
 import { DoorRow, type DoorRowGlyph, type DoorRowProps } from '@/shared/ui';
 
 import { playIntentRows } from '../domain/playIntentRows';
+import { useProfileOptions } from '../hooks/useProfileOptions';
 import { useProfileSurface } from '../hooks/useProfileSurface';
 
 import {
@@ -52,11 +57,17 @@ import {
   AREA_LINE,
   DEFERRED_ROW,
   HOW_FAR_TO_LOOK_TITLE,
+  INTRO_TITLE,
+  PHOTOS_TITLE,
+  TAGS_TITLE,
   WHAT_KIND_OF_GAME_TITLE,
   WHERE_YOU_PLAY_TITLE,
   YOUR_WEEK_TITLE,
+  introLine,
   kindOfGameLine,
+  photosLine,
   radiusLine,
+  tagsLine,
   weekLine,
   type DeferredRowKey,
 } from './youProfilePresentation';
@@ -134,24 +145,73 @@ export function WhereYouPlayRow({ divided }: YouRowProps) {
   );
 }
 
+export function PhotosRow({ divided }: YouRowProps) {
+  const router = useRouter();
+  const profile = useProfileSurface();
+
+  return (
+    <DoorRow
+      glyph="camera"
+      title={PHOTOS_TITLE}
+      line={liveLine(profile, (surface) => photosLine(surface.photos))}
+      divided={divided}
+      onPress={() => router.push(YOU_PHOTOS_ROUTE)}
+    />
+  );
+}
+
+export function TagsRow({ divided }: YouRowProps) {
+  const router = useRouter();
+  const profile = useProfileSurface();
+  const options = useProfileOptions();
+
+  // Two reads, and the line waits for both: the ceiling it counts against is served, and
+  // *4 of ?* is not a sentence.
+  const both =
+    profile.data === undefined || options.data === undefined
+      ? undefined
+      : { tagIds: profile.data.socialTagIds, maximum: options.data.socialTagSelection.maximum };
+
+  return (
+    <DoorRow
+      glyph="tag"
+      title={TAGS_TITLE}
+      line={liveLine({ data: both, error: profile.error ?? options.error }, (read) =>
+        tagsLine(read.tagIds, read.maximum),
+      )}
+      divided={divided}
+      onPress={() => router.push(YOU_TAGS_ROUTE)}
+    />
+  );
+}
+
+export function IntroRow({ divided }: YouRowProps) {
+  const router = useRouter();
+  const profile = useProfileSurface();
+
+  return (
+    <DoorRow
+      glyph="align-left"
+      title={INTRO_TITLE}
+      line={liveLine(profile, (surface) => introLine(surface.intro))}
+      divided={divided}
+      onPress={() => router.push(YOU_INTRO_ROUTE)}
+    />
+  );
+}
+
 const DEFERRED_ROUTE = {
-  photos: YOU_PHOTOS_ROUTE,
-  tags: YOU_TAGS_ROUTE,
-  intro: YOU_INTRO_ROUTE,
   whoYouPlayWith: YOU_WHO_YOU_PLAY_WITH_ROUTE,
   gameSuggestions: YOU_GAME_SUGGESTIONS_ROUTE,
 } as const satisfies Readonly<Record<DeferredRowKey, string>>;
 
 const DEFERRED_GLYPH: Readonly<Record<DeferredRowKey, DoorRowGlyph>> = {
-  photos: 'camera',
-  tags: 'tag',
-  intro: 'align-left',
   whoYouPlayWith: 'users',
   gameSuggestions: 'check-circle',
 };
 
 /**
- * One of the five rows whose screen lands with its contract — the line names what the row
+ * One of the two rows whose screen lands with its contract — the line names what the row
  * is, and the screen behind it says so in one line.
  */
 function DeferredRow({ row, divided }: YouRowProps & { readonly row: DeferredRowKey }) {
@@ -174,8 +234,3 @@ export const WhoYouPlayWithRow = ({ divided }: YouRowProps) => (
 export const GameSuggestionsRow = ({ divided }: YouRowProps) => (
   <DeferredRow row="gameSuggestions" divided={divided} />
 );
-export const PhotosRow = ({ divided }: YouRowProps) => (
-  <DeferredRow row="photos" divided={divided} />
-);
-export const TagsRow = ({ divided }: YouRowProps) => <DeferredRow row="tags" divided={divided} />;
-export const IntroRow = ({ divided }: YouRowProps) => <DeferredRow row="intro" divided={divided} />;

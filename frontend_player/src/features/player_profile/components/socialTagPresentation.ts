@@ -1,5 +1,7 @@
 /**
- * The words the tags **step** says — the rule it states, and the two refusals it makes.
+ * The words the tags **step** says — the rule it states, and the two refusals it makes — and
+ * the one label the You tab's *Tags* adds, which is the step's floor wording with the verb
+ * changed (ADR-0179 §2).
  *
  * The tags themselves are named in
  * [`@/shared/vocabulary/socialTagPresentation`](../../../shared/vocabulary/socialTagPresentation.ts):
@@ -21,6 +23,7 @@ import type {
 } from '../domain/socialTagSelection';
 
 import { stepEyebrow } from './socialStepPresentation';
+import { SAVE, SAVED } from './youProfilePresentation';
 
 /**
  * The step's eyebrow, carrying **the rule as well as the position**.
@@ -36,7 +39,20 @@ import { stepEyebrow } from './socialStepPresentation';
 export function socialTagsEyebrow(bounds: SocialTagSelectionBounds | undefined): string {
   const position = stepEyebrow('tags');
   if (bounds === undefined) return position;
-  return `${position} · Pick ${bounds.minimum} to ${bounds.maximum}`;
+  return `${position} · ${socialTagsRule(bounds)}`;
+}
+
+/** The rule alone — *Pick 2 to 6* — which the You tab cites under its own group title. */
+export function socialTagsRule(bounds: SocialTagSelectionBounds): string {
+  return `Pick ${bounds.minimum} to ${bounds.maximum}`;
+}
+
+/**
+ * What a control shut under the floor says, counting down as tags are picked, so the rule is
+ * legible from the control itself — and what it is shut *from*, as the verb.
+ */
+function shortLabel(missing: number, verb: string): string {
+  return missing === 1 ? `Pick 1 more tag ${verb}` : `Pick ${missing} tags ${verb}`;
 }
 
 /**
@@ -47,9 +63,16 @@ export function socialTagsEyebrow(bounds: SocialTagSelectionBounds | undefined):
  */
 export function socialTagsContinueLabel(standing: SocialTagSelectionStanding): string {
   if (standing.kind === 'ready') return 'Continue';
-  return standing.missing === 1
-    ? 'Pick 1 more tag to continue'
-    : `Pick ${standing.missing} tags to continue`;
+  return shortLabel(standing.missing, 'to continue');
+}
+
+/**
+ * What the You tab's *Save* says — the step's floor wording with *to continue* become *to
+ * save*, then *Save* while the draft differs from the profile and *Saved* while it does not.
+ */
+export function socialTagsSaveLabel(standing: SocialTagSelectionStanding, dirty: boolean): string {
+  if (standing.kind === 'short') return shortLabel(standing.missing, 'to save');
+  return dirty ? SAVE : SAVED;
 }
 
 /**
@@ -63,3 +86,10 @@ export function socialTagsContinueLabel(standing: SocialTagSelectionStanding): s
 export function socialTagCeilingTitle(bounds: SocialTagSelectionBounds): string {
   return `${bounds.maximum} tags is the most`;
 }
+
+/** The sentence under that title — it names a control the player is looking at. */
+export const SOCIAL_TAG_CEILING_BODY =
+  'Nothing changed. Remove one you have already picked to make room for another.';
+
+/** The served vocabulary came back empty — a screen with nothing to pick from says so. */
+export const NO_TAGS_AVAILABLE = 'No tags are available right now. Try again later.';

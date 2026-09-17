@@ -320,18 +320,20 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The week, the radius and the Play intent this player declared
-         * @description One read for the three facts the Play screens hold, across the two aggregates that own them. The fourth fact a search screen needs — **which sports am I rated in** — is `GET /api/v1/ratings` and is not re-served here.
+         * Every fact this player declared — what the Play screens and You read
+         * @description One read for everything a player declared, across the two aggregates that own it: the week, the radius and the per-sport Play intent the Play screens edit, and — since the *You* tab — the tags, the photos with their verdicts, the intro, the standing proposals answer, and the owner's own gender and preference. The one fact a search screen still needs from elsewhere — **which sports am I rated in** — is `GET /api/v1/ratings` and is not re-served here.
          *
          *     **`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial **before** a search is refused with `play_intent_not_declared` rather than after.
          *
-         *     **An empty `availability` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*.
+         *     **An empty `availability` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*. **An empty `photos` list is one too**: a profile may hold none.
          *
-         *     ## What this response does not carry
+         *     **Absent means omitted, never `null`.** `intro` is omitted where no line was written; a photo's `review` is omitted where nobody looked — which is not `allowed`; `gender` is omitted on a profile committed before the question existed — which is not `PREFER_NOT_TO_SAY`.
          *
-         *     **`gender` and `gender_preference` are withheld and always will be.** Neither value ever comes back out of this API — the profile commit says so, and this route does not weaken it.
+         *     ## Who is told what
          *
-         *     **Social tags, photos and location are not served *yet*.** They are deferred rather than refused, and this is the route that grows them when the *You* screen is built — there will be no second endpoint for them. The one to be careful with is **photos**: a profile may legally hold none, so an absent photo list here must not be read as *this player has no photographs*. Tags and a location are required at commit, so their absence cannot be mistaken for an answer either way.
+         *     **`gender` and `gender_preference` are withheld from everybody but their owner.** No response that describes one player to another carries either — not a card, not a record, not a seat — and that walk is asserted over the whole emitted contract. This route is the one shape that carries them, to the person who set them, so the screen that asks *who should we match you with* can open on the answer already given (`docs/adr/0179` §4).
+         *
+         *     **The location area is not served, and neither is a flag for it.** A profile cannot be committed without an area, so `has_location` could never be false; the tab branches on the phone's permission state, which is the device's.
          */
         get: operations["read_player_profile_api_v1_players_me_profile_get"];
         put?: never;
@@ -421,6 +423,152 @@ export interface paths {
          *     **Nothing else moves.** A trip is a trip: the next deal deals around the new area, the radar refetches, *In your area* answers for the new cell — and nothing is reset, no radius changes and no prompt is raised. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.
          */
         put: operations["change_location_api_v1_players_me_location_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/social-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace this player's Social tags
+         * @description The whole selection, every time — the list **is** the selection, and what is absent from it is dropped. Unkeyed and safe to send twice: the same selection twice lands the same state, and a transition that changes nothing records nothing.
+         *
+         *     **Re-validated exactly as the commit re-validates** — against the served vocabulary and the served floor and ceiling — so the tab's picker and onboarding's cannot disagree about what a selection may be (`docs/adr/0179` §6).
+         *
+         *     The response carries the tags **in the vocabulary's order**, which is what the profile read serves and what a card draws, so a client can see what the profile now holds rather than assuming it kept the order it sent. The next deal anybody runs reads the new tags off the candidate index, as it always has.
+         */
+        put: operations["change_social_tags_api_v1_players_me_social_tags_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace this player's photographs, in order
+         * @description The whole list, every time, **in the order the player arranged it** — the first is the one a player card shows, so promoting the second photograph is a change even though the set is the same. Unkeyed and safe to send twice: the same order twice records nothing.
+         *
+         *     **An empty list is a legal value and clears.** A profile may hold no photograph; the poster returns on the card, and the photographs let go of become what the uncommitted-photo sweep collects.
+         *
+         *     **Photos write on every change** (`docs/adr/0179`): a player rearranging three photographs sends three of these, each idempotent, and the last one is the state — the row is the truth and a draft of it would be a second one. The verdict beside each photograph is the profile read's to serve, not this response's.
+         */
+        put: operations["change_photos_api_v1_players_me_photos_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/intro": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace this player's intro — or withdraw it
+         * @description **The day ADR-0170 §5 deferred to** (`docs/adr/0179` §6): the intro becomes editable with the tags and the photos, as one piece of work. The line is trimmed and fenced exactly as the commit fences it, and the fence is contact — nothing else is read.
+         *
+         *     **`null` withdraws the line.** The stream records that it was taken back and the profile folds to none — the same absence a player who skipped the step has, which the profile read spells by omission. Whitespace is `null`. The field is required, so `{}` is a 422: withdrawing has to be said.
+         *
+         *     **`204` and no body.** The intro reaches the card, the record and its author's own profile read and nowhere else (`docs/adr/0170` §3), and the write does not become a fourth shape: read the line as stored — trimmed — back from `GET /players/me/profile`, as the two gender writes are read back.
+         *
+         *     Unkeyed and safe to send twice: the same line twice records nothing, and so does withdrawing a line that was never written. The next deal reads the new line — or none — off the candidate index; search records already kept quote the line as it stood at the deal (`docs/adr/0104`).
+         */
+        put: operations["change_intro_api_v1_players_me_intro_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/gender": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Correct this player's answer to the gender question
+         * @description *Self-declared, freely changed* (`docs/adr/0096`): a value a player may not correct is a value the platform has ruled on, which is the one thing this field is not. Unkeyed; an unchanged value records nothing, and a first answer on a profile committed before the question existed is a change and records one.
+         *
+         *     **`204` and no body, deliberately.** The owner's own profile read is the one response shape that carries a gender value out (`docs/adr/0179` §4), and the contract walk holds it to being the only one; the write answers nothing rather than becoming a second. Read the answer back from `GET /players/me/profile`.
+         *
+         *     The mutual gate reads the new answer on the next search either side runs: the searcher's own live, everybody else's off the candidate index, which follows the event as it always has.
+         */
+        put: operations["change_gender_api_v1_players_me_gender_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/gender-preference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change who this player is willing to play with
+         * @description A new durable answer to *who am I willing to play with* (`docs/adr/0096` §3). Unkeyed; an unchanged value records nothing.
+         *
+         *     **It is mutual and durable, and narrowing it has an effect the player must be told about at the moment of setting**: they become invisible to the excluded side entirely — including to searchers who asked for anybody. The client says so from a reason code; learning it from silence is not acceptable. Seats already accepted are facts, not candidates: nothing already agreed is undone.
+         *
+         *     **`204` and no body**, for the gender write's reason: the setting is served on the owner's profile read and on no other shape (`docs/adr/0179` §4). It gates the next search in both directions — this player's own, read live, and everybody else's, off the candidate index once the projection has followed the event.
+         */
+        put: operations["change_gender_preference_api_v1_players_me_gender_preference_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/proposals-opt-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Answer the proposals question again, from the profile screen
+         * @description **The one write on this surface that always records.** Every other `PUT` here is a preference and a no-op when nothing changed; this one is a consent, and *the player was asked again, against these words, on this surface, and answered the same way* is a fact a consent log has to evidence (`docs/adr/0089`). So the same yes twice appends two answers, and there is deliberately nothing to deduplicate.
+         *
+         *     **The surface is this route's — `PROFILE` — and never the body's.** The commit records `ONBOARDING` because the commit is the end of onboarding; a client that could assert where a consent was gathered could assert one it never gathered. `copy_version` is the client's, because the words are.
+         *
+         *     `accepted` is required and **not** nullable, unlike the commit's: there, *unanswered* is a state a client can be in and is refused with a code that says *ask the question*; here the screen is the question and pressing is the answer. The response is the standing answer as the profile read serves it, with the moment it was recorded.
+         */
+        put: operations["answer_proposals_opt_in_api_v1_players_me_proposals_opt_in_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1583,7 +1731,7 @@ export interface paths {
          *
          *     **A low rating feeds the average and nothing else.** It does not pass, hide or block, and it will not stop you being matched with that person again. `POST /api/v1/passes` and `POST /api/v1/blocks` are the controls that do those things, and both are meant to be deliberate.
          *
-         *     **Nobody is told, and no individual answer is ever shown to anybody.** What reaches a reader is an average out of five beside how many different people it rests on; what reaches the person you rated is a coarse band about themselves and no count.
+         *     **Nobody is told, and no individual answer is ever shown to anybody.** What reaches every reader — the person you rated included — is an average out of five beside how many different people it rests on, over their fifty most recent raters (ADR-0179 §5).
          */
         post: operations["answer_the_card_api_v1_sportsmanship__game_id__post"];
         delete?: never;
@@ -1607,7 +1755,7 @@ export interface paths {
          *
          *     `is_self` is `true`. Read it rather than comparing ids.
          *
-         *     **What other players said comes back as a band and never as a figure.** `sportsmanship_band` is three steps wide and carries no count, and `sportsmanship` is absent — an average beside a count would let you subtract each new rating out and name it, and you know who you played, so every answer would be identifiable by the one person who must never see it. It changes nothing about how you are matched: the reliability pill is what the platform acts on.
+         *     **What other players said comes back as the figure and its count** — `sportsmanship.average` and `sportsmanship.raters`, exactly what a stranger is served about you. The coarse band that used to stand in for it here is retired by ADR-0179 §5, which names what that costs. It changes nothing about how you are matched: the reliability pill is what the platform acts on.
          *
          *     **`?sport=` works here too**, and picks which of your own Levels the skill card draws — the same resolution a stranger's sheet takes.
          */
@@ -1637,7 +1785,7 @@ export interface paths {
          *
          *     **The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.
          *
-         *     **Asking about yourself is allowed** and answers `is_self: true` — the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, **including the coarse `sportsmanship_band` in place of the figure**: the rule follows the subject and not the route.
+         *     **Asking about yourself is allowed** and answers `is_self: true` — the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.
          *
          *     **`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.
          */
@@ -1691,6 +1839,32 @@ export interface components {
             id: string;
             /** Text */
             text: string;
+        };
+        /**
+         * AnswerProposalsOptInRequest
+         * @description The proposals question, answered again from the profile screen.
+         *
+         *     ``accepted`` is a required ``bool`` and **not** nullable, which is the one
+         *     place this differs from the commit's `ProposalsOptInRequest`: there,
+         *     *unanswered* is a state a client can legitimately be in and is refused with
+         *     a code that says *ask the question*; here the screen **is** the question
+         *     and pressing is the answer, so ``null`` is a 422 rather than a fact.
+         *
+         *     **The surface is not a field.** It is the route's — ``PROFILE`` — and a
+         *     body naming one is ignored, because a client that could assert where a
+         *     consent was gathered could assert one it never gathered.
+         */
+        AnswerProposalsOptInRequest: {
+            /**
+             * Accepted
+             * @description The player's answer, pressed again.
+             */
+            accepted: boolean;
+            /**
+             * Copy Version
+             * @description Identifier of the exact copy the player was shown. Not the copy itself — the words are the client's and are never stored here.
+             */
+            copy_version: string;
         };
         /**
          * AnswerTheCardRequest
@@ -2224,6 +2398,50 @@ export interface components {
             availability: components["schemas"]["AvailabilitySlotResource"][];
         };
         /**
+         * ChangeGenderPreferenceRequest
+         * @description A new durable answer to *who am I willing to play with*.
+         */
+        ChangeGenderPreferenceRequest: {
+            /**
+             * @description Who this player is willing to be matched with.
+             *
+             *     **It is mutual and durable.** Narrowing it makes them invisible to the excluded side entirely — including to searchers who asked for anybody — and the client must say so at the moment of setting; learning it from silence is not acceptable. Seats already accepted are facts, not candidates: nothing already agreed is undone.
+             */
+            gender_preference: components["schemas"]["GenderPreference"];
+        };
+        /**
+         * ChangeGenderRequest
+         * @description A new answer to the gender question — *self-declared, freely changed*.
+         */
+        ChangeGenderRequest: {
+            /** @description The player's own answer. `PREFER_NOT_TO_SAY` is a first-class answer; it matches only unconstrained searches, which costs its holder reach, and the client is what says so at the moment of asking (`docs/adr/0096`). */
+            gender: components["schemas"]["Gender"];
+        };
+        /**
+         * ChangeIntroRequest
+         * @description The line, replaced — or withdrawn (``docs/adr/0179`` §6).
+         *
+         *     **The field is required and nullable**, which is the shape of a value whose
+         *     absence is a real act: ``null`` withdraws the line, and ``{}`` is a 422 so
+         *     that a client which forgot the field cannot be clearing lines. No
+         *     ``max_length``, for the commit's reason: the cap is the domain's, and the
+         *     domain refuses with `intro_not_admitted` and `reason: too_long`, which is
+         *     the code a client branches on.
+         *
+         *     **Nothing comes back.** The intro reaches the card, the record and its
+         *     author's own profile read and nowhere else — a sweep in ``tests/unit/
+         *     test_intro.py`` holds the contract to those three shapes — and a response
+         *     that echoed the trimmed line would be a fourth. The author reads it back
+         *     from the profile read, as the two gender writes are read back.
+         */
+        ChangeIntroRequest: {
+            /**
+             * Intro
+             * @description The new line, or `null` to withdraw it. Trimmed, then held to **at most 100 characters** and **one line** — the commit's fence exactly, with the commit's codes: `intro_not_admitted` and one coarse `details.reason`, `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle`. Whitespace is `null`: a line with nothing in it is withdrawn, never stored empty.
+             */
+            intro: string | null;
+        };
+        /**
          * ChangeLocationRequest
          * @description The phone's fix, on a cold start.
          *
@@ -2247,6 +2465,21 @@ export interface components {
             longitude: number;
         };
         /**
+         * ChangePhotosRequest
+         * @description The photographs, replaced whole and **in order** (``docs/adr/0179`` §8).
+         *
+         *     An empty list is a legal value and clears: a profile may hold none, and the
+         *     poster returns. There is no *clear my photos* flag for the week's reason —
+         *     the list is the answer.
+         */
+        ChangePhotosRequest: {
+            /**
+             * Photo Ids
+             * @description Ids returned by `POST /photos`, in the order the player arranged them — the first is the one a player card shows. At most 3; **an empty list is valid and clears**. Every id is checked to exist and to belong to this player, exactly as the commit checks it, and the same id twice is refused with `duplicate_photo`.
+             */
+            photo_ids: string[];
+        };
+        /**
          * ChangeSearchRadiusRequest
          * @description The Search radius, replaced whole.
          */
@@ -2256,6 +2489,22 @@ export interface components {
              * @description Whole kilometres, re-checked against the range and step served by `GET /player-profile/options`. Refused with `search_radius_out_of_bounds` — a disabled slider is not a validation.
              */
             search_radius_km: number;
+        };
+        /**
+         * ChangeSocialTagsRequest
+         * @description The Social tags, replaced whole (``docs/adr/0179`` §8).
+         *
+         *     Strings rather than an enum, as the commit carries them: an id outside the
+         *     served vocabulary is refused by the domain with ``unknown_social_tag``, a
+         *     count outside the served bounds with ``social_tag_selection_out_of_bounds``,
+         *     and the client gets a code it can act on rather than a 422.
+         */
+        ChangeSocialTagsRequest: {
+            /**
+             * Social Tags
+             * @description Every tag this player now holds, as ids served by `GET /player-profile/options`. **The list is the selection** — what is absent is dropped. Re-checked against the served vocabulary and the served floor and ceiling exactly as the commit re-checks them; the same id twice is refused with `duplicate_social_tag`.
+             */
+            social_tags: string[];
         };
         /**
          * CommitPlayerProfileRequest
@@ -2312,7 +2561,7 @@ export interface components {
              *
              *     Trimmed, then held to **at most 100 characters** and **one line**, in any language. Refused with `intro_not_admitted` and one coarse `details.reason` — `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle` — so the client can say what to change without the server explaining what it matched. Nothing else is read.
              *
-             *     **Not editable yet** (ADR-0170 §5): this commit is its only write, with the tags and the photo it sits between. It crosses on the player card and on the record, and this response does not echo it.
+             *     Edited later from the You tab through `PUT /players/me/intro`, with the tags and the photos it sits between (ADR-0179 §6). It crosses on the player card and on the record, and this response does not echo it.
              */
             intro?: string | null;
         };
@@ -2347,10 +2596,11 @@ export interface components {
          * @description Where a player was standing when they answered.
          *
          *     Two values, and both are reachable. ``ONBOARDING`` is the only one the commit
-         *     can record — the commit *is* the end of onboarding's second part. The profile
-         *     screen edits the same value later (``docs/adr/0089``), which is what
-         *     ``PROFILE`` is for; the aggregate transition it uses exists, and the endpoint
-         *     that drives it does not yet.
+         *     can record — the commit *is* the end of onboarding's second part. ``PROFILE``
+         *     is the You tab's ``PUT /players/me/proposals-opt-in`` (``docs/adr/0179`` §8),
+         *     where the same question is answered again and every press records: the
+         *     surface is the **route's** and never the body's, because a client that could
+         *     assert where a consent was gathered could assert one it never gathered.
          * @enum {string}
          */
         ConsentSurface: "ONBOARDING" | "PROFILE";
@@ -4373,36 +4623,6 @@ export interface components {
             cards: components["schemas"]["OpenCardSchema"][];
         };
         /**
-         * OpinionBand
-         * @description How somebody is coming across, in the three steps **they** may be told.
-         *
-         *     **The subject's whole answer, and the coarseness is the safety.** A figure
-         *     plus a count in front of the person they are about is a subtraction: an
-         *     average moving from 4,80 over ten to 4,73 over eleven names the new rating as
-         *     a 4, and they know who they played, so every answer would be identifiable by
-         *     the one person who must never see it. Three steps across the whole scale tell
-         *     them *something is going wrong*, which is the useful half.
-         *
-         *     **A second spelling of ``sportsmanship``'s ``SportsmanshipBand``**, and it
-         *     takes a **different name** for the reason ``OnCourtVerdict`` does beside
-         *     ``PhotoReviewDecision`` and ``GameOutcome`` does beside ``Outcome``. That is
-         *     two rules meeting: this context borrows no other context's domain types
-         *     (``docs/adr/0159``), and the emitted contract is **one namespace** — a class
-         *     of the same name in two modules does not shadow the other, it *renames both*,
-         *     and every generated type a shipped app already holds moves. It is
-         *     ``RecordLikelyRangeSchema``'s argument, applied one layer down, because this
-         *     enum reaches the wire as itself rather than through a schema class.
-         *
-         *     The risk a second spelling carries is answered the way those two answer it —
-         *     ``tests/unit/test_player_record_sportsmanship.py`` fails the build if the two
-         *     vocabularies stop agreeing.
-         *
-         *     **There is no fourth value for *nobody has said anything*.** That is the
-         *     field's absence, on the rule every zone on this sheet takes.
-         * @enum {string}
-         */
-        OpinionBand: "GOOD" | "MIXED" | "POOR";
-        /**
          * OpponentVarietySchema
          * @description How widely this person spreads their games, over their **whole** record.
          *
@@ -4567,7 +4787,11 @@ export interface components {
          *     verdict is user metadata, which every S3-compatible store answers with a
          *     request per object. So the shape stays one shape and the tile stays one code
          *     path, exactly as the paragraph above promises; what differs is whether this
-         *     response has anything to say about the check.
+         *     response has anything to say about the check. Where the owner reads what
+         *     **stands** beside each of their photographs is the profile read's ``photos``
+         *     list (`ProfilePhotoResource`, ``docs/adr/0179`` §8) — the one screen whose
+         *     question is the check's answer, paying that request for at most three
+         *     objects rather than per tile.
          *
          *     **The upload can also carry nothing, and that is not the read's ``null``**
          *     (``docs/adr/0138``). A reviewer that could not be asked concludes nothing, so
@@ -4629,6 +4853,18 @@ export interface components {
          * @enum {string}
          */
         PhotoReviewDecision: "allowed" | "flagged";
+        /**
+         * PhotosResponse
+         * @description The photographs as the profile now holds them, in their order.
+         *
+         *     Ids and nothing else: the verdict beside each is the profile read's to
+         *     serve (`ProfilePhotoResource`), paid for once there rather than on every
+         *     rearrangement here.
+         */
+        PhotosResponse: {
+            /** Photo Ids */
+            photo_ids: string[];
+        };
         /**
          * PlanListResponse
          * @description One row for every court you may plan, written or not.
@@ -4894,32 +5130,32 @@ export interface components {
         };
         /**
          * PlayerProfileReadResponse
-         * @description The profile facts the Play screens read, in one round trip.
+         * @description Every fact a player declared, in one round trip — what the Play screens
+         *     read and, since ``docs/adr/0179``, what the You tab draws its rows from.
          *
-         *     **Three facts and not the whole profile**, and the two absences are
-         *     different absences:
+         *     **The gender and the preference are served here, and on no other shape.**
+         *     ADR-0096 §6's *no response shape carries a gender value out* is about
+         *     responses that describe one player to another, and its walk still refuses
+         *     both words on every one of those. A player reading their own answer on a
+         *     route scoped to ``me`` is not what that rule protects, and a screen that
+         *     asks *who should we match you with* with nothing pre-selected is a screen a
+         *     player cannot trust (``docs/adr/0179`` §4). ``gender`` is **omitted** on a
+         *     profile committed before the question existed — never ``PREFER_NOT_TO_SAY``,
+         *     which is an answer a player gives.
          *
-         *     A **standing refusal.** ``gender`` and ``gender_preference`` never come back
-         *     out of this API — the commit route already promises it (``docs/adr/0096``
-         *     §6) and this route does not weaken it.
+         *     **The one thing still withheld is the location area**, and nothing stands
+         *     in for it: a profile cannot be committed without an area, so a
+         *     ``has_location`` could never be false, and a branch nobody can take is a
+         *     branch nobody tests.
          *
-         *     A **deferral.** Social tags, photos and the location area are not refused;
-         *     they are **not served yet**, and this is the route they land on when *You* is
-         *     built rather than a route that acquires a sibling. The one worth naming is
-         *     **photos**: a profile may legally hold none, so an absent ``photo_ids`` is
-         *     the single deferral a client could read as *you have none* — which is exactly
-         *     the vanished-row lie ADR-0109 exists to prevent, arriving through the field
-         *     nobody would check. Tags and a location are required at commit, so their
-         *     absence cannot be mistaken for an answer.
-         *
-         *     It is prose rather than a machine-readable ``withheld`` list: ADR-0130
-         *     already struck ADR-0109's *and why* half, and a list here would be a field
-         *     whose only reader is a human, on a route where no client ever counted a row
-         *     that could go missing.
+         *     Absence has one spelling here and it is **omission** (``OMITTED``): an intro
+         *     never written, a photograph nobody looked at, a gender never asked. The one
+         *     absence that is served rather than omitted is **an empty ``photos`` list**,
+         *     because a profile may legally hold none and that is a real answer.
          *
          *     **No ``player_id``.** The resource is ``/players/me``, so the caller is the
-         *     bearer token and echoing it back would be a fourth fact on a body scoped to
-         *     three. ``GET /users/me`` is where an id comes from.
+         *     bearer token and echoing it back would say nothing. ``GET /users/me`` is
+         *     where an id comes from.
          *
          *     **Fields are only ever added.** A shipped mobile app parses this document for
          *     months after it stops being built.
@@ -4944,6 +5180,31 @@ export interface components {
             play_intents: {
                 [key: string]: components["schemas"]["PlayIntent"];
             };
+            /**
+             * Social Tags
+             * @description The Social tag ids this player holds, **in the vocabulary's order** whatever order the picker sent them in. Required at commit, so never empty and never absent.
+             */
+            social_tags: components["schemas"]["SocialTag"][];
+            /**
+             * Photos
+             * @description The photographs, **in the player's order** — the first is the profile photo — each with the verdict its uploader is owed. **An empty list is a real answer**: a profile may hold none, and the client draws the generated court poster.
+             */
+            photos: components["schemas"]["ProfilePhotoResource"][];
+            /**
+             * Intro
+             * @description The line this player wrote about themselves, as recorded, or **omitted** where none was written. Never an empty string (`docs/adr/0170`).
+             */
+            intro?: string;
+            /** @description The standing answer to the proposals question: what was answered, when, against which words and from which surface. Always present — a profile cannot be committed without one. */
+            proposals_opt_in: components["schemas"]["ProposalsOptInResponse"];
+            /**
+             * @description The owner's own answer to the gender question. **Served here and on no other response shape** (`docs/adr/0179` §4) — what one player is told about another never carries it.
+             *
+             *     **Omitted** on a profile committed before the question existed, and never read as `PREFER_NOT_TO_SAY`, which is an answer a player gives: a client pre-selects nothing rather than something.
+             */
+            gender?: components["schemas"]["Gender"];
+            /** @description Who the owner is willing to be matched with — their own setting, served here and on no other response shape (`docs/adr/0179` §4). Always present: it defaults to `ANY` at commit, so there is nothing for its absence to mean. */
+            gender_preference: components["schemas"]["GenderPreference"];
         };
         /**
          * PlayerProfileResponse
@@ -4952,16 +5213,16 @@ export interface components {
          *     The same body whether the commit created the profile or replayed an earlier
          *     one, so a client that only wants its profile needs no branch on the status.
          *
-         *     **No gender value comes back out**, and that is a rule rather than an
-         *     oversight (``docs/adr/0096`` §6): a preference crosses the wire *in*, on a
-         *     search; no response shape carries a gender out and no card renders one.
-         *     This body is only ever the caller's own profile, so nothing here would leak
-         *     a third party's answer — the field is left off anyway, because the moment
-         *     one response shape carries it, *which* shapes may is a judgement call made
-         *     per endpoint instead of a line nobody has to re-argue. Nothing reads it back
-         *     today: onboarding sends it once, and there is no profile editor. When one
-         *     exists, adding it here is an addition to this document and ADR-0096's
-         *     ticket's to make.
+         *     **No gender value comes back out of this body**, and that is a rule rather
+         *     than an oversight (``docs/adr/0096`` §6): a preference crosses the wire
+         *     *in*, on a search; no response that describes one player to another carries
+         *     a gender out and no card renders one. This body is only ever the caller's
+         *     own profile, so nothing here would leak a third party's answer — the field
+         *     is left off anyway, because *which* shapes may carry it is a line rather
+         *     than a judgement made per endpoint, and the line is **exactly one shape**:
+         *     the owner's own read, ``PlayerProfileReadResponse`` (``docs/adr/0179`` §4).
+         *     The profile editor that reads it back is the You tab, and it reads that
+         *     route; the commit's answer stays what it was.
          *
          *     **Fields are only ever added.** A shipped mobile app parses this document for
          *     months after it stops being built.
@@ -5005,7 +5266,7 @@ export interface components {
         PlayerRecordResponse: {
             /**
              * Is Self
-             * @description Whether this is the reader's own record. **The server's answer, and the client never derives it** by comparing the id it asked about against its session — the sheet retitles to *How others see you*, drops the distance and shows a coarse band where a figure would be, and getting that wrong is most visible on the one screen it matters on.
+             * @description Whether this is the reader's own record. **The server's answer, and the client never derives it** by comparing the id it asked about against its session — the sheet retitles to *How others see you* and drops the distance and the fit pill, and getting that wrong is most visible on the one screen it matters on. It decides the title and nothing on the sheet: every zone, what other players said included, is the same fact whoever is reading.
              *
              *     `true` on `/players/me/record` always, and on the parameterised route when a client asks about itself.
              */
@@ -5100,25 +5361,13 @@ export interface components {
              *
              *     **Omitted where nobody has rated them**, which is most people and is never a nought: rating is a favour, ignoring the card costs nothing, and nothing anywhere records that somebody did not answer. It is a **fourth absence** and asks a fourth question — not `skill`'s, not `variety`'s and not `reliability`'s, since a plan that dissolved and a seat that ran out are opportunities and neither is an opinion anybody offered.
              *
-             *     **Absent on your own record, always.** You are answered with `sportsmanship_band` instead. The two never appear together, and which one you get is decided by `is_self`.
+             *     **On your own record too, and it is the same figure.** What you read about yourself under *Sportsmanship, by players* is what a stranger reads about you — `4,3 / 5 · 12 players` — with nothing coarsened and no count withheld. The three-step band that used to stand in for it on your own sheet is gone from this shape; ADR-0179 §5 decides that and names what it costs.
              *
              *     **It is about no sport**, like `variety` and `reliability`: `?sport=` does not move it. How somebody is to play with is not a padel fact.
              *
              *     **The matcher never reads it.** A low figure hides nobody and demotes nobody — Pass and Block are the controls that act, and both are deliberate.
              */
             sportsmanship?: components["schemas"]["RecordSportsmanshipSchema"];
-            /**
-             * @description **How you are coming across, in three steps — and only ever about yourself.**
-             *
-             *     **No figure and no count, and that is the whole design.** A published average beside a published count lets you subtract: moving from 4,80 over ten to 4,73 over eleven names the new rating as a 4, and you know who you played. Every answer would be identifiable by the one person who must never see it, and people stop answering honestly once that is true. A band tells you something is going wrong, which is the useful half.
-             *
-             *     **Deliberately too coarse to read anything into.** At one or two ratings it cannot be informative about any individual, and even at fifty a step this wide moves for a change of habit rather than for one evening. Do not draw a number, a bar or a trend from it.
-             *
-             *     **Present only when `is_self` is `true`**, and omitted where nobody has rated you yet — the same absence `sportsmanship` spells on somebody else's record.
-             *
-             *     **It changes nothing about how you are matched.** The reliability pill is what the platform acts on, and this is not in it.
-             */
-            sportsmanship_band?: components["schemas"]["OpinionBand"];
         };
         /**
          * PlayingStyleEvidence
@@ -5224,6 +5473,43 @@ export interface components {
              * @description The platform's confidence transform over the combined σ, as a whole percent. Never 100: the platform cannot tell a player it is certain.
              */
             confidence: number;
+        };
+        /**
+         * ProfilePhotoResource
+         * @description One of the owner's photographs, and what the on-court check said about it.
+         *
+         *     **The same words as ``PhotoResponse``** — ``photo_id`` and ``review``, the
+         *     same code under the same name — so a client keys a tile from this list and
+         *     from ``GET /photos/{id}`` by one id and reads one vocabulary, even though the
+         *     two shapes spell *no verdict* differently (there ``null``, here omitted).
+         *     What differs is which route carries the verdict: the upload says it at
+         *     the moment the photograph was chosen (``docs/adr/0133``), the per-photo read
+         *     says nothing, and this list says what **stands** — because the You tab's
+         *     photos row is the one screen whose question is *what did the check conclude
+         *     about mine*, and a warning a player was shown once at upload has to be
+         *     findable again on the screen that lets them change the answer.
+         *
+         *     Three answers and only two values (``docs/adr/0138``): ``allowed``,
+         *     ``flagged``, and **omitted** for *nobody looked*. Omitted is not
+         *     ``allowed`` — a photograph that arrived while the reviewer was unreachable,
+         *     or before the check existed, has had nothing concluded about it, and a
+         *     client that drew a tick on the absence would be claiming a check happened.
+         *     ``flagged`` blocks nothing: the photo is stored, it is shown, and the check
+         *     is wrong sometimes.
+         */
+        ProfilePhotoResource: {
+            /**
+             * Photo Id
+             * Format: uuid
+             * @description Permanent id — what a photos write carries
+             */
+            photo_id: string;
+            /**
+             * @description What the on-court check concluded about this photograph, or **omitted** where nobody looked.
+             *
+             *     **Omitted is not `allowed`.** Three answers, not two: checked and passed, checked and flagged, and *nobody looked* — a photo that arrived while the reviewer could not be reached, or before the check existed. This is the owner's own reading of the verdict the upload showed them once; `GET /photos/{id}` deliberately carries none. `flagged` blocks nothing — the photo is stored and shown, and the check is wrong sometimes. The evidence behind the verdict never crosses on any route.
+             */
+            review?: components["schemas"]["PhotoReviewDecision"];
         };
         /**
          * Prompt
@@ -5505,8 +5791,7 @@ export interface components {
          *     belongs to ``sportsmanship``, which has a surface of its own; a class simply
          *     called ``SportsmanshipSchema`` here would not shadow whatever that context
          *     publishes next, it would *rename both* — and every generated type a shipped
-         *     app already holds would move. It is ``RecordLikelyRangeSchema``'s rule, and
-         *     the same rule renamed the band this sits beside.
+         *     app already holds would move. It is ``RecordLikelyRangeSchema``'s rule.
          *
          *     **Its own heading, and never mixed with the rows above.** The record card is
          *     headed *counted by the system, not written by people*, which is the promise
@@ -5534,8 +5819,10 @@ export interface components {
          *     anybody's search results — the reliability pill is the counted-only number
          *     and is exactly what the platform acts on.
          *
-         *     **Never on your own record.** `sportsmanship_band` is what you get about
-         *     yourself, and this is absent — see that field for why.
+         *     **On your own record too, at this resolution.** The person it is about
+         *     reads the same figure and the same count a stranger does; the coarse band
+         *     that used to stand in for it on their own sheet is gone from the shape. See
+         *     the field on the response for why.
          */
         RecordSportsmanshipSchema: {
             /**
@@ -6451,6 +6738,21 @@ export interface components {
              * @description Most tags a player may hold — the picker's ceiling
              */
             maximum_tags: number;
+        };
+        /**
+         * SocialTagsResponse
+         * @description The tags as the profile now holds them — in the vocabulary's order.
+         *
+         *     A body rather than a ``204`` for the week's reason: the order stored is the
+         *     platform's and not the picker's, so a client that kept what it sent would
+         *     hold a selection in an order the profile does not.
+         */
+        SocialTagsResponse: {
+            /**
+             * Social Tags
+             * @description In the vocabulary's order, whatever order was sent.
+             */
+            social_tags: components["schemas"]["SocialTag"][];
         };
         /**
          * SocialVibeEvidence
@@ -7819,6 +8121,345 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_social_tags_api_v1_players_me_social_tags_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeSocialTagsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialTagsResponse"];
+                };
+            };
+            /**
+             * @description `unknown_social_tag` — an id this platform does not serve; re-read `GET /player-profile/options`.
+             *
+             *     `social_tag_selection_out_of_bounds` — too few or too many tags for the served floor and ceiling.
+             *
+             *     `duplicate_social_tag` — the same tag id arrived twice.
+             *
+             *     The commit's three refusals under the commit's codes: the picker on the tab is the onboarding step reused, and a control is not a validation.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_photos_api_v1_players_me_photos_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePhotosRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhotosResponse"];
+                };
+            };
+            /** @description `too_many_photos` / `duplicate_photo` — the list is not one a profile may hold. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `player_profile_not_found` — this player has not finished onboarding's second part.
+             *
+             *     `photo_not_found` — a photo id that does not exist, or belongs to another player. The two answer the same way deliberately, and it is the commit's check through the commit's port.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_intro_api_v1_players_me_intro_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeIntroRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `intro_not_admitted` — the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). The commit's fence exactly; refused before anything is stored, and the server never says what it matched. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_gender_api_v1_players_me_gender_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeGenderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_gender_preference_api_v1_players_me_gender_preference_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeGenderPreferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answer_proposals_opt_in_api_v1_players_me_proposals_opt_in_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerProposalsOptInRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalsOptInResponse"];
+                };
             };
             /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
             404: {

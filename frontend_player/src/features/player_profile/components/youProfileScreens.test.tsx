@@ -19,6 +19,7 @@ import { doorRowLabel } from '@/shared/ui';
 import {
   PROFILE_SURFACE_PATH,
   launchSignedIn,
+  profileSurface,
   resetLocation,
   stubGate,
   stubInterest,
@@ -77,14 +78,14 @@ const RATING: Wire['RatingResponse'] = {
 };
 
 /** Two cells and a twelve-kilometre radius — the profile as the tab opens on it. */
-const SURFACE: Wire['PlayerProfileReadResponse'] = {
+const SURFACE = profileSurface({
   availability: [
     { day: 2, part: 'EVENING' },
     { day: 6, part: 'MORNING' },
   ],
   search_radius_km: 12,
   play_intents: { PADEL: 'FOR_FUN' },
-};
+});
 
 const AVAILABILITY_PATH = '/api/v1/players/me/availability';
 const RADIUS_PATH = '/api/v1/players/me/search-radius';

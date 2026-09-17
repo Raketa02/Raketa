@@ -38,6 +38,7 @@ import {
   PLAYER_SCORE_BLOCK,
   STRAND_NAME,
   VARIETY_LABEL,
+  opinionFigure,
   recordBlocksLabel,
 } from './recordPresentation';
 import {
@@ -275,11 +276,11 @@ describe('Player reliability', () => {
     expect(screen.getByText(SCORE_TONE_WORD.good)).toBeTruthy();
     expect(screen.getByText(OUT_OF_100)).toBeTruthy();
     // The card, as the sheet draws it: the strands, the variety, the sportsmanship — the
-    // band today, because that is what the record serves its subject.
+    // figure, since #468 serves it to the subject as to anybody (ADR-0179 §5).
     expect(screen.getByText(STRAND_NAME.SHOWS_UP)).toBeTruthy();
     expect(screen.getByText('11 of 12')).toBeTruthy();
     expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
-    expect(screen.getByText('Good')).toBeTruthy();
+    expect(screen.getByText(opinionFigure({ average: 4.3, raters: 12 }))).toBeTruthy();
   });
 
   it('gives a score under the bar its own word', async () => {

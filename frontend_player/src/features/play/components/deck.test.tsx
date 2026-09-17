@@ -53,6 +53,7 @@ import {
   stubHaptics,
   stubInterest,
   stubProfileOptions,
+  profileSurface,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
 import { fakeHaptics, type FakeHaptics } from '@/test-support/platform';
@@ -1664,11 +1665,14 @@ describe('Players, the tab', () => {
    * deal runs under one ruler (ADR-0169 §2), and both are absences.
    */
   it('deals an undeclared player without an interstitial, and draws no standing line', async () => {
-    stubProfileSurface(transport, {
-      availability: [{ day: 2, part: 'EVENING' }],
-      search_radius_km: 12,
-      play_intents: {},
-    });
+    stubProfileSurface(
+      transport,
+      profileSurface({
+        availability: [{ day: 2, part: 'EVENING' }],
+        search_radius_km: 12,
+        play_intents: {},
+      }),
+    );
     await openDeck();
 
     expect(await screen.findByLabelText(MAREK_CARD)).toBeTruthy();
