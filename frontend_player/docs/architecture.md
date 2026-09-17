@@ -838,6 +838,20 @@ sessions.
 - **App lifecycle is centralized** in `shared/lib/platform/appState.ts` — Query focus,
   session freshness, privacy screens, observability, reconnect. Not dozens of `AppState`
   listeners across unrelated screens.
+- **No overlay touches `Modal`; it draws on `ModalStage`, which is the native window on iOS
+  and a layer in the tree on Android** ([ADR-0178](../../docs/adr/0178-an-overlay-on-android-is-a-layer-in-the-tree-not-a-native-window.md)).
+  Under the New Architecture a modal's content on Android is laid out at 0 × 0 first and again
+  at the window's size when the dialog reports it as native state — and Reanimated 3.16 loses
+  that second pass whenever any animated style is mounted anywhere in the tree (measured
+  2026-09-17: a 1 × 1 `useAnimatedStyle` view on the deck pane collapsed the deck's own sheet).
+  Sized by hand the sheet drew and could not be pressed: a 0 × 0 view makes Android
+  re-dispatch every touch's start and the modal's host wins the second negotiation. So on
+  Android `shared/ui/overlay`'s `OverlayHost`, wrapped around the route tree in the root
+  layout, renders every stage as a layer beside the toast host, ordered by `theme.layer`, the
+  app hidden beneath it from a screen reader, the back gesture answered by the stage. A
+  layer's children keep the root's contexts and lose a screen's — every provider is at the
+  root, and no sheet's content reads the navigation; keep it so. The first overlay to hold a
+  text input takes on `KeyboardAvoidingView` in its stage, on both platforms.
 - **Nothing on the UI thread scales a layer to move it.** The radar's tiles are placed by
   translating a one-point anchor per tile from three shared values; the earlier one scaled
   transform with counter-scaled tiles was a blur on iOS at the floor, because a 4 700-point

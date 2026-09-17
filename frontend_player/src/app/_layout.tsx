@@ -25,7 +25,7 @@ import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
 import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
 import { queryClient } from '@/shared/lib/query-client';
-import { ReducedMotionProvider, ToastHost } from '@/shared/ui';
+import { OverlayHost, ReducedMotionProvider, ToastHost } from '@/shared/ui';
 
 /**
  * Hand the HTTP client its credential adapter, including the wire call its 401 rotation
@@ -84,19 +84,28 @@ export default function RootLayout() {
            */}
           <ReducedMotionProvider>
             <BootstrapGate run={run}>
-              <Slot />
               {/*
-               * A sibling of the route tree rather than part of it, so the badge is on every
-               * screen without a screen having to know it exists — and inside the gate, so
-               * it reads config only after bootstrap has validated it. Nothing at all in
-               * production.
+               * design-system 9.3's root-level overlay host: every modal stage on Android is a
+               * layer here, above the route tree and the tab bar, and the app beneath is hidden
+               * from a screen reader while one is up (`shared/ui/overlay`). iOS's stages are
+               * native windows and never use it. Under the toast host, because a toast is said
+               * after a sheet has closed and must be seen over one that has not.
                */}
-              <EnvironmentBadge />
+              <OverlayHost>
+                <Slot />
+                {/*
+                 * A sibling of the route tree rather than part of it, so the badge is on every
+                 * screen without a screen having to know it exists — and inside the gate, so
+                 * it reads config only after bootstrap has validated it. Nothing at all in
+                 * production.
+                 */}
+                <EnvironmentBadge />
+              </OverlayHost>
               {/*
-               * design-system 9.3's single root-level overlay host, and its first occupant.
-               * `zIndex` is scoped to the parent in React Native, so a toast raised from inside
-               * a card renders inside that card — mounting it once here is what makes the layer
-               * order mean anything. One host, one queue: `shared/store/toast.store.ts`.
+               * 9.3's host's first occupant, and still its own: `zIndex` is scoped to the parent
+               * in React Native, so a toast raised from inside a card renders inside that card —
+               * mounting it once here is what makes the layer order mean anything. One host, one
+               * queue: `shared/store/toast.store.ts`.
                */}
               <ToastHost />
             </BootstrapGate>

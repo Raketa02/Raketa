@@ -120,17 +120,21 @@ export { TextField, type TextFieldProps } from './TextField';
 export { Dash, Plus, Tick } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
 export { Toast, ToastHost, type ToastProps } from './Toast';
+export { ModalStage, type ModalStageProps } from './ModalStage';
 export {
+  OverlayHost,
   ReducedMotionProvider,
   announce,
   behindOverlay,
   moveAccessibilityFocus,
   useCollapsedPresentation,
   useLiveRegion,
+  useOverlayLayers,
   useReducedMotion,
   useScreenReader,
   type Announcement,
   type FocusTarget,
+  type OverlayLayers,
   type ReducedMotionProviderProps,
 } from './overlay';
 export {

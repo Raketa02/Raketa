@@ -14,10 +14,9 @@
  * Three obligations (design-system Part 13), and they are not all met by the same
  * mechanism:
  *
- * 1. **Siblings hidden from screen readers.** React Native's `Modal` presents in its own
- *    window, which handles it natively — but only for the *other* window. The tree behind
- *    still has to say so itself, which is why the screen root spreads
- *    {@link behindOverlay}. That is also the only half of this a test can observe.
+ * 1. **Siblings hidden from screen readers.** The stage handles the other window, or the
+ *    other layers — but the tree behind still has to say so itself, which is why the screen
+ *    root spreads {@link behindOverlay}. That is also the only half of this a test can observe.
  * 2. **Focus moves in, and back to the trigger on close.** Done with
  *    `AccessibilityInfo.setAccessibilityFocus`: onto the sheet's own heading when it
  *    opens, and onto `returnFocusTo` when it closes — otherwise a screen-reader user is
@@ -29,14 +28,16 @@
  * *non-committal* option — a sheet that made a destructive choice reachable by tapping
  * outside it would be a different component.
  *
- * **9.3's single root-level overlay host is not needed for this one.** That rule exists
- * because `zIndex` is scoped to the parent in React Native, so an overlay rendered where
- * it was triggered can end up underneath a sibling. A `Modal` is a separate native window
- * and is not in the layer order at all, so it is already out of any dark card's repaint.
- * `Popover` reaches the same place the same way, so the host has no consumer yet — it
- * becomes necessary for the first overlay that has to stay inside the React tree.
+ * **The sheet sits on `ModalStage`, and where that is depends on the platform.** On iOS it is
+ * React Native's `Modal` — a separate native window, out of any dark card's repaint, which is
+ * why 9.3's root-level overlay host was not needed for a sheet. On Android it is a layer in
+ * the tree, drawn by that host, because the native window is unusable there while Reanimated
+ * 3.16 is in the app — its content is 0 × 0 and every press inside it is terminated
+ * (`overlay.tsx`'s `OverlayHost` records the measurement). A `Modal` presents in its own
+ * window, which handles obligation 1 natively for iOS; the host does it for the whole app on
+ * Android; and the screen root's {@link behindOverlay} is what a test can observe on both.
  *
- * Motion is skipped when the OS asks for reduced motion (Part 13), which for a `Modal` is
+ * Motion is skipped when the OS asks for reduced motion (Part 13), which for the stage is
  * the difference between `slide` and `none`.
  *
  * ## The body scrolls, and that is what makes 88% a cap rather than a guillotine
@@ -60,9 +61,10 @@
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CloseControl } from './CloseControl';
+import { ModalStage } from './ModalStage';
 import { moveAccessibilityFocus, useReducedMotion, type FocusTarget } from './overlay';
 import { theme } from './theme';
 
@@ -97,14 +99,14 @@ export function BottomSheet({
   }, [visible, returnFocusTo]);
 
   return (
-    <Modal
+    <ModalStage
       visible={visible}
-      transparent
-      // Android's hardware back. Required there, ignored on iOS.
+      // Android's hardware back. iOS never asks.
       onRequestClose={onClose}
       animationType={reducedMotion ? 'none' : 'slide'}
+      layer="sheet"
     >
-      <View style={s.stage}>
+      <View style={s.stage} testID="bottom-sheet-stage">
         {/* Dismissal, not a control: the sheet's close carries the name, and a second
             unnamed button spanning the screen is noise in the reading order. */}
         <Pressable
@@ -114,7 +116,7 @@ export function BottomSheet({
           importantForAccessibility="no-hide-descendants"
         />
 
-        <View style={s.sheet} accessibilityViewIsModal>
+        <View style={s.sheet} accessibilityViewIsModal testID="bottom-sheet">
           <View style={s.grab} />
 
           <View style={s.head}>
@@ -135,7 +137,7 @@ export function BottomSheet({
           </ScrollView>
         </View>
       </View>
-    </Modal>
+    </ModalStage>
   );
 }
 

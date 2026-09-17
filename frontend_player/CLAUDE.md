@@ -184,6 +184,14 @@ asymmetry with a proxy or a cookie session.
 - **Archivo ships no ✓, ✉, ★ or ⚡.** Every mark is drawn or is Feather (`@expo/vector-icons`,
   declared in `package.json` on purpose — ADR-0135), never the character.
 - **Never log a token, an `Authorization` header, a password or a full payload.**
+- **A mounted Reanimated style makes every React Native `Modal` on Android unusable** (New
+  Architecture + Reanimated 3.16): its content stays 0 × 0 and no press inside completes. No
+  overlay uses `Modal`; it draws on `shared/ui`'s `ModalStage` — the native window on iOS, a
+  layer in the tree on Android hosted by `OverlayHost` in the root layout (ADR-0178,
+  `docs/architecture.md` Part 13). A sheet's content keeps the root's contexts only: no
+  provider below the root, no navigation hook inside a sheet. And never scale a layer to move
+  things on the UI thread — iOS rasterises it blurred; translate a point per tile, as the radar
+  does.
 
 ## Git & domain language
 

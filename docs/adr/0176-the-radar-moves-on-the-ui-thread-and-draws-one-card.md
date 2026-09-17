@@ -185,3 +185,11 @@ it. Scattering the members around their rings at the same distances is a backend
   on 2026-09-17: the pinch on iOS showed the blur §2's amendment answers, and the pinch on
   Android the hand-off ADR-0177 §1's amendment answers. Both were seen fixed on the same two
   devices.)*
+- **Reanimated in the tree breaks every `Modal` on Android.** Under the New Architecture a
+  modal's content is laid out at 0 × 0 until the dialog's size arrives as native state, and
+  Reanimated 3.16 loses that update whenever any animated style is mounted — a 1 × 1
+  `useAnimatedStyle` view on the deck pane collapsed the deck's own sheet. This record put the
+  first animated style in the app, and the radar's sheet was the first casualty: a sliver of
+  padding at the top-left of a window that still slid in, and — sized by hand — one nothing in
+  could be pressed. [ADR-0178](0178-an-overlay-on-android-is-a-layer-in-the-tree-not-a-native-window.md)
+  takes every overlay on Android off the native window and into a layer at the root.
