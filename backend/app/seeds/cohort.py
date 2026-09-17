@@ -89,14 +89,15 @@ from app.seeds.catalog import (
     BAND_DEVELOPING,
     BAND_ESTABLISHED,
     BAND_NEW,
-    CENTRE_LATITUDE,
-    CENTRE_LONGITUDE,
+    CENTRE,
+    REFERENCE_CENTRE,
     PROTAGONIST_RADIUS_KM,
     PROTAGONIST_TAGS,
     PROTAGONIST_WEEK,
     SEED_EMAIL_DOMAIN,
     THE_POPULATED_PLAYER,
     AnswerPolicy,
+    Centre,
 )
 from app.seeds.photos import DeclaredVerdict
 
@@ -221,15 +222,23 @@ class Ring:
     pair of those. ``docs/adr/0099``'s bounded single climb is then watchable end
     to end on a screen instead of being a property only a unit test has seen.
 
-    ``latitude`` is stated at two decimal places and the distance it produces is
+    ``north`` is stated at two decimal places and the distance it produces is
     **checked** at import, because ``LocationArea`` rounds to 2 dp on the way in:
     ~1.1 km is the floor, and anything thinner is not a ring, it is rounding.
+
+    **It is an offset, not a latitude.** Every ring sits on the centre's own
+    meridian, ``north`` degrees up it, so the whole population moves with the
+    centre (``catalog.CENTRE``) as one rigid figure: a degree of latitude is
+    the same 111 km everywhere on the globe, which is what makes every distance
+    in this module a property of the offsets alone and none of them a property
+    of where the seed happens to be centred today.
     """
 
     code: str
     #: What this ring is *for*, printed in the report and in the artifact.
     reason: str
-    latitude: float
+    #: Degrees of latitude north of the centre, at two decimal places.
+    north: float
     #: Inclusive-exclusive kilometres this ring must fall inside, checked at
     #: import against the module's own distance function.
     bounds_km: tuple[float, float]
@@ -262,7 +271,7 @@ RINGS: Final = (
     Ring(
         code="a",
         reason="inside the searcher's own radius — the pool before any widening",
-        latitude=51.55,
+        north=0.04,
         bounds_km=(0.0, float(PROTAGONIST_RADIUS_KM)),
         members={
             CLUB_PLAYER.name: 12,
@@ -274,14 +283,14 @@ RINGS: Final = (
     Ring(
         code="b",
         reason="reached only by rung B, the ×1.5 widening",
-        latitude=51.62,
+        north=0.11,
         bounds_km=(float(PROTAGONIST_RADIUS_KM), PROTAGONIST_RADIUS_KM * 1.5),
         members={CLUB_PLAYER.name: 4, IMPROVER.name: 1},
     ),
     Ring(
         code="c",
         reason="reached only by rung C, the ×2.0 widening",
-        latitude=51.67,
+        north=0.16,
         bounds_km=(PROTAGONIST_RADIUS_KM * 1.5, PROTAGONIST_RADIUS_KM * 2.0),
         members={CLUB_PLAYER.name: 4, STRONG_PLAYER.name: 1},
     ),
@@ -291,7 +300,7 @@ RINGS: Final = (
             "past the ladder's furthest rung and inside the slider's ceiling — "
             "which is why the played history's opponents live here"
         ),
-        latitude=51.80,
+        north=0.29,
         bounds_km=(PROTAGONIST_RADIUS_KM * 2.0, float(SEARCH_RADIUS_BOUNDS.maximum_km)),
         # **Eight club players and not three, and the five extra are the played
         # history's.** A member the cohort plays a *second sport* against holds a
@@ -313,7 +322,7 @@ RINGS: Final = (
             "past the slider's ceiling — a population `radius_clamp` provably "
             "cannot reach, whatever a player sets and whatever a rung offers"
         ),
-        latitude=52.10,
+        north=0.59,
         bounds_km=(float(SEARCH_RADIUS_BOUNDS.maximum_km), 500.0),
         members={CLUB_PLAYER.name: 2, NEW_TO_THE_SPORT.name: 1},
     ),
@@ -1142,10 +1151,13 @@ def _cell(code: str) -> tuple[int, str]:
 @final
 @dataclass(frozen=True, slots=True)
 class Cohort:
-    """The whole population and the seed it was drawn under."""
+    """The whole population, the seed it was drawn under and the centre it was
+    drawn around."""
 
     seed: int
     members: tuple[CohortMember, ...]
+    #: Where the rings were cut from. The reference unless a run moved it.
+    centre: Centre = REFERENCE_CENTRE
 
     def by_handle(self, handle: str) -> CohortMember:
         for member in self.members:
@@ -1154,17 +1166,24 @@ class Cohort:
         raise KeyError(handle)
 
 
-def generate(*, seed: int = COHORT_SEED) -> Cohort:
-    """Draw the cohort. **Every draw keyed off one handle, nothing off a set.**"""
+def generate(*, seed: int = COHORT_SEED, centre: Centre = REFERENCE_CENTRE) -> Cohort:
+    """Draw the cohort. **Every draw keyed off one handle, nothing off a set.**
+
+    The centre is not a draw: it places the same population, and defaults to the
+    reference so that ``make gen-cohort`` and the artifact test write and read
+    London whatever ``SEED_CENTRE`` says in the shell they run from.
+    """
 
     members: list[CohortMember] = []
     for ring in RINGS:
         position = 0
         for archetype in ARCHETYPES:
             for _ in range(ring.members.get(archetype.name, 0)):
-                members.append(_draw(ring, archetype, position, seed=seed))
+                members.append(
+                    _draw(ring, archetype, position, seed=seed, centre=centre)
+                )
                 position += 1
-    return Cohort(seed=seed, members=_named(members))
+    return Cohort(seed=seed, members=_named(members), centre=centre)
 
 
 def _named(members: Sequence[CohortMember]) -> tuple[CohortMember, ...]:
@@ -1196,7 +1215,7 @@ def _named(members: Sequence[CohortMember]) -> tuple[CohortMember, ...]:
 
 
 def _draw(
-    ring: Ring, archetype: Archetype, position: int, *, seed: int
+    ring: Ring, archetype: Archetype, position: int, *, seed: int, centre: Centre
 ) -> CohortMember:
     handle = f"cohort-{ring.code}-{position:02d}"
     plays_both = (
@@ -1217,8 +1236,8 @@ def _draw(
         handle=handle,
         ring=ring.code,
         archetype=archetype.name,
-        latitude=ring.latitude,
-        longitude=CENTRE_LONGITUDE,
+        latitude=latitude_of(ring, centre),
+        longitude=centre.longitude,
         radius_km=_radius(handle, position, seed),
         slots=_slots(handle, position, seed),
         tags=_tags(handle, position, seed),
@@ -1516,12 +1535,15 @@ def as_document(cohort: Cohort) -> dict[str, object]:
         ),
         "seed": cohort.seed,
         "sports": [sport.value for sport in SPORTS],
-        "centre": {"latitude": CENTRE_LATITUDE, "longitude": CENTRE_LONGITUDE},
+        "centre": {
+            "latitude": cohort.centre.latitude,
+            "longitude": cohort.centre.longitude,
+        },
         "rings": [
             {
                 "code": ring.code,
                 "reason": ring.reason,
-                "latitude": ring.latitude,
+                "latitude": latitude_of(ring, cohort.centre),
                 "kilometres": round(_distance_of(ring), 2),
                 "members": dict(sorted(ring.members.items())),
             }
@@ -1598,10 +1620,27 @@ def write(cohort: Cohort, path: Path = ARTIFACT) -> Path:
     return path
 
 
+def latitude_of(ring: Ring, centre: Centre) -> float:
+    """Where a ring sits when the cohort is centred at ``centre``: ``north``
+    degrees up the centre's meridian, back on a two-decimal cell."""
+
+    return round(centre.latitude + ring.north, 2)
+
+
 def _distance_of(ring: Ring) -> float:
+    """How far a ring is from the centre. **Measured on the reference meridian
+    and true on every other**: two points on one meridian are a latitude apart
+    and nothing else, and a degree of latitude is the same length everywhere."""
+
     return distance_km(
-        Point(latitude=CENTRE_LATITUDE, longitude=CENTRE_LONGITUDE),
-        Point(latitude=ring.latitude, longitude=CENTRE_LONGITUDE),
+        Point(
+            latitude=REFERENCE_CENTRE.latitude,
+            longitude=REFERENCE_CENTRE.longitude,
+        ),
+        Point(
+            latitude=latitude_of(ring, REFERENCE_CENTRE),
+            longitude=REFERENCE_CENTRE.longitude,
+        ),
     )
 
 
@@ -2065,21 +2104,24 @@ def _distance_between(one: str, other: str) -> float:
     distance function rather than subtracted, because two radii from a centre
     are not a distance between two points in general."""
 
-    latitudes = {ring.code: ring.latitude for ring in RINGS}
+    latitudes = {ring.code: latitude_of(ring, REFERENCE_CENTRE) for ring in RINGS}
     # **The centre is not a ring and is spelled as one here**, because the
     # protagonist sits on it and *how far is she* is the same question about the
     # same meridian. It is a key in this one mapping rather than a fifth `Ring`,
     # which would have to declare bounds and a membership it does not have.
-    latitudes[PROTAGONIST_RING] = CENTRE_LATITUDE
+    latitudes[PROTAGONIST_RING] = REFERENCE_CENTRE.latitude
     return distance_km(
-        Point(latitude=latitudes[one], longitude=CENTRE_LONGITUDE),
-        Point(latitude=latitudes[other], longitude=CENTRE_LONGITUDE),
+        Point(latitude=latitudes[one], longitude=REFERENCE_CENTRE.longitude),
+        Point(latitude=latitudes[other], longitude=REFERENCE_CENTRE.longitude),
     )
 
 
 #: The one cohort this system seeds, drawn at import so that the generator, the
 #: committed artifact and the run all read one object — and drawn **once**,
 #: because the refusal below reads the same draw rather than making its own.
-COHORT: Final = generate()
+#: Drawn around the *run's* centre: the same population as the artifact,
+#: translated to wherever ``SEED_CENTRE`` put it, which is the reference unless
+#: a developer moved it (``catalog.CENTRE``).
+COHORT: Final = generate(centre=CENTRE)
 
 _refuse_an_impossible_cohort(COHORT)

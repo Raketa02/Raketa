@@ -157,6 +157,9 @@ from app.modules.users.application.register_user import RegisterUser
 from app.modules.users.domain.ports import UserRepository
 from app.seeds.catalog import (
     ACCOUNTS,
+    CENTRE,
+    REFERENCE_CENTRE,
+    SEED_CENTRE_VARIABLE,
     SEED_CONSENT_COPY_VERSION,
     SEED_PASSWORD,
     AbandonedRun,
@@ -1311,6 +1314,29 @@ COHORT_DISCLAIMER = (
 )
 
 
+def _centre_lines() -> list[str]:
+    """Where the population sits, and how to put a simulator there.
+
+    A seeded account is moved the moment somebody signs into it from a phone —
+    the client puts the phone's own position on the profile at every cold start
+    (``docs/adr/0174`` §6) — so the one thing a developer has to know about the
+    seed's geography is the cell to pin their simulator to. Printed on every run,
+    because a reseed is exactly when the simulator gets reset too.
+    """
+
+    where = (
+        "the reference, London"
+        if CENTRE == REFERENCE_CENTRE
+        else f"{SEED_CENTRE_VARIABLE}; the committed cohort measures from London"
+    )
+    return [
+        f"Centred on {CENTRE.latitude},{CENTRE.longitude} ({where}). Pin the iOS "
+        f"simulator there before signing in — `make sim-location`, or "
+        f"`xcrun simctl location booted set {CENTRE.latitude},{CENTRE.longitude}` "
+        f"— or the first cold start moves the account to wherever the device is.",
+    ]
+
+
 def report(run_report: SeedReport) -> list[str]:
     """The run, as lines a developer reads — address, password, state, id."""
 
@@ -1318,6 +1344,7 @@ def report(run_report: SeedReport) -> list[str]:
     lines = [
         f"Seeded {len(seeded)} account(s) and {len(run_report.members)} cohort "
         f"member(s). Password for all of them: {SEED_PASSWORD}",
+        *_centre_lines(),
         "",
     ]
     for entry in seeded:

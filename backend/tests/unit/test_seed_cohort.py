@@ -47,6 +47,10 @@ from app.modules.player_profile.domain.intro import Intro
 from app.seeds import catalog
 from app.seeds.catalog import (
     PROTAGONISTS,
+    REFERENCE_CENTRE,
+    SEED_CENTRE_VARIABLE,
+    Centre,
+    seed_centre,
     THE_BLANK_WEEK_PLAYER,
     THE_POPULATED_PLAYER,
     AnswerPolicy,
@@ -69,10 +73,13 @@ from app.seeds.cohort import (
     WHAT_PLAYERS_SAID,
     Cohort,
     _distance_between,
+    _distance_of,
     _ring_in,
     as_document,
     generate,
+    latitude_of,
 )
+from app.modules.matchmaking.domain.geography import Point, distance_km
 from app.seeds.games import write_the_played_history
 from app.seeds.pairs import write_the_relationships
 from app.seeds.photos import DeclaredVerdict
@@ -439,6 +446,129 @@ def _draw_in_a_subprocess(hash_seed: str) -> str:
     )
     assert result.returncode == 0, result.stderr
     return result.stdout
+
+
+# ---------------------------------------------------------------------------
+# 1b. The centre: the artifact's is fixed, the run's may move
+# ---------------------------------------------------------------------------
+
+
+def test_the_artifact_is_drawn_around_the_reference_whatever_the_shell_says():
+    """`generate()` defaults to London. **The shell cannot move the artifact.**
+
+    A developer who has exported `SEED_CENTRE` for `make seed-host` then runs
+    `make gen-cohort` or this suite, and neither may notice: the committed
+    population measures from the reference, and only the drawn `COHORT` — the
+    run's — is translated. Two centres, one of them fixed, or the artifact test
+    above would be a function of whoever last ran it.
+    """
+
+    assert REFERENCE_CENTRE == Centre(latitude=51.51, longitude=-0.13)
+    assert generate().centre == REFERENCE_CENTRE
+    assert as_document(generate())["centre"] == {
+        "latitude": 51.51,
+        "longitude": -0.13,
+    }
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        (None, REFERENCE_CENTRE),
+        ("", REFERENCE_CENTRE),
+        ("   ", REFERENCE_CENTRE),
+        ("50.06,19.94", Centre(latitude=50.06, longitude=19.94)),
+        # Whitespace, and a phone's full-precision fix rounds to the cell — the
+        # same rounding the profile commit does on the way in.
+        (" 50.0614 , 19.9372 ", Centre(latitude=50.06, longitude=19.94)),
+        ("-33.87,151.21", Centre(latitude=-33.87, longitude=151.21)),
+        ("51.51,-0.13", REFERENCE_CENTRE),
+    ],
+)
+def test_the_centre_is_parsed_from_the_environment(raw, expected):
+    """A pure function of the record, exhaustively (`docs/environments.md`)."""
+
+    environ = {} if raw is None else {SEED_CENTRE_VARIABLE: raw}
+
+    assert seed_centre(environ) == expected
+
+
+@pytest.mark.parametrize(
+    "raw, complaint",
+    [
+        ("50.06", "latitude,longitude"),
+        ("50.06,19.94,7", "latitude,longitude"),
+        ("Kraków", "latitude,longitude"),
+        ("50.06;19.94", "latitude,longitude"),
+        ("91,19.94", "off the globe"),
+        ("50.06,181", "off the globe"),
+    ],
+)
+def test_a_centre_that_is_not_a_place_is_refused_by_name(raw, complaint):
+    with pytest.raises(ValueError, match=complaint):
+        seed_centre({SEED_CENTRE_VARIABLE: raw})
+
+
+def test_a_moved_cohort_is_the_same_figure_somewhere_else():
+    """**Translation, not regeneration.** Every member keeps their handle, ring
+    and draws, sits on the new centre's meridian, and is exactly as far from the
+    new centre as they were from the old one — because a degree of latitude is
+    the same length everywhere, which is the fact the rings are built on. This
+    is what lets a developer in Kraków seed around their own phone without a
+    single distance in the ring table, the walkthroughs or the assertions
+    changing underneath them.
+    """
+
+    krakow = Centre(latitude=50.06, longitude=19.94)
+    reference, moved = generate(), generate(centre=krakow)
+
+    assert moved.centre == krakow
+    assert len(moved.members) == len(reference.members)
+    for there, here in zip(moved.members, reference.members, strict=True):
+        assert (there.handle, there.ring, there.archetype) == (
+            here.handle,
+            here.ring,
+            here.archetype,
+        )
+        assert there.longitude == krakow.longitude
+        assert there.latitude == round(
+            here.latitude + (krakow.latitude - REFERENCE_CENTRE.latitude), 2
+        )
+        # Everything but the position is the same draw.
+        assert replace(there, latitude=0.0, longitude=0.0) == replace(
+            here, latitude=0.0, longitude=0.0
+        )
+        was = distance_km(
+            Point(
+                latitude=REFERENCE_CENTRE.latitude,
+                longitude=REFERENCE_CENTRE.longitude,
+            ),
+            Point(latitude=here.latitude, longitude=here.longitude),
+        )
+        now = distance_km(
+            Point(latitude=krakow.latitude, longitude=krakow.longitude),
+            Point(latitude=there.latitude, longitude=there.longitude),
+        )
+        assert now == pytest.approx(was, abs=0.01), there.handle
+
+
+def test_every_ring_lands_on_a_cell_wherever_the_centre_is():
+    """`LocationArea` rounds to two decimal places on the way in. A ring that
+    rounds to a different cell than the one it was placed on is a ring that
+    moved between the seed and the database, so the offsets and the centre are
+    both two-decimal and their sum is put back on the grid."""
+
+    for centre in (REFERENCE_CENTRE, Centre(latitude=50.06, longitude=19.94)):
+        for ring in RINGS:
+            latitude = latitude_of(ring, centre)
+            assert latitude == round(latitude, 2), (ring.code, centre)
+            assert _distance_of(ring) == pytest.approx(
+                distance_km(
+                    Point(latitude=centre.latitude, longitude=centre.longitude),
+                    Point(latitude=latitude, longitude=centre.longitude),
+                ),
+                abs=0.01,
+            )
 
 
 # ---------------------------------------------------------------------------
