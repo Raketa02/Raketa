@@ -56,6 +56,13 @@ const HELD_SURFACE: PlayerProfileSurface = {
   playIntents: {},
   socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
   photos: [],
+  proposalsOptIn: {
+    accepted: true,
+    copyVersion: 'proposals-opt-in.v3',
+    surface: 'onboarding',
+    answeredAt: '2026-08-12T10:00:00Z',
+  },
+  genderPreference: 'any',
 };
 
 let transport: Transport;

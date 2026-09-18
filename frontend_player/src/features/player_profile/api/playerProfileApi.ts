@@ -25,6 +25,12 @@ type SocialTagsResponse = components['schemas']['SocialTagsResponse'];
 type ChangePhotosRequest = components['schemas']['ChangePhotosRequest'];
 type PhotosResponse = components['schemas']['PhotosResponse'];
 type ChangeIntroRequest = components['schemas']['ChangeIntroRequest'];
+type ChangeGenderRequest = components['schemas']['ChangeGenderRequest'];
+type ChangeGenderPreferenceRequest = components['schemas']['ChangeGenderPreferenceRequest'];
+type AnswerProposalsOptInRequest = components['schemas']['AnswerProposalsOptInRequest'];
+type ProposalsOptInResponse = components['schemas']['ProposalsOptInResponse'];
+type WireGender = components['schemas']['Gender'];
+type WireGenderPreference = components['schemas']['GenderPreference'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
 type WireSport = components['schemas']['Sport'];
 /**
@@ -368,6 +374,93 @@ export function changeIntro({ intro }: ChangeIntroOptions): Promise<void> {
   return httpRequest<void>({
     method: 'PUT',
     path: '/api/v1/players/me/intro',
+    body,
+    authenticated: true,
+  });
+}
+
+export interface ChangeGenderOptions {
+  readonly gender: WireGender;
+}
+
+/**
+ * Correct this player's answer to the gender question — the You tab's *Save* under *About
+ * you* (ADR-0179 §8). A no-op on an unchanged value, on the far side.
+ *
+ * **`204` and no body, deliberately.** The owner's own profile read is the one response shape
+ * that carries a gender value out (ADR-0179 §4), and the contract walk holds it to being the
+ * only one; the write answers nothing rather than becoming a second. The screen reads the
+ * answer back from the read — which its cache already holds, so the use case says why the
+ * value sent is the value held.
+ *
+ * **Unkeyed, and no `signal`**, for the radius write's two reasons.
+ */
+export function changeGender({ gender }: ChangeGenderOptions): Promise<void> {
+  const body: ChangeGenderRequest = { gender };
+  return httpRequest<void>({
+    method: 'PUT',
+    path: '/api/v1/players/me/gender',
+    body,
+    authenticated: true,
+  });
+}
+
+export interface ChangeGenderPreferenceOptions {
+  readonly genderPreference: WireGenderPreference;
+}
+
+/**
+ * Change who this player is willing to be matched with — the You tab's *Save* under *Who we
+ * should match you with* (ADR-0179 §8). **Mutual and durable**: narrowing it hides this player
+ * from the excluded side entirely, and the screen has said so at the moment of the press.
+ *
+ * **`204` and no body**, for the gender write's reason: the setting is served on the owner's
+ * profile read and on no other shape. It gates the next search in both directions.
+ *
+ * **Unkeyed, and no `signal`**, for the radius write's two reasons.
+ */
+export function changeGenderPreference({
+  genderPreference,
+}: ChangeGenderPreferenceOptions): Promise<void> {
+  const body: ChangeGenderPreferenceRequest = { gender_preference: genderPreference };
+  return httpRequest<void>({
+    method: 'PUT',
+    path: '/api/v1/players/me/gender-preference',
+    body,
+    authenticated: true,
+  });
+}
+
+export interface AnswerProposalsOptInOptions {
+  readonly accepted: boolean;
+  /** The identifier of the exact copy on screen at the press — never the words. */
+  readonly copyVersion: string;
+}
+
+/**
+ * Answer the proposals question again, from the profile — the You tab's press on either
+ * answer (ADR-0179 §8). **Every press records**, the same answer included: consent is
+ * evidenced, and a re-affirmation against these words is a fact the stream keeps.
+ *
+ * **The surface is not a field.** It is the route's — `PROFILE` — and a body naming one is
+ * ignored, because a client that could assert where a consent was gathered could assert one it
+ * never gathered. `accepted` is required and not nullable here, unlike the commit's: the screen
+ * **is** the question and pressing is the answer.
+ *
+ * It answers with **the record it just made** — the answer, its moment, its words and its
+ * surface — which is what the screen then draws, never the press it sent.
+ *
+ * **Unkeyed, and no `signal`.** Not idempotent by design — twice is two records on purpose —
+ * and a cancelled write leaves the client unable to say whether a consent was recorded.
+ */
+export function answerProposalsOptIn({
+  accepted,
+  copyVersion,
+}: AnswerProposalsOptInOptions): Promise<ProposalsOptInResponse> {
+  const body: AnswerProposalsOptInRequest = { accepted, copy_version: copyVersion };
+  return httpRequest<ProposalsOptInResponse>({
+    method: 'PUT',
+    path: '/api/v1/players/me/proposals-opt-in',
     body,
     authenticated: true,
   });

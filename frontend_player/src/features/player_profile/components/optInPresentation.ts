@@ -144,6 +144,29 @@ export const OPT_IN_PROMISES: readonly OptInPromise[] = [
 ];
 
 /**
+ * The same three promises **as the profile says them**, where the third reads *from here*
+ * rather than *from your profile* — because on the profile, *here* is where the player is
+ * standing ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2; `the-words.md` §27).
+ *
+ * **Not a fourth version, and the reason is what the version names.** The identifier names
+ * the promise a player agreed to — *you can stop, any time, from your profile* — and the
+ * profile screen makes that exact promise from the place it is kept; the one word that differs
+ * is where the reader stands, not what is promised. So an answer given here is stamped
+ * `PROPOSALS_OPT_IN_COPY_VERSION` like an answer given on the step, and the record reads back
+ * against the same words. Built from the step's list rather than written beside it, so a
+ * reword of the other two promises there cannot leave this card behind — and keyed by the
+ * promise's **term**, not its position, so a fourth promise appended there is not mistaken
+ * for the one about stopping. The pin in `optInPresentation.test.ts` is what catches the term
+ * itself being reworded.
+ */
+const STOPPING = 'You can stop';
+
+export const OPT_IN_PROMISES_ON_PROFILE: readonly OptInPromise[] = OPT_IN_PROMISES.map((promise) =>
+  promise.term === STOPPING ? { ...promise, detail: 'any time, from here' } : promise,
+);
+
+/**
  * The correction. What saying no changes, and — the half that matters — what it does not.
  *
  * It leads with the **no**, because the no is what the sentence is for: this is the one claim

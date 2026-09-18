@@ -306,12 +306,15 @@ profile editor that later edits the same values.
   **reason code** rather than a sentence. The gate is mutual, so `WOMEN_ONLY` does not only
   filter what a player sees — it hides them from every man, including men who searched for
   anybody, and that is the half nobody would guess. The rule decides _whether there is a
-  cost_; this app's copy says it, on the step, **at the moment of the press**. Learning it
-  from an empty inbox is not acceptable
+  cost_; this app's copy says it **at the moment of the press, on every surface that takes
+  the value** — the step, and since [#472](https://github.com/Raketa02/Raketa/issues/472)
+  the You tab's _Who you play with_, which draws the same group (`GenderControls`) under a
+  _Save_ of its own. Learning it from an empty inbox is not acceptable
   ([ADR-0096](../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
   _Avoid_: "filter" — a filter is one-directional and this deliberately is not; "privacy
   setting" — it changes who is matched, not what is shown, and neither value is ever drawn
-  on any surface but the step that takes it.
+  to anybody but its owner, on the two screens that take it and on the row's line only as
+  _Matched with …_, never the gender (ADR-0179 §4).
 - **Photo workbench** — the pictures a photos screen is holding, each with the upload it is
   in the middle of. **It has two homes** (ADR-0179 §2). On the step it sits beside the
   Profile draft in the same store, and it is not an answer: a local `file://` URI is
@@ -339,18 +342,21 @@ profile editor that later edits the same values.
   the availability grid, the Search radius and the per-sport Play intent, in one round trip
   across the two aggregates that own them — and, since the route **grew** the day **You** was
   built ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
-  tags, the photos with their verdicts and the intro, read on #471. The opt-in and the
-  owner's own gender and preference are on the same response and are read on #472; there is
-  no `has_location`, because a profile cannot be committed without an area and a flag that
-  cannot be false is a branch nobody tests. Its home is
+  tags, the photos with their verdicts and the intro, read on #471, and the standing
+  Proposals opt-in with its evidence and the **owner's own** gender and preference — the one
+  shape that carries them — read on #472; there is no `has_location`, because a profile
+  cannot be committed without an area and a flag that cannot be false is a branch nobody
+  tests. Its home is
   `player_profile/`, not `play/`, because the **writes** are: one unkeyed `PUT` per fact, and a
   read whose paired writes live in another feature is a read in the wrong feature. **Two
   screens draw it now.** Find a game reads the week and the radius as a search's working copy —
   and the radius is the one fact written from there, as the first half of pressing the card;
   the **You** tab reads every one of them as a fact with a door, and its screens write the
-  week, the radius, the tags and the intro on a **button** and never on release — and the
-  photos on every change to the row — so a slider on You and the search on Play move one
-  number two ways. _Avoid_: "the profile" for this — it is a surface over one, and calling
+  week, the radius, the tags, the intro and each of the two gender groups on a **button** and
+  never on release — the photos on every change to the row, and the opt-in on **every press**,
+  the same answer included, because a re-affirmation against these words is a fact the stream
+  keeps — so a slider on You and the search on Play move one number two ways. _Avoid_: "the
+  profile" for this — it is a surface over one, and calling
   it the profile is how a field gets added to a body scoped to what the tab draws; also "play
   screen read", which names one of two callers rather than the facts.
 

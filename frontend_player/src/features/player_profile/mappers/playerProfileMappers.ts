@@ -41,6 +41,7 @@ import type { PlayerProfileSurface, PlayIntentDeclarations } from '../domain/Pla
 import type { PhotoReview, UploadedPhoto } from '../domain/photoCollection';
 import type { ProfileOptions } from '../domain/ProfileOptions';
 import type { ProfileCommit } from '../domain/profileCommit';
+import type { ConsentSurface, RecordedProposalsOptIn } from '../domain/proposalsOptIn';
 
 type PlayerProfileOptionsResponse = components['schemas']['PlayerProfileOptionsResponse'];
 type PhotoResponse = components['schemas']['PhotoResponse'];
@@ -50,6 +51,8 @@ type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequ
 type WireDayPart = components['schemas']['DayPart'];
 type WireGender = components['schemas']['Gender'];
 type WireGenderPreference = components['schemas']['GenderPreference'];
+type WireConsentSurface = components['schemas']['ConsentSurface'];
+type ProposalsOptInResponse = components['schemas']['ProposalsOptInResponse'];
 type WirePhotoReview = components['schemas']['PhotoReviewDecision'];
 type ProfilePhotoResource = components['schemas']['ProfilePhotoResource'];
 type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
@@ -290,9 +293,10 @@ export function toPlayIntentDeclared(response: {
  * the set difference the search screen's interstitial is opened on; an empty `photos` is *a
  * profile holding none*, which the poster stands in for; and an omitted `intro` is *none was
  * written*, never `''`. A tag this build has no words for is dropped, as the options mapping
- * drops it, and the rest keep the served order — the vocabulary's. The opt-in, the gender and
- * the preference are on the same response and are read by
- * [#472](https://github.com/Raketa02/Raketa/issues/472).
+ * drops it, and the rest keep the served order — the vocabulary's. An omitted `gender` is *never
+ * asked* — a profile committed before the question existed — and is carried as the absence it
+ * is, never as `prefer-not-to-say`, which is an answer somebody gives; the screen pre-selects
+ * nothing.
  */
 export function toPlayerProfileSurface(response: PlayerProfileReadResponse): PlayerProfileSurface {
   return {
@@ -302,6 +306,33 @@ export function toPlayerProfileSurface(response: PlayerProfileReadResponse): Pla
     socialTagIds: toSocialTagIds(response.social_tags),
     photos: response.photos.map(toProfilePhotoHeld),
     ...(response.intro === undefined ? {} : { intro: response.intro }),
+    proposalsOptIn: toRecordedProposalsOptIn(response.proposals_opt_in),
+    ...(response.gender === undefined ? {} : { gender: GENDER[response.gender] }),
+    genderPreference: GENDER_PREFERENCE[response.gender_preference],
+  };
+}
+
+/**
+ * The two screens that ask the proposals question, in the two spellings that exist — a table
+ * for the day parts' reason: the profile screen keys a sentence by it, so a third surface on
+ * the wire stops this file compiling instead of producing a code the screen has no words for.
+ */
+const CONSENT_SURFACE: Readonly<Record<WireConsentSurface, ConsentSurface>> = {
+  ONBOARDING: 'onboarding',
+  PROFILE: 'profile',
+};
+
+/**
+ * The standing answer as the profile holds it — off the read, and off the opt-in write's own
+ * answer, which is the same shape: the route answers with the record it just made, moment and
+ * surface included, and that is what the screen draws rather than the press it sent.
+ */
+export function toRecordedProposalsOptIn(served: ProposalsOptInResponse): RecordedProposalsOptIn {
+  return {
+    accepted: served.accepted,
+    copyVersion: served.copy_version,
+    answeredAt: served.answered_at,
+    surface: CONSENT_SURFACE[served.surface],
   };
 }
 
@@ -319,10 +350,13 @@ function toProfilePhotoHeld(served: ProfilePhotoResource): UploadedPhoto {
  * producing a string the other end has never heard of. `prefer-not-to-say` would not even
  * survive a cast, which is the shape of bug a table cannot have.
  *
- * **Neither comes back.** No response shape this app reads carries a gender value out
+ * **Both come back, on exactly one shape.** No response that describes one player to another
+ * carries a gender value out
  * ([ADR-0096](../../../../../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)
- * §6), so these are one-directional by the contract and not by omission — there is nothing
- * to write an inbound half of.
+ * §6); the owner's own profile read does
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §4), so that *Who you play with* can open on the answer already given. So each table has
+ * an inbound half, read the other way and inverted so the two cannot disagree about a value.
  */
 const WIRE_GENDER: Readonly<Record<Gender, WireGender>> = {
   woman: 'WOMAN',
@@ -330,11 +364,32 @@ const WIRE_GENDER: Readonly<Record<Gender, WireGender>> = {
   'prefer-not-to-say': 'PREFER_NOT_TO_SAY',
 };
 
+const GENDER: Readonly<Record<WireGender, Gender>> = {
+  WOMAN: 'woman',
+  MAN: 'man',
+  PREFER_NOT_TO_SAY: 'prefer-not-to-say',
+};
+
 const WIRE_GENDER_PREFERENCE: Readonly<Record<GenderPreference, WireGenderPreference>> = {
   'women-only': 'WOMEN_ONLY',
   'men-only': 'MEN_ONLY',
   any: 'ANY',
 };
+
+const GENDER_PREFERENCE: Readonly<Record<WireGenderPreference, GenderPreference>> = {
+  WOMEN_ONLY: 'women-only',
+  MEN_ONLY: 'men-only',
+  ANY: 'any',
+};
+
+/** The outbound halves, for the two writes the You tab sends one value at a time. */
+export function toWireGender(gender: Gender): WireGender {
+  return WIRE_GENDER[gender];
+}
+
+export function toWireGenderPreference(preference: GenderPreference): WireGenderPreference {
+  return WIRE_GENDER_PREFERENCE[preference];
+}
 
 /**
  * Everything the second part collected, as the one body that ends it.

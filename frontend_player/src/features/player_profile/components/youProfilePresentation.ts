@@ -15,26 +15,27 @@
  * through the step's own reading. The one static line is the area's, because the area is the
  * one fact with a single state — a profile cannot be committed without one.
  *
- * ## Two rows land with their contract, and say so
+ * ## Two lines say less than the read holds, on purpose
  *
- * Who you play with and Game suggestions read fields the profile read grew on
- * [#466](https://github.com/Raketa02/Raketa/issues/466) and this client reads on
- * [#472](https://github.com/Raketa02/Raketa/issues/472). Until then each row draws a line
- * naming what it is, and the screen behind it says in one `tiny` line what it is and that the
- * edit lands with the read that carries the fact — 10.1's empty-state rule, and never *coming
- * soon*. Photos, Tags and Intro drew the same lines until
- * [#471](https://github.com/Raketa02/Raketa/issues/471) read them; their live lines are below.
+ * *Who you play with* says the preference and never the gender: the gender is on the read for
+ * the screen behind the row to pre-select from, and the row, the header card and the record
+ * draw neither (ADR-0179 §4). *Game suggestions* says the answer and its day, and leaves the
+ * words it was given against to the card behind it, where the evidence is read whole.
  */
 
 import { sportLabel } from '@/features/onboarding/types';
 import { YOU_COPY } from '@/features/shell/types';
+import { dayDate } from '@/shared/date/calendarDay';
+import { platformDay } from '@/shared/date/platformZone';
 import { counted } from '@/shared/formatting/counted';
 import { intentLabel } from '@/shared/vocabulary/playIntentPresentation';
 import { socialTagName } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
+import type { GenderPreference } from '../domain/gender';
 import type { PlayIntentRow } from '../domain/playIntentRows';
+import type { ConsentSurface, RecordedProposalsOptIn } from '../domain/proposalsOptIn';
 import { weekStanding } from '../domain/availabilityWeek';
 import { PHOTO_CEILING, type UploadedPhoto } from '../domain/photoCollection';
 
@@ -120,6 +121,43 @@ export function tagsLine(tagIds: readonly SocialTagId[], maximum: number): strin
   return `${count} · ${named.join(', ')}${rest > 0 ? `, +${rest}` : ''}`;
 }
 
+/**
+ * `Matched with anyone` · `… women only` · `… men only` — **the preference only.**
+ *
+ * The gender is drawn on its own screen and nowhere else on the tab
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §4): the row, the header card and the record never carry it. Keyed by the preference, so a
+ * fourth value has no line rather than a wrong one.
+ */
+const MATCHED_WITH: Readonly<Record<GenderPreference, string>> = {
+  any: 'Matched with anyone',
+  'women-only': 'Matched with women only',
+  'men-only': 'Matched with men only',
+};
+
+export function whoYouPlayWithLine(preference: GenderPreference): string {
+  return MATCHED_WITH[preference];
+}
+
+/**
+ * The day an answer was given, as the tab says a date — `12 Aug`, in the platform's zone,
+ * which is the one zone this platform reads a moment in (`platformZone`). An instant that is
+ * not one is printed as it stands rather than guessed at.
+ */
+function answeredOn(answeredAt: string): string {
+  return dayDate(platformDay(answeredAt) ?? answeredAt);
+}
+
+/** The standing answer's one word — `Yes` / `No` — on the card's tag and in the row's line. */
+export function answerWord(accepted: boolean): string {
+  return accepted ? 'Yes' : 'No';
+}
+
+/** `Yes — since 12 Aug` · `No — since 12 Aug`. */
+export function gameSuggestionsLine(answer: RecordedProposalsOptIn): string {
+  return `${answerWord(answer.accepted)} — since ${answeredOn(answer.answeredAt)}`;
+}
+
 /** The step's title, quoted, where no line was written. */
 export const NO_INTRO_LINE = 'None — say it in your own words';
 
@@ -161,6 +199,15 @@ export const CLEAR_ALL = 'Clear all';
 export const REMOVE_INTRO = 'Remove intro';
 export const REMOVING = 'Removing…';
 
+/**
+ * The spoken name of a *Save* that shares its screen with another — `Save — About you`. The
+ * visible label stays `Save`; the group's own heading is what tells the two apart for a
+ * listener, as a name rather than a hint, because a hint can be switched off (Part 13).
+ */
+export function groupSaveLabel(label: string, group: string): string {
+  return `${label} — ${group}`;
+}
+
 /** A read that failed offers itself again — the control the failure belongs to. */
 export const TRY_AGAIN = 'Try again';
 
@@ -172,28 +219,34 @@ export const LOADING_PHOTOS = 'Loading your photos';
 export const LOADING_TAGS = 'Loading tags';
 export const LOADING_YOUR_TAGS = 'Loading your tags';
 export const LOADING_INTRO = 'Loading your intro';
+export const LOADING_WHO_YOU_PLAY_WITH = 'Loading who you play with';
+export const LOADING_GAME_SUGGESTIONS = 'Loading your answer';
 
 /** *Where you play*'s one state, and the control under it. */
 export const AREA_SET = 'Your area is set';
 export const READ_AGAIN = 'Read my area again';
 
-/**
- * The two rows whose screens land on #472: the line on the row, and the one line the screen
- * behind it says. Keyed so a screen and its row cannot come apart.
- */
-export const DEFERRED_ROW = {
-  whoYouPlayWith: {
-    title: WHO_YOU_PLAY_WITH_TITLE,
-    line: 'Who we match you with',
-    screenLine:
-      'Your own answer, and who you are matched with, are changed here, once the profile ' +
-      'read carries them.',
-  },
-  gameSuggestions: {
-    title: GAME_SUGGESTIONS_TITLE,
-    line: 'Whether Raketa may suggest you games',
-    screenLine: 'Your answer is changed here, once the profile read carries it.',
-  },
-} as const;
+/** The answer card's label on *Game suggestions*, over the tag that says which. */
+export const YOUR_ANSWER = 'Your answer';
 
-export type DeferredRowKey = keyof typeof DEFERRED_ROW;
+/**
+ * Where the standing answer was given, in the card's sentence — keyed by the surface, so a
+ * third screen asking the question has no clause rather than a wrong one.
+ */
+const GIVEN_FROM: Readonly<Record<ConsentSurface, string>> = {
+  onboarding: 'setting up',
+  profile: 'this screen',
+};
+
+/**
+ * `Given 12 Aug, against these words (proposals-opt-in.v3), from setting up.` — the evidence
+ * beside the answer: when, against which words, and from which of the two screens. The version
+ * is printed as the identifier it is, because it is what the record holds and the words are
+ * on the card above.
+ */
+export function answerGivenLine(answer: RecordedProposalsOptIn): string {
+  return (
+    `Given ${answeredOn(answer.answeredAt)}, against these words (${answer.copyVersion}), ` +
+    `from ${GIVEN_FROM[answer.surface]}.`
+  );
+}

@@ -52,7 +52,6 @@ import {
   AREA_LINE,
   AREA_SET,
   CLEAR_ALL,
-  DEFERRED_ROW,
   HOW_FAR_TO_LOOK_TITLE,
   READ_AGAIN,
   SAVE,
@@ -62,7 +61,6 @@ import {
   YOUR_WEEK_TITLE,
   radiusLine,
   weekLine,
-  type DeferredRowKey,
 } from './youProfilePresentation';
 
 const RATING: Wire['RatingResponse'] = {
@@ -395,32 +393,6 @@ describe('Where you play', () => {
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.getByLabelText(READ_AGAIN)).toBeTruthy();
   });
-});
-
-// ---------------------------------------------------------------------------
-// The five rows whose screens land with their contract
-// ---------------------------------------------------------------------------
-
-describe('a row whose screen lands with its contract', () => {
-  /**
-   * Each opens a screen that says, in one line, what it is and that the edit lands with the
-   * read that carries the fact — 10.1's rule — under the group it was opened from.
-   */
-  it.each(Object.keys(DEFERRED_ROW) as readonly DeferredRowKey[])(
-    'opens %s on one line naming what it is',
-    async (key) => {
-      const row = DEFERRED_ROW[key];
-      await onYou();
-
-      fireEvent.press(screen.getByLabelText(doorRowLabel(row.title, row.line)));
-
-      expect(await screen.findByRole('header', { name: row.title })).toBeTruthy();
-      expect(screen.getByText(row.screenLine)).toBeTruthy();
-      expect(screen.queryByText(/coming soon/i)).toBeNull();
-      fireEvent.press(screen.getByLabelText('Back'));
-      await waitFor(() => expect(screen).toHavePathname('/you'));
-    },
-  );
 });
 
 // ---------------------------------------------------------------------------

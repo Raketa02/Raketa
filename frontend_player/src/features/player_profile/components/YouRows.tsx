@@ -6,10 +6,10 @@
  *
  * The shell composes the tab — its title, the three group titles, which rows sit in which
  * group — and every row from *Skill passport* down is the feature's whose fact it is. These
- * are the profile's: the declaration, the week, the radius, the area, the photos, the tags,
- * the intro, and the two whose screens land with their contract. Each reads the fact off the
- * read that carries it, says it in one line through `youProfilePresentation`, and pushes its
- * own screen.
+ * are the profile's: the declaration, the week, the radius, the area, who the player is
+ * matched with, the standing answer to the proposals question, the photos, the tags and the
+ * intro. Each reads the fact off the read that carries it, says it in one line through
+ * `youProfilePresentation`, and pushes its own screen.
  *
  * ## A live line is a read, and a read has three states
  *
@@ -26,17 +26,18 @@
  * | Your week | `GET /players/me/profile`.availability |
  * | How far to look | `GET /players/me/profile`.search_radius_km |
  * | Where you play | nothing — the one state, because a profile cannot be committed without an area |
+ * | Who you play with | `GET /players/me/profile`.gender_preference — **the preference only**, never the gender (ADR-0179 §4) |
+ * | Game suggestions | `GET /players/me/profile`.proposals_opt_in — the answer and its day |
  * | Photos | `GET /players/me/profile`.photos — the count, and the profile photo's verdict |
  * | Tags | `GET /players/me/profile`.social_tags ∩ `GET /player-profile/options`.social_tag_selection — the ceiling is served |
  * | Intro | `GET /players/me/profile`.intro |
- * | the two deferred | nothing yet — the fields land on the read with #472 |
  */
 
 import { useRouter } from 'expo-router';
 
 import { useSkillRatings } from '@/features/onboarding/types';
 import { liveLine } from '@/shared/errors';
-import { DoorRow, type DoorRowGlyph, type DoorRowProps } from '@/shared/ui';
+import { DoorRow, type DoorRowProps } from '@/shared/ui';
 
 import { playIntentRows } from '../domain/playIntentRows';
 import { useProfileOptions } from '../hooks/useProfileOptions';
@@ -55,21 +56,23 @@ import {
 } from './youProfileRoutes';
 import {
   AREA_LINE,
-  DEFERRED_ROW,
+  GAME_SUGGESTIONS_TITLE,
   HOW_FAR_TO_LOOK_TITLE,
   INTRO_TITLE,
   PHOTOS_TITLE,
   TAGS_TITLE,
   WHAT_KIND_OF_GAME_TITLE,
   WHERE_YOU_PLAY_TITLE,
+  WHO_YOU_PLAY_WITH_TITLE,
   YOUR_WEEK_TITLE,
+  gameSuggestionsLine,
   introLine,
   kindOfGameLine,
   photosLine,
   radiusLine,
   tagsLine,
   weekLine,
-  type DeferredRowKey,
+  whoYouPlayWithLine,
 } from './youProfilePresentation';
 
 /** 5.5's `index > 0` — the shell says where in its card the row sits. */
@@ -145,6 +148,38 @@ export function WhereYouPlayRow({ divided }: YouRowProps) {
   );
 }
 
+export function WhoYouPlayWithRow({ divided }: YouRowProps) {
+  const router = useRouter();
+  const profile = useProfileSurface();
+
+  return (
+    <DoorRow
+      glyph="users"
+      title={WHO_YOU_PLAY_WITH_TITLE}
+      // The preference and only the preference: the gender is on the read for the screen
+      // behind this row to pre-select from, and the row is not that screen.
+      line={liveLine(profile, (surface) => whoYouPlayWithLine(surface.genderPreference))}
+      divided={divided}
+      onPress={() => router.push(YOU_WHO_YOU_PLAY_WITH_ROUTE)}
+    />
+  );
+}
+
+export function GameSuggestionsRow({ divided }: YouRowProps) {
+  const router = useRouter();
+  const profile = useProfileSurface();
+
+  return (
+    <DoorRow
+      glyph="check-circle"
+      title={GAME_SUGGESTIONS_TITLE}
+      line={liveLine(profile, (surface) => gameSuggestionsLine(surface.proposalsOptIn))}
+      divided={divided}
+      onPress={() => router.push(YOU_GAME_SUGGESTIONS_ROUTE)}
+    />
+  );
+}
+
 export function PhotosRow({ divided }: YouRowProps) {
   const router = useRouter();
   const profile = useProfileSurface();
@@ -199,38 +234,3 @@ export function IntroRow({ divided }: YouRowProps) {
     />
   );
 }
-
-const DEFERRED_ROUTE = {
-  whoYouPlayWith: YOU_WHO_YOU_PLAY_WITH_ROUTE,
-  gameSuggestions: YOU_GAME_SUGGESTIONS_ROUTE,
-} as const satisfies Readonly<Record<DeferredRowKey, string>>;
-
-const DEFERRED_GLYPH: Readonly<Record<DeferredRowKey, DoorRowGlyph>> = {
-  whoYouPlayWith: 'users',
-  gameSuggestions: 'check-circle',
-};
-
-/**
- * One of the two rows whose screen lands with its contract — the line names what the row
- * is, and the screen behind it says so in one line.
- */
-function DeferredRow({ row, divided }: YouRowProps & { readonly row: DeferredRowKey }) {
-  const router = useRouter();
-
-  return (
-    <DoorRow
-      glyph={DEFERRED_GLYPH[row]}
-      title={DEFERRED_ROW[row].title}
-      line={DEFERRED_ROW[row].line}
-      divided={divided}
-      onPress={() => router.push(DEFERRED_ROUTE[row])}
-    />
-  );
-}
-
-export const WhoYouPlayWithRow = ({ divided }: YouRowProps) => (
-  <DeferredRow row="whoYouPlayWith" divided={divided} />
-);
-export const GameSuggestionsRow = ({ divided }: YouRowProps) => (
-  <DeferredRow row="gameSuggestions" divided={divided} />
-);

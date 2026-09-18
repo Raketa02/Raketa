@@ -341,9 +341,7 @@ describe('the profile surface Play and You read', () => {
     gender_preference: 'ANY',
   };
 
-  it('carries the three facts Play reads and the three You edits, and nothing else', () => {
-    // The opt-in, the gender and the preference are on the wire and are #472's to read;
-    // nothing here defaults or drops them, they are simply not carried yet.
+  it('carries every fact the tab draws — the three Play reads, the three social ones, and the three that gate the matcher', () => {
     expect(toPlayerProfileSurface(SERVED_SURFACE)).toEqual({
       week: [{ day: 2, part: 'evening' }],
       searchRadiusKm: 12,
@@ -351,6 +349,52 @@ describe('the profile surface Play and You read', () => {
       socialTagIds: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
       photos: [{ photoId: 'photo-1', review: 'allowed' }, { photoId: 'photo-2' }],
       intro: 'Will travel for a hard game.',
+      proposalsOptIn: {
+        accepted: true,
+        copyVersion: 'proposals-opt-in.v3',
+        surface: 'onboarding',
+        answeredAt: '2026-08-12T10:00:00Z',
+      },
+      gender: 'man',
+      genderPreference: 'any',
+    });
+  });
+
+  it('reads the owner’s own gender and preference in the app’s spellings — the one shape that carries them', () => {
+    // ADR-0179 §4: the owner reads their own answer on the route scoped to `me`, so the screen
+    // that asks *who should we match you with* can open on the answer already given.
+    const narrowed = toPlayerProfileSurface({
+      ...SERVED_SURFACE,
+      gender: 'PREFER_NOT_TO_SAY',
+      gender_preference: 'WOMEN_ONLY',
+    });
+
+    expect(narrowed.gender).toBe('prefer-not-to-say');
+    expect(narrowed.genderPreference).toBe('women-only');
+  });
+
+  it('leaves the gender absent on a profile committed before the question existed — never prefer not to say', () => {
+    const { gender: _served, ...neverAsked } = SERVED_SURFACE;
+
+    expect(toPlayerProfileSurface(neverAsked)).not.toHaveProperty('gender');
+  });
+
+  it('reads the standing answer with where it was given, in the app’s spelling of the surface', () => {
+    const fromTheProfile = toPlayerProfileSurface({
+      ...SERVED_SURFACE,
+      proposals_opt_in: {
+        accepted: false,
+        copy_version: 'proposals-opt-in.v3',
+        surface: 'PROFILE',
+        answered_at: '2026-09-18T08:30:00Z',
+      },
+    });
+
+    expect(fromTheProfile.proposalsOptIn).toEqual({
+      accepted: false,
+      copyVersion: 'proposals-opt-in.v3',
+      surface: 'profile',
+      answeredAt: '2026-09-18T08:30:00Z',
     });
   });
 

@@ -15,7 +15,9 @@
  * were just handed"* is the rule. What they must not do is write the number the client *sent*:
  * a client that assumed its own value landed would be re-deciding a bound the server owns.
  * The intro's route answers nothing by design, and its use case says why the line sent is the
- * line held.
+ * line held; the two gender writes answer nothing for the same reason and are held the same
+ * way. The opt-in's route answers with **the record it just made**, and that is what the cache
+ * holds — the answer, its moment and its surface, never the press.
  *
  * **The three social writes also invalidate the player's own record**
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
@@ -35,9 +37,15 @@ import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { Sport } from '@/shared/vocabulary/sport';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
+import type { Gender, GenderPreference } from '../domain/gender';
 import type { PlayerProfileSurface } from '../domain/PlayerProfileSurface';
 import type { UploadedPhoto } from '../domain/photoCollection';
+import type { ProposalsOptIn } from '../domain/ProfileDraft';
+import type { RecordedProposalsOptIn } from '../domain/proposalsOptIn';
+import { answerProposalsOptIn } from '../use-cases/answerProposalsOptIn';
 import { changeAvailability } from '../use-cases/changeAvailability';
+import { changeGender } from '../use-cases/changeGender';
+import { changeGenderPreference } from '../use-cases/changeGenderPreference';
 import { changeIntro } from '../use-cases/changeIntro';
 import { changePhotos } from '../use-cases/changePhotos';
 import { changeSearchRadius } from '../use-cases/changeSearchRadius';
@@ -193,6 +201,63 @@ export function useChangeIntro() {
         return intro === undefined ? rest : { ...rest, intro };
       });
       void client.invalidateQueries({ queryKey: playerRecordKeys.all });
+    },
+  });
+}
+
+/**
+ * Correct the profile's answer to the gender question — the You tab's *Save* under *About
+ * you* (ADR-0179 §2). The value written into the cache is the one the use case answers with,
+ * which is the value sent; nothing else reads it, so nothing else is invalidated.
+ */
+export function useChangeGender() {
+  const client = useQueryClient();
+
+  return useMutation<Gender, AppError, Gender>({
+    mutationFn: (gender) => changeGender(gender),
+    onSuccess: (gender) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
+        held === undefined ? held : { ...held, gender },
+      );
+    },
+  });
+}
+
+/**
+ * Change who the profile is matched with — the You tab's *Save* under *Who we should match
+ * you with* (ADR-0179 §2). The row's line follows the cache; the gate it changes is evaluated
+ * on the next search, on the far side, and nothing here has a cache of that to move.
+ */
+export function useChangeGenderPreference() {
+  const client = useQueryClient();
+
+  return useMutation<GenderPreference, AppError, GenderPreference>({
+    mutationFn: (preference) => changeGenderPreference(preference),
+    onSuccess: (genderPreference) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
+        held === undefined ? held : { ...held, genderPreference },
+      );
+    },
+  });
+}
+
+/**
+ * Answer the proposals question again, from the profile — the You tab's press on either
+ * answer (ADR-0179 §2). **Every press sends**, the same answer included; the use case says why.
+ *
+ * The record written into the cache is **the route's** — its moment and its surface are the
+ * server's to stamp, and a client that wrote its own clock and *this screen* into the cache
+ * would be asserting a consent it had only requested.
+ */
+export function useAnswerProposalsOptIn() {
+  const client = useQueryClient();
+
+  return useMutation<RecordedProposalsOptIn, AppError, ProposalsOptIn>({
+    mutationFn: (answer) => answerProposalsOptIn(answer),
+    onSuccess: (proposalsOptIn) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
+        held === undefined ? held : { ...held, proposalsOptIn },
+      );
     },
   });
 }

@@ -31,8 +31,10 @@ The rule that decides whether there is a cost is `gender.reachOf`; the sentence 
 `genderPresentation`'s. The answer about the player is **required and never pre-selected** —
 _Prefer not to say_ is a choice somebody makes, not a default given on their behalf — while
 the preference beside it opens at _Anyone_, which is the value every profile already
-carries. **Neither value ever comes back out of the API** (ADR-0096 §6), so this step is the
-only surface in the app either one is ever seen on.
+carries. **Neither value ever reaches anybody else** (ADR-0096 §6): no response that describes
+one player to another carries either. The one shape that does is the owner's own profile read
+(ADR-0179 §4, since #472), so the You tab's _Who you play with_ can open on the answer already
+given — the second surface either value is seen on, and both to its owner only.
 
 **The consent step's copy is frozen and versioned.** `optInPresentation.ts` owns every
 sentence the Proposals opt-in card shows, together with the `copy_version` stamped beside
@@ -252,3 +254,51 @@ invalidated through `playerRecordKeys`, never patched. The live lines are `photo
 `tagsLine` (against the **served** ceiling, so the row reads the options too) and `introLine`.
 **Not seen on a device**: the row drawn from signed addresses, the sheet over the tab's chrome,
 the write failure pinned under the row, and the intro's action bar over the keyboard.
+
+**Who you play with and Game suggestions — the gender step's two groups each under a _Save_,
+and the opt-in answered again from You** ([#472](https://github.com/Raketa02/Raketa/issues/472),
+[ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+§2, §4, §8). **The read came first**: `PlayerProfileSurface` grew `gender` (absent on a profile
+committed before the question existed — never `prefer-not-to-say`, which is an answer somebody
+gives), `genderPreference`, and `proposalsOptIn` as a `RecordedProposalsOptIn` — the draft's
+pair with its moment and its surface, the surface spelled in `domain/proposalsOptIn` as this
+app's own `ConsentSurface` because the screen keys a sentence by it, and held to the wire's by
+the mapper's table. The two gender tables gained their inbound halves; the mapper's _neither
+comes back_ became _both come back, on exactly one shape_. **The refactor came second**, as
+#469's and #471's did: `GenderControls` is the step's two radio groups — _About you_ with the
+cost line, _Who we should match you with_ with the reach sentence at the press — and
+`OptInPromises` is the card the answer is given against; the two steps are those under their
+own chrome, their suites unchanged. **Who you play with** is the two groups each in a card of
+its own with its own _Save_ (`SavedGroup`), because each is its own fact with its own route —
+`PUT /players/me/gender` and `PUT /players/me/gender-preference`, both `204`, both held in the
+cache as the value sent for the intro write's reason — pre-selected from the read, _Save_ shut
+while a group's draft is the answer held, the two _Save_s told apart for a listener by a spoken
+name carrying the group (`groupSaveLabel`, _Save — About you_; a name and not a hint, because a
+hint can be switched off); the step's scope note and durable-setting line are not drawn (§9). The reach sentence is `reachNote`'s, drawn by the control on both screens, so the
+second surface that takes the value says it without either screen having to remember to. **The
+row says _Matched with …_ and never the gender**, and the header card and the record draw
+neither, as before. **Game suggestions** is `OptInPromises` with `OPT_IN_PROMISES_ON_PROFILE`
+— the step's three with the third reading _any time, from here_, built from the step's list so
+a reword there cannot leave this card behind, and **not a fourth copy version**: the identifier
+names the promise, and the one word that differs is where the reader stands, so a press here
+stamps `proposals-opt-in.v3` like the step does — the scope line above it, and an answer card:
+_Your answer_ with `Yes`/`No` as a `Tag` (`ok` for a yes), the evidence line _Given 12 Aug,
+against these words (proposals-opt-in.v3), from setting up_ (`answerGivenLine`, the day in the
+platform's zone through `platformDay` + `dayDate`), and the two answers in the copy's order
+(_No_ first, `OPT_IN_ANSWERS` — the prototype drew _Yes_ first, and the copy's rule that a
+screen mapping its own list could reverse it unnoticed is exactly what that constant exists
+for). **Every press sends** `PUT /players/me/proposals-opt-in` with the version on screen, the
+standing answer included, and **the card follows the reply**: the route answers with the record
+it made — the server's clock, the route's `PROFILE` — and `useAnswerProposalsOptIn` writes that
+into the cache, never the press; there is no _Save_ and no draft, and the pressed answer is busy
+under its own label — the press is the answer, and there is no other word for what it is doing.
+The step's _never pre-ticked_ line and its eyebrow are not drawn: here the answer **is**
+pre-selected, because it was given.
+The live lines are `whoYouPlayWithLine` (the preference only) and `gameSuggestionsLine`
+(_Yes — since 12 Aug_). `DEFERRED_ROW` and `DeferredYouScreens` are gone with the last two rows
+they stood in for. **Two calls for the author**: that a press from the profile stamps the step's
+version while the third promise reads differently — the argument is above and in
+`optInPresentation`, and the review named it a ruling rather than a violation; and the answers'
+order, which follows the copy over the prototype. **Not seen on a device**: the two cards'
+rhythm under the tab's chrome, the tag beside _Your answer_, and the busy state on a pressed
+answer.

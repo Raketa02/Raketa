@@ -17,13 +17,14 @@ import { onboardingKeys } from '@/features/onboarding/types';
 import { FIND_A_GAME_TITLE, modeControlLabel, usePlaySession } from '@/features/play/types';
 import {
   AREA_LINE,
-  DEFERRED_ROW,
+  GAME_SUGGESTIONS_TITLE,
   HOW_FAR_TO_LOOK_TITLE,
   INTRO_TITLE,
   PHOTOS_TITLE,
   TAGS_TITLE,
   WHAT_KIND_OF_GAME_TITLE,
   WHERE_YOU_PLAY_TITLE,
+  WHO_YOU_PLAY_WITH_TITLE,
   YOUR_WEEK_TITLE,
   introLine,
   kindOfGameLine,
@@ -31,6 +32,7 @@ import {
   radiusLine,
   tagsLine,
   weekLine,
+  whoYouPlayWithLine,
 } from '@/features/player_profile/types';
 import {
   HOW_OTHERS_SEE_YOU_LINE,
@@ -280,7 +282,8 @@ describe('You', () => {
     expect(
       screen.getByLabelText(doorRowLabel(WHAT_KIND_OF_GAME_TITLE, DECLARED_LINE)),
     ).toBeTruthy();
-    // Finding players — the three declarations with a read, and the two that land with theirs.
+    // Finding players — the five declarations, each off the profile read; the two that gate the
+    // matcher say the preference and the standing answer, and never the gender.
     expect(
       screen.getByLabelText(
         doorRowLabel(
@@ -299,14 +302,11 @@ describe('You', () => {
     ).toBeTruthy();
     expect(screen.getByLabelText(doorRowLabel(WHERE_YOU_PLAY_TITLE, AREA_LINE))).toBeTruthy();
     expect(
-      screen.getByLabelText(
-        doorRowLabel(DEFERRED_ROW.whoYouPlayWith.title, DEFERRED_ROW.whoYouPlayWith.line),
-      ),
+      screen.getByLabelText(doorRowLabel(WHO_YOU_PLAY_WITH_TITLE, whoYouPlayWithLine('any'))),
     ).toBeTruthy();
+    // The served answer is a yes from setting up, on the twelfth of August.
     expect(
-      screen.getByLabelText(
-        doorRowLabel(DEFERRED_ROW.gameSuggestions.title, DEFERRED_ROW.gameSuggestions.line),
-      ),
+      screen.getByLabelText(doorRowLabel(GAME_SUGGESTIONS_TITLE, 'Yes — since 12 Aug')),
     ).toBeTruthy();
     // On your card — the door to the sheet, the three social facts off the read, and the name.
     expect(

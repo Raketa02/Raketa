@@ -4,13 +4,13 @@
  * `GET /api/v1/players/me/profile` carries the availability grid, the Search radius and the
  * per-sport Play intent, across the two aggregates that own them
  * ([#246](https://github.com/Raketa02/Raketa/issues/246)) — and, since the route grew for
- * *You* ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §8), the Social tags,
- * the photos with their verdicts and the intro, which this client reads on
- * [#471](https://github.com/Raketa02/Raketa/issues/471). The opt-in and the owner's own gender
- * and preference are on the same response and appear here the day
- * [#472](https://github.com/Raketa02/Raketa/issues/472) reads them; there is no
- * `has_location`, because a profile cannot be committed without an area. This type is what
- * the route serves and this client reads, and a field appears the day both are true.
+ * *You* ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
+ * tags, the photos with their verdicts and the intro
+ * ([#471](https://github.com/Raketa02/Raketa/issues/471)), the standing proposals answer with
+ * its evidence, and the owner's own gender and preference
+ * ([#472](https://github.com/Raketa02/Raketa/issues/472)). There is no `has_location`,
+ * because a profile cannot be committed without an area. This type is what the route serves
+ * and this client reads, and a field appears the day both are true.
  *
  * ## Why this lives in `player_profile` and not in `play`
  *
@@ -35,7 +35,9 @@ import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { Sport } from '@/shared/vocabulary/sport';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
+import type { Gender, GenderPreference } from './gender';
 import type { UploadedPhoto } from './photoCollection';
+import type { RecordedProposalsOptIn } from './proposalsOptIn';
 
 /**
  * What was **declared**, per sport — and absence means *undeclared*, never `NO_PREFERENCE`.
@@ -73,4 +75,20 @@ export interface PlayerProfileSurface {
   readonly photos: readonly UploadedPhoto[];
   /** The line this player wrote about themselves, or absent where none was written. Never `''`. */
   readonly intro?: string;
+  /**
+   * The standing answer to the proposals question, with its evidence. **Always present** — a
+   * profile cannot be committed without one — and the current answer only: a re-affirmation
+   * from the You tab replaces it, and the stream keeps the one it replaced.
+   */
+  readonly proposalsOptIn: RecordedProposalsOptIn;
+  /**
+   * The owner's own answer to the gender question — served on this one shape and on no other
+   * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+   * §4), because a screen that asks it with nothing pre-selected is a screen a player cannot
+   * trust. **Absent on a profile committed before the question existed**, and never read as
+   * `prefer-not-to-say`, which is an answer somebody gives: the screen pre-selects nothing.
+   */
+  readonly gender?: Gender;
+  /** Who the owner is willing to be matched with. Always present: `any` is what nothing narrowed means. */
+  readonly genderPreference: GenderPreference;
 }

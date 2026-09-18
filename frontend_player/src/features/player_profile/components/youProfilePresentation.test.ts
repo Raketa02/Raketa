@@ -2,9 +2,8 @@
  * The You tab's words this feature owns — `the-words.md` §27, held to the table.
  *
  * Most of the tab's sentences are citations of the steps' own, and those are asserted where
- * they live. What is new is the live lines, the few sentences a screen gained or lost on the
- * way from a step to a row, and the five rows whose screens land with their contract — which
- * must name what they are and never *coming soon* (10.1's rule).
+ * they live. What is new is the live lines and the few sentences a screen gained or lost on
+ * the way from a step to a row.
  */
 
 import { PHOTO_CEILING } from '../domain/photoCollection';
@@ -14,7 +13,6 @@ import {
   AREA_LINE,
   AREA_SET,
   CLEAR_ALL,
-  DEFERRED_ROW,
   HOW_FAR_TO_LOOK_TITLE,
   KIND_OF_GAME_LINE,
   NO_INTRO_LINE,
@@ -23,12 +21,17 @@ import {
   SAVE,
   SAVED,
   SAVE_YOUR_WEEK,
+  YOUR_ANSWER,
+  answerGivenLine,
+  answerWord,
+  gameSuggestionsLine,
   introLine,
   kindOfGameLine,
   photosLine,
   radiusLine,
   tagsLine,
   weekLine,
+  whoYouPlayWithLine,
 } from './youProfilePresentation';
 
 describe('the live lines', () => {
@@ -59,6 +62,59 @@ describe('the live lines', () => {
         { sport: 'squash', intent: undefined },
       ]),
     ).toBe('Padel Competitive · Tennis For fun · Squash not set');
+  });
+});
+
+describe('the live lines that gate the matcher', () => {
+  it('says who the player is matched with, and never what they answered about themselves', () => {
+    // The preference only: the gender is drawn on its own screen and nowhere else on the tab.
+    expect(whoYouPlayWithLine('any')).toBe('Matched with anyone');
+    expect(whoYouPlayWithLine('women-only')).toBe('Matched with women only');
+    expect(whoYouPlayWithLine('men-only')).toBe('Matched with men only');
+  });
+
+  it('says the standing answer and since when, the day in the platform’s zone', () => {
+    expect(
+      gameSuggestionsLine({
+        accepted: true,
+        copyVersion: 'proposals-opt-in.v3',
+        surface: 'onboarding',
+        answeredAt: '2026-08-12T10:00:00Z',
+      }),
+    ).toBe('Yes — since 12 Aug');
+    // 23:30 UTC on the 17th is already the 18th in Warsaw — the platform's day, not the phone's.
+    expect(
+      gameSuggestionsLine({
+        accepted: false,
+        copyVersion: 'proposals-opt-in.v3',
+        surface: 'profile',
+        answeredAt: '2026-09-17T23:30:00Z',
+      }),
+    ).toBe('No — since 18 Sep');
+  });
+});
+
+describe('the answer card on Game suggestions', () => {
+  it('names the answer, and says when, against which words, and from where it was given', () => {
+    expect(YOUR_ANSWER).toBe('Your answer');
+    expect(answerWord(true)).toBe('Yes');
+    expect(answerWord(false)).toBe('No');
+    expect(
+      answerGivenLine({
+        accepted: true,
+        copyVersion: 'proposals-opt-in.v3',
+        surface: 'onboarding',
+        answeredAt: '2026-08-12T10:00:00Z',
+      }),
+    ).toBe('Given 12 Aug, against these words (proposals-opt-in.v3), from setting up.');
+    expect(
+      answerGivenLine({
+        accepted: false,
+        copyVersion: 'proposals-opt-in.v2',
+        surface: 'profile',
+        answeredAt: '2026-09-18T08:30:00Z',
+      }),
+    ).toBe('Given 18 Sep, against these words (proposals-opt-in.v2), from this screen.');
   });
 });
 
@@ -123,32 +179,5 @@ describe('the titles and the buttons', () => {
 
   it('withdraws the intro with its own control, beside Save', () => {
     expect(REMOVE_INTRO).toBe('Remove intro');
-  });
-});
-
-describe('the two rows whose screens land with their contract', () => {
-  it('are the two #472 draws — the three social edits have their screens', () => {
-    expect(Object.keys(DEFERRED_ROW).sort()).toEqual(['gameSuggestions', 'whoYouPlayWith']);
-  });
-
-  /**
-   * 10.1's empty-state rule: one present-tense line naming what the thing **is**, and never an
-   * apology, a date, or a claim that nothing is happening.
-   */
-  it('names what each row is, on the row and behind it', () => {
-    for (const row of Object.values(DEFERRED_ROW)) {
-      expect(row.line.length).toBeGreaterThan(0);
-      expect(row.screenLine.length).toBeGreaterThan(0);
-      for (const sentence of [row.line, row.screenLine]) {
-        expect(sentence).not.toMatch(/coming soon|soon|sorry|under construction|not built/i);
-        expect(sentence).not.toMatch(/nothing is happening/i);
-      }
-    }
-  });
-
-  it('says on each screen that the edit lands with the read that carries the fact', () => {
-    for (const row of Object.values(DEFERRED_ROW)) {
-      expect(row.screenLine).toMatch(/profile read/);
-    }
   });
 });

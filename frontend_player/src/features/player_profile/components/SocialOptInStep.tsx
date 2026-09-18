@@ -81,11 +81,10 @@
  */
 
 import { useRouter } from 'expo-router';
-import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { recoveryMessage } from '@/shared/errors';
-import { Button, Card, Hairline, Note, theme } from '@/shared/ui';
+import { Button, Note, theme } from '@/shared/ui';
 
 import { mayFinish, type CommitStanding } from '../domain/profileCommit';
 import { optInStanding } from '../domain/proposalsOptIn';
@@ -104,6 +103,7 @@ import {
   stepTheCommitRefused,
 } from './commitPresentation';
 import { SOCIAL_STEP_PATH, pathThatAsks } from './socialStepRoutes';
+import { OptInPromises } from './OptInPromises';
 import {
   OPT_IN_ANSWERS,
   OPT_IN_EYEBROW,
@@ -111,7 +111,6 @@ import {
   OPT_IN_FINISH_LABEL,
   OPT_IN_NEVER_PRE_TICKED,
   OPT_IN_PROMISES,
-  OPT_IN_PROMISE_HEADING,
   OPT_IN_SCOPE,
   PROPOSALS_OPT_IN_COPY_VERSION,
 } from './optInPresentation';
@@ -299,39 +298,10 @@ export function SocialOptInStep() {
           all, and it belongs before the question, not after it. */}
       <Note variant="info">{OPT_IN_SCOPE}</Note>
 
-      <Card>
-        <Text style={s.heading}>{OPT_IN_PROMISE_HEADING}</Text>
-
-        {/* **Stacked, not `Row`.** 5.5 is the key-value *line* — label left, value right,
-            `space-between` — and it is right for the figures and evidence rows it names.
-            Here the value is a whole sentence, and a sentence pushed into the right half of
-            a phone-width row is four words a line. So the term sits above what it promises,
-            and only 5.5's divider rule is borrowed. */}
-        <View style={s.promises}>
-          {OPT_IN_PROMISES.map((promise, index) => {
-            // One accessibility element, not two: *You may receive* and the sentence
-            // completing it mean nothing read a screen apart — which is the obligation 5.5
-            // states for its own rows, and it does not depend on the layout.
-            const promised = (
-              <View accessible accessibilityLabel={`${promise.term} ${promise.detail}`}>
-                <Text style={s.term}>{promise.term}</Text>
-                <Text style={s.detail}>{promise.detail}</Text>
-              </View>
-            );
-
-            // The divider is drawn from the second promise onward, so the first has no rule
-            // above it and the last none below it — 5.5's `index > 0`, expressed with the
-            // primitive that owns the fold. **No gap on this container**: `Hairline` already
-            // sets the space on both sides of the line, and a gap stacked on top of it would
-            // put the rule closer to the promise below than the one above.
-            return index === 0 ? (
-              <Fragment key={promise.term}>{promised}</Fragment>
-            ) : (
-              <Hairline key={promise.term}>{promised}</Hairline>
-            );
-          })}
-        </View>
-      </Card>
+      {/* The step's three — the ones that say *from your profile*. The card is `OptInPromises`,
+          which *Game suggestions* draws too with its own third (ADR-0179 §2); the version
+          stamped below names these words, and this screen is the one that drew them. */}
+      <OptInPromises promises={OPT_IN_PROMISES} />
 
       {/* Immediately above the two controls, because it is a claim about them: neither is
           selected, and nothing else the player has done was read as answering this. */}
@@ -369,14 +339,6 @@ export function SocialOptInStep() {
 }
 
 const s = StyleSheet.create({
-  // The card carries no gap of its own: `Hairline` owns the space around each fold, and
-  // this is the one step between the heading and the first promise, which has no fold.
-  promises: { marginTop: theme.space.xs },
-  heading: { ...theme.type.cardTitle, color: theme.color.ink },
-  term: { ...theme.type.inlineTitle, color: theme.color.ink },
-  // `ink`, not `muted`: this is the substance of what is being agreed to, and the muted
-  // role is for text that is genuinely secondary to something else on the screen.
-  detail: { ...theme.type.tiny, color: theme.color.ink },
   smallPrint: { ...theme.type.tiny, color: theme.color.muted },
   // Stacked, not a row: both labels are a sentence naming what they do, and two of those
   // side by side on a phone are two clipped words. The gap is the one between stacked
