@@ -30,9 +30,9 @@
  * The contract served `sportsmanship_band` to a record's subject and `sportsmanship` to anybody
  * else until [#468](https://github.com/Raketa02/Raketa/issues/468) retired the band (ADR-0179
  * §5): the figure and its count now cross to the subject as to any reader, and the wire has one
- * field. So the mapper reads that one field whoever is asking. The `band` arm of `Opinion`, its
- * words and the row that draws them are retired by
- * [#473](https://github.com/Raketa02/Raketa/issues/473); nothing here can produce one any more.
+ * field. So the mapper reads that one field whoever is asking, and `Opinion` is that one shape
+ * ([#473](https://github.com/Raketa02/Raketa/issues/473)) — `is_self` retitles the sheet and
+ * decides nothing here.
  *
  * ## The verdict is folded to a boolean here and is never carried further
  *
@@ -104,9 +104,7 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
  */
 function opinion(response: PlayerRecordResponse): { readonly opinion?: Opinion } {
   const said = response.sportsmanship;
-  return said === undefined
-    ? {}
-    : { opinion: { kind: 'figure', average: said.average, raters: said.raters } };
+  return said === undefined ? {} : { opinion: { average: said.average, raters: said.raters } };
 }
 
 /**

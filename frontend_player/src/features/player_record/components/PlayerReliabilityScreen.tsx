@@ -21,9 +21,12 @@
  *
  * ## The sportsmanship row draws what the record serves
  *
- * Today the band; the figure and its count once
- * [#473](https://github.com/Raketa02/Raketa/issues/473) lands ADR-0179 §5. Nothing here
- * chooses: the row is `RecordCard`'s and the arm is folded at the wire boundary.
+ * The figure and its count — *Sportsmanship, by players · 4,3 / 5 · 12 players* — the same row
+ * a stranger reads on this player's record: ADR-0179 §5 serves the subject the figure and
+ * retired the band from the wire (#468), the client read it from the moment the contract was
+ * regenerated (#471), and the arm that once drew a band word is gone
+ * ([#473](https://github.com/Raketa02/Raketa/issues/473)). Nothing here chooses: the row is
+ * `RecordCard`'s, drawn here unchanged.
  */
 
 import { useRouter } from 'expo-router';

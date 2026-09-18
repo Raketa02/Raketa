@@ -29,7 +29,6 @@ import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   IN_YOUR_AREA,
-  OPINION_BAND_NAME,
   SPORTSMANSHIP_LABEL,
   OWN_RECORD_TITLE,
   PLAYER_SCORE_BLOCK,
@@ -1118,7 +1117,9 @@ describe('who this person is', () => {
   /**
    * **The subject reads the same figure as anybody else** ([#468](https://github.com/Raketa02/Raketa/issues/468),
    * ADR-0179 §5): the band is retired from the wire, and a self read carries `sportsmanship`.
-   * Asserted end to end here, where the builder opens your own face.
+   * Asserted end to end here, where the builder opens your own face. The three band words are
+   * spelled only to be asserted absent — no deck exports them any more
+   * ([#473](https://github.com/Raketa02/Raketa/issues/473)).
    */
   it('draws the figure and its count on your own record, the band retired', async () => {
     transport.on('GET', OWN_RECORD, () =>
@@ -1133,8 +1134,9 @@ describe('who this person is', () => {
     fireEvent.press(yourFace('YOUR_SIDE'));
     await screen.findByText(`me_myself ${YOU_MARK}`);
 
+    expect(screen.getByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
     expect(screen.getByText(opinionFigure({ average: 4.7, raters: 17 }))).toBeTruthy();
-    expect(screen.queryByText(OPINION_BAND_NAME.GOOD)).toBeNull();
+    expect(screen.queryByText(/^(Good|Mixed|Poor)$/)).toBeNull();
   });
 
   /**

@@ -246,16 +246,15 @@ describe('how widely they spread their games', () => {
  *
  * The band a subject used to be answered with is retired ([#468](https://github.com/Raketa02/Raketa/issues/468),
  * ADR-0179 §5): the wire carries `sportsmanship` whoever is asking, and the mapper reads it
- * whoever is asking. The band's words and the row that draws them are
- * [#473](https://github.com/Raketa02/Raketa/issues/473)'s to retire; what this suite holds is
- * that nothing here can produce one any more.
+ * whoever is asking. `Opinion` is the figure and its count and nothing else
+ * ([#473](https://github.com/Raketa02/Raketa/issues/473)) — no arm, no discriminator — so what
+ * this suite holds is that a self read is mapped exactly as a stranger's is.
  */
 describe('what other players said', () => {
   const SAID = { average: 4.7, raters: 17 };
 
   it('carries the average and the count of people it rests on', () => {
     expect(toPlayerRecord(response({ sportsmanship: SAID })).opinion).toEqual({
-      kind: 'figure',
       average: 4.7,
       raters: 17,
     });
@@ -264,7 +263,7 @@ describe('what other players said', () => {
   it('answers your own record with the same figure, since the band was retired', () => {
     const served = response({ is_self: true, sportsmanship: SAID });
 
-    expect(toPlayerRecord(served).opinion).toEqual({ kind: 'figure', average: 4.7, raters: 17 });
+    expect(toPlayerRecord(served).opinion).toEqual({ average: 4.7, raters: 17 });
   });
 
   it('is absent where nobody has said anything, and never at nought', () => {

@@ -35,7 +35,9 @@ import { installTransport, json, type Transport, type Wire } from '@/test-suppor
 import {
   COUNTED_BLOCK,
   LAST_FIVE_BLOCK,
+  OWN_RECORD_TITLE,
   PLAYER_SCORE_BLOCK,
+  SPORTSMANSHIP_LABEL,
   STRAND_NAME,
   VARIETY_LABEL,
   opinionFigure,
@@ -43,6 +45,8 @@ import {
 } from './recordPresentation';
 import {
   ADD_A_SPORT,
+  HOW_OTHERS_SEE_YOU_LINE,
+  HOW_OTHERS_SEE_YOU_TITLE,
   NOTHING_COUNTED,
   OUT_OF_100,
   PLAYER_RELIABILITY_TITLE,
@@ -276,11 +280,14 @@ describe('Player reliability', () => {
     expect(screen.getByText(SCORE_TONE_WORD.good)).toBeTruthy();
     expect(screen.getByText(OUT_OF_100)).toBeTruthy();
     // The card, as the sheet draws it: the strands, the variety, the sportsmanship — the
-    // figure, since #468 serves it to the subject as to anybody (ADR-0179 §5).
+    // figure, since #468 serves it to the subject as to anybody (ADR-0179 §5), and no band
+    // word anywhere on the screen (#473; the three are spelled only to be asserted absent).
     expect(screen.getByText(STRAND_NAME.SHOWS_UP)).toBeTruthy();
     expect(screen.getByText('11 of 12')).toBeTruthy();
     expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
+    expect(screen.getByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
     expect(screen.getByText(opinionFigure({ average: 4.3, raters: 12 }))).toBeTruthy();
+    expect(screen.queryByText(/^(Good|Mixed|Poor)$/)).toBeNull();
   });
 
   it('gives a score under the bar its own word', async () => {
@@ -313,5 +320,43 @@ describe('Player reliability', () => {
     expect(screen.queryByLabelText(/out of 100/)).toBeNull();
     // The variety is a different absence, and is still drawn.
     expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
+  });
+
+  /**
+   * **A player nobody has rated draws no sportsmanship row, as before** — the fourth absence,
+   * asking its own question: the rows above it are still drawn, and nothing is drawn at nought.
+   */
+  it('draws no sportsmanship row for a player nobody has rated', async () => {
+    const { sportsmanship: _nobody, ...unrated } = OWN_RECORD_SERVED;
+    stubOwnRecord(transport, unrated);
+    await openReliability();
+
+    expect(await screen.findByText(STRAND_NAME.SHOWS_UP)).toBeTruthy();
+    expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
+    expect(screen.queryByText(SPORTSMANSHIP_LABEL)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// How others see you
+// ---------------------------------------------------------------------------
+
+/**
+ * **The sheet behind the tab's door reads the same row** — the sheet is `PlayerRecordSheet`
+ * whole, and the builder's walk holds it to the figure on your own face; what is proved here
+ * is the door the spec names, so that *He opens How others see you and reads it there too*
+ * (#473) is a sentence a test says.
+ */
+describe('How others see you', () => {
+  it('draws the sportsmanship figure and its count on your own record, and no band word', async () => {
+    await onYou();
+    fireEvent.press(
+      screen.getByLabelText(doorRowLabel(HOW_OTHERS_SEE_YOU_TITLE, HOW_OTHERS_SEE_YOU_LINE)),
+    );
+    await screen.findByRole('header', { name: OWN_RECORD_TITLE });
+
+    expect(await screen.findByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
+    expect(screen.getByText(opinionFigure({ average: 4.3, raters: 12 }))).toBeTruthy();
+    expect(screen.queryByText(/^(Good|Mixed|Poor)$/)).toBeNull();
   });
 });

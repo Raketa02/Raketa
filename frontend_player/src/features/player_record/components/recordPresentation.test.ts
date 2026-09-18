@@ -14,7 +14,6 @@ import {
   IN_YOUR_AREA,
   FIT_ROW_NAME,
   fitRowLabel,
-  OPINION_BAND_NAME,
   OWN_RECORD_TITLE,
   RECORD_TITLE,
   STRAND_NAME,
@@ -23,7 +22,6 @@ import {
   introLine,
   lastFiveReading,
   SPORTSMANSHIP_LABEL,
-  opinionValue,
   opinionFigure,
   recordCloseLabel,
   recordCardLabel,
@@ -387,7 +385,7 @@ describe('the record card', () => {
   it('speaks the rating as a row, and makes no promise about it', () => {
     const spoken = recordCardLabel({
       rows: [row()],
-      opinion: { kind: 'figure', average: 4.7, raters: 17 },
+      opinion: { average: 4.7, raters: 17 },
     });
 
     expect(spoken).toBe(`Shows up, 9 of 9. ${SPORTSMANSHIP_LABEL}, 4,7 out of 5, 17 players`);
@@ -396,11 +394,14 @@ describe('the record card', () => {
 });
 
 /**
- * **The second block's words**, and the two things they must never say.
+ * **The sportsmanship row's words**, and the one thing they must never say.
  *
  * A figure without its count is this field's one way of lying — `3,0 / 5` over one rater reads
- * as a settled fact about somebody — and a figure about *yourself* is the leak the whole design
- * exists to prevent. Both are asserted here, because both are a sentence rather than a rule.
+ * as a settled fact about somebody — so the count is asserted inseparable. The second thing
+ * this suite used to hold, that a figure about *yourself* is never drawn, is reversed: ADR-0179
+ * §5 serves the subject the figure, and the band that stood in for it is retired
+ * ([#473](https://github.com/Raketa02/Raketa/issues/473)) — so what is pinned now is that the
+ * row has one reading, the figure's, and no word in it.
  */
 describe('what opponents said', () => {
   /**
@@ -421,31 +422,16 @@ describe('what opponents said', () => {
     expect(opinionFigure({ average: 4.25, raters: 4 })).toBe('4,3 / 5 · 4 players');
   });
 
-  it('names the three steps a subject may be told, and nothing finer', () => {
-    expect(OPINION_BAND_NAME).toEqual({ GOOD: 'Good', MIXED: 'Mixed', POOR: 'Poor' });
-  });
-
   /**
-   * **The block names its own author**, which is what keeps the card above answerable for
-   * *counted by the system, not written by people* — and it says the matcher never reads it,
-   * because it is drawn on the same sheet as the pill that the matcher does read.
+   * **One reading, and it is the figure's** — the row's label, then the average out of five and
+   * the people it rests on, for a subject as for a stranger. The band this row used to speak
+   * for the subject (*Good · Mixed · Poor*) is retired with the arm that carried it, so the
+   * three words are spelled here only to be asserted absent: no export names them any more.
    */
-  it('draws the figure and its count, and never one without the other', () => {
-    expect(opinionValue({ kind: 'figure', average: 4.7, raters: 17 })).toBe('4,7 / 5 · 17 players');
-  });
+  it('speaks the figure and its count for everybody, and never a band word', () => {
+    const spoken = recordCardLabel({ rows: [], opinion: { average: 4.7, raters: 17 } });
 
-  /**
-   * **Your own record carries no figure and no count anywhere**, spoken or drawn — a published
-   * average beside a published count is a subtraction that names each new rating, and the
-   * subject knows who they played.
-   */
-  it('draws a band with no number in it at all', () => {
-    const drawn = opinionValue({ kind: 'band', band: 'GOOD' });
-
-    expect(drawn).toBe('Good');
-    expect(drawn).not.toMatch(/\d/);
-    expect(recordCardLabel({ rows: [], opinion: { kind: 'band', band: 'GOOD' } })).toBe(
-      `${SPORTSMANSHIP_LABEL}, Good`,
-    );
+    expect(spoken).toBe(`${SPORTSMANSHIP_LABEL}, 4,7 out of 5, 17 players`);
+    expect(spoken).not.toMatch(/\b(Good|Mixed|Poor)\b/);
   });
 });

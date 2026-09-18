@@ -28,7 +28,9 @@ import {
   COUNTED_BLOCK,
   LAST_FIVE_BLOCK,
   PLAYER_SCORE_BLOCK,
+  SPORTSMANSHIP_LABEL,
   VARIETY_LABEL,
+  opinionFigure,
   recordCardLabel,
   strandFraction,
   varietyValue,
@@ -194,6 +196,23 @@ describe('the record card', () => {
     expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
     expect(
       screen.getByText(varietyValue({ distinctOpponents: 14, timesOnCourt: 20 })),
+    ).toBeTruthy();
+  });
+
+  /**
+   * **What other players said is one row, drawn the same for everybody** — the label naming its
+   * author and the figure with its count, in the card's mono figure role, spoken as one clause of
+   * the card. The card used to draw a band word here for the subject; the band is retired
+   * (ADR-0179 §5, [#473](https://github.com/Raketa02/Raketa/issues/473)) and `Opinion` has no
+   * arm it could arrive on, so what is pinned is the one drawing there is.
+   */
+  it('draws the sportsmanship row as the figure and its count, alone where that is all there is', () => {
+    render(<RecordCard opinion={{ average: 4.3, raters: 12 }} />);
+
+    expect(screen.getByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
+    expect(screen.getByText(opinionFigure({ average: 4.3, raters: 12 }))).toBeTruthy();
+    expect(
+      screen.getByLabelText(recordCardLabel({ rows: [], opinion: { average: 4.3, raters: 12 } })),
     ).toBeTruthy();
   });
 

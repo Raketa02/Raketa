@@ -17,7 +17,6 @@ export { PlayerRecordSheet, type PlayerRecordSheetProps } from './components/Pla
 
 export type {
   Opinion,
-  OpinionBand,
   OpponentVariety,
   PlayerRecord,
   RatedSport,
@@ -100,12 +99,13 @@ export {
  * walk reads: the two titles, the close control's name, the pairing row's spoken name, the one
  * line a record that cannot be opened draws, the one clause a client is licensed to write from
  * two area codes — which the walk asserts is **absent** from your own record — the record
- * card's heading with the two figures it prints, and the second block's heading with the figure
- * and the three band words that are the two things it draws instead of each other.
+ * card's heading with the two figures it prints, and the sportsmanship row's label with the
+ * figure it draws for everybody. The three band words it used to draw for the subject are
+ * exported by nothing, because nothing draws them
+ * ([#473](https://github.com/Raketa02/Raketa/issues/473)).
  */
 export {
   IN_YOUR_AREA,
-  OPINION_BAND_NAME,
   OWN_RECORD_TITLE,
   YOU_MARK,
   RECORD_TITLE,

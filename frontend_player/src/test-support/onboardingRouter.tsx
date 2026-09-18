@@ -723,8 +723,8 @@ const GATE_USER_NICKNAME = 'ada';
 
 /**
  * Your own record, as `GET /players/me/record` answers — a player rated in one sport with a
- * record behind them, and the sportsmanship **band**, which is what the route serves its
- * subject today (ADR-0158 §6; the figure lands with #473).
+ * record behind them, and the sportsmanship figure with its count, which the route serves its
+ * subject as it serves any reader (ADR-0179 §5, #468).
  *
  * The You tab draws it three times over: the header card's face, intro and score, the
  * reliability row's line, and — with `?sport=` — the passport's blocks under each card. The

@@ -39,8 +39,6 @@ import { ON_COURT_CLAUSE } from '@/shared/ui';
 
 import type {
   Opinion,
-  OpinionBand,
-  OpinionFigure,
   OpponentVariety,
   ReliabilityStrand,
   StrandRow,
@@ -400,20 +398,6 @@ export const VARIETY_LABEL = 'Opponent variety';
  */
 export const SPORTSMANSHIP_LABEL = 'Sportsmanship, by players';
 
-/**
- * What the row prints on the right — `4,7 / 5 · 17 players` for a reader, one word for the
- * subject.
- *
- * The two arms are the wire's, folded at the boundary from `is_self`, so this switches on what
- * it was handed and compares nothing. The band takes **no tone**: `scoreTone` is this sheet's
- * one ladder and it belongs to the Player Score, so a coarse three-step painted in the same
- * three colours would offer itself as a second score on the screen a held player opens to find
- * out what is holding them back.
- */
-export function opinionValue(opinion: Opinion): string {
-  return opinion.kind === 'band' ? OPINION_BAND_NAME[opinion.band] : opinionFigure(opinion);
-}
-
 /** The two halves, computed once so the drawn row and the spoken one cannot disagree. */
 function varietyParts(variety: OpponentVariety): readonly [string, string] {
   return [
@@ -458,10 +442,11 @@ export interface RecordCardFacts {
  * **The card, as one element** — every row it drew, and nothing about a heading it no longer
  * has.
  *
- * The sportsmanship clause carries `WRITTEN_BY_PLAYERS` behind it, which is the contract's own
+ * The sportsmanship clause used to carry `WRITTEN_BY_PLAYERS` behind it — the contract's own
  * instruction and the half a listener cannot get from the row's label: *by players* says who
- * wrote it, and the sentence says that a low one acts on nobody. It is spoken only where the row
- * is drawn, because a promise about a figure nobody was shown is a sentence about nothing.
+ * wrote it, and the sentence said that a low one acts on nobody. That sentence is removed by
+ * decision (its words are recorded below `opinionFigure`), so a listener now gets exactly what
+ * a reader gets: the row's label and its answer.
  */
 export function recordCardLabel(facts: RecordCardFacts): string {
   return sentences([
@@ -481,7 +466,8 @@ export function recordCardLabel(facts: RecordCardFacts): string {
 const STAR_SCALE = 5;
 
 /**
- * `4,7 / 5 · 17 players` — **the average and the count, and never one without the other.**
+ * `4,7 / 5 · 17 players` — **the average and the count, and never one without the other**, and
+ * what the row prints on the right for everybody.
  *
  * A figure drawn without its count is this field's one way of lying: `4,7 / 5 · 17 players` and
  * `3,0 / 5 · 1 player` are the same field, and the second has to visibly read as one person's
@@ -489,9 +475,28 @@ const STAR_SCALE = 5;
  * honestly — which is the discipline the metered rows already take by printing their raw pair.
  *
  * The mean is **served, not derived**: there is one rounding of this record on the platform.
+ * And it is drawn in the card's mono figure role with **no tone**: `scoreTone` is this sheet's
+ * one ladder and it belongs to the Player Score, so a star average painted in the same three
+ * colours would offer itself as a second score on the screen a held player opens to find out
+ * what is holding them back.
+ *
+ * The subject used to be answered here with one word — *Good*, *Mixed* or *Poor*, a band too
+ * coarse to subtract a rater from — and is answered with the figure since ADR-0179 §5
+ * ([#473](https://github.com/Raketa02/Raketa/issues/473)); the band's words are gone from this
+ * deck rather than kept unreachable, so nothing can draw one.
  */
-export function opinionFigure(figure: OpinionFigure): string {
-  return `${formatStars(figure.average)} / ${STAR_SCALE} · ${ratersReading(figure.raters)}`;
+export function opinionFigure(figure: Opinion): string {
+  const [stars, raters] = opinionParts(figure);
+  return `${stars} / ${STAR_SCALE} · ${raters}`;
+}
+
+/**
+ * The two halves, computed once so the drawn row and the spoken one cannot disagree — the
+ * variety row's own discipline. The scale is not one of them: the two registers spell it
+ * differently (`/ 5` and *out of 5*), and that is the one word they are apart by.
+ */
+function opinionParts(opinion: Opinion): readonly [string, string] {
+  return [formatStars(opinion.average), ratersReading(opinion.raters)];
 }
 
 /** **People, not ratings** — a weekly partner is one rater however many evenings they play. */
@@ -499,69 +504,38 @@ function ratersReading(raters: number): string {
   return counted(raters, 'player', 'players');
 }
 
-/**
- * **The three steps a subject may be told**, and there is nothing finer anywhere on their own
- * record.
+/*
+ * **The sentence under the card is gone, and this is what it said** (#384). A record and not a
+ * docblock: nothing below carries it, on purpose.
  *
- * One word each, drawn in the type register a sentence takes rather than in a figure's mono, and
- * **carrying no tone**: `scoreTone` is the sheet's one ladder and it belongs to the number the
- * matcher acts on, so tinting a coarse band in the same three colours would offer this one to be
- * read as a second Player Score. The word is the whole answer, which is what makes the band safe.
- */
-export const OPINION_BAND_NAME: Readonly<Record<OpinionBand, string>> = {
-  GOOD: 'Good',
-  MIXED: 'Mixed',
-  POOR: 'Poor',
-};
-
-/**
- * **The two sentences under the card are gone, and this is what they said** (#384).
- *
- * `BAND_HAS_NO_COUNT` — *A band and no count, so no single answer can be worked out of it* —
- * explained to the subject why their own record is coarser than the ones they read all day.
  * `WRITTEN_BY_PLAYERS` — *Written by other players. It is not in the Player Score, and it hides
  * nobody and holds nobody back* — is asked for **by name** by `the-words.md` wherever the star
  * figure is drawn beside the reliability figure, and both of its halves were load-bearing:
  * naming the score says where the average is *not* counted, and the second half says a low one
  * acts on nobody.
  *
- * **They are removed by decision and the cost is real.** The row's label still names its author
+ * **It is removed by decision and the cost is real.** The row's label still names its author
  * — *Sportsmanship, by players* — which is the half a reader can infer; what is no longer said
- * anywhere on this sheet is that a low average **costs nothing**. A reader may now take a
- * `2,0 / 5` for a penalty the platform issued, and the subject is left to notice on their own
- * that their own record is coarser than everybody else's. If either reading turns out to
- * matter, the sentences are here and go back on the block rather than being rewritten.
+ * anywhere on this sheet is that a low average **costs nothing**. A reader may take a `2,0 / 5`
+ * for a penalty the platform issued — and since ADR-0179 §5 the subject reads that figure too,
+ * on the one screen they open to find out what is holding them back. If that reading turns out
+ * to matter, the sentence is here and goes back on the row rather than being rewritten. (A
+ * second sentence, *a band and no count, so no single answer can be worked out of it*, went
+ * with the band it explained.)
  */
 
 /**
- * **The answer as a listener meets it** — clauses, where the block draws a separator and a
- * slash, and the band's own sentence with it.
- *
- * One switch on the arm and not two: what a listener is told and how much of it there is are
- * the same fact about which arm this is, and splitting them is how a block ends up speaking one
- * arm's sentence over the other's figure.
- */
-function opinionClauses(opinion: Opinion): readonly string[] {
-  return opinion.kind === 'band'
-    ? [`${OPINION_BAND_NAME[opinion.band]}.`]
-    : [`${formatStars(opinion.average)} out of ${STAR_SCALE}, ${ratersReading(opinion.raters)}.`];
-}
-
-/**
- * **The row as a listener meets it** — its label, then its answer.
+ * **The row as a listener meets it** — its label, then the figure and its count as clauses,
+ * where the row draws a slash and a separator.
  *
  * It reads as a clause in the card's own sentence rather than as a block of its own, which is
- * what moving the figure onto the card made it. `WRITTEN_BY_PLAYERS` follows it in
- * {@link recordCardLabel} rather than being folded in here, because it is one promise about the
+ * what moving the figure onto the card made it. `WRITTEN_BY_PLAYERS` followed it in
+ * {@link recordCardLabel} rather than being folded in here, because it was one promise about the
  * row and not part of the answer.
  */
 function opinionReading(opinion: Opinion): string {
-  // The clause carries its own full stop — it was a block's prose before it was a row's —
-  // and `sentences` punctuates what it is handed, so it is dropped here rather than leaving
-  // the reading with two.
-  const said = opinionClauses(opinion).join(' ').replace(/\.$/, '');
-
-  return `${SPORTSMANSHIP_LABEL}, ${said}`;
+  const [stars, raters] = opinionParts(opinion);
+  return `${SPORTSMANSHIP_LABEL}, ${stars} out of ${STAR_SCALE}, ${raters}`;
 }
 
 /**
