@@ -209,6 +209,14 @@ Identity and account state.
   Revisit only if a person can be known to the system as a participant without holding an
   account, or if club staff share this accounts system — neither is true today.
 - **Authority** — role enum, `USER` or `ADMIN`.
+- **Tester** — a player whose account carries the **tester mark**: a real player who may be
+  given a **Feature flag**'s feature before anyone else. **A mark on the account, not an
+  `Authority`** — being shown something early grants no power over anyone, so `Authority` stays
+  `USER` or `ADMIN`. Owned by the backend, set and cleared by an admin command and never by the
+  player, and read by the player app as `is_tester` on its own account. The app sends it to the
+  flag evaluation as `isTester`; **no datafile ever names a tester**, because the datafile is
+  public ([ADR-0180](docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+  §9). _Avoid_: "beta user", "tester role".
 - **Email** — value object. Trimmed, lower-cased, RFC-ish validated, ≤ 320 chars.
 - **Name** — value object. *What a player is called.* Free text: trimmed, runs of whitespace
   collapsed to one space, 2–64 chars, **never unique** — two players may share one,
@@ -1912,6 +1920,15 @@ These are real and implemented; they apply across every context.
   implements them; wiring happens at the FastAPI boundary
   (`backend/app/api/dependencies.py`).
 - **UnitOfWork** — the transaction boundary port (`AsyncSqlAlchemyUnitOfWork` adapter).
+- **Feature flag** — a named switch that answers *is this feature active* for one player, and can
+  change without a build. Defined in a separate repository, `Raketa02/raketa-features`, turned
+  on or off by a pull request there, and **decided in the player app only**, from a datafile
+  built per environment ([ADR-0180](docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)).
+  Every flag has a **code default** declared once in the client, used when no datafile has
+  ever arrived. **Not environment configuration**: a flag may be *defaulted* per environment,
+  never *derived* from it ([`docs/environments.md`](docs/environments.md)). A gated screen reads
+  its flag once, when it mounts. The first is `find_a_game`. _Avoid_: "toggle" as a noun,
+  "kill switch" — a flag here acts at the next launch or foreground, never instantly.
 - **Read model** — the `users` table projection, written via `project_registered`, kept
   separate from the append-only event stream (CQRS-lite).
 

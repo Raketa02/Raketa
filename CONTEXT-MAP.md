@@ -8,6 +8,11 @@ A **polyglot monorepo** with two independently deployable apps that realize the
 - **`frontend_player/`** — React Native + Expo, TypeScript. The native iOS/Android app
   for players. Talks to FastAPI directly; tokens live in the OS keychain.
 
+Outside the monorepo, **`Raketa02/raketa-features`** holds the feature flags as Featurevisor
+YAML. It is not an app and holds no domain code: its CI builds one datafile per environment,
+and the player app fetches its own over HTTP and decides each flag on the device
+([ADR-0180](docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)).
+
 ```
                     ┌──────────────────┐
                     │   backend/       │  owns the domain + the contract
@@ -44,7 +49,7 @@ own **technical** vocabulary:
 
 | File | Scope | Owns |
 | --- | --- | --- |
-| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Player profile, Social tag, Availability grid, Search radius, Proposals opt-in, Challenge, Seat, Standing, Game, Result, Score, Counted game, Ghost game, Player Score, Strand, Player card, Record block, Run of form, At stake, On-court check, Sportsmanship, Stars, The card… |
+| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Player profile, Social tag, Availability grid, Search radius, Proposals opt-in, Challenge, Seat, Standing, Game, Result, Score, Counted game, Ghost game, Player Score, Strand, Player card, Record block, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Tester, Feature flag… |
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation, presentation module, copy deck… |
 
