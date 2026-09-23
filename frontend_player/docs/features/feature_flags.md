@@ -69,5 +69,8 @@ datafile stubbed at the socket (`stubDatafile`, `datafileFor`), and every walk w
 `datafileSettled` before it mounts the screen it asks about, because a gate that mounted first
 would be — correctly — answering from the rung below. `stubGate` serves no datafile, so every other
 suite runs on the code defaults, and jest's setup empties AsyncStorage after every test so a saved
-datafile never leaks into the next one. Fill-the-seat's two walks are in
-`challenges/components/challengeFill.test.tsx`. **Not seen on a device.**
+datafile never leaks into the next one. The toggle arriving mid-search is walked in
+`play/components/pool.test.tsx`, and fill-the-seat's two walks are in
+`challenges/components/challengeFill.test.tsx`. **Seen on a device on 2026-09-23**: the `local`
+rule turned off and on through the flags repo's serve script, each change showing at the next Play
+mount after a return to the foreground.

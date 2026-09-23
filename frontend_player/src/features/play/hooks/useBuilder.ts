@@ -180,16 +180,18 @@ export function useSearchRecord(searchId: string | undefined) {
 }
 
 /**
- * **Whether a search was run to finish a challenge** — fill-the-seat's, rather than one composed
- * on *Find a game*.
+ * **Whether this player already ran the search a route was opened on** — its record is held.
  *
- * The pool is one route for both: the builder under a challenge pushes `/play/pool` like the
- * builder under Play does. So the one thing that tells the pool route which journey it is on is
- * the record it was opened against, and `completing` is exactly that fact (ADR-0150 §2). The
- * `find_a_game` gate asks it, because fill-the-seat is not behind that flag
- * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
- * §7).
+ * A record is written by the act that minted the search, before anything is pushed onto it, so a
+ * builder or pool opened on one is the next step of a journey already under way: Find a game's,
+ * or fill-the-seat's. One opened on an id with no record behind it is a link, not a journey.
+ *
+ * The `find_a_game` gate asks it
+ * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §7): while the flag is off, the builder and the pool close to a link and
+ * stay open to a journey, so a toggle that lands mid-search never pulls a screen out from under
+ * the player (PRD #476 story 21), and fill-the-seat — which pushes the same `/play/pool` — is
+ * never behind the flag at all.
  */
-export function useSearchCompletesAChallenge(searchId: string | undefined): boolean {
-  return useSearchRecord(searchId)?.origin.completing !== undefined;
+export function useSearchWasRun(searchId: string | undefined): boolean {
+  return useSearchRecord(searchId) !== undefined;
 }

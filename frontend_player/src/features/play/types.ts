@@ -402,10 +402,11 @@ export {
 export { PoolScreen, type PoolScreenProps } from './components/PoolScreen';
 
 /**
- * Whether the search a pool was opened against is finishing a challenge — for the pool's route,
- * which keeps fill-the-seat's pool open while `find_a_game` closes Find a game's (ADR-0180 §7).
+ * Whether the player already ran the search a builder or pool was opened on — for those two
+ * routes, which stay open to a journey under way while `find_a_game` is off and close to a bare
+ * link (ADR-0180 §7).
  */
-export { useSearchCompletesAChallenge } from './hooks/useBuilder';
+export { useSearchWasRun } from './hooks/useBuilder';
 
 /**
  * The forecast, as the builder holds it — **every way round, each with its own number**, and

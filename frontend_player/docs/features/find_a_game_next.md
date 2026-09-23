@@ -15,4 +15,4 @@ rebuild would inherit without anybody deciding it. It is its own feature rather 
 `features/play` so the new version grows in a folder that never held the old one, and retiring the
 old one later is deleting a folder; it carries the full layer set, empty, for that reason.
 `FIND_A_GAME_NEXT_TEST_ID` is exported because a screen with nothing on it has nothing else a suite
-could find it by. **Not seen on a device.**
+could find it by. **Seen on a device on 2026-09-23.**

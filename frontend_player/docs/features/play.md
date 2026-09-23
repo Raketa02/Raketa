@@ -1183,13 +1183,15 @@ marker `expanded` — the flight to a fanned face, the fold on a second tap and 
 flag once when it mounts — `useFeatureOnMount` from `features/feature_flags` — and draws
 `FindAGameScreen` when it is on and `features/find_a_game_next`'s empty screen when it is off; the
 shell lays the root down again on every entry to the tab, which is when a toggle that arrived
-meanwhile shows. `play/builder.tsx` redirects to `/play` while it is off. **`play/pool.tsx` does
-too, unless the search it was opened against is finishing a challenge**: the builder under a
-challenge's fill-the-seat pushes the same `/play/pool` Find a game's does, and fill-the-seat is not
-behind the flag (story 25), so the route asks `useSearchCompletesAChallenge` — `origin.completing`
-on the record, the fact ADR-0150 §2 already made the thing a fill _is_. That exemption is a
-reading of the ticket rather than a line of it: the ticket names the builder under a challenge as
-unaffected and the pool route as gated, and the two meet at this one route. A toggle arriving
-between Find a game and the builder in one visit (a foreground in between) sends that builder back
-to Play; nobody stays on a flow the flag has closed. `findAGame.test.tsx` and the other Play suites
-are untouched: `stubGate` serves no datafile, which is every flag at its code default.
+meanwhile shows. **`play/builder.tsx` and `play/pool.tsx` close to a bare link while it is off,
+and never to a search under way**: each redirects to `/play` only when the search it was opened on
+has no record — `useSearchWasRun`, the record being written by the act that minted the search,
+before anything is pushed onto it. **Ruled by the user on 2026-09-23**, over the ticket's literal
+_the builder and pool routes redirect_: a toggle that lands by foreground while a player is on Find
+a game would otherwise bounce their next step to the empty screen, which is what story 21 and
+ADR-0180 §7's _nobody has a screen pulled out from under them mid-task_ refuse. The same rule is
+what keeps fill-the-seat open (story 25) — its builder pushes the same `/play/pool`, on a search the
+fill minted — so the special case for a challenge it replaced is gone. `pool.test.tsx` walks the
+toggle arriving mid-search; `theFindAGameGate.test.tsx` walks the bare links. `findAGame.test.tsx`
+and the other Play suites are untouched: `stubGate` serves no datafile, which is every flag at its
+code default.

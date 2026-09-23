@@ -44,7 +44,7 @@ import {
 const ON = datafileFor({ find_a_game: 'on' });
 const OFF = datafileFor({ find_a_game: 'off' });
 
-/** A search id that survives the builder's and the pool's param checks — no record behind it. */
+/** A search id that survives the builder's and the pool's param checks, and that nobody ran. */
 const SOME_SEARCH = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
 
 const PADEL_RATING: Wire['RatingResponse'] = {
@@ -178,10 +178,15 @@ describe('the Play tab, by what the datafile says', () => {
   });
 });
 
+/**
+ * A link to the builder or the pool with **no search behind it** — nothing on the Play tab could
+ * have started one while the feature is off. A search the player already ran is let through, and
+ * `play/components/pool.test.tsx` walks that half: the toggle arriving mid-search.
+ */
 describe('the routes under Play while the feature is off', () => {
   beforeEach(() => stubDatafile(transport, OFF));
 
-  it('sends the builder back to Play', async () => {
+  it('sends a link to the builder back to Play', async () => {
     await launch();
 
     act(() => router.push({ pathname: '/play/builder', params: { search: SOME_SEARCH } }));
@@ -190,7 +195,7 @@ describe('the routes under Play while the feature is off', () => {
     await expectThePlaceholder();
   });
 
-  it('sends the pool back to Play', async () => {
+  it('sends a link to the pool back to Play', async () => {
     await launch();
 
     act(() => router.push({ pathname: '/play/pool', params: { search: SOME_SEARCH, seat: '1' } }));

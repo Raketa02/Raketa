@@ -30,8 +30,9 @@ export const FEATURE_DEFAULTS = {
    * **Find a game**, the Play tab's first screen, with the builder and the pool behind it.
    *
    * On by default because it is the screen the app ships. Off is the empty placeholder that
-   * will host its replacement, and with it the builder and pool routes under Play send a player
-   * back to Play's root. Fill-the-seat and the Players tab are not behind it.
+   * will host its replacement, and with it a link to the builder or pool under Play lands on
+   * Play's root — a search already under way is finished. Fill-the-seat and the Players tab are
+   * not behind it.
    *
    * - **Owner:** the Play tab — `features/play` today, `features/find_a_game_next` once it grows.
    * - **Purpose:** let the rebuilt Find a game replace the current one in place, testers first.

@@ -508,7 +508,7 @@ describe('⚡ fill the seats', () => {
  * §7, [#479](https://github.com/Raketa02/Raketa/issues/479)). The flag closes Find a game and
  * the builder and pool under Play with it; a challenge already sent still has to be fillable, and
  * this journey reaches the builder at its own route and the pool at Play's — which the gate lets
- * through because the search it was opened against is finishing this challenge.
+ * through because it is opened on a search the fill already ran, like any search under way.
  */
 describe('with Find a game switched off', () => {
   beforeEach(() => stubDatafile(transport, datafileFor({ find_a_game: 'off' })));
