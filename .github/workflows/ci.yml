@@ -281,31 +281,42 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
-      # **One suite needs ten times what the next one does, so the run is given a
-      # ceiling, a worker count and a recycle rule** — measured, not guessed:
-      # `--logHeapUsage` over the whole suite puts `deck.test.tsx` at 5389 MB and
-      # the next heaviest at 541 MB. It mounts the entire router tree 78 times in
-      # one process, through the radar's gesture-and-animation pane.
+      # **The suite runs in two steps, because one file out of 294 needs ten times
+      # the memory of any other and nothing else should pay for it.** Measured
+      # with `--logHeapUsage` over the whole run: `deck.test.tsx` peaks at
+      # 5389 MB and the next heaviest suite at 541 MB. It mounts the entire
+      # router tree 78 times in one process, through the radar's
+      # gesture-and-animation pane.
       #
       # A `ubuntu-latest` runner has 16 GB but Node sizes its old space from that
-      # at roughly 4 GB, so the deck's worker aborted with SIGABRT (exit 134)
-      # while every assertion in it passed. `--max-old-space-size` lifts that; it
-      # is a ceiling and not a reservation, so the other 293 suites are unchanged.
+      # at roughly 4 GB, so sharing a run with the deck killed the job twice, in
+      # two different ways, and **neither read as a test failure**:
       #
-      # **`--workerIdleMemoryLimit` is the half that actually matters**, and
-      # leaving it out is what killed the runner itself the first time this was
-      # fixed: a worker is reused across suites and gives nothing back, so one
-      # crawled upward through ~147 of them while the other held the deck at
-      # 5.4 GB, and between them they starved the runner agent — 56 minutes of
-      # thrashing and then "lost communication with the server", which is not a
-      # test failure and does not read as one. Recycling any worker over 1500 MB
-      # between suites bounds the pair at roughly 5.9 GB, which is what the
-      # measured run shows: 294 suites, 4264 tests, 2m11s.
+      #   · heap raised, nothing else — the deck's worker aborted with SIGABRT
+      #     (exit 134) with every assertion in it passing;
+      #   · heap raised for two capped workers — a jest worker is reused across
+      #     suites and gives nothing back, so one crawled upward through ~147 of
+      #     them while the other held the deck, and together they starved the
+      #     runner agent: 56 minutes, then "lost communication with the server";
+      #   · heap raised with a recycle rule — bounded, but the 8 GB heap's major
+      #     GCs and the worker restarts stalled the event loop, and seven
+      #     timing-sensitive router suites blew their 5000 ms test budgets.
+      #
+      # So the deck is taken out of the shared run instead of the shared run
+      # being bent around it. **Everything else keeps the runner's own
+      # parallelism and Node's own heap** — 293 suites that have never needed
+      # either lifted (4184 tests, 1m40s) — and **the deck gets one process to
+      # itself**, where `--runInBand` means no worker to restart and no second
+      # peak to meet (80 tests, 31s). `testMatch` is confined to `src/`, so
+      # naming `/node_modules/` alongside the deck only restores the default
+      # this flag would otherwise replace.
       #
       # The deck's appetite is the thing to fix. This is what stops it failing a
       # build while it is still there.
       - name: Test
-        run: pnpm test -- --maxWorkers=2 --workerIdleMemoryLimit=1500MB
+        run: pnpm test -- --testPathIgnorePatterns "/node_modules/" "src/features/play/components/deck\.test\.tsx"
+      - name: Test — the deck, in a process of its own
+        run: pnpm test -- --runTestsByPath src/features/play/components/deck.test.tsx --runInBand
         env:
           NODE_OPTIONS: --max-old-space-size=8192
       # A native module may be imported from exactly one port, and the keychain
