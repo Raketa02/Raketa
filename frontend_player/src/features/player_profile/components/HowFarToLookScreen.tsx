@@ -74,6 +74,8 @@ export function HowFarToLookScreen() {
             ) : null}
             <Button
               label={dirty ? SAVE : SAVED}
+              // Green and saying so while there is nothing to save — the week's rule.
+              variant={dirty ? 'primary' : 'settled'}
               size="lg"
               disabled={!dirty}
               busy={save.isPending}

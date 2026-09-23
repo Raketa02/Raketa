@@ -98,6 +98,9 @@ export function TagsScreen() {
 
             <Button
               label={socialTagsSaveLabel(standing, dirty)}
+              // Green only when the label is *Saved*: a selection under the floor is shut
+              // with the step's own words, and those are an ask, not a fact settled.
+              variant={dirty || standing.kind !== 'ready' ? 'primary' : 'settled'}
               size="lg"
               disabled={standing.kind !== 'ready' || !dirty}
               busy={save.isPending}

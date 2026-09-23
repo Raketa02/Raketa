@@ -21,8 +21,11 @@
  *
  * Pre-filled from `GET /users/me`, which bootstrap seeds before the tab can be pressed. The
  * mutation writes what the server recorded into that cache and awaits a fresh read before it
- * resolves (ADR-0171 §3), so by the time this screen goes back the tab's header card and the
- * *Name* row already say the new name.
+ * resolves (ADR-0171 §3), and the form drops what was typed the moment that lands — so the
+ * boxes then show the re-read, *Save* turns green and says *Saved* on the button's own fade,
+ * and the tab's header card and the *Name* row already say the new name when the player goes
+ * back. **The screen stays**, as every screen behind a row does: the way back is the header's,
+ * and a save is not a reason to leave.
  */
 
 import { useRouter } from 'expo-router';
@@ -45,7 +48,6 @@ export function NameScreen() {
   // flow cannot produce.
   const form = useNamingForm({
     initial: { name: user.data?.name ?? '', nickname: user.data?.nickname ?? '' },
-    onSaved: () => router.back(),
   });
 
   return (
@@ -55,10 +57,11 @@ export function NameScreen() {
       onBack={router.back}
       avoidsKeyboard
       action={
-        // *Saved* while the boxes are as they opened — the button says why it is shut, as the
-        // week's and the radius' do (Part 16, 2026-09-17).
+        // *Saved*, in green, while the boxes are as they opened — the button says why it is
+        // shut, as the week's and the radius' do (Part 16, 2026-09-17 and 2026-09-18).
         <Button
           label={form.changed ? SAVE_NAME.label : SAVE_NAME.savedLabel}
+          variant={form.changed ? 'primary' : 'settled'}
           size="lg"
           disabled={!form.changed}
           busyLabel={SAVE_NAME.busyLabel}

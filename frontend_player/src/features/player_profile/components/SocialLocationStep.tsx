@@ -38,15 +38,19 @@
  * area still goes to the draft and the commit exactly as before.
  *
  * The green is `Button`'s `settled` variant, and the **words change with it**: a state
- * carried by a fill alone is a state nobody who cannot see the fill is told about.
+ * carried by a fill alone is a state nobody who cannot see the fill is told about. The one
+ * moment on this step that moves — the control arriving at *settled* — is the button's own
+ * (6.1, amended 2026-09-18): the coral fades into the mint under the new words, once, never on
+ * the way back, and not at all under reduced motion. This step used to fade the whole control
+ * for the same reason; now that every *Save* on the You tab arrives the same way, the fade
+ * lives with the fill it is about.
  */
 
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, type ReactNode } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { openAppSettings } from '@/shared/lib/platform';
-import { Button, Note, theme, useReducedMotion } from '@/shared/ui';
+import { Button, Note } from '@/shared/ui';
 
 import { stepAfter } from '../domain/socialSteps';
 import { useLocationStep } from '../hooks/useLocationStep';
@@ -108,17 +112,15 @@ export function SocialLocationStep() {
           while the action bar's continue takes the accent. Pressing it then re-reads
           something already answered, which is why it stays a control and says which act it
           is now offering. */}
-      <SettlingControl settled={settled}>
-        <Button
-          label={captureLabel(area)}
-          variant={settled ? 'settled' : 'primary'}
-          size="lg"
-          busy={standing.reading}
-          busyLabel={READING_WORD}
-          onPress={() => void capture()}
-          accessibilityHint={settled ? READ_AGAIN_HINT : 'Asks your phone for your position, once'}
-        />
-      </SettlingControl>
+      <Button
+        label={captureLabel(area)}
+        variant={settled ? 'settled' : 'primary'}
+        size="lg"
+        busy={standing.reading}
+        busyLabel={READING_WORD}
+        onPress={() => void capture()}
+        accessibilityHint={settled ? READ_AGAIN_HINT : 'Asks your phone for your position, once'}
+      />
 
       {refusal === undefined ? null : (
         // Announced: a player who has just dismissed an OS dialog is looking at the
@@ -143,52 +145,6 @@ export function SocialLocationStep() {
       ) : null}
     </SocialStepLayout>
   );
-}
-
-/**
- * The one moment on this step that moves: the control arriving at *settled*.
- *
- * A **fade**, which is the only kind of motion the design system has for something that is
- * not an overlay (12.1) — the control is redrawn green with new words underneath, and the
- * fade is what stops that reading as a flicker. It plays once per transition and never on
- * the way back, because there is no way back: an area, once read, is only ever replaced by
- * another one.
- *
- * **Skipped entirely when the OS asks for reduced motion**, in which case the settled state
- * simply is. Nothing is carried by the animation — the fill and the label both say it — so
- * a player who never sees it has been told the same thing.
- */
-function SettlingControl({
-  settled,
-  children,
-}: {
-  readonly settled: boolean;
-  readonly children: ReactNode;
-}) {
-  const reduced = useReducedMotion();
-  const fade = useRef(new Animated.Value(1)).current;
-  /** What the last render was told, so a re-render on some other state does not replay it. */
-  const wasSettled = useRef(settled);
-
-  useEffect(() => {
-    const arrived = settled && !wasSettled.current;
-    wasSettled.current = settled;
-    if (!arrived) return;
-
-    if (reduced) {
-      fade.setValue(1);
-      return;
-    }
-
-    fade.setValue(0);
-    Animated.timing(fade, {
-      toValue: 1,
-      duration: theme.motion.fade,
-      useNativeDriver: true,
-    }).start();
-  }, [settled, reduced, fade]);
-
-  return <Animated.View style={{ opacity: fade }}>{children}</Animated.View>;
 }
 
 const s = StyleSheet.create({

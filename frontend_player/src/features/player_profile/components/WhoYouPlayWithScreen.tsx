@@ -109,6 +109,10 @@ function SavedGroup<T extends string, H extends T | undefined>({
       <Button
         label={label}
         accessibilityLabel={groupSaveLabel(label, group)}
+        // Green and saying so while the group's draft is the profile's own — the week's rule,
+        // once per group, so the one that was just saved turns green and the other stays as
+        // it was.
+        variant={dirty ? 'primary' : 'settled'}
         size="lg"
         disabled={!dirty}
         busy={isPending}

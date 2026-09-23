@@ -15,8 +15,10 @@
  * whole week, and what the screen then draws is **the route's answer** written into the cache
  * — repeated cells collapsed, the platform's reading order — never the draft echoed back. The
  * draft is dropped the moment the save lands, so the grid and the row's live line are then
- * one read. The button is shut while the draft is the week already held: a save that changes
- * nothing is a round trip for an answer in hand.
+ * one read. The button is shut while the draft is the week already held — and **green, saying
+ * *Saved***: a save that changes nothing is a round trip for an answer in hand, and the
+ * button's state is the message (6.1 `settled`). It turns green as the save lands, on the
+ * button's own fade, and is simply green on a screen opened with nothing to save.
  *
  * ## An empty week is a legal value here
  *
@@ -82,6 +84,7 @@ export function YourWeekScreen() {
             ) : null}
             <Button
               label={dirty ? SAVE_YOUR_WEEK : SAVED}
+              variant={dirty ? 'primary' : 'settled'}
               size="lg"
               disabled={!dirty}
               busy={save.isPending}

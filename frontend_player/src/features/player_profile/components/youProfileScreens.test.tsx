@@ -8,14 +8,17 @@
  * suites already prove the controls. What is proved here is what the tab added: **a draft
  * until the button** — the week and the radius write only on *Save*, and the route's answer is
  * what the row's live line then says — and the area's press ending in the cold start's route,
- * with the step's permission states behind it.
+ * with the step's permission states behind it. And, since 2026-09-18, that a *Save* with
+ * nothing to send is drawn green and saying *Saved* (6.1 `settled`) — on opening, and again the
+ * moment a save lands.
  */
 
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
-import { doorRowLabel } from '@/shared/ui';
+import { doorRowLabel, theme } from '@/shared/ui';
+import { fillOf } from '@/test-support/drawn';
 import {
   PROFILE_SURFACE_PATH,
   launchSignedIn,
@@ -151,8 +154,10 @@ describe('Your week', () => {
 
     expect(ticked()).toEqual(['Tuesday evening', 'Saturday morning']);
     expect(screen.getByText(availabilityFootnote({ kind: 'ticked', count: 2 }))).toBeTruthy();
-    // Nothing has changed, and the button says so rather than merely being grey.
+    // Nothing has changed, and the button says so rather than merely being grey — and is
+    // green, whole, because the state is the message.
     expect(screen.getByLabelText(SAVED).props.accessibilityState?.disabled).toBe(true);
+    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
   });
 
   it('writes nothing on a press, and the whole week on Save — then draws the route’s answer', async () => {
@@ -171,6 +176,8 @@ describe('Your week', () => {
     fireEvent.press(screen.getByLabelText('Wednesday evening'));
     expect(transport.requestsTo('PUT', AVAILABILITY_PATH)).toHaveLength(0);
     expect(screen.getByText(availabilityFootnote({ kind: 'ticked', count: 3 }))).toBeTruthy();
+    // Something to send: the accent, and the act's own words.
+    expect(fillOf(screen.getByLabelText(SAVE_YOUR_WEEK))).toBe(theme.color.coralInk);
 
     fireEvent.press(screen.getByLabelText(SAVE_YOUR_WEEK));
 
@@ -182,8 +189,10 @@ describe('Your week', () => {
         { day: 3, part: 'EVENING' },
       ],
     });
-    // Saved: the draft is dropped and the grid is the cache, which is the route's week.
+    // Saved: the draft is dropped and the grid is the cache, which is the route's week — and
+    // the button has turned green under the word.
     expect(await screen.findByLabelText(SAVED)).toBeTruthy();
+    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
     expect(ticked()).toEqual(['Tuesday evening', 'Wednesday evening', 'Saturday morning']);
 
     // And the row's live line follows the cache on the way back.
@@ -256,6 +265,7 @@ describe('How far to look', () => {
 
     expect(theSlider().props.accessibilityValue.now).toBe(12);
     expect(screen.getByLabelText(SAVED).props.accessibilityState?.disabled).toBe(true);
+    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
   });
 
   it('writes nothing as the slider moves, and the number on Save — then draws the route’s answer', async () => {
@@ -275,6 +285,7 @@ describe('How far to look', () => {
     await waitFor(() => expect(transport.requestsTo('PUT', RADIUS_PATH)).toHaveLength(1));
     expect(transport.requestsTo('PUT', RADIUS_PATH)[0]?.body).toEqual({ search_radius_km: 14 });
     expect(await screen.findByLabelText(SAVED)).toBeTruthy();
+    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
     expect(theSlider().props.accessibilityValue.now).toBe(15);
 
     fireEvent.press(screen.getByLabelText('Back'));
@@ -288,9 +299,11 @@ describe('How far to look', () => {
 
     step('increment');
     expect(screen.getByLabelText(SAVE)).toBeTruthy();
+    expect(fillOf(screen.getByLabelText(SAVE))).toBe(theme.color.coralInk);
     step('decrement');
 
     expect(screen.getByLabelText(SAVED).props.accessibilityState?.disabled).toBe(true);
+    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
     expect(transport.requestsTo('PUT', RADIUS_PATH)).toHaveLength(0);
   });
 });

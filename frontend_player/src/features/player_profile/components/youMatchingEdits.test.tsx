@@ -10,13 +10,16 @@
  * **saves alone** through its own route; the reach sentence is said at the press and never for
  * *Anyone*; the row says the preference and **never the gender**; and the opt-in **sends on
  * every press** with the version on screen, the card following the reply rather than the press.
+ * And, since 2026-09-18, that each group's *Save* is green and saying *Saved* while its draft
+ * is the profile's own — so the group just saved turns green and the other stays as it was.
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
-import { doorRowLabel } from '@/shared/ui';
+import { doorRowLabel, theme } from '@/shared/ui';
+import { fillOf } from '@/test-support/drawn';
 import {
   PROFILE_SURFACE_SERVED,
   launchSignedIn,
@@ -121,6 +124,7 @@ const row = (title: string, line: string) => screen.getByLabelText(doorRowLabel(
 const control = (label: string) => screen.getByLabelText(label);
 const isSelected = (label: string) => control(label).props.accessibilityState?.selected;
 const isDisabled = (label: string) => control(label).props.accessibilityState?.disabled;
+const isGreen = (label: string) => fillOf(control(label)) === theme.color.mintInk;
 
 const GENDER_PATH = '/api/v1/players/me/gender';
 const PREFERENCE_PATH = '/api/v1/players/me/gender-preference';
@@ -188,6 +192,8 @@ describe('Who you play with', () => {
     expect(SAVED_ABOUT_YOU).toBe('Saved — About you');
     expect(isDisabled(SAVED_ABOUT_YOU)).toBe(true);
     expect(isDisabled(SAVED_PREFERENCE)).toBe(true);
+    expect(isGreen(SAVED_ABOUT_YOU)).toBe(true);
+    expect(isGreen(SAVED_PREFERENCE)).toBe(true);
     expect(screen.queryByLabelText(SAVE_ABOUT_YOU)).toBeNull();
     expect(screen.queryByLabelText(SAVE_PREFERENCE)).toBeNull();
     expect(screen.queryByLabelText('Continue')).toBeNull();
@@ -212,7 +218,9 @@ describe('Who you play with', () => {
     expect(isSelected('Anyone')).toBe(false);
     // One Save opened and one still shut: the group about the player has not changed.
     expect(isDisabled(SAVE_PREFERENCE)).toBe(false);
+    expect(fillOf(control(SAVE_PREFERENCE))).toBe(theme.color.coralInk);
     expect(isDisabled(SAVED_ABOUT_YOU)).toBe(true);
+    expect(isGreen(SAVED_ABOUT_YOU)).toBe(true);
     expect(puts(PREFERENCE_PATH)).toHaveLength(0);
 
     fireEvent.press(control(SAVE_PREFERENCE));
@@ -221,6 +229,7 @@ describe('Who you play with', () => {
     expect(puts(PREFERENCE_PATH)[0]?.body).toEqual({ gender_preference: 'WOMEN_ONLY' });
     expect(puts(GENDER_PATH)).toHaveLength(0);
     expect(await screen.findByLabelText(SAVED_PREFERENCE)).toBeTruthy();
+    expect(isGreen(SAVED_PREFERENCE)).toBe(true);
     expect(screen.getByText(womenOnly)).toBeTruthy();
 
     fireEvent.press(control('Back'));
@@ -260,6 +269,7 @@ describe('Who you play with', () => {
     expect(puts(GENDER_PATH)[0]?.body).toEqual({ gender: 'PREFER_NOT_TO_SAY' });
     expect(puts(PREFERENCE_PATH)).toHaveLength(0);
     expect(await screen.findByLabelText(SAVED_ABOUT_YOU)).toBeTruthy();
+    expect(isGreen(SAVED_ABOUT_YOU)).toBe(true);
     expect(isDisabled(SAVED_PREFERENCE)).toBe(true);
     expect(isSelected('Prefer not to say')).toBe(true);
 

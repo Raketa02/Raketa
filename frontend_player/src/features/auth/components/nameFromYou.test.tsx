@@ -7,15 +7,17 @@
  * The step's own suite proves the form — what is refused before a round trip, what the server
  * refuses, that the player is re-read before anything moves. What is proved here is what the
  * row adds: the boxes open **pre-filled**, *Save* is the same act, a taken handle is refused in
- * the app's sentence under the box **on the tab too**, and a save that landed is what the row
- * and the header say on the way back.
+ * the app's sentence under the box **on the tab too**, a save that landed leaves the screen
+ * where it is with *Save* green and saying *Saved* over the re-read (6.1 `settled`, amended
+ * 2026-09-18), and it is what the row and the header say on the way back.
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
-import { doorRowLabel } from '@/shared/ui';
+import { doorRowLabel, theme } from '@/shared/ui';
+import { fillOf } from '@/test-support/drawn';
 import {
   GATE_USER,
   launchSignedIn,
@@ -87,18 +89,21 @@ describe('the Name row', () => {
     expect(screen.getByLabelText(NAME_LABEL).props.value).toBe(NAME);
     expect(screen.getByLabelText(NICKNAME_LABEL).props.value).toBe(NICKNAME);
     expect(screen.getByText(NICKNAME_RULE)).toBeTruthy();
-    // Nothing has changed, and the button says so rather than merely being grey.
+    // Nothing has changed, and the button says so rather than merely being grey — and is
+    // green, whole, because the state is the message.
     expect(screen.getByLabelText(SAVE_NAME.savedLabel).props.accessibilityState?.disabled).toBe(
       true,
     );
+    expect(fillOf(screen.getByLabelText(SAVE_NAME.savedLabel))).toBe(theme.color.mintInk);
     // No question over the boxes: the step's title does not need repeating on an edit.
     expect(screen.queryByText('How should people see you?')).toBeNull();
 
     fireEvent.changeText(screen.getByLabelText(NAME_LABEL), 'Ada K');
     expect(screen.getByLabelText(SAVE_NAME.label).props.accessibilityState?.disabled).toBe(false);
+    expect(fillOf(screen.getByLabelText(SAVE_NAME.label))).toBe(theme.color.coralInk);
   });
 
-  it('saves through the naming act, re-reads the player, and the row says the new name', async () => {
+  it('saves through the naming act, re-reads the player, stays green under Saved, and the row says the new name', async () => {
     // The server records the name normalised, and the re-read is what every screen then says.
     transport.on('PUT', NAMING_PATH, () =>
       json<Wire['NamingResponse']>({ name: 'Ada King', nickname: 'ada.k' }),
@@ -115,9 +120,18 @@ describe('the Name row', () => {
       name: 'Ada King',
       nickname: 'ada.k',
     });
-    // Re-read, then back: the stub still answers the gate's name, and that is what is drawn —
-    // the route's answer written into the cache is the server's re-read, never the box.
+    // Re-read, and the screen stays: the stub still answers the gate's name, and that is what
+    // the boxes then hold — the route's answer written into the cache is the server's re-read,
+    // never the box — under a *Save* gone green with nothing left to send.
     await waitFor(() => expect(transport.requestsTo('GET', ME_PATH).length).toBe(readsBefore + 1));
+    expect(await screen.findByLabelText(SAVE_NAME.savedLabel)).toBeTruthy();
+    expect(screen).toHavePathname('/you/name');
+    expect(fillOf(screen.getByLabelText(SAVE_NAME.savedLabel))).toBe(theme.color.mintInk);
+    expect(screen.getByLabelText(NAME_LABEL).props.value).toBe(NAME);
+    expect(screen.getByLabelText(NICKNAME_LABEL).props.value).toBe(NICKNAME);
+
+    // And the row says the re-read on the way back.
+    fireEvent.press(screen.getByLabelText('Back'));
     await waitFor(() => expect(screen).toHavePathname('/you'));
     expect(
       await screen.findByLabelText(doorRowLabel(NAME_ROW_TITLE, nameLine(NAME, NICKNAME))),

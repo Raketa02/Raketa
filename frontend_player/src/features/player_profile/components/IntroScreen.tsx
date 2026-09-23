@@ -109,6 +109,10 @@ export function IntroScreen() {
 
             <Button
               label={dirty ? SAVE : SAVED}
+              // Green and saying so while the box holds the line the profile does — the
+              // week's rule. A refused or blank draft is shut coral: nothing about it is
+              // settled.
+              variant={dirty ? 'primary' : 'settled'}
               size="lg"
               // Shut on a line the server would refuse on shape, on a blank box — the way to
               // none is the control below — and on the line already held.

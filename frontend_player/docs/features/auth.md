@@ -68,3 +68,15 @@ tab was a placeholder; the header card and the _Name_ row say the first two, and
 no row because it has no route (ADR-0179 §9) — a fact with no door under a list of facts with
 doors reads as a broken row. _Sign out_ stays at the foot, `dark` and not `primary`, the only
 way out of a session.
+
+**A save on the Name screen stays, and turns _Save_ green** (2026-09-18, with the You tab's
+other six _Save_s — design-system 6.1 as amended that day). The screen used to go back on its
+own the moment the re-read landed, which was the one place on the tab where a save that landed
+was never seen landing. Now the form is **a draft over the player**, the tab's shape for every
+control behind a row: each box shows what was typed or the player's own answer while nothing
+was, `changed` is the draft against what is held, and the draft is dropped when the mutation
+resolves — after the re-read — so the boxes then hold **the server's re-read** and never what
+was typed, and _Save_ is shut again as a green `settled` `Saved`, arriving on the button's own
+fade. `onSaved` is optional: the naming step still passes `router.replace('/')`, the Name screen
+passes nothing, and the way back is the header's. `nameFromYou.test.tsx` walks it. **Not seen
+on a device**: the boxes re-drawn from the re-read under a green button.

@@ -22,6 +22,17 @@
  * control that turns green must also change its words, and the screen that uses this is
  * responsible for that half.
  *
+ * **A settled button that is shut keeps its fill, and its arrival is the one thing here that
+ * moves** (amended 2026-09-18, for the You tab's *Save*s). The 40% dim says *not now* about
+ * an action; on a settled button the fill *is* the fact, and a fact at 40% reads as half a
+ * fact — so `Saved` under a draft that is the profile's own is drawn whole, and the words
+ * (past tense) and `accessibilityState.disabled` carry the *nothing to press* half between
+ * them. Arriving at `settled` from any other variant cross-fades the fill it came from into
+ * the mint over one `motion.fade`: the fill it arrived from is drawn over the new one and
+ * fades out, and never on the way back or on first mount, where the state simply is. Under
+ * reduced motion it simply is too — nothing is carried by the fade that the fill and the
+ * label do not both say.
+ *
  * **`on-dark` is the sixth variant, and it was specified in 6.1 and unbuilt** until Play's
  * one-tap declaration needed it. It is 5.2's repaint read as a control: `onDarkFill` over the
  * dark card, a white label, and `onDarkFillPressed` under the finger — the two tokens the
@@ -73,8 +84,18 @@
  * pill reopens the record rather than reaching for the prop.
  */
 
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
+import { useReducedMotion } from './overlay';
 import { theme } from './theme';
 
 export type ButtonVariant =
@@ -143,6 +164,7 @@ export function Button({
   // The accessible name follows what is drawn. A button reading "Starting…" while it
   // announces "Rate 1 sport" hands two different apps to two different players.
   const shown = busy ? (busyLabel ?? label) : label;
+  const arrival = useArrivalAtSettled(variant);
 
   return (
     <Pressable
@@ -162,10 +184,24 @@ export function Button({
         FILL[variant],
         gloss !== undefined ? s.glossed : undefined,
         pressed && !blocked ? PRESSED[variant] : undefined,
-        blocked ? s.blocked : undefined,
+        // Never on `settled`: the fill is the fact, and the words say why it is shut.
+        blocked && variant !== 'settled' ? s.blocked : undefined,
         style,
       ]}
     >
+      {arrival === undefined ? null : (
+        // The fill it arrived from, over the new one and on its way out. Under the label,
+        // so the words are never what fades; inert, so it is never what is pressed.
+        <Animated.View
+          testID="button-arrival"
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            SHAPE[shape],
+            { backgroundColor: arrival.from, opacity: arrival.fade },
+          ]}
+        />
+      )}
       <View style={[s.labelBox, gloss !== undefined ? s.labelBoxGlossed : undefined]}>
         <Text style={[s.label, LABEL[variant]]} numberOfLines={1}>
           {shown}
@@ -176,6 +212,54 @@ export function Button({
       </View>
     </Pressable>
   );
+}
+
+/**
+ * The arrival at `settled` — the module note's one motion.
+ *
+ * What it returns is the fill the button came from and the value that fades it out, or nothing
+ * while there is nothing on its way out: on first mount, on every variant that is not
+ * `settled`, on `settled` reached from `settled`, under reduced motion, and once the fade
+ * has finished. The variant is compared during render rather than in an effect so the old
+ * fill is on the first frame of the new state instead of one frame late, which would draw
+ * the mint whole for a frame and then put the coral back over it.
+ *
+ * The value rests at 1 between arrivals, so the layer is opaque on the frame it mounts and the
+ * fade runs 1 → 0; a variant that leaves `settled` mid-fade unmounts the layer, stops the
+ * timing and puts the value back to rest.
+ */
+function useArrivalAtSettled(
+  variant: ButtonVariant,
+): { readonly from: string; readonly fade: Animated.Value } | undefined {
+  const reduced = useReducedMotion();
+  const fade = useRef(new Animated.Value(1)).current;
+  const [seen, setSeen] = useState(variant);
+  const [from, setFrom] = useState<ButtonVariant>();
+
+  if (variant !== seen) {
+    setSeen(variant);
+    setFrom(variant === 'settled' && !reduced ? seen : undefined);
+  }
+
+  useEffect(() => {
+    if (from === undefined) return;
+
+    const timing = Animated.timing(fade, {
+      toValue: 0,
+      duration: theme.motion.fade,
+      useNativeDriver: true,
+    });
+    timing.start(({ finished }) => {
+      if (finished) setFrom(undefined);
+    });
+
+    return () => {
+      timing.stop();
+      fade.setValue(1);
+    };
+  }, [from, fade]);
+
+  return from === undefined ? undefined : { from: FILL[from].backgroundColor, fade };
 }
 
 const s = StyleSheet.create({

@@ -302,3 +302,27 @@ version while the third promise reads differently — the argument is above and 
 order, which follows the copy over the prototype. **Not seen on a device**: the two cards'
 rhythm under the tab's chrome, the tag beside _Your answer_, and the busy state on a pressed
 answer.
+
+**A _Save_ with nothing to send is green and says so, and turns green as the save lands**
+(2026-09-18; design-system [6.1](../design-system.md#61-button) as amended that day). The seven
+_Save_s behind the tab's rows — the week, the radius, the two gender groups, the tags, the
+intro, and auth's name — said `Saved` while the draft was the profile's own and were drawn as a
+`primary` at the disabled 40%: a coral saying _done_ at less than half strength. Each is now
+`variant={dirty ? 'primary' : 'settled'}` and nothing else about it changed — the labels, the
+disabled state and its spoken name are as they were — and the two things that make that a
+picture are the button's own: a shut `settled` keeps its fill, and **arriving at `settled`
+cross-fades the coral into the mint over one `fade`**, under the label, once, never on the way
+back, skipped under reduced motion. So a screen opened with nothing to save is simply green,
+and a save that lands turns green under the word as the draft is dropped. **Two are not
+green**: the tags' _Pick 1 more tag to save_, an ask shut under the floor, and the intro's
+_Save_ over a refused or blank line — nothing about either is settled, so both stay a dimmed
+`primary` (`standing.kind !== 'ready'` and `line === undefined` respectively, which is what the
+disabled condition already said). The location step's `SettlingControl` — the whole control
+fading in on arrival at _Location saved_ — retires, because the button now does the same thing
+to the fill alone and two fades on one arrival read as neither. `Photos`, `Game suggestions`
+and `What kind of game` have no _Save_ and are untouched; `Where you play`'s _Location saved_
+gains the arrival fade for free. The four You suites read the fill beside the word through
+`test-support/drawn.ts`, and `Button.test.tsx` pins the fade's shape on a fake clock. **Not
+seen on a device**: the cross-fade's length against the busy dim it follows — `Saving…` is
+dimmed coral and `Saved` is whole mint, and the jump in opacity lands on the same frame the
+fade starts.

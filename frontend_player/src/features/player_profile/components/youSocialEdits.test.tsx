@@ -9,14 +9,16 @@
  * here is what the tab added: each screen **draws from the read**; the photos **write on every
  * change** — a promotion, a removal, an upload that landed — where the tags and the intro are
  * a draft until *Save*; the intro's three refusals land where they land; and the row's live
- * line follows the cache on the way back.
+ * line follows the cache on the way back. And, since 2026-09-18, that a *Save* with nothing to
+ * send is drawn green and saying *Saved* — and an ask under the floor is not.
  */
 
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
-import { doorRowLabel } from '@/shared/ui';
+import { doorRowLabel, theme } from '@/shared/ui';
+import { fillOf } from '@/test-support/drawn';
 import {
   OWN_RECORD_PATH,
   PROFILE_OPTIONS_SERVED,
@@ -429,6 +431,7 @@ describe('Tags', () => {
       'Here to improve',
     ]);
     expect(screen.getByLabelText(SAVED).props.accessibilityState?.disabled).toBe(true);
+    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
     expect(screen.queryByLabelText('Continue')).toBeNull();
   });
 
@@ -451,6 +454,7 @@ describe('Tags', () => {
     fireEvent.press(screen.getByLabelText('Here to compete'));
     fireEvent.press(screen.getByLabelText('Laughs off mistakes'));
     expect(screen.getByLabelText(SAVE).props.accessibilityState?.disabled).toBe(false);
+    expect(fillOf(screen.getByLabelText(SAVE))).toBe(theme.color.coralInk);
     expect(puts(TAGS_PATH)).toHaveLength(0);
 
     fireEvent.press(screen.getByLabelText('Shares a lift'));
@@ -464,6 +468,7 @@ describe('Tags', () => {
       social_tags: [...HELD_TAGS, 'HERE_TO_COMPETE', 'LAUGHS_OFF_MISTAKES'],
     });
     expect(await screen.findByLabelText(SAVED)).toBeTruthy();
+    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
 
     fireEvent.press(screen.getByLabelText('Back'));
     expect(
@@ -496,6 +501,8 @@ describe('Tags', () => {
     expect(
       screen.getByLabelText('Pick 1 more tag to save').props.accessibilityState?.disabled,
     ).toBe(true);
+    // An ask, shut: not the settled green, which would say the opposite of the words on it.
+    expect(fillOf(screen.getByLabelText('Pick 1 more tag to save'))).toBe(theme.color.coralInk);
     expect(puts(TAGS_PATH)).toHaveLength(0);
   });
 
@@ -532,6 +539,7 @@ describe('Intro', () => {
 
     expect(box().props.value).toBe(HELD_INTRO);
     expect(screen.getByLabelText(SAVED).props.accessibilityState?.disabled).toBe(true);
+    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
     expect(screen.getByLabelText(REMOVE_INTRO)).toBeTruthy();
   });
 
@@ -541,6 +549,8 @@ describe('Intro', () => {
     fireEvent.changeText(box(), 'x'.repeat(INTRO_CAP + 1));
     expect(screen.getByText(INTRO_REFUSAL_SENTENCE.too_long)).toBeTruthy();
     expect(screen.getByLabelText(SAVE).props.accessibilityState?.disabled).toBe(true);
+    // Shut coral, not green: nothing about a refused line is settled.
+    expect(fillOf(screen.getByLabelText(SAVE))).toBe(theme.color.coralInk);
 
     fireEvent.changeText(box(), 'Two lines\nof this');
     expect(screen.getByText(INTRO_REFUSAL_SENTENCE.multiline)).toBeTruthy();
@@ -586,6 +596,7 @@ describe('Intro', () => {
     await waitFor(() => expect(puts(INTRO_PATH)).toHaveLength(1));
     expect(puts(INTRO_PATH)[0]?.body).toEqual({ intro: 'Up for doubles most evenings.' });
     expect(await screen.findByLabelText(SAVED)).toBeTruthy();
+    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
 
     fireEvent.press(screen.getByLabelText('Back'));
     expect(
