@@ -258,6 +258,18 @@ Which tier runs against which environment, and the one line that is not crossed.
 | End-to-end (Playwright) | `local` today. `development` or `staging` once either is provisioned. | Each test owns its data. |
 | Manual exploratory | `local`; `development` or `staging` once provisioned. | |
 
+**How the suite runs.** The merge gate runs every test of every app a push changes, never a
+subset. It runs them in parallel, across tiered jobs per app and split into shards, behind
+one `ci-ok` check. The full suite at the end of a ticket runs in parallel too, across the
+laptop's cores. Coverage is never measured on a pull request: it runs nightly, on every push
+to `main`, and on demand with `make coverage`, and nothing gates on it. Running only the tests
+a change can affect (`make test-affected`, `pnpm test:affected`) is for iterating on a ticket.
+It is never what lets a change merge, because the selector cannot see the tests that read the
+source tree as text. Decided by
+[ADR-0181](adr/0181-the-merge-gate-runs-every-test-and-choosing-tests-is-the-inner-loops-job.md).
+**None of it is built yet.** The pieces land with #482–#490, and until they do CI runs each
+app in one serial job and measures the backend's coverage on every push.
+
 **Production is never where a destructive automated test runs.** No test suite, load
 generator, fixture teardown, database reset or seed run targets production — not gated behind a
 flag, not "carefully", not with a confirmation prompt. The guarantee is structural rather than
