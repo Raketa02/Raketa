@@ -10890,6 +10890,11 @@
             "type": "boolean",
             "title": "Is Active"
           },
+          "is_tester": {
+            "type": "boolean",
+            "title": "Is Tester",
+            "description": "Whether this account carries the **tester mark**: a real player who may be given a feature before anyone else. Set and cleared by an admin command, never by the player, and `false` for every account until then. **Not a role** \u2014 `authority` does not move with it. The player app passes it to flag evaluation as `isTester`, so no published datafile ever has to name a tester."
+          },
           "created_at": {
             "anyOf": [
               {
@@ -10915,7 +10920,8 @@
           "email",
           "authority",
           "is_admin",
-          "is_active"
+          "is_active",
+          "is_tester"
         ],
         "title": "UserResponse",
         "description": "The account, plus the one fact about it onboarding's entry gate needs.\n\n``has_player_profile`` is not a property of a ``User`` and the domain layer\nhas no idea it exists \u2014 it is answered by the Player profile context and\njoined here, on the response, because the gate reads it on every cold launch\nand a second round trip for one boolean would be a second thing to fail\n(``docs/adr/0090``).\n\n``name`` and ``nickname`` are **null until the naming**, and this is the one\nread where either may be null (``docs/adr/0171`` \u00a72): a player on any\nsurface that names another player has necessarily been named, because the\ngate holds an unnamed account at the naming step. On ``/me`` they are read\nfrom the player's own stream, as ``has_player_profile`` is, so they are\nright the instant after the commit the gate reads them after.\n\n**It is not an \"onboarded\" flag.** The rating context's invariant against one\nstands: whether a player has been through onboarding *for a sport* is asked\nby asking whether a rating exists for that sport, and this field cannot\nanswer it. This asks a genuinely per-player question, because a profile is\none per player and has no sport dimension at all."

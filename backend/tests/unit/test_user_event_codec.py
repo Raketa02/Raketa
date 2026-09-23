@@ -17,11 +17,18 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import pytest
+
 from app.application.events import EventCatalog
 from app.application.events.envelope import SerializedEventEnvelope
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.users.application.event_subscriptions import register_user_events
-from app.modules.users.domain.events import UserNamed, UserRegistered
+from app.modules.users.domain.events import (
+    UserMarkedAsTester,
+    UserNamed,
+    UserRegistered,
+    UserUnmarkedAsTester,
+)
 
 NOW = datetime(2026, 8, 27, tzinfo=timezone.utc)
 
@@ -128,3 +135,31 @@ def test_the_naming_round_trips_under_its_own_contract() -> None:
         codec.decode(_envelope(encoded.payload, event_type="users.user_named"))
         == named
     )
+
+
+@pytest.mark.parametrize(
+    ("event", "event_type"),
+    [
+        (
+            UserMarkedAsTester(user_id=REGISTERED.user_id, occurred_at=NOW),
+            "users.user_marked_as_tester",
+        ),
+        (
+            UserUnmarkedAsTester(user_id=REGISTERED.user_id, occurred_at=NOW),
+            "users.user_unmarked_as_tester",
+        ),
+    ],
+)
+def test_the_tester_mark_round_trips_under_its_own_contracts(
+    event: object, event_type: str
+) -> None:
+    """Two events, each filed under its own name (``docs/adr/0180`` §9), so a
+    stream read years from now says *marked* and *unmarked* in those words."""
+
+    codec = _codec()
+
+    encoded = codec.encode(event)
+
+    assert encoded.event_type == event_type
+    assert encoded.schema_version == 1
+    assert codec.decode(_envelope(encoded.payload, event_type=event_type)) == event

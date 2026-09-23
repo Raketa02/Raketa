@@ -261,6 +261,12 @@ Identity and account state.
     **Nickname** together; the fold keeps the latest.
   - **UserDisabled** — `users.user_disabled` / v1.
   - **UserPromotedToAdmin** — `users.user_promoted_to_admin` / v1.
+  - **UserMarkedAsTester** — `users.user_marked_as_tester` / v1 — the **Tester** mark set.
+  - **UserUnmarkedAsTester** — `users.user_unmarked_as_tester` / v1 — the mark cleared. Two
+    events and not one carrying a boolean, so the stream says who was a tester and when in the
+    words it was done in ([ADR-0180](docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+    §9). Both are projected onto the `users` row in the act's own transaction, beside
+    `is_admin` and `is_active`, because every `User` a route is handed is read from that row.
 
 **Invariants**
 - Email and nickname are **unique**, and each is read by the act that carries it —
@@ -275,6 +281,11 @@ Identity and account state.
 - **`disable()` is idempotent** — a no-op on an already-inactive user.
 - **An inactive user cannot be promoted** — raises `InactiveUserCannotBePromoted`.
 - `promote_to_admin()` is a no-op if already `ADMIN`.
+- **The tester mark is idempotent both ways** — `mark_as_tester()` on a Tester and
+  `unmark_as_tester()` on anybody else record nothing. It is set only by `SetTesterMark`, which
+  `make tester PLAYER=<id|email> MARK=on|off` runs and no route reaches; a player it cannot find
+  by id or email is refused with `UnknownPlayer`. A disabled account is not refused: the mark
+  grants nothing.
 
 ### Auth (`backend/app/modules/auth/`)
 

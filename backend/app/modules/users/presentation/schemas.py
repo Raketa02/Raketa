@@ -159,6 +159,17 @@ class UserResponse(BaseModel):
     authority: str
     is_admin: bool
     is_active: bool
+    is_tester: bool = Field(
+        ...,
+        description=(
+            "Whether this account carries the **tester mark**: a real player who "
+            "may be given a feature before anyone else. Set and cleared by an "
+            "admin command, never by the player, and `false` for every account "
+            "until then. **Not a role** — `authority` does not move with it. The "
+            "player app passes it to flag evaluation as `isTester`, so no "
+            "published datafile ever has to name a tester."
+        ),
+    )
     created_at: Optional[datetime] = None
     has_player_profile: bool = Field(
         default=False,
@@ -194,6 +205,7 @@ class UserResponse(BaseModel):
             authority=user.authority.value,
             is_admin=user.is_admin,
             is_active=user.is_active,
+            is_tester=user.is_tester,
             created_at=user.created_at,
             has_player_profile=has_player_profile,
         )

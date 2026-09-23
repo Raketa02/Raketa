@@ -442,6 +442,7 @@ from app.modules.sportsmanship.infrastructure.sqlalchemy_standing_answers import
 from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger import (
     SqlAlchemySportsmanshipLedger,
 )
+from app.modules.users.application.set_tester_mark import SetTesterMark
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
     SqlAlchemyUserRepository,
@@ -511,6 +512,25 @@ def build_refresh_token_repository(session: AsyncSession) -> RefreshTokenReposit
 
 def build_user_repository(session: AsyncSession) -> UserRepository:
     return SqlAlchemyUserRepository(session)
+
+
+def build_set_tester_mark(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> SetTesterMark:
+    """The tester mark, reached by ``make tester`` and never by a route
+    (``docs/adr/0180`` §9) — wired here so the command gets the wiring a request
+    would, rather than a second opinion about it."""
+
+    resolved = runtime or get_event_runtime()
+    return SetTesterMark(
+        users=build_user_repository(session),
+        event_store=build_domain_event_store(session, runtime=resolved),
+        uow=build_unit_of_work(session),
+        clock=build_clock(),
+        events=build_event_publisher(session, runtime=resolved),
+    )
 
 
 # --------------------------------------------------------------------------

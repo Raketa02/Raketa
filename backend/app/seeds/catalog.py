@@ -958,6 +958,21 @@ PROTAGONISTS: tuple[SeedAccount, ...] = (
     THE_BLANK_WEEK_PLAYER,
 )
 
+#: The accounts that carry the **tester mark** (``docs/adr/0180`` §9), so a rule
+#: the flags repo gives only to its ``testers`` segment can be seen on a freshly
+#: seeded database without anybody running ``make tester`` first.
+#:
+#: **The default protagonist is one because she is the account a phone is signed
+#: in as**, and a flag is decided on the device. **Two of the four and not all of
+#: them**, so a gated Play screen can be read from either side of the mark by
+#: signing in as another protagonist — a set that marked everybody a screen is
+#: developed against would leave nothing to compare with. The mark is set through
+#: the same use case the command runs, and a re-run finds it already set.
+TESTERS: tuple[SeedAccount, ...] = (
+    THE_POPULATED_PLAYER,
+    THE_NEWCOMER,
+)
+
 #: Every account this system creates, in the order a run walks them: emptiest
 #: first, so a run interrupted half way leaves the simple states done.
 ACCOUNTS: tuple[SeedAccount, ...] = (

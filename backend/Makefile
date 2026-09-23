@@ -19,7 +19,7 @@ ECS_SERVICE      ?= raketa-service
         gen-walkthroughs gen-cohort \
         build-dev up down down-v logs ps shell migrate seed seed-host sim-location \
         rebuild-candidate-index rebuild-candidate-index-host \
-        photo-flag-rate photo-flag-rate-host \
+        photo-flag-rate photo-flag-rate-host tester tester-host \
         build-prod ecr-login ecr-push ecs-deploy
 
 help:
@@ -147,6 +147,23 @@ photo-flag-rate:   ## the on-court flag rate at each candidate threshold, from s
 
 photo-flag-rate-host: ## the same reading from the host — needs .env, like seed-host
 	poetry run python -m app.modules.player_profile.infrastructure.flag_rate_cli $(THRESHOLDS)
+
+## ----- the tester mark (docs/adr/0180 §9)
+## A Tester is a real player who may be given a feature before anyone else. The
+## mark is an event on the player's own stream, written through the same use case
+## a test drives — never a row edited by hand — and there is deliberately no
+## route for it. The mark is named every time, `on` or `off`; nothing defaults.
+##   make tester PLAYER=alice@example.com MARK=on
+##   make tester PLAYER=<account id> MARK=off
+TESTER_USAGE = usage: make tester PLAYER=<id|email> MARK=on|off
+
+tester:            ## mark a player as a Tester, or clear it: PLAYER=<id|email> MARK=on|off
+	@test -n "$(PLAYER)" && test -n "$(MARK)" || { echo "$(TESTER_USAGE)"; exit 2; }
+	$(COMPOSE_LOCAL) exec api python -m app.modules.users.infrastructure.tester_cli "$(PLAYER)" "$(MARK)"
+
+tester-host:       ## the same mark from the host — needs .env, like seed-host
+	@test -n "$(PLAYER)" && test -n "$(MARK)" || { echo "$(TESTER_USAGE)"; exit 2; }
+	poetry run python -m app.modules.users.infrastructure.tester_cli "$(PLAYER)" "$(MARK)"
 
 ## ----- production / ECR / ECS
 ## DORMANT — AWS deployment is not in use; development is entirely local
