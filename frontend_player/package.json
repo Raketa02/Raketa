@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:affected": "bash scripts/test-affected.sh",
     "test:boundaries": "bash scripts/test-import-boundaries.sh",
     "test:labels": "bash scripts/test-play-label-rule.sh",
     "gen:api": "openapi-typescript ../backend/openapi.player.json -o src/generated/schema.d.ts",

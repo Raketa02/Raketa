@@ -46,6 +46,7 @@ pnpm android      # build & run on an Android emulator
 pnpm lint         # ESLint (also enforces the import boundaries)
 pnpm typecheck    # tsc --noEmit, strict
 pnpm test         # Jest (jest-expo)
+pnpm test:affected # while iterating: only the suites the branch's changes reach — never the gate
 pnpm format       # Prettier --write   pnpm format:check → --check
 pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.json
 pnpm check        # lint + format check + typecheck + test — the local gate
