@@ -15,7 +15,7 @@ ECR_URI          ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_
 ECS_CLUSTER      ?= raketa-cluster
 ECS_SERVICE      ?= raketa-service
 
-.PHONY: help install test coverage lint lint-imports format typecheck check test-gates openapi \
+.PHONY: help install test test-group test-durations split-partition coverage lint lint-imports format typecheck check test-gates openapi \
         gen-walkthroughs gen-cohort \
         build-dev up down down-v logs ps shell migrate seed seed-host sim-location \
         rebuild-candidate-index rebuild-candidate-index-host \
@@ -29,8 +29,37 @@ help:
 install:           ## install poetry deps
 	poetry install
 
-test:              ## run pytest (no coverage — `make coverage` measures it)
-	poetry run pytest tests -q
+# The suite runs in parallel (ADR-0181): one worker per core, work-stealing
+# because durations are uneven — a handful of tests (the seed command, the cohort,
+# the runs under two hash seeds) take 10–60 s, most take milliseconds. WORKERS=0 runs serially, in-process and in collection order, which
+# is how an order-dependent failure is chased; WORKERS=2 is a CI runner's size.
+# PYTEST_ARGS goes on the end: `make test PYTEST_ARGS=-x`.
+WORKERS   ?= auto
+XDIST     := -n $(WORKERS) --dist worksteal
+
+test:              ## run pytest, one worker per core (WORKERS=0 is serial; no coverage)
+	poetry run pytest tests -q $(XDIST) $(PYTEST_ARGS)
+
+# Balanced groups for CI's shards (ADR-0181 §5; #489 runs one per runner): the
+# suite split into SPLITS groups by the durations committed in .test_durations,
+# with xdist inside each. `least_duration`
+# deals the longest tests first, each to the lightest group, so the seed tests
+# spread across shards instead of sharing one. A test the file does not know gets
+# the average, so a stale file unbalances the groups and never drops a test.
+DURATIONS ?= .test_durations
+SPLIT     := --splitting-algorithm least_duration --durations-path $(DURATIONS)
+
+test-group:        ## run group GROUP of SPLITS, in parallel — one CI shard's share
+	@[ -n "$(GROUP)" ] && [ -n "$(SPLITS)" ] || { echo "usage: make test-group GROUP=<k> SPLITS=<N>" >&2; exit 2; }
+	poetry run pytest tests -q $(XDIST) $(SPLIT) --splits $(SPLITS) --group $(GROUP) $(PYTEST_ARGS)
+
+# Commit the result. `--clean-durations` drops the tests that no longer exist.
+# Under xdist every worker's timings reach the controller, which writes last.
+test-durations:    ## re-record .test_durations from a whole run, for balanced groups
+	poetry run pytest tests -q $(XDIST) --store-durations --clean-durations --durations-path $(DURATIONS)
+
+split-partition:   ## show the groups for SPLITS=2 and 3 add up to the suite, stale file too
+	poetry run python -m scripts.split_partition $(DURATIONS)
 
 # Coverage is off by default: it makes a run 2.4x slower and nothing gates on it
 # (ADR-0181). This measures it on demand — the whole suite, the term-missing

@@ -12,8 +12,14 @@ sourcing, and a transactional outbox. Python 3.11, Poetry.
 Run via the Makefile from `backend/`:
 
 ```bash
-make test        # poetry run pytest tests -q — measures no coverage
-make coverage    # the same run measuring coverage over app/: term-missing + coverage.xml
+make test        # the suite in parallel — one xdist worker per core, work-stealing;
+                 # measures no coverage. make test WORKERS=0 is a serial run, in
+                 # collection order: the command for an order-dependent failure
+make test-group GROUP=1 SPLITS=2  # one of N balanced groups, xdist inside — a CI shard
+make test-durations  # re-record .test_durations from a whole run, and commit it
+make split-partition # the groups for 2 and 3 add up to the suite, stale file too
+make coverage    # the whole suite, serially, measuring coverage over app/:
+                 # term-missing + coverage.xml
 make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
@@ -1248,6 +1254,19 @@ Write the failing test, make it pass, refactor. Every domain or use-case change 
 tests.
 
 - Tests live in `tests/`, not beside source. Files are `test_*.py`.
+- **The suite runs in parallel by default** — `make test`, and so `make check`, is
+  pytest-xdist with one worker per core
+  ([ADR-0181](../docs/adr/0181-the-merge-gate-runs-every-test-and-choosing-tests-is-the-inner-loops-job.md)).
+  Parallel-safety is a property every test must keep: a test that shares state across
+  processes — a fixed file path, a port, a global — fails some of the time, and nothing
+  retries it. Write under `tmp_path`; give a background job beside a request its own
+  connection per session (#482). **Serial, for chasing an order-dependent failure:**
+  `make test WORKERS=0`.
+- **The suite splits into balanced groups for CI's shards** — `make test-group`, one
+  per runner once #489 lands — by the committed `.test_durations`. A test the file does not know gets the average, so a stale file
+  unbalances the shards and never drops a test (`make split-partition` shows it). When
+  the groups' times drift apart, refresh with `make test-durations` on a green tree and
+  commit the file.
 - `tests/unit/` — pure domain/application/adapter logic; mock ports with hand-written stub
   classes implementing the `Protocol` (see `tests/unit/test_resolve_current_user.py`).
 - `tests/api/` — full HTTP flows via the `client` fixture (HTTPX ASGI + in-memory SQLite).

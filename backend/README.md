@@ -940,8 +940,16 @@ Run tests:
 
 ```bash
 poetry install
-poetry run pytest
+make test              # in parallel: one pytest-xdist worker per core
+make test WORKERS=0    # serially, in collection order — for an order-dependent failure
 ```
+
+The suite runs in parallel by default, with work-stealing because durations are
+uneven: a handful of tests take 10–60 s and most take milliseconds. For CI's shards
+it also splits into groups (`make test-group GROUP=<k> SPLITS=<N>`), balanced by the
+durations committed in `.test_durations` and refreshed with `make test-durations`;
+`make split-partition` shows every test landing in exactly one group, stale file or
+not.
 
 A run measures no coverage, because that makes it 2.4× slower and nothing gates on
 it. `make coverage` runs the whole suite with coverage over `app/`, prints the
@@ -955,8 +963,8 @@ Run linting:
 poetry run ruff check .
 ```
 
-The configured tooling includes Black, isort, Ruff, mypy, pytest-cov, and
-pytest-env.
+The configured tooling includes Black, isort, Ruff, mypy, pytest-cov,
+pytest-env, pytest-xdist and pytest-split.
 
 ## Security Practices
 
