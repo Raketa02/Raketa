@@ -1,17 +1,14 @@
-"""The published fold: an average out of five, and the band the subject sees.
+"""The published fold: an average out of five, for everybody it is shown to.
 
-**Two answers off one window, and the second one cannot say the first.** A reader
-is shown the figure beside how many different people it rests on; the person it is
-about is shown a coarse band and no count. That asymmetry is the whole of
-``docs/adr/0158``'s privacy argument — an average plus a count lets the subject
-subtract, name each new rating exactly, and go and find the one person who could
-have given it — so it is asserted here at the rule rather than only at the route.
+**One answer off one window.** Every reader is shown the figure beside how many
+different people it rests on — the subject included, since ``docs/adr/0179`` §5
+retired the coarse band that used to stand in for it on their own sheet and
+accepted the cost by name. What is asserted here is the fold itself, which did
+not move: the mean, the rounding, and the two absences.
 
 **The collapse is not tested here.** *Only a rater's most recent stars count* is
 the primary key of ``sportsmanship_rating`` and not arithmetic, so the place it
-can fail is a database and it is contracted in ``tests/demands/``. What this file
-owns is the fold over whatever window that key produced: the mean, the rounding,
-the band's edges, and the two absences.
+can fail is a database and it is contracted in ``tests/demands/``.
 """
 
 from __future__ import annotations
@@ -22,8 +19,6 @@ from app.kernel import InvariantViolated
 from app.modules.sportsmanship.domain.published import (
     RATER_WINDOW,
     PublishedSportsmanship,
-    SportsmanshipBand,
-    band_of,
     published_from,
 )
 
@@ -64,9 +59,8 @@ def test_a_half_rounds_up_rather_than_to_even():
 
 
 def test_the_figure_is_one_decimal_and_the_rounding_happens_once():
-    """**Derived here and nowhere else.** The band below is taken from this
-    number rather than from the raw mean, so nothing downstream ever divides
-    again."""
+    """**Derived here and nowhere else.** Nothing downstream divides again, and
+    nothing downstream coarsens — the figure the subject reads is this one."""
 
     assert published_from([5, 4, 4, 4, 3, 3, 3]).average == 3.7
 
@@ -81,43 +75,12 @@ def test_a_window_wider_than_the_rule_is_a_broken_precondition():
         published_from([5] * (RATER_WINDOW + 1))
 
 
-@pytest.mark.parametrize(
-    "average, expected",
-    [
-        (5.0, SportsmanshipBand.GOOD),
-        (4.0, SportsmanshipBand.GOOD),
-        (3.9, SportsmanshipBand.MIXED),
-        (3.0, SportsmanshipBand.MIXED),
-        (2.9, SportsmanshipBand.POOR),
-        (1.0, SportsmanshipBand.POOR),
-    ],
-)
-def test_the_band_is_three_steps_across_the_whole_scale(average, expected):
-    """**Deliberately too coarse to name a rating.** Whole-star edges over a
-    one-to-five scale: it tells somebody that something is going wrong, which is
-    the useful half, and never who to blame for it."""
-
-    assert band_of(average) is expected
-
-
-def test_the_band_is_taken_from_the_published_figure_and_not_the_raw_mean():
-    """**One number, coarsened.** A band read off the unrounded mean could
-    disagree with the figure a reader is shown at an edge — 3,96 prints 4,0 to a
-    stranger, and a subject told *mixed* would be looking at a different record
-    from everybody else."""
-
-    published = published_from([4] * 23 + [3])
-
-    assert published.average == 4.0
-    assert band_of(published.average) is SportsmanshipBand.GOOD
-
-
 def test_the_published_scale_and_the_tapped_scale_are_the_same_two_numbers():
     """**Two bounds for two things, asserted rather than assumed.** ``card.py``
     bounds what a person may tap and this module bounds what a mean of taps may
     be; they are the same pair for one reason and not by construction, so the day
     a half-star arrives the disagreement goes red here rather than publishing a
-    figure the band has no step for."""
+    figure off the scale a reader is told it sits on."""
 
     from app.modules.sportsmanship.domain.card import MAXIMUM_STARS, MINIMUM_STARS
     from app.modules.sportsmanship.domain.published import (
@@ -129,20 +92,3 @@ def test_the_published_scale_and_the_tapped_scale_are_the_same_two_numbers():
         float(MINIMUM_STARS),
         float(MAXIMUM_STARS),
     )
-
-
-def test_every_band_edge_lies_inside_the_scale_it_coarsens():
-    """A step whose edge sits off the scale is a step nothing can land in."""
-
-    from app.modules.sportsmanship.domain.published import (
-        GOOD_FROM,
-        HIGHEST_AVERAGE,
-        LOWEST_AVERAGE,
-        MIXED_FROM,
-    )
-
-    assert LOWEST_AVERAGE < MIXED_FROM < GOOD_FROM < HIGHEST_AVERAGE
-    assert {band_of(LOWEST_AVERAGE), band_of(HIGHEST_AVERAGE)} == {
-        SportsmanshipBand.POOR,
-        SportsmanshipBand.GOOD,
-    }

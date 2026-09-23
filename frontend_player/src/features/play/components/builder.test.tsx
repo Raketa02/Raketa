@@ -29,7 +29,6 @@ import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   IN_YOUR_AREA,
-  OPINION_BAND_NAME,
   SPORTSMANSHIP_LABEL,
   OWN_RECORD_TITLE,
   PLAYER_SCORE_BLOCK,
@@ -1116,14 +1115,17 @@ describe('who this person is', () => {
   });
 
   /**
-   * **The subject is answered with a band and never with the figure.** An average beside a count
-   * lets them subtract each new rating out and name it, and they know who they played — so the
-   * arm is chosen from `is_self` at the wire boundary, and a response carrying both draws the
-   * band. Asserted end to end here, because that is where a response can carry both.
+   * **The subject reads the same figure as anybody else** ([#468](https://github.com/Raketa02/Raketa/issues/468),
+   * ADR-0179 §5): the band is retired from the wire, and a self read carries `sportsmanship`.
+   * Asserted end to end here, where the builder opens your own face. The three band words are
+   * spelled only to be asserted absent — no deck exports them any more
+   * ([#473](https://github.com/Raketa02/Raketa/issues/473)).
    */
-  it('draws a band and no count on your own record, whatever the response carried', async () => {
+  it('draws the figure and its count on your own record, the band retired', async () => {
     transport.on('GET', OWN_RECORD, () =>
-      json(record({ is_self: true, name: 'me_myself', sportsmanship_band: 'GOOD' })),
+      json(
+        record({ is_self: true, name: 'me_myself', sportsmanship: { average: 4.7, raters: 17 } }),
+      ),
     );
     await openTheBuilder();
     await pressFill();
@@ -1132,12 +1134,9 @@ describe('who this person is', () => {
     fireEvent.press(yourFace('YOUR_SIDE'));
     await screen.findByText(`me_myself ${YOU_MARK}`);
 
-    expect(screen.getByText(OPINION_BAND_NAME.GOOD)).toBeTruthy();
-    // Neither half on its own either: the average is what a subtraction starts from, and the
-    // count is what makes each new answer name itself.
-    expect(screen.queryByText(opinionFigure({ average: 4.7, raters: 17 }))).toBeNull();
-    expect(screen.queryByText(/4,7/)).toBeNull();
-    expect(screen.queryByText(/17 players/)).toBeNull();
+    expect(screen.getByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
+    expect(screen.getByText(opinionFigure({ average: 4.7, raters: 17 }))).toBeTruthy();
+    expect(screen.queryByText(/^(Good|Mixed|Poor)$/)).toBeNull();
   });
 
   /**

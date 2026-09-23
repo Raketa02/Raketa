@@ -19,10 +19,11 @@ unit test because the place it can fail is a database.
 those two only differ once fifty-one different people have said something, which
 is exactly the arrangement below.
 
-**And the subject's answer carries neither number.** ``band_for`` folds the same
-window and returns three steps wide; a caller holding it cannot subtract, which
-is ``docs/adr/0158``'s whole privacy argument made structural rather than
-promised.
+**And there is one answer, for every reader.** The port used to publish a second
+one — a coarse band, for the subject, folded from the same window — and
+``docs/adr/0179`` §5 retired it: the figure crosses to the person it is about as
+it crosses to anybody, and the cost of that is accepted by name in that record.
+The demand is pinned at one method so a second resolution cannot return quietly.
 """
 
 from __future__ import annotations
@@ -46,10 +47,7 @@ from app.modules.sportsmanship.domain.card import (
     StarsGiven,
 )
 from app.modules.sportsmanship.domain.ports import PublishedSportsmanshipQuery
-from app.modules.sportsmanship.domain.published import (
-    RATER_WINDOW,
-    SportsmanshipBand,
-)
+from app.modules.sportsmanship.domain.published import RATER_WINDOW
 
 SUBJECT = uuid4()
 
@@ -246,51 +244,20 @@ async def test_a_figure_is_only_about_the_person_it_was_given_about(
 
 
 # ---------------------------------------------------------------------------
-# What the subject is told about themselves
+# One answer, whoever is reading
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("implementation", registered(PublishedSportsmanshipQuery))
-async def test_the_subject_is_answered_with_a_band_and_nothing_else(
-    implementation, session
-):
-    """**The method the subject's sheet calls cannot say the figure.** What
-    comes back is one of three steps: no average to subtract from, no count to
-    subtract with, and therefore no answer identifiable by the one person who
-    must never see it."""
+def test_the_published_port_answers_one_question_and_it_is_the_figure():
+    """**No second resolution** (``docs/adr/0179`` §5). ``band_for`` — three
+    steps wide, no count, for the subject — is gone from this port with the
+    band it returned; a method that answered about a person at a coarser
+    resolution than the figure would be that decision quietly reopened."""
 
-    for stars in (5, 4, 5):
-        await _rated(session, rater=uuid4(), stars=stars, at=_at(days=1))
+    published = [
+        name
+        for name, value in vars(PublishedSportsmanshipQuery).items()
+        if callable(value) and not name.startswith("_")
+    ]
 
-    band = await implementation.build(session).band_for(SUBJECT)
-
-    assert band is SportsmanshipBand.GOOD
-    assert not hasattr(band, "average")
-    assert not hasattr(band, "raters")
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedSportsmanshipQuery))
-async def test_the_band_and_the_figure_are_folded_from_one_window(
-    implementation, session
-):
-    """One record read at two resolutions. A band that disagreed with the figure
-    a reader is shown would mean two folds, and the second one would be the copy
-    that got believed."""
-
-    for stars in (2, 3, 2):
-        await _rated(session, rater=uuid4(), stars=stars, at=_at(days=1))
-
-    query = implementation.build(session)
-    published = await query.published_for(SUBJECT)
-
-    assert published is not None
-    assert published.average < 3.0
-    assert await query.band_for(SUBJECT) is SportsmanshipBand.POOR
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedSportsmanshipQuery))
-async def test_a_subject_nobody_has_rated_has_no_band_either(implementation, session):
-    """The same absence the figure spells, so the sheet omits one field or the
-    other and never draws an empty one."""
-
-    assert await implementation.build(session).band_for(uuid4()) is None
+    assert published == ["published_for"]

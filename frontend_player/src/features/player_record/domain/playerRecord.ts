@@ -157,51 +157,31 @@ export interface OpponentVariety {
 }
 
 /**
- * **The three steps a subject may be told**, and there is no fourth for *nobody has said
- * anything* — that is the field's absence, on the rule every zone on this sheet takes.
+ * **What other players said** — the average and the number of different people it rests on,
+ * to every reader, the subject included.
  *
- * Written down here rather than read off the contract for the reason `RELIABILITY_STRANDS` is:
- * a copy table is keyed by it and transport does not reach `components/`. The two are held
- * equal by the compiler in `mappers/wireVocabulary.ts`.
+ * One shape and no arms. It had two: a reader was answered with the figure and the **subject**
+ * with a coarse band and no count, folded at the wire boundary from `is_self`, because a
+ * published average beside a published count is a **subtraction** — moving from 4,80 over ten
+ * to 4,73 over eleven names the new rating as a 4, and the subject knows who they played.
+ * [ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §5 weighed that against a player being told *Mixed* about themselves with no number to work
+ * on, chose the number, and retired the band from the wire
+ * ([#468](https://github.com/Raketa02/Raketa/issues/468)) and from this client
+ * ([#473](https://github.com/Raketa02/Raketa/issues/473)). What holds the subtraction in check
+ * is the record's own and not this shape's: the collapse to one answer per rater, the
+ * fifty-rater window, no zero on the scale, and no individual rating on any route.
+ *
+ * **It is not a strand and does not enter the pill.** A star average is not a ratio out of a
+ * hundred, the matcher never reads it, and it is drawn as the card's last row under a label
+ * naming its own author — because every row above it was counted by the system and this is
+ * the one thing on the sheet people wrote.
+ *
+ * Named once because three layers pass it around: the mapper builds it, the row draws it and
+ * the spoken reading reads it, and a shape restated at each of those is the shape that
+ * eventually differs at one of them.
  */
-export const OPINION_BANDS = ['GOOD', 'MIXED', 'POOR'] as const;
-
-export type OpinionBand = (typeof OPINION_BANDS)[number];
-
-/**
- * **What other players said** — one arm or the other, and never both.
- *
- * A reader is answered with the average and the number of different people it rests on; the
- * **subject** is answered with a band and no count. The contract sends those as two fields and
- * says they never cross together; this is one value with two arms, so a build cannot draw the
- * figure over somebody's own record even if a response carried both.
- *
- * That is not tidiness. A published average beside a published count is a **subtraction**: an
- * average moving from 4,80 over ten to 4,73 over eleven names the new rating as a 4, and the
- * subject knows who they played — so every answer would be identifiable by the one person who
- * must never see it, and people stop answering honestly once that is true. Which arm a record
- * carries is decided at the wire boundary, from `is_self`.
- *
- * **Neither arm is a strand and neither enters the pill.** A star average is not a ratio out of
- * a hundred, the matcher never reads it, and it is drawn one block down under a heading naming
- * its own author — because the card above promises *counted by the system, not written by
- * people* and this is the one thing on the sheet people wrote.
- */
-export type Opinion =
-  | ({ readonly kind: 'figure' } & OpinionFigure)
-  | {
-      readonly kind: 'band';
-      /** Deliberately too coarse to read anything into. Never a number, a bar or a trend. */
-      readonly band: OpinionBand;
-    };
-
-/**
- * **The two numbers a reader is answered with, named** — because three layers pass them around.
- *
- * The mapper builds them, the block draws them and the spoken name reads them, and a shape
- * restated at each of those is the shape that eventually differs at one of them.
- */
-export interface OpinionFigure {
+export interface Opinion {
   /** The mean of what they said, out of five, to one decimal. **Served, never derived.** */
   readonly average: number;
   /**
@@ -318,7 +298,7 @@ export interface PlayerRecord {
    */
   readonly variety?: OpponentVariety;
   /**
-   * What other players said, in whichever of the two registers the subject is owed.
+   * What other players said — the figure and its count, whoever is reading.
    *
    * A **fourth absence**, asking a fourth question: omitted where nobody has rated them, which
    * is most people. Rating is a favour, ignoring the card costs nothing, and nothing anywhere

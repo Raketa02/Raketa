@@ -30,7 +30,9 @@
  * no renderer; the words are `radiusPresentation`'s; the track, the thumb and the two
  * accessibility actions are the design system's. What is left in this file is what a player
  * sees — the same split the four steps before it made, and for the same reason: the profile
- * editor will obey these rules from a screen that looks nothing like this one.
+ * editor will obey these rules from a screen that looks nothing like this one. **That screen
+ * exists now** — the You tab's *How far to look* (ADR-0179 §2) — and the slider the two share
+ * is `SearchRadiusControl`; what this step keeps is the seeding below and its *Continue*.
  *
  * ## The four numbers are the server's, and the step opens at one of them
  *
@@ -47,29 +49,17 @@ import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
-import { Button, Note, RadiusSlider, theme } from '@/shared/ui';
+import { Button, Note, theme } from '@/shared/ui';
 
-import {
-  openingRadius,
-  radiusAtFraction,
-  radiusFraction,
-  steppedRadius,
-  topOfScale,
-} from '../domain/searchRadius';
+import { openingRadius } from '../domain/searchRadius';
 import { stepAfter } from '../domain/socialSteps';
 import { useProfileOptions } from '../hooks/useProfileOptions';
 import { useProfileDraft } from '../store/profileDraft.store';
 
+import { SearchRadiusControl } from './SearchRadiusControl';
 import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
-import {
-  RADIUS_LABEL,
-  radiusFigure,
-  radiusWords,
-  spokenRadius,
-  widestRadiusFigure,
-} from './radiusPresentation';
 
 export function SocialRadiusStep() {
   const router = useRouter();
@@ -132,24 +122,12 @@ export function SocialRadiusStep() {
       ) : null}
 
       {bounds === undefined || radius === undefined ? null : (
-        <RadiusSlider
-          value={radius}
-          minimum={bounds.minimumKm}
-          /* The top of the *scale*, which is the served maximum whenever the step divides
-             the range and the last value on a step when it does not. What is announced has
-             to be a radius the control can be driven to and the commit would accept —
-             announcing one neither is true of would be the screen describing a distance
-             nobody can hold. */
-          maximum={topOfScale(bounds)}
-          fraction={radiusFraction(radius, bounds)}
-          onSlideTo={(fraction) => answer({ searchRadiusKm: radiusAtFraction(fraction, bounds) })}
-          onIncrement={() => answer({ searchRadiusKm: steppedRadius(radius, bounds, 'increment') })}
-          onDecrement={() => answer({ searchRadiusKm: steppedRadius(radius, bounds, 'decrement') })}
-          figure={radiusFigure(radius)}
-          widestFigure={widestRadiusFigure(bounds)}
-          words={radiusWords(radius)}
-          accessibilityLabel={RADIUS_LABEL}
-          accessibilityValueText={spokenRadius(radius)}
+        // Every move writes through to the draft: walking on and back finds the number the
+        // player set, and the commit carries it.
+        <SearchRadiusControl
+          radius={radius}
+          bounds={bounds}
+          onChange={(searchRadiusKm) => answer({ searchRadiusKm })}
         />
       )}
     </SocialStepLayout>

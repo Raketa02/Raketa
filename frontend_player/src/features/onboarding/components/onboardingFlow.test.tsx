@@ -647,15 +647,15 @@ describe('walking into the questionnaire', () => {
 const STRANGE_LINK_ID = 'e5f6a7b8-9c0d-4e1f-8a2b-3c4d5e6f7a8b';
 
 describe('a link into the middle of onboarding', () => {
-  // Onboarding happens once, at the beginning, and there is no re-take from inside the
-  // app. So surviving param validation is not the same as belonging here: a well-formed
+  // A pass has two doors — the picker and the passport's *Add a sport* — and a link is
+  // neither. So surviving param validation is not the same as belonging here: a well-formed
   // link naming a sport this player never chose is not a shortcut into a flow already
   // under way, and drawing it a questionnaire meant drawing progress with no denominator.
   it('sends a question link for a sport this player never chose back to the beginning', async () => {
     stubGate();
     // A pass is running over padel — the player is mid-onboarding — and the link names
     // squash.
-    useOnboardingPass.getState().begin(['padel']);
+    useOnboardingPass.getState().begin(['padel'], 'welcome');
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 
@@ -669,7 +669,7 @@ describe('a link into the middle of onboarding', () => {
     // A result is a screen inside onboarding, so it carries the same rule for the same
     // reason — it belongs at the beginning, not at somebody's rating.
     stubGate();
-    useOnboardingPass.getState().begin(['padel']);
+    useOnboardingPass.getState().begin(['padel'], 'welcome');
 
     await launchSignedIn(`/result/${STRANGE_LINK_ID}?sport=squash`);
 
@@ -683,7 +683,7 @@ describe('a link into the middle of onboarding', () => {
     // that turned them away. Welcome is a screen, and the picker hands the run back
     // anyway — starting a sport with an unfinished run returns that run.
     stubGate({ runs: [runInProgress('SQUASH', STRANGE_LINK_ID)] });
-    useOnboardingPass.getState().begin(['padel']);
+    useOnboardingPass.getState().begin(['padel'], 'welcome');
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 

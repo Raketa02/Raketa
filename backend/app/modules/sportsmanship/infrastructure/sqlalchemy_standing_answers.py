@@ -1,4 +1,4 @@
-"""``PublishedSportsmanshipQuery`` over the rating table. **One window, two reads.**
+"""``PublishedSportsmanshipQuery`` over the rating table. **One window, one read.**
 
 **The collapse costs this file nothing, which is the whole argument for the key.**
 *Only a rater's most recent stars about a person count* is
@@ -20,9 +20,8 @@ the same ``rated_at`` — an all-blank-but-one card and a two-person card both d
 everything about two processes folding the same record to the same figure
 (``docs/adr/0105``).
 
-**Two methods, and the second cannot say what the first says.** ``band_for``
-folds the same window and coarsens it; what it returns has no figure and no count
-in it, because the caller for it is the sheet the *subject* reads.
+**One method, whoever is asking.** A second — the subject's coarse band, folded
+from the same window — went with the band (``docs/adr/0179`` §5).
 """
 
 from __future__ import annotations
@@ -36,8 +35,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.sportsmanship.domain.published import (
     RATER_WINDOW,
     PublishedSportsmanship,
-    SportsmanshipBand,
-    band_of,
     published_from,
 )
 from app.modules.sportsmanship.infrastructure.card_model import (
@@ -56,18 +53,6 @@ class StandingAnswersAboutThem:
         """The figure and how many different people it rests on."""
 
         return published_from(await self._window(subject_id))
-
-    async def band_for(self, subject_id: UUID) -> SportsmanshipBand | None:
-        """The coarse band, taken from the figure and never from the raw mean.
-
-        **It goes through ``published_from`` rather than round its own mean**, so
-        there is one rounding of one record on this platform and a subject's band
-        cannot land on the other side of an edge from the figure a reader sees.
-        What leaves this method is three steps wide and carries neither number.
-        """
-
-        published = published_from(await self._window(subject_id))
-        return None if published is None else band_of(published.average)
 
     async def _window(self, subject_id: UUID) -> Sequence[int]:
         """This subject's fifty most recent standing answers, newest first.

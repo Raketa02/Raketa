@@ -1,10 +1,11 @@
 """What a record says about a person, in this context's own words.
 
 **The header identity, the sport pills, the skill card, opponent variety, the
-metered rows and what other players said.** The last of those arrives in two
-shapes rather than one, and the second shape is the only place on this sheet
-where *who is reading* changes what is said rather than only what it is titled
-(``docs/adr/0158``).
+metered rows and what other players said.** Every one of them is the same fact
+whoever is reading: ``is_self`` retitles the sheet and decides nothing about
+what is on it. The last zone used to be the exception — a coarse band for the
+subject where a reader saw the figure — and is not one since ``docs/adr/0179``
+§5 served the figure to its subject and retired the band.
 
 **Every one of these fields is spelled here rather than imported**, and the
 duplication is the decision (``docs/adr/0159``). ``matchmaking`` already holds a
@@ -296,39 +297,6 @@ HIGHEST_AVERAGE: Final = 5.0
 RATER_WINDOW: Final = 50
 
 
-class OpinionBand(StrEnum):
-    """How somebody is coming across, in the three steps **they** may be told.
-
-    **The subject's whole answer, and the coarseness is the safety.** A figure
-    plus a count in front of the person they are about is a subtraction: an
-    average moving from 4,80 over ten to 4,73 over eleven names the new rating as
-    a 4, and they know who they played, so every answer would be identifiable by
-    the one person who must never see it. Three steps across the whole scale tell
-    them *something is going wrong*, which is the useful half.
-
-    **A second spelling of ``sportsmanship``'s ``SportsmanshipBand``**, and it
-    takes a **different name** for the reason ``OnCourtVerdict`` does beside
-    ``PhotoReviewDecision`` and ``GameOutcome`` does beside ``Outcome``. That is
-    two rules meeting: this context borrows no other context's domain types
-    (``docs/adr/0159``), and the emitted contract is **one namespace** — a class
-    of the same name in two modules does not shadow the other, it *renames both*,
-    and every generated type a shipped app already holds moves. It is
-    ``RecordLikelyRangeSchema``'s argument, applied one layer down, because this
-    enum reaches the wire as itself rather than through a schema class.
-
-    The risk a second spelling carries is answered the way those two answer it —
-    ``tests/unit/test_player_record_sportsmanship.py`` fails the build if the two
-    vocabularies stop agreeing.
-
-    **There is no fourth value for *nobody has said anything*.** That is the
-    field's absence, on the rule every zone on this sheet takes.
-    """
-
-    GOOD = "GOOD"
-    MIXED = "MIXED"
-    POOR = "POOR"
-
-
 @final
 @dataclass(frozen=True, slots=True)
 class WhatPlayersSaid:
@@ -350,9 +318,10 @@ class WhatPlayersSaid:
     is evidence of *breadth* rather than of repetition, and a weekly partner
     cannot inflate it.
 
-    **It never reaches the person it is about.** The subject is answered with
-    :class:`OpinionBand`, off a different method on a different port, so
-    the figure has no path to them rather than a rule against printing it.
+    **It reaches the person it is about, at this resolution** (``docs/adr/0179``
+    §5). The coarse band that used to be the subject's answer is retired, and
+    the cost of the figure in front of them is accepted by name in that record
+    rather than re-argued here.
 
     **Unlike the pair above it, the division is not the client's.** Opponent
     variety withholds its share because nothing rounds it and it prices no
@@ -499,11 +468,16 @@ class PlayerRecord:
 
     **``is_self`` is the server's answer and not the client's.** A sheet titled
     *How others see you* draws a different screen from one about a stranger — no
-    distance, a coarse band where a figure would be — and a client deciding that
+    distance, no fit pill, *(you)* beside the name — and a client deciding that
     by comparing the id it asked about against the one in its session is a client
     that gets it wrong exactly once, on the screen where being wrong is most
     visible. So the subject's id is deliberately **not** on this type: there is
     nothing here to compare.
+
+    **Nothing on this type turns on ``is_self``.** It used to hold two
+    sportsmanship fields, at most one ever filled, and an invariant deciding
+    which by who was reading; the figure is served to its subject now
+    (``docs/adr/0179`` §5) and the second field went with the rule it served.
     """
 
     is_self: bool
@@ -535,39 +509,10 @@ class PlayerRecord:
     #: absence as ``skill``'s: a player rated in nothing may well have played,
     #: and somebody rated in four sports may never have had a game counted.
     variety: OpponentVariety | None
-    #: What other players said, **for a reader who is not the subject.** ``None``
-    #: for somebody nobody has rated, and ``None`` on every record somebody is
-    #: reading about themselves — the two absences are one field being empty and
-    #: the invariant below says which is which.
+    #: What other players said — **for every reader, the subject included.**
+    #: ``None`` for somebody nobody has rated, which is the one absence this
+    #: field spells (``docs/adr/0179`` §5).
     sportsmanship: WhatPlayersSaid | None
-    #: The coarse band, **for the subject and nobody else.** ``None`` on a record
-    #: about somebody else, and ``None`` for a subject nobody has rated.
-    sportsmanship_band: OpinionBand | None
-
-    def __post_init__(self) -> None:
-        """**The one rule on this type, and it is the privacy rule.**
-
-        Two fields where at most one is ever filled, and which one is decided by
-        ``is_self`` rather than by whoever assembled the record. It is checked
-        here because the failure is silent everywhere else: a figure and a count
-        drawn on the sheet titled *How others see you* is a subtraction the
-        subject can perform against their own record, and nothing about the
-        response would look wrong (``docs/adr/0158``).
-
-        A broken precondition and not a refusal — nobody typed this, and there is
-        no state of the platform in which it is a legitimate answer.
-        """
-
-        invariant(
-            not (self.is_self and self.sportsmanship is not None),
-            "a figure and a count on the subject's own record: they can subtract "
-            "each new rating out of it and they know who they played",
-        )
-        invariant(
-            not (self.sportsmanship_band is not None and not self.is_self),
-            "a band on a stranger's record: the coarse reading exists for the one "
-            "person the figure is withheld from, and nobody else",
-        )
 
 
 __all__ = [
@@ -583,7 +528,6 @@ __all__ = [
     "ReliabilityPanel",
     "SkillPanel",
     "SportPill",
-    "OpinionBand",
     "StrandRow",
     "SubjectIdentity",
     "SubjectRating",

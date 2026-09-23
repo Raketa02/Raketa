@@ -25,12 +25,24 @@ from app.bootstrap.composition import (
     build_play_intent_declaration_repository,
     build_player_profile_repository,
 )
+from app.modules.player_profile.application.answer_proposals_opt_in import (
+    AnswerProposalsOptIn,
+)
 from app.modules.player_profile.application.change_availability import (
     ChangeAvailability,
 )
+from app.modules.player_profile.application.change_gender import ChangeGender
+from app.modules.player_profile.application.change_gender_preference import (
+    ChangeGenderPreference,
+)
+from app.modules.player_profile.application.change_intro import ChangeIntro
 from app.modules.player_profile.application.change_location import ChangeLocation
+from app.modules.player_profile.application.change_photos import ChangePhotos
 from app.modules.player_profile.application.change_search_radius import (
     ChangeSearchRadius,
+)
+from app.modules.player_profile.application.change_social_tags import (
+    ChangeSocialTags,
 )
 from app.modules.player_profile.application.commit_player_profile import (
     CommitPlayerProfile,
@@ -181,11 +193,16 @@ HasPlayerProfileDep = Annotated[HasPlayerProfile, Depends(get_has_player_profile
 def get_read_player_profile(
     profiles: PlayerProfileRepositoryDep,
     declarations: PlayIntentDeclarationRepositoryDep,
+    photos: PhotoStorageDep,
 ) -> ReadPlayerProfile:
     # Both repositories, because the read spans both of this context's
     # aggregates — which is the join ADR-0090's precedent makes cheap, one
-    # context lower than where that record made it.
-    return ReadPlayerProfile(profiles=profiles, declarations=declarations)
+    # context lower than where that record made it. And the store, because the
+    # verdict beside each photograph is metadata on the object and lives
+    # nowhere else (``docs/adr/0179`` §8).
+    return ReadPlayerProfile(
+        profiles=profiles, declarations=declarations, photos=photos
+    )
 
 
 ReadPlayerProfileDep = Annotated[ReadPlayerProfile, Depends(get_read_player_profile)]
@@ -227,6 +244,81 @@ def get_change_location(
 
 
 ChangeLocationDep = Annotated[ChangeLocation, Depends(get_change_location)]
+
+
+def get_change_social_tags(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangeSocialTags:
+    # The three every preference edit takes: the vocabulary and the bounds are
+    # the domain's, so there is nothing to re-validate against a store.
+    return ChangeSocialTags(profiles=profiles, uow=uow, clock=clock)
+
+
+ChangeSocialTagsDep = Annotated[ChangeSocialTags, Depends(get_change_social_tags)]
+
+
+def get_change_photos(
+    profiles: PlayerProfileRepositoryDep,
+    photos: PhotoStorageDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangePhotos:
+    # The store as well, for the commit's reason: every id is proved to exist
+    # and to be the caller's against the same port the upload used.
+    return ChangePhotos(profiles=profiles, photos=photos, uow=uow, clock=clock)
+
+
+ChangePhotosDep = Annotated[ChangePhotos, Depends(get_change_photos)]
+
+
+def get_change_intro(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangeIntro:
+    return ChangeIntro(profiles=profiles, uow=uow, clock=clock)
+
+
+ChangeIntroDep = Annotated[ChangeIntro, Depends(get_change_intro)]
+
+
+def get_change_gender(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangeGender:
+    return ChangeGender(profiles=profiles, uow=uow, clock=clock)
+
+
+ChangeGenderDep = Annotated[ChangeGender, Depends(get_change_gender)]
+
+
+def get_change_gender_preference(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangeGenderPreference:
+    return ChangeGenderPreference(profiles=profiles, uow=uow, clock=clock)
+
+
+ChangeGenderPreferenceDep = Annotated[
+    ChangeGenderPreference, Depends(get_change_gender_preference)
+]
+
+
+def get_answer_proposals_opt_in(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> AnswerProposalsOptIn:
+    return AnswerProposalsOptIn(profiles=profiles, uow=uow, clock=clock)
+
+
+AnswerProposalsOptInDep = Annotated[
+    AnswerProposalsOptIn, Depends(get_answer_proposals_opt_in)
+]
 
 
 def get_declare_play_intent(

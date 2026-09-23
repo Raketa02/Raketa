@@ -12,10 +12,39 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
-import { authKeys } from '@/features/auth/types';
+import { authKeys, NAME_ROW_TITLE, nameLine } from '@/features/auth/types';
 import { onboardingKeys } from '@/features/onboarding/types';
 import { FIND_A_GAME_TITLE, modeControlLabel, usePlaySession } from '@/features/play/types';
-import { AREA_UPDATES_LINE } from '@/features/player_profile/types';
+import {
+  AREA_LINE,
+  GAME_SUGGESTIONS_TITLE,
+  HOW_FAR_TO_LOOK_TITLE,
+  INTRO_TITLE,
+  PHOTOS_TITLE,
+  TAGS_TITLE,
+  WHAT_KIND_OF_GAME_TITLE,
+  WHERE_YOU_PLAY_TITLE,
+  WHO_YOU_PLAY_WITH_TITLE,
+  YOUR_WEEK_TITLE,
+  introLine,
+  kindOfGameLine,
+  photosLine,
+  radiusLine,
+  tagsLine,
+  weekLine,
+  whoYouPlayWithLine,
+} from '@/features/player_profile/types';
+import {
+  HOW_OTHERS_SEE_YOU_LINE,
+  HOW_OTHERS_SEE_YOU_TITLE,
+  OWN_RECORD_TITLE,
+  PLAYER_RELIABILITY_TITLE,
+  SKILL_PASSPORT_TITLE,
+  passportLine,
+  reliabilityLine,
+  scoreRingLabel,
+} from '@/features/player_record/types';
+import { doorRowLabel } from '@/shared/ui';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -28,9 +57,13 @@ import {
   stubConversations,
   stubEntries,
   stubGate,
+  stubOwnRecord,
   stubProfileOptions,
   stubInterest,
   stubProfileSurface,
+  OWN_RECORD_SERVED,
+  PROFILE_OPTIONS_SERVED,
+  PROFILE_SURFACE_SERVED,
 } from '@/test-support/onboardingRouter';
 import {
   errorResponse,
@@ -39,9 +72,10 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
-import { declarationOptionLabel, intentLabel } from '@/shared/vocabulary/playIntentPresentation';
+import { declarationOptionLabel } from '@/shared/vocabulary/playIntentPresentation';
 
-import { CHATS_COPY, NOW_COPY, PLACEHOLDER_COPY } from './shellCopy';
+import { CHATS_COPY, NOW_COPY } from './shellCopy';
+import { YOU_COPY } from './youCopy';
 
 /** One rating and a committed profile: the gate's fourth answer is *the app*. */
 const RATING: Wire['RatingResponse'] = {
@@ -103,6 +137,9 @@ beforeEach(() => {
   stubProfileSurface(transport);
   stubInterest(transport);
   stubProfileOptions(transport);
+  // You reads your own record on arrival — the header card's face and score, and the
+  // reliability row's line.
+  stubOwnRecord(transport);
   transport.on('POST', '/api/v1/deck', () => json(NOBODY_DEALT));
 });
 
@@ -183,13 +220,181 @@ describe('Players', () => {
   });
 });
 
-describe('the placeholder', () => {
-  it('says what belongs on You rather than apologising', async () => {
+/**
+ * **The You tab is a screen, and the last placeholder went with it**
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)).
+ * What each row's screen does is its feature's suite's; what the shell owes the tab is the
+ * composition — the header card, the three groups with every row in its group, each row
+ * spoken as *title, live line* off the read that carries it, the way out at the foot, and the
+ * one overlay two of its parts open.
+ */
+describe('You', () => {
+  /** The stubbed profile's one declaration, as the row says it. */
+  const DECLARED_LINE = kindOfGameLine([{ sport: 'padel', intent: 'FOR_FUN' }]);
+  /** The stubbed record's score over its three strands, as the row says it. */
+  const RELIABILITY_LINE = reliabilityLine({
+    playerScore: OWN_RECORD_SERVED.reliability?.player_score ?? 0,
+    strands: (OWN_RECORD_SERVED.reliability?.strands ?? []).map((row) => ({
+      strand: row.strand,
+      good: row.good,
+      opportunities: row.opportunities,
+      pct: row.pct,
+    })),
+  });
+
+  /** The tab, with its reads in — the last row's line is the last read to land. */
+  async function openYou() {
     await launchIntoTheApp();
-
     pressTab('You');
+    await screen.findByRole('header', { name: YOU_COPY.title });
+    await screen.findByLabelText(
+      doorRowLabel(
+        YOUR_WEEK_TITLE,
+        weekLine([
+          { day: 2, part: 'evening' },
+          { day: 6, part: 'morning' },
+        ]),
+      ),
+    );
+  }
 
-    expect(await screen.findByText(PLACEHOLDER_COPY.you.line)).toBeTruthy();
+  it('titles the tab as the bar does, and names the three groups over three cards', async () => {
+    await openYou();
+
+    expect(screen.getByText(YOU_COPY.eyebrow)).toBeTruthy();
+    for (const group of Object.values(YOU_COPY.groups)) {
+      expect(screen.getByText(group)).toBeTruthy();
+    }
+  });
+
+  it('draws every row in its group, each spoken as its title and its live line', async () => {
+    await openYou();
+
+    // Playing — the two facts a player cannot touch, and the declaration.
+    expect(
+      screen.getByLabelText(
+        doorRowLabel(SKILL_PASSPORT_TITLE, passportLine([{ sport: 'padel', level: 2.71 }])),
+      ),
+    ).toBeTruthy();
+    expect(
+      await screen.findByLabelText(doorRowLabel(PLAYER_RELIABILITY_TITLE, RELIABILITY_LINE)),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(doorRowLabel(WHAT_KIND_OF_GAME_TITLE, DECLARED_LINE)),
+    ).toBeTruthy();
+    // Finding players — the five declarations, each off the profile read; the two that gate the
+    // matcher say the preference and the standing answer, and never the gender.
+    expect(
+      screen.getByLabelText(
+        doorRowLabel(
+          YOUR_WEEK_TITLE,
+          weekLine([
+            { day: 2, part: 'evening' },
+            { day: 6, part: 'morning' },
+          ]),
+        ),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        doorRowLabel(HOW_FAR_TO_LOOK_TITLE, radiusLine(PROFILE_SURFACE_SERVED.search_radius_km)),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByLabelText(doorRowLabel(WHERE_YOU_PLAY_TITLE, AREA_LINE))).toBeTruthy();
+    expect(
+      screen.getByLabelText(doorRowLabel(WHO_YOU_PLAY_WITH_TITLE, whoYouPlayWithLine('any'))),
+    ).toBeTruthy();
+    // The served answer is a yes from setting up, on the twelfth of August.
+    expect(
+      screen.getByLabelText(doorRowLabel(GAME_SUGGESTIONS_TITLE, 'Yes — since 12 Aug')),
+    ).toBeTruthy();
+    // On your card — the door to the sheet, the three social facts off the read, and the name.
+    expect(
+      screen.getByLabelText(doorRowLabel(HOW_OTHERS_SEE_YOU_TITLE, HOW_OTHERS_SEE_YOU_LINE)),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        doorRowLabel(
+          PHOTOS_TITLE,
+          photosLine([{ photoId: 'photo-held-1', review: 'allowed' }, { photoId: 'photo-held-2' }]),
+        ),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        doorRowLabel(
+          TAGS_TITLE,
+          tagsLine(
+            ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'WARMS_UP_PROPERLY', 'HERE_TO_IMPROVE'],
+            PROFILE_OPTIONS_SERVED.social_tag_selection.maximum_tags,
+          ),
+        ),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(doorRowLabel(INTRO_TITLE, introLine(PROFILE_SURFACE_SERVED.intro))),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        doorRowLabel(NAME_ROW_TITLE, nameLine(GATE_USER.name ?? '', GATE_USER.nickname ?? '')),
+      ),
+    ).toBeTruthy();
+  });
+
+  /**
+   * The rows are the features' and the groups are the shell's: *which row sits in which
+   * group* is the one thing this file decides, so it is asserted as an order rather than as
+   * thirteen presences.
+   */
+  it('lays the groups down in the order the three questions are asked', async () => {
+    await openYou();
+
+    const drawn = screen.getAllByText(/./);
+    const at = (text: string) => drawn.indexOf(screen.getByText(text));
+    expect(at(YOU_COPY.groups.playing)).toBeLessThan(at(SKILL_PASSPORT_TITLE));
+    expect(at(SKILL_PASSPORT_TITLE)).toBeLessThan(at(YOU_COPY.groups.findingPlayers));
+    expect(at(YOU_COPY.groups.findingPlayers)).toBeLessThan(at(YOUR_WEEK_TITLE));
+    expect(at(YOUR_WEEK_TITLE)).toBeLessThan(at(YOU_COPY.groups.onYourCard));
+    expect(at(YOU_COPY.groups.onYourCard)).toBeLessThan(at(NAME_ROW_TITLE));
+    expect(at(NAME_ROW_TITLE)).toBeLessThan(at('Sign out'));
+  });
+
+  it('draws the header card from the three reads, and the score in its ring', async () => {
+    await openYou();
+
+    expect(
+      await screen.findByLabelText(
+        scoreRingLabel(OWN_RECORD_SERVED.reliability?.player_score ?? 0),
+      ),
+    ).toBeTruthy();
+    // The name and the handle — the You tab is one of the two screens that draw an
+    // `@nickname` (ADR-0171 §4) — and the intro in the drawing's marks.
+    expect(screen.getByText(GATE_USER.name ?? '')).toBeTruthy();
+    expect(screen.getByText(`@${GATE_USER.nickname ?? ''}`)).toBeTruthy();
+    // Twice on the tab: the card quotes the record's line, and the *Intro* row quotes the
+    // profile read's — the same line, off two reads (#471).
+    expect(screen.getAllByText(`“${OWN_RECORD_SERVED.intro ?? ''}”`)).toHaveLength(2);
+  });
+
+  it('opens your own record, retitled, from the header card and from the row', async () => {
+    await openYou();
+
+    fireEvent.press(
+      screen.getByLabelText(doorRowLabel(HOW_OTHERS_SEE_YOU_TITLE, HOW_OTHERS_SEE_YOU_LINE)),
+    );
+
+    // The sheet is up under the server's own title for a record that is yours, and the read
+    // behind it is the ungated `/me` route.
+    expect(await screen.findByRole('header', { name: OWN_RECORD_TITLE })).toBeTruthy();
+    expect(transport.requestsTo('GET', '/api/v1/players/me/record').length).toBeGreaterThan(0);
+    fireEvent.press(screen.getByLabelText(`Close ${OWN_RECORD_TITLE.toLowerCase()}`));
+    await waitFor(() =>
+      expect(screen.queryByRole('header', { name: OWN_RECORD_TITLE })).toBeNull(),
+    );
+
+    // The header card is one press whose name is the identity; its hint names the door.
+    fireEvent.press(screen.getByHintText(`Opens ${OWN_RECORD_TITLE.toLowerCase()}`));
+    expect(await screen.findByRole('header', { name: OWN_RECORD_TITLE })).toBeTruthy();
   });
 
   it('never tells the player nothing is happening', async () => {
@@ -201,41 +406,11 @@ describe('the placeholder', () => {
     expect(screen.queryByText(/nothing is happening/i)).toBeNull();
   });
 
-  /**
-   * **The one written trace of the cold-start refresh** (ADR-0174 §6, #462): the area moves
-   * silently, so the tab says the rule once — under the profile block, above the way out.
-   * The words are `locationPresentation.test.ts`'s; this is the tab drawing them.
-   */
-  it('says how the area moves, under the profile block and above the account panel', async () => {
-    await launchIntoTheApp();
-
-    pressTab('You');
-
-    expect(await screen.findByText(AREA_UPDATES_LINE)).toBeTruthy();
-    // The declared row is the profile block; the email is the account panel. Positions are
-    // read off the drawn text nodes in tree order, so *under* and *above* are what a reader
-    // meets and not a guess.
-    await screen.findByText(intentLabel('FOR_FUN'));
-    const drawn = screen.getAllByText(/./);
-    const at = (text: string) => drawn.indexOf(screen.getByText(text));
-    expect(at(intentLabel('FOR_FUN'))).toBeGreaterThan(-1);
-    expect(at(AREA_UPDATES_LINE)).toBeGreaterThan(at(intentLabel('FOR_FUN')));
-    expect(at(GATE_USER.email)).toBeGreaterThan(at(AREA_UPDATES_LINE));
-  });
-
-  it('keeps the way out of a session on You, where it belongs', async () => {
+  it('keeps the way out of a session on You, at the foot', async () => {
     // The account panel outlived the screen it used to be: sign-out is the only way back
-    // to the beginning, and the tab whose citation is *your profile* is where it goes.
-    await launchIntoTheApp();
+    // to the beginning, and the tab whose eyebrow is *your profile* is where it goes.
+    await openYou();
 
-    pressTab('You');
-
-    expect(await screen.findByText(PLACEHOLDER_COPY.you.line)).toBeTruthy();
-    // The name, and the handle under it — the You tab is one of the two screens that draw
-    // an `@nickname` (ADR-0171 §4).
-    expect(await screen.findByText(GATE_USER.name ?? '')).toBeTruthy();
-    expect(screen.getByText(`@${GATE_USER.nickname ?? ''}`)).toBeTruthy();
-    expect(screen.getByText(GATE_USER.email)).toBeTruthy();
     expect(screen.getByLabelText('Sign out')).toBeTruthy();
   });
 
@@ -575,6 +750,16 @@ describe('what a declaration changed on You does to Play', () => {
     );
 
     pressTab('You');
+    // The declaration is behind its row now (ADR-0179 §2): the row, then the sport, then the
+    // answer.
+    fireEvent.press(
+      await screen.findByLabelText(
+        doorRowLabel(
+          WHAT_KIND_OF_GAME_TITLE,
+          kindOfGameLine([{ sport: 'padel', intent: 'FOR_FUN' }]),
+        ),
+      ),
+    );
     fireEvent.press(await screen.findByText('Padel'));
     fireEvent.press(await screen.findByLabelText(declarationOptionLabel(other, 'Padel')));
     await waitFor(() => expect(transport.requestsTo('PUT', PADEL_INTENT)).toHaveLength(1));

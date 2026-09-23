@@ -40,7 +40,11 @@ export {
 export { Card, PressableCard, type CardProps, type PressableCardProps } from './Card';
 export { Chip, type ChipProps } from './Chip';
 export { CloseControl, type CloseControlProps } from './CloseControl';
-export { ConfidenceRing, type ConfidenceRingProps } from './ConfidenceRing';
+export {
+  ConfidenceRing,
+  type ConfidenceRingProps,
+  type ConfidenceRingSize,
+} from './ConfidenceRing';
 export {
   CourtPoster,
   COURT_POSTER_POSES,
@@ -50,7 +54,13 @@ export {
 } from './CourtPoster';
 export { Court, courtSeatCount, courtSeatSize, type CourtProps } from './Court';
 export { COURT_POSTER_COUNT, courtPosterFor } from './courtPosterFraming';
-export { DarkCard, type DarkCardProps } from './DarkCard';
+export {
+  DarkCard,
+  PressableDarkCard,
+  type DarkCardProps,
+  type PressableDarkCardProps,
+} from './DarkCard';
+export { DoorRow, doorRowLabel, type DoorRowGlyph, type DoorRowProps } from './DoorRow';
 export { FIT_HIGH, FIT_SCALE, FitPill, type FitPillProps } from './FitPill';
 export { Hairline, type HairlineProps, type HairlineVariant } from './Hairline';
 export { InfoGlyph, type InfoGlyphProps } from './InfoGlyph';

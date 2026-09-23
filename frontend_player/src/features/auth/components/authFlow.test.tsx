@@ -13,6 +13,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
+import { Text } from 'react-native';
 
 import {
   beginSession,
@@ -39,7 +40,10 @@ import { ADULT_ATTESTATION_MISSING, ADULT_LABEL } from '../schemas/authForms';
 import { refreshTokens } from '../use-cases/refreshTokens';
 import { signIn } from '../use-cases/signIn';
 
+import { useCurrentUser } from '../hooks/useCurrentUser';
+
 import { AccountPanel } from './AccountPanel';
+import { authErrorMessage } from './authErrorMessage';
 import { SignInScreen } from './SignInScreen';
 import { SignUpScreen } from './SignUpScreen';
 
@@ -441,21 +445,30 @@ describe('signing out', () => {
 // The account panel
 // ---------------------------------------------------------------------------
 
+/** A screen that reads the player and says what the read said — the smallest such screen. */
+function WhoAmI() {
+  const user = useCurrentUser();
+  if (user.error !== null) return <Text>{authErrorMessage(user.error)}</Text>;
+  return <Text>{user.data?.name ?? ''}</Text>;
+}
+
 describe('the account panel', () => {
-  it('shows the player, read through Query rather than held by the session', async () => {
+  /**
+   * **The panel is the button now** (ADR-0179 §1). The identity it drew — the name, the handle,
+   * the email — is the You tab's header card's and its *Name* row's, asserted where they are
+   * drawn (`theShell.test.tsx`); what the panel keeps is the one act that is the account's.
+   */
+  it('draws the way out, and no identity of its own', async () => {
     setSessionStatus('authenticated');
     transport.on('GET', '/api/v1/users/me', () => json(USER));
 
     renderScreen(<AccountPanel />);
 
-    // The identity is three lines, and they are the whole assertion: the panel carries no
-    // heading of its own — the You tab does — so who is signed in is only ever visible
-    // through what Query fetched. The name, then the handle under it — this is one of the
-    // two screens that draw an `@nickname` (ADR-0171 §4) — then the email.
-    expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
-    expect(screen.getByText('@ada')).toBeTruthy();
-    expect(screen.getByText('ada@example.com')).toBeTruthy();
-    expect(screen.getByLabelText('Ada Lovelace, @ada, ada@example.com')).toBeTruthy();
+    expect(screen.getByLabelText('Sign out')).toBeTruthy();
+    expect(screen.queryByText('Ada Lovelace')).toBeNull();
+    expect(screen.queryByText('ada@example.com')).toBeNull();
+    // Nothing read: the panel has no fact of its own to fetch.
+    expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(0);
   });
 
   it('does not sign the player out when a request is forbidden', async () => {
@@ -463,7 +476,8 @@ describe('the account panel', () => {
     await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
     transport.on('GET', '/api/v1/users/me', () => errorResponse(403, 'forbidden'));
 
-    renderScreen(<AccountPanel />);
+    // Any screen that reads the player: the rule is the session's, not a panel's.
+    renderScreen(<WhoAmI />);
 
     await waitFor(() =>
       expect(screen.getByText('Something went wrong at our end. Try again later.')),

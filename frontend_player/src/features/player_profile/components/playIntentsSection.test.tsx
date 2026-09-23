@@ -18,12 +18,14 @@ import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { declarationOptionLabel } from '@/shared/vocabulary/playIntentPresentation';
-import { PLACEHOLDER_COPY } from '@/features/shell/types';
+import { doorRowLabel } from '@/shared/ui';
 import {
   PROFILE_SURFACE_PATH,
   launchSignedIn,
+  profileSurface,
   stubGate,
   stubInterest,
+  stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
@@ -35,11 +37,12 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
+import { NOT_DECLARED_LINE, playIntentRowLabel } from './playIntentsPresentation';
 import {
-  NOT_DECLARED_LINE,
-  PLAY_INTENTS_HEADING,
-  playIntentRowLabel,
-} from './playIntentsPresentation';
+  KIND_OF_GAME_LINE,
+  WHAT_KIND_OF_GAME_TITLE,
+  kindOfGameLine,
+} from './youProfilePresentation';
 
 function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
   return {
@@ -57,11 +60,11 @@ function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
 
 /** Rated in three, declared in two — so both halves of a row are on screen at once. */
 const THREE_RATED = [rating('PADEL'), rating('TENNIS'), rating('SQUASH')];
-const DECLARED_IN_TWO: Wire['PlayerProfileReadResponse'] = {
+const DECLARED_IN_TWO = profileSurface({
   availability: [{ day: 2, part: 'EVENING' }],
   search_radius_km: 12,
   play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'NO_PREFERENCE' },
-};
+});
 
 const SQUASH_INTENT = '/api/v1/play-intents/SQUASH';
 /** Asserted against the wire union, so a renamed surface is a red build rather than a red test. */
@@ -75,6 +78,7 @@ beforeEach(() => {
   stubProfileSurface(transport, DECLARED_IN_TWO);
   stubProfileOptions(transport);
   stubInterest(transport);
+  stubOwnRecord(transport);
 });
 
 afterEach(async () => {
@@ -84,13 +88,29 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
+/** What the row on the tab says about the three, as the two reads answer. */
+const THE_ROW = doorRowLabel(
+  WHAT_KIND_OF_GAME_TITLE,
+  kindOfGameLine([
+    { sport: 'padel', intent: 'COMPETITIVE' },
+    { sport: 'tennis', intent: 'NO_PREFERENCE' },
+    { sport: 'squash', intent: undefined },
+  ]),
+);
+
 /** A signed-in player standing on the You tab. */
-async function openYou() {
+async function onYou() {
   await launchSignedIn();
   fireEvent.press(await screen.findByLabelText('You'));
-  await screen.findByText(PLAY_INTENTS_HEADING);
-  // The heading arrives with the ratings; the **values** are the profile read, which is the
-  // second of the two, so a declared row is what says the section is finished.
+}
+
+/** …and through the row to the section behind it (ADR-0179 §2). */
+async function openYou() {
+  await onYou();
+  fireEvent.press(await screen.findByLabelText(THE_ROW));
+  await screen.findByText(KIND_OF_GAME_LINE);
+  // The line arrives with the screen; the **values** are the profile read, so a declared row
+  // is what says the section is finished.
   await screen.findByLabelText(playIntentRowLabel('Padel', 'COMPETITIVE'));
 }
 
@@ -115,11 +135,15 @@ describe('the play intents on You', () => {
     expect(screen.queryByLabelText(playIntentRowLabel('Badminton', undefined))).toBeNull();
   });
 
-  /** The tab is still a placeholder, and the line naming what it becomes is still owed two thirds. */
-  it('keeps the tab\u2019s citation, which is still owed two thirds of what it names', async () => {
+  /**
+   * The section's heading and body went (ADR-0179 §9); the one line under the title says the
+   * thing they said, and the row on the tab says the three answers before the screen opens.
+   */
+  it('says the one line under its title, and nothing above the list', async () => {
     await openYou();
 
-    expect(screen.getByText(PLACEHOLDER_COPY.you.line)).toBeTruthy();
+    expect(screen.getByText(KIND_OF_GAME_LINE)).toBeTruthy();
+    expect(screen.queryByText('What other players see')).toBeNull();
   });
 
   it('opens the three answers on a row, and writes the one that is pressed', async () => {
@@ -153,10 +177,11 @@ describe('the play intents on You', () => {
   it('draws no answers at all until the read that carries them has landed', async () => {
     // Never resolves: the assertion is about the beat between the two reads.
     transport.on('GET', PROFILE_SURFACE_PATH, () => new Promise<Response>(() => {}));
-    await launchSignedIn();
-    fireEvent.press(await screen.findByLabelText('You'));
+    await onYou();
+    // The row's own line waits for the same read, so it is opened by its title alone.
+    fireEvent.press(await screen.findByLabelText(WHAT_KIND_OF_GAME_TITLE));
 
-    await screen.findByText(PLAY_INTENTS_HEADING);
+    await screen.findByText(KIND_OF_GAME_LINE);
     expect(screen.queryByLabelText(playIntentRowLabel('Squash', undefined))).toBeNull();
     expect(screen.queryByText(NOT_DECLARED_LINE)).toBeNull();
   });
@@ -170,8 +195,9 @@ describe('the play intents on You', () => {
    */
   it('says the read failed rather than that nothing is declared', async () => {
     transport.on('GET', PROFILE_SURFACE_PATH, () => errorResponse(403, 'forbidden'));
-    await launchSignedIn();
-    fireEvent.press(await screen.findByLabelText('You'));
+    await onYou();
+    // The row says the read failed, in the recovery sentence, and still opens.
+    fireEvent.press(await screen.findByLabelText(WHAT_KIND_OF_GAME_TITLE, { exact: false }));
 
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.queryByLabelText(playIntentRowLabel('Squash', undefined))).toBeNull();

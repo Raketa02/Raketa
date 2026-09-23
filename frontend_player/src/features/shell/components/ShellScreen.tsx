@@ -30,9 +30,10 @@
  */
 
 import { useRef, useState, type ReactNode } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { ScreenHeader, theme } from '@/shared/ui';
 
 export interface ShellScreenProps {
@@ -44,6 +45,13 @@ export interface ShellScreenProps {
    */
   readonly title?: string;
   readonly eyebrow?: string;
+  /**
+   * Under the title, qualifying it — **forwarded, not designed.** *What kind of game* on the You
+   * tab is the first shell screen with one: its one line, *This changes how people find you*,
+   * replaced the section's heading and body (ADR-0179 §2), and it is the header's own
+   * `subline` rather than a first paragraph of the page because it qualifies the title.
+   */
+  readonly subline?: string;
   /**
    * The header's two slots — **forwarded, not designed**, like the way back below. The Players
    * tab is the first shell screen with no title row: its header *is* a *Deck | Radar* toggle in
@@ -85,6 +93,16 @@ export interface ShellScreenProps {
    * keeps the gesture meaning something where it is offered.
    */
   readonly onRefresh?: () => Promise<unknown>;
+  /**
+   * Whether the page and the action get out of the keyboard's way — **forwarded, not
+   * designed.** The *Name* screen on the You tab is the first shell screen that types
+   * ([#469](https://github.com/Raketa02/Raketa/issues/469)), and its *Save* is pinned in the
+   * action slot under the scroller, which on iOS is exactly where the keyboard goes. So the two
+   * are wrapped in `KeyboardAvoidingView` under `KEYBOARD_AVOIDANCE` — the value
+   * `SocialStepLayout`, the sign-in and the conversation already use — and taps on the action
+   * land while the keyboard is up. Off everywhere else, where it would do nothing.
+   */
+  readonly avoidsKeyboard?: boolean;
   readonly children: ReactNode;
 }
 
@@ -98,12 +116,14 @@ export interface ShellScreenProps {
 export function ShellScreen({
   title,
   eyebrow,
+  subline,
   lead,
   right,
   fill = false,
   action,
   onBack,
   onRefresh,
+  avoidsKeyboard = false,
   children,
 }: ShellScreenProps) {
   /**
@@ -131,34 +151,56 @@ export function ShellScreen({
     }
   }
 
+  const page = (
+    <ScrollView
+      contentContainerStyle={[s.content, fill ? s.fill : undefined]}
+      keyboardShouldPersistTaps={avoidsKeyboard ? 'handled' : undefined}
+      refreshControl={
+        onRefresh === undefined ? undefined : (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void pull()}
+            tintColor={theme.color.muted}
+            colors={[theme.color.muted]}
+            progressBackgroundColor={theme.color.paper}
+          />
+        )
+      }
+    >
+      {children}
+    </ScrollView>
+  );
+  const pinned = action !== undefined ? <View style={s.action}>{action}</View> : null;
+
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <ScreenHeader title={title} eyebrow={eyebrow} lead={lead} right={right} onBack={onBack} />
+      <ScreenHeader
+        title={title}
+        eyebrow={eyebrow}
+        subline={subline}
+        lead={lead}
+        right={right}
+        onBack={onBack}
+      />
 
-      <ScrollView
-        contentContainerStyle={[s.content, fill ? s.fill : undefined]}
-        refreshControl={
-          onRefresh === undefined ? undefined : (
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void pull()}
-              tintColor={theme.color.muted}
-              colors={[theme.color.muted]}
-              progressBackgroundColor={theme.color.paper}
-            />
-          )
-        }
-      >
-        {children}
-      </ScrollView>
-
-      {action !== undefined ? <View style={s.action}>{action}</View> : null}
+      {/* The page and the action are the header's two siblings, as 10.1 draws them — and stay
+          so when nothing avoids the keyboard, which is every screen but one. */}
+      {avoidsKeyboard ? (
+        <KeyboardAvoidingView style={s.body} behavior={KEYBOARD_AVOIDANCE}>
+          {page}
+          {pinned}
+        </KeyboardAvoidingView>
+      ) : (
+        page
+      )}
+      {avoidsKeyboard ? null : pinned}
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
+  body: { flex: 1 },
   content: {
     paddingHorizontal: theme.size.gutter,
     paddingBottom: theme.space.lg,

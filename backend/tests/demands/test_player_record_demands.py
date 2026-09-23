@@ -88,7 +88,6 @@ from app.modules.player_record.domain.ports import (
     SubjectVariety,
 )
 from app.modules.player_record.domain.record import (
-    OpinionBand,
     OpponentVariety,
     WhatPlayersSaid,
 )
@@ -684,55 +683,6 @@ async def test_a_player_nobody_has_rated_is_absent_and_never_a_nought(
 
 
 @pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
-async def test_the_subjects_own_answer_is_a_band_and_carries_no_number(
-    implementation, session
-):
-    """**The privacy rule, run against the real fold** (``docs/adr/0158``). What
-    comes back for the person the record is about is one of three steps: no
-    average to subtract from and no count to subtract with, so no answer is
-    identifiable by the one person who must never see it."""
-
-    subject = new_uuid()
-    for stars in (5, 4, 5):
-        await _stars(session, subject=subject, stars=stars)
-
-    band = await implementation.build(session).band_for(subject)
-
-    assert band is OpinionBand.GOOD
-    assert not hasattr(band, "average")
-    assert not hasattr(band, "raters")
-
-
-@pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
-async def test_the_band_and_the_figure_never_disagree_about_one_record(
-    implementation, session
-):
-    """One window, one mean, one rounding — read at two resolutions. A band
-    derived from a second fold would eventually land on the other side of an edge
-    from the figure a reader is shown, and the subject would be looking at a
-    different record from everybody else."""
-
-    subject = new_uuid()
-    for stars in (2, 3, 2):
-        await _stars(session, subject=subject, stars=stars)
-
-    reader = implementation.build(session)
-    said = await reader.what_players_said(subject)
-
-    assert said is not None
-    assert said.average < 3.0
-    assert await reader.band_for(subject) is OpinionBand.POOR
-
-
-@pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
-async def test_a_subject_nobody_has_rated_has_no_band_either(implementation, session):
-    """The same absence, so the sheet omits one field or the other and never
-    draws an empty one."""
-
-    assert await implementation.build(session).band_for(new_uuid()) is None
-
-
-@pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
 async def test_a_weekly_partner_is_one_rater_however_many_evenings(
     implementation, session
 ):
@@ -757,10 +707,24 @@ def test_the_sportsmanship_demand_asks_about_one_player_and_takes_no_clock():
     with the first. The matcher must never read it in any shape at all, and that
     is held by an import contract rather than by this signature."""
 
-    for method in ("what_players_said", "band_for"):
-        hints = get_type_hints(getattr(SubjectSportsmanship, method))
-        assert set(hints) == {"player_id", "return"}, hints
-        assert hints["player_id"] is UUID
+    hints = get_type_hints(SubjectSportsmanship.what_players_said)
+    assert set(hints) == {"player_id", "return"}, hints
+    assert hints["player_id"] is UUID
+
+
+def test_the_sportsmanship_demand_has_one_method_and_it_is_the_figures():
+    """**No second resolution** (``docs/adr/0179`` §5). ``band_for`` — the
+    subject's three steps, no count — is gone from this demand with the band;
+    a method answering about a person at a coarser resolution than the figure
+    would be that decision quietly reopened on the consumer's side."""
+
+    declared = [
+        name
+        for name, value in vars(SubjectSportsmanship).items()
+        if callable(value) and not name.startswith("_")
+    ]
+
+    assert declared == ["what_players_said"]
 
 
 # ---------------------------------------------------------------------------

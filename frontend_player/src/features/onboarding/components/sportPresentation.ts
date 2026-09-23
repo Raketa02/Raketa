@@ -27,6 +27,22 @@ export function sportLabel(sport: Sport): string {
   return LABELS[sport];
 }
 
+/**
+ * The three-letter form, for the one place a sport is drawn beside a level in a tag that has
+ * to fit three across next to a face and a ring — the You tab's header card (ADR-0179 §1,
+ * *Pad 2,71 · Ten 3,10 · Squ 2,30*). Drawn only: the pill is spoken with `sportLabel`.
+ */
+const SHORT_LABELS: Readonly<Record<Sport, string>> = {
+  padel: 'Pad',
+  tennis: 'Ten',
+  squash: 'Squ',
+  badminton: 'Bad',
+};
+
+export function sportShortLabel(sport: Sport): string {
+  return SHORT_LABELS[sport];
+}
+
 export function sportColour(sport: Sport): string {
   return theme.sport[sport];
 }

@@ -57,7 +57,7 @@ import { StrandMeterRow } from './StrandMeterRow';
 import {
   SPORTSMANSHIP_LABEL,
   VARIETY_LABEL,
-  opinionValue,
+  opinionFigure,
   recordCardLabel,
   varietyValue,
 } from './recordPresentation';
@@ -71,9 +71,9 @@ export interface RecordCardProps {
    * What other players said — **a third absence, asking a third question.**
    *
    * Most people have not been rated, and rating is a favour nothing records the omission of, so
-   * this is missing far more often than the rows above it. Which arm it is — a figure for a
-   * reader, a band for the subject — is folded at the wire boundary from `is_self`, so the row
-   * draws what it was handed and compares nothing.
+   * this is missing far more often than the rows above it. The figure and its count, for the
+   * subject as for a stranger (ADR-0179 §5): the row draws what it was handed and compares
+   * nothing, and there is no second arm for it to be handed.
    */
   readonly opinion?: Opinion;
 }
@@ -110,12 +110,12 @@ export function RecordCard({ reliability, variety, opinion }: RecordCardProps) {
 
         {/* Last, because it is the one row here people wrote and the label says so. It carries
             no bar for the variety row's reason and no tone for its own: `scoreTone` belongs to
-            the Player Score, and a three-step band in those three colours would read as a
-            second score on the screen a held player opens to find out what holds them back. */}
+            the Player Score, and a star average in those three colours would read as a second
+            score on the screen a held player opens to find out what holds them back. */}
         {opinion === undefined ? null : (
           <Row
             label={SPORTSMANSHIP_LABEL}
-            value={<Text style={s.figure}>{opinionValue(opinion)}</Text>}
+            value={<Text style={s.figure}>{opinionFigure(opinion)}</Text>}
             divided={drawn || variety !== undefined}
           />
         )}

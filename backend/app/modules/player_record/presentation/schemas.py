@@ -28,7 +28,6 @@ from app.modules.player_record.domain.record import (
     LAST_FIVE,
     GameOutcome,
     OnCourtVerdict,
-    OpinionBand,
     PlayerRecord,
 )
 
@@ -301,8 +300,7 @@ class RecordSportsmanshipSchema(BaseModel):
     belongs to ``sportsmanship``, which has a surface of its own; a class simply
     called ``SportsmanshipSchema`` here would not shadow whatever that context
     publishes next, it would *rename both* — and every generated type a shipped
-    app already holds would move. It is ``RecordLikelyRangeSchema``'s rule, and
-    the same rule renamed the band this sits beside.
+    app already holds would move. It is ``RecordLikelyRangeSchema``'s rule.
 
     **Its own heading, and never mixed with the rows above.** The record card is
     headed *counted by the system, not written by people*, which is the promise
@@ -330,8 +328,10 @@ class RecordSportsmanshipSchema(BaseModel):
     anybody's search results — the reliability pill is the counted-only number
     and is exactly what the platform acts on.
 
-    **Never on your own record.** `sportsmanship_band` is what you get about
-    yourself, and this is absent — see that field for why.
+    **On your own record too, at this resolution.** The person it is about
+    reads the same figure and the same count a stranger does; the coarse band
+    that used to stand in for it on their own sheet is gone from the shape. See
+    the field on the response for why.
     """
 
     average: float = Field(
@@ -426,9 +426,10 @@ class PlayerRecordResponse(BaseModel):
             "Whether this is the reader's own record. **The server's answer, "
             "and the client never derives it** by comparing the id it asked "
             "about against its session — the sheet retitles to *How others see "
-            "you*, drops the distance and shows a coarse band where a figure "
-            "would be, and getting that wrong is most visible on the one screen "
-            "it matters on.\n\n"
+            "you* and drops the distance and the fit pill, and getting that "
+            "wrong is most visible on the one screen it matters on. It decides "
+            "the title and nothing on the sheet: every zone, what other players "
+            "said included, is the same fact whoever is reading.\n\n"
             "`true` on `/players/me/record` always, and on the parameterised "
             "route when a client asks about itself."
         ),
@@ -607,39 +608,18 @@ class PlayerRecordResponse(BaseModel):
             "`skill`'s, not `variety`'s and not `reliability`'s, since a plan "
             "that dissolved and a seat that ran out are opportunities and "
             "neither is an opinion anybody offered.\n\n"
-            "**Absent on your own record, always.** You are answered with "
-            "`sportsmanship_band` instead. The two never appear together, and "
-            "which one you get is decided by `is_self`.\n\n"
+            "**On your own record too, and it is the same figure.** What you "
+            "read about yourself under *Sportsmanship, by players* is what a "
+            "stranger reads about you — `4,3 / 5 · 12 players` — with nothing "
+            "coarsened and no count withheld. The three-step band that used to "
+            "stand in for it on your own sheet is gone from this shape; ADR-0179 "
+            "§5 decides that and names what it costs.\n\n"
             "**It is about no sport**, like `variety` and `reliability`: "
             "`?sport=` does not move it. How somebody is to play with is not a "
             "padel fact.\n\n"
             "**The matcher never reads it.** A low figure hides nobody and "
             "demotes nobody — Pass and Block are the controls that act, and both "
             "are deliberate."
-        ),
-    )
-
-    sportsmanship_band: OpinionBand = Field(
-        default=OMITTED,
-        description=(
-            "**How you are coming across, in three steps — and only ever about "
-            "yourself.**\n\n"
-            "**No figure and no count, and that is the whole design.** A "
-            "published average beside a published count lets you subtract: "
-            "moving from 4,80 over ten to 4,73 over eleven names the new rating "
-            "as a 4, and you know who you played. Every answer would be "
-            "identifiable by the one person who must never see it, and people "
-            "stop answering honestly once that is true. A band tells you "
-            "something is going wrong, which is the useful half.\n\n"
-            "**Deliberately too coarse to read anything into.** At one or two "
-            "ratings it cannot be informative about any individual, and even at "
-            "fifty a step this wide moves for a change of habit rather than for "
-            "one evening. Do not draw a number, a bar or a trend from it.\n\n"
-            "**Present only when `is_self` is `true`**, and omitted where nobody "
-            "has rated you yet — the same absence `sportsmanship` spells on "
-            "somebody else's record.\n\n"
-            "**It changes nothing about how you are matched.** The reliability "
-            "pill is what the platform acts on, and this is not in it."
         ),
     )
 
@@ -699,8 +679,6 @@ class PlayerRecordResponse(BaseModel):
             fields["sportsmanship"] = RecordSportsmanshipSchema(
                 average=said.average, raters=said.raters
             )
-        if record.sportsmanship_band is not None:
-            fields["sportsmanship_band"] = record.sportsmanship_band
         if record.variety is not None:
             fields["variety"] = OpponentVarietySchema(
                 distinct_opponents=record.variety.distinct_opponents,

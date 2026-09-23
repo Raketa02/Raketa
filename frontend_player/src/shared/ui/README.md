@@ -91,7 +91,20 @@ chat map: `TextField` (6.13, which auth's four boxes moved onto in the same comm
 `PhotoPanel` with `PlayerPhoto`, `OnCourtMark` and `courtPosterFor` under it; and by the
 sportsmanship card: `StarRow` with `Star`; and by the Chats list's _Leave the game_: `SwipeRow`
 (6.15), a row that slides left on `PanResponder` to reveal one control, with its arithmetic in
-`swipeRowGeometry.ts`. Import them from `@/shared/ui`.
+`swipeRowGeometry.ts`; and by the You tab: `DoorRow` (5.5 as amended, Part 16 2026-09-17), a
+fact with a screen behind it — a `paper2` lead square with a Feather glyph, a title, a **live**
+line off a read and a chevron, spoken as _title, live line_; what a row says while its read is
+on its way or has failed is `shared/errors`' `liveLine`, because a read's standing turned into a
+sentence is an errors concern and not a drawing. `DarkCard` gained `PressableDarkCard` for the
+tab's header card, as `Card` has `PressableCard`. Import them from `@/shared/ui`.
+
+**`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
+card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with
+`SCORE` beneath; `ringLg` (74) on the reliability screen, with the tone ladder's word beside it
+and nothing beneath (Part 16, 2026-09-17; ADR-0179 §1–§2). The `size` changes the diameter and
+nothing else — one stroke, one tick, one overshoot, one type role for the figure — and the
+caller may hand the `figure` to print, because a Player Score is out of a hundred and not a
+percentage. The `label` beneath became optional for the reliability screen's reason.
 
 **Six of those arrived by promotion rather than by being built here**, and the promotion is the
 interesting half ([#375](https://github.com/Raketa02/Raketa/issues/375),

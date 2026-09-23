@@ -9,24 +9,15 @@
  * this screen owes the player is to make the two shape refusals impossible to walk past and
  * to say the third one before it is met.
  *
- * ## Nothing here decides anything
+ * ## Nothing here decides anything, and the box is not here either
  *
  * The cap, the count, the line-break rule and what the commit carries are `intro`'s, with
- * their own tests and no renderer; the sentences are `introPresentation`'s. What is left
- * here is what a player sees — the same split every step before it made, and for the same
- * reason: the profile editor will obey these rules from a screen that looks nothing like
- * this one, on the day the intro becomes editable with the tags and the photo (ADR-0170 §5).
- *
- * ## The cap is drawn as a refusal rather than as a `maxLength`
- *
- * `WhereField`'s argument, one feature over, and it holds here: a `maxLength` swallows the
- * tail of a paste, and a shortened line is one the person who typed it believes they wrote
- * whole — in front of every stranger who reads it. So the box takes everything, the counter
- * keeps counting past a hundred, the sentence under the box says what is wrong, and *Next*
- * stays shut until it is not. The box grows to a few lines so a hundred characters can be
- * read back whole, and the return key **dismisses the keyboard rather than breaking the
- * line** — a line break is the second shape refusal, and the ordinary way of producing one
- * should not produce it. A pasted one still can, and is refused under the box the same way.
+ * their own tests and no renderer; the sentences are `introPresentation`'s; the box with its
+ * counter, hint and rule — and the cap drawn as a refusal rather than as a `maxLength` — is
+ * `IntroField`, which the You tab's *Intro* draws too
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2, §6 — the day ADR-0170 §5 named). What is left here is the step's own: its chrome, *Next*
+ * and *Skip*.
  *
  * ## Skip is visible, and it clears
  *
@@ -45,39 +36,24 @@
  */
 
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
 
-import { Button, TextField, theme } from '@/shared/ui';
+import { Button } from '@/shared/ui';
 
-import { introLength, introStanding } from '../domain/intro';
+import { introStanding } from '../domain/intro';
 import { stepAfter } from '../domain/socialSteps';
 import { useProfileDraft } from '../store/profileDraft.store';
 
+import { IntroField } from './IntroField';
 import {
-  INTRO_FIELD_HINT,
-  INTRO_FIELD_LABEL,
   INTRO_NEXT_LABEL,
-  INTRO_PLACEHOLDER,
   INTRO_REFUSAL_SENTENCE,
-  INTRO_RULE,
   INTRO_SKIP_LABEL,
-  introCounter,
   introNextHint,
   introSkipHint,
-  spokenIntroCounter,
 } from './introPresentation';
 import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
-
-/**
- * How many lines the box may grow to before it scrolls.
- *
- * A hundred characters is two lines on the deck card at the mock's size and three in this
- * box at the value role, so three is where a line at the cap can be read back whole. One
- * more than that is room for the overrun the counter is there to show.
- */
-const INTRO_LINES = 4;
 
 export function SocialIntroStep() {
   const router = useRouter();
@@ -88,10 +64,6 @@ export function SocialIntroStep() {
   const next = stepAfter('intro');
   const written = draft?.intro ?? '';
   const standing = introStanding(written);
-  // The count is of the line as the cap reads it — trimmed — and not of the box: the spaces
-  // around a line are not part of it, and a counter that said `104 / 100` beside an open
-  // *Next* would be arguing with the rule it is there to show.
-  const length = introLength(written.trim());
   const refusal = standing.kind === 'refused' ? INTRO_REFUSAL_SENTENCE[standing.reason] : undefined;
 
   const goOn = () => {
@@ -129,45 +101,11 @@ export function SocialIntroStep() {
         )
       }
     >
-      <TextField
-        label={INTRO_FIELD_LABEL}
-        placeholder={INTRO_PLACEHOLDER}
-        value={written}
+      <IntroField
+        written={written}
         onChangeText={(text) => answer({ intro: text })}
-        growTo={INTRO_LINES}
-        // Return dismisses the keyboard. A line break is a refusal, and the key that would
-        // ordinarily insert one should not be the key that produces it.
-        submitBehavior="blurAndSubmit"
-        // Prose a person writes, not an identifier: the platform's own correction and
-        // capitalisation stay on, and there is nothing on a phone's saved-values list that
-        // is a sentence about somebody.
-        autoComplete="off"
-        accessibilityHint={INTRO_FIELD_HINT}
-        {...(refusal === undefined ? {} : { error: refusal })}
+        refusal={refusal}
       />
-
-      {/* Right-aligned under the box, in the number role — every figure is mono and
-          tabular, which is what keeps `9 / 100` and `10 / 100` from shifting the line. Spoken
-          as a count rather than as a fraction, because `/` is not a word. */}
-      <Text style={s.counter} accessibilityLabel={spokenIntroCounter(length)}>
-        {introCounter(length)}
-      </Text>
-
-      {/* The rule, once, before the refusal that enforces it is six screens away. */}
-      <View style={s.rule}>
-        <Text style={s.smallPrint}>{INTRO_RULE}</Text>
-      </View>
     </SocialStepLayout>
   );
 }
-
-const s = StyleSheet.create({
-  counter: {
-    ...theme.num.xs,
-    ...theme.tabular,
-    color: theme.color.muted,
-    textAlign: 'right',
-  },
-  rule: { paddingTop: theme.space.xs },
-  smallPrint: { ...theme.type.tiny, color: theme.color.muted },
-});

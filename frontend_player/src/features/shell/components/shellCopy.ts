@@ -1,54 +1,34 @@
 /**
- * What the one unbuilt tab says, and what the two built ones the shell writes for say.
+ * The sentences the shell writes for the tabs it composes — Chats and Now.
  *
- * **These are citations, not filler.** A placeholder line is one sentence naming what its tab
- * will be, plus that it is not built — decided elsewhere, so the sentence is quoting a rule
- * rather than making a promise ([#227](https://github.com/Raketa02/Raketa/issues/227)):
- *
- * | Tab | Where the line comes from |
- * | --- | --- |
- * | You | [#226](https://github.com/Raketa02/Raketa/issues/226) — the grid, the radius and the declaration are exactly the three facts on the wire |
- *
- * **Four tabs have left this table and none of them was deleted.** Play's stub was replaced by
- * the screen itself ([#268](https://github.com/Raketa02/Raketa/issues/268)); Chats' line — *"a
- * chat opens when somebody accepts"* — was a citation of
+ * **These are citations, not filler**, and there is no placeholder among them any more. For
+ * as long as a tab was unbuilt its line was one sentence naming what the tab would be plus
+ * that it was not built — decided elsewhere, so the sentence was quoting a rule rather than
+ * making a promise ([#227](https://github.com/Raketa02/Raketa/issues/227)). **Every tab has
+ * left that table and none of them was deleted.** Play's stub was replaced by the screen
+ * itself ([#268](https://github.com/Raketa02/Raketa/issues/268)); Chats' line — *"a chat
+ * opens when somebody accepts"* — was a citation of
  * [#221](https://github.com/Raketa02/Raketa/issues/221), and `CHATS_COPY` below is that same
  * citation said properly on a tab that is built
  * ([#360](https://github.com/Raketa02/Raketa/issues/360)); **Now's died with the rail**
- * ([#367](https://github.com/Raketa02/Raketa/issues/367)), replaced by `NOW_COPY` below; and
+ * ([#367](https://github.com/Raketa02/Raketa/issues/367)), replaced by `NOW_COPY` below;
  * **Around's retired with the tab** — its line promised *players and courts near you*, nothing
  * had been decided about either, and the deck moved in as **Players**
  * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
- * §1). Courts get their own home when they arrive. One tab remains unbuilt, and `PlaceholderTab`
- * excludes the four that are not.
+ * §1); and **You's went last, with the tab it cited** — *your profile, your radius, your week —
+ * not built yet* was [#226](https://github.com/Raketa02/Raketa/issues/226)'s three facts on the
+ * wire, and the tab draws all three now and a good deal more
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)),
+ * with its own words in `youCopy`. `PlaceholderCopy`, `PlaceholderTab` and `PLACEHOLDER_COPY`
+ * went with it: an empty union and an empty table would have been a shape kept for a case that
+ * cannot recur, since every column the bar draws has a screen behind it.
  *
  * **No sentence here may say "nothing is happening."** It began as Now's refusal — Now is where a
  * send lands, so a placeholder asserting emptiness would be lying one tap after a challenge went
  * out — and it now governs every empty state the shell writes, on both of the built tabs. Naming
  * what a tab **is** is true in both states, which is the test each line has to pass and the test
  * `shellCopy.test.ts` holds them to.
- *
- * The em dash is a dash and not a colon on purpose: *not built yet* is an aside about the
- * app, not a second clause of the sentence about the tab.
  */
-
-import type { TabBarKey } from '@/shared/ui';
-
-/** A tab with no screen behind it yet: what it is called, and the one line it shows. */
-export interface PlaceholderCopy {
-  readonly title: string;
-  readonly line: string;
-}
-
-/** The one tab that ships unbuilt. Now, Players, Play and Chats are built and are not it. */
-export type PlaceholderTab = Exclude<TabBarKey, 'now' | 'players' | 'play' | 'chats'>;
-
-export const PLACEHOLDER_COPY = {
-  you: {
-    title: 'You',
-    line: 'Your profile, your radius, your week — not built yet',
-  },
-} as const satisfies Record<PlaceholderTab, PlaceholderCopy>;
 
 /**
  * **The Chats tab's own sentences** — the panel, and each section's empty state.

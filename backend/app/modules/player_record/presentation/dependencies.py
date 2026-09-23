@@ -123,10 +123,10 @@ SubjectVarietyDep = Annotated[SubjectVariety, Depends(get_subject_variety)]
 def get_subject_sportsmanship(db: DbSession) -> SubjectSportsmanship:
     """What other players said. **One adapter, and it serves both routes.**
 
-    Both use cases below take the same collaborator, and which of its two methods
-    is called is the assembler's decision off ``is_self`` — not a second wiring.
-    Two adapters here would be two answers to *whose sheet is this*, and the one
-    the wiring gave would win over the one the record states.
+    Both use cases below take the same collaborator and put it the same one
+    question, whoever is reading (``docs/adr/0179`` §5). Two adapters here would
+    be two answers to *whose sheet is this*, and the one the wiring gave would
+    win over the one the record states.
     """
 
     return build_subject_sportsmanship(db)
@@ -210,9 +210,9 @@ def get_read_own_record(
     penalty nobody can look up is a penalty nobody can fix.
 
     **The sportsmanship reader is the same object the other route gets**, and
-    what makes this route safe is not a narrower collaborator but a narrower
-    *question*: the assembler asks it for a band, and the band's method has no
-    figure in it to hand over.
+    it is put the same question: the figure and its count cross to the subject
+    as to anybody (``docs/adr/0179`` §5), so there is nothing narrower for this
+    route to ask.
     """
 
     return ReadOwnRecord(

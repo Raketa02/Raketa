@@ -35,6 +35,7 @@ from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
+    IntroChanged,
     IntroWritten,
     LocationChanged,
     PhotosChanged,
@@ -211,6 +212,21 @@ def test_a_written_intro_moves_the_line_and_nothing_else() -> None:
     )
 
 
+def test_a_changed_intro_moves_the_line_and_a_withdrawal_clears_it() -> None:
+    """The You tab's edit follows the commit's line into the same column
+    (``docs/adr/0179`` §6) — the whole new value, so the fold stays a fold —
+    and a withdrawal is ``None`` in that column, not a line left standing on
+    every card after its author took it back."""
+
+    changed = _only(IntroChanged(PLAYER, "Will travel for a hard game.", LATER))
+    assert changed == PlayerFactsMoved(
+        player_id=PLAYER, changes={"intro": "Will travel for a hard game."}
+    )
+
+    withdrawn = _only(IntroChanged(PLAYER, None, LATER))
+    assert withdrawn == PlayerFactsMoved(player_id=PLAYER, changes={"intro": None})
+
+
 # ---------------------------------------------------------------------------
 # The per-sport facts
 # ---------------------------------------------------------------------------
@@ -334,6 +350,7 @@ def test_the_projected_contracts_are_exactly_what_projects_something() -> None:
         GenderChanged,
         GenderPreferenceChanged,
         IntroWritten,
+        IntroChanged,
         ProposalsOptInAnswered,
         PlayIntentDeclared,
         RatingInitialised,

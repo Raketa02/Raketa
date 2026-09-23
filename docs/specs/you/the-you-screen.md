@@ -517,6 +517,10 @@ only, and §21's test asserts they appear on that one shape and on no other.
 
 ### 5.3 Decided (ADR-0179 §5): the sportsmanship figure, shown to its subject
 
+> Built on 2026-09-17 (#468): `GET /players/me/record` serves `sportsmanship` and
+> `sportsmanship_band` is gone from the contract. The paragraph below describes the backend
+> as it stood when the question was put.
+
 The reliability screen and the record draw *Sportsmanship, by players* as **the figure and its
 count** — `4,3 / 5 · 12 players` — the way the record prints it to a reader. **The backend does
 not serve that to its subject and was decided not to**: `GET /players/me/record` carries

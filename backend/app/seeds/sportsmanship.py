@@ -7,12 +7,12 @@ who was not on the court, a rater who was not either, and a second answer to a
 card that is already closed. A fixture that inserted into ``sportsmanship_rating``
 would prove that a rating can be inserted.
 
-**This layer writes nothing the record reads.** The average, the count and the
-coarse band the subject is shown are a **fold over these rows taken when somebody
-opens a record** — there is no projection, no summary column and nothing to keep
-up to date. That is worth saying here because it is the whole shape of the
-question this fixture answers: the record card is empty on a fresh database
-because *nothing has happened yet*, not because a table has not been filled in.
+**This layer writes nothing the record reads.** The average and the count are a
+**fold over these rows taken when somebody opens a record** — there is no
+projection, no summary column and nothing to keep up to date. That is worth
+saying here because it is the whole shape of the question this fixture answers:
+the record card is empty on a fresh database because *nothing has happened
+yet*, not because a table has not been filled in.
 
 **The declaration says what was thought and never where it was said.**
 ``WHAT_PLAYERS_SAID`` is keyed by subject and then by rater; which of their courts

@@ -223,12 +223,19 @@ def test_the_reason_crosses_as_the_refusals_details() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_the_intro_reaches_the_card_and_the_record_and_nowhere_else() -> None:
+def test_the_intro_reaches_the_card_the_record_and_its_author_and_nowhere_else() -> (
+    None
+):
     """``docs/adr/0170`` §3 — *not on a seat, not on a Chats row, not in a
     conversation header, not on a challenge card: those are places a person is
     named, and the intro is a place a person speaks.* Walked over the emitted
     contract, the way the sportsmanship words are, so a helpful field on a
-    court person or a seat goes red rather than shipping."""
+    court person or a seat goes red rather than shipping.
+
+    The third shape is the **author's own** profile read — where the line is
+    read back to the person who wrote it so they can change or withdraw it
+    (``docs/adr/0170`` §5, ``docs/adr/0179`` §6 and §8). Not a stranger's
+    surface, and named here by name so a fourth shape still goes red."""
 
     from app.api.contract import build_surface_spec
     from app.api.v1.player import player_api_router
@@ -247,7 +254,11 @@ def test_the_intro_reaches_the_card_and_the_record_and_nowhere_else() -> None:
         if "intro" in (schema.get("properties") or {})
     )
 
-    assert carrying == ["PlayerCardSchema", "PlayerRecordResponse"]
+    assert carrying == [
+        "PlayerCardSchema",
+        "PlayerProfileReadResponse",
+        "PlayerRecordResponse",
+    ]
 
 
 # ---------------------------------------------------------------------------

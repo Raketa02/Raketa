@@ -23,24 +23,12 @@ import { intentLabel } from '@/shared/vocabulary/playIntentPresentation';
 import type { PlayIntent } from '@/shared/vocabulary/playIntent';
 
 /**
- * The section's heading — **who the answer is for**, said before any of it is read.
- *
- * Not *Your play intents*: the value's name is the least useful thing about it here, and the
- * one fact that makes the list worth having is that it is read by somebody else.
+ * **The section's heading and body are gone**, and on purpose (ADR-0179 §2, §9). They read
+ * *What other players see* and *The kind of game you want. Searches read this per sport when
+ * deciding whether you would suit them. It does not change what you can search for.* — and
+ * the You tab's *What kind of game* screen says the one thing they said in one line under its
+ * title, `KIND_OF_GAME_LINE`, so the section is the list and the footnote.
  */
-export const PLAY_INTENTS_HEADING = 'What other players see';
-
-/**
- * What the list is, and the thing it is repeatedly mistaken for.
- *
- * The second sentence is the one that earns its place. *It does not change what you can search
- * for* is the whole confusion this ticket and
- * [#294](https://github.com/Raketa02/Raketa/issues/294) are both about, stated on the screen
- * where the value lives rather than only on the one where it collides with a switch.
- */
-export const PLAY_INTENTS_BODY =
-  'The kind of game you want. Searches read this per sport when deciding whether you would ' +
-  'suit them. It does not change what you can search for.';
 
 /**
  * A rated sport nobody has answered for.

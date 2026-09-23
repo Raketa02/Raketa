@@ -12,6 +12,7 @@
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import {
+  sameSelection,
   selectionStanding,
   toggleSocialTag,
   type SocialTagSelectionBounds,
@@ -115,5 +116,24 @@ describe('the floor', () => {
       kind: 'short',
       missing: 2,
     });
+  });
+});
+
+/**
+ * **Whether a draft is the selection the profile already holds** — what shuts *Save* on the
+ * You tab (ADR-0179 §2). By membership and never by order: the profile holds the tags in the
+ * vocabulary's order whatever order the picker pressed them in, so a draft that merely
+ * re-ordered the same tags has nothing to save.
+ */
+describe('whether two selections are the same answer', () => {
+  it('is by membership, whatever the order', () => {
+    expect(
+      sameSelection(['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'], ['HERE_TO_IMPROVE', 'PLAYS_TO_WIN']),
+    ).toBe(true);
+    expect(sameSelection(['PLAYS_TO_WIN'], ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'])).toBe(false);
+    expect(
+      sameSelection(['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'], ['PLAYS_TO_WIN', 'QUIET_AND_FOCUSED']),
+    ).toBe(false);
+    expect(sameSelection([], [])).toBe(true);
   });
 });

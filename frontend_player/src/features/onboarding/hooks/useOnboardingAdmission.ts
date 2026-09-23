@@ -3,7 +3,9 @@
  *
  * The decision is `admissionTo`'s, a pure rule with its own tests; this is the wiring that
  * acts on it — the same split the entry gate uses, and the same one `useAdvanceThroughPass`
- * uses. What crosses the feature's public surface is the answer, never the store.
+ * uses. What crosses the feature's public surface is the answer, never the store. A pass
+ * begun at the passport reads the same rule off the same store: it admits its one sport and
+ * starts any other over (ADR-0179 §3).
  *
  * **Beginning happens here, and it happens during render.** A run resumed with no pass is
  * a pass of one sport, and the chrome reads a position on the questionnaire's very first

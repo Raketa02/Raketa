@@ -42,7 +42,7 @@ export { toSport, toWireSport } from './mappers/onboardingMappers';
  * five {sport} searches"* — and a copy deck quoting a name is never a second table of names
  * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1).
  */
-export { sportColour, sportLabel } from './components/sportPresentation';
+export { sportColour, sportLabel, sportShortLabel } from './components/sportPresentation';
 
 /**
  * The four Band names, and which of the four a served name refers to.
@@ -61,6 +61,25 @@ export { sportColour, sportLabel } from './components/sportPresentation';
 export { BAND_NAMES, bandPresentation, type BandPresentation } from './components/bandPresentation';
 
 /**
+ * **The result card, drawn once per rating on the Skill passport**
+ * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2): `Verdict` is the dark card the result screen draws, unchanged, and the passport puts a
+ * sport tag and a status chip across its top. The explainers and the pressed-mark shape travel
+ * with it because the passport draws the card's popover, one for every card, as the result
+ * screen draws its own. `ratingStatusLabel` is the chip's word and the card's row, cited.
+ */
+export {
+  Verdict,
+  VerdictPopover,
+  useVerdictExplainer,
+  type Explaining,
+  type RatingVerdict,
+  type VerdictProps,
+} from './components/Verdict';
+export { ratingStatusLabel } from './components/bandPresentation';
+export { useSports } from './hooks/useSports';
+
+/**
  * The entry gate. The *decision* is exported, never the redirect: where a player belongs
  * is this feature's rule, and which route expresses it is the routing layer's.
  */
@@ -73,14 +92,28 @@ export {
 /**
  * A walk through onboarding is over when the player is in the app. The gate is the one
  * place that knows they are, so it is the one place that says so — see the hook for why
- * this is the definition rather than a convention.
+ * this is the definition rather than a convention. **It hands the gate where the pass
+ * began**, because a pass begun at the Skill passport ends on the passport
+ * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §3), and which route that is belongs to the route file that lands it.
  */
-export { useEndOnboardingPass } from './hooks/useEndOnboardingPass';
+export { useEndOnboardingPass, type PassLanding } from './hooks/useEndOnboardingPass';
+export type { PassOrigin } from './domain/onboardingPass';
 
 /**
- * Whether a link may drop a player straight into a sport's questionnaire. Onboarding
- * happens once, at the beginning, so a link naming a sport this player never chose sends
- * them there rather than into the middle of a flow with nothing honest to show.
+ * **The second door into the pass** — the Skill passport's *Add a sport* (ADR-0179 §3). The
+ * chip starts the sport's assessment through the picker's own start, begins a pass of that
+ * one sport at the question route, and the pass ends back on the passport. The act crosses
+ * the surface; the store does not.
+ */
+export { useAddASport, type AddASport } from './hooks/useAddASport';
+export { STARTING_LABEL } from './components/startPresentation';
+
+/**
+ * Whether a link may drop a player straight into a sport's questionnaire. A pass has two
+ * doors — the picker and the passport's chip — and a link is neither: one naming a sport
+ * outside the running pass sends the player to welcome rather than into the middle of a
+ * flow with nothing honest to show.
  */
 export { useOnboardingAdmission, type OnboardingAdmission } from './hooks/useOnboardingAdmission';
 

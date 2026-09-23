@@ -193,12 +193,17 @@ review comment and a test description all use the same word.
   and lay a new one down. Four tabs lay down one screen and ⚡Play lays down two, which is
   why back from Play's entry leaves Play rather than walking it. **A Play session ends
   exactly when it runs.** _Avoid_: "switching tabs" as though it were a push.
-- **A placeholder tab** — a tab with no screen behind it yet, and there is **one**, You. It
-  states what its tab will be and that it is not built, in one sentence, so a player can tell
-  it from a bug; the sentence is a **citation** of a decision taken elsewhere. Four tabs have
-  left the table — Play, Chats and Now by being built, Around by retiring when the deck moved
-  in as Players — and **Now never says nothing is happening** — it is where a send lands.
-  _Avoid_: "empty state" (that is a screen with a real answer of nothing) and "coming soon".
+- **A placeholder tab** — a tab with no screen behind it yet, and **there is none now**. For
+  as long as one existed it stated what its tab would be and that it was not built, in one
+  sentence, so a player could tell it from a bug; the sentence was a **citation** of a decision
+  taken elsewhere. Five tabs left the table and none was deleted: Play, Chats and Now by being
+  built, Around by retiring when the deck moved in as Players, and **You** — the last — by
+  being built as onboarding laid out flat (ADR-0179). The union and the table went with it,
+  because a shape kept for a case that cannot recur is not a fact. What survives is the rule
+  the placeholders were written under: **no sentence the shell writes says nothing is
+  happening**, and `shellCopy.test.ts` still holds every line to it. _Avoid_: "empty state"
+  (that is a screen with a real answer of nothing) and "coming soon" — a screen that lands
+  with its contract says in one line what it is, never that.
 
 ### The onboarding flow
 
@@ -218,7 +223,7 @@ profile editor that later edits the same values.
   one place, when the player reaches the app. Between passes there is **no pass**, and
   that absence is load-bearing: it is what lets a resumed run begin one without adopting a
   finished walk's queue. **Onboarding happens once, at the beginning — and a pass has an
-  origin**: welcome, or the Skill passport's *Add a sport*, which begins a pass of exactly one
+  origin**: welcome, or the Skill passport's _Add a sport_, which begins a pass of exactly one
   sport and ends back on the passport
   ([ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
   §3). A link naming a sport outside the running pass is still sent to welcome rather than
@@ -253,18 +258,23 @@ profile editor that later edits the same values.
   **position** in a run, and the two move by different rules.
 - **Intro shape refusal** — the two of `intro_not_admitted`'s three reasons that are facts
   about the string itself, `too_long` and `multiline`, which the intro step reads off the
-  Profile draft and shuts _Next_ on before anything is sent — in the **same three-member
-  vocabulary** the wire's refusal carries, so one sentence table serves the refusal the step
-  pre-empts and the one the commit brings back. The third, `contains_contact`, is **the
+  Profile draft and shuts _Next_ on before anything is sent — and the You tab's _Intro_ reads
+  off its draft and shuts _Save_ on — in the **same three-member vocabulary** the wire's
+  refusal carries, so one sentence table serves the refusal a screen pre-empts and the one
+  the commit or the intro write brings back. The third, `contains_contact`, is **the
   server's pattern and never this app's**: a copy of it would be a staler one on every phone
-  the day it is tuned from a refusal, so it lands at the commit, six screens later, and the
-  step says the rule up front instead. Counted in **code points**, as the server's `len`
+  the day it is tuned from a refusal, so it lands at the write — six screens later on the
+  step, one press later on the tab, drawn in the same place under the box — and the step
+  says the rule up front instead. Counted in **code points**, as the server's `len`
   counts, and trimmed first, as the server trims. The [Intro](../CONTEXT.md) itself is the
   root glossary's. _Avoid_: "validation" — the client validates nothing, it pre-empts two
   refusals whose authority stays on the server; "content filter" — nothing here reads what
   the line says.
 - **Profile draft** — every answer the second part has collected, held **on the client**
-  until the one commit that ends the part. Three of its fields start **empty** because empty
+  until the one commit that ends the part. It is the part's and only the part's: the You tab
+  edits the same facts against the same rules and holds **no draft of this kind** — each
+  screen there holds a draft of one fact beside the profile read until its _Save_, and the
+  photos hold none at all. Three of its fields start **empty** because empty
   is a real answer — no photo, a blank week, and the intro box with nothing in it — and the
   intro is held **as typed**, untrimmed, so a round trip finds the box as it was left; what
   the commit carries is the trimmed line, or no field at all. In memory, never persisted, and never sent
@@ -296,20 +306,30 @@ profile editor that later edits the same values.
   **reason code** rather than a sentence. The gate is mutual, so `WOMEN_ONLY` does not only
   filter what a player sees — it hides them from every man, including men who searched for
   anybody, and that is the half nobody would guess. The rule decides _whether there is a
-  cost_; this app's copy says it, on the step, **at the moment of the press**. Learning it
-  from an empty inbox is not acceptable
+  cost_; this app's copy says it **at the moment of the press, on every surface that takes
+  the value** — the step, and since [#472](https://github.com/Raketa02/Raketa/issues/472)
+  the You tab's _Who you play with_, which draws the same group (`GenderControls`) under a
+  _Save_ of its own. Learning it from an empty inbox is not acceptable
   ([ADR-0096](../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
   _Avoid_: "filter" — a filter is one-directional and this deliberately is not; "privacy
   setting" — it changes who is matched, not what is shown, and neither value is ever drawn
-  on any surface but the step that takes it.
-- **Photo workbench** — the pictures the photos step is holding, each with the upload it is
-  in the middle of, beside the Profile draft and in the same store. Not an answer: a local
-  `file://` URI is worthless to the server and an upload in flight has nothing to commit, so
-  what reaches the draft is **derived** from it — the ids of the photos that arrived, in the
-  player's order. One store because the two share one lifetime and that derivation is the
-  invariant; two would be two things to reset and a sync somebody forgets. _Avoid_: "photo
-  state", "upload queue" — the queue is one promise chain inside the step's hook, and it is
-  not what this holds.
+  to anybody but its owner, on the two screens that take it and on the row's line only as
+  _Matched with …_, never the gender (ADR-0179 §4).
+- **Photo workbench** — the pictures a photos screen is holding, each with the upload it is
+  in the middle of. **It has two homes** (ADR-0179 §2). On the step it sits beside the
+  Profile draft in the same store, and it is not an answer: a local `file://` URI is
+  worthless to the server and an upload in flight has nothing to commit, so what reaches the
+  draft is **derived** from it — the ids of the photos that arrived, in the player's order.
+  One store because the two share one lifetime and that derivation is the invariant; two
+  would be two things to reset and a sync somebody forgets. On the You tab it sits beside
+  the Profile surface, **seeded once** from the profile's photos — each restored tile drawn
+  from the signed address `GET /photos/{id}` answers, because a restored photo has no device
+  copy — and the same derivation is a `PUT /players/me/photos` on every change that moves
+  the ids: the step has no _Save_, so the tab has none, and the row is the state. Either way
+  the hook that picks and uploads is one and reads the bench _as it is now_, because the
+  queue runs between renders. _Avoid_: "photo state", "upload queue" — the queue is one
+  promise chain inside the hook, and it is not what this holds; "draft" for the tab's bench —
+  nothing on it waits for a button.
 - **Profile options** — the **one read** the eight steps are drawn from: the Social tag
   vocabulary with its grouping, how many tags a profile must hold, and the Search radius
   bounds. Reference data owned by TanStack Query, fetched once for the whole part, and the
@@ -318,19 +338,27 @@ profile editor that later edits the same values.
   this build has no words for is dropped rather than drawn — the answer `toSport` gives an
   unknown sport. _Avoid_: "config" and "settings"; neither is about this player, and both
   invite something per-player being added to it.
-- **Profile surface** — the **one read** the Play screens hold about the player: the
-  availability grid, the Search radius and the per-sport Play intent, in one round trip across
-  the two aggregates that own them. Deliberately **not the whole profile**, and the two
-  absences on it are different absences — gender and the gender preference are a _standing
-  refusal_ that never comes back out of this API, and tags, photos and the location area are a
-  _deferral_ this same route grows when **You** is built. Its home is `player_profile/`, not
-  `play/`, because the three **writes** are: one unkeyed `PUT` per fact, and a read whose
-  paired writes live in another feature is a read in the wrong feature. Of the three facts
-  only the radius is written from Find a game — a search carries no radius and never will, so
-  the profile is the only place a slider there can mean anything. _Avoid_: "the profile" for
-  this — it is a surface over one, and calling it the profile is how a fourth field gets added
-  to a body scoped to three; also "play screen read", which names a caller rather than the
-  facts.
+- **Profile surface** — the **one read** this app holds about the player's declared facts:
+  the availability grid, the Search radius and the per-sport Play intent, in one round trip
+  across the two aggregates that own them — and, since the route **grew** the day **You** was
+  built ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
+  tags, the photos with their verdicts and the intro, read on #471, and the standing
+  Proposals opt-in with its evidence and the **owner's own** gender and preference — the one
+  shape that carries them — read on #472; there is no `has_location`, because a profile
+  cannot be committed without an area and a flag that cannot be false is a branch nobody
+  tests. Its home is
+  `player_profile/`, not `play/`, because the **writes** are: one unkeyed `PUT` per fact, and a
+  read whose paired writes live in another feature is a read in the wrong feature. **Two
+  screens draw it now.** Find a game reads the week and the radius as a search's working copy —
+  and the radius is the one fact written from there, as the first half of pressing the card;
+  the **You** tab reads every one of them as a fact with a door, and its screens write the
+  week, the radius, the tags, the intro and each of the two gender groups on a **button** and
+  never on release — the photos on every change to the row, and the opt-in on **every press**,
+  the same answer included, because a re-affirmation against these words is a fact the stream
+  keeps — so a slider on You and the search on Play move one number two ways. _Avoid_: "the
+  profile" for this — it is a surface over one, and calling
+  it the profile is how a field gets added to a body scoped to what the tab draws; also "play
+  screen read", which names one of two callers rather than the facts.
 
 ### The Play tab
 

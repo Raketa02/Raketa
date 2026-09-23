@@ -26,6 +26,7 @@ import {
   OPT_IN_FINISH_LABEL,
   OPT_IN_NEVER_PRE_TICKED,
   OPT_IN_PROMISES,
+  OPT_IN_PROMISES_ON_PROFILE,
   OPT_IN_PROMISE_HEADING,
   OPT_IN_SCOPE,
   PROPOSALS_OPT_IN_COPY_VERSION,
@@ -147,5 +148,20 @@ describe('what the card promises', () => {
     expect(theWholeScreen).not.toMatch(/you appear/i);
     expect(theWholeScreen).not.toMatch(/deck/i);
     expect(theWholeScreen).not.toMatch(/matchmaking/i);
+  });
+
+  /**
+   * On the profile the third promise says *here*, where the step says *from your profile* —
+   * the same promise read from where it is kept, and the one word that differs is where the
+   * reader stands. Everything else on the card is the step's, word for word, which is what
+   * lets the same version be stamped from both screens (ADR-0179 §2; `the-words.md` §27).
+   */
+  it('says the third promise from here on the profile, and changes nothing else', () => {
+    expect(OPT_IN_PROMISES_ON_PROFILE).toHaveLength(OPT_IN_PROMISES.length);
+    expect(OPT_IN_PROMISES_ON_PROFILE.slice(0, 2)).toEqual(OPT_IN_PROMISES.slice(0, 2));
+    expect(OPT_IN_PROMISES_ON_PROFILE[2]).toEqual({
+      term: 'You can stop',
+      detail: 'any time, from here',
+    });
   });
 });

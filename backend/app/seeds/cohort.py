@@ -952,10 +952,8 @@ RATED_WITHIN_DAYS: Final = (CARD_OPENS_AFTER + CARD_STAYS_OPEN_FOR).days
 #: - The protagonist rests on **two raters at 4,5**. Two rather than three,
 #:   because her evening with ``cohort-a-12`` is nine days old and **the card
 #:   closes after a week** — a rating written for it would be one nobody was ever
-#:   shown the card to give. She never sees the figure anyway: her own sheet is
-#:   titled *How others see you* and shows the coarse band instead
-#:   (``docs/adr/0158``), so the figure is what a *reader* of her record gets and
-#:   the band is what she gets.
+#:   shown the card to give. She reads it on her own sheet, titled *How others
+#:   see you*, exactly as a reader of her record does (``docs/adr/0179`` §5).
 #: - ``cohort-a-12`` rests on **three at 4,0** and ``cohort-a-16`` on **two at
 #:   3,5** — a middling figure and a small count, because a card that only ever
 #:   drew 4,5 over two would never show what a fuller record looks like.

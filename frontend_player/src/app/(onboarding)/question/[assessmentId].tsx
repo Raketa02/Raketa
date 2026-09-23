@@ -11,9 +11,9 @@
  * that was asked, not from the answer.
  *
  * **Surviving validation is not the same as belonging here.** A well-formed link naming a
- * sport this player never chose is still not a way into the middle of onboarding — that
- * happens once, at the beginning, and there is no re-take from inside the app. Whether a
- * player may be admitted is the feature's rule; turning its answer into a route is this
+ * sport this player never chose is still not a way into the middle of onboarding — a pass has
+ * two doors, the picker and the Skill passport's *Add a sport*, and a link is neither. Whether
+ * a player may be admitted is the feature's rule; turning its answer into a route is this
  * file's whole job.
  */
 

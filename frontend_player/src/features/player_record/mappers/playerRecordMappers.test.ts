@@ -242,59 +242,32 @@ describe('how widely they spread their games', () => {
 });
 
 /**
- * **What other players said, and the one field that must never reach its own subject.**
+ * **What other players said — one figure, for every reader.**
  *
- * The figure and the band never cross together, and which one a record carries is decided by
- * `is_self` rather than by which field happened to arrive. That is the whole safety of the
- * design read at the boundary: a published average beside a published count lets the subject
- * subtract each new rating out and name it, and they know who they played — so the fold here
- * makes *your own record drew the figure* unrepresentable rather than merely unlikely, exactly
- * as the ON COURT verdict's fold does one field up.
+ * The band a subject used to be answered with is retired ([#468](https://github.com/Raketa02/Raketa/issues/468),
+ * ADR-0179 §5): the wire carries `sportsmanship` whoever is asking, and the mapper reads it
+ * whoever is asking. `Opinion` is the figure and its count and nothing else
+ * ([#473](https://github.com/Raketa02/Raketa/issues/473)) — no arm, no discriminator — so what
+ * this suite holds is that a self read is mapped exactly as a stranger's is.
  */
 describe('what other players said', () => {
   const SAID = { average: 4.7, raters: 17 };
 
   it('carries the average and the count of people it rests on', () => {
     expect(toPlayerRecord(response({ sportsmanship: SAID })).opinion).toEqual({
-      kind: 'figure',
       average: 4.7,
       raters: 17,
     });
   });
 
-  it('answers your own record with the band, and never with the figure', () => {
-    const served = response({ is_self: true, sportsmanship_band: 'GOOD' });
+  it('answers your own record with the same figure, since the band was retired', () => {
+    const served = response({ is_self: true, sportsmanship: SAID });
 
-    expect(toPlayerRecord(served).opinion).toEqual({ kind: 'band', band: 'GOOD' });
-  });
-
-  /**
-   * **A response carrying both is answered with the band.** The contract says the two never
-   * appear together; an older build, a replayed request or a defect could still send both, and
-   * the one that must not be drawn is the figure. So the arm is chosen by whose record it is.
-   */
-  it('draws the band even where a figure arrived beside it', () => {
-    const served = response({ is_self: true, sportsmanship: SAID, sportsmanship_band: 'MIXED' });
-
-    expect(toPlayerRecord(served).opinion).toEqual({ kind: 'band', band: 'MIXED' });
+    expect(toPlayerRecord(served).opinion).toEqual({ average: 4.7, raters: 17 });
   });
 
   it('is absent where nobody has said anything, and never at nought', () => {
     expect(toPlayerRecord(response()).opinion).toBeUndefined();
     expect(toPlayerRecord(response({ is_self: true })).opinion).toBeUndefined();
-  });
-
-  /**
-   * A band with no words is a coarse claim about somebody drawn as a code. The block goes
-   * rather than the word — the same answer a Social tag this build cannot name gets, and the
-   * opposite of the strand row's, because there is nothing else in this block to keep.
-   */
-  it('draws no block at all for a band this build cannot name', () => {
-    const served = response({
-      is_self: true,
-      sportsmanship_band: 'SPLENDID' as Wire['OpinionBand'],
-    });
-
-    expect(toPlayerRecord(served).opinion).toBeUndefined();
   });
 });

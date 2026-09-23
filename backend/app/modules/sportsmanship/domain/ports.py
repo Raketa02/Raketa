@@ -15,13 +15,12 @@ while a route could get one — so the port does not offer one, and a route that
 wanted to leak one would have to grow a read first.
 
 ``PublishedSportsmanshipQuery`` is the third and the only one pointed outward,
-and it is where that rule is paid for rather than repeated. It answers **two
-questions off one window** — the figure and its count for a reader, and a coarse
-band for the subject — and the split is structural for the reason the ledger's
-silence is: a published average plus a published count in front of the person it
-is about is a *subtraction*, so the method the subject's sheet calls is a method
-that cannot say the figure. Neither answer is an individual rating, which is what
-lets this port exist at all beside the paragraph above.
+and it answers **one question off one window** — the figure and how many
+different people it rests on — for every reader, the subject included. The
+coarse band it used to answer the subject with is retired by ``docs/adr/0179``
+§5, which is where the cost of that is written. What lets this port exist at all
+beside the paragraph above is unchanged: a mean over a window is not an
+individual rating.
 
 ``SettledCourts`` is somebody else's, and it asks ``games`` one question at two
 arities — *which of my games are over, and who else was on each* — answering with
@@ -47,10 +46,7 @@ from uuid import UUID
 
 from app.kernel import Instant
 from app.modules.sportsmanship.domain.card import SettledCourt, SportsmanshipCard
-from app.modules.sportsmanship.domain.published import (
-    PublishedSportsmanship,
-    SportsmanshipBand,
-)
+from app.modules.sportsmanship.domain.published import PublishedSportsmanship
 
 
 @runtime_checkable
@@ -147,7 +143,7 @@ class SportsmanshipLedger(Protocol):
 @runtime_checkable
 class PublishedSportsmanshipQuery(Protocol):
     """What other players said about somebody. **The one thing this context
-    publishes outward, and it publishes two different answers.**
+    publishes outward, and it is one answer.**
 
     **Why it is not a method on ``SportsmanshipLedger``.** That port is this
     module's own store and it answers *which of these cards are closed* — a fact
@@ -157,14 +153,9 @@ class PublishedSportsmanshipQuery(Protocol):
     a fold that a sheet reads has no business being reachable from a port a use
     case commits.
 
-    **Two methods, and the second is not the first with a rounding on top.** A
-    reader may be told the figure and the count; the subject may be told a coarse
-    band and **nothing else**. Both come off one window, and the reason they are
-    two methods rather than one answer a caller narrows is that a caller which
-    received the figure has already been handed the thing the rule forbids —
-    ``docs/adr/0158``'s subtraction is available to anybody holding an average
-    and a count, whatever they choose to render. So the sheet about *you* calls
-    a method that cannot say your figure.
+    **One method, for every reader.** The second one — a coarse band for the
+    subject, kept apart so that no caller on their path ever held the figure —
+    is retired by ``docs/adr/0179`` §5, and what that gives up is stated there.
 
     **Nothing here takes a clock.** The window is fifty **people** and not fifty
     days: nothing decays, and an opinion falls out of the record when fifty other
@@ -173,7 +164,7 @@ class PublishedSportsmanshipQuery(Protocol):
     """
 
     async def published_for(self, subject_id: UUID) -> PublishedSportsmanship | None:
-        """The figure and the count of people behind it, **for another reader.**
+        """The figure and the count of people behind it, **for any reader.**
 
         ``None`` for somebody nobody has rated — the record omits the zone rather
         than drawing a nought, on the rule this platform applies to every fact
@@ -183,18 +174,6 @@ class PublishedSportsmanshipQuery(Protocol):
         beside it: ``3,0 / 5 · 1 player`` is visibly one person's opinion. A
         minimum here would be the platform withholding the honest answer until it
         looked more authoritative than it is.
-        """
-        ...
-
-    async def band_for(self, subject_id: UUID) -> SportsmanshipBand | None:
-        """The coarse band, **for the person it is about.** No count, no figure.
-
-        ``None`` for somebody nobody has rated, which is the same absence
-        ``published_for`` spells and reaches the sheet the same way.
-
-        It is folded from the same window and coarsened from the same rounded
-        figure, so a subject's band can never disagree at an edge with what a
-        reader is shown — one record, read at two resolutions.
         """
         ...
 

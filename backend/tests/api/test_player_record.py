@@ -1021,8 +1021,6 @@ async def test_a_reader_is_told_the_figure_and_how_many_people_it_rests_on(
     body = (await record_of(client, searcher["token"], subject)).json()
 
     assert body["sportsmanship"] == {"average": 4.7, "raters": 3}
-    # The band is the subject's own answer and reaches nobody else.
-    assert "sportsmanship_band" not in body
 
 
 async def test_it_publishes_from_a_single_rating_with_the_count_beside_it(
@@ -1056,7 +1054,6 @@ async def test_a_person_nobody_has_rated_has_the_zone_absent_entirely(
     body = (await record_of(client, searcher["token"], subject)).json()
 
     assert "sportsmanship" not in body
-    assert "sportsmanship_band" not in body
 
 
 async def test_nothing_is_trimmed_at_either_end_of_the_window(
@@ -1076,17 +1073,17 @@ async def test_nothing_is_trimmed_at_either_end_of_the_window(
     assert body["sportsmanship"] == {"average": 3.7, "raters": 3}
 
 
-async def test_your_own_record_carries_a_band_and_never_the_figure(
+async def test_your_own_record_carries_the_figure_and_the_count(
     client, session_factory, searcher
 ):
-    """**The rule the whole design turns on** (``docs/adr/0158``).
+    """**The subject reads what a reader reads** (``docs/adr/0179`` §5).
 
-    A published average beside a published count lets the subject subtract: 4,80
-    over ten becoming 4,73 over eleven names the new rating as a 4, and they know
-    who they played. Every answer would be identifiable by the one person who
-    must never see it. So the sheet titled *How others see you* carries three
-    steps and neither number — asserted as an absence of the whole field rather
-    than as a nulled one, because a `null` would be a measured nothing.
+    The sheet titled *How others see you* draws *Sportsmanship, by players ·
+    4,7 / 5 · 3 players* — the published average over the fifty most recent
+    raters and how many different people it rests on — exactly as it is drawn
+    for anybody else. The subtraction ``docs/adr/0158`` §6 named is real and is
+    accepted by name; the band that used to stand in for the figure is gone
+    from the shape, asserted as an absence of the whole field.
     """
 
     await stars_for(session_factory, searcher["id"], 5, 4, 5)
@@ -1094,35 +1091,56 @@ async def test_your_own_record_carries_a_band_and_never_the_figure(
     body = (await own_record(client, searcher["token"])).json()
 
     assert body["is_self"] is True
-    assert body["sportsmanship_band"] == "GOOD"
-    assert "sportsmanship" not in body
-    assert "average" not in json.dumps(body)
-    assert "raters" not in json.dumps(body)
+    assert body["sportsmanship"] == {"average": 4.7, "raters": 3}
+    assert "sportsmanship_band" not in body
 
 
-async def test_asking_about_yourself_by_id_is_answered_with_the_band_too(
+async def test_the_subject_and_a_reader_are_served_one_figure(
+    client, session_factory, candidate_source, searcher
+):
+    """**One record, one resolution, whoever is reading.** The figure on your
+    own sheet is byte-for-byte the figure a stranger a search showed you to is
+    served about you — no coarsening, no withheld count, no second fold."""
+
+    subject, token = await world.a_signed_in_candidate(
+        client, session_factory, "subject", mu=searcher["mu"]
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    shown = (await world.search(client, searcher["token"])).json()["candidates"]
+    assert [row["player_id"] for row in shown] == [str(subject)]
+    await stars_for(session_factory, subject, 5, 3, 4, 4)
+
+    as_a_reader = (await record_of(client, searcher["token"], subject)).json()
+    as_the_subject = (await own_record(client, token)).json()
+
+    assert as_a_reader["is_self"] is False
+    assert as_the_subject["is_self"] is True
+    assert as_a_reader["sportsmanship"] == {"average": 4.0, "raters": 4}
+    assert as_the_subject["sportsmanship"] == as_a_reader["sportsmanship"]
+
+
+async def test_asking_about_yourself_by_id_is_answered_with_the_figure_too(
     client, session_factory, searcher
 ):
-    """The parameterised route reaches the same sheet, so the rule cannot be
-    walked around by naming your own id: ``is_self`` decides this and not which
-    route was called."""
+    """The parameterised route reaches the same sheet: ``is_self`` retitles it
+    and moves nothing else, whichever route was called."""
 
     await stars_for(session_factory, searcher["id"], 1, 2)
 
     body = (await record_of(client, searcher["token"], searcher["id"])).json()
 
     assert body["is_self"] is True
-    assert body["sportsmanship_band"] == "POOR"
-    assert "sportsmanship" not in body
+    assert body["sportsmanship"] == {"average": 1.5, "raters": 2}
 
 
-async def test_a_subject_nobody_has_rated_has_no_band_of_their_own(client, searcher):
+async def test_a_subject_nobody_has_rated_has_the_zone_absent_on_their_own_record(
+    client, searcher
+):
     """The same absence a stranger's sheet spells, so a newcomer's own record
-    draws neither an empty zone nor a bottom band."""
+    draws neither an empty zone nor a nought."""
 
     body = (await own_record(client, searcher["token"])).json()
 
-    assert "sportsmanship_band" not in body
     assert "sportsmanship" not in body
 
 

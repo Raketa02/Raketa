@@ -196,3 +196,88 @@ _Not today_ · _Let's play_ or the standing relation (`radar/RadarSheetFoot`, [`
 **the deck's _i_ and the long press fill nothing, by decision**: the deck's own buttons are one tap
 away and two places to answer at once invites a double tap, which `deck.test.tsx` holds. The next
 surface that wants a foot has to argue for one.
+
+**The record on the You tab — the header card, the two read-only screens, and the sheet behind
+a row** ([#469](https://github.com/Raketa02/Raketa/issues/469),
+[ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+§1–§3). `useOwnRecord` is `usePlayerRecord` on `{ kind: 'me' }` with the id off `GET /users/me`
+— the same entry the sheet reads, on the sheet's own defaults, so the card that summarises the
+record and the sheet that draws it whole are one read. **`YouHeaderCard`** is the record's own
+header, compact, on a dark card and one press: the name and handle from `GET /users/me`
+(seeded by bootstrap, and what the _Name_ row's save writes into), the sport pills from
+`GET /ratings`, and the face, the mark, the intro and the Player Score from the record — each
+absent until its read is in, never a nought. The face is the panel's **`card` size (74 × 92),
+not the 64 × 80 the prototype drew**: `onCourtMarkFit.test.ts` holds the mark's arithmetic for
+every panel size, and a 64 pt panel leaves under 50 pt for words and a tick that need about
+57, so a size that cannot carry the mark cannot be one. The score is 7.8's ring at `ringSm`
+printing the bare figure with `SCORE` beneath (a Player Score is out of a hundred, not a
+percentage), drawn only where the record holds a reliability. The intro is upright in the
+drawing's marks, as the sheet and the deck card draw it — this app loads no italic Archivo.
+**`OwnRecordSheet`** wraps `PlayerRecordSheet` on the signed-in player's id and nothing else:
+no sport, no distance, no overlap, no pairing, no foot. **The two rows** are _Skill passport_
+(one clause per rating off `GET /ratings`) and _Player reliability_ (`92 of 100 · 3 things
+counted`, or _Nothing counted yet_ where the record has no reliability), and _How others see
+you_ is a door the shell opens. **`SkillPassportScreen`** draws onboarding's `Verdict` — the
+result screen's dark card, extracted so it could be — once per rating, with the sport tag and a
+status `Tag` across its top (`statusChipVariant`: on-dark, amber, mint), the _Questions asked_
+row left to the run, and `RecordBlocks` under each card from `GET /players/me/record?sport=`
+for that sport — the score the whole person's and repeated, the run and the count that
+sport's. **No ceiling tick**: `GET /ratings` serves no ceiling and this client holds no copy of
+the number (7.8 as amended 2026-08-14), so `domain/passport`'s `passportCeiling` — the tick only
+while the status is an Initial estimate — answers nothing until the read carries it; a constant
+30 would be the copy the amendment removed. _Add a sport_ is one `Chip` per unrated sport in the
+served registry — the registry minus `GET /ratings` — and not drawn for a player rated in every
+sport; **a chip begins a pass of that one sport** through onboarding's `useAddASport`
+([#470](https://github.com/Raketa02/Raketa/issues/470)), says _Starting…_ while the start is in
+the air, and a failed start is a coral note above the chips with the chip offered again — the
+player is still on this screen and a failed start began nothing. Where the pass ends is read off
+its origin by the entry gate, which lands it back here with the You tab beneath; `YOU_PASSPORT_ROUTE`
+is exported for exactly that caller. **The ladder** names the four bands with `bandPresentation`'s
+meanings and the player's own rungs marked (_Established · you (padel)_), the rungs they are
+not on at 7.5's inactive opacity, and **an edge only on a rung a served rating carries** —
+band boundaries come from the response and are restated nowhere on this client, so the two
+rungs the player is not on print none. **`PlayerReliabilityScreen`** is the score in the ring
+at `ringLg` with the tone ladder's word beside it (`SCORE_TONE_WORD` — _Reliable_ from 90,
+_Holding_ from 70, _Under the bar_ below, `scoreTone`'s three steps said) and _Out of 100_,
+then `RecordCard` exactly as the sheet draws it, the sportsmanship row drawing whatever the
+record serves (the band when this landed; the figure since #471 regenerated the contract). A player with no reliability is told
+there is no score and that it is not a low one, and the card is still drawn under that where
+the record has a variety or an opinion. The popover for every card's three marks is one, drawn
+as a sibling of the passport's root as the result screen draws its own. **Not seen on a
+device**: two cards' worth of dark card and blocks scrolling, the ladder's rungs, and the ring
+at 56 beside a wrapped name.
+
+**The band left the wire before its words left this client** ([#471](https://github.com/Raketa02/Raketa/issues/471)
+regenerated the contract; [#468](https://github.com/Raketa02/Raketa/issues/468) retired
+`sportsmanship_band`, ADR-0179 §5). `playerRecordMappers` reads the one `sportsmanship` field for
+every reader, self included, because that is the one field there is; the `band` arm of
+`Opinion`, `OPINION_BANDS`, `OPINION_BAND_NAME` and `RecordCard`'s branch for them were unreachable
+from the wire for one ticket and were retired by the next. The reliability screen drew the figure
+from that commit on, being `RecordCard` unchanged.
+
+**One row for everybody, and the band's words are gone rather than kept unreachable**
+([#473](https://github.com/Raketa02/Raketa/issues/473),
+[ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+§5). `Opinion` is the figure and its count — `average` and `raters` — and nothing else: no
+`kind`, no second arm, no `OpinionFigure` beside it, because a type with one arm is that arm. The
+mapper builds it from `sportsmanship` whoever is asking, `RecordCard` draws it through
+`opinionFigure` — _Sportsmanship, by players · 4,3 / 5 · 12 players_ in the card's mono figure
+role, on _How others see you_ and on _Player reliability_ exactly as on a stranger's sheet — and
+the spoken reading is the figure's, _Sportsmanship, by players, 4,3 out of 5, 12 players_.
+`opinionValue`, the switch that chose between the two, went with the arm it switched on, and the
+drawn row and the spoken one are composed from one `opinionParts`, the variety row's discipline;
+`OPINION_BAND_NAME` left the sheet's exported words, so `types.ts` names no band word and the
+suites that walk the three surfaces — the deck's spoken reading, the builder's own face, and the
+You tab's two doors — assert the three (_Good · Mixed · Poor_) absent by spelling them
+themselves, which is the one thing a retired word may be spelled for. **What this reverses** is the paragraph on
+[#387](https://github.com/Raketa02/Raketa/issues/387) above, where the subject got a band and no
+count because an average beside a count is a subtraction that names each new rating: the ADR
+weighed that against a player being told _Mixed_ about themselves with no number to work on and
+chose the number, and the cost — a rater nameable by their subject, blunted by the collapse and
+the fifty-rater window — is the ADR's to carry, not this feature's. What this feature carries is
+the second half of that paragraph, now sharper: the sentence that a low average _costs nothing_
+is still unsaid, and the subject now reads the figure it is unsaid about on the one screen they
+open to find out what is holding them back; `WRITTEN_BY_PLAYERS`'s words are recorded in a
+comment in `recordPresentation` against the day that matters — a record, not kept copy. Nothing
+changed on the wire here — #471 committed the regenerated types, and `make gen-api` is a no-op
+at this commit. Not seen on a device: the row on the reliability screen under the ring.

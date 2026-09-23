@@ -8,13 +8,16 @@ list would make every exhaustiveness assertion a claim about something else, and
 the first person to add a row would have to guess which — which is the rule
 ``backend/CLAUDE.md`` states for the next arrival, and this is the next arrival.
 
-**One port and two questions, and the suite is not thereby ceremonial.** What it
-executes is the pair of rules this context's whole design rests on and that no
-type could hold: the window is fifty **people** rather than fifty ratings, and
-the answer given to the *subject* carries no figure and no count. Both are
-properties of rows in a table, and the only honest way to exercise a fold over a
-table is against one — arranged, as everywhere else here, through this context's
-own aggregate rather than an ``INSERT`` (``docs/adr/0029``).
+**One port and one question, and the suite is not thereby ceremonial.** What
+it executes is the rule this context's whole design rests on and that no type
+could hold: the window is fifty **people** rather than fifty ratings, with the
+collapse in the key. That is a property of rows in a table, and the only honest
+way to exercise a fold over a table is against one — arranged, as everywhere
+else here, through this context's own aggregate rather than an ``INSERT``
+(``docs/adr/0029``). The second rule it used to execute — *the subject's answer
+carries no figure and no count* — went with the band (``docs/adr/0179`` §5), and
+what the suite pins in its place is that the port has not grown a second
+resolution back.
 
 **What is deliberately not on this list** is ``SportsmanshipLedger`` and
 ``SettledCourts``. The first is this context's own store and the second is a
@@ -35,11 +38,10 @@ from app.bootstrap.composition import build_published_sportsmanship
 from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.modules.sportsmanship.domain.ports import PublishedSportsmanshipQuery
 
-#: What this context owes the rest of the platform. **One port**, because there
-#: is one window — and the two methods on it are two *resolutions* of one record
-#: rather than two questions, which is exactly why they must not be two ports:
-#: a second port would be a second fold, free to disagree with the first about
-#: the number it coarsens.
+#: What this context owes the rest of the platform. **One port, one method**,
+#: because there is one window and one answer off it, for every reader
+#: (``docs/adr/0179`` §5 retired the subject's coarser one). A second port would
+#: be a second fold, free to disagree with the first.
 SPORTSMANSHIP_DEMANDS: tuple[type, ...] = (PublishedSportsmanshipQuery,)
 
 

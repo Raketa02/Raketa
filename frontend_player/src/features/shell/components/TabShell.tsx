@@ -79,6 +79,26 @@ import { barStandsDown, tabForPathname } from '../domain/shellTabs';
 
 import { openTab } from './shellNavigation';
 
+/**
+ * The screens behind the You tab's rows — every route under `you/` except the tab's own root.
+ * The list rather than a prefix, because `Stack.Screen` matches on the name and a wildcard
+ * would put the push on the root too.
+ */
+const YOU_SCREENS = [
+  'you/passport',
+  'you/reliability',
+  'you/kind-of-game',
+  'you/week',
+  'you/radius',
+  'you/area',
+  'you/who-you-play-with',
+  'you/game-suggestions',
+  'you/photos',
+  'you/tags',
+  'you/intro',
+  'you/name',
+] as const;
+
 export function TabShell() {
   const pathname = usePathname();
   const challengesWaiting = useChallengesWaiting();
@@ -146,6 +166,14 @@ export function TabShell() {
           name="chats/conversation/[conversationId]/index"
           options={{ animation: 'default' }}
         />
+        {/* And so is every screen behind a row on You: each is pushed over the tab, the tab
+            stays underneath, and backing out returns to the row it was tapped from
+            ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+            §1). Named one by one, as every exception is: `you/index` is the tab's root, arrived
+            at by a tab press, and takes the shell's own `none` like every root. */}
+        {YOU_SCREENS.map((name) => (
+          <Stack.Screen key={name} name={name} options={{ animation: 'default' }} />
+        ))}
       </Stack>
       {barStandsDown(pathname) ? null : (
         <TabBar

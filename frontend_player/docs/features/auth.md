@@ -45,3 +45,26 @@ could-not-reach banner rather than moving on; the act is repeatable, and the nex
 the same request with a re-read that answers. `AuthenticatedUser` carries `name` and
 `nickname`, both absent until the naming, and the **You tab draws the name, `@nickname` under it
 and the email** — one of the two screens that draw a handle, the other being the record.
+
+**The naming, from the You tab** ([#469](https://github.com/Raketa02/Raketa/issues/469),
+[ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+§7 — the follow-up ADR-0171 left open). **The refactor came first**: `useNamingForm` is the
+form — what is typed, what the schema refuses before a round trip, the send through
+`useNamePlayer`, the server's refusal with the field it names — and `NamingFields` draws the
+two boxes, the handle's rule and each refusal under its box, with the banner above them; the
+naming step is now that form under its own chrome (the eyebrow, the question, _Continue_, a
+back that is refused), and its suite is unchanged. **`NameScreen`** is the same form under the
+tab's chrome — _On your card · Name_, a way back, `avoidsKeyboard` — pre-filled from
+`GET /users/me` with _Save_ where the step says _Continue_ and no sentence over the boxes: the
+step's question does not need repeating on a screen that only edits the answer. A taken handle
+is the server's `409 nickname_already_taken` on the press, drawn under the box in the app's own
+sentence exactly as the step draws it, and never a lookup while typing (ADR-0159's
+enumeration). The mutation writes what the server recorded and awaits the re-read before it
+resolves, so the tab's header card and the **`NameRow`** — _Ada Lovelace · @ada_, the name and
+the handle together or nothing, which makes the tab one of the two places the handle is drawn —
+already say the new name on the way back. **`AccountPanel` is the button now.** The name, the
+handle and the email it drew were the way to tell which player the gate let through while the
+tab was a placeholder; the header card and the _Name_ row say the first two, and the email has
+no row because it has no route (ADR-0179 §9) — a fact with no door under a list of facts with
+doors reads as a broken row. _Sign out_ stays at the foot, `dark` and not `primary`, the only
+way out of a session.

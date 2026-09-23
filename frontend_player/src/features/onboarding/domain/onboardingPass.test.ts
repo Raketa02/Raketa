@@ -13,6 +13,7 @@ import {
   nextDestination,
   positionOf,
   recordRated,
+  stopDestination,
   toggleSport,
   type OnboardingPass,
 } from './onboardingPass';
@@ -20,14 +21,33 @@ import {
 const PADEL_RUN = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const TENNIS_RUN = 'b7c8d9e0-1f2a-4b3c-8d4e-5f6a7b8c9d0e';
 
-/** A pass over these sports with those runs already rated, built the way the app builds it. */
+/** A pass begun at welcome over these sports, built the way the picker builds it. */
 function passOver(queue: readonly ('padel' | 'tennis' | 'squash')[]): OnboardingPass {
-  return begin(queue);
+  return begin(queue, 'welcome');
+}
+
+/** A pass begun at the Skill passport: one sport, and the passport is where it ends. */
+function passportPassOver(sport: 'padel' | 'tennis' | 'squash' | 'badminton'): OnboardingPass {
+  return begin([sport], 'passport');
 }
 
 describe('beginning a pass', () => {
   it('takes the sports chosen, in the order they were chosen, with nothing rated', () => {
-    expect(begin(['tennis', 'padel'])).toEqual({ queue: ['tennis', 'padel'], rated: [] });
+    expect(begin(['tennis', 'padel'], 'welcome')).toEqual({
+      origin: 'welcome',
+      queue: ['tennis', 'padel'],
+      rated: [],
+    });
+  });
+
+  it('carries where it began, because where it ends is read off that', () => {
+    // ADR-0179 §3: a pass has an origin — welcome, or the passport's *Add a sport* — and
+    // it is a fact about the pass rather than about any screen in it.
+    expect(passportPassOver('badminton')).toEqual({
+      origin: 'passport',
+      queue: ['badminton'],
+      rated: [],
+    });
   });
 
   it('discards what an earlier pass produced', () => {
@@ -36,7 +56,7 @@ describe('beginning a pass', () => {
     // A new queue is a new walk through onboarding, and the closing screens account for
     // *this* walk. Carrying padel forward would put a sport the player answered nothing
     // about today on a screen saying these are the ratings you just produced.
-    expect(begin(['tennis']).rated).toEqual([]);
+    expect(begin(['tennis'], 'welcome').rated).toEqual([]);
     expect(first.rated).toHaveLength(1);
   });
 });
@@ -110,7 +130,7 @@ describe('position across sports', () => {
     // No longer reachable on a screen — `admissionTo` turns those players away — but it
     // stays the honest answer, and it is *why* they can be turned away rather than drawn
     // a bar with no denominator.
-    expect(positionOf(begin([]), 'padel')).toBeUndefined();
+    expect(positionOf(begin([], 'welcome'), 'padel')).toBeUndefined();
     expect(positionOf(passOver(['tennis']), 'padel')).toBeUndefined();
   });
 
@@ -122,7 +142,7 @@ describe('position across sports', () => {
     // The defect this replaced: with nothing ending a pass, a run resumed after a walk
     // that rated two sports was still inside that walk and read "Rating 2 of 2". A resumed
     // run is now a genuine pass of one sport, and needs no special case to say so.
-    expect(positionOf(begin(['padel']), 'padel')).toEqual({ index: 1, total: 1 });
+    expect(positionOf(begin(['padel'], 'welcome'), 'padel')).toEqual({ index: 1, total: 1 });
   });
 });
 
@@ -179,7 +199,7 @@ describe('where the player goes after a sport', () => {
 
   it('goes straight to the app from a sport outside the pass that produced nothing', () => {
     // The resumed run that was abandoned: nothing was chosen, nothing was rated.
-    expect(nextDestination(begin([]), 'padel')).toEqual({ kind: 'app' });
+    expect(nextDestination(begin([], 'welcome'), 'padel')).toEqual({ kind: 'app' });
   });
 
   it('goes straight to the app when no pass is running', () => {
@@ -198,10 +218,44 @@ describe('where the player goes after a sport', () => {
   });
 });
 
+describe('where a pass begun at the passport ends', () => {
+  // ADR-0179 §3: a profile exists, so the done screen, the data screen and the social steps
+  // are onboarding's and not this pass's. It ends where it began, whatever it produced.
+  it('lands back on the passport once its one sport is rated', () => {
+    const pass = recordRated(passportPassOver('badminton'), {
+      assessmentId: TENNIS_RUN,
+      sport: 'badminton',
+    });
+
+    expect(nextDestination(pass, 'badminton')).toEqual({ kind: 'passport' });
+  });
+
+  it('lands back on the passport when its one sport was abandoned, not in the app', () => {
+    // Nothing rated would send a welcome pass into the app; here the app is where the
+    // player already was, and the passport is the screen they left.
+    expect(nextDestination(passportPassOver('badminton'), 'badminton')).toEqual({
+      kind: 'passport',
+    });
+    expect(stopDestination(passportPassOver('badminton'))).toEqual({ kind: 'passport' });
+  });
+
+  it('never offers a next sport, because the queue is one', () => {
+    expect(nextDestination(passportPassOver('squash'), 'squash')).not.toEqual(
+      expect.objectContaining({ kind: 'rate' }),
+    );
+  });
+
+  it('admits exactly its one sport, and starts any other over', () => {
+    // The admission rule keeps its refusals: a link naming a sport outside the running pass
+    // is not a shortcut into the middle of a flow, whichever door the pass came in by.
+    expect(admissionTo(passportPassOver('badminton'), 'badminton')).toEqual({ kind: 'admit' });
+    expect(admissionTo(passportPassOver('badminton'), 'squash')).toEqual({ kind: 'start-over' });
+  });
+});
+
 describe('being admitted to a questionnaire', () => {
-  // Onboarding happens once, at the beginning: there is no re-take from inside the app,
-  // so the only ways onto a question are the picker's queue and the gate resuming an
-  // unfinished run.
+  // A pass has two doors — the picker's queue and the passport's chip — and a third way
+  // onto a question, the gate resuming an unfinished run. A link is none of them.
   it('admits a sport that is in the pass', () => {
     expect(admissionTo(passOver(['padel', 'tennis']), 'tennis')).toEqual({ kind: 'admit' });
   });

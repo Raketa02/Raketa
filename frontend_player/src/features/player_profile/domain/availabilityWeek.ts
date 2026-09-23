@@ -70,3 +70,28 @@ export type WeekStanding =
 export function weekStanding(week: readonly AvailabilitySlot[]): WeekStanding {
   return week.length === 0 ? { kind: 'empty' } : { kind: 'ticked', count: week.length };
 }
+
+/**
+ * **Two weeks are the same week when they hold the same cells** — in any order, however many
+ * times a cell appears.
+ *
+ * The You tab's *Your week* holds a draft until *Save*, and the button is shut while the draft
+ * is the week the profile already holds: a save that changes nothing is a round trip for an
+ * answer already in hand. By cell and never by order, because the profile answers in the
+ * platform's own reading order whatever order the player pressed in
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2).
+ */
+export function sameWeek(
+  one: readonly AvailabilitySlot[],
+  other: readonly AvailabilitySlot[],
+): boolean {
+  const ticked = new Set(one.map(cellKey));
+  const against = new Set(other.map(cellKey));
+  if (ticked.size !== against.size) return false;
+  return [...ticked].every((cell) => against.has(cell));
+}
+
+function cellKey(cell: AvailabilitySlot): string {
+  return `${cell.day}-${cell.part}`;
+}

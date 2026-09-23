@@ -27,4 +27,10 @@ export const playerProfileKeys = {
    * the reads that should move while you look at them.
    */
   surface: () => [...playerProfileKeys.all, 'surface'] as const,
+  /**
+   * The signed address of one of the player's own photographs — what a tile on the You tab
+   * draws a held photo from. Its own entry per id, so a row of three is three reads that
+   * each say their own standing, and a re-arrangement re-reads nothing.
+   */
+  photo: (photoId: string) => [...playerProfileKeys.all, 'photo', photoId] as const,
 };
