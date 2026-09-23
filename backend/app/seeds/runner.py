@@ -348,7 +348,7 @@ def _build(
         register=RegisterUser(
             users=users,
             event_store=event_store,
-            hasher=build_password_hasher(),
+            hasher=build_password_hasher(settings),
             uow=uow,
             clock=clock,
             events=events,

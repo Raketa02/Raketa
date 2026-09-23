@@ -273,6 +273,7 @@ aggregator.
 | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway. |
 | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
 | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
+| a deployed environment with `BCRYPT_ROUNDS` below production's 12 | Nothing fails at a weak cost, so the stored passwords would just be cheaper to crack, and nobody would notice. |
 
 The origin refusal is the backend's instance of the platform's **public-network scheme
 rule**, added by #99 so that all three apps carry it (`docs/environments.md`). The backend
@@ -296,6 +297,7 @@ serving HTTP.
 | `JWT_SECRET_KEY` | Signing secret for access and refresh JWTs. |
 | `ACCESS_TOKEN_EXPIRE_SECONDS` | Access-token TTL. |
 | `REFRESH_TOKEN_EXPIRE_SECONDS` | Refresh-token TTL. |
+| `BCRYPT_ROUNDS` | bcrypt's work factor for passwords and refresh tokens. 12, production's, unless lowered — and only `local` may lower it; the test suite sets 4. A stored hash carries its own cost, so changing it strands nothing. |
 | `EVENT_DELIVERY_WORKER_ENABLED` | Enables the embedded outbox worker. |
 | `EVENT_DELIVERY_POLL_INTERVAL_SECONDS` | Outbox worker poll interval. |
 | `EVENT_DELIVERY_BATCH_SIZE` | Max outbox rows processed per poll. |

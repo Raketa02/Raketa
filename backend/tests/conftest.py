@@ -12,6 +12,9 @@ os.environ.setdefault("DB_SSL_MODE", "disable")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_SECONDS", "900")
 os.environ.setdefault("REFRESH_TOKEN_EXPIRE_SECONDS", "3600")
 os.environ.setdefault("LOG_JSON", "false")
+# bcrypt's minimum. At production's twelve every sign-up, login and refresh costs a
+# fifth of a second; three API files took 170 s at twelve and 19 s at four.
+os.environ.setdefault("BCRYPT_ROUNDS", "4")
 
 import pytest
 import pytest_asyncio

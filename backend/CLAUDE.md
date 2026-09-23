@@ -1314,8 +1314,8 @@ tests.
   read by nothing. Required: `WRITER_DB_URL`, `JWT_SECRET_KEY`, `DB_SSL_MODE`.
 - **`APP_ENV` is a strict enum** over `local | development | staging | production`, the
   same four names the client uses. Only `local` runs; selecting `development` or
-  `staging` without `APP_HOST` and `WRITER_DB_URL` refuses to start, and so do five other
-  dangerous configurations (see the README's refusal table). It also supplies the defaults
+  `staging` without `APP_HOST` and `WRITER_DB_URL` refuses to start, and so do the other
+  dangerous configurations in the README's refusal table. It also supplies the defaults
   for `DEBUG`, `LOG_LEVEL` and `LOG_JSON`, each still overridable. **The environment may
   select configuration; it may never select behaviour a domain test could observe.**
 - Tests set their own env in `conftest.py` (SQLite, test JWT secret, `APP_ENV=local`) —

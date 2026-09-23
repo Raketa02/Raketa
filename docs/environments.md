@@ -75,6 +75,7 @@ a migration or a seed run — not only for a process serving HTTP.
 | backend | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway, so it cannot be mistaken for working configuration. |
 | backend | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
 | backend | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
+| backend | a deployed environment with `BCRYPT_ROUNDS` below production's 12 | Nothing fails at a weak cost — every login still works — so the stored passwords would just be cheaper to crack, and nobody would notice. The default is 12 everywhere, and only a laptop may lower it; the test suite uses bcrypt's minimum, 4. |
 | player | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
 | player | a deployed `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_FEATURES_URL` that is not `https://` | The scheme rule, below. |
 

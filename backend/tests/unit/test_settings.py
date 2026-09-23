@@ -24,16 +24,19 @@ import logging
 
 import pytest
 
+from app.bootstrap.composition import build_password_hasher
 from app.core.config import (
     DEFAULT_JWT_SECRET_KEY,
     DEFAULT_PHOTO_STORAGE_SECRET_KEY,
     DEPLOYED,
     ENVIRONMENT_PROFILES,
+    PRODUCTION_BCRYPT_ROUNDS,
     ConfigurationError,
     Environment,
     Settings,
 )
 from app.core.logging import configure_logging
+from tests.unit.bcrypt_cost import BCRYPT_MINIMUM_ROUNDS, cost_of
 
 #: A password no legitimate message has any reason to contain.
 POISON_PASSWORD = "hunter2-do-not-log-me"
@@ -451,8 +454,71 @@ def test_no_refusal_fires_outside_the_environment_it_names(clean_env) -> None:
         ALLOW_ORIGINS=["*"],
         ALLOW_CREDENTIALS=True,
         DB_SSL_MODE="disable",
+        BCRYPT_ROUNDS=BCRYPT_MINIMUM_ROUNDS,
     )
     assert settings.APP_ENV is Environment.LOCAL
+
+
+# --------------------------------------------------------------------------- #
+# The work factor
+# --------------------------------------------------------------------------- #
+#
+# Why it is a setting at all is argued beside `BCRYPT_ROUNDS` in the settings
+# module. What is asserted here is the half that makes lowering it safe: nothing
+# deployed may.
+
+
+@pytest.mark.parametrize("env", list(Environment))
+def test_every_environment_hashes_at_production_strength_by_default(
+    clean_env, env
+) -> None:
+    """One default, and it is production's. The environment selects no work
+    factor; a laptop that wants a cheaper one says so."""
+    assert settings_for(env).BCRYPT_ROUNDS == PRODUCTION_BCRYPT_ROUNDS == 12
+
+
+def test_a_hash_made_under_production_configuration_carries_production_strength(
+    clean_env,
+) -> None:
+    """Read off the hash itself, because that is the only place the cost the
+    adapter actually used is recorded — a setting could say twelve while the
+    adapter ignored it."""
+    hasher = build_password_hasher(production())
+
+    assert cost_of(hasher.hash("hunter22!")) == 12
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+@pytest.mark.parametrize("rounds", range(BCRYPT_MINIMUM_ROUNDS, 12))
+def test_a_deployed_environment_refuses_a_weaker_work_factor(
+    clean_env, env, rounds: int
+) -> None:
+    """Every value bcrypt accepts below production's, in every deployed
+    environment — and the message names the variable and never the number.
+
+    A weak work factor is dangerous rather than merely wrong: nothing fails, every
+    login still works, and the stored hashes are simply cheaper to crack for as
+    long as nobody looks.
+    """
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(env, BCRYPT_ROUNDS=rounds)
+
+    message = str(exc.value)
+    assert "BCRYPT_ROUNDS" in message
+    assert str(rounds) not in message
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_accepts_a_stronger_work_factor(clean_env, env) -> None:
+    """The other half. The floor is production's strength, not its ceiling."""
+    assert settings_for(env, BCRYPT_ROUNDS=13).BCRYPT_ROUNDS == 13
+
+
+def test_local_accepts_bcrypts_minimum(clean_env) -> None:
+    """The test configuration's value. A laptop may hash as cheaply as the
+    library allows, because nothing it stores is anybody's password."""
+    settings = build(APP_ENV="local", BCRYPT_ROUNDS=BCRYPT_MINIMUM_ROUNDS)
+    assert settings.BCRYPT_ROUNDS == BCRYPT_MINIMUM_ROUNDS
 
 
 # --------------------------------------------------------------------------- #
@@ -496,9 +562,14 @@ REFUSALS = [
         lambda: production(ALLOW_ORIGINS=[f"http://{POISON_PASSWORD}.example"]),
     ),
     ("DB_SSL_MODE", lambda: production(DB_SSL_MODE="disable")),
+    (
+        "BCRYPT_ROUNDS",
+        lambda: settings_for("staging", BCRYPT_ROUNDS=BCRYPT_MINIMUM_ROUNDS),
+    ),
+    ("BCRYPT_ROUNDS", lambda: production(BCRYPT_ROUNDS=BCRYPT_MINIMUM_ROUNDS)),
 ]
 
-#: Two refusals name the same variable, so the ids are spelled rather than derived —
+#: Several refusals name the same variable, so the ids are spelled rather than derived —
 #: `ALLOW_ORIGINS0` in a failure report tells a reader nothing about which fired.
 REFUSAL_IDS = [
     "APP_ENV",
@@ -514,6 +585,8 @@ REFUSAL_IDS = [
     "ALLOW_ORIGINS-wildcard-with-credentials",
     "ALLOW_ORIGINS-plaintext-when-deployed",
     "DB_SSL_MODE",
+    "BCRYPT_ROUNDS",
+    "BCRYPT_ROUNDS-in-production",
 ]
 
 

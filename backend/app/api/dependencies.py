@@ -47,8 +47,8 @@ SettingsDep = Annotated[Settings, Depends(get_settings)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 
 
-def get_password_hasher() -> PasswordHasher:
-    return build_password_hasher()
+def get_password_hasher(settings: SettingsDep) -> PasswordHasher:
+    return build_password_hasher(settings)
 
 
 PasswordHasherDep = Annotated[PasswordHasher, Depends(get_password_hasher)]

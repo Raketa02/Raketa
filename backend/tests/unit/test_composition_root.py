@@ -150,7 +150,7 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
             build_unit_of_work(session),
             store,
             events,
-            build_password_hasher(),
+            build_password_hasher(settings),
             build_token_service(settings),
             build_refresh_token_repository(session),
             build_user_repository(session),
@@ -187,7 +187,7 @@ async def test_a_registration_runs_through_the_factories_alone(session_factory):
         register = RegisterUser(
             users=build_user_repository(session),
             event_store=build_domain_event_store(session),
-            hasher=build_password_hasher(),
+            hasher=build_password_hasher(get_settings()),
             uow=build_unit_of_work(session),
             clock=build_clock(),
             events=build_event_publisher(session),
