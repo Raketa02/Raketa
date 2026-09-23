@@ -951,6 +951,12 @@ durations committed in `.test_durations` and refreshed with `make test-durations
 `make split-partition` shows every test landing in exactly one group, stale file or
 not.
 
+While iterating, `make test-affected` runs only the tests pytest-testmon says the change
+since its last run can affect (its data, `.testmondata`, is ignored by git). It is for
+the inner loop and never the gate: it cannot see a test that reads the source tree as
+text, a JSON spec or fixture file, or code run in a subprocess, so `make test` still
+runs at the end of every ticket and in CI.
+
 A run measures no coverage, because that makes it 2.4× slower and nothing gates on
 it. `make coverage` runs the whole suite with coverage over `app/`, prints the
 term-missing report and writes `coverage.xml`. The suite also logs at `INFO`, a
@@ -964,7 +970,7 @@ poetry run ruff check .
 ```
 
 The configured tooling includes Black, isort, Ruff, mypy, pytest-cov,
-pytest-env, pytest-xdist and pytest-split.
+pytest-env, pytest-xdist, pytest-split and pytest-testmon.
 
 ## Security Practices
 

@@ -55,6 +55,7 @@ watchfiles = "^1.2.0"
 import-linter = "^2.0"
 pytest-xdist = "^3.8.0"
 pytest-split = "^0.11.0"
+pytest-testmon = "^2.2.0"
 
 [tool.black]
 line-length = 88

@@ -15,7 +15,7 @@ ECR_URI          ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_
 ECS_CLUSTER      ?= raketa-cluster
 ECS_SERVICE      ?= raketa-service
 
-.PHONY: help install test test-group test-durations split-partition coverage lint lint-imports format typecheck check test-gates openapi \
+.PHONY: help install test test-affected test-group test-durations split-partition coverage lint lint-imports format typecheck check test-gates openapi \
         gen-walkthroughs gen-cohort \
         build-dev up down down-v logs ps shell migrate seed seed-host sim-location \
         rebuild-candidate-index rebuild-candidate-index-host \
@@ -39,6 +39,17 @@ XDIST     := -n $(WORKERS) --dist worksteal
 
 test:              ## run pytest, one worker per core (WORKERS=0 is serial; no coverage)
 	poetry run pytest tests -q $(XDIST) $(PYTEST_ARGS)
+
+# The inner loop, never the gate (ADR-0181 §2): pytest-testmon runs only the
+# tests whose recorded dependencies changed since its last run, and re-runs the
+# ones that failed. The first run records every test; the data is .testmondata,
+# which git ignores. `-p no:cov` switches pytest-cov off, so testmon's tracer is
+# the only one in the run: a `--cov` that reaches this target is refused, not
+# traced twice.
+# It cannot see a test that reads the source as text, a JSON spec or fixture file,
+# or code run in a subprocess — so `make test` still runs at the end of every ticket.
+test-affected:     ## only the tests the change since the last such run can affect (testmon)
+	poetry run pytest tests -q -p no:cov --testmon $(XDIST) $(PYTEST_ARGS)
 
 # Balanced groups for CI's shards (ADR-0181 §5; #489 runs one per runner): the
 # suite split into SPLITS groups by the durations committed in .test_durations,

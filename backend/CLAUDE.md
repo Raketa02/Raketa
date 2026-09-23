@@ -15,6 +15,8 @@ Run via the Makefile from `backend/`:
 make test        # the suite in parallel — one xdist worker per core, work-stealing;
                  # measures no coverage. make test WORKERS=0 is a serial run, in
                  # collection order: the command for an order-dependent failure
+make test-affected  # while iterating: only the tests the change since its last run can
+                 # affect (pytest-testmon) — the inner loop, never the gate; see Testing
 make test-group GROUP=1 SPLITS=2  # one of N balanced groups, xdist inside — a CI shard
 make test-durations  # re-record .test_durations from a whole run, and commit it
 make split-partition # the groups for 2 and 3 add up to the suite, stale file too
@@ -1262,6 +1264,22 @@ tests.
   retries it. Write under `tmp_path`; give a background job beside a request its own
   connection per session (#482). **Serial, for chasing an order-dependent failure:**
   `make test WORKERS=0`.
+- **While iterating, `make test-affected`; at the end of every ticket, `make test`.** The
+  first is pytest-testmon: only the tests whose recorded dependencies changed since its
+  last run, plus the ones that failed — seconds for a leaf change, quickest with
+  `WORKERS=0`, which starts no workers. Its first run records every test into
+  `.testmondata`, which git ignores. It is the inner loop and **never the
+  gate** (ADR-0181 §2), because it cannot see:
+  - tests that read the source tree as text — the kernel purity walk,
+    `test_only_a_composition_root_imports_the_wall_clock`,
+    `test_no_second_copy_of_a_tag_id_exists_anywhere_in_the_app`. A domain module that
+    imports the wall clock passes `make test-affected` green;
+  - JSON specs and fixture files;
+  - code run in a subprocess — the seed command, the runs under two hash seeds, mypy.
+
+  So the full suite, `make test` in parallel, still runs at the end of every ticket and in
+  CI. A change on a hot path such as sign-up selects most of the API suite, and
+  testmon's tracing makes that slower than `make test` itself.
 - **The suite splits into balanced groups for CI's shards** — `make test-group`, one
   per runner once #489 lands — by the committed `.test_durations`. A test the file does not know gets the average, so a stale file
   unbalances the shards and never drops a test (`make split-partition` shows it). When
