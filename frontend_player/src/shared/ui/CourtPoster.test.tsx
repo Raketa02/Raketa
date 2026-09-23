@@ -8,8 +8,8 @@
  * that collided in a `<Defs>` id from two that did not, nor a flat figure from one that had
  * quietly gained a second value.
  *
- * Which hue and which pose a given player gets is *not* here — that belongs to the feature
- * that chooses them, and it is held in `courtPosterFraming.test.ts`.
+ * Which hue and which pose a given player gets is *not* here — that belongs to the hash that
+ * chooses them, and it is held next door in `courtPosterFraming.test.ts`.
  */
 
 import { render, screen } from '@testing-library/react-native';

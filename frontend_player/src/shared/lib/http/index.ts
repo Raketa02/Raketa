@@ -2,9 +2,12 @@ export {
   configureHttp,
   httpRequest,
   resetHttp,
+  rotateStreamCredential,
+  streamAttempt,
   type HttpCredentials,
   type HttpMethod,
   type HttpRequest,
+  type StreamAttempt,
 } from './httpClient';
 export {
   httpUpload,

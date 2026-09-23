@@ -24,7 +24,11 @@
 
 import type { AppError } from '@/shared/errors';
 
-import type { MissingAnswer } from '../domain/profileCommit';
+import { introRefusal } from '../domain/intro';
+import { STEP_THAT_ASKS, type MissingAnswer } from '../domain/profileCommit';
+import type { SocialStep } from '../domain/socialSteps';
+
+import { CHANGE_INTRO_LABEL, introRefusalSentence } from './introPresentation';
 
 /** What the finish promises, once there is something for it to promise. */
 export const FINISH_HINT = 'Sends everything you answered and finishes setting up';
@@ -43,7 +47,7 @@ export const COMMIT_FAILED_TITLE = "That didn't go through";
 /**
  * Said under the recovery sentence, and it is the load-bearing half.
  *
- * A player who has just answered six screens and seen a failure has one question, and it is
+ * A player who has just answered seven screens and seen a failure has one question, and it is
  * not *what went wrong*. Nothing was lost, and pressing again is safe — the retry carries
  * the same key as the attempt that failed, so it cannot produce a second profile.
  */
@@ -165,7 +169,7 @@ export function answerStillWanted(
  *
  * **The feature's own `code` table**, which is the half `recoveryMessage` deliberately
  * leaves to whoever owns the endpoint: a recovery category can say *check the details above
- * and try again*, and a screen with seven steps behind it has to say **which** detail and
+ * and try again*, and a screen with eight steps behind it has to say **which** detail and
  * offer the way back.
  *
  * It is keyed by the wire code and never by the message — the message is a diagnostic the
@@ -173,7 +177,10 @@ export function answerStillWanted(
  * let a copy edit on the server change what an installed app does.
  *
  * One entry today. It is a table rather than an `if` because the commit has eight refusals
- * and the others will want their own sentences the moment a screen can produce one.
+ * and the others will want their own sentences the moment a screen can produce one. The
+ * intro's refusal is **not** in it, and that is the point of the next function: nothing is
+ * missing when a line is refused, so it is not an answer still wanted and does not take
+ * those words.
  */
 const ANSWER_THE_COMMIT_REFUSED: Readonly<
   Record<string, Exclude<MissingAnswer, 'proposals-opt-in'>>
@@ -182,19 +189,56 @@ const ANSWER_THE_COMMIT_REFUSED: Readonly<
 };
 
 /**
- * Which answer a failed commit was refused for, if it names one.
+ * A refusal the commit made that a step can fix: where to go, what to say, and the control
+ * that goes there.
+ *
+ * One shape for two kinds of refusal — an answer the server found missing, and a line the
+ * server would not admit — because the last step draws both the same way: the sentence in
+ * the failure note, and a `secondary` control under it back to the step. What differs is
+ * where the words come from, and that is decided here rather than on the screen.
+ */
+export interface CommitRefusal {
+  readonly step: SocialStep;
+  /** What to change, said in the failure note in place of *try again*. */
+  readonly body: string;
+  /** The control that goes back to the step. */
+  readonly label: string;
+}
+
+/**
+ * Which step a failed commit sends the player back to, if it names one.
  *
  * **The commit re-validates what the picker already enforced**, exactly as it does for
  * tags: a disabled button is absent from a replayed request and from an older build, so
- * this refusal is reachable even though the availability step will not continue without a
- * tick. When it arrives, *try again* is the wrong sentence — retrying the same body fails
- * identically — so the screen asks for the answer and offers the step that takes it.
+ * `availability_grid_empty` is reachable even though the availability step will not
+ * continue without a tick. When it arrives, *try again* is the wrong sentence — retrying the
+ * same body fails identically — so the screen asks for the answer and offers the step that
+ * takes it, in the same words as an answer the draft is short of. Which side noticed is not
+ * the player's to care about.
  *
- * The same words as an answer the draft is short of, which is not a coincidence worth
- * removing: the player is being asked for the same thing, and the fact that one was noticed
- * here and the other on the server is not theirs to care about.
+ * **`intro_not_admitted` is the other kind.** Nothing is missing: the line is there and the
+ * server will not keep it, for one coarse reason it names and one pattern it does not. The
+ * sentence is the reason's, from `introPresentation`, and the way back is the intro step. A
+ * reason this build has no words for still names the step — the code is recognised even
+ * where the detail is not — and says the gap.
  */
-export function answerTheCommitRefused(error: AppError): AnswerStillWanted | undefined {
-  const answer = error.code === undefined ? undefined : ANSWER_THE_COMMIT_REFUSED[error.code];
-  return answer === undefined ? undefined : { answer, copy: MISSING_ANSWER_COPY[answer] };
+export function stepTheCommitRefused(error: AppError): CommitRefusal | undefined {
+  if (error.code === undefined) return undefined;
+
+  const answer = ANSWER_THE_COMMIT_REFUSED[error.code];
+  if (answer !== undefined) {
+    const copy = MISSING_ANSWER_COPY[answer];
+    return { step: STEP_THAT_ASKS[answer], body: copy.body, label: copy.label };
+  }
+
+  const intro = introRefusal(error);
+  if (intro !== undefined) {
+    return {
+      step: 'intro',
+      body: introRefusalSentence(intro.reason),
+      label: CHANGE_INTRO_LABEL,
+    };
+  }
+
+  return undefined;
 }

@@ -199,7 +199,7 @@ describe('the floor', () => {
     // stopped, so the numbers are in the chrome and not only inside a disabled label.
     await reachTheTagsStep();
 
-    expect(screen.getByText('Setting up · Step 1 of 7 · Pick 2 to 6')).toBeTruthy();
+    expect(screen.getByText('Setting up · Step 1 of 8 · Pick 2 to 6')).toBeTruthy();
   });
 
   it('blocks continuing with nothing picked, and says how many are missing', async () => {
@@ -226,7 +226,7 @@ describe('the floor', () => {
     expect(control.props.accessibilityState?.disabled).toBe(false);
 
     fireEvent.press(control);
-    await waitFor(() => expect(screen).toHavePathname('/photos'));
+    await waitFor(() => expect(screen).toHavePathname('/intro'));
   });
 
   it('stays met from the floor all the way to the ceiling', async () => {
@@ -294,14 +294,26 @@ describe('a selected tag', () => {
     // somebody.
     await reachTheTagsStep();
 
-    expect(screen.getByLabelText('Plays to win').props.accessibilityState).toEqual({
+    // `disabled: false` beside it since #365 gave 6.2 a disabled state, and `busy: false` since
+    // #366 gave it a busy one: this step draws neither — it refuses a seventh tag out loud rather
+    // than by greying twelve, and nothing here is written anywhere — and a chip that announced
+    // nothing about either would leave *not refused* indistinguishable from *no answer*, which is
+    // `selected`'s own argument one property over.
+    //
+    // Matched rather than equalled, because the chip is the design system's and the set of states
+    // it speaks is 6.2's to grow: a whole-object assertion here goes red for a primitive gaining a
+    // state this step has no opinion about, which is a failure about the wrong file.
+    expect(screen.getByLabelText('Plays to win').props.accessibilityState).toMatchObject({
       selected: false,
+      disabled: false,
+      busy: false,
     });
 
     press('Plays to win');
 
     await waitFor(() =>
-      expect(screen.getByLabelText('Plays to win').props.accessibilityState).toEqual({
+      expect(screen.getByLabelText('Plays to win').props.accessibilityState).toMatchObject({
+        disabled: false,
         selected: true,
       }),
     );
@@ -315,7 +327,7 @@ describe('the selection the part holds', () => {
     press('Here to improve');
 
     fireEvent.press(await screen.findByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/photos'));
+    await waitFor(() => expect(screen).toHavePathname('/intro'));
     fireEvent.press(screen.getByLabelText('Back to What kind of player are you?'));
     await waitFor(() => expect(screen).toHavePathname('/tags'));
 

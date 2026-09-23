@@ -3,18 +3,24 @@
 ``docs/adr/0127`` §6 draws the line: ``INTEREST_TTL``,
 ``OUTSTANDING_INTEREST_CAP`` and ``PASS_SUPPRESS`` are **ruleset configuration**,
 and what is *contract* is the shapes around them — ``expires_at`` on an outgoing
-row, the ``outstanding`` / ``cap`` pair plus the refusal code, and, for
-``PASS_SUPPRESS``, nothing at all.
+row, the ``outstanding`` / ``cap`` / ``ttl_days`` triple plus the refusal code,
+and, for ``PASS_SUPPRESS``, nothing at all.
 
 So: **the client never hardcodes any of the three and never computes an expiry.**
 It renders a number the backend sent and a moment the backend computed, because a
 phone in somebody's hand can be months behind the backend — which is the whole
-reason that line was drawn where it was.
+reason that line was drawn where it was. ``ttl_days`` is that rule applied to
+the one sentence that needs the number itself (``docs/adr/0169`` §5): the deck's
+ending says *your yeses stay live for N days*, and N crosses rather than being
+held.
 
 **There is no incoming list here, and there is no shape one could arrive in.**
 ``docs/adr/0109`` refuses an inbox: a one-sided yes was banked under a promise of
 silence, and the only way somebody else's yes reaches its recipient is as a
-mutual — which they can only see because they said yes first.
+mutual — which they can only see because they said yes first. The one thing
+that promise was narrowed by is a **count**, and it crosses on the deal's pool
+and not here (``docs/adr/0169`` §4, ``PoolSchema.want_to_play_you``): how many
+are waiting, never who.
 
 **Nothing here says how full anybody's inbox is.** Challenge load prints as a
 coarse code on a candidate row and nowhere else; a number about somebody else's
@@ -97,6 +103,18 @@ class OutstandingSchema(BaseModel):
             "may move between releases."
         ),
     )
+    ttl_days: int = Field(
+        ...,
+        ge=1,
+        description=(
+            "How many days a yes you send in this sport stays live before it "
+            "lapses. **Read it from here, never hardcode it** — it is the same "
+            "ruleset number that dates every `expires_at`, sent so a screen can "
+            "say *your yeses stay live for N days* without holding N. Every "
+            "yes still carries its own `expires_at`; render that for a row, and "
+            "this for the sentence."
+        ),
+    )
 
 
 class ExpressedInterestResponse(BaseModel):
@@ -114,6 +132,22 @@ class ExpressedInterestResponse(BaseModel):
             "`true` when they had already said *Let's play* to you for this "
             "sport. **A mutual is told to both sides.** A one-sided yes is told "
             "to nobody, ever."
+        ),
+    )
+    challenge_id: UUID | None = Field(
+        ...,
+        description=(
+            "**The game the two of you have**, when there is one — the "
+            "challenge this tap opened, or the one an earlier mutual between "
+            "you opened that is not finished with.\n\n"
+            "**`null` is one answer covering two causes, and it does not say "
+            "which.** You may already have a game *being arranged* together, or "
+            "the platform may have declined to open one. That distinction does "
+            "not cross this wire and will not — so a client that reported the "
+            "absence as a state of its own would be reporting the second, which "
+            "is a fact about the other person no refusal here is allowed to "
+            "disclose.\n\n"
+            "`mutual` is unaffected either way: it is what the two yeses say."
         ),
     )
     outstanding: OutstandingSchema = Field(

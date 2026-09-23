@@ -13,9 +13,11 @@
  * ## The entry gate
  *
  * The second redirect is onboarding's, and onboarding is **two parts** — so the gate has
- * four destinations rather than two: an unfinished run resumes, no ratings goes to welcome,
- * a rating with no Player profile goes to the second part's first step, and only then does
- * a player reach the app ([ADR-0090](../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
+ * five destinations rather than two: an unnamed account goes to the naming step before
+ * anything else ([ADR-0171](../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §3), an unfinished run resumes, no ratings goes to welcome, a rating with no Player profile
+ * goes to the second part's first step, and only then does a player reach the app
+ * ([ADR-0090](../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
  *
  * None of it is part of `SessionStatus`: making "has a rating" a session state would block
  * every cold launch on a network request, which is the opposite of what the bootstrap
@@ -24,27 +26,61 @@
  * Where a player belongs is a rule, and it lives in the onboarding feature with its own
  * tests. This file only turns the decision into a route — which is the whole job of a
  * route file.
+ *
+ * ## A pass that began at the passport ends on it
+ *
+ * The gate's app branch is where every onboarding pass ends, and a pass has an origin
+ * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §3): one begun at the Skill passport's *Add a sport* enters the app the way every pass
+ * does — *See your ratings*, *continue later* and *abandon* all replace to `/` — and it is
+ * this file, told the origin as the pass ends, that lays the You tab down and pushes the
+ * passport over it. The shell's own move, as the yes screen lands a room: the tab beneath,
+ * so *back* from the passport goes where it came from. Which route the passport is belongs to
+ * the feature that owns the screen, not to this file — the same seam `NAMING_STEP` and
+ * `SOCIAL_STEPS_ENTRY` cross.
  */
 
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, router, usePathname } from 'expo-router';
+import { useCallback } from 'react';
 
+import { NAMING_STEP } from '@/features/auth/types';
 import {
   EntryUnavailableScreen,
   useEndOnboardingPass,
   useEntryDecision,
+  type PassOrigin,
 } from '@/features/onboarding/types';
-import { SOCIAL_STEPS_ENTRY } from '@/features/player_profile/types';
+import { YOU_PASSPORT_ROUTE } from '@/features/player_record/types';
+import { SOCIAL_STEPS_ENTRY, useLocationRefresh } from '@/features/player_profile/types';
+import { openTab } from '@/features/shell/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 
 export default function AppLayout() {
   const status = useSessionStatus();
   const entry = useEntryDecision();
+  const pathname = usePathname();
+
+  // Where a pass that has just ended lands, by where it began. A welcome pass is already
+  // where the gate put it; a passport pass goes back to the passport, with the You tab laid
+  // down beneath it.
+  const land = useCallback(
+    (origin: PassOrigin) => {
+      if (origin !== 'passport') return;
+      openTab('you', pathname);
+      router.push(YOU_PASSPORT_ROUTE);
+    },
+    [pathname],
+  );
 
   // A walk through onboarding is over when the player is in the app. Declared here because
   // this is the branch that knows it — one site, and the definition rather than a line
   // someone has to remember on each of the several ways out of the flow. Called before the
   // returns below, because a hook may not be conditional.
-  useEndOnboardingPass(entry.kind === 'app');
+  useEndOnboardingPass(entry.kind === 'app', land);
+  // And the location moves on a cold start, for the same branch and the same reason: this is
+  // the one site that knows a player is signed in and past onboarding. The feature owns what
+  // happens; this file owns the moment (ADR-0174 §6).
+  useLocationRefresh(entry.kind === 'app');
 
   // Can't happen in practice — `BootstrapGate` renders nothing until the sequence
   // resolves, so no route tree exists while the status is still `bootstrapping`. It is
@@ -61,6 +97,10 @@ export default function AppLayout() {
       return null;
     case 'unavailable':
       return <EntryUnavailableScreen reason={entry.reason} onRetry={entry.retry} />;
+    case 'naming':
+      // Before anything else: every destination after this one says the player's name. Which
+      // route that is belongs to the feature that owns the naming, not to this file.
+      return <Redirect href={NAMING_STEP} />;
     case 'welcome':
       return <Redirect href="/welcome" />;
     case 'social-steps':

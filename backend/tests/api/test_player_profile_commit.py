@@ -22,14 +22,12 @@ ALICE = {
     "email": "alice.profile@example.com",
     "password1": "hunter22!",
     "password2": "hunter22!",
-    "nickname": "alice-profile",
     "adult_attested": True,
 }
 BOB = {
     "email": "bob.profile@example.com",
     "password1": "hunter22!",
     "password2": "hunter22!",
-    "nickname": "bob-profile",
     "adult_attested": True,
 }
 
@@ -43,7 +41,18 @@ async def auth_headers(client, payload=ALICE) -> dict[str, str]:
         json={"email": payload["email"], "password": payload["password1"]},
     )
     assert login.status_code == 200, login.text
-    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    # Named, because a record is read back below and an unnamed player has no
+    # record identity to read (``docs/adr/0171``): sign-up is credentials only
+    # and the naming is the first step of onboarding.
+    handle = payload["email"].split("@")[0].replace(".", "_")
+    named = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": handle.replace("_", " ").title(), "nickname": handle},
+        headers=headers,
+    )
+    assert named.status_code == 200, named.text
+    return headers
 
 
 def a_body(**overrides) -> dict:
@@ -424,9 +433,11 @@ async def test_no_gender_value_ever_comes_back_out(client):
     """``docs/adr/0096`` §6, asserted rather than remembered.
 
     The body is only ever the caller's own profile, so nothing here would leak a
-    third party's answer — but the moment one response shape carries it, *which*
-    shapes may becomes a judgement made per endpoint instead of a line nobody
-    has to re-argue. This is that line.
+    third party's answer — but *which* shapes may carry it is a line rather than
+    a judgement made per endpoint, and the line is one shape: the owner's own
+    read (``docs/adr/0179`` §4). The commit's answer is not it, and the walk in
+    ``tests/unit/test_no_response_carries_a_forbidden_fact.py`` holds the
+    whole contract to that.
     """
 
     headers = await auth_headers(client)
@@ -436,3 +447,80 @@ async def test_no_gender_value_ever_comes_back_out(client):
     assert "gender" not in body
     assert "gender_preference" not in body
     assert "WOMAN" not in str(body)
+
+
+# ---------------------------------------------------------------------------
+# The intro (docs/adr/0170) — one field, one code, one coarse reason
+# ---------------------------------------------------------------------------
+
+
+async def test_a_commit_may_carry_one_line_about_oneself(client):
+    """Karol writes a line and commits: 201, and the line is stored as its own
+    event. The commit body does not echo it — it crosses on the card and on the
+    record, and nowhere else (``docs/adr/0170`` §3)."""
+
+    headers = await auth_headers(client)
+
+    response = await commit(
+        client, headers, a_body(intro="Moved from Wrocław in May. Needs opponents.")
+    )
+
+    assert response.status_code == 201, response.text
+    record = await client.get("/api/v1/players/me/record", headers=headers)
+    assert record.status_code == 200, record.text
+    assert record.json()["intro"] == "Moved from Wrocław in May. Needs opponents."
+
+
+async def test_a_commit_without_a_line_is_a_commit_without_one(client):
+    """Ola skips: no field, no event, and the record omits the key rather than
+    sending an empty string."""
+
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers)
+
+    assert response.status_code == 201, response.text
+    record = await client.get("/api/v1/players/me/record", headers=headers)
+    assert "intro" not in record.json()
+
+
+@pytest.mark.parametrize(
+    "line,reason",
+    [
+        ("x" * 101, "too_long"),
+        ("Moved here in May.\nNeeds opponents.", "multiline"),
+        ("WhatsApp me 600 123 456", "contains_contact"),
+        ("karol@example.com", "contains_contact"),
+        ("https://karol.example.com", "contains_contact"),
+        ("insta @karol_plays", "contains_contact"),
+    ],
+    ids=["101 characters", "a line break", "a phone", "an email", "a URL", "a handle"],
+)
+async def test_a_line_the_platform_does_not_admit_is_refused_with_its_reason(
+    client, line: str, reason: str
+):
+    """Tomek writes *WhatsApp me 600 123 456* and is refused —
+    ``intro_not_admitted``, reason ``contains_contact`` — **before anything is
+    stored**. One code and one coarse reason: the client says what to change,
+    and the server never explains what it matched."""
+
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(intro=line))
+
+    assert response.status_code == 400, response.text
+    body = response.json()
+    assert body["code"] == "intro_not_admitted"
+    assert body["details"] == {"reason": reason}
+    # Nothing was stored: the same key commits cleanly once the line is fixed,
+    # which it could not if a refused commit had left a profile behind.
+    retry = await commit(client, headers, a_body(intro="Three sets, best of five"))
+    assert retry.status_code == 201, retry.text
+
+
+async def test_a_line_about_the_game_is_admitted(client):
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(intro="Three sets, best of five"))
+
+    assert response.status_code == 201, response.text

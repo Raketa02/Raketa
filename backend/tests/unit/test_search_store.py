@@ -9,6 +9,7 @@ withheld* — so the near-miss band has no read path at all, and a stranger's
 
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
@@ -28,7 +29,9 @@ from app.modules.matchmaking.domain.searches import (
     CandidateBand,
     GameResult,
     InclusionReason,
+    LineupRecord,
     PoolDescription,
+    RatedSportRecord,
     RecordedCard,
     SearchCandidateRecord,
     SearchInitiation,
@@ -39,6 +42,7 @@ from app.modules.matchmaking.domain.searches import (
 )
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
+    SearchORM,
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
@@ -88,17 +92,19 @@ def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
         reliability_penalty_applied=False,
         reliability_penalty_decisive=False,
         concerns=("SOCIAL_VIBE",),
-        distance_km=4,
+        distance_km=3.7,
         # The card is recorded on the row that showed it, so a near miss — shown
         # to nobody — carries none, and neither does it carry a counted game's
         # price.
         card=(
             RecordedCard(
-                nickname="ada",
+                name="ada",
                 photo_id=PHOTO,
                 review=PhotoReviewDecision.FLAGGED,
                 area_code="LDN-CENTRAL",
                 social_tags=("PLAYS_TO_WIN",),
+                # And the line, for the record block's reason below.
+                intro="Moved from Wrocław in May.",
                 level=2.7,
                 band="Improver",
                 range_low=2.36,
@@ -214,7 +220,7 @@ async def test_the_whole_row_that_was_shown_comes_back(store):
     """**The record is self-contained**, because nothing it was assembled from
     remembers what it said an hour ago.
 
-    A nickname changes, a Level moves, a player leaves an area, and a Level delta
+    A name changes, a Level moves, a player leaves an area, and a Level delta
     is priced against ratings that keep moving — so a read-back that re-read them
     would answer a different search and call it the same one. The card, the
     concerns, the distance and the at-stake block are on the row.
@@ -228,7 +234,7 @@ async def test_the_whole_row_that_was_shown_comes_back(store):
     row = (await adapter.find(search_id=record.id, searcher_id=SEARCHER)).returned[0]
 
     assert row.card is not None
-    assert row.card.nickname == "ada"
+    assert row.card.name == "ada"
     assert row.card.photo_id == PHOTO, "an id, never a URL"
     assert row.card.social_tags == ("PLAYS_TO_WIN",)
     assert (row.card.level, row.card.range_low, row.card.range_high) == (
@@ -237,7 +243,7 @@ async def test_the_whole_row_that_was_shown_comes_back(store):
         3.04,
     ), "a Level read back without the range it was shown with"
     assert row.concerns == ("SOCIAL_VIBE",)
-    assert row.distance_km == 4
+    assert row.distance_km == 3.7, "the one-decimal print, read back as printed"
     assert row.at_stake == AtStake(win_delta=0.07, loss_delta=-0.05)
     # The record block, which is on the row for the same reason: a Player Score
     # moves, a run of form gains a game, and a counted-game count only grows.
@@ -280,10 +286,41 @@ async def test_a_card_written_before_the_record_block_reads_back_without_one(sto
     row = (await adapter.find(search_id=record.id, searcher_id=SEARCHER)).returned[0]
 
     assert row.card is not None
-    assert row.card.nickname == "ada", "an older card stopped reading at all"
+    assert row.card.name == "ada", "an older card stopped reading at all"
     assert row.card.player_score is None
     assert row.card.counted_games is None
     assert row.card.last_five == ()
+
+
+async def test_a_card_written_before_the_intro_reads_back_without_one(store):
+    """The same soft key, one field over (``docs/adr/0170``): a blob written
+    before the line existed showed no line, and *no intro* is what its absence
+    already means."""
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+
+    stored = (
+        await session.execute(
+            select(SearchCandidateORM).where(
+                SearchCandidateORM.search_id == record.id,
+                SearchCandidateORM.band == CandidateBand.RETURNED.value,
+            )
+        )
+    ).scalars()
+    for candidate in stored:
+        candidate.player_card = {
+            key: value for key, value in candidate.player_card.items() if key != "intro"
+        }
+    await session.commit()
+
+    row = (await adapter.find(search_id=record.id, searcher_id=SEARCHER)).returned[0]
+
+    assert row.card is not None
+    assert row.card.name == "ada", "an older card stopped reading at all"
+    assert row.card.intro is None
 
 
 async def test_the_search_row_comes_back_whole_beside_its_candidates(store):
@@ -335,6 +372,87 @@ async def test_a_search_recorded_before_the_area_was_kept_reads_back_without_one
     assert read.searcher_area_code is None
 
 
+def _a_line_up(*, seated: tuple[UUID, ...] | None) -> SearchRecord:
+    """A line-up's record: the shortlist's, on the surface layer 4 belongs to."""
+
+    return replace(
+        _record(),
+        surface=SearchSurface.LINEUP,
+        lineup=LineupRecord(
+            combinations=4,
+            refused_by_gate=1,
+            refused_by_floor=0,
+            max_fit_rank_seated=None if not seated else 2,
+            rows=(),
+            seated=seated,
+        ),
+    )
+
+
+async def test_layer_four_records_who_sat_down_and_reads_it_back(store):
+    """**The seated are on layer 4**, since the returned band became the pool
+    ([#407](https://github.com/Raketa02/Raketa/issues/407)). In the order they
+    were seated, and an empty tuple is *nobody tonight* — which is not the
+    absence below."""
+
+    adapter, session = store
+    seated = (uuid4(), uuid4())
+    record = _a_line_up(seated=seated)
+
+    await adapter.record(record)
+    await session.commit()
+
+    read = await adapter.find(search_id=record.id, searcher_id=SEARCHER)
+
+    assert read is not None and read.lineup is not None
+    assert read.lineup.seated == seated
+    assert read.lineup.max_fit_rank_seated == 2
+
+
+async def test_a_line_up_recorded_before_the_seated_were_kept_reads_back_without_them(
+    store,
+):
+    """``None`` is *not recorded*, and never *nobody*.
+
+    A row written while the returned band was the seated in seat order carries
+    no ``seated`` key in its blob, and searches are kept for ever — so the
+    state is standing rather than a migration's leftover, exactly as the area
+    code's is.
+    """
+
+    adapter, session = store
+    record = _a_line_up(seated=None)
+
+    await adapter.record(record)
+    await session.commit()
+    async with session.begin_nested():
+        row = (
+            await session.execute(select(SearchORM).where(SearchORM.id == record.id))
+        ).scalar_one()
+        assert "seated" not in row.lineup, "an unrecorded fact was written as null"
+
+    read = await adapter.find(search_id=record.id, searcher_id=SEARCHER)
+
+    assert read is not None and read.lineup is not None
+    assert read.lineup.seated is None
+
+
+def test_layer_four_cannot_seat_nobody_and_read_a_deepest_rank():
+    """The two facts about the seated are one fact in two columns."""
+
+    from app.kernel import InvariantViolated
+
+    with pytest.raises(InvariantViolated):
+        LineupRecord(
+            combinations=0,
+            refused_by_gate=0,
+            refused_by_floor=0,
+            max_fit_rank_seated=3,
+            rows=(),
+            seated=(),
+        )
+
+
 def test_an_area_code_is_recorded_or_absent_and_never_blank():
     """The invariant that keeps the two absences apart at the source."""
 
@@ -376,6 +494,61 @@ async def test_a_stranger_reads_nothing_and_cannot_tell_why(store):
     unknown = await adapter.find(search_id=uuid4(), searcher_id=SEARCHER)
 
     assert foreign is None is unknown
+
+
+async def test_a_search_discloses_the_sport_it_showed_somebody_in(store):
+    """The read the player record is entitled through (``docs/adr/0159``).
+
+    **Sports and not searches**: the caller needs the partition to re-evaluate a
+    gate in, and a hundred padel searches of the same pair are one partition.
+    """
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+    shown = record.candidates[0].player_id
+
+    assert await adapter.sports_shown_in(
+        searcher_id=SEARCHER, player_id=shown
+    ) == frozenset({Sport.PADEL})
+
+
+async def test_a_near_miss_discloses_nothing(store):
+    """A player withheld from a search was shown to nobody, so nothing about
+    them was disclosed — layer 3 has no read path here either."""
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+    withheld = next(
+        row.player_id
+        for row in record.candidates
+        if row.band is CandidateBand.NEAR_MISS
+    )
+
+    assert (
+        await adapter.sports_shown_in(searcher_id=SEARCHER, player_id=withheld)
+        == frozenset()
+    )
+
+
+async def test_a_disclosure_belongs_to_the_searcher_who_was_shown_it(store):
+    """Somebody else's search discloses nothing to this reader, which is the
+    difference between a disclosure and a directory of everybody the platform has
+    ever shown to anybody."""
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+    shown = record.candidates[0].player_id
+
+    assert (
+        await adapter.sports_shown_in(searcher_id=STRANGER, player_id=shown)
+        == frozenset()
+    )
 
 
 async def test_the_store_does_not_commit_for_its_caller(store):
@@ -457,11 +630,12 @@ def test_a_basis_and_the_reasons_beside_it_may_not_be_different_lengths():
             concerns=(),
             distance_km=None,
             card=RecordedCard(
-                nickname="ada",
+                name="ada",
                 photo_id=None,
                 review=None,
                 area_code="LDN-CENTRAL",
                 social_tags=(),
+                intro=None,
                 level=2.7,
                 band="Improver",
                 range_low=2.36,
@@ -476,7 +650,7 @@ def test_a_basis_and_the_reasons_beside_it_may_not_be_different_lengths():
 
 def test_a_near_miss_may_not_carry_a_card():
     """A near miss was **shown to nobody**, so there is no card it could have
-    shown — and a row carrying one would be layer 3 holding a person's nickname
+    shown — and a row carrying one would be layer 3 holding a person's name
     for a screen it may never reach."""
 
     from app.kernel import InvariantViolated
@@ -504,11 +678,12 @@ def test_a_near_miss_may_not_carry_a_card():
             concerns=(),
             distance_km=None,
             card=RecordedCard(
-                nickname="ada",
+                name="ada",
                 photo_id=None,
                 review=None,
                 area_code="LDN-CENTRAL",
                 social_tags=(),
+                intro=None,
                 level=2.7,
                 band="Improver",
                 range_low=2.36,
@@ -572,3 +747,138 @@ def test_the_redaction_detector_must_agree_with_the_rows_written():
                 ),
             }
         )
+
+
+# ---------------------------------------------------------------------------
+# The reading — a ``RADAR`` record (``docs/adr/0174`` §1)
+# ---------------------------------------------------------------------------
+
+
+def _a_reading() -> SearchRecord:
+    """A reading's record: no mode, a bearing and the ratings on every row."""
+
+    base = _record()
+    returned = tuple(
+        replace(
+            row,
+            bearing_deg=47 + row.position,
+            ratings=(
+                RatedSportRecord(sport=Sport.PADEL, level=2.7),
+                RatedSportRecord(sport=Sport.TENNIS, level=3.1),
+            ),
+        )
+        for row in base.returned
+    )
+    return replace(
+        base,
+        mode=None,
+        intent_read=None,
+        surface=SearchSurface.RADAR,
+        rung_offers=None,
+        offered_by_search_id=None,
+        rung_taken=None,
+        counts=replace(base.counts, n_near_miss_recorded=0),
+        best_withheld_fit=None,
+        candidates=returned,
+    )
+
+
+async def test_a_reading_round_trips_with_its_bearings_and_ratings(store):
+    """Both are recorded because a read-back never recomputes: a bearing is spot
+    to spot and the cell under a spot moves, and a Level moves."""
+
+    adapter, session = store
+    reading = _a_reading()
+    await adapter.record(reading)
+    await session.commit()
+
+    read = await adapter.find(search_id=reading.id, searcher_id=SEARCHER)
+
+    assert read is not None
+    assert read.surface is SearchSurface.RADAR
+    assert read.mode is None
+    assert [row.bearing_deg for row in read.returned] == [48, 49]
+    assert read.returned[0].ratings == (
+        RatedSportRecord(sport=Sport.PADEL, level=2.7),
+        RatedSportRecord(sport=Sport.TENNIS, level=3.1),
+    )
+
+
+def test_a_reading_has_no_mode_and_a_shortlist_still_must():
+    """``scores_under_one_ruler`` is the deck's rule and now the radar's: the
+    record's invariant reads it, so a reading with a mode is refused as a
+    deal with one is, and a shortlist without one still is."""
+
+    from app.kernel import InvariantViolated
+
+    with pytest.raises(InvariantViolated):
+        replace(_a_reading(), mode=SearchMode.FOR_FUN)
+    with pytest.raises(InvariantViolated):
+        replace(_record(), mode=None)
+
+
+def test_a_bearing_and_the_ratings_sit_on_a_readings_returned_rows_and_nowhere_else():
+    """Biconditional, like the deck's re-show flag: a shortlist row has no
+    bearing to carry, and a reading's row cannot be written without one."""
+
+    from app.kernel import InvariantViolated
+
+    reading = _a_reading()
+    with pytest.raises(InvariantViolated):
+        replace(
+            reading,
+            candidates=tuple(
+                replace(row, bearing_deg=None) for row in reading.candidates
+            ),
+        )
+    with pytest.raises(InvariantViolated):
+        replace(
+            reading,
+            candidates=tuple(replace(row, ratings=None) for row in reading.candidates),
+        )
+    shortlist = _record()
+    with pytest.raises(InvariantViolated):
+        replace(
+            shortlist,
+            candidates=tuple(
+                replace(row, bearing_deg=90)
+                if row.band is CandidateBand.RETURNED
+                else row
+                for row in shortlist.candidates
+            ),
+        )
+
+
+def test_the_tables_no_mode_constraint_spells_the_surfaces_the_property_names():
+    """The ORM's check constraints cannot read ``scores_under_one_ruler``, so
+    they spell the surfaces by name — and this holds the spelling to the
+    property, so a surface added to one and not the other goes red."""
+
+    from sqlalchemy import CheckConstraint
+
+    from app.modules.matchmaking.infrastructure.search_model import SearchORM
+
+    named = {
+        surface.value for surface in SearchSurface if surface.scores_under_one_ruler
+    }
+    constraints = {
+        constraint.name: str(constraint.sqltext)
+        for constraint in SearchORM.__table_args__
+        if isinstance(constraint, CheckConstraint)
+    }
+    for name in (
+        "ck_search_mode_null_exactly_under_one_ruler",
+        "ck_search_intent_read_only_under_one_ruler",
+    ):
+        spelled = set(re.findall(r"'([A-Z_]+)'", constraints[name]))
+        assert spelled == named, (name, spelled, named)
+
+
+def test_a_bearing_is_a_whole_degree_on_the_compass():
+    from app.kernel import InvariantViolated
+
+    row = _candidate(CandidateBand.RETURNED, 1)
+    with pytest.raises(InvariantViolated):
+        replace(row, bearing_deg=360)
+    with pytest.raises(InvariantViolated):
+        replace(row, bearing_deg=-1)

@@ -68,17 +68,98 @@ from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
-from app.modules.challenges.domain.planned_game import PlannedGameOpening
+from app.modules.challenges.domain.friendly_choice import FriendlyChoiceQuery
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
+from app.modules.challenges.domain.planned_game import PlannedGameHandover
+from app.modules.challenges.domain.seatable_game import SeatableGameQuery
+from app.modules.challenges.domain.settled_game import SettledGameQuery
+from app.modules.challenges.infrastructure.games_game_of_court import (
+    GamesGameOfCourt,
+)
 from app.modules.challenges.infrastructure.games_planned_game import (
     GamesPlannedGame,
 )
+from app.modules.challenges.infrastructure.games_seatable_game import (
+    GamesSeatableGame,
+)
+from app.modules.challenges.infrastructure.games_settled_game import (
+    GamesSettledGame,
+)
+from app.modules.challenges.infrastructure.profile_friendly_choice import (
+    ProfileFriendlyChoice,
+)
+from app.modules.games.application.call_off_game import CallOffGame
+from app.modules.games.application.dismiss_game import DismissGameOfCourt
 from app.modules.games.application.open_planned_game import OpenPlannedGame
+from app.modules.games.application.vacate_seat import VacateSeat
+from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
+from app.modules.conversations.application.destroy_ended_conversations import (
+    DestroyEndedConversations,
+)
+from app.modules.conversations.application.lifetime import Lifetime
+from app.modules.conversations.application.membership import Membership
+from app.modules.conversations.application.tell_the_room import TellTheRoom
+from app.modules.conversations.domain.ports import (
+    AccountHoldQuery as ConversationAccountHoldQuery,
+    ArrangingCourt,
+    ConversationDirectory,
+    ConversationRepository,
+    MemberFaces,
+    PlayedCourt,
+)
+from app.modules.conversations.domain.live import (
+    NudgePublisher,
+    NudgeSubscriber,
+    TypingHeartbeat,
+    TypingRoster,
+)
+from app.modules.conversations.application.follow_conversation import (
+    FollowConversation,
+)
+from app.modules.conversations.infrastructure.fail_soft_nudges import (
+    FailSoftNudgePublisher,
+)
+from app.modules.conversations.infrastructure.fail_soft_typing import (
+    FailSoftTypingHeartbeat,
+    FailSoftTypingRoster,
+)
+from app.modules.conversations.infrastructure.redis_live_channel import (
+    RedisNudgePublisher,
+    RedisNudgeSubscriber,
+)
+from app.modules.conversations.infrastructure.redis_typing_presence import (
+    RedisTypingHeartbeat,
+    RedisTypingRoster,
+)
+from app.modules.conversations.infrastructure.absent_providers import (
+    NobodyIsFollowing,
+    NoHoldsExist as NoConversationHoldsExist,
+)
+from app.modules.conversations.infrastructure.challenges_arranging_court import (
+    ChallengesArrangingCourt,
+)
+from app.modules.conversations.infrastructure.event_sourced_conversation_repository import (  # noqa: E501
+    EventSourcedConversationRepository,
+)
+from app.modules.conversations.infrastructure.games_played_court import (
+    GamesPlayedCourt,
+)
+from app.modules.conversations.infrastructure.profile_member_faces import (
+    ProfileMemberFaces,
+)
+from app.modules.conversations.infrastructure.sqlalchemy_conversation_directory import (  # noqa: E501
+    SqlAlchemyConversationDirectory,
+)
 from app.modules.games.domain.ports import (
+    AgreedMoment,
     ConfirmedResultLedger,
+    CourtPairing,
     GameDirectory,
     GameHistoryQuery,
     GameRepository,
-    PlayerHandles,
+    OpponentVarietyQuery,
+    PlayerNames,
+    SeatableCourt,
 )
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
     EventSourcedConfirmedResults,
@@ -86,10 +167,17 @@ from app.modules.games.infrastructure.event_sourced_confirmed_results import (
 from app.modules.games.infrastructure.event_sourced_game_history import (
     EventSourcedGameHistory,
 )
+from app.modules.games.infrastructure.event_sourced_seatable_court import (
+    EventSourcedSeatableCourt,
+)
+from app.modules.plans.infrastructure.games_agreed_moment import PlansAgreedMoment
 from app.modules.games.infrastructure.event_sourced_game_repository import (
     EventSourcedGameRepository,
 )
-from app.modules.games.infrastructure.users_handles import UsersHandles
+from app.modules.games.infrastructure.users_names import UsersNames
+from app.modules.matchmaking.infrastructure.games_shared_courts import (
+    GamesSharedCourts,
+)
 from app.modules.matchmaking.infrastructure.games_match_history import (
     GamesPlayedAndChallengesAnswered,
 )
@@ -98,9 +186,12 @@ from app.modules.challenges.domain.ports import (
     ChallengeDirectory,
     ChallengeHistoryQuery,
     ChallengeRepository,
+    CourtPairingQuery,
     LapsingChallengeQuery,
+    LeftCourtQuery,
     OpenChallengeQuery,
     OriginSearchQuery,
+    PlayerNames as ChallengePlayerNames,
 )
 from app.modules.challenges.infrastructure.absent_providers import (
     NoHoldsExist as NoChallengeHoldsExist,
@@ -117,6 +208,12 @@ from app.modules.challenges.infrastructure.event_sourced_challenge_repository im
 from app.modules.challenges.infrastructure.event_sourced_lapsing_challenge_query import (  # noqa: E501
     EventSourcedLapsingChallengeQuery,
 )
+from app.modules.challenges.infrastructure.event_sourced_left_court_query import (
+    EventSourcedLeftCourtQuery,
+)
+from app.modules.challenges.infrastructure.users_names import (
+    UsersNames as ChallengeUsersNames,
+)
 from app.modules.challenges.infrastructure.event_sourced_open_challenge_query import (
     EventSourcedOpenChallengeQuery,
 )
@@ -124,8 +221,13 @@ from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
     AccountStatusQuery,
     AtStakeQuery,
+    HalfBuiltCourtQuery,
     MatchHistoryQuery,
     PlayerScoreQuery,
+    SharedCourtQuery,
+)
+from app.modules.matchmaking.application.fail_closed_gates import (
+    FailClosedGates,
 )
 from app.modules.matchmaking.application.roll_exposure import RollExposure
 from app.modules.matchmaking.domain.cards import (
@@ -137,6 +239,7 @@ from app.modules.matchmaking.domain.declines import PromptDeclineLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.matchmaking.domain.interest import InterestLedger
+from app.modules.matchmaking.domain.deck_reset import DeckResetLedger
 from app.modules.matchmaking.domain.passes import PassLedger
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
@@ -157,8 +260,8 @@ from app.modules.matchmaking.infrastructure.published_player_scores import (
     PublishedPlayerScores,
 )
 from app.modules.player_score.domain.ports import PublishedScoreQuery
-from app.modules.player_score.infrastructure.two_strands_from_the_record import (
-    TwoStrandsFromTheRecord,
+from app.modules.player_score.infrastructure.three_strands_from_the_record import (
+    ThreeStrandsFromTheRecord,
 )
 from app.modules.matchmaking.infrastructure.candidate_index_tail import (
     CandidateIndexTail,
@@ -190,6 +293,9 @@ from app.modules.matchmaking.infrastructure.player_card_source import (
 from app.modules.matchmaking.infrastructure.sqlalchemy_interest_ledger import (
     SqlAlchemyInterestLedger,
 )
+from app.modules.matchmaking.infrastructure.sqlalchemy_deck_reset_ledger import (
+    SqlAlchemyDeckResetLedger,
+)
 from app.modules.matchmaking.infrastructure.sqlalchemy_pass_ledger import (
     SqlAlchemyPassLedger,
 )
@@ -202,11 +308,24 @@ from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
 from app.modules.matchmaking.domain.mutual_challenge import (
     MutualChallengeMinting,
 )
+from app.modules.matchmaking.infrastructure.challenges_half_built_court import (
+    ChallengesHalfBuiltCourts,
+)
 from app.modules.matchmaking.infrastructure.challenges_match_history import (
     ChallengesButNobodyHasPlayed,
 )
 from app.modules.matchmaking.infrastructure.challenges_mutual_challenge import (
     ChallengesMutualChallenge,
+)
+from app.modules.matchmaking.application.pair_with_a_court import PairWithACourt
+from app.modules.matchmaking.application.search_workbench import SearchWorkbench
+from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
+from app.modules.matchmaking.infrastructure.challenge_court_cards import (
+    ChallengeCourtCards,
+    NoCourtCanBePriced,
+)
+from app.modules.matchmaking.infrastructure.games_court_pairing import (
+    GamesCourtPairing,
 )
 from app.modules.matchmaking.infrastructure.search_court_origin import (
     SearchCourtOrigin,
@@ -216,6 +335,23 @@ from app.modules.matchmaking.infrastructure.rating_at_stake import (
 )
 from app.modules.matchmaking.infrastructure.users_account_status import (
     UsersAccountStatus,
+)
+from app.modules.plans.application.read_plans import ReadPlans
+from app.modules.plans.domain.ports import (
+    AccountHoldQuery as PlanAccountHoldQuery,
+    PlanDirectory,
+    PlannableCourts,
+    PlanRepository,
+)
+from app.modules.plans.infrastructure.absent_providers import (
+    NoHoldsExist as NoPlanHoldsExist,
+)
+from app.modules.plans.infrastructure.event_sourced_plan_repository import (
+    EventSourcedPlanDirectory,
+    EventSourcedPlanRepository,
+)
+from app.modules.plans.infrastructure.plannable_courts import (
+    ChallengesAndGamesPlannableCourts,
 )
 from app.modules.player_profile.domain.ports import (
     PlayIntentDeclarationRepository,
@@ -251,6 +387,60 @@ from app.modules.rating.infrastructure.event_sourced_assessment_repository impor
 )
 from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
     EventSourcedSkillRatingRepository,
+)
+from app.modules.player_record.infrastructure.games_subject_form import (
+    GamesSubjectForm,
+)
+from app.modules.player_record.infrastructure.games_subject_variety import (
+    GamesSubjectVariety,
+)
+from app.modules.player_record.infrastructure.published_subject_sportsmanship import (
+    PublishedSubjectSportsmanship,
+)
+from app.modules.player_record.infrastructure.rating_subject_ratings import (
+    RatingSubjectRatings,
+)
+from app.modules.player_record.infrastructure.score_subject_reliability import (
+    ScoreSubjectReliability,
+)
+from app.modules.player_record.domain.ports import (
+    PriorDisclosure,
+    RecordGates,
+    RecordPhotoLink,
+    SubjectForm,
+    SubjectIdentitySource,
+    SubjectRatings,
+    SubjectReliability,
+    SubjectSportsmanship,
+    SubjectVariety,
+)
+from app.modules.player_record.infrastructure.disclosures import (
+    ChallengesTheyShare,
+    GamesTheyPlayed,
+    SearchesThatShowedThem,
+)
+from app.modules.player_record.infrastructure.live_record_gates import (
+    LiveRecordGates,
+)
+from app.modules.player_record.infrastructure.presigned_record_photo import (
+    PresignedRecordPhoto,
+)
+from app.modules.player_record.infrastructure.subject_identities import (
+    ProfileAndAccountIdentity,
+)
+from app.modules.sportsmanship.domain.ports import (
+    PublishedSportsmanshipQuery,
+    SettledCourts,
+    SportsmanshipLedger,
+)
+from app.modules.sportsmanship.infrastructure.games_settled_courts import (
+    GamesSettledCourts,
+)
+from app.modules.sportsmanship.infrastructure.sqlalchemy_standing_answers import (
+    StandingAnswersAboutThem,
+)
+from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger import (
+    SqlAlchemySportsmanshipLedger,
 )
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
@@ -428,6 +618,23 @@ def build_lapsing_challenge_query(session: AsyncSession) -> LapsingChallengeQuer
     return EventSourcedLapsingChallengeQuery(session)
 
 
+def build_left_court_query(session: AsyncSession) -> LeftCourtQuery:
+    """The candidate set the hour loop opens — over the log, and with no codec,
+    on the lapse read's argument (``docs/adr/0175`` §3)."""
+    return EventSourcedLeftCourtQuery(session)
+
+
+def build_challenge_names(session: AsyncSession) -> ChallengePlayerNames:
+    """*What is this person called* — the one thing a challenge **list** borrows.
+
+    The second line in this file building a names adapter, and the second
+    ``UsersNames`` class behind it: ``challenges`` and ``games`` each declare
+    the port because neither may import the other, so the two are aliased apart
+    here rather than one context signing the other's (``docs/adr/0143`` §7).
+    """
+    return ChallengeUsersNames(build_user_repository(session))
+
+
 def build_challenge_hold_query(session: AsyncSession) -> ChallengeAccountHoldQuery:
     """``cases`` does not exist, so nothing can hold an account.
 
@@ -472,6 +679,220 @@ def build_origin_search_query(session: AsyncSession) -> OriginSearchQuery:
     return SearchCourtOrigin(build_search_store(session))
 
 
+def build_court_pairing_query(
+    *,
+    session: AsyncSession,
+    clock: Clock,
+    unit_of_work: UnitOfWork,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    settings: Settings,
+    store: Redis | None,
+    candidates: CandidateSource | None,
+) -> CourtPairingQuery:
+    """Who the people on a court are, and what the reader makes of each of them.
+
+    The second outward demand ``challenges`` makes of the matcher and the second
+    line here where the two meet — ``build_origin_search_query``'s shape, one
+    screen later (``docs/adr/0143`` §4). It is the **expensive** one: a search
+    context bound live, the whole Fit stack run over the court, a card assembled
+    per person and a photograph signed for each, so it is wired to a route a tap
+    opens and never to a list.
+
+    **Everything it needs is a whole workbench**, because the pairing is
+    recomputed through the same code path a search runs rather than replayed from
+    a record — which is the only shape under which a challenge born of a search
+    and one born of a mutual yes render the same way, and the only one under
+    which *Match score for you* is true.
+
+    ``candidates`` is ``None`` in a process with no index, and ``store`` is
+    ``None`` where the ephemeral store never came up. Neither is a refusal here:
+    both reach the reader as *the pairing could not be read*, because answering a
+    challenge is not gated on the matcher.
+
+    **Two entry points and one assembly.** This one is the route's, over the
+    connections a request holds; :func:`build_court_pairing_query_over` is the
+    same wiring over the two seams a demands suite supplies itself, so what the
+    suite exercises is what ships rather than a second construction of it.
+    """
+
+    if candidates is None or store is None:
+        return NoCourtCanBePriced()
+    return build_court_pairing_query_over(
+        workbench=build_court_pairing_workbench(
+            session=session,
+            clock=clock,
+            unit_of_work=unit_of_work,
+            event_store=event_store,
+            events=events,
+            settings=settings,
+            exposure=build_exposure_ledger(store),
+            candidates=candidates,
+        ),
+        settings=settings,
+    )
+
+
+def build_court_pairing_query_over(
+    *, workbench: SearchWorkbench, settings: Settings
+) -> CourtPairingQuery:
+    """The adapter itself, over a workbench the caller already holds.
+
+    **A workbench is taken rather than built, because a caller may already have
+    one.** A seed run assembles one for its searches and then reads a challenge
+    screen through it; building a second over the same session would be four
+    objects over one table, which is the thing ``app/seeds/paths.py`` says in as
+    many words about its own stores.
+    """
+
+    storage = build_photo_storage(settings)
+    return ChallengeCourtCards(
+        pairing=PairWithACourt(
+            workbench=workbench,
+            ruleset=build_ruleset(),
+            engine=build_match_fit_engine(),
+        ),
+        photos=build_card_photo_links(storage=storage, settings=settings),
+    )
+
+
+def build_game_court_pairing(
+    *,
+    session: AsyncSession,
+    clock: Clock,
+    unit_of_work: UnitOfWork,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    settings: Settings,
+    store: Redis | None,
+    candidates: CandidateSource | None,
+) -> CourtPairing:
+    """What the matcher makes of a game's court, for the reader (``docs/adr/0161``).
+
+    The one outward demand ``games`` makes of the matcher, and the third line
+    here where a court is priced for somebody already on it —
+    ``build_court_pairing_query``'s shape, one screen later. It is wired to a
+    route a tap opens and never to a list, for the same reason that one is: the
+    whole Fit stack runs over the court.
+
+    ``candidates`` is ``None`` in a process with no index, and ``store`` is
+    ``None`` where the ephemeral store never came up. Neither is a refusal, and
+    neither is a null object either: the forecast needs the matcher and the
+    seats and the stakes do not, so a process with no index still names every
+    Level on the court and prices it, and draws no forecast. That is the
+    adapter with no arranger, and not a second class.
+
+    **Two entry points and one assembly**, as beside it: this one is the
+    route's, over the connections a request holds, and
+    :func:`build_game_court_pairing_over` is the same wiring over a workbench a
+    caller already holds.
+    """
+
+    if candidates is None or store is None:
+        return build_game_court_pairing_over(session=session, workbench=None)
+    return build_game_court_pairing_over(
+        session=session,
+        workbench=build_court_pairing_workbench(
+            session=session,
+            clock=clock,
+            unit_of_work=unit_of_work,
+            event_store=event_store,
+            events=events,
+            settings=settings,
+            exposure=build_exposure_ledger(store),
+            candidates=candidates,
+        ),
+    )
+
+
+def build_game_court_pairing_over(
+    *, session: AsyncSession, workbench: SearchWorkbench | None
+) -> CourtPairing:
+    """The adapter itself, over a workbench the caller already holds — or none.
+
+    Three things composed and none of them new: the pairing use case the
+    challenge card is built on, the at-stake rule read forward, and ``rating``'s
+    published read for the seats — the last two over the session, exactly as
+    the workbench's own at-stake read is. ``workbench`` is ``None`` where this
+    process cannot price a court, and the two session reads are built
+    regardless, because they need no workbench.
+    """
+
+    return GamesCourtPairing(
+        arranger=(
+            None
+            if workbench is None
+            else PairWithACourt(
+                workbench=workbench,
+                ruleset=build_ruleset(),
+                engine=build_match_fit_engine(),
+            )
+        ),
+        at_stake=build_at_stake_query(session),
+        ratings=build_rated_player_query(session),
+    )
+
+
+def build_court_pairing_workbench(
+    *,
+    session: AsyncSession,
+    clock: Clock,
+    unit_of_work: UnitOfWork,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    settings: Settings,
+    exposure: ExposureLedger,
+    candidates: CandidateSource,
+) -> SearchWorkbench:
+    """A workbench for a caller that holds no other reason to have one.
+
+    The two seams a demands suite supplies for itself: the candidate index is the
+    **process's** rather than the request's (``docs/adr/0112``), and the exposure
+    ledger is Redis, which no test in this repository needs running.
+
+    Everything else is built from the session, because this caller shares none of
+    it with anything — which is exactly what makes it safe to build here and
+    exactly why a caller who *does* share passes their own workbench instead.
+    """
+
+    storage = build_photo_storage(settings)
+    return SearchWorkbench(
+                clock=clock,
+                ruleset=build_ruleset(),
+                searches=build_search_store(session),
+                unit_of_work=unit_of_work,
+                candidates=candidates,
+                profiles=build_player_profile_repository(
+                    event_store=event_store, events=events
+                ),
+                ratings=build_skill_rating_repository(
+                    event_store=event_store, events=events
+                ),
+                declarations=build_play_intent_declaration_repository(
+                    event_store=event_store, events=events
+                ),
+                blocks=build_block_query(session),
+                holds=build_account_hold_query(session),
+                account_status=build_account_status_query(session),
+                history=build_match_history_query(session),
+                player_scores=build_player_score_query(session),
+                at_stake=build_at_stake_query(session),
+                exposure=exposure,
+                interest=build_interest_ledger(session),
+                cards=build_player_card_source(
+                    session=session,
+                    event_store=event_store,
+                    events=events,
+                    storage=storage,
+                ),
+        records=build_player_record_source(session),
+        absent_terms=build_absent_terms(),
+        # **Nothing is recorded and nothing is measured.** The meter reports the
+        # scoring stage of a *search*, and this is not one.
+        meter=None,
+    )
+
+
 def build_mutual_challenge_minting(
     session: AsyncSession,
     *,
@@ -494,9 +915,38 @@ def build_mutual_challenge_minting(
                 events=build_event_publisher(session),
             ),
             open_challenges=build_open_challenge_query(session, runtime=runtime),
+            settled_games=build_settled_game_query(session, runtime=runtime),
             safety=build_court_safety(session),
             clock=build_clock(),
-            planned_games=build_planned_game_opening(session, runtime=runtime),
+            planned_games=build_planned_game_handover(session, runtime=runtime),
+            friendly_choices=build_friendly_choice_query(session, runtime=runtime),
+        )
+    )
+
+
+def build_friendly_choice_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> FriendlyChoiceQuery:
+    """*Which of these two declared* for fun *in this sport?* — what the mutual
+    mint reads to decide the kind of game it opens (``docs/adr/0169`` §8).
+
+    Built on ``player_profile``'s own declaration repository rather than on the
+    matcher's ``mode_for_intent``: the arrow runs ``matchmaking -> challenges``
+    and never back, and the two mappings answer different questions anyway —
+    that one picks a weight vector and lets *no preference* inherit the fun
+    ruler, this one honours a stated wish and lets *no preference* choose
+    nothing.
+
+    **A second declaration repository inside one unit of work** beside whatever
+    the request built, and safe for ``build_settled_game_query``'s reason: it
+    only ever **reads**, and two readers may hold a version of one stream.
+    """
+    return ProfileFriendlyChoice(
+        build_play_intent_declaration_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
         )
     )
 
@@ -664,7 +1114,7 @@ def build_published_score_query(session: AsyncSession) -> PublishedScoreQuery:
     session, so this line stays a choice of implementation and the folds behind
     it stay with the contexts that own them.
     """
-    return TwoStrandsFromTheRecord(
+    return ThreeStrandsFromTheRecord(
         games=build_game_history_query(session),
         challenges=build_challenge_history_query(session),
     )
@@ -726,28 +1176,145 @@ def build_game_repository(
     )
 
 
-def build_planned_game_opening(
+def build_planned_game_handover(
     session: AsyncSession,
     *,
     runtime: EventRuntime | None = None,
-) -> PlannedGameOpening:
-    """The game a completed line-up opens, recorded inline.
+) -> PlannedGameHandover:
+    """The game a completed line-up opens or re-seats, the seat a departure
+    vacates, the game a deserting departure or the hour calls off, and the
+    dismissal a reader records on it from the Chats row, recorded inline
+    (``docs/adr/0162``, ``docs/adr/0163``, ``docs/adr/0175``).
 
-    It wraps a ``games`` use case rather than an aggregate: what a game born of a
-    completed line-up *is* belongs to that context, and the adapter is a
-    translation of one sentence into another.
+    It wraps four ``games`` use cases rather than an aggregate: what a game born
+    of a completed line-up *is* belongs to that context, and the adapter is a
+    translation of one sentence into another — four times.
 
-    **No unit of work here.** The opening joins the transaction of the acceptance
-    that caused it, so the use case appends and publishes and the caller commits —
-    the boundary stays a decision about the command.
+    **One repository for all four**, because they run in one transaction and
+    each loads the stream it appends to; **no unit of work here**, because the
+    hand-over joins the transaction of the acceptance, the departure, the
+    sweep or the dismissal that caused it, so the use case appends and
+    publishes and the caller commits — the boundary stays a decision about the
+    command.
     """
+    games = build_game_repository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
     return GamesPlannedGame(
-        OpenPlannedGame(
-            games=build_game_repository(
-                session=session,
-                event_store=build_domain_event_store(session, runtime=runtime),
-                events=build_event_publisher(session, runtime=runtime),
-            )
+        OpenPlannedGame(games=games),
+        VacateSeat(games=games),
+        CallOffGame(games=games),
+        DismissGameOfCourt(games=games),
+    )
+
+
+def build_agreed_moment(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> AgreedMoment:
+    """*When has this game been agreed for?* — the Plan's answer to ``games``'
+    demand (``docs/adr/0162`` §4), keyed by the challenge the game was opened
+    from, which is the plan's own id (``docs/adr/0164`` §1).
+
+    Over the Plan's repository rather than its directory, because the question
+    is about one court and ``load`` answers an unwritten plan — whose moment is
+    ``None`` — rather than nothing.
+    """
+    return PlansAgreedMoment(
+        build_plan_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_seatable_court(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> SeatableCourt:
+    """*May a seat on this challenge's court still be left, or taken?* —
+    ``games``' answer, over its repository and the Plan's moment.
+
+    A second game repository inside one unit of work, beside the hand-over's,
+    on ``build_settled_game_query``'s argument: this one only ever reads, and
+    the hand-over's is the only writer.
+    """
+    return EventSourcedSeatableCourt(
+        games=build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        moments=build_agreed_moment(session, runtime=runtime),
+    )
+
+
+def build_seatable_game_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> SeatableGameQuery:
+    """The read half of the departure's seam, in ``challenges``' own words:
+    the adapter translates ``games``' published answer and decides nothing."""
+    return GamesSeatableGame(build_seatable_court(session, runtime=runtime))
+
+
+def build_game_of_court_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> GameOfCourtQuery:
+    """*Which of these courts have a game, and which game?* — the challenge
+    read's fourth question on the arrow ``challenges -> games``
+    (``docs/adr/0172`` §4), wired the way the settled read is and for its
+    reason: the join is the repository's, nothing is written through it, and a
+    second reading repository inside one unit of work is safe because the
+    hand-over's is the only writer.
+    """
+    return GamesGameOfCourt(
+        build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_settled_game_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> SettledGameQuery:
+    """*Is anything more going to happen to the game this challenge opened?*
+
+    The read half of the seam above, wired the same way and for the same reason:
+    what *settled* means belongs to ``games``, and which implementation answers
+    belongs here (``docs/adr/0152`` §5).
+
+    It is built on the aggregate repository rather than on a read port, because
+    the join it needs — one challenge to one game — is already there for the
+    opening's idempotence. Nothing is written through it, and it commits nothing.
+
+    **It is a second game repository inside one unit of work**, beside the one
+    ``build_planned_game_handover`` makes, and that is safe here for a reason
+    rather than by luck: a repository's per-unit-of-work state is the version
+    bookkeeping behind optimistic concurrency, and this one only ever **reads**.
+    Two readers may hold a version of one stream; what must not happen is two
+    *writers* holding one, and the hand-over's repository is the only writer —
+    it opens a game, or since ``docs/adr/0162`` re-seats or vacates a seat on
+    one, and nothing built here appends beside it. Sharing one would mean a
+    builder taking another builder's product, which is not the shape any port is
+    wired in here.
+    """
+    return GamesSettledGame(
+        build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
         )
     )
 
@@ -768,14 +1335,14 @@ def build_game_history_query(
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
 
 
-def build_player_handles(session: AsyncSession) -> PlayerHandles:
+def build_player_names(session: AsyncSession) -> PlayerNames:
     """*What is this person called* — the one thing ``games`` borrows about one.
 
     Built from ``users``' own repository rather than from the session, so this
     line stays a choice of implementation and the fold behind it stays with the
     context that owns it (``docs/adr/0141``).
     """
-    return UsersHandles(build_user_repository(session))
+    return UsersNames(build_user_repository(session))
 
 
 def build_game_directory(
@@ -790,6 +1357,95 @@ def build_game_directory(
     ports: a caller that wants counts has no business holding the aggregates.
     """
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
+def build_plannable_courts(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> PlannableCourts:
+    """*Which courts is this player arranging, and which are history* —
+    ``challenges`` and ``games`` folded together, on the Plan's side of both
+    arrows (``docs/adr/0164`` §3).
+
+    The one thing the Plan reads about a court, and the read that decides
+    whether a write may land. Built here rather than at the surface for the
+    reason ``build_arranging_court`` is: which contexts answer *who is on this
+    court and is it still being arranged* is a wiring choice, and a read path
+    that reached into either itself would put a second author on it. It is
+    folded rather than projected for the reason every read in those contexts
+    is: ``open_to_planning`` and ``whole`` are standings, and a stored one would
+    be wrong for the whole gap between a deadline passing and anything noticing.
+
+    **A second game repository inside one unit of work**, on
+    ``build_settled_game_query``'s argument: this one only ever reads.
+    """
+    return ChallengesAndGamesPlannableCourts(
+        challenges=build_challenge_directory(session, runtime=runtime),
+        games=build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+    )
+
+
+def build_plan_repository(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> PlanRepository:
+    """Per unit of work, for the reason every aggregate repository here is: it
+    remembers the stream versions it loaded.
+
+    **It takes no session**, unlike ``conversations``' — there is no row to lock
+    and no lookup by payload, because a plan's stream id *is* its challenge's.
+    """
+    return EventSourcedPlanRepository(event_store=event_store, events=events)
+
+
+def build_plan_directory(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> PlanDirectory:
+    """*Which of these courts have a plan written* — one ``IN`` over the
+    aggregate ids.
+
+    It reads the rows itself rather than folding through the repository, which is
+    the opposite of the conversation directory beside it and for a stated reason:
+    nothing appends to a plan read from here, so there is no stream version for a
+    second reader to disagree about.
+    """
+    return EventSourcedPlanDirectory(session, (runtime or get_event_runtime()).codec)
+
+
+def build_plan_hold_query(session: AsyncSession) -> PlanAccountHoldQuery:
+    """``cases`` does not exist, so nothing can hold an account.
+
+    **The fourth line in this file that says so.** Each context declares its own
+    hold port because none may import another to ask a safety question; on the
+    day ``cases`` ships, all four change to the same adapter.
+    """
+    return NoPlanHoldsExist()
+
+
+def build_read_plans(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadPlans:
+    """*One row for every court you may plan, written or not.*
+
+    Assembled here rather than at the surface because a seed run reads it too,
+    and the two must be reading the same thing.
+    """
+    return ReadPlans(
+        plans=build_plan_directory(session, runtime=runtime),
+        courts=build_plannable_courts(session, runtime=runtime),
+        clock=clock,
+    )
 
 
 def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
@@ -813,6 +1469,36 @@ def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
         games=build_game_history_query(session),
         clock=build_clock(),
     )
+
+
+def build_half_built_court_query(session: AsyncSession) -> HalfBuiltCourtQuery:
+    """The court a fill names, answered by ``challenges`` and translated.
+
+    **One provider and one contract**, unlike the history port beside it: every
+    fact on this read is a challenge fact, so nothing composes with it.
+
+    The clock is built here rather than taken, for the reason the history's is:
+    *is this court still being arranged* is a fact about the instant the read
+    happens, and a caller holding one could hold a stale one.
+    """
+    return ChallengesHalfBuiltCourts(
+        build_challenge_history_query(session), build_clock()
+    )
+
+
+def build_shared_court_query(session: AsyncSession) -> SharedCourtQuery:
+    """The courts the deck's cool-off reads, answered by ``games`` and translated.
+
+    **One provider and one contract**: every fact on this read is a game fact —
+    who is on the court, and whether it is behind them yet — so nothing
+    composes with it, and it reads ``games``' own directory rather than a
+    second published port (``docs/adr/0169`` §6).
+
+    The clock is built here rather than taken, for the reason the history's is:
+    *is this court still ahead of them* is a fact about the instant the read
+    happens, and a caller holding one could hold a stale one.
+    """
+    return GamesSharedCourts(build_game_directory(session), build_clock())
 
 
 def build_rated_player_query(
@@ -851,6 +1537,22 @@ def build_at_stake_query(
     return RatingResultUpdateRule(build_rated_player_query(session, runtime=runtime))
 
 
+def build_opponent_variety_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> OpponentVarietyQuery:
+    """*How widely does this person spread their games* — over the whole record.
+
+    The same class as the history read and a **separate port**, which is the
+    whole of the fence: this fold is unbounded, and a caller holding it as part
+    of the port a search already carries could call it inside a walk over five
+    hundred candidates. Typed narrowly here, it reaches only the surface that
+    opens one person at a time.
+    """
+    return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
 def build_confirmed_result_ledger(
     session: AsyncSession,
     *,
@@ -866,6 +1568,113 @@ def build_confirmed_result_ledger(
     return EventSourcedConfirmedResults(
         session, (runtime or get_event_runtime()).codec
     )
+
+
+def build_subject_ratings(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SubjectRatings:
+    """Every sport a record's subject is rated in, in the record's own words.
+
+    Built over ``rating``'s **read** port and never its repository, which is the
+    whole reason that port exists: a repository remembers stream versions so a
+    rating it found can be moved, and a sheet drawing a number must not be able
+    to. The translation lives in ``player_record``'s infrastructure, which is
+    where every borrowed fact is renamed on this platform.
+    """
+
+    return RatingSubjectRatings(build_rated_player_query(session, runtime=runtime))
+
+
+def build_subject_form(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SubjectForm:
+    """The run of five for one sport, over ``games``' published history.
+
+    The same query the player card's run is drawn from, asked its per-sport
+    question — so a record and a card cannot come to two answers about what a
+    counted result is.
+    """
+
+    return GamesSubjectForm(build_game_history_query(session, runtime=runtime))
+
+
+def build_subject_variety(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SubjectVariety:
+    """How widely a record's subject spreads their games, over their whole record.
+
+    Built over ``games``' **variety port** and never over the history read beside
+    it, which is the fence rather than tidiness: this fold is unbounded, and the
+    narrow type is what stops it being reachable from a caller that walks five
+    hundred candidates.
+    """
+
+    return GamesSubjectVariety(
+        build_opponent_variety_query(session, runtime=runtime)
+    )
+
+
+def build_subject_reliability(session: AsyncSession) -> SubjectReliability:
+    """What the platform watched a record's subject do — the pill and its rows.
+
+    Built over ``player_score``'s **published** read and never over the two folds
+    underneath it, which is the same fence every other row here takes: the blend
+    a player is shown is that context's arithmetic, and a second caller reaching
+    past it to ``games`` and ``challenges`` would be a second author of what the
+    number means.
+    """
+
+    return ScoreSubjectReliability(build_published_score_query(session))
+
+
+def build_subject_sportsmanship(
+    session: AsyncSession,
+) -> SubjectSportsmanship:
+    """What other players said about a record's subject — the figure and its
+    count, whoever is reading (``docs/adr/0179`` §5).
+
+    Built over ``sportsmanship``'s **published** port and never over the ledger
+    beside it, which is the same fence every other row here takes: the ledger is
+    that context's store and a sheet holding it could write through it.
+    """
+
+    return PublishedSubjectSportsmanship(build_published_sportsmanship(session))
+
+
+def build_settled_courts(session: AsyncSession) -> SettledCourts:
+    """*Is this a settled court of mine, and who else was on it* — over ``games``.
+
+    The adapter lives in ``sportsmanship``'s own infrastructure, which is the
+    shape ``games`` takes for ``PlayerNames``: a provider publishes what it
+    knows about its own subject, and the context that wants it narrower does the
+    narrowing. It is built over the directory rather than beside it, so the
+    court a card is drawn for is folded from the same read of the log the games
+    list already runs.
+    """
+    return GamesSettledCourts(build_game_directory(session))
+
+
+def build_sportsmanship_ledger(session: AsyncSession) -> SportsmanshipLedger:
+    """The answered cards, and one standing answer per pair of people.
+
+    It writes and never commits, so it is built per request beside the unit of
+    work the use case commits through — the lifetime every durable ledger in this
+    codebase is given.
+    """
+    return SqlAlchemySportsmanshipLedger(session)
+
+
+def build_published_sportsmanship(
+    session: AsyncSession,
+) -> PublishedSportsmanshipQuery:
+    """What other players said about somebody — the figure and its count.
+
+    Built over the session and never over the ledger beside it, which is the
+    fence rather than tidiness: the ledger writes, and a read a sheet performs
+    has no business holding a port a use case commits through. It reads the same
+    rows the ledger writes, which is what a published fold is.
+    """
+    return StandingAnswersAboutThem(session)
 
 
 def build_settle_ratings_on_results(
@@ -948,6 +1757,21 @@ def build_pass_ledger(session: AsyncSession) -> PassLedger:
     """
 
     return SqlAlchemyPassLedger(session)
+
+
+def build_deck_reset_ledger(session: AsyncSession) -> DeckResetLedger:
+    """The durable record of every *Show them again*, over the caller's session.
+
+    **No fail-soft wrapper**, and for the opposite reason to the pass's: this
+    row is not the evidence beside a gate, it is what three courtesies read to
+    know they have been cleared. A reset that could be lost would re-hide the
+    people a player just asked to see — the *empty the deck* failure every soft
+    ledger here is soft in order to avoid — so it is a table, read in the deal's
+    own transaction, and a reset whose row could not be written is a reset that
+    did not happen, which the route says.
+    """
+
+    return SqlAlchemyDeckResetLedger(session)
 
 
 def build_prompt_decline_ledger(session: AsyncSession) -> PromptDeclineLedger:
@@ -1035,6 +1859,92 @@ def build_card_photo_links(
     return PresignedCardPhotos(
         storage=storage, valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES
     )
+
+
+
+# --------------------------------------------------------------------------
+# The player record — one route out, and every port inward
+# --------------------------------------------------------------------------
+#
+# This context stores nothing (``docs/adr/0159``), so there is no repository
+# here and never will be: every builder below composes somebody else's published
+# port into a demand this one declared in its own words.
+
+
+def build_subject_identity_source(
+    *,
+    session: AsyncSession,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    storage: PhotoStorage,
+) -> SubjectIdentitySource:
+    """Who a person is, from the two contexts that own the answer.
+
+    The same three providers ``build_player_card_source`` composes, asked about
+    one player rather than twenty — and built over their **own ports** for that
+    builder's reason: a walk over the profile streams written here would be a
+    second implementation of how a profile is folded.
+    """
+
+    return ProfileAndAccountIdentity(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=event_store, events=events
+        ),
+        photos=storage,
+    )
+
+
+def build_record_photo_link(
+    *, storage: PhotoStorage, settings: Settings
+) -> RecordPhotoLink:
+    """A record's photograph, addressed for one response.
+
+    **The window is read here**, from the one setting every photo link on this
+    platform is signed for, so a record, a card and ``GET /photos/{id}`` cannot
+    come to three answers about how long a link may live.
+    """
+
+    return PresignedRecordPhoto(
+        storage=storage, valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES
+    )
+
+
+def build_search_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*A search of mine returned them* — over the record that says so."""
+
+    return SearchesThatShowedThem(build_search_store(session))
+
+
+def build_challenge_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*We are both seated in a live challenge* — over ``challenges``' directory.
+
+    The strand that runs the other way from a search: a court is sent off the
+    organiser's search, so without this the person who was *asked* could not open
+    the record of the person who asked them.
+    """
+
+    return ChallengesTheyShare(build_challenge_directory(session))
+
+
+def build_game_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*We were on a court together* — over ``games``' directory."""
+
+    return GamesTheyPlayed(build_game_directory(session))
+
+
+def build_record_gates(
+    *, gates: FailClosedGates, holds: AccountHoldQuery
+) -> RecordGates:
+    """The four that fail closed, plus the reader's own hold.
+
+    The four are **not built here**: they are ``matchmaking``'s collaborator,
+    already assembled per request wherever a surface shows one player to another,
+    and this line composes rather than copies. A second spelling of a safety gate
+    is the defect the whole rule exists to prevent.
+    """
+
+    return LiveRecordGates(gates=gates, holds=holds)
 
 
 def build_absent_terms() -> frozenset[Term]:
@@ -1255,4 +2165,379 @@ def build_rebuild_candidate_index(
         session_factory=session_factory,
         tail=build_candidate_index_tail(settings=settings),
         clock=build_clock(),
+    )
+
+
+# --------------------------------------------------------------------------
+# Conversations
+# --------------------------------------------------------------------------
+
+
+def build_conversation_repository(
+    *,
+    session: AsyncSession,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> ConversationRepository:
+    """Per unit of work, for the same reason every aggregate repository is —
+    **and for one more.**
+
+    It remembers the stream versions it loaded, like every other; and it takes
+    the session as well as the store because two of its three reads take the
+    conversation row's **lock**, which is where a gapless sequence is minted
+    (``docs/adr/0147`` §2). A repository outliving its transaction would be one
+    holding a lock nothing is going to release.
+    """
+    return EventSourcedConversationRepository(
+        event_store=event_store, events=events, session=session
+    )
+
+
+def build_conversation_directory(
+    *,
+    session: AsyncSession,
+    conversations: ConversationRepository,
+) -> ConversationDirectory:
+    """*Which rooms are these* — the lookup on the rows, folded through the
+    repository.
+
+    It is handed the repository rather than building one, because the aggregates
+    it answers with carry stream versions somebody may be about to append
+    against: two repositories in one transaction would be two answers to *what
+    version have I seen*.
+    """
+    return SqlAlchemyConversationDirectory(
+        session=session, conversations=conversations
+    )
+
+
+def build_arranging_court(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> ArrangingCourt:
+    """Half of *one rule read against two records*, answered by ``challenges``.
+
+    Built here rather than at the surface for the reason every adapter is: which
+    context answers *who has agreed to be on this court* is a wiring choice, and
+    a read path that reached into ``challenges`` itself would put a second author
+    on it.
+    """
+    return ChallengesArrangingCourt(
+        challenges=build_challenge_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        directory=build_challenge_directory(session, runtime=runtime),
+    )
+
+
+def build_played_court(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> PlayedCourt:
+    """The other half, answered by ``games``."""
+    return GamesPlayedCourt(
+        build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_member_faces(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> MemberFaces:
+    """A name from ``users``, a face from the Player profile, a link from the
+    store.
+
+    **The third names adapter in this file**, and the first that carries a
+    photograph beside the name: ``docs/adr/0148`` §6 made one affordable here
+    where ``docs/adr/0143`` refused it, because a room is destroyed rather than
+    kept.
+
+    Built over the **three providers' own ports** rather than over the session,
+    which is what keeps this context from becoming a second reader of somebody
+    else's schema — and it is why a Player profile arrives as a stream folded
+    through the event store: where a photograph lives is that context's business.
+
+    The window is the platform's one photo window, so a room and
+    ``GET /photos/{id}`` cannot come to two answers about how long a link lives.
+    """
+    return ProfileMemberFaces(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        photos=build_photo_storage(settings),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+
+def build_conversation_hold_query(
+    session: AsyncSession,
+) -> ConversationAccountHoldQuery:
+    """``cases`` does not exist, so nothing can hold an account.
+
+    **The third line in this file that says so.** Each context declares its own
+    hold port because none may import another to ask a safety question; on the
+    day ``cases`` ships, all three change to the same adapter.
+    """
+    return NoConversationHoldsExist()
+
+
+def build_membership(
+    session: AsyncSession,
+    *,
+    arranging: ArrangingCourt | None = None,
+    runtime: EventRuntime | None = None,
+) -> Membership:
+    """*The people who have agreed to be on this court right now* — one rule,
+    over both records.
+
+    ``arranging`` is takeable because the list read needs the same port for a
+    second question — *which challenges has this player accepted a seat on* —
+    and two courts over one session would be two aggregate repositories each
+    remembering its own stream versions. One per request, handed in.
+    """
+    return Membership(
+        arranging=arranging or build_arranging_court(session, runtime=runtime),
+        played=build_played_court(session, runtime=runtime),
+    )
+
+
+def build_lifetime(
+    session: AsyncSession,
+    *,
+    arranging: ArrangingCourt | None = None,
+    runtime: EventRuntime | None = None,
+) -> Lifetime:
+    """*Which of these rooms are over* — the game's clock off the room's own
+    stream, and the challenge's end off ``challenges`` (``docs/adr/0164`` §6).
+
+    ``arranging`` is takeable for the reason ``build_membership``'s is: a
+    request asks the same port for membership, for the list's *find*, and now
+    for *is it over*, and three courts over one session would be three aggregate
+    repositories each remembering its own stream versions. One per request,
+    handed in.
+    """
+    return Lifetime(
+        arranging=arranging or build_arranging_court(session, runtime=runtime)
+    )
+
+
+def build_a_room_of_yours(
+    *,
+    conversations: ConversationRepository,
+    membership: Membership,
+    lifetime: Lifetime,
+    clock: Clock,
+) -> ARoomOfYours:
+    """*This room, if you are in it* — the seam every act on one room shares.
+
+    Built from the three collaborators rather than from a session, because all
+    are already request-scoped and a second copy of any would be a second answer
+    to *who is in this* or *is this over*.
+
+    **The clock is the fourth, and it is what makes the lifetime a read.** A room
+    past its end answers ``conversation_not_found`` whether or not the sweep has
+    run (``docs/adr/0153`` §5). *Over* is decided in ``Lifetime`` — the one
+    seam the list and the sweep decide it through too — and this is the one seam
+    every act on **one** room passes through, so the refusal has a single place.
+    """
+    return ARoomOfYours(
+        conversations=conversations,
+        membership=membership,
+        lifetime=lifetime,
+        clock=clock,
+    )
+
+
+def build_destroy_ended_conversations(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> DestroyEndedConversations:
+    """The sweep, wired the way a request is. **Destroyed, not delisted.**
+
+    ``clock`` is **required and never defaulted**, like every other clock-taking
+    builder here. Its two callers want different answers and both are legitimate:
+    the job wants the wall clock, and a seed run wants the one declared instant
+    the rest of its fixture is dated against (``docs/adr/0029``, and
+    ``app/seeds/clock.py``'s own argument). A default would make one of those the
+    answer somebody inherited rather than the one they wrote.
+
+    The repository and the directory are **one pair over one session**, as every
+    other reader of the two is: the directory folds through the repository, so a
+    second one would be a second set of remembered stream versions.
+
+    **It reads ``challenges`` too**, through the lifetime seam every read
+    decides a room's end through: a room without a game is over when its
+    challenge is (``docs/adr/0164`` §6), and a sweep that folded the room's own
+    stream alone would never delete one.
+    """
+    resolved = runtime or get_event_runtime()
+    conversations = build_conversation_repository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=resolved),
+        events=build_event_publisher(session, runtime=resolved),
+    )
+    return DestroyEndedConversations(
+        directory=build_conversation_directory(
+            session=session, conversations=conversations
+        ),
+        conversations=conversations,
+        lifetime=build_lifetime(session, runtime=resolved),
+        unit_of_work=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_tell_the_room(
+    session: AsyncSession,
+    *,
+    nudges: NudgePublisher,
+    runtime: EventRuntime | None = None,
+) -> TellTheRoom:
+    """The outbox subscriber that writes system lines. **Per delivery batch.**
+
+    It is built over the batch's own session — the one ``EventBatch`` marks the
+    outbox row published in — so a line and the delivery that caused it commit
+    together. That is why this is not registered once for the process the way
+    every logging handler is.
+
+    **The publisher is handed in and has no default**, unlike every optional
+    collaborator above it. A delivery that is live and a delivery that is not are
+    both legitimate — an API process is the first, a seed run and a command-line
+    drain are the second — and the difference is not one this file can read off a
+    session. A default would make *this room is not live* the answer somebody
+    inherited rather than the one they wrote.
+    """
+    conversations = build_conversation_repository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    played = build_played_court(session, runtime=runtime)
+    return TellTheRoom(
+        conversations=conversations,
+        directory=build_conversation_directory(
+            session=session, conversations=conversations
+        ),
+        arranging=build_arranging_court(session, runtime=runtime),
+        played=played,
+        nudges=nudges,
+    )
+
+
+def build_nudge_publisher(client: Redis) -> NudgePublisher:
+    """*Tell whoever is listening that a room moved* — **wrapped, always.**
+
+    The composition root never hands out an unwrapped publisher, on
+    ``build_exposure_ledger``'s argument one section up: the entry is already
+    durable in Postgres when this is called, so a bus that is down costs a room
+    its liveness and may never cost anybody their message. An unwrapped one would
+    make that a discipline at two call sites instead of a property of the type.
+
+    **On the command client, not the subscriber's.** A ``PUBLISH`` is a
+    request/response command and belongs on the pool every command path draws
+    from; it is the subscription that cannot live there (``docs/adr/0147`` §5).
+    """
+
+    return FailSoftNudgePublisher(RedisNudgePublisher(client))
+
+
+def build_nobody_is_following() -> NudgePublisher:
+    """*This delivery is not live*, said out loud. **A seed run and a CLI drain.**
+
+    Constructed here rather than reached for at those two call sites, because
+    this file is where an adapter is built and `tests/unit/test_seed_runner.py`
+    holds `app/seeds/` to it: a seed module importing an adapter's internals is
+    the shape that walk refuses, whatever the adapter does.
+
+    It is the correct answer for a run with no phone attached, and not a degraded
+    one — which is why it is a different builder from the fail-soft publisher
+    above rather than the same one with a missing store.
+    """
+
+    return NobodyIsFollowing()
+
+
+def build_nudge_subscriber(client: Redis) -> NudgeSubscriber:
+    """*Everything published about this room* — **and it is not wrapped.**
+
+    The asymmetry with the publisher above is the design (``docs/adr/0147`` §8):
+    a subscription **is** the liveness, so it fails loud and the stream closes.
+    A chat that is not live has to look not-live, and a connection held open
+    delivering nothing looks up to date.
+
+    The client is the subscriber's own — no read deadline, because on a
+    subscription waiting *is* the operation (#342).
+    """
+
+    return RedisNudgeSubscriber(client)
+
+
+def build_typing_heartbeat(client: Redis) -> TypingHeartbeat:
+    """*This player is typing* — **wrapped, always**, and on the command client.
+
+    Wrapped for ``build_nudge_publisher``'s reason and a stronger version of it:
+    a nudge that is lost costs a room its liveness, and a heartbeat that is lost
+    costs one second of a courtesy. An unwrapped one would make that a discipline
+    at a call site instead of a property of the type.
+
+    On the pool every command path draws from, bounded at both ends. Nothing here
+    subscribes to anything (``docs/adr/0156`` §3): presence is written to the
+    store and read back off it, and it never touches the bus.
+    """
+
+    return FailSoftTypingHeartbeat(RedisTypingHeartbeat(client))
+
+
+def build_typing_roster(client: Redis) -> TypingRoster:
+    """*Who is typing in this room* — **wrapped too, and that is the departure.**
+
+    The nudge ports fail in opposite directions and this pair does not
+    (``docs/adr/0156`` §6). A subscription **is** the room's liveness, so it fails
+    loud and the stream closes; a roster is a courtesy asked once a second by
+    every open conversation screen, on the client with a two-second read
+    deadline — so failing it loud would let a merely slow store close every
+    healthy stream on the platform. It reports nobody typing instead, which is
+    what a quiet room reports.
+
+    **One wrapper per stream, and that is load-bearing rather than incidental.**
+    It complains on the transition into failure rather than on every read, and it
+    is this builder's per-request lifetime that makes *once per stream per
+    outage* the shape of that.
+    """
+
+    return FailSoftTypingRoster(RedisTypingRoster(client))
+
+
+def build_follow_conversation(
+    *,
+    rooms: ARoomOfYours,
+    nudges: NudgeSubscriber,
+    typists: TypingRoster,
+) -> FollowConversation:
+    """*Follow this room until the token that opened it expires.*
+
+    Built from the collaborators rather than a session, for
+    ``build_a_room_of_yours``' reason: the gate is a read like every other read
+    on this context, and the stream that follows it touches no database at all.
+
+    **Three collaborators and two stores.** The subscription is the bus's and the
+    roster is the ephemeral store's, on two different clients for two different
+    reasons — see the two builders above.
+    """
+
+    return FollowConversation(
+        rooms=rooms, nudges=nudges, typists=typists, clock=build_clock()
     )

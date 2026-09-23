@@ -1,6 +1,6 @@
 /**
- * What a challenge says — five standings read from two sides, and the three sentences about
- * its deadlines.
+ * What a challenge says — seven standings, the live ones read from two sides and the endings
+ * keyed by whose act ended them, and the four sentences about its deadlines.
  *
  * The words are the client's because the code is all that crosses
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13, §14). They live
@@ -18,9 +18,67 @@
  * first acceptance and grows with each one"*, which makes it **not a waiting room** — and its
  * obvious phrasing, *waiting for the rest*, is the one that would be false.
  *
+ * **And it counts open seats, because it can never count answers.** It shipped reading
+ * *"{n} in, {m} still to answer"* off an `awaiting` count, and `standing_of` returns
+ * `AWAITING_ANSWERS` while **any** seat is still awaiting — so at the rung that yields
+ * `LINE_UP_INCOMPLETE` nothing is, `{m}` was structurally zero, and the built line read *"2 in,
+ * 0 still to answer"*. It takes `open` instead
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13,
+ * [ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)).
+ * **A field that could only ever be zero is what let the sentence be wrong**, and #221's
+ * constraint is untouched: the phrasing that would be false is still *waiting for the rest*.
+ *
  * **`LAPSED` is not a decline**, and the words hold that apart: a day ran out, nobody said no.
  * The `answers challenges` strand needs the denominator, so a lapse that read as a refusal in
  * copy would be a fact quietly restated as a different one.
+ *
+ * **`WITHDRAWN` is neither**, and its word is the record's own
+ * ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)).
+ * Not *cancel*; not *call off*, which is `CALLED_OFF`'s; not *stand down*, which the root
+ * `CONTEXT.md` owns platform-wide for a term that cannot be evaluated. **The invitee who never
+ * answered is told the same as the one who accepted** — separating them would say who else was
+ * on the court.
+ *
+ * ## The ended rows name whose act ended it
+ *
+ * **Every ending is keyed by `ended_by` and by that person's own seat, never by side**
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7, [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13's second table):
+ * *{name} left* · *{name} called the game off* · *You called the game off* · *{name} left —
+ * nobody else is coming* · *{name} said no — that seat is open again* · *{name}'s day ran out —
+ * that seat is open again*. A seat that `LEFT` reads *left* wherever it is named, so the
+ * sentence is always true of the person it names whichever of two the server's bound picked.
+ * On the two **folded** endings the reader's own seat is read first — §13's invitee column,
+ * *You said no* and *Your day ran out*, is true of a seat that gave up whoever's act closed the
+ * court after it; on the two **announced** ones the sentence is the act's, and *You* is the
+ * reader's own act alone. **One word for the game's ending: *called off*.** *Cancel* appears
+ * nowhere.
+ *
+ * ## The third reading: an invitee who has left a challenge that has not
+ *
+ * A padel four where one declines and two accept is `LINE_UP_INCOMPLETE`, and the player who
+ * declined still holds a seat — so `GET /challenges` still returns it to them. Keyed on
+ * `(standing, side)` alone they would read *"You're in"*, which is false in both clauses. So
+ * the invitee's sentence reads **the reader's own seat**, not only their side
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13.1).
+ *
+ * The row is not filtered away instead, because `GET /challenges` is *every challenge you hold a
+ * seat in* and a departed seat is still a seat — and a row that vanished would take the only
+ * available explanation with it. **Not because the pair rule still binds them**: it releases the
+ * moment a seat leaves, and what keeps them out of *this* court is `already_asked_at`, per
+ * aggregate ([#393](https://github.com/Raketa02/Raketa/issues/393)). **Neither sentence says how many are in** —
+ * they have left, so who is on that court is no longer theirs to be told, and `{m}` is a count
+ * of open seats, which is a fact about the arrangement rather than about anybody in it.
+ *
+ * **The same reading is owed one row up, and `AWAITING_ANSWERS` now has it too**
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13.2,
+ * [#389](https://github.com/Raketa02/Raketa/issues/389)). `standing_of` holds that standing while
+ * *any* seat is awaiting, so a padel four sits in it with the reader's own answer already given —
+ * and *"They're waiting on you"* was told to somebody who had already spoken. Three readings, on
+ * the same field and by the same rule as above: **the reader who is in** is told what is left and
+ * that the room is open, which is #221's refusal of the waiting room a second time; **the two who
+ * have left** are told that it continues and nothing about its shape. Singles reaches none of it —
+ * the only invitee accepting takes the challenge to `ON`.
  *
  * ## An unknown standing
  *
@@ -30,56 +88,112 @@
  */
 
 import { counted } from '@/shared/formatting/counted';
+import { durationLeft } from '@/shared/formatting/durations';
 import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
-import type { ChallengeSide } from '../domain/standing';
+import { endingIsTheReadersOwn, standingFactsFor, type Challenge } from '../domain/challenge';
+import { yourAnswerBy } from '../domain/challengeInbox';
+import type { EndedFacts, SeatAnswer, Standing, StandingFacts } from '../domain/standing';
 
 /**
- * One standing, with the payload its sentence quotes.
- *
- * A discriminated input rather than `(standing, side, counts)`: three of the five quote a
- * figure or a name, two quote nothing, and a flat signature would let a caller pass a count
- * that belongs to a different standing.
- *
- * **A person is a `NamedPlayer`, never a string.** Two of these sentences name somebody, and
- * ADR-0107's *the whole handle or nobody* is a rule about what may be written — a `name:
- * string` parameter would let a caller shorten a handle on the way in and leave the rule
- * documented rather than held.
+ * **What a reader who has given their seat up did** — §13.1's three ways out, keyed by every
+ * answer but the one that keeps a seat, so a fourth way added to the contract fails to compile
+ * here rather than falling through to *You're in*. On a live standing it is the first clause and
+ * the standing's is the second; on an ended one it is the whole line (§13's invitee column).
  */
-export type StandingFacts = { readonly side: ChallengeSide } & (
-  | { readonly standing: 'AWAITING_ANSWERS'; readonly awaiting: number }
-  | { readonly standing: 'ON' }
-  | {
-      readonly standing: 'LINE_UP_INCOMPLETE';
-      readonly accepted: number;
-      readonly awaiting: number;
-    }
-  | { readonly standing: 'DECLINED'; readonly player: NamedPlayer }
-  | { readonly standing: 'LAPSED'; readonly player: NamedPlayer }
-);
+const OWN_ACT: Readonly<Record<Exclude<SeatAnswer, 'ACCEPTED'>, string>> = {
+  DECLINED: 'You said no',
+  LAPSED: 'Your day ran out',
+  // The third way out (ADR-0162): they left the game this court had become.
+  LEFT: 'You left',
+};
+
+function ownAct(answer: SeatAnswer | undefined): string | undefined {
+  return answer === undefined || answer === 'ACCEPTED' ? undefined : OWN_ACT[answer];
+}
+
+/** The same, as a first clause: the reader's own fact, and the tail is the challenge's. */
+function gaveUp(answer: SeatAnswer | undefined): string | undefined {
+  const act = ownAct(answer);
+  return act === undefined ? undefined : `${act}.`;
+}
 
 export function standingLine(facts: StandingFacts): string {
   const organiser = facts.side === 'organiser';
 
   switch (facts.standing) {
-    case 'AWAITING_ANSWERS':
-      return organiser
-        ? `Waiting on ${counted(facts.awaiting, 'answer', 'answers')}`
-        : "They're waiting on you";
+    case 'AWAITING_ANSWERS': {
+      const waiting = `Waiting on ${counted(facts.awaiting, 'answer', 'answers')}`;
+      if (organiser) return waiting;
+
+      // §13.2. The ones who have left are told that it continues and nothing about its shape —
+      // §13.1's rule, and `They` is the people still on the court in both places.
+      const gone = gaveUp(facts.ownAnswer);
+      if (gone !== undefined) return `${gone} They are still waiting on answers.`;
+
+      // The reader who is in gets §13's `LINE_UP_INCOMPLETE` shape with one clause swapped, and
+      // the clause is the organiser's own sentence — so both sides print one `awaiting` and
+      // cannot disagree about it. The chat opened on the first acceptance, which is theirs or
+      // earlier, and saying so is #221's refusal of the waiting room.
+      if (facts.ownAnswer === 'ACCEPTED') {
+        return `You're in. ${waiting}, and the chat is already open`;
+      }
+
+      return "They're waiting on you";
+    }
     case 'ON':
       return organiser ? "Everybody's in" : "You're in — everybody's in";
-    case 'LINE_UP_INCOMPLETE':
-      return organiser
-        ? `${facts.accepted} in, ${facts.awaiting} still to answer — the chat is already open`
-        : `You're in. ${facts.awaiting} still to answer, and the chat is already open`;
+    case 'LINE_UP_INCOMPLETE': {
+      const open = counted(facts.open, 'seat open', 'seats open');
+      if (organiser) return `${facts.accepted} in, ${open} — the chat is already open`;
+
+      // §13.1. `They are still filling the court` and never a count: a reader who has left is
+      // not told who is on it.
+      const gone = gaveUp(facts.ownAnswer);
+      if (gone !== undefined) return `${gone} They are still filling the court.`;
+      return `You're in. ${open}, and the chat is already open`;
+    }
     case 'DECLINED':
-      return organiser
-        ? `${playerName(facts.player)} said no — that seat is open again`
-        : 'You said no';
     case 'LAPSED':
-      return organiser
-        ? `${playerName(facts.player)}'s day ran out — that seat is open again`
-        : 'Your day ran out';
+    case 'WITHDRAWN':
+    case 'CALLED_OFF':
+      return endingLine(facts);
+  }
+}
+
+/**
+ * **The ended rows** — §13's second table, keyed by the standing and by `ended_by`'s own seat,
+ * and the reader's own act where it was theirs.
+ *
+ * `endingIsTheReadersOwn` is the domain's one answer to *is this sentence about the reader*, read
+ * here for the words and in `othersOn` for the faces, so a row never draws a face its sentence
+ * does not name. Which own sentence it is: the announced endings say the act — *You withdrew
+ * this*, and *You left* for the departure that called a game off — and the folded ones say what
+ * the reader's own seat did. **A `CALLED_OFF` court is ended by a departure or by the hour and
+ * by nothing else** ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §1–§3): *{name} left* names the last leaver, and *Nobody filled the seat* is the hour's, whose
+ * `ended_by` is nobody by design. *{name} called the game off* is retired with the press.
+ */
+function endingLine(facts: EndedFacts): string {
+  const own = endingIsTheReadersOwn(facts);
+  const name = playerName(facts.endedBy);
+
+  switch (facts.standing) {
+    case 'CALLED_OFF':
+      if (facts.byNobody === true) return NOBODY_FILLED_THE_SEAT;
+      return own ? OWN_ACT.LEFT : `${name} left`;
+    case 'DECLINED':
+      if (own)
+        return ownAct(facts.ownAnswer) ?? (facts.byADeparture ? OWN_ACT.LEFT : OWN_ACT.DECLINED);
+      return facts.byADeparture
+        ? `${name} left — nobody else is coming`
+        : `${name} said no — that seat is open again`;
+    case 'LAPSED':
+      if (own) return ownAct(facts.ownAnswer) ?? OWN_ACT.LAPSED;
+      return `${name}'s day ran out — that seat is open again`;
+    case 'WITHDRAWN':
+      return own ? 'You withdrew this' : `${name} withdrew this — that court is closed`;
   }
 }
 
@@ -133,6 +247,27 @@ export function answerWindowLine(seat: {
   readonly duration: string;
 }): string {
   return `${playerName(seat.player)} · ${seat.duration} left`;
+}
+
+/**
+ * **Your own seat, on your own row** — §14's fourth sentence, and the newest of the four.
+ *
+ * The screen that needed it is new. `{name} · {duration} left` names somebody else and is the
+ * **organiser's** sentence, listing each seat and its own clock; until the Chats inbox there
+ * was no surface that showed you *your* challenge, so nobody had written the sentence for your
+ * own seat. **Naming yourself on your own row would be the app telling you who you are.**
+ *
+ * It is the row's line whenever the challenge is yours to answer and unanswered — the badge's
+ * own predicate, reused, so the badge, the sort and the line cannot disagree
+ * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §1.2).
+ *
+ * `duration` is already formatted, for {@link answerWindowLine}'s reason: how long is left is
+ * read off `answer_by` against the list's `read_at`, and a copy deck is not where a clock is
+ * read. **Draw the clock, never obey it** — this sentence gates no control, and the buttons on
+ * the screen behind the row are drawn from the standing the platform sent.
+ */
+export function yourAnswerWindowLine(duration: string): string {
+  return `${duration} left to answer`;
 }
 
 /**
@@ -269,3 +404,115 @@ export function openChallengeLine(name: string): string {
  */
 export const A_PAIR_HERE_IS_ALREADY_PLAYING =
   'Two people on this court already have a game between them.';
+
+// ---------------------------------------------------------------------------
+// The Chats inbox: the section's name, and the row's one line
+// ---------------------------------------------------------------------------
+
+/**
+ * The section's own name, and **it carries no count**.
+ *
+ * `Challenges for you` had to widen: a challenge you *sent* belongs in this list and is drawn
+ * nowhere else in the app. Widening breaks the number — `CHALLENGES FOR YOU · 1` agrees exactly
+ * with the tab badge, which counts only what is addressed to you — so the count goes and the
+ * badge stays the only number on the screen
+ * ([#326](https://github.com/Raketa02/Raketa/issues/326) §6).
+ *
+ * Stored as a word rather than as `CHALLENGES`: the heading is uppercased by 3.3's `eyebrow`
+ * role, and a listener should hear a section name rather than a shout.
+ */
+export const CHALLENGES_HEADING = 'Challenges';
+
+/**
+ * The screen a row opens — its title, and the whole of what this file owes it.
+ *
+ * The screen itself is built ([#361](https://github.com/Raketa02/Raketa/issues/361)) and its own
+ * sentences live in `challengeDetailPresentation.ts`. What stays here is the title and §13's
+ * seventeen standing sentences, which that screen states **through `standingLine`** exactly as the
+ * row above it does: one challenge described twice in two files is how a row and the screen
+ * behind it start disagreeing about what happened.
+ */
+export const CHALLENGE_SCREEN_TITLE = 'Challenge';
+
+/**
+ * **The row's one line, and it has two sources** — chosen by *is this mine to clear*.
+ *
+ * The time you have left when it is, and §13's standing sentence otherwise
+ * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §1.2). The
+ * choice is the badge's own predicate, so the badge, the sort and this line agree by
+ * construction rather than by three implementations remembering the same rule.
+ *
+ * **The duration folds against the response's `read_at` and never against this phone's clock.**
+ * A countdown taken from `Date.now()` drifts out of agreement with the standing the same
+ * response folded, which is the one failure that field exists to prevent.
+ *
+ * A standing this build cannot read draws §3's named gap, because on this row the code **is**
+ * the whole line — there is nothing else in the slot for a shorter list to leave behind.
+ */
+export function challengeRowLine(challenge: Challenge, playerId: string): string {
+  const answerBy = yourAnswerBy(challenge, playerId);
+  if (answerBy !== undefined) {
+    return yourAnswerWindowLine(durationLeft(answerBy, challenge.readAt));
+  }
+
+  const facts = standingFactsFor(challenge, playerId);
+  return facts === undefined ? OUT_OF_DATE_GAP : standingLine(facts);
+}
+
+/**
+ * Whether this row draws the urgency stripe — **presence, never magnitude.**
+ *
+ * Exactly the rows whose line is a duration, which is the same predicate again. There is no
+ * stripe on the organiser's row: the clock there is live but it is not theirs to clear, and the
+ * stripe marks what the badge counts.
+ */
+export function rowHasAClockOfYours(challenge: Challenge, playerId: string): boolean {
+  return yourAnswerBy(challenge, playerId) !== undefined;
+}
+
+/**
+ * **The tag on a called-off row** — the state word the Now card carries, in the kit's *bad*
+ * variant at the row's trailing edge, on `CALLED_OFF` rows only and on no other ending
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §7, [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §1.2).
+ * Look *A* on the mock; a quiet tag, a recessed ground and a red sentence were the alternatives.
+ */
+export const CALLED_OFF_TAG = 'Called off';
+
+/**
+ * **The hour's sentence** — a `CALLED_OFF` row the platform ended, still short of a player when
+ * its moment passed ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §3). Nobody's act, so nobody is named; short, and it says whose fault it wasn't.
+ */
+export const NOBODY_FILLED_THE_SEAT = 'Nobody filled the seat';
+
+/**
+ * **The word behind a swiped `Called off` row** — the dismissal, the Now card's trash met from
+ * the other list a called-off court is drawn on
+ * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)).
+ * *This row* and not *the challenge*: the withdraw's word is *Remove the challenge* and ends a
+ * court for the people asked; this ends nothing and removes what the reader is looking at, on
+ * every device, for good. Named by what it does on the surface it is pressed from, as *Remove
+ * this card* is on the card — one act, two words, each exact where it is read.
+ */
+export const REMOVE_THIS_ROW = 'Remove this row';
+
+/**
+ * Which standing wears the tag — **the standing, and nothing else**: whose act it was and whether
+ * the reader is the presser change the sentence, never the tag. A `Record` keyed by the union, so
+ * an eighth standing decides here whether it wears one rather than inheriting *no*. It and the
+ * clock stripe never share a row, because a `CALLED_OFF` row has no clock of anybody's.
+ */
+const WEARS_THE_TAG: Readonly<Record<Standing, boolean>> = {
+  AWAITING_ANSWERS: false,
+  ON: false,
+  LINE_UP_INCOMPLETE: false,
+  DECLINED: false,
+  LAPSED: false,
+  WITHDRAWN: false,
+  CALLED_OFF: true,
+};
+
+export function rowWearsTheTag(challenge: Challenge): boolean {
+  return challenge.standing !== undefined && WEARS_THE_TAG[challenge.standing];
+}

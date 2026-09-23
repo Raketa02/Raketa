@@ -72,13 +72,17 @@ class Sortable:
 
     player_id: str
     fit: float
-    #: **Whole kilometres, as the wire carries them** — not the measurement.
+    #: **The print, as the wire carries it** — one decimal, spot to spot
+    #: (``docs/adr/0174`` §2) — and never the measurement the term read.
     #: Offerability is a claim about what the *client* could do with the rows it
-    #: holds, and the client holds an integer: two candidates 3.2 km and 3.4 km
-    #: away are one distance to it, so a control promising to tell them apart
-    #: would reorder nothing it could show. It is also what makes the read-back
-    #: agree with the search, which records the same integer.
-    distance_km: int | None
+    #: holds, and the client holds the print: two candidates whose cards both
+    #: say *3,2 km* are one distance to it, so a control promising to tell them
+    #: apart would reorder nothing it could show. It is also what makes the
+    #: read-back agree with the search, which records the same number. That the
+    #: print is spot to spot is what lets *Closest* tell two people in one cell
+    #: apart at all — by a fiction inside the cell, and the card says the same
+    #: fiction, which is the whole of what a sort is allowed to promise.
+    distance_km: float | None
     #: The **published** Player Score, not the matcher's blend, because *Most
     #: reliable*'s promise is *these are the people your own screens call
     #: reliable*.
@@ -88,7 +92,7 @@ class Sortable:
 def of_scored(row: Scored) -> Sortable:
     """What the search that just ran reads its own rows as.
 
-    The distance is ``Scored``'s own — the whole kilometres the wire carries,
+    The distance is ``Scored``'s own — the one-decimal print the wire carries,
     absent when the term stood down — rather than the measurement, so a
     stood-down row sorts last here exactly as it does on the wire.
     """
@@ -151,20 +155,25 @@ def sorts_available(
     people have no record yet, so on most searches it is still absent, and that
     is the derivation working rather than a gap.
 
-    **Neither the deck nor a line-up draws any of them**, and that is the same
-    rule rather than an exception to it. A line-up returns **seats** and not a
-    list: the four are chosen together by one objective, and a control that
-    reordered them would be offering to undo the choice the surface exists to
-    make — *Even it out* is a selection among three arrangements, which is a
-    different control and rides on the line-up itself.
+    **Neither the deck nor a line-up draws any of them.** For the line-up it
+    is a decision not yet taken rather than the deck's rule: its list is the
+    **pool** it seated from (#407), in the Fit order that decided who was
+    eligible for a seat at all, and the four are chosen out of it together by
+    one objective — so a re-sort of the list would undo nothing on the court,
+    and *Even it out*, a selection among three arrangements, stays the one
+    control that rides on the line-up itself. ``BEST_FIT`` would reorder
+    nothing on a list already in Fit order; the other two are not offered
+    until a screen asks for them over that list.
 
     For the deck: a deck is one card at a time, so there is no list in the
     player's hand for a control to reorder, and its **order is its whole
-    variety** — three bands plus ``PASS_SUPPRESS`` (``the-two-contracts.md`` §6).
+    variety** — two bands plus ``PASS_SUPPRESS`` (``the-two-contracts.md`` §6).
     A control that resorted a deal would be offering to undo the one thing the
-    surface does. The surface decides it here rather than at each caller, because
-    the search that has just run and the same deal read back a month later must
-    reach one answer.
+    surface does. **Nor the radar**: a reading is a map and not a list, and its
+    one order — the distance, then the id — is the Origin key's and never a
+    reader's (``docs/adr/0174`` §1). The surface decides it here rather than at
+    each caller, because the search that has just run and the same one read
+    back a month later must reach one answer.
     """
 
     if surface is not SearchSurface.SHORTLIST:

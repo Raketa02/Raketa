@@ -29,6 +29,8 @@ from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
+    IntroChanged,
+    IntroWritten,
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
@@ -41,6 +43,7 @@ from app.modules.player_profile.domain.gender import (
     Gender,
     GenderPreference,
 )
+from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.profile import (
     MAX_PROFILE_PHOTOS,
@@ -467,3 +470,146 @@ def test_gender_and_the_preference_replay_from_their_own_events():
 
     assert rebuilt.gender is Gender.MAN
     assert rebuilt.gender_preference is GenderPreference.MEN_ONLY
+
+
+# ---------------------------------------------------------------------------
+# The intro (docs/adr/0170)
+# ---------------------------------------------------------------------------
+
+
+def test_a_line_present_at_the_commit_is_its_own_event_after_the_two():
+    """``IntroWritten`` is emitted by the commit when the line is present —
+    after the creation and the consent, so *no special first case* for the
+    consent history stays literally true."""
+
+    profile = a_profile(intro=Intro.written("Moved from Wrocław in May."))
+
+    recorded = profile.pull_events()
+
+    assert [type(event) for event in recorded] == [
+        PlayerProfileCreated,
+        ProposalsOptInAnswered,
+        IntroWritten,
+    ]
+    written = recorded[2]
+    assert isinstance(written, IntroWritten)
+    assert written.intro == "Moved from Wrocław in May."
+    assert written.player_id == PLAYER
+    assert written.occurred_at == CREATED_AT
+    assert profile.intro == Intro.recorded("Moved from Wrocław in May.")
+
+
+def test_a_skipped_intro_leaves_nothing_behind():
+    """A blank leaves nothing behind — the shape sportsmanship already takes.
+    ``PlayerProfileCreated`` does not grow a field for it."""
+
+    profile = a_profile()
+
+    recorded = profile.pull_events()
+
+    assert [type(event) for event in recorded] == [
+        PlayerProfileCreated,
+        ProposalsOptInAnswered,
+    ]
+    assert not hasattr(recorded[0], "intro")
+    assert profile.intro is None
+
+
+def test_an_intro_replays_from_its_own_event():
+    profile = a_profile(intro=Intro.written("Will travel for a hard game."))
+
+    rebuilt = replayed(profile)
+
+    assert rebuilt.intro == Intro.recorded("Will travel for a hard game.")
+    assert rebuilt.version == 3, "three events, three versions"
+
+
+def test_a_stream_with_no_intro_written_folds_to_no_intro():
+    """No upcaster: a profile committed before the question existed replays
+    with the intro absent, which is what those players have."""
+
+    rebuilt = replayed(a_profile())
+
+    assert rebuilt.intro is None
+
+
+# ---------------------------------------------------------------------------
+# The intro, edited (docs/adr/0179 §6)
+# ---------------------------------------------------------------------------
+
+
+def test_a_changed_line_is_its_own_event_and_the_profile_reads_it():
+    profile = replayed(a_profile(intro=Intro.written("Moved from Wrocław in May.")))
+
+    profile.change_intro(
+        Intro.written("Will travel for a hard game."), occurred_at=LATER
+    )
+
+    (changed,) = profile.pull_events()
+    assert isinstance(changed, IntroChanged)
+    assert changed.intro == "Will travel for a hard game."
+    assert changed.player_id == PLAYER
+    assert changed.occurred_at == LATER
+    assert profile.intro == Intro.recorded("Will travel for a hard game.")
+
+
+def test_withdrawing_the_line_records_that_and_the_profile_folds_to_none():
+    """A removal is a write of **no intro**: the stream records that the line
+    was withdrawn, and the profile folds to none — the same absence a player
+    who skipped has, reached by a different route."""
+
+    profile = replayed(a_profile(intro=Intro.written("Moved from Wrocław in May.")))
+
+    profile.change_intro(None, occurred_at=LATER)
+
+    (withdrawn,) = profile.pull_events()
+    assert isinstance(withdrawn, IntroChanged)
+    assert withdrawn.intro is None
+    assert profile.intro is None
+
+
+def test_the_same_line_twice_records_nothing_and_so_does_no_line_over_none():
+    """A preference, not a consent: the line already held is not a change, and
+    withdrawing a line that was never written is not one either."""
+
+    with_a_line = replayed(a_profile(intro=Intro.written("Moved from Wrocław.")))
+    with_a_line.change_intro(Intro.written("Moved from Wrocław."), occurred_at=LATER)
+    assert with_a_line.pull_events() == []
+
+    without = replayed(a_profile())
+    without.change_intro(None, occurred_at=LATER)
+    assert without.pull_events() == []
+
+
+def test_a_line_written_after_a_skip_is_a_change():
+    """The first line on a profile that skipped the step: nothing to be equal
+    to, so it is recorded — and as ``IntroChanged``, never a second
+    ``IntroWritten``, which stays the commit's."""
+
+    profile = replayed(a_profile())
+
+    profile.change_intro(Intro.written("Late to the game."), occurred_at=LATER)
+
+    assert [type(event) for event in profile.pull_events()] == [IntroChanged]
+    assert profile.intro == Intro.recorded("Late to the game.")
+
+
+def test_the_fold_keeps_the_latest_of_written_and_changed():
+    """``IntroWritten`` then ``IntroChanged`` — and a withdrawal after that —
+    replay to what stands last, whichever event it came in on."""
+
+    profile = a_profile(intro=Intro.written("Moved from Wrocław in May."))
+    profile.change_intro(
+        Intro.written("Will travel for a hard game."), occurred_at=LATER
+    )
+    edited = profile.pull_events()
+
+    assert PlayerProfile.from_history(edited).intro == Intro.recorded(
+        "Will travel for a hard game."
+    )
+
+    profile.change_intro(None, occurred_at=LATER)
+    withdrawn = edited + profile.pull_events()
+    rebuilt = PlayerProfile.from_history(withdrawn)
+    assert rebuilt.intro is None
+    assert rebuilt.version == 5, "five events, five versions"

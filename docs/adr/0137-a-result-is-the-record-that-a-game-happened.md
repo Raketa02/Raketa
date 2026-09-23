@@ -103,6 +103,13 @@ field with nothing to check it against.
 So a game reaches exactly three ends, and **every one of them is folded from the record and the
 clock, never stored**:
 
+> **Superseded 2026-09-12 by [ADR-0163](0163-called-off-is-the-fourth-end-of-a-game.md): there
+> are four.** *Called off* is the fourth, and it is the one an act reaches — a withdraw on a court
+> that has been a game hands `GameCalledOff` to this context in the same transaction, and the
+> standing reads it first, as `challenges` reads `withdrawn_at`. It is still folded and never
+> stored; what moved is *never announced*, on ADR-0142 §3's exemption, because no arrangement of
+> the record could reach it. The three below are untouched.
+
 | End | What it means | What the record holds |
 | --- | --- | --- |
 | **Confirmed** | they played and a score is agreed | a played moment, and a proposal that was accepted or that nobody answered |

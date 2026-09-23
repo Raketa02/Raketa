@@ -304,6 +304,65 @@ def test_a_strand_below_the_observation_bar_stands_down_alone() -> None:
     assert named == set(FOUR_RATIOS) - {ReliabilityStrand.SETTLES_UP}
 
 
+def test_the_observation_bar_is_per_strand_and_only_one_of_them_asks_for_five(
+) -> None:
+    """**Per-strand minimums, at their boundary** (``docs/adr/0160``).
+
+    The same four observations behind two strands: *shows up* is over its bar of
+    three and reads, *answers about results* is under its bar of five and stands
+    down alone. Raising a single number to five instead would have taken the
+    first of those away too — which is a decision about how this product treats
+    newcomers, and not a consequence of tuning one strand.
+    """
+
+    bars = LIVE_RULESET.reliability.min_observations
+    assert bars[ReliabilityStrand.ANSWERS_RESULTS] == 5
+    assert bars[ReliabilityStrand.SHOWS_UP] == 3
+
+    thin = {
+        ReliabilityStrand.SHOWS_UP: (90, 4),
+        ReliabilityStrand.ANSWERS_RESULTS: (20, 4),
+    }
+    reading = reliability(
+        candidate(reliability=record(ratios=thin)), COMP, LIVE_RULESET.reliability
+    )
+    assert isinstance(reading, TermReading)
+    assert isinstance(reading.evidence, ReliabilityEvidence)
+    assert {strand.strand for strand in reading.evidence.strands} == {
+        ReliabilityStrand.SHOWS_UP
+    }
+
+
+def test_a_strand_at_its_own_bar_exactly_is_read() -> None:
+    """The bar is *below it stands down*, so the bar itself counts.
+
+    One observation either side of the number, on the one strand whose bar is not
+    the others': four is nothing and five is a record.
+    """
+
+    bar = LIVE_RULESET.reliability.min_observations[
+        ReliabilityStrand.ANSWERS_RESULTS
+    ]
+
+    def named(observations: int) -> set[ReliabilityStrand]:
+        reading = reliability(
+            candidate(
+                reliability=record(
+                    ratios={ReliabilityStrand.ANSWERS_RESULTS: (60, observations)}
+                )
+            ),
+            COMP,
+            LIVE_RULESET.reliability,
+        )
+        if isinstance(reading, StoodDown):
+            return set()
+        assert isinstance(reading.evidence, ReliabilityEvidence)
+        return {strand.strand for strand in reading.evidence.strands}
+
+    assert named(bar - 1) == set()
+    assert named(bar) == {ReliabilityStrand.ANSWERS_RESULTS}
+
+
 def test_a_record_past_the_horizon_stands_the_whole_term_down() -> None:
     """The strands share one cause — *this player stopped playing*."""
 
@@ -319,24 +378,27 @@ def test_a_record_past_the_horizon_stands_the_whole_term_down() -> None:
 def test_the_two_mode_vectors_order_the_same_two_candidates_oppositely() -> None:
     """The proof the decomposition earns its complexity, rather than the assertion.
 
-    Two candidates identical on three strands, differing only on *keeps plans*
-    and *sportsmanship*. Competitive prefers one and for fun prefers the other —
-    a single blended score cannot express that, and the decomposition is
+    Two candidates identical on three strands, differing only on *answers about
+    results* and *sportsmanship*. Competitive prefers one and for fun prefers the
+    other — a single blended score cannot express that, and the decomposition is
     justified for exactly as long as such a pair exists.
 
-    **The pair used to be *confirms results* and *sportsmanship*, at 24/4 against
-    5/16, and that strand was struck** (``docs/adr/0137``). What is left is a
-    narrower inversion — 18/7 against 15/17 — and it is asserted here rather than
-    assumed, because the day the last inverting pair leaves this vector is the day
-    the whole decomposition stops paying for itself and should be argued again.
+    **The widest pair is back, and it is this one** (``docs/adr/0160``). It was
+    *confirms results* against *sportsmanship* at 24/4 versus 5/16; that strand
+    was struck (``docs/adr/0137``) and the inversion narrowed to *keeps plans*'s
+    18/7 against 15/17, which still flipped and was what this test asserted.
+    *Answers about results* enters at the share the struck name held, so the pair
+    asserted here is 24/4 against 5/16 again. It is asserted rather than assumed
+    because the day the last inverting pair leaves this vector is the day the
+    whole decomposition stops paying for itself and should be argued again.
     """
 
-    def reader(keeps_plans: int, sportsmanship: float) -> float:
+    def reader(answers_results: int, sportsmanship: float) -> float:
         strands = {
             ReliabilityStrand.SHOWS_UP: (75, 20),
             ReliabilityStrand.ANSWERS_CHALLENGES: (75, 20),
             ReliabilityStrand.SETTLES_UP: (75, 20),
-            ReliabilityStrand.KEEPS_PLANS: (keeps_plans, 20),
+            ReliabilityStrand.ANSWERS_RESULTS: (answers_results, 20),
         }
         readings = [
             reliability(

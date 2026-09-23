@@ -79,6 +79,12 @@ class CommitPlayerProfileCommand:
     says *ask the question*. Gender has ``PREFER_NOT_TO_SAY`` — a real answer to
     the same effect — so there is no unanswered state to model and nothing to
     refuse at this layer (``docs/adr/0096``).
+
+    **``intro`` is optional, and it is a string here and not an ``Intro``** for
+    the tag ids' reason: the fence — the cap, the line breaks, the contact rule
+    — is the domain's, and it is the domain that refuses with the code and the
+    reason a client branches on (``docs/adr/0170`` §2). ``None`` and a
+    whitespace-only string are both *skipped*, and the domain says so.
     """
 
     player_id: UUID
@@ -95,6 +101,8 @@ class CommitPlayerProfileCommand:
     proposals_opt_in: bool | None
     consent_copy_version: str
     consent_surface: ConsentSurface
+    #: One line about themselves, or nothing. Fenced by the domain, never here.
+    intro: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +137,22 @@ class ChangeSearchRadiusCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class ChangeLocationCommand:
+    """The phone's fix, on a cold start (``docs/adr/0174`` §6).
+
+    The **precise fix**, as the device gave it and as the commit carries it —
+    two floats and not a ``LocationArea`` — because the coarsening is the
+    domain's job and it happens exactly once, on the way in
+    (``domain/location.py``). Nothing above the use case ever holds the cell,
+    and nothing below it ever holds the fix.
+    """
+
+    player_id: UUID
+    latitude: float
+    longitude: float
+
+
+@dataclass(frozen=True, slots=True)
 class DeclarePlayIntentCommand:
     """What kind of game this player wants, in one sport.
 
@@ -148,3 +172,101 @@ class DeclarePlayIntentCommand:
     sport: Sport
     intent: PlayIntent
     surface: PlayIntentSurface
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeSocialTagsCommand:
+    """A player's Social tags, replaced whole (``docs/adr/0179`` §8).
+
+    The ids stay strings for the commit's reason: it is what lets the *domain*
+    refuse an id outside the served vocabulary and a count outside the served
+    bounds, with the codes a client branches on, rather than a schema layer
+    refusing them as a shapeless 422. The You tab's picker is the onboarding
+    step reused whole, so the numbers it disables on are the numbers this is
+    re-checked against — and a control is not a validation.
+    """
+
+    player_id: UUID
+    social_tag_ids: Sequence[str]
+
+
+@dataclass(frozen=True, slots=True)
+class ChangePhotosCommand:
+    """A player's photographs, replaced whole and **in order**
+    (``docs/adr/0179`` §8).
+
+    The sequence the client sent *is* the answer — the first is the one a
+    player card shows — and an empty sequence is a real one: a profile may hold
+    no photograph, and the poster returns. Each id is checked to exist and to
+    be the caller's, against the same port the upload used, exactly as the
+    commit checks it.
+    """
+
+    player_id: UUID
+    photo_ids: Sequence[UUID]
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeIntroCommand:
+    """The line a player wrote about themselves, replaced — or withdrawn
+    (``docs/adr/0179`` §6).
+
+    A string and not an ``Intro``, for the commit's reason: the fence — the
+    cap, the line breaks, the contact rule — is the domain's, and it is the
+    domain that refuses with the code and the reason a client branches on.
+    ``None`` and a whitespace-only string are both **the withdrawal**, as at
+    the commit both are *skipped*: the stream records that the line was taken
+    back and the profile folds to none.
+    """
+
+    player_id: UUID
+    intro: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeGenderCommand:
+    """A new answer to the gender question — *self-declared, freely changed*
+    (``docs/adr/0096``, ``docs/adr/0179`` §8).
+
+    An enum, as the commit carries it: a closed set the boundary *selects from*
+    rather than constructs, so there is nothing for the domain to refuse that
+    the type has not already refused.
+    """
+
+    player_id: UUID
+    gender: Gender
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeGenderPreferenceCommand:
+    """A new durable answer to *who am I willing to play with*
+    (``docs/adr/0096`` §3, ``docs/adr/0179`` §8).
+
+    An enum for ``ChangeGenderCommand``'s reason. What narrowing it *does* — it
+    makes this player invisible to the excluded side entirely, searchers who
+    asked for anybody included — is the client's to say at the moment of
+    setting, and the aggregate's event says so.
+    """
+
+    player_id: UUID
+    gender_preference: GenderPreference
+
+
+@dataclass(frozen=True, slots=True)
+class AnswerProposalsOptInCommand:
+    """The proposals question, answered again from the profile screen
+    (``docs/adr/0179`` §8).
+
+    ``accepted`` is a ``bool`` and **not** ``bool | None``, which is the one
+    place this differs from the commit's shape: there, *unanswered* is a third
+    state a client can legitimately be in and must be refused with a code that
+    says *ask the question*; here the screen **is** the question, and pressing
+    is the answer. ``copy_version`` is what the screen showed, and ``surface``
+    is the route's — never the body's — exactly as the commit's is
+    ``ONBOARDING`` because the commit is the end of onboarding.
+    """
+
+    player_id: UUID
+    accepted: bool
+    copy_version: str
+    surface: ConsentSurface

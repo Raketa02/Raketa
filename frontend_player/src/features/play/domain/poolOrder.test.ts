@@ -17,7 +17,7 @@ function row(playerId: string, fit: number, distanceKm?: number, playerScore?: n
     fit,
     ...(distanceKm === undefined ? {} : { distanceKm }),
     card: {
-      nickname: playerId,
+      name: playerId,
       areaCode: 'A+050612+0019938',
       socialTags: [],
       level: 2.7,
@@ -152,36 +152,40 @@ describe('the sort row', () => {
 });
 
 /**
- * **The pin** — the one reordering this client does that is not a comparator.
+ * **A liker sits where the server put them** — the pin is gone
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8).
  *
- * It is bound to the served order, so every assertion here is paired: what the default draws,
- * and what the same rows draw the moment a chip is tapped.
+ * An incoming yes is a tag and a `+14` nudge on the server, never a pin: the engine already
+ * placed the liker earlier than their Fit alone would, and a client lifting them above thirty
+ * people at 80 was forcing a 51 to the top of a list about who fits. The served order **is** the
+ * order, and the tag travels with the card wherever the server — or a chip — puts it.
  */
-describe('the pin', () => {
+describe('the served order, with a liker on it', () => {
   const lifted = (playerId: string, fit: number, distanceKm?: number): Candidate => ({
     ...row(playerId, fit, distanceKm),
     inclusionReason: 'INTEREST_LIFT',
   });
 
-  it('leaves the served order exactly as it is when nobody was lifted', () => {
+  it('is left exactly as it is when nobody was lifted', () => {
     const rows = [row('a', 61, 9), row('b', 88, 2), row('c', 74, 5)];
 
     expect(ids(orderPool(rows, undefined))).toEqual(['a', 'b', 'c']);
   });
 
-  it('lifts somebody who already said yes to the top, whatever they scored', () => {
-    const rows = [row('a', 88, 9), lifted('b', 41, 2), row('c', 74, 5)];
+  it('draws somebody who already said yes where the server placed them, not first', () => {
+    const rows = [row('a', 88, 9), lifted('b', 51, 2), row('c', 74, 5)];
 
-    expect(ids(orderPool(rows, undefined))).toEqual(['b', 'a', 'c']);
+    expect(ids(orderPool(rows, undefined))).toEqual(['a', 'b', 'c']);
   });
 
-  it('keeps two pinned rows in the order the engine served them', () => {
+  it('hands back the very array it was given, because nothing here reorders anybody', () => {
     const rows = [row('a', 88), lifted('b', 41), row('c', 74), lifted('d', 55)];
 
-    expect(ids(orderPool(rows, undefined))).toEqual(['b', 'd', 'a', 'c']);
+    expect(orderPool(rows, undefined)).toBe(rows);
   });
 
-  it('releases the moment the player asks for a different order', () => {
+  it('sorts a liker by the same comparators as everybody else', () => {
     const rows = [row('a', 88, 9), lifted('b', 41, 2), row('c', 74, 5)];
 
     // Their honest place under each of the three: the number, the kilometres, and the record.
@@ -190,19 +194,10 @@ describe('the pin', () => {
     expect(ids(orderPool(rows, 'MOST_RELIABLE'))).toEqual(['a', 'b', 'c']);
   });
 
-  it('releases even where the sort this build performs reorders nothing', () => {
-    // `EVENEST` has a word and no ordering, and a `MOST_RELIABLE` over rows with no readings
-    // separates nobody. Either way the player has **left** the served order, and the pin is a
-    // property of that order rather than of whether the comparator moved anything.
-    const rows = [row('a', 88, 9), lifted('b', 41, 2), row('c', 74, 5)];
-
-    expect(ids(orderPool(rows, 'EVENEST'))).toEqual(['a', 'b', 'c']);
-  });
-
-  it('does not touch the printed number, which is the whole of why it is not a bonus', () => {
+  it('does not touch the printed number — the `+12` #231 struck stays struck', () => {
     const rows = [row('a', 88), lifted('b', 41)];
 
-    expect(orderPool(rows, undefined).map((one) => one.fit)).toEqual([41, 88]);
+    expect(orderPool(rows, undefined).map((one) => one.fit)).toEqual([88, 41]);
   });
 });
 
@@ -263,7 +258,7 @@ describe('the best match', () => {
    * coral tag to the **second** best row, which would be the card saying *best match* about a
    * row that is not one.
    */
-  it('still names the highest row when that row is the pinned one', () => {
+  it('still names the highest row when that row is the lifted one', () => {
     const rows = [row('a', 61), { ...row('b', 88), inclusionReason: 'INTEREST_LIFT' as const }];
 
     expect(bestMatchId(rows, undefined)).toBe('b');

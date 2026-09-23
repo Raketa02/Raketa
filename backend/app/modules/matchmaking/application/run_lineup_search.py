@@ -30,13 +30,26 @@ complete a four, a newcomer least of all (``docs/adr/0099``).
 the engine is no longer optimising for the searcher, who may end up with a worse
 individual match than an empty court would have given them, so the envelope says
 ``optimised_for: GROUP`` and the screen can say so too.
+
+**The answer carries the pool it seated from, and the court names people on
+it.** The returned band is ``pool_for``'s top ``K`` by Fit — the seated among
+them — and not the seated alone (#407). A court is its answer, but a builder is
+also a screen somebody picks from, and *Pick players myself* on a court reached
+from a challenge has no list but this record: that journey mints no shortlist,
+``POST /forecasts`` and the send both refuse anybody the cited search never
+returned, and a plain ``POST /searches`` is gated by the very challenge being
+completed — so a record holding only the seated offered that screen the one
+person just taken off a seat, or nobody. **Exposure still counts the seated
+only**: the court is what was shown, the rest of the pool is shown only if the
+player opens the list, and counting what may never be opened would sink two
+dozen people per ⚡ under the ±6 adjustment (``the-engine.md`` §8).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from itertools import combinations
-from typing import Sequence, final
+from typing import Callable, Sequence, final
 from uuid import UUID
 
 from app.engines.matchfit.grouping import (
@@ -45,18 +58,24 @@ from app.engines.matchfit.grouping import (
     PairAdmissibility,
     Seating,
 )
+from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
 from app.engines.matchfit.v1 import seat
-from app.kernel import InvariantViolated, invariant
+from app.kernel import InvariantViolated, Sport, invariant
 from app.modules.blocks.domain.ports import BlockQuery
 from app.modules.matchmaking.application.commands import RunLineupSearchCommand
-from app.modules.matchmaking.application.outward_reads import live_block_pairs
+from app.modules.matchmaking.application.outward_reads import (
+    live_block_pairs,
+    read_demand,
+)
 from app.modules.matchmaking.application.record_rows import group_term_rows
 from app.modules.matchmaking.application.search_workbench import SearchWorkbench
+from app.modules.matchmaking.domain.deck import mode_for_intent
 from app.modules.matchmaking.domain.errors import (
     LockedSeatNotAvailable,
     MatchmakingUnavailable,
+    TheChallengeIsNotYoursToFill,
 )
 from app.modules.matchmaking.domain.fence import (
     combine_group_sigma,
@@ -77,6 +96,10 @@ from app.modules.matchmaking.domain.lineups import (
     unfilled_reason,
     who_turned_up,
 )
+from app.modules.matchmaking.domain.ports import (
+    HalfBuiltCourt,
+    HalfBuiltCourtQuery,
+)
 from app.modules.matchmaking.domain.relaxation import radius_ladder
 from app.modules.matchmaking.domain.searches import (
     CombinationBand,
@@ -95,6 +118,7 @@ from app.modules.matchmaking.domain.prompts import (
 from app.modules.matchmaking.domain.shortlist import Scored
 from app.modules.matchmaking.domain.sorting import sorts_available
 from app.modules.player_profile.domain.availability import window_of
+from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.shared.ids import new_uuid
 
 
@@ -104,8 +128,11 @@ class LineupAnswer:
     """What the route renders: the record, the court, and the three ways round.
 
     The record is the answer's identity, exactly as it is for a shortlist, and
-    the seated rows are read off it — so the card in the response and the card in
-    the record cannot disagree about what was shown.
+    its returned band is the **pool** the four were drawn from, in Fit order,
+    with the seated among them. A seat names a person by id and their row is
+    read off the record — so the card in the response and the card in the
+    record cannot disagree about what was shown, and a pool opened on this
+    record has the rest of the ranking to offer.
 
     ``seats``, ``arrangements`` and ``group_reason`` are beside it rather than on
     it for the reason the sorts are: they are a statement about *this* answer,
@@ -146,6 +173,31 @@ class LineupAnswer:
 
 
 @final
+@dataclass(frozen=True, slots=True)
+class TheAsk:
+    """What one line-up is for, after the challenge — if any — has been read.
+
+    **The five things a fill and an ordinary ⚡ disagree about, resolved
+    together.** They all turn on one fact, so they are answered in one place and
+    read everywhere else: a use case that asked *was a challenge named* at each
+    of the five would be five chances to answer it differently, and the one that
+    drifted would be the one that quietly stopped exempting the gate.
+
+    ``mode_of`` is a function rather than a mode because the workbench resolves
+    it against the declaration it reads: passing a value would need a second read
+    of that declaration, and the two could disagree.
+    """
+
+    sport: Sport
+    locked_seats: tuple[UUID, ...]
+    mode_of: Callable[[PlayIntent], SearchMode]
+    #: The one challenge the open-challenge gate steps aside for, or nothing.
+    exempt_challenge_id: UUID | None
+    #: Everybody who has answered that challenge and left it. Empty otherwise.
+    excluding: frozenset[UUID]
+
+
+@final
 class RunLineupSearch:
     """The line-up, end to end."""
 
@@ -156,21 +208,32 @@ class RunLineupSearch:
         ruleset: Ruleset,
         engine: MatchFit,
         blocks: BlockQuery,
+        courts: HalfBuiltCourtQuery,
     ) -> None:
         self._work = workbench
         self._ruleset = ruleset
         self._engine = engine
         self._blocks = blocks
+        self._courts = courts
 
     async def execute(self, command: RunLineupSearchCommand) -> LineupAnswer:
         now = self._work.clock.now()
         stages: dict[str, int] = {}
 
+        # **The challenge is read before anything else, because it is what the
+        # search is *about*.** The sport, the mode and the locked seats are all
+        # read off it (``docs/adr/0150`` §2), so a read that happened later would
+        # be a search already bound to facts a client sent. From here on nothing
+        # asks *was a challenge named* again: ``asked`` is the resolved answer,
+        # and one place that resolves it is one place that can be wrong.
+        ask = await self._resolve(command)
+        sport = ask.sport
+
         with self._work.timed(stages, "read_searcher"):
             declared = await self._work.searcher_facts(
                 player_id=command.searcher_id,
-                sport=command.sport,
-                mode_of=lambda _: command.mode,
+                sport=sport,
+                mode_of=ask.mode_of,
             )
         await self._work.refuse_a_held_searcher(declared.player_id)
 
@@ -181,16 +244,20 @@ class RunLineupSearch:
             rung=command.rung,
         )
         searcher = replace(declared, grid=asked.grid, radius_km=asked.radius_km)
-        snapshot, freshness = self._work.bound_snapshot(command.sport, now)
+        snapshot, freshness = self._work.bound_snapshot(sport, now)
         for_a_newcomer = searcher.is_new_at(now)
 
         # **The surface is derived, never sent.** A line-up and filling seats
-        # differ only by locked seats, which is a property of the request, so
+        # differ by locked seats, which is a property of the request, so
         # ``search.surface`` records which of the two happened without the
-        # client having chosen a route (``the-two-contracts.md`` §1).
+        # client having chosen a route (``the-two-contracts.md`` §1). A fill
+        # from a challenge lands here too and needs no fifth value — and since
+        # ``docs/adr/0162`` it may lock nobody, when the court it completes has
+        # lost everybody but the filler, so naming the challenge is what makes
+        # it a fill rather than the locked seats being non-empty.
         surface = (
             SearchSurface.FILL_SEATS
-            if command.locked_seats
+            if ask.locked_seats or ask.exempt_challenge_id is not None
             else SearchSurface.LINEUP
         )
         with self._work.timed(stages, "read_gates"):
@@ -202,18 +269,27 @@ class RunLineupSearch:
                 surface=surface,
                 initiation=SearchInitiation.HUMAN,
                 for_a_newcomer=for_a_newcomer,
+                completing_challenge_id=ask.exempt_challenge_id,
             )
 
         with self._work.scoring(stages):
             try:
-                pool = pool_for(context, self._engine)
+                pool = pool_for(
+                    context,
+                    self._engine,
+                    # **Nobody who has answered this challenge is a candidate for
+                    # its own fill** (§4). They were released back into the deck
+                    # the moment they declined or lapsed, and without this the
+                    # send would refuse — after the player chose them.
+                    excluding=ask.excluding,
+                )
             except InvariantViolated as broken:
                 raise MatchmakingUnavailable(
                     f"the matcher refused to answer: {broken}"
                 ) from broken
 
-        locked = self._locked(pool, command.locked_seats)
-        guests = guests_for(command.sport)
+        locked = self._locked(pool, ask.locked_seats)
+        guests = guests_for(sport)
         fenced = searcher_of(context)
         # **Minted here rather than at the record**, because it is what turnout
         # is keyed off: one search, one draw, and the same search re-read draws
@@ -284,16 +360,30 @@ class RunLineupSearch:
                 ) from broken
 
         reason = unfilled_reason(pool, seating, context, guests=guests)
-        seated_rows = self._rows_for(pool, seating)
+        seated = self._seated_off_the_pool(pool, seating)
         with self._work.timed(stages, "attach"):
-            rows = await self._work.attach(seated_rows, context)
+            # **The whole pool, not the seated few.** ``K`` cards rather than
+            # three — the same bound a shortlist pays for twenty, and the price
+            # of a record *Pick players myself* can draw a list from.
+            rows = await self._work.attach(pool.rows, context)
 
         returned = tuple(row.scored for row in rows)
+        # Who actually sat down, among the rows that survived ``attach``: the
+        # only rows exposure is noted for, below.
+        shown = tuple(row for row in returned if row.player_id in seated)
         record = SearchRecord(
             id=search_id,
             searcher_id=searcher.player_id,
-            sport=command.sport,
-            mode=command.mode,
+            sport=sport,
+            # **The mode the search actually ran under**, read off the searcher
+            # the workbench built rather than off the request — which is the only
+            # spelling that stays true when the mode was inherited from a
+            # challenge or resolved from a declaration. ``intent_read`` stays
+            # ``None``: it is set only where ``mode`` is null — the deck and
+            # the radar — and a declaration is the only record of what was
+            # scored. Here a real mode was chosen and recorded, so the row
+            # says which.
+            mode=searcher.mode,
             intent_read=None,
             surface=surface,
             initiation=SearchInitiation.HUMAN,
@@ -306,7 +396,7 @@ class RunLineupSearch:
             counts=replace(pool.counts, n_returned=len(returned)),
             best_withheld_fit=pool.best_withheld_fit,
             pool_description=PoolDescription(
-                sport=command.sport,
+                sport=sport,
                 radius_km_used=searcher.radius_km,
                 players_in_range=pool.players_in_range,
                 window=window_of(searcher.grid, context.today),
@@ -323,11 +413,19 @@ class RunLineupSearch:
             offered_by_search_id=asked.offered_by_search_id,
             rung_taken=asked.rung_taken,
             latency_ms_by_stage=stages,
-            lineup=_layer_four(pool, seating),
+            lineup=_layer_four(pool, seating, seated=seated),
             candidates=self._work.recorded_rows(rows, pool.near_misses),
         )
         await self._work.record(record)
-        await self._work.note_exposure(command.sport, now, returned, for_a_newcomer)
+        # **The seated only, and never the pool.** The court is what this answer
+        # shows; the rest of the pool is drawn only if the player opens the
+        # list, and a ⚡ that counted two dozen appearances would sink the top
+        # of every ranking a few fills later under the ±6 exposure adjustment
+        # (``the-engine.md`` §8). The cost is stated rather than hidden: a list
+        # opened off this record is shown and **under**-counted — the opposite
+        # error from a shortlist, which counts every row whether or not the
+        # player scrolled to it. Neither is a gate, and the two do not cancel.
+        await self._work.note_exposure(sport, now, shown, for_a_newcomer)
         searcher_id = str(searcher.player_id)
         week = improvised_week(asked=asked.grid, profile=declared.grid)
         return LineupAnswer(
@@ -370,8 +468,93 @@ class RunLineupSearch:
                 if no_shared_slots(fenced, seating)
                 else None
             ),
-            optimised_for_group=bool(command.locked_seats),
+            optimised_for_group=bool(ask.locked_seats),
         )
+
+    async def _resolve(self, command: RunLineupSearchCommand) -> "TheAsk":
+        """What this line-up is actually for, resolved once. **One question.**
+
+        A fill and an ordinary ⚡ differ in five places — the sport, the locked
+        seats, the mode, the gate's exemption and the pool's exclusion — and all
+        five turn on the **same** fact: whether a challenge was named. Asking it
+        five times would be five chances to answer it differently, and the one
+        that drifted would be the one that quietly stopped exempting the gate.
+        So it is asked here, and everything below reads the answer.
+
+        The read **fails closed**, which is what the port declared and why it is
+        its own port: a read that stood down would run an ordinary ⚡ over a pool
+        that still excludes every person on the court, and hand the player a four
+        of strangers where their own line-up should have been.
+
+        The refusal for an id that answers nothing is a **conflict about the
+        challenge**, and it names none of the three reasons — no such challenge,
+        no seat of yours on it, nobody arranging it any more.
+        """
+
+        challenge_id = command.completing_challenge_id
+        if challenge_id is None:
+            asked_for = invariant(
+                command.mode,
+                "a line-up that names no challenge and no mode",
+            )
+            return TheAsk(
+                sport=invariant(
+                    command.sport,
+                    "a line-up with neither a sport nor a challenge to read "
+                    "one from",
+                ),
+                locked_seats=command.locked_seats,
+                # A constant: which tab you are on, decided before anything was
+                # read at all.
+                mode_of=lambda _: asked_for,
+                exempt_challenge_id=None,
+                excluding=frozenset(),
+            )
+        court = await read_demand(
+            HalfBuiltCourtQuery,
+            lambda: self._courts.half_built_court(
+                challenge_id=challenge_id, member_id=command.searcher_id
+            ),
+        )
+        if court is None:
+            raise TheChallengeIsNotYoursToFill(
+                "that challenge is not one of yours to fill"
+            )
+        return TheAsk(
+            sport=court.sport,
+            locked_seats=court.seated_ids,
+            mode_of=self._mode_of(court),
+            exempt_challenge_id=court.challenge_id,
+            excluding=court.answered_and_gone,
+        )
+
+    def _mode_of(self, court: HalfBuiltCourt) -> Callable[[PlayIntent], SearchMode]:
+        """Which weight vector a fill runs under. **Two answers, one read.**
+
+        A function rather than a value, for the workbench's own reason: the
+        declaration a mode is chosen from is the declaration recorded beside it,
+        and there is no second load for the two to disagree across.
+
+        *A challenge born with a mode* — **it keeps it.** A competitive court
+        must not have its last seat filled by a for-fun search, and the mode is
+        the court's rather than the filler's. A mutual-born court whose mint
+        stamped ``FOR_FUN`` — either of the pair declared the sport *for fun*
+        (``docs/adr/0169`` §8) — is born with one and keeps it the same way.
+
+        *A challenge born without one* — deck-born, and a mutual-born court
+        neither of whose pair declared *for fun* — resolves one from the
+        **filler's** declared Play intent on the rule
+        ``mode_for_intent`` keeps, ``NO_PREFERENCE → fun`` (``docs/adr/0150``
+        §5). It was the deck's rule when that record was written; the deck now
+        runs on one ruler for everybody (``docs/adr/0169`` §2) and the mapping
+        lives on here. **No mode picker appears anywhere**, and ADR-0100 keeps
+        its silence.
+        """
+
+        inherited = court.mode
+        if inherited is not None:
+            return lambda _: inherited
+        return lambda intent: mode_for_intent(intent, self._ruleset.intent)
 
     def _locked(
         self, pool: LineupPool, locked_seats: tuple[UUID, ...]
@@ -387,6 +570,14 @@ class RunLineupSearch:
         It **refuses rather than quietly dropping the seat**: a four that came
         back without the person the searcher put in it, and with somebody else
         there instead, is the builder lying about what it was asked to do.
+
+        **On a fill it is reachable and it means something** (``docs/adr/0150``).
+        The open-challenge gate steps aside for the challenge being completed, so
+        the people who accepted are ordinary rows in this pool; the four
+        fail-closed gates are untouched, and the only way this can now fire from
+        a challenge is that somebody in the line-up has been blocked, held or
+        deactivated since they accepted. That is a true thing to say, and it is
+        followed by a re-read rather than by a payload.
         """
 
         rows: list[Scored] = []
@@ -423,39 +614,46 @@ class RunLineupSearch:
                     "two of the players you seated cannot share a court"
                 )
 
-    def _rows_for(
+    def _seated_off_the_pool(
         self, pool: LineupPool, seating: Seating
-    ) -> tuple[Scored, ...]:
-        """The seated, as the rows the record and the card were built from.
+    ) -> tuple[str, ...]:
+        """Who sat down, in the order they were seated — and the proof that
+        every one of them came out of the pool.
 
-        In **seat order** rather than in Fit order, because ``position`` on a
-        recorded row is where somebody was shown and on this surface that is
-        where they were seated.
+        The enumeration draws from the pool and the locked seats were resolved
+        against it, so a lookup that missed would mean the two had come apart,
+        and it says so rather than returning a court naming somebody the pool
+        never held. What it does **not** prove is a row on the record:
+        ``attach`` still drops a row it cannot build a card for, and a seat
+        naming somebody ``candidates`` does not carry is the gap the read-back
+        test names rather than one this closes.
 
-        Every seated player came out of this pool — the enumeration draws from
-        it and the locked seats were resolved against it — so a lookup that
-        missed would mean the two had come apart, and it says so rather than
-        returning a court with a person quietly removed from it.
+        The record's rows are the pool itself, in Fit order, so ``position`` on
+        this surface is a place in that list and not a seat — the Fit rank,
+        unless a row above was dropped for its card — and the court says
+        separately who sat where.
         """
 
-        return tuple(
+        for one in seating.seated:
             invariant(
                 pool.by_id(one.player_id),
                 f"{one.player_id} was seated and is not in the pool they were "
                 f"drawn from",
             )
-            for one in seating.seated
-        )
+        return tuple(one.player_id for one in seating.seated)
 
 
-def _layer_four(pool: LineupPool, seating: Seating) -> LineupRecord:
-    """Layer 4, assembled once. **Two rows, and no route returns either.**
+def _layer_four(
+    pool: LineupPool, seating: Seating, *, seated: tuple[str, ...]
+) -> LineupRecord:
+    """Layer 4, assembled once. **Two rows, and no route returns any of it.**
 
     The winner and the runner-up come back whole because the deciding margin is
     computed over their contributions, and a margin is not reproducible from a
     code. The counters come from the enumeration itself, which is the only place
     ``docs/adr/0116``'s falsifier — *how many combinations the pairwise gate
-    refused* — exists at all.
+    refused* — exists at all. And the seated are named, because the returned
+    band stopped naming them.
     """
 
     rows = tuple(
@@ -472,6 +670,11 @@ def _layer_four(pool: LineupPool, seating: Seating) -> LineupRecord:
         refused_by_floor=seating.counts.refused_by_floor,
         max_fit_rank_seated=max_fit_rank(pool, seating),
         rows=rows,
+        # **Who sat down, on the record.** The returned band is the pool now
+        # (#407), and a partial line-up or a singles court writes no winner to
+        # read the seated off — so the fact rides here, in the order they were
+        # seated, beside the deepest rank it already implied.
+        seated=tuple(UUID(one) for one in seated),
     )
 
 

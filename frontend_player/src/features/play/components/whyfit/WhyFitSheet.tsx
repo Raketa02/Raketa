@@ -159,13 +159,15 @@ export function WhyFitSheet({
         // A concern is the engine's own graded claim about a term, and it replaces the reason
         // line on the row rather than being added under it: one term saying "✓ X" and "! X"
         // is §10's rule broken at its own root. An evidence variant this build has no
-        // renderer for puts the gap where the reason line goes.
+        // renderer for puts the gap where the reason line goes. The candidate goes with the
+        // evidence: the distance sentence prints its one-decimal `distanceKm` — the number
+        // the card printed — and never the whole kilometres the engine scored.
         const said =
           row.term.evidence === null
             ? OUT_OF_DATE_GAP
             : isConcern
               ? concernLine(row.term.evidence)
-              : reasonLine(row.term.evidence);
+              : reasonLine(row.term.evidence, candidate);
 
         return (
           <View

@@ -11,9 +11,11 @@
  * coordinate string and `areas.py` refuses in writing to make it a name; and **nothing is
  * said about activity**, which is the slot #218 refused.
  *
- * The **Social tag row**'s words join them, and the assertion there is the split between the
- * two registers: the chip carries a glyph and a per-tag marker, the spoken clause carries
- * neither and groups instead ([#311](https://github.com/Raketa02/Raketa/issues/311)).
+ * The **Social tag row**'s spoken clauses join them, and the assertion there is one half of a
+ * split: the clause carries neither the glyph nor the per-tag marker and groups the shared
+ * ones instead ([#311](https://github.com/Raketa02/Raketa/issues/311)). The other half — what
+ * the chip is *drawn* with — moved to `shared/vocabulary/socialTagPresentation.test.ts` with
+ * the row itself, and is asserted there against the same two registers.
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
@@ -25,10 +27,7 @@ import {
   lastFiveReading,
   levelRow,
   metaLine,
-  ON_COURT_CLAUSE,
-  ON_COURT_MARK,
   recordClauses,
-  socialTagChip,
   socialTagClauses,
   stakeClauses,
 } from './playerCardPresentation';
@@ -65,18 +64,33 @@ describe('the level row', () => {
 
 describe('the meta line', () => {
   it('is the distance alone when the two areas differ', () => {
-    expect(metaLine({ km: 7, theirAreaCode: ELSEWHERE, myAreaCode: HERE })).toBe('7 km');
+    expect(metaLine({ km: 7.2, theirAreaCode: ELSEWHERE, myAreaCode: HERE })).toBe('7,2 km');
   });
 
   it('says they are in your area when the two codes match', () => {
     // A comparison between two codes is exactly what ADR-0021 licenses a client to compute.
-    expect(metaLine({ km: 2, theirAreaCode: HERE, myAreaCode: HERE })).toBe('In your area · 2 km');
+    expect(metaLine({ km: 1.9, theirAreaCode: HERE, myAreaCode: HERE })).toBe(
+      'In your area · 1,9 km',
+    );
+  });
+
+  /**
+   * **One decimal, everywhere** (ADR-0174 §2). The distance is the spot-to-spot number the server
+   * serves to one place, and the card prints it through the one formatter — so somebody in the
+   * reader's own cell reads *In your area · 0,6 km* rather than a whole kilometre, and a served
+   * whole number still carries its decimal.
+   */
+  it('prints the distance to one decimal, never a whole kilometre', () => {
+    expect(metaLine({ km: 0.6, theirAreaCode: HERE, myAreaCode: HERE })).toBe(
+      'In your area · 0,6 km',
+    );
+    expect(metaLine({ km: 4, theirAreaCode: ELSEWHERE, myAreaCode: HERE })).toBe('4,0 km');
   });
 
   it('never prints the code itself, in either branch', () => {
     const lines = [
-      metaLine({ km: 7, theirAreaCode: ELSEWHERE, myAreaCode: HERE }),
-      metaLine({ km: 2, theirAreaCode: HERE, myAreaCode: HERE }),
+      metaLine({ km: 7.2, theirAreaCode: ELSEWHERE, myAreaCode: HERE }),
+      metaLine({ km: 1.9, theirAreaCode: HERE, myAreaCode: HERE }),
     ];
 
     for (const line of lines) expect(line).not.toMatch(/A\+\d/);
@@ -85,35 +99,57 @@ describe('the meta line', () => {
   it('says nothing about when they were last here', () => {
     // `active {x}` is the other slot with nothing behind it, and it is the one ADR-0106 §5
     // withholds rather than the one nobody has built.
-    const line = metaLine({ km: 7, theirAreaCode: ELSEWHERE, myAreaCode: HERE });
+    const line = metaLine({ km: 7.2, theirAreaCode: ELSEWHERE, myAreaCode: HERE });
 
     expect(line).not.toMatch(/active|today|online|ago/i);
   });
 });
 
 describe('the tag beside the handle', () => {
-  it('says nothing at all where neither fact is true', () => {
+  it('says nothing at all where none of the three facts is true', () => {
     // The row is the identity row and not a tag rail: most people on a list are neither the
-    // best match nor somebody who already said yes, and a tag drawn for them would be a word
-    // that means *nothing in particular*.
-    expect(candidateTag({ bestMatch: false })).toBeUndefined();
+    // best match nor anybody a yes has passed between, and a tag drawn for them would be a
+    // word that means *nothing in particular*.
+    expect(candidateTag({ saidYes: false, bestMatch: false })).toBeUndefined();
   });
 
   it('marks the best match in coral', () => {
-    expect(candidateTag({ bestMatch: true })).toEqual({ label: 'Best match', variant: 'hot' });
+    expect(candidateTag({ saidYes: false, bestMatch: true })).toEqual({
+      kind: 'best-match',
+      label: 'Best match',
+      variant: 'hot',
+    });
   });
 
   it('says the interest lift in volt, and it replaces best match where both apply', () => {
     // *"because it's the stronger fact"* — the coral one is about where somebody sits in a
     // list this player is reading, and the volt one is about a decision somebody else made.
-    expect(candidateTag({ inclusionReason: 'INTEREST_LIFT', bestMatch: false })).toEqual({
-      label: 'Wants to play you',
-      variant: 'volt',
-    });
-    expect(candidateTag({ inclusionReason: 'INTEREST_LIFT', bestMatch: true })).toEqual({
-      label: 'Wants to play you',
-      variant: 'volt',
-    });
+    const wants = { kind: 'wants-to-play-you', label: 'Wants to play you', variant: 'volt' };
+
+    expect(
+      candidateTag({ inclusionReason: 'INTEREST_LIFT', saidYes: false, bestMatch: false }),
+    ).toEqual(wants);
+    expect(
+      candidateTag({ inclusionReason: 'INTEREST_LIFT', saidYes: false, bestMatch: true }),
+    ).toEqual(wants);
+  });
+
+  /**
+   * ADR-0169 §8: an outgoing yes is a tag only — the reader's own act, off their own list, and
+   * a fact about a person rather than about a list, so it outranks the coral tag as the volt
+   * one does. It is **not** volt: volt is *they want you*, and a border travels with that word
+   * alone.
+   */
+  it('says the reader’s own yes as a plain tag, over best match and never over the lift', () => {
+    const said = { kind: 'you-said-yes', label: 'You said yes', variant: 'base' };
+
+    expect(candidateTag({ saidYes: true, bestMatch: false })).toEqual(said);
+    expect(candidateTag({ saidYes: true, bestMatch: true })).toEqual(said);
+    // Both true is a mutual, and a mutual is not on the list; should one ever be, *Wants to
+    // play you* wins.
+    expect(
+      candidateTag({ inclusionReason: 'INTEREST_LIFT', saidYes: true, bestMatch: false })?.kind,
+    ).toBe('wants-to-play-you');
   });
 
   it('takes the admitting code’s words from its liveness twin, which is one tag and not two', () => {
@@ -121,9 +157,9 @@ describe('the tag beside the handle', () => {
     // with ONE tag. The tag is bound to the admitting code; the words are the twin's, and the
     // twin's own sentence can only reach a card as the reason fallback, which the competitive
     // card never takes.
-    expect(candidateTag({ inclusionReason: 'INTEREST_LIFT', bestMatch: false })?.label).toBe(
-      livenessLine('INTEREST_RECEIVED'),
-    );
+    expect(
+      candidateTag({ inclusionReason: 'INTEREST_LIFT', saidYes: false, bestMatch: false })?.label,
+    ).toBe(livenessLine('INTEREST_RECEIVED'));
   });
 });
 
@@ -139,11 +175,6 @@ describe('what a card’s primary button says', () => {
 describe('the social tag row’s words', () => {
   const shared = (id: SocialTagId) => ({ id, shared: true });
   const theirs = (id: SocialTagId) => ({ id, shared: false });
-
-  it('draws the tag with its glyph, and the marker only where it is shared', () => {
-    expect(socialTagChip(shared('PLAYS_TO_WIN'))).toBe('🏆 Plays to win · you too');
-    expect(socialTagChip(theirs('PLAYS_TO_WIN'))).toBe('🏆 Plays to win');
-  });
 
   it('speaks the shared ones under one clause rather than marking each of them', () => {
     // A listener hearing *you too* six times is being read a table, not a card.
@@ -223,32 +254,6 @@ describe('the record block’s words', () => {
   it('says nothing for a block that is hidden, which is every block for a new player', () => {
     expect(recordClauses({})).toEqual([]);
     expect(recordClauses({ countedGames: 3 })).toEqual(['3 counted games']);
-  });
-});
-
-describe('the ON COURT mark’s words', () => {
-  it('carries no figure in either register', () => {
-    // ADR-0133's clause survives ADR-0138 untouched — the confidence never crosses on any
-    // route — so there is nothing here to print a number from and nothing here that prints
-    // one. Asserted on the strings, because the card beside them draws a Fit and a forecast
-    // and a *no percentages on the card* assertion would be about those instead.
-    expect(ON_COURT_MARK).not.toMatch(/\d/);
-    expect(ON_COURT_CLAUSE).not.toMatch(/\d/);
-  });
-
-  it('leads with the photograph when it is spoken, and not when it is drawn', () => {
-    // Two words over somebody's picture are plainly about the picture; a clause in a run of
-    // sentences is not, and *on court* between a Level and a forecast is one comma away from
-    // activity recency — which no card carries at any granularity.
-    expect(ON_COURT_MARK).toBe('On court');
-    expect(ON_COURT_CLAUSE.startsWith('Photo')).toBe(true);
-  });
-
-  it('is sentence case, because the capitals are the panel’s treatment', () => {
-    // The Sport beneath it is uppercased by the same style rather than by its own string.
-    // A pre-shouted constant would be the one place in this deck where a style decision is
-    // spelled into the copy.
-    expect(ON_COURT_MARK).not.toBe(ON_COURT_MARK.toUpperCase());
   });
 });
 

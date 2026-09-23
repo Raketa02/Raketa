@@ -1,6 +1,13 @@
 # ADR-0107 — The player card is assembled outside the engine, and its contents are a closed list
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2's *`distance_km` is an integer* superseded 2026-09-16 by
+  [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)** §2: one decimal, spot to spot. **§2's closed list amended and §3's first refusal (*no bio*) taken up
+  2026-09-14 by [ADR-0170](0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)**: one field, `intro`, with the moderation story §3 asked for. §3's
+  second refusal and §4 stand (§4 with ADR-0167 §3's one exception).
+  **§4's sentence superseded 2026-09-15 by
+  [ADR-0171](0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)**: a player
+  has a **Name**, and the rule reads *the whole name or nobody*; §4's argument — never invent a
+  familiar form — stands whole, and §2's closed list carries the name where it carried the nickname.
 - **Date:** 2026-08-26
 
 ## Context
@@ -147,6 +154,15 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 and the profile's own radius is whole kilometres, so a decimal would claim a precision the
 data does not hold and would let *"3 km"* sit under a 3 km radius while being excluded by it.
 
+> **Superseded 2026-09-16 by [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2.** One decimal,
+> measured between two **drawn spots** the server now holds — a fixed point inside each
+> player's cell, from a digest of who they are — on every candidate, so the deck and the radar
+> print one number for one person. The second half's cost is accepted by name: the reach is
+> still measured cell to cell, so a player at the very edge may print *10,3 km* inside a 10 km
+> reach. The Fit measures cell to cell and does not move. `bearing_deg` joins `distance_km` on
+> the radar's rows, beside the card and never in it, for the rule this paragraph's neighbour
+> states.
+
 **`photo_id` in the record, `photo_url` on the response.**
 [ADR-0091](0091-photo-storage-behind-a-port.md) serves photos through short-lived presigned
 URLs, and [ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) keeps every
@@ -174,6 +190,14 @@ apply* spelling, and the client draws the poster.
   is a presence indicator, and this product does not have one.
 
 ### 4. There is no name, so nothing may shorten one
+
+> **Amended 2026-09-14 by [ADR-0167](0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+> §3: one drawing is exempt, and it is named in full.** The yes screen draws **two initials over a
+> generated poster** — never over a photograph, never spoken, never in copy, and on no other
+> surface; the tile's accessible name is the whole handle. The rule below stands for every
+> sentence, every spoken name and every other drawing — `handleStem` and the seat's caption were
+> admitted *inside* it, and the Chats rows keep [#338](https://github.com/Raketa02/Raketa/issues/338)
+> §5's refusal of a monogram. The argument, and the fence, are ADR-0167's.
 
 The card carries a **Nickname**. `users` holds no real name and no given name, and a nickname
 is a single opaque handle — 2–64 characters of `[A-Za-z0-9_.-]`.

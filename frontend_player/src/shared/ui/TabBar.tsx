@@ -52,20 +52,44 @@
  * **The ring is absolutely positioned**: a bar that grew 8pt on arriving in Play would move
  * the four things that did not change in order to announce the one that did.
  *
- * ## What is deliberately absent
+ * ## The badge, on Chats and on no other column
  *
- * **No badge.** The one count this product has is the player's own outstanding yeses, and it
- * is drawn as a **sentence** on the deck's ending
- * ([6.3](../../../docs/design-system.md#63-segmented-control)'s segment carried it as
- * *Match me · 3* until that was struck for reading as a count of waiting cards).
+ * **One badge, and the badge inventory is fixed at one for the reason the glyph inventory is
+ * fixed at five** ([#326](https://github.com/Raketa02/Raketa/issues/326)). It counts unanswered
+ * challenges **addressed to you** — things only you can clear — which is what makes it an
+ * obligation a player can discharge rather than a number that nags.
+ *
+ * **It is a named prop and never a hook.** `shared/ui` importing a feature hook inverts the
+ * dependency ([ADR-0009](../../../../docs/adr/0009-feature-first-clean-architecture-frontends.md))
+ * and would give *"the drawn object only"* a network call. And it is `challengesWaiting` rather
+ * than a generic `badges?: Partial<Record<TabBarKey, number>>`, which is the glyph argument in a
+ * new costume: a caller that can badge any tab can badge You.
+ *
+ * **The argument that kept the bar bare survives as the test, and it still bites.** The count
+ * this product already had was the player's own outstanding yeses, drawn as a **sentence** on
+ * the deck's ending ([6.3](../../../docs/design-system.md#63-segmented-control)'s segment
+ * carried it as *Match me · 3* until that was struck for reading as a count of waiting cards).
  * It is **filtered by the sport on screen**, so that the number labels the deck it is about
  * ([#270](https://github.com/Raketa02/Raketa/issues/270)) — and the bar has no sport, so
- * promoting it here would put a number on permanent chrome that only means something beside a
- * control this bar does not draw, on a tab whose own rule is that it always opens somewhere
- * else.
+ * promoting *that* here would still put a number on permanent chrome that only means something
+ * beside a control this bar does not draw. A challenge addressed to you is filtered by nothing,
+ * and Chats is where it opens: the absence is **amended, not overturned**.
+ *
+ * **Nothing is drawn unless there is a count.** `undefined` is zero, in flight and refused at
+ * once, and they are deliberately not told apart — a spinner or a `?` on permanent chrome is
+ * anxiety with no act behind it. **No cap**: the pair rule allows at most one open challenge per
+ * organiser, so a double-digit badge means something genuinely unusual and `9+` would hide the
+ * one case worth seeing.
+ *
+ * **The count is spoken on the column's own label.** `Column` is `accessible` with an explicit
+ * name, so a `<Text>` dropped inside is swallowed rather than announced — the badge is a change
+ * to the **label** at least as much as to the drawing, or it does not exist for half its
+ * readers. Not `accessibilityValue`: a tab has no value, and the count is part of what the tab
+ * *is* right now.
  */
 
 import Feather from '@expo/vector-icons/Feather';
+import { counted } from '@/shared/formatting/counted';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,7 +99,7 @@ import { theme } from './theme';
 /** A glyph name Feather actually ships. Not a `string`, and not behind a cast. */
 type FeatherGlyph = keyof typeof Feather.glyphMap;
 
-export type TabBarKey = 'now' | 'around' | 'play' | 'chats' | 'you';
+export type TabBarKey = 'now' | 'players' | 'play' | 'chats' | 'you';
 
 export interface TabBarTab {
   readonly key: TabBarKey;
@@ -84,17 +108,22 @@ export interface TabBarTab {
 }
 
 /**
- * The five, in order. `home` and `map-pin` beat the calendar, the clock and `radar`: Now has
- * no plans, no bookings and no courts behind it, and a calendar glyph would announce a
- * scheduling surface nothing is building — `home` claims nothing that is not built, and
- * `map-pin` says *near here* and stops.
+ * The five, in order. `home` beats the calendar and the clock: Now has no plans, no bookings
+ * and no courts behind it, and a calendar glyph would announce a scheduling surface nothing is
+ * building — `home` claims nothing that is not built. **The second column is Players and draws
+ * `users`** — the deck lives there, one person at a time, and `user` is You's
+ * ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1). It was Around, drawn with `map-pin` after `radar` was refused for a tab with no scan
+ * behind it (ADR-0135); the family finding stands, and `radar` is still not drawn, because the
+ * Radar is a pane inside Players and not a tab.
  *
  * `labelMaxScale` is derived from these exact words. Adding a sixth, or a longer one, is a
- * change to `tabBarLabelCap.test.ts`'s answer before it is a change to this list.
+ * change to `tabBarLabelCap.test.ts`'s answer before it is a change to this list — and
+ * *Players* is the longest of the five, which is what moved the cap when Around retired.
  */
 export const TAB_BAR_TABS = [
   { key: 'now', label: 'Now', glyph: 'home' },
-  { key: 'around', label: 'Around', glyph: 'map-pin' },
+  { key: 'players', label: 'Players', glyph: 'users' },
   { key: 'play', label: 'Play', glyph: 'zap' },
   { key: 'chats', label: 'Chats', glyph: 'message-circle' },
   { key: 'you', label: 'You', glyph: 'user' },
@@ -126,6 +155,14 @@ export interface TabBarProps {
   /** Which of the five is showing. Play stays active for every screen inside Play. */
   readonly active: TabBarKey;
   readonly onPress: (key: TabBarKey) => void;
+  /**
+   * Unanswered challenges addressed to you — the one badge this bar draws, on Chats.
+   *
+   * Absent draws nothing, and absent covers zero, still loading and failed alike. The caller
+   * folds those three together, so this prop is *a count to draw* rather than a number the bar
+   * has to decide about.
+   */
+  readonly challengesWaiting?: number;
 }
 
 /** What every column is: one of the five, whether it is the one you are on, and the report. */
@@ -135,7 +172,17 @@ interface ColumnProps {
   readonly onPress: (key: TabBarKey) => void;
 }
 
-export function TabBar({ active, onPress }: TabBarProps) {
+/**
+ * A count, drawn on the column's glyph and spoken in its name.
+ *
+ * It is **not** on `ColumnProps`, because ⚡Play has no badge and never will: the inventory is
+ * fixed at one, and a prop the raised column inherits and ignores is the first step to a second.
+ */
+interface Badged {
+  readonly waiting?: number;
+}
+
+export function TabBar({ active, onPress, challengesWaiting }: TabBarProps) {
   // The bar owns the bottom safe-area inset, and it owns it here rather than taking it as a
   // prop: a CTA sitting above the bar must not apply it too, and an inset applied twice is
   // 34pt of nothing on a notched device.
@@ -147,21 +194,66 @@ export function TabBar({ active, onPress }: TabBarProps) {
         tab.key === 'play' ? (
           <PlayTab key={tab.key} tab={tab} selected={active === tab.key} onPress={onPress} />
         ) : (
-          <FlankTab key={tab.key} tab={tab} selected={active === tab.key} onPress={onPress} />
+          <FlankTab
+            key={tab.key}
+            tab={tab}
+            selected={active === tab.key}
+            onPress={onPress}
+            {...(tab.key === 'chats' && challengesWaiting !== undefined
+              ? { waiting: challengesWaiting }
+              : {})}
+          />
         ),
       )}
     </View>
   );
 }
 
-function FlankTab({ tab, selected, onPress }: ColumnProps) {
+function FlankTab({ tab, selected, onPress, waiting }: ColumnProps & Badged) {
   const tone = selected ? theme.color.ink : theme.color.muted;
 
   return (
-    <Column tab={tab} selected={selected} onPress={onPress} dimOnPress>
-      <Glyph name={tab.glyph} size={theme.size.tabIcon} color={tone} />
+    <Column tab={tab} selected={selected} onPress={onPress} waiting={waiting} dimOnPress>
+      {/* The glyph gets a box of its own so the badge can be positioned against the icon
+          rather than against the column: a column is 64pt wide and the mark it belongs to
+          is 16. */}
+      <View style={s.glyphBox}>
+        <Glyph name={tab.glyph} size={theme.size.tabIcon} color={tone} />
+        {waiting === undefined ? null : <Badge count={waiting} />}
+      </View>
       <Label text={tab.label} color={tone} />
     </Column>
+  );
+}
+
+/**
+ * The count, as a mark — **`coralInk` filled with a white digit at 5,89**.
+ *
+ * White on `coral` is 3,89, the one pairing Rule C refuses outright and the exact correction
+ * the ⚡Play disc three columns away already took. The digit is mono and tabular, so 1 -> 2 does
+ * not reflow the column, and there is no cap.
+ *
+ * It is **out of the layout**, like the active ring and for the same reason: the bar's height
+ * must not change because a challenge arrived. It rises `badgeRise` above the icon — the 4pt the
+ * ring already spends out of the bar's 6pt top padding — and sits back over the glyph's right
+ * edge by the smallest step on the grid, so it reads as attached to the mark rather than
+ * floating beside it.
+ *
+ * **It announces nothing.** The count is on the column's own `accessibilityLabel`, because
+ * `Column` is `accessible` and a `<Text>` inside it is swallowed — so a badge that announced
+ * itself here would be either silent or a second reading of one number.
+ */
+function Badge({ count }: { readonly count: number }) {
+  return (
+    <View
+      style={s.badge}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Text style={s.badgeCount} maxFontSizeMultiplier={theme.size.tabBar.labelMaxScale}>
+        {count}
+      </Text>
+    </View>
   );
 }
 
@@ -207,18 +299,20 @@ function Column({
   tab,
   selected,
   onPress,
+  waiting,
   dimOnPress = false,
   children,
-}: ColumnProps & {
-  /** 6.6's answer for a surface with no second fill. The disc has one, so it does not dim. */
-  readonly dimOnPress?: boolean;
-  readonly children: ReactNode | ((state: { pressed: boolean }) => ReactNode);
-}) {
+}: ColumnProps &
+  Badged & {
+    /** 6.6's answer for a surface with no second fill. The disc has one, so it does not dim. */
+    readonly dimOnPress?: boolean;
+    readonly children: ReactNode | ((state: { pressed: boolean }) => ReactNode);
+  }) {
   return (
     <Pressable
       accessible
       accessibilityRole="tab"
-      accessibilityLabel={tab.label}
+      accessibilityLabel={columnLabel(tab, waiting)}
       // The visible tone is the sighted half of this fact and never the whole of it.
       accessibilityState={{ selected }}
       onPress={() => onPress(tab.key)}
@@ -227,6 +321,21 @@ function Column({
       {children}
     </Pressable>
   );
+}
+
+/**
+ * What a column announces — its name, and the count when it is carrying one.
+ *
+ * **The string lives here rather than in `the-words.md`**: that file is the deck for codes the
+ * backend sends and the app writes words for, and this is chrome copy over a count the client
+ * derives ([#326](https://github.com/Raketa02/Raketa/issues/326) §9). It sits beside
+ * `TAB_BAR_TABS`, which already owns the five labels — and its one counted phrase goes through
+ * `counted()` like every other in the app, because a market with real plural rules has to have
+ * one function to change rather than every sentence that counts something.
+ */
+function columnLabel(tab: TabBarTab, waiting: number | undefined): string {
+  if (waiting === undefined) return tab.label;
+  return `${tab.label}, ${counted(waiting, 'challenge', 'challenges')} waiting`;
 }
 
 /**
@@ -286,6 +395,39 @@ const s = StyleSheet.create({
     gap: theme.space.xxs,
   },
   columnPressed: { opacity: 0.7 },
+
+  // The icon's own box. `visible` for the disc's reason: Android clips a child drawn outside
+  // its parent, and a clipped badge is a count disappearing on one platform.
+  glyphBox: {
+    width: theme.size.tabIcon,
+    height: theme.size.tabIcon,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  badge: {
+    position: 'absolute',
+    // Up by the ring's own overhang, and back over the glyph's right edge by the smallest
+    // step on the grid — so the badge belongs to the mark rather than sitting beside it.
+    bottom: theme.size.tabIcon - theme.size.tabBar.badge + theme.size.tabBar.badgeRise,
+    left: theme.size.tabIcon - theme.space.xxs,
+    height: theme.size.tabBar.badge,
+    minWidth: theme.size.tabBar.badge,
+    paddingHorizontal: theme.space.xxs,
+    borderRadius: theme.radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // 6.1 `primary`'s fill: white on `coralInk` is 5.89, where white on `coral` is 3.89.
+    backgroundColor: theme.color.coralInk,
+  },
+  badgeCount: {
+    ...theme.num.xs,
+    ...theme.tabular,
+    color: theme.color.surface,
+    // The role's own line height is 17 inside an 18pt box; centring is the box's job, and the
+    // text box must not add its own leading on top of it.
+    lineHeight: theme.size.tabBar.badge,
+  },
 
   discBox: {
     width: theme.size.fab,

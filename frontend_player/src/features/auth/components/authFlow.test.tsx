@@ -13,6 +13,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
+import { Text } from 'react-native';
 
 import {
   beginSession,
@@ -39,7 +40,10 @@ import { ADULT_ATTESTATION_MISSING, ADULT_LABEL } from '../schemas/authForms';
 import { refreshTokens } from '../use-cases/refreshTokens';
 import { signIn } from '../use-cases/signIn';
 
+import { useCurrentUser } from '../hooks/useCurrentUser';
+
 import { AccountPanel } from './AccountPanel';
+import { authErrorMessage } from './authErrorMessage';
 import { SignInScreen } from './SignInScreen';
 import { SignUpScreen } from './SignUpScreen';
 
@@ -53,6 +57,7 @@ const TOKENS: Wire['TokenResponse'] = {
 const USER: Wire['UserResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
+  name: 'Ada Lovelace',
   nickname: 'ada',
   authority: 'player',
   is_admin: false,
@@ -176,7 +181,6 @@ describe('signing in', () => {
 describe('signing up', () => {
   function fillSignUp(password = 'hunter2hunter2', confirm = 'hunter2hunter2') {
     fireEvent.changeText(screen.getByLabelText('Email'), 'ada@example.com');
-    fireEvent.changeText(screen.getByLabelText('Nickname'), 'ada');
     fireEvent.changeText(screen.getByLabelText('Password'), password);
     fireEvent.changeText(screen.getByLabelText('Repeat password'), confirm);
     // Ticked here rather than in the screen, because nothing may arrive ticked: an
@@ -184,9 +188,12 @@ describe('signing up', () => {
     fireEvent.press(screen.getByLabelText(ADULT_LABEL));
   }
 
+  /** The account is created **unnamed** — registration answers with no name and no handle. */
+  const UNNAMED: Wire['UserResponse'] = { ...USER, name: null, nickname: null };
+
   it('creates the account, signs in, and lands in a live session', async () => {
     setSessionStatus('unauthenticated');
-    transport.on('POST', '/api/v1/users', () => json(USER, 201));
+    transport.on('POST', '/api/v1/users', () => json(UNNAMED, 201));
     transport.on('POST', '/api/v1/auth/login', () => json(TOKENS));
 
     renderScreen(<SignUpScreen />);
@@ -201,21 +208,29 @@ describe('signing up', () => {
     expect(transport.requestsTo('POST', '/api/v1/auth/login')).toHaveLength(1);
   });
 
-  it('sends the password twice, because the backend checks both halves', async () => {
+  /**
+   * **Credentials only, and no nickname box** — sign-up is choosing credentials, and saying
+   * who you are is onboarding's first screen
+   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+   * §2). The server refuses a payload that still carries one as malformed, so what leaves the
+   * form is pinned field by field.
+   */
+  it('shows no nickname field, and sends the password twice with nothing about who you are', async () => {
     setSessionStatus('unauthenticated');
-    transport.on('POST', '/api/v1/users', () => json(USER, 201));
+    transport.on('POST', '/api/v1/users', () => json(UNNAMED, 201));
     transport.on('POST', '/api/v1/auth/login', () => json(TOKENS));
 
     renderScreen(<SignUpScreen />);
+    expect(screen.queryByLabelText('Nickname')).toBeNull();
     fillSignUp();
     fireEvent.press(screen.getByLabelText('Create account'));
 
     await waitFor(() => expect(getSessionStatus()).toBe('authenticated'));
 
     const [registration] = transport.requestsTo('POST', '/api/v1/users');
+    // The password twice, because the backend checks both halves.
     expect(registration?.body).toEqual({
       email: 'ada@example.com',
-      nickname: 'ada',
       password1: 'hunter2hunter2',
       password2: 'hunter2hunter2',
       adult_attested: true,
@@ -342,15 +357,15 @@ describe('signing up', () => {
     expect(screen.getByLabelText('Password').props.secureTextEntry).toBe(true);
   });
 
-  it('puts a taken nickname under the nickname field', async () => {
+  it('puts a taken email under the email field', async () => {
     setSessionStatus('unauthenticated');
     transport.on('POST', '/api/v1/users', () =>
       json(
         {
-          code: 'nickname_already_taken',
-          message: 'nickname already taken',
+          code: 'email_already_registered',
+          message: 'email already registered',
           trace_id: 'trace-test',
-          details: { field: 'nickname' },
+          details: { field: 'email' },
         } satisfies Wire['ErrorResponse'],
         409,
       ),
@@ -360,7 +375,9 @@ describe('signing up', () => {
     fillSignUp();
     fireEvent.press(screen.getByLabelText('Create account'));
 
-    expect(await screen.findByText('That nickname is taken. Pick another.')).toBeTruthy();
+    expect(
+      await screen.findByText('That email already has an account. Sign in instead.'),
+    ).toBeTruthy();
     // It never got as far as signing in, and the player is still signed out.
     expect(transport.requestsTo('POST', '/api/v1/auth/login')).toHaveLength(0);
     expect(getSessionStatus()).toBe('unauthenticated');
@@ -389,6 +406,7 @@ describe('signing out', () => {
     queryClient.setQueryData(authKeys.currentUser(), {
       id: USER.id,
       email: USER.email,
+      name: USER.name,
       nickname: USER.nickname,
     });
 
@@ -427,17 +445,30 @@ describe('signing out', () => {
 // The account panel
 // ---------------------------------------------------------------------------
 
+/** A screen that reads the player and says what the read said — the smallest such screen. */
+function WhoAmI() {
+  const user = useCurrentUser();
+  if (user.error !== null) return <Text>{authErrorMessage(user.error)}</Text>;
+  return <Text>{user.data?.name ?? ''}</Text>;
+}
+
 describe('the account panel', () => {
-  it('shows the player, read through Query rather than held by the session', async () => {
+  /**
+   * **The panel is the button now** (ADR-0179 §1). The identity it drew — the name, the handle,
+   * the email — is the You tab's header card's and its *Name* row's, asserted where they are
+   * drawn (`theShell.test.tsx`); what the panel keeps is the one act that is the account's.
+   */
+  it('draws the way out, and no identity of its own', async () => {
     setSessionStatus('authenticated');
     transport.on('GET', '/api/v1/users/me', () => json(USER));
 
     renderScreen(<AccountPanel />);
 
-    // The identity is one line, and it is the whole assertion: the panel carries no
-    // heading of its own — the You tab does — so who is signed in is only ever visible
-    // through what Query fetched.
-    expect(await screen.findByText('ada · ada@example.com')).toBeTruthy();
+    expect(screen.getByLabelText('Sign out')).toBeTruthy();
+    expect(screen.queryByText('Ada Lovelace')).toBeNull();
+    expect(screen.queryByText('ada@example.com')).toBeNull();
+    // Nothing read: the panel has no fact of its own to fetch.
+    expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(0);
   });
 
   it('does not sign the player out when a request is forbidden', async () => {
@@ -445,7 +476,8 @@ describe('the account panel', () => {
     await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
     transport.on('GET', '/api/v1/users/me', () => errorResponse(403, 'forbidden'));
 
-    renderScreen(<AccountPanel />);
+    // Any screen that reads the player: the rule is the session's, not a panel's.
+    renderScreen(<WhoAmI />);
 
     await waitFor(() =>
       expect(screen.getByText('Something went wrong at our end. Try again later.')),

@@ -11,6 +11,13 @@
  * feature's `api/` or `mappers/` layer (`docs/architecture.md` Part 1, and an ESLint rule). So
  * each feature asserts the agreement in one `mappers/wireVocabulary.ts`, and the type that
  * expresses it lives here, once, where both can cite it.
+ *
+ * **One assertion is not in a feature, and it is not an exception to that rule so much as the
+ * rule reaching a route with no feature.** `shared/lib/platform/liveStream.ts` parses the live
+ * channel's frame, which ADR-0147 §7 requires to be the generated `LiveNudgeSchema` — and a
+ * transport may not be imported by a feature's `api/` layer, so the port *is* that route's `api/`
+ * layer. It carries its own `Exact` row for the same reason every other one does. The linter's
+ * exemption is one file wide and `pnpm test:boundaries` asserts both halves of it.
  */
 
 /**

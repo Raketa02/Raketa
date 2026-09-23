@@ -15,8 +15,9 @@
  * ## The yes answers with two facts, and the no answers with none
  *
  * A yes comes back with `mutual` — *"the one thing this tells you about the other person, and
- * you have earned it by them having said yes to you first"* — and with where the sport now
- * stands against its cap, which is the count the segment above the deck draws.
+ * you have earned it by them having said yes to you first"* — with **the game the two of them
+ * now have**, when there is one to name, and with where the sport stands against its cap,
+ * which is the count the segment above the deck draws.
  *
  * A pass answers `204` and **no route anywhere returns one**: not to the passer, not as a
  * count, not as *"you have passed on twelve people"*. So there is nothing to map, and the
@@ -45,6 +46,17 @@ export interface InterestExpressed {
    * one bit of the answer that changes what the screen says.
    */
   readonly mutual: boolean;
+  /**
+   * **The game the two of you have**, when the platform has one to name — the challenge this
+   * tap opened, or the one an earlier mutual opened that is not finished with
+   * ([ADR-0154](../../../../../docs/adr/0154-a-mutual-names-the-game-it-has-and-names-nothing-when-it-has-none.md)).
+   *
+   * `null` is **one answer covering two causes** and the screen may not tell them apart: the
+   * pair already have a game being *arranged*, or a gate declined to open one. Which it is
+   * does not cross the wire and will not, so nothing above this may draw the absence as a
+   * state of its own.
+   */
+  readonly challengeId: string | null;
   /** Where this sport stands after the tap, for the count the segment draws. */
   readonly outstanding: OutstandingInterest;
 }
@@ -58,6 +70,7 @@ export async function sayYes(answer: CardAnswer): Promise<InterestExpressed> {
 
   return {
     mutual: response.mutual,
+    challengeId: response.challenge_id,
     outstanding: toOutstandingAfterTap(response.outstanding),
   };
 }

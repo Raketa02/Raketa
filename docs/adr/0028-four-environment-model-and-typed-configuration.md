@@ -146,3 +146,45 @@ authority on the vocabulary; this ADR is the authority on why it exists.
   from real env files on purpose: re-copying the working env files from the updated
   templates, and deleting the backend `.env.local` that is read by nothing and whose name is
   about to mean an official environment.
+
+## Amendment — 2026-09-10: rule 5 binds every deployed environment, not only the unbuilt ones
+
+Rule 5 said **an unprovisioned environment fails loudly rather than falling back**, and the
+code said it exactly that narrowly: the three presence refusals sat behind
+`UNPROVISIONED = {development, staging}`. `production` was exempt from all three.
+
+**That exemption was the wrong half of the set, and it cost a bootable deployment.**
+`backend/deploy/ecs/taskdef.json` selects `production` and supplied no `REDIS_URL`, so the
+one environment nobody had exempted deliberately would have inherited
+`redis://redis:6379/0` — the service name in `docker-compose-local.yml` — and run
+permanently degraded, which is the state `app/infrastructure/redis_client.py` says must not
+be reachable. Two more variables were missing outright, and the committed artifact could not
+have started a container at all ([#341](https://github.com/Raketa02/Raketa/issues/341)).
+
+**The rule is restated over `DEPLOYED`.** What makes an address dangerous is not that the
+environment is unbuilt; it is that the shipped default is a compose service name, which
+resolves on a laptop and nowhere else. That is as true of `production` as of the two nobody
+has built — more so, because it is the one where inheriting a laptop costs most. So
+`APP_HOST`, `WRITER_DB_URL` and `REDIS_URL` must each be set explicitly in `development`,
+`staging` **and** `production`. `local` is untouched and still needs nothing.
+
+**Nothing else in this record moves.** Rule 5's mechanism is unchanged — the backend still
+asks whether somebody *set* a value rather than whether it differs from a sentinel, for the
+reason rule 5 gives: with no domain registered there is nothing to compare a host against.
+Rule 6's scheme rule was already stated over `DEPLOYED` and is where the name came from.
+
+**And the disagreement is now checkable, which is the part rule 4 could not reach.** Rule 4
+put the refusals on the settings object so every construction path sees them; nothing
+constructed the *production* settings object, because only `local` runs. `make taskdef`
+(`.github/scripts/check-taskdef.sh`) boots the committed task definition through the
+real `Settings` and fails naming whatever it does not supply — deriving the required set by
+executing this rule rather than by restating it, so the next refusal added here is enforced
+against the deployment artifact without anybody remembering to.
+
+**One gap is named rather than closed.** `PHOTO_STORAGE_ENDPOINT_URL`,
+`PHOTO_REVIEW_ENDPOINT_URL` and `PHOTO_STORAGE_ACCESS_KEY` also default to the local dev
+stack and are refused nowhere, so a deployed process still resolves all three to a laptop —
+and `config.py`'s claim that the first pair is `None` in a deployed environment is not true
+of the defaults as written. That is the same failure in a context this record cannot settle
+alone: the photo sidecar has no container in the task definition at all. See
+[`../environments.md`](../environments.md) under *How each app refuses to fall back*.

@@ -9,10 +9,14 @@
  *
  * ## What a pass is
  *
- * **The sports chosen, in the order chosen, and which of them produced a Skill rating.**
- * Those two facts answer every question onboarding asks about itself: the progress bar's
- * numerator and denominator, which sport comes next, and whether there is anything to
- * account for on the way out.
+ * **The sports chosen, in the order chosen, which of them produced a Skill rating — and
+ * where the pass began.** The first two facts answer every question onboarding asks about
+ * itself: the progress bar's numerator and denominator, which sport comes next, and whether
+ * there is anything to account for on the way out. The third answers where the way out
+ * leads: a pass has an **origin** — welcome, or the Skill passport's *Add a sport* — and
+ * where it ends is read off it
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §3). Everything between the two ends is the same walk.
  *
  * ## What a pass is not
  *
@@ -44,7 +48,19 @@ export interface RatedRun {
   readonly sport: Sport;
 }
 
+/**
+ * Where a pass began — which is where it ends.
+ *
+ * `welcome` is onboarding proper: the picker's queue, or a run the entry gate resumed with no
+ * picker in between, and it ends on the summary, the second part or the app. `passport` is
+ * the Skill passport's *Add a sport*: a queue of one, begun at the question route, ending
+ * back on the passport — never on the done screen, the data screen or the social steps,
+ * because a Player profile already exists and those screens are onboarding's.
+ */
+export type PassOrigin = 'welcome' | 'passport';
+
 export interface OnboardingPass {
+  readonly origin: PassOrigin;
   /**
    * The sports chosen, in the order they were chosen.
    *
@@ -60,13 +76,15 @@ export interface OnboardingPass {
 }
 
 /**
- * A pass over the sports chosen, with nothing rated yet.
+ * A pass over the sports chosen, with nothing rated yet, begun at one of the two doors.
  *
  * A *new* queue is a new pass: whatever an earlier walk produced belongs to that walk,
- * and the closing screens account for this one.
+ * and the closing screens account for this one. The origin is taken rather than defaulted
+ * because it is what the ending reads, and a caller that did not say which door it is
+ * would be a caller nobody asked.
  */
-export function begin(queue: readonly Sport[]): OnboardingPass {
-  return { queue, rated: [] };
+export function begin(queue: readonly Sport[], origin: PassOrigin): OnboardingPass {
+  return { origin, queue, rated: [] };
 }
 
 /**
@@ -142,18 +160,19 @@ export type PassAdmission =
 /**
  * Whether a player may be dropped straight into this sport's questionnaire.
  *
- * **Onboarding happens once, at the beginning.** There is no re-take from inside the app
- * yet, so the only legitimate ways onto a question are the picker's queue and the entry
- * gate resuming an unfinished run. A link that lands somewhere else — a hand-built URL, a
- * stale notification, an invitation forwarded to a player who never chose these sports —
- * is not a shortcut into the middle of a flow, and treating it as one is what produced a
- * questionnaire with no honest progress to show.
+ * **A pass has two doors, and a link is neither.** The legitimate ways onto a question are
+ * the picker's queue, the passport's *Add a sport* — a pass of exactly one sport, which
+ * admits exactly that sport — and the entry gate resuming an unfinished run. A link that
+ * lands somewhere else — a hand-built URL, a stale notification, an invitation forwarded to
+ * a player who never chose these sports — is not a shortcut into the middle of a flow, and
+ * treating it as one is what produced a questionnaire with no honest progress to show. A
+ * second door is not a shortcut (ADR-0179 §3).
  *
  * The three answers are the three real situations:
  *
  * - **No pass** is the resume path. The gate redirects to an outstanding question with no
  *   picker in between, and that run is a genuine pass of one sport.
- * - **The sport is in the pass** is the ordinary case, every screen after the picker.
+ * - **The sport is in the pass** is the ordinary case, every screen after either door.
  * - **A pass is running without this sport** cannot be reached by any flow the app has.
  *   The player goes back to the beginning, and if the run really was theirs the picker
  *   hands it straight back — starting a sport with an unfinished run returns that run.
@@ -181,7 +200,13 @@ export type PassDestination =
    */
   | { readonly kind: 'closing' }
   /** Straight into the app. */
-  | { readonly kind: 'app' };
+  | { readonly kind: 'app' }
+  /**
+   * Back on the Skill passport the pass began from, with the new card drawn — or without
+   * it, when the one sport was abandoned. A profile exists, so the done screen, the data
+   * screen and the social steps are never this pass's (ADR-0179 §3).
+   */
+  | { readonly kind: 'passport' };
 
 /**
  * Where a player who **stops before the end of the queue** goes.
@@ -191,7 +216,13 @@ export type PassDestination =
  * answering both is what stops the two from drifting into different answers to *is there
  * anything to account for*.
  *
- * Two answers, and the question is only ever the one this pass can answer by itself:
+ * **A pass begun at the passport ends on the passport, whatever it produced.** There is no
+ * account to give on a done screen — the passport *is* the account, and it draws the new
+ * card itself — and there is no second part to enter, because a Player profile already
+ * exists. Rated or abandoned, the player goes back to the screen they left.
+ *
+ * For a pass begun at welcome, two answers, and the question is only ever the one this
+ * pass can answer by itself:
  *
  * - **Nothing rated in this pass → the app**, and the entry gate answers from there. There
  *   is no account to give, and this pass knows nothing about ratings an earlier walk made
@@ -209,8 +240,9 @@ export type PassDestination =
  * profile fact is read once and acted on once.
  */
 export function stopDestination(pass: OnboardingPass | undefined): PassDestination {
-  if (pass === undefined || pass.rated.length === 0) return { kind: 'app' };
-  return { kind: 'closing' };
+  if (pass === undefined) return { kind: 'app' };
+  if (pass.origin === 'passport') return { kind: 'passport' };
+  return pass.rated.length === 0 ? { kind: 'app' } : { kind: 'closing' };
 }
 
 /**

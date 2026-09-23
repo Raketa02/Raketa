@@ -14,11 +14,16 @@ import {
   mediaTypeOf,
   promoteToProfile,
   flaggedPositions,
+  heldPhotos,
+  photoIds,
   recordUpload,
   removePhoto,
   replacePhoto,
+  samePhotoIds,
   slotsLeft,
+  standingPhotos,
   uploadedPhotoIds,
+  uploadedPhotos,
   type ProfilePhoto,
 } from './photoCollection';
 
@@ -33,6 +38,15 @@ function uploaded(name: string): ProfilePhoto {
 
 function arrival(name: string, mimeType: string | null = 'image/jpeg') {
   return { uri: `file:///photos/${name}.jpg`, mimeType };
+}
+
+/** The same shape as `uploaded`, with the verdict the check came back with. */
+function flagged(name: string): ProfilePhoto {
+  return {
+    uri: `file:///photos/${name}.jpg`,
+    mimeType: 'image/jpeg',
+    upload: { kind: 'uploaded', photoId: `id-${name}`, review: 'flagged' },
+  };
 }
 
 const failure = new AppError('unknown', 'retryable-by-user', 'nope');
@@ -166,6 +180,56 @@ describe('swapping one photo for another', () => {
    * a collection the row cannot draw honestly. Replacing something with itself is therefore
    * a no-op rather than a re-upload of a picture that is already there.
    */
+  /**
+   * **A replacement stands in for the photo it replaced until it has arrived.** The profile
+   * on the You tab holds the old photo, and a write sent while the new one is on its way — or
+   * after it failed — must keep holding it in that slot, not drop it: the player asked for a
+   * swap, not a removal (ADR-0179 §2's write is on *an upload that landed*).
+   */
+  it('remembers the arrived photo it replaced, until it has arrived itself', () => {
+    const held = [uploaded('one'), flagged('two')];
+
+    const swapped = replacePhoto(held, held[1]!.uri, arrival('new'));
+
+    expect(swapped[1]?.replacing).toEqual({ photoId: 'id-two', review: 'flagged' });
+    expect(standingPhotos(swapped)).toEqual([
+      { photoId: 'id-one', review: 'allowed' },
+      { photoId: 'id-two', review: 'flagged' },
+    ]);
+    // Failing leaves the old one standing; arriving is what replaces it.
+    const failed = recordUpload(swapped, 'file:///photos/new.jpg', {
+      kind: 'failed',
+      error: failure,
+    });
+    expect(photoIds(standingPhotos(failed))).toEqual(['id-one', 'id-two']);
+    const landed = recordUpload(swapped, 'file:///photos/new.jpg', {
+      kind: 'uploaded',
+      photoId: 'id-new',
+      review: 'allowed',
+    });
+    expect(photoIds(standingPhotos(landed))).toEqual(['id-one', 'id-new']);
+    expect(landed[1]?.replacing).toBeUndefined();
+  });
+
+  it('carries the stood-for photo forward through a second replacement before the first arrived', () => {
+    const held = [uploaded('one')];
+    const once = replacePhoto(held, held[0]!.uri, arrival('new'));
+
+    const twice = replacePhoto(once, 'file:///photos/new.jpg', arrival('newer'));
+
+    expect(twice[0]?.replacing).toEqual({ photoId: 'id-one', review: 'allowed' });
+    expect(photoIds(standingPhotos(twice))).toEqual(['id-one']);
+  });
+
+  it('stands for nothing when the photo it replaced had not arrived either', () => {
+    const [picked] = addPhotos([], [arrival('picked')]).photos;
+
+    const swapped = replacePhoto([picked!], picked!.uri, arrival('new'));
+
+    expect(swapped[0]?.replacing).toBeUndefined();
+    expect(standingPhotos(swapped)).toEqual([]);
+  });
+
   it('leaves the collection alone when the arrival is already in it', () => {
     const held = [uploaded('one'), uploaded('two')];
 
@@ -264,6 +328,64 @@ describe('what the draft ends up carrying', () => {
 
     expect(uploadedPhotoIds(photos)).toEqual(['id-two', 'id-one']);
   });
+
+  /**
+   * **The You tab's photos write carries the same list with the verdicts beside it**, so the
+   * cache can be written from the route's answer — ids only — without losing what the check
+   * said about each: the pair is what the workbench holds, and the ids are read off it.
+   */
+  it('is also the pairs, id and verdict, for the write that keeps the verdicts', () => {
+    const photos = [
+      uploaded('one'),
+      { ...uploaded('two'), upload: { kind: 'uploading', progress: 0.5 } } as ProfilePhoto,
+      { ...uploaded('three'), upload: { kind: 'uploaded', photoId: 'id-three' } } as ProfilePhoto,
+    ];
+
+    expect(uploadedPhotos(photos)).toEqual([
+      { photoId: 'id-one', review: 'allowed' },
+      { photoId: 'id-three' },
+    ]);
+    expect(uploadedPhotoIds(photos)).toEqual(photoIds(uploadedPhotos(photos)));
+  });
+});
+
+describe('whether two lists of ids are the same answer', () => {
+  it('is by id and by position — the order is the answer', () => {
+    expect(samePhotoIds(['a', 'b'], ['a', 'b'])).toBe(true);
+    expect(samePhotoIds(['a', 'b'], ['b', 'a'])).toBe(false);
+    expect(samePhotoIds(['a'], ['a', 'b'])).toBe(false);
+    expect(samePhotoIds([], [])).toBe(true);
+  });
+});
+
+/**
+ * **The workbench's second caller seeds it from the read** (ADR-0179 §2): the photos a profile
+ * already holds, each drawn from the signed address `GET /photos/{id}` answered, arrive as
+ * `uploaded` — an id, a verdict where the check concluded one — exactly as an upload's answer
+ * would have left them, so every rule above reads a restored tile and a fresh one alike.
+ */
+describe('a workbench seeded from the profile', () => {
+  it('holds each photo as uploaded, keyed by its signed address, in the profile’s order', () => {
+    const seeded = heldPhotos(
+      [{ photoId: 'id-two', review: 'flagged' }, { photoId: 'id-one' }],
+      (photoId) => `https://store.test/${photoId}?signature=whatever`,
+    );
+
+    expect(seeded).toEqual([
+      {
+        uri: 'https://store.test/id-two?signature=whatever',
+        mimeType: null,
+        upload: { kind: 'uploaded', photoId: 'id-two', review: 'flagged' },
+      },
+      {
+        uri: 'https://store.test/id-one?signature=whatever',
+        mimeType: null,
+        upload: { kind: 'uploaded', photoId: 'id-one' },
+      },
+    ]);
+    expect(uploadedPhotoIds(seeded)).toEqual(['id-two', 'id-one']);
+    expect(flaggedPositions(seeded)).toEqual([0]);
+  });
 });
 
 describe('what a photo is sent as', () => {
@@ -278,15 +400,6 @@ describe('what a photo is sent as', () => {
 });
 
 describe('what the on-court check made of a photo', () => {
-  /** The same shape as `uploaded`, with the verdict the check came back with. */
-  function flagged(name: string): ProfilePhoto {
-    return {
-      uri: `file:///photos/${name}.jpg`,
-      mimeType: 'image/jpeg',
-      upload: { kind: 'uploaded', photoId: `id-${name}`, review: 'flagged' },
-    };
-  }
-
   it('names the flagged photos by their position in the row', () => {
     // Positions rather than photos: the sentence the step puts on one says which tile it
     // is about, exactly as a failure's does.
@@ -295,6 +408,18 @@ describe('what the on-court check made of a photo', () => {
 
   it('is nothing at all when every photo came back allowed', () => {
     expect(flaggedPositions([uploaded('one'), uploaded('two')])).toEqual([]);
+  });
+
+  it('is nothing for a photo nobody looked at — an absent verdict is not a flag', () => {
+    // Three answers and two values (ADR-0138): checked and passed, checked and flagged, and
+    // *nobody looked* — a photo that arrived while the reviewer could not be reached. The
+    // warning is for a conclusion, and the absence of one is not a conclusion.
+    const unlooked = {
+      ...uploaded('one'),
+      upload: { kind: 'uploaded', photoId: 'id-one' },
+    } as ProfilePhoto;
+
+    expect(flaggedPositions([unlooked, flagged('two')])).toEqual([1]);
   });
 
   it('says nothing about a photo that has not arrived, or did not', () => {

@@ -18,17 +18,103 @@
  */
 
 import {
+  Fragment,
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
   type RefObject,
 } from 'react';
-import { AccessibilityInfo, findNodeHandle, type View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View, findNodeHandle } from 'react-native';
 
 /** A ref to whatever should hold accessibility focus — a host element, not a component. */
 export type FocusTarget = RefObject<View | null>;
+
+/**
+ * **The overlay host** — design-system 9.3's root-level layer, which every modal stage on
+ * Android is drawn into (`ModalStage.android`), and which hides the app beneath it from a
+ * screen reader while any is up.
+ *
+ * ## Why Android does not get the native `Modal`
+ *
+ * React Native's `Modal` presents in its own window, and under the New Architecture the size
+ * of that window reaches layout as **native state**: the content is laid out at 0 × 0 first
+ * and again at the window's size when the dialog reports it — measured on a Galaxy A55, `0 × 0`
+ * and then `360 × 702` a frame later. **Reanimated 3.16 loses the second pass whenever any
+ * animated style is mounted anywhere in the tree** — a 1 × 1 `useAnimatedStyle` view on the
+ * deck pane was enough to collapse the deck's own sheet — and what is left is unusable, not
+ * merely mis-sized: the content is a sliver as wide as its own padding at the top-left, and
+ * even sized from the window it cannot be pressed, because Android finds no child under the
+ * finger inside a 0 × 0 view, the dialog re-dispatches every touch's start, and the second
+ * start hands the responder to the modal's own host — every press in the sheet is terminated
+ * on the way to its release, and the scroll view never sees a touch at all. The radar is the
+ * app's first animated style, so its sheet was the first casualty (2026-09-17).
+ *
+ * So on Android an overlay is hosted **here, in the tree**, where layout and touch are
+ * ordinary: a layer at the root, above every screen and the tab bar, with the platform's back
+ * gesture and the sheet's own motion done by the stage. iOS keeps the native window
+ * (`ModalStage.tsx`), which is unaffected and carries its own exit animation.
+ *
+ * ## What the host owes the tree
+ *
+ * The layers are rendered **as siblings of the app**, so a stage's children keep every
+ * context the root provides — the query client, the safe area, reduced motion — and lose any
+ * a screen would have given them. None of the app's sheets reads one: every provider is at the
+ * root, and no sheet content reads the navigation (`docs/architecture.md` Part 13). A stage
+ * re-states its layer on every render, as a portal does, and the host reconciles the same
+ * position so the layer's own state — a scroll position, a pressed control — survives.
+ *
+ * While a layer is up the app beneath takes {@link behindOverlay}: a native window hid the
+ * tab bar and the other screens from a screen reader on its own, and a layer in the tree has
+ * to say so itself — for the whole app, not only the screen that opened it.
+ */
+export function OverlayHost({ children }: { readonly children: ReactNode }) {
+  const [layers, setLayers] = useState<ReadonlyMap<string, ReactNode>>(() => new Map());
+  const set = useCallback((key: string, layer: ReactNode) => {
+    setLayers((held) => new Map(held).set(key, layer));
+  }, []);
+  const remove = useCallback((key: string) => {
+    setLayers((held) => {
+      if (!held.has(key)) return held;
+      const next = new Map(held);
+      next.delete(key);
+      return next;
+    });
+  }, []);
+  const layersApi = useMemo<OverlayLayers>(() => ({ set, remove }), [set, remove]);
+  const open = layers.size > 0;
+
+  return (
+    <OverlayLayersContext.Provider value={layersApi}>
+      <View style={s.beneath} {...behindOverlay(open)} testID="overlay-host-beneath">
+        {children}
+      </View>
+      {[...layers].map(([key, layer]) => (
+        <Fragment key={key}>{layer}</Fragment>
+      ))}
+    </OverlayLayersContext.Provider>
+  );
+}
+
+/** What a stage does with the host: put its layer up under its own key, and take it down. */
+export interface OverlayLayers {
+  readonly set: (key: string, layer: ReactNode) => void;
+  readonly remove: (key: string) => void;
+}
+
+const OverlayLayersContext = createContext<OverlayLayers | undefined>(undefined);
+
+/** The host's layers, or `undefined` where there is no host — a stage then draws in place. */
+export function useOverlayLayers(): OverlayLayers | undefined {
+  return useContext(OverlayLayersContext);
+}
+
+const s = StyleSheet.create({
+  beneath: { flex: 1 },
+});
 
 /**
  * The props a screen puts on its root while one of its overlays is open.

@@ -1,6 +1,6 @@
 """The three card fields the candidate index deliberately does not hold.
 
-**A nickname belongs to ``users``**, which the index does not tail at all, and a
+**A name belongs to ``users``**, which the index does not tail at all, and a
 photo list belongs to the **Player profile**, which the index deliberately does
 not project — ``candidate_projection`` refuses ``player_profile.photos_changed``
 by name, because the card is assembled outside the engine (``docs/adr/0107``).
@@ -16,7 +16,7 @@ worse than the first, because it would also be a second implementation of how a
 profile is folded.
 
 **It runs after the floor**, so it is at most twenty players even when the pool
-is five hundred: one set read for the nicknames, one profile per surviving row,
+is five hundred: one set read for the names, one profile per surviving row,
 and — for a row that has a photograph — one object-store ``HEAD`` for the
 verdict. The per-row reads are the price of not owning somebody else's storage,
 and they are bounded by the shortlist rather than by the city. **The verdict's
@@ -65,12 +65,16 @@ class PlayerCardIdentities:
     async def identities_for(
         self, player_ids: Collection[UUID]
     ) -> Mapping[UUID, CardIdentity]:
-        """Each of these players' nickname, first photo and that photo's verdict.
+        """Each of these players' name, first photo and that photo's verdict.
 
-        **The nickname is what decides whether there is a card at all.** A player
-        ``users`` has never heard of is absent from the answer rather than
-        present with a blank name, and the caller drops the row before the record
-        is written so that ``n_returned`` and the rows stored still agree.
+        **The name is what decides whether there is a card at all.** A player
+        ``users`` has never heard of — or has not named, which the entry gate
+        keeps off every surface a search reaches (``docs/adr/0171`` §4) — is
+        absent from the answer rather than present with a blank name, and the
+        caller drops the row before the record is written so that
+        ``n_returned`` and the rows stored still agree. The nickname ``users``
+        answers beside the name is left here: a handle is drawn on a record,
+        never on a card.
 
         A missing *photo*, by contrast, is an ordinary state: the card is drawn
         and the client draws the generated court poster. So is a missing
@@ -81,14 +85,14 @@ class PlayerCardIdentities:
 
         if not player_ids:
             return {}
-        nicknames = await self._users.find_nicknames_of(player_ids)
+        namings = await self._users.find_namings_of(player_ids)
 
         # **One after another, because they share the request's session.** An
         # `AsyncSession` is not safe to use concurrently, and a profile is folded
         # from a stream through it — so gathering these would be a race, not a
         # speed-up.
         photos = {
-            player_id: await self._first_photo(player_id) for player_id in nicknames
+            player_id: await self._first_photo(player_id) for player_id in namings
         }
 
         # **All at once, because these share nothing.** Every `PhotoStorage`
@@ -115,11 +119,11 @@ class PlayerCardIdentities:
 
         return {
             player_id: CardIdentity(
-                nickname=nickname,
+                name=naming.name,
                 photo_id=photos[player_id],
                 review=verdicts.get(player_id),
             )
-            for player_id, nickname in nicknames.items()
+            for player_id, naming in namings.items()
         }
 
     async def _first_photo(self, player_id: UUID) -> UUID | None:

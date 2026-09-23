@@ -19,6 +19,14 @@ one statement. A uuid is 36 characters of hex and hyphens with no other meaning 
 a seating code, so a substring match on it is exact in the only sense that matters
 here.
 
+**It matches the field on every event that carries it, and two do**
+(``docs/adr/0162``). A newcomer who re-seated a game is on the court of a stream
+whose opening never named them, so the read matches ``LineUpReseated``'s court as
+well as ``GamePlanned``'s — and it answers *which streams have ever seated these
+people*, which is wider than *which courts are they on now*. Somebody who left is
+still found, and every fold that answers about the people **on** a court reads
+``line_up.players`` off the folded aggregate to say so.
+
 **Two statements, not one.** The first finds the streams by matching the
 serialized court; the second reads those streams whole. They cannot be one,
 because a ``ResultProposed`` row carries no court and dropping it would fold a
@@ -44,7 +52,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.events.envelope import SerializedEventEnvelope
 from app.application.ports.events import EventCodec
 from app.infrastructure.events.event_store_model import EventStoreORM
-from app.modules.games.domain.events import GamePlanned
+from app.modules.games.domain.events import GamePlanned, LineUpReseated
 from app.modules.games.infrastructure.event_sourced_game_repository import (
     GAME_AGGREGATE,
 )
@@ -52,20 +60,24 @@ from app.shared.domain import DomainEvent
 
 
 def _seatings_key(name: str) -> str:
-    """The JSON key the codec writes for the court, checked at import.
+    """The JSON key the codec writes for the court, checked at import — on
+    **both** events that carry one.
 
     This is the one read in this context that matches on a **serialized field
     name** rather than on a stream id, and what is avoidable about that coupling
     is it being *silent*: a renamed field would make every game invisible to
     these queries, which reads as *nobody has ever played* and would leave
-    familiarity standing down for ever with a green build.
+    familiarity standing down for ever with a green build. A re-seat that spelled
+    the field differently would fail more quietly still — every newcomer
+    invisible, every original player found.
     """
 
-    if name not in {field.name for field in fields(GamePlanned)}:
-        raise RuntimeError(
-            f"GamePlanned has no field {name!r}: the game stream reads match on "
-            "it and would silently find nobody"
-        )
+    for event in (GamePlanned, LineUpReseated):
+        if name not in {field.name for field in fields(event)}:
+            raise RuntimeError(
+                f"{event.__name__} has no field {name!r}: the game stream reads "
+                "match on it and would silently find nobody"
+            )
     return name
 
 

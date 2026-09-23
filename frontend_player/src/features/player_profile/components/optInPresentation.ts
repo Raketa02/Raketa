@@ -47,7 +47,7 @@
  * ## What the version names is the screen, not this file
  *
  * The step's title and the line under it come from `socialStepPresentation`, because the
- * chrome of all seven steps is one table and splitting it would give this step two spellings
+ * chrome of all eight steps is one table and splitting it would give this step two spellings
  * of its own name. A player reads them on the same screen as the card, so
  * `optInPresentation.test.ts` pins them alongside everything below — what the version
  * identifier names is what was *shown*, wherever the string happened to be declared.
@@ -102,7 +102,7 @@ export const PROPOSALS_OPT_IN_COPY_V1 = 'proposals-opt-in.v1';
 export const PROPOSALS_OPT_IN_COPY_V2 = 'proposals-opt-in.v2';
 
 /**
- * The chrome line, which replaces the plain *step 7 of 7* rather than joining it.
+ * The chrome line, which replaces the plain *step 8 of 8* rather than joining it.
  *
  * The step's own position is already in the sentence — *before finishing* is where a player
  * is — and the line's job here is to say that this one question is the whole of what is
@@ -142,6 +142,29 @@ export const OPT_IN_PROMISES: readonly OptInPromise[] = [
     detail: 'any time, from your profile',
   },
 ];
+
+/**
+ * The same three promises **as the profile says them**, where the third reads *from here*
+ * rather than *from your profile* — because on the profile, *here* is where the player is
+ * standing ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2; `the-words.md` §27).
+ *
+ * **Not a fourth version, and the reason is what the version names.** The identifier names
+ * the promise a player agreed to — *you can stop, any time, from your profile* — and the
+ * profile screen makes that exact promise from the place it is kept; the one word that differs
+ * is where the reader stands, not what is promised. So an answer given here is stamped
+ * `PROPOSALS_OPT_IN_COPY_VERSION` like an answer given on the step, and the record reads back
+ * against the same words. Built from the step's list rather than written beside it, so a
+ * reword of the other two promises there cannot leave this card behind — and keyed by the
+ * promise's **term**, not its position, so a fourth promise appended there is not mistaken
+ * for the one about stopping. The pin in `optInPresentation.test.ts` is what catches the term
+ * itself being reworded.
+ */
+const STOPPING = 'You can stop';
+
+export const OPT_IN_PROMISES_ON_PROFILE: readonly OptInPromise[] = OPT_IN_PROMISES.map((promise) =>
+  promise.term === STOPPING ? { ...promise, detail: 'any time, from here' } : promise,
+);
 
 /**
  * The correction. What saying no changes, and — the half that matters — what it does not.

@@ -52,21 +52,43 @@ from app.modules.player_profile.domain.play_intent import PlayIntent
 
 
 class SearchSurface(str, Enum):
-    """Which terminal stage ran. Four values, and pooling their rates is how
+    """Which terminal stage ran. Five values, and pooling their rates is how
     every number the engine is judged by becomes meaningless — ``FILL_SEATS`` is
-    not even optimising for the searcher.
+    not even optimising for the searcher, and ``RADAR`` ranks nobody at all.
 
-    ``SHORTLIST`` and ``DECK`` can be written today; the two line-up surfaces
-    arrive with their route. All four were declared before any of them could be
-    written, because ``surface`` is a stored column and a vocabulary that grows
-    one value per ticket is a vocabulary whose old rows cannot be read against
-    the new ones.
+    ``SHORTLIST`` and ``DECK`` could be written from the start; the two line-up
+    surfaces arrived with their route, and the **reading** with the radar
+    (``docs/adr/0174`` §1). The first four were declared before any of them
+    could be written, because ``surface`` is a stored column and a vocabulary
+    that grows one value per ticket is a vocabulary whose old rows cannot be
+    read against the new ones — and the fifth is the one surface that was
+    argued for after the column existed, which is what an ADR is for.
     """
 
     SHORTLIST = "SHORTLIST"
     LINEUP = "LINEUP"
     DECK = "DECK"
     FILL_SEATS = "FILL_SEATS"
+    #: A reading of the reach: everyone inside the viewer's radius who is rated
+    #: in the sport, five gates asked and no judgement applied.
+    RADAR = "RADAR"
+
+    @property
+    def scores_under_one_ruler(self) -> bool:
+        """Whether this surface has **no mode** — the deck and the radar.
+
+        Both score every pairing under the fun ruler for every viewer, declared
+        or not (``docs/adr/0169`` §2, ``docs/adr/0174`` §3), so neither takes a
+        mode from a request and neither records one; the intent term stands
+        down on every pairing, and the declaration is recorded only as it
+        stood. Asked here rather than spelled at each site, so that the record's
+        invariant and the context's stood-down terms read one answer. The
+        ``search`` table's check constraint has to spell the two by name, and
+        ``tests/unit/test_search_store.py`` holds the spelling to this
+        property, so a surface added to one and not the other goes red.
+        """
+
+        return self in (SearchSurface.DECK, SearchSurface.RADAR)
 
 
 class SearchInitiation(str, Enum):
@@ -237,13 +259,30 @@ LAST_FIVE = 5
 
 @final
 @dataclass(frozen=True, slots=True)
+class RatedSportRecord:
+    """One sport somebody is rated in, and the Level they hold there — **as it
+    stood when the reading ran** (``docs/adr/0174`` §2, the card's sport rows).
+
+    Recorded on a reading's row for the reason the card's own Level is: a Level
+    moves, so a read-back that went and asked would answer a *different*
+    reading. It is the Level and nothing else — no band, no range, no
+    certainty — because the row is the card's sport chips and not a second
+    rating sheet, and a client wanting more opens the record.
+    """
+
+    sport: Sport
+    level: float
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class RecordedCard:
     """The player card **as it was shown**, kept on the row that showed it.
 
     The card is assembled outside the engine (``docs/adr/0107``) from two
     sources — the index row and ``users`` — and neither of them remembers what it
     said an hour ago. A read-back that re-read them would answer a *different*
-    search: a nickname changed since, a Level that has moved, an area the player
+    search: a name changed since, a Level that has moved, an area the player
     has left. So the card is recorded here, and the round trip reproduces the
     answer that was given rather than the one that would be given now.
 
@@ -266,7 +305,8 @@ class RecordedCard:
     job is that a card cannot be stored half-assembled.
     """
 
-    nickname: str
+    #: The **name** as it was shown — never the nickname (``docs/adr/0171`` §4).
+    name: str
     #: ``None`` when they had no photo, and the client drew the generated court
     #: poster. **Not a measured zero** — there is no photo to point at.
     photo_id: UUID | None
@@ -281,6 +321,13 @@ class RecordedCard:
     review: PhotoReviewDecision | None
     area_code: str
     social_tags: tuple[str, ...]
+    #: The line they had written about themselves when this search ran, or
+    #: ``None`` where they had written none (``docs/adr/0170``) — **omitted on
+    #: the wire, never an empty string**. Recorded off the index row like the
+    #: tags, so a read-back quotes the line as it stood at the deal (§3): today
+    #: it cannot have changed since, and the day editing arrives this is the
+    #: record that keeps it from being re-read.
+    intro: str | None
     #: Their Level as RacketSkill published it *then*.
     level: float
     band: str
@@ -371,10 +418,12 @@ class SearchCandidateRecord:
     #: the ruleset this row is stamped with, and re-deriving it under a later one
     #: would answer a question about a search that never ran.
     concerns: tuple[str, ...]
-    #: Whole kilometres, as the wire carried it. ``None`` when the distance term
-    #: stood down — which is **omitted** on the wire and not a zero, and is what
-    #: lets a stood-down row sort last instead of first.
-    distance_km: int | None
+    #: One decimal, spot to spot, as the wire carried it (``docs/adr/0174`` §2).
+    #: ``None`` when the distance term stood down — which is **omitted** on the
+    #: wire and not a zero, and is what lets a stood-down row sort last instead
+    #: of first. Recorded because a read-back cannot re-derive it: the drawn
+    #: spot is fixed per player but the cell under it moves.
+    distance_km: float | None
     #: The card as it was shown. Present on a ``RETURNED`` row and absent on a
     #: near miss, which was never shown to anybody — a biconditional, so *a
     #: returned row with nobody on it* is unrepresentable rather than merely
@@ -395,9 +444,28 @@ class SearchCandidateRecord:
     #: re-shown profiles* — the only falsifier ``PASS_SUPPRESS`` has
     #: (``docs/adr/0128``).
     suppression_lapsed: bool | None = None
+    #: The bearing from the viewer's drawn spot to this player's — north ``0``,
+    #: clockwise, a whole degree on ``[0, 359]`` (``docs/adr/0174`` §2). **On a
+    #: reading's returned rows and nowhere else**, which the record asserts as a
+    #: biconditional: it is the one position field the deck does not need, and
+    #: it sits beside ``distance_km`` on the row and never inside the card, for
+    #: ADR-0107's rule read the way it removed the distance — its value depends
+    #: on who is looking. Recorded because a read-back never recomputes: the
+    #: spot is fixed per player, and the cell under it moves.
+    bearing_deg: int | None = None
+    #: Every sport this player was rated in when the reading ran, with the
+    #: Level held in each — the card's sport chips. **On a reading's returned
+    #: rows and nowhere else**, on the same biconditional; an empty tuple is a
+    #: player rated in nothing this reading could still draw, which the
+    #: ``NOT_RATED`` gate makes unreachable and the type does not forbid.
+    ratings: tuple[RatedSportRecord, ...] | None = None
 
     def __post_init__(self) -> None:
         invariant(self.position >= 1, f"a position below one: {self.position}")
+        invariant(
+            self.bearing_deg is None or 0 <= self.bearing_deg <= 359,
+            f"a bearing of {self.bearing_deg}°: a whole degree on the compass",
+        )
         invariant(
             (self.withheld_reason is None) == (self.band is CandidateBand.RETURNED),
             f"a {self.band.value} row with withheld reason {self.withheld_reason}",
@@ -477,6 +545,14 @@ class LineupRecord:
     *whether the winning combination ever contains a candidate ranked past ``K``*
     and cannot fire, because the pool is truncated at ``K`` by construction; this
     one measures how deep into the ranking the engine actually reached.
+
+    ``seated`` is **who sat down**, and it is here because the returned band no
+    longer says (#407): that band is the pool the four were drawn from, and a
+    complete four's seated are the winner's members — but a partial line-up and
+    a singles court record no winner, and a search-time fact the record used to
+    hold is not one it may lose. ``None`` is *not recorded* — a search written
+    while the returned band was the seated in seat order, which searches being
+    kept for ever makes a standing state rather than a migration's leftover.
     """
 
     combinations: int
@@ -487,6 +563,11 @@ class LineupRecord:
     #: The winner, then the runner-up. Empty when no combination was scored, and
     #: one row long when there was nothing to beat.
     rows: tuple[RecordedCombination, ...]
+    #: Who took a seat, in the order they were seated — nought to three, and an
+    #: empty tuple is *nobody tonight*. ``None`` is *not recorded*, never
+    #: *nobody* — and it has no default, so *not recorded* is a state a writer
+    #: has to spell rather than the one it gets by forgetting.
+    seated: tuple[UUID, ...] | None
 
     def __post_init__(self) -> None:
         for name, count in (
@@ -505,6 +586,14 @@ class LineupRecord:
             == [CombinationBand.WINNER, CombinationBand.RUNNER_UP][: len(self.rows)],
             "layer 4's rows are the winner then the runner-up, in that order",
         )
+        # The two facts about the seated are one fact in two columns: a rank
+        # among nobody, or nobody with a rank, is a row where they have drifted.
+        if self.seated is not None:
+            invariant(
+                (self.max_fit_rank_seated is None) == (not self.seated),
+                f"layer 4 seats {len(self.seated)} and reads a deepest rank of "
+                f"{self.max_fit_rank_seated}",
+            )
 
 
 @final
@@ -522,11 +611,13 @@ class SearchRecord:
     searcher_id: UUID
     sport: Sport
     #: ``NULL`` exactly when the surface is the deck, which has no mode and
-    #: scores against a declared Play intent instead.
+    #: scores under one ruler for everybody (``docs/adr/0169`` §2).
     mode: SearchMode | None
-    #: The mirror of ``mode``'s constraint: non-null exactly on the deck. It
-    #: records the **declaration as it stood**, never the vector it mapped to, so
-    #: a later change to the mapping does not rewrite history.
+    #: Set only on the deck, where it records the **declaration as it stood** —
+    #: never a vector, and ``None`` for a viewer who never declared, because the
+    #: deck reads no declaration and refuses nobody for lacking one. It is
+    #: history and nothing the deal does with it; on every other surface the
+    #: mode is the request's and the column is null.
     intent_read: PlayIntent | None
     surface: SearchSurface
     initiation: SearchInitiation
@@ -604,12 +695,16 @@ class SearchRecord:
 
     def __post_init__(self) -> None:
         on_the_deck = self.surface is SearchSurface.DECK
+        # **No mode exactly on the two surfaces that score under one ruler** —
+        # the deck and the radar — and a declaration recorded as it stood on
+        # those two alone.
+        modeless = self.surface.scores_under_one_ruler
         invariant(
-            (self.mode is None) == on_the_deck,
+            (self.mode is None) == modeless,
             f"a {self.surface.value} search with mode {self.mode}",
         )
         invariant(
-            (self.intent_read is not None) == on_the_deck,
+            self.intent_read is None or modeless,
             f"a {self.surface.value} search with intent_read {self.intent_read}",
         )
         invariant(
@@ -634,6 +729,24 @@ class SearchRecord:
                 == (on_the_deck and row.band is CandidateBand.RETURNED),
                 f"a {self.surface.value} {row.band.value} row with "
                 f"suppression_lapsed {row.suppression_lapsed}",
+            )
+            # **A bearing and the sport chips are facts about a drawn spot**,
+            # so both are set exactly where a spot was drawn: on a reading, in
+            # the returned band. A deck card has no compass and a near miss is
+            # drawn nowhere, and either would otherwise carry a value that
+            # reads as *measured* rather than as *not asked*.
+            on_the_radar = self.surface is SearchSurface.RADAR
+            invariant(
+                (row.bearing_deg is not None)
+                == (on_the_radar and row.band is CandidateBand.RETURNED),
+                f"a {self.surface.value} {row.band.value} row with "
+                f"bearing_deg {row.bearing_deg}",
+            )
+            invariant(
+                (row.ratings is not None)
+                == (on_the_radar and row.band is CandidateBand.RETURNED),
+                f"a {self.surface.value} {row.band.value} row with "
+                f"ratings {row.ratings}",
             )
         invariant(
             len(self.returned) == self.counts.n_returned,

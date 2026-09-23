@@ -77,8 +77,8 @@
  *
  * They are rules and not drawings, which is the whole of why they are here: a side somebody
  * could be wrong about (squash puts both players on the same half of the picture), a seat
- * somebody could wrongly empty, and a tap whose meaning depends on a toggle. What each of them
- * *says* is `components/courtPresentation.ts`', and what any of it *looks like* is
+ * somebody could wrongly empty, and a tap whose meaning depends on what is already held. What each
+ * of them *says* is `components/courtPresentation.ts`', and what any of it *looks like* is
  * `components/court/`'s — §7's line, drawn once.
  */
 
@@ -90,7 +90,7 @@ import type { SearchMode } from './vocabulary';
 import { sameWeek, type WorkingWeek } from './workingWeek';
 
 /**
- * What a search was run for — the three facts a line-up's validity is judged against.
+ * What a search was run for — the facts a line-up's validity is judged against.
  *
  * The week is in here because `POST /lineups` carries it as `availability_override`: a
  * shortlist composed against Tuesday evenings is not a shortlist against Saturday mornings,
@@ -99,7 +99,49 @@ import { sameWeek, type WorkingWeek } from './workingWeek';
 export interface PlayOrigin {
   readonly sport: Sport;
   readonly mode: SearchMode;
-  readonly week: WorkingWeek;
+  /**
+   * The week the search ran on — **absent where none was composed**, which is the legal value
+   * meaning *against the grid the profile holds*.
+   *
+   * Every search started on *Find a game* has one, because that screen is where a week is
+   * improvised. A fill that completes a challenge has none: there was no *Find a game* to
+   * improvise on, so the ask omits `availability_override` and the answer is the profile's own
+   * grid ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) §7).
+   * It is **absent rather than empty** because an empty week is a real, different value — *I
+   * unticked every cell* — and #247 is what stopped the wire conflating the two.
+   */
+  readonly week?: WorkingWeek;
+  /**
+   * The half-built court this search exists to **finish** — absent on every search composed on
+   * *Find a game*.
+   *
+   * It is part of the origin rather than a flag on a screen because it is *what the search was
+   * run for*, in exactly the sense the other fields are: ADR-0150 §2 reads the sport, the mode
+   * and the locked seats off the challenge and **refuses all three beside it**, so the challenge
+   * is not one more thing sent alongside an ask — it *is* the ask. Everything downstream reads
+   * it off the record and nothing is passed a second time (`the-loop-components.md` §4.2: *no
+   * `from` parameter*).
+   */
+  readonly completing?: CompletingChallenge;
+}
+
+/**
+ * A challenge being completed, and **who on it has already said yes.**
+ *
+ * The two travel together because the second is only ever read about the first. `accepted` is
+ * derived once, from the detail the challenge screen is already holding at the moment ⚡ is
+ * pressed — a set the fill's own answer cannot state, because the people who accepted *"come
+ * back as ordinary candidate rows"* and an ordinary row says nothing about a challenge.
+ *
+ * It is what makes `BuildSeat.accepted` true for the first time: an accepted seat is not a
+ * control — no clear badge, no press, no pool — and swapping is the only thing that works on
+ * it, which **draws** *an acceptance is to the game, not to the side* rather than writing it
+ * (ADR-0150 §8).
+ */
+export interface CompletingChallenge {
+  readonly challengeId: string;
+  /** Player ids that answered `ACCEPTED`. Never the whole court: an empty seat has said nothing. */
+  readonly accepted: readonly SeatedPlayerId[];
 }
 
 /**
@@ -180,9 +222,20 @@ export interface Lineup {
  */
 export const isDoubles = (seats: number) => seats > 2;
 
-/** Whether two searches were run for the same thing. The week compares as a set. */
+/**
+ * Whether two searches were run for the same thing. The week compares as a **set**.
+ *
+ * **A composed week is never the same origin as an uncomposed one**, and that is the reading
+ * the optional field could otherwise get wrong: *absent* is *the profile's grid, whatever it
+ * says today*, and `[]` is *every cell unticked* — two answers that a `?? []` would collapse
+ * into one, silently, in the function the whole orphan model rests on.
+ */
 export function sameOrigin(one: PlayOrigin, other: PlayOrigin): boolean {
-  return one.sport === other.sport && one.mode === other.mode && sameWeek(one.week, other.week);
+  if (one.sport !== other.sport || one.mode !== other.mode) return false;
+  // Two fills of two different courts are two origins, whatever else they agree about.
+  if (one.completing?.challengeId !== other.completing?.challengeId) return false;
+  if (one.week === undefined || other.week === undefined) return one.week === other.week;
+  return sameWeek(one.week, other.week);
 }
 
 /**
@@ -339,6 +392,42 @@ export function withheldSeats(
   return lineup.seats.filter((seated) => !live.has(seated));
 }
 
+/**
+ * Who stays on the court when the line-up **moves onto another search's list** — the people
+ * that list returned, in the order they were seated, and nobody else.
+ *
+ * ## Why a line-up ever moves
+ *
+ * ⚡ mints a search of its own and the line-up rebinds to it, because `POST /forecasts` refuses
+ * anybody the cited search never showed. But that record **returns exactly the people it
+ * seated** — a court is its answer, not a list — so a pool opened on it would offer the one
+ * person just taken off and nobody else. The list a player picks from is the ranked one the
+ * court was searched under, and a pick off it has to bind the line-up to *that* search, or the
+ * next forecast is refused.
+ *
+ * ## Why the difference, and not everybody
+ *
+ * The same bound, read from the other end: the new origin can vouch only for the rows it
+ * returned. A seat it never showed cannot travel — the forecast and the send would both refuse
+ * the four — so it leaves the court, and the pool **says so before the tap** rather than
+ * letting the court empty itself afterwards. That is `the-play-screens.md` §5.1's own sentence
+ * about re-running: the other seats are only *probably* in the new answer, and a line-up that
+ * moves is honestly a new line-up.
+ *
+ * Membership only. Where the arrangement is read from is the origin's business, and a seat that
+ * stays keeps its place in seat order.
+ *
+ * @param seats the line-up's seats, less anybody the pick is replacing.
+ * @param returnedIds the `player_id`s the list being picked from returned.
+ */
+export function carriedOnto(
+  seats: readonly SeatedPlayerId[],
+  returnedIds: readonly SeatedPlayerId[],
+): readonly SeatedPlayerId[] {
+  const returned = new Set(returnedIds);
+  return seats.filter((seated) => returned.has(seated));
+}
+
 // ---------------------------------------------------------------------------
 // The court: H-25's sides, the locked seats, and the swap truth table
 // ---------------------------------------------------------------------------
@@ -444,33 +533,21 @@ export function courtHalfOf(place: SeatPlace): CourtHalf {
 }
 
 /**
- * Why a seat is locked. A code, so the sentence is `components/`' and stays one spelling.
- *
- * It is *why*, and not *whether*, because the two are the same fact: a seat is locked for
- * exactly one of two reasons, and the reason is what the refusal has to say out loud. A
- * boolean beside a separate refusal vocabulary would be that fact written twice — and it is
- * how one of them ends up admitting a seat the other refuses.
- */
-export type SeatGuard = 'SEAT_IS_YOURS' | 'ALREADY_ACCEPTED';
-
-/**
- * **The lock**, and the one place either half of it is written.
+ * **The lock** — a seat nobody may vacate: **yours, and anybody who has already accepted.**
  *
  * Two reasons and one rule rather than a special case beside a rule. Your own seat is not
  * something the builder is composing — it is the thing everything else is composed around —
  * and an acceptance is a promise the product has already made on somebody else's behalf.
  *
- * `undefined` is *not locked*, which is what every caller below reads.
+ * **It answers *whether*, and no longer *why*.** It returned a `SeatGuard` code — one per
+ * reason — for exactly as long as a tap on a locked seat was refused out loud, and the
+ * refusal had to name which reason it was. Removing the swap toggle removed both refusals
+ * with it: a tap trades now, and trading across the net is the one thing a locked seat was
+ * always allowed to do. What is left is a single question with a single reader, and a code
+ * nothing prints is a vocabulary with no listener.
  */
-export function seatLock(seat: BuildSeat): SeatGuard | undefined {
-  if (seat.kind === 'you') return 'SEAT_IS_YOURS';
-  if (seat.kind === 'player' && seat.accepted) return 'ALREADY_ACCEPTED';
-  return undefined;
-}
-
-/** A seat nobody may vacate: **yours, and anybody who has already accepted.** */
 export function seatIsLocked(seat: BuildSeat): boolean {
-  return seatLock(seat) !== undefined;
+  return seat.kind === 'you' || (seat.kind === 'player' && seat.accepted);
 }
 
 /**
@@ -492,56 +569,53 @@ export function seatIsClearable(seat: BuildSeat): boolean {
  * here touches a line-up, which is what lets the whole truth table be read in one place.
  */
 export type SeatTap =
-  /** Fill this seat, or replace who is in it. One act: the pool is opened against a seat. */
+  /** Fill this seat. One act: the pool is opened against a seat with nobody in it. */
   | { readonly kind: 'OPEN_POOL'; readonly seat: number }
   | { readonly kind: 'SELECT'; readonly seat: number }
   | { readonly kind: 'DESELECT' }
-  | { readonly kind: 'SWAP'; readonly from: number; readonly to: number }
-  | { readonly kind: 'REFUSE'; readonly guard: SeatGuard; readonly seat: number };
-
-/** The court's interaction state, which is the swap toggle and the seat waiting for a partner. */
-export interface SwapState {
-  readonly swapping: boolean;
-  /** The seat selected for a trade. Only ever set while `swapping`. */
-  readonly selected: number | undefined;
-}
+  | { readonly kind: 'SWAP'; readonly from: number; readonly to: number };
 
 /**
  * **The swap truth table**, and the whole of what a seat does when it is pressed.
  *
  * ```
- * empty                     open the pool against this seat   (either mode)
- * swap off · yours          refuse: turn the toggle on to change sides
- * swap off · accepted       refuse: they keep their place
- * swap off · anybody else   open the pool against this seat
- * swap on  · nothing held   select
- * swap on  · this seat      deselect
- * swap on  · another seat   trade the two
+ * empty            open the pool against this seat
+ * nothing held     select
+ * this seat        deselect
+ * another seat     trade the two
  * ```
  *
- * **An empty seat is tested first, in both modes.** There is nothing in it to trade, and a
- * player in swap mode tapping a hole means the obvious thing.
+ * ## Swapping is not a mode, and losing the mode is what made it four rows
  *
- * **The two guards belong to the replacement and not to the trade.** Swapping is *change
- * sides, never seats*: your own seat and an accepted one are both freely movable across the
- * net, and it is only being replaced that they refuse. That is why the toast names the toggle
- * — the thing it refuses is available one switch away. The refusal reads `seatLock` rather
- * than re-testing what it holds, so a third locked seat gains its refusal for free.
+ * The table had seven rows and a toggle over them, because a tap on an occupied seat meant
+ * two different things and a switch beside the court was what told them apart: *replace this
+ * player* with the toggle off, *trade these two* with it on. The toggle is gone
+ * (`BuilderScreen`), and with it the only reason a seat's tap had a mode at all — **a seat
+ * trades, always**, and the court says so in one sentence above it.
+ *
+ * **An empty seat is still tested first, and it is the only row that is not a trade.** There
+ * is nothing in it to swap, and tapping a hole means the obvious thing.
+ *
+ * **Replacing somebody is now the clear badge and then the hole it leaves.** That is a real
+ * cost — two taps where there was one — and it is the trade the toggle's removal makes: the
+ * × is drawn on exactly the seats a replacement was ever allowed against
+ * (`seatIsClearable`), so nothing that could be replaced has stopped being replaceable, and
+ * *Pick players myself* still opens the pool on the first empty seat.
+ *
+ * **Both refusals went with the mode.** They belonged to the replacement and never to the
+ * trade — *change sides, never seats* — so your own seat and an accepted one were always
+ * freely movable across the net, and it was only being replaced that they refused. With no
+ * replacement on a tap there is nothing left to refuse, which is why `seatIsLocked` no longer
+ * says which reason it is and `courtPresentation` no longer writes either sentence.
  *
  * The seat is passed rather than looked up, so this is total: a court draws its own seats, and
  * an index it could not produce is not a state to write a branch for.
+ *
+ * @param selected the seat already held for a trade, or `undefined` when none is.
  */
-export function tapSeat(state: SwapState, index: number, seat: BuildSeat): SeatTap {
+export function tapSeat(selected: number | undefined, index: number, seat: BuildSeat): SeatTap {
   if (seat.kind === 'empty') return { kind: 'OPEN_POOL', seat: index };
-
-  if (!state.swapping) {
-    const guard = seatLock(seat);
-    return guard === undefined
-      ? { kind: 'OPEN_POOL', seat: index }
-      : { kind: 'REFUSE', guard, seat: index };
-  }
-
-  if (state.selected === undefined) return { kind: 'SELECT', seat: index };
-  if (state.selected === index) return { kind: 'DESELECT' };
-  return { kind: 'SWAP', from: state.selected, to: index };
+  if (selected === undefined) return { kind: 'SELECT', seat: index };
+  if (selected === index) return { kind: 'DESELECT' };
+  return { kind: 'SWAP', from: selected, to: index };
 }

@@ -33,6 +33,7 @@ import { useStartAssessment } from '../hooks/useStartAssessment';
 import { OnboardingChrome } from './OnboardingChrome';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { sportColour, sportLabel } from './sportPresentation';
+import { STARTING_LABEL } from './startPresentation';
 
 export function SportsPickerScreen() {
   const router = useRouter();
@@ -53,10 +54,11 @@ export function SportsPickerScreen() {
 
   const begin = () => {
     if (first === undefined) return;
-    // The pass begins here, with the queue that was chosen. It no longer *clears* an
-    // earlier walk — the entry gate ended that one when the player reached the app — so
-    // this is a beginning rather than a reset that happened to double as one.
-    beginPass(queue);
+    // The pass begins here, with the queue that was chosen, at onboarding's own door. It no
+    // longer *clears* an earlier walk — the entry gate ended that one when the player
+    // reached the app — so this is a beginning rather than a reset that happened to double
+    // as one.
+    beginPass(queue, 'welcome');
     start.mutate(first, {
       onSuccess: (step) =>
         router.replace({
@@ -116,7 +118,7 @@ export function SportsPickerScreen() {
           size="lg"
           disabled={first === undefined}
           busy={start.isPending}
-          busyLabel="Starting…"
+          busyLabel={STARTING_LABEL}
           onPress={begin}
         />
       </View>

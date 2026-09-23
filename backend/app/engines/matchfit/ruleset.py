@@ -275,10 +275,19 @@ class BalanceRules:
 class ReliabilityRules:
     """The three bars a reliability reading has to clear.
 
-    ``min_observations`` is per **strand**: below it that strand alone stands
-    down and the survivors renormalise inside the term. ``horizon_days`` binds
-    the whole term — if the most recent observation across every strand is older,
-    reliability stands down entirely.
+    ``min_observations`` is a bar **per strand**, and the mapping is exhaustive:
+    below its own bar that strand alone stands down and the survivors renormalise
+    inside the term. **It was one number for every strand and is now one per
+    strand** (``docs/adr/0160``), because *answers about results* needs a higher
+    bar than the rest and raising the single number instead would take a newcomer
+    who has played three games and turned up to all three from a full score to no
+    score at all — a change to how the whole product treats newcomers, arrived at
+    as a side effect of tuning one strand. A missing key is refused rather than
+    defaulted: a strand nobody set a bar for would enter every reading on its
+    first observation, which is the failure the bar exists to prevent.
+
+    ``horizon_days`` binds the whole term — if the most recent observation across
+    every strand is older, reliability stands down entirely.
 
     ``published_score_bar`` is read against the **published Player Score**, the
     number on the player's own profile, and not the matcher's per-mode blend of
@@ -289,7 +298,7 @@ class ReliabilityRules:
     visible score back up must be able to see the penalty lift.
     """
 
-    min_observations: int
+    min_observations: Mapping[ReliabilityStrand, int]
     horizon_days: int
     published_score_bar: int
 
@@ -579,7 +588,8 @@ class TelemetryRules:
 
 @dataclass(frozen=True)
 class InterestRules:
-    """The three numbers behind *Let's play*, a pass, and how many yeses stand.
+    """The four numbers behind *Let's play*, a pass, how many yeses stand, and
+    how long a shared court keeps somebody out of the deck.
 
     ``ttl_days`` matters because **an interest lift is the only guaranteed
     inclusion left**: a human's own *Let's play* may admit a candidate below the
@@ -596,11 +606,22 @@ class InterestRules:
     ``outstanding_cap_per_sport`` decides whether a player may **act**. It hides
     nobody and its bite is visible the instant it lands, which is why it is an
     ordinary ruleset row rather than one of the product numbers beside it.
+
+    ``deck_cool_off_days`` hides somebody the viewer is already **with** — a
+    live challenge or game between them, and this many days after the court is
+    behind them (``docs/adr/0169`` §6). A deck is for meeting people, and a
+    rematch is arranged in the chat the two already have. Deck only: Find a
+    game keeps ``docs/adr/0142`` §1's release. A row of its own rather than a
+    reading of ``pass_suppress_days``, deliberately equal to it today and free
+    to part from it; **nought is a legal value** and is what a released ruleset
+    that never knew the row says — no window after a court, while a court still
+    ahead is held out whatever the number.
     """
 
     ttl_days: int
     outstanding_cap_per_sport: int
     pass_suppress_days: int
+    deck_cool_off_days: int
 
 
 @dataclass(frozen=True)
@@ -1041,10 +1062,19 @@ def _validate_balance(balance: BalanceRules) -> None:
 
 
 def _validate_reliability(reliability: ReliabilityRules) -> None:
+    # Exhaustive over the vocabulary, checked here rather than trusted, because a
+    # strand whose bar was never set would enter a reading on one observation and
+    # nothing else in the pipeline would notice.
     invariant(
-        reliability.min_observations >= 1,
-        f"reliability minimum observations: {reliability.min_observations}",
+        set(reliability.min_observations) == set(ReliabilityStrand),
+        "reliability minimum observations must name every strand: "
+        f"{sorted(strand.value for strand in reliability.min_observations)}",
     )
+    for strand, minimum in reliability.min_observations.items():
+        invariant(
+            minimum >= 1,
+            f"reliability minimum observations for {strand.value}: {minimum}",
+        )
     invariant(
         reliability.horizon_days >= 1,
         f"reliability horizon days: {reliability.horizon_days}",
@@ -1272,4 +1302,8 @@ def _validate_interest(interest: InterestRules) -> None:
     invariant(
         interest.outstanding_cap_per_sport >= 1,
         f"outstanding interest cap: {interest.outstanding_cap_per_sport}",
+    )
+    invariant(
+        interest.deck_cool_off_days >= 0,
+        f"deck cool-off days: {interest.deck_cool_off_days}",
     )

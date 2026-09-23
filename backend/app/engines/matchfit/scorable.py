@@ -101,6 +101,8 @@ class GridCell:
 @dataclass(frozen=True, slots=True)
 class RatioObservation:
     """One of the five ratio strands: the published figure, and how much of it.
+    (Five of the six names — sportsmanship is a mean and crosses as the other
+    shape below.)
 
     ``published_value`` is **the number the player is shown on their own Player
     Score screen** and is never re-derived from a count — a card explaining a
@@ -331,7 +333,9 @@ class ScorableCandidate:
     radius_km: float
     #: The candidate's coarse area, as a machine code.
     area_code: str
-    #: Whole kilometres are what the wire carries; the term reads the measurement.
+    #: Cell to cell — the term reads this measurement and prints it whole in its
+    #: evidence. The one-decimal ``distance_km`` on the wire is the module's own,
+    #: measured between two drawn spots, and never reaches this type.
     distance_km: float
     #: What RacketSkill says about the two Levels together — combined outside,
     #: see the module docstring. The engine prints the two σs and weighs this.

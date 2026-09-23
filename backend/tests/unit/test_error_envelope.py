@@ -133,21 +133,22 @@ def test_the_two_conflicting_assessment_errors_are_distinguishable():
 
 
 def test_the_profile_commits_refusals_are_distinguishable():
-    """The five 400s the commit can answer with arrive on the same status from
-    the same endpoint and ask the client for five different things: re-read the
-    options, pick fewer tags, deduplicate the picker, move the slider, or ask
-    the consent question that was skipped."""
+    """The six 400s the commit can answer with arrive on the same status from
+    the same endpoint and ask the client for six different things: re-read the
+    options, pick fewer tags, deduplicate the picker, move the slider, ask the
+    consent question that was skipped, or rewrite the line."""
 
     refusals = [
-        profile_errors.UnknownSocialTag,
-        profile_errors.SocialTagSelectionOutOfBounds,
-        profile_errors.DuplicateSocialTag,
-        profile_errors.SearchRadiusOutOfBounds,
-        profile_errors.ProposalsOptInNotAnswered,
+        profile_errors.UnknownSocialTag(),
+        profile_errors.SocialTagSelectionOutOfBounds(),
+        profile_errors.DuplicateSocialTag(),
+        profile_errors.SearchRadiusOutOfBounds(),
+        profile_errors.ProposalsOptInNotAnswered(),
+        profile_errors.IntroNotAdmitted(profile_errors.IntroRefusal.TOO_LONG),
     ]
 
     assert len({error.code for error in refusals}) == len(refusals)
-    assert {error().status_code for error in refusals} == {400}
+    assert {error.status_code for error in refusals} == {400}
 
 
 def test_a_code_is_not_derived_from_the_message():

@@ -379,5 +379,73 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
   );
 }
 
+/**
+ * What one **authenticated stream** attempt goes out with — a URL, the headers, and which
+ * rotation the credential in them came from.
+ *
+ * `undefined` where there is no session: there is nothing to authorise an attempt with, and a
+ * stream opened without a credential is a `401` this module would then have to explain.
+ */
+export interface StreamAttempt {
+  readonly url: string;
+  readonly headers: Readonly<Record<string, string>>;
+  /** Handed back to {@link rotateStreamCredential} when the attempt is refused. */
+  readonly generation: number;
+}
+
+/**
+ * **Authorise one attempt at an open stream.**
+ *
+ * The app has one long-lived read that is not a `fetch` — the conversation's live channel, which
+ * is Server-Sent Events over `XMLHttpRequest` behind `shared/lib/platform`'s `LiveStreamPort`
+ * ([ADR-0147](../../../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
+ * §4). It cannot go through {@link httpRequest}: there is no response to decode, no timeout to
+ * apply, and the whole point of it is that it does not end.
+ *
+ * **What it may not have is a second `Authorization` header.** That is the one thing this module
+ * exists to own, so the header is minted here and the port is handed it whole — it forwards the
+ * bag to the transport and reads nothing out of it. Two integers and a string cross the seam; no
+ * token is passed as a value anybody above could name.
+ *
+ * **A fresh bag per attempt, and that is the load-bearing half.** The stream is closed by the
+ * server at the access token's `exp`, roughly every fifteen minutes (ADR-0147 §6), so a channel
+ * that captured its headers once and reconnected with them would reconnect with the credential
+ * that had just expired — for ever. Each attempt asks again.
+ */
+export function streamAttempt(path: string): StreamAttempt | undefined {
+  const credential = credentials.current();
+  if (credential === undefined) return undefined;
+
+  return {
+    url: buildUrl(path),
+    headers: {
+      Authorization: `Bearer ${credential.accessToken}`,
+      'X-Request-ID': newCorrelationId(),
+    },
+    generation: credential.generation,
+  };
+}
+
+/**
+ * Rotate after a stream attempt was refused as unauthenticated, and say whether another attempt
+ * is worth making.
+ *
+ * `credentials.refresh` and nothing else, so a stream reconnecting through an expired token takes
+ * the **same single-flight rotation** every request takes — a second one would be the second
+ * networking path in the one shape that is hardest to notice, because it only runs a quarter of
+ * an hour after anybody looked.
+ *
+ * **It never calls `abandon`, and that is deliberate.** A rejected replay is what tears a session
+ * down in {@link sendWithRotation}, and there the request that discovered it is one the player is
+ * waiting on. A stream is not: it is a latency optimisation over an authoritative read path that
+ * is running on the same screen and will reach the same conclusion through the path that is
+ * allowed to act on it. So the honest answer here is `false` — *stop attempting* — and the
+ * session's fate belongs to the requests the player can see.
+ */
+export async function rotateStreamCredential(seen: number): Promise<boolean> {
+  const outcome = await credentials.refresh(seen);
+  return outcome === 'retry' && credentials.current() !== undefined;
+}
+
 /** Re-exported so a caller can narrow without reaching past this module. */
 export { AppError };

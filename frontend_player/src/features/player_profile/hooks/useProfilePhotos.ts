@@ -1,11 +1,21 @@
 /**
- * The photos step's one piece of orchestration: pick, upload, and keep the workbench honest.
+ * The photo workbench's one piece of orchestration: pick, upload, and keep the workbench
+ * honest — for the step and for the You tab alike.
  *
  * **Nothing here decides anything.** The ceiling, the order, what promotion means and which
  * ids the draft ends up with are `photoCollection`'s, with their own tests and no renderer;
  * sending one photo is `uploadProfilePhoto`'s. What is left is the sequencing a screen
  * cannot express and a pure function must not: asking the OS, opening the picker, and
  * running the uploads.
+ *
+ * ## The workbench is handed in, because it has two homes
+ *
+ * The step's workbench lives beside the draft in the part's store, and what it yields is the
+ * draft's `photoIds` (`useDraftPhotoBench`). The You tab's lives beside the profile read,
+ * seeded from it, and what it yields is a `PUT` on every change (`useOwnPhotos`,
+ * ADR-0179 §2). This hook is the same on both: it reads the bench, changes it through the one
+ * function the bench offers, and never holds a photo of its own — so the queue below, which
+ * outlives any screen, always reads the bench as it is now and never a render's copy of it.
  *
  * ## One photo at a time, in one queue
  *
@@ -17,7 +27,7 @@
  * ## An upload outlives the screen
  *
  * No `AbortSignal` is passed. The draft is the part's, not the step's — a player who
- * presses continue while a photo is still going should arrive at step three and find it
+ * presses continue while a photo is still going should arrive at step four and find it
  * arrived, rather than have it cancelled by unmounting the row it was drawn in. Nothing
  * leaks: the chain ends when the last upload does, and every result is written through the
  * store, which is cleared with the part.
@@ -65,6 +75,36 @@ import { useProfileDraft } from '../store/profileDraft.store';
 import { uploadProfilePhoto } from '../use-cases/uploadProfilePhoto';
 
 /**
+ * Where the photos are held, as this hook needs to reach them.
+ *
+ * `photos` is what a render draws; `current` is the same list **as it is right now**, for the
+ * queue and the picker, which run between renders and would otherwise act on a row that has
+ * since changed — an upload skipped as *removed while it waited* because the render that
+ * added it had not happened yet. `changePhotos` takes a function of the current list for the
+ * store's reason: three uploads finish whenever they finish.
+ */
+export interface PhotoBench {
+  readonly photos: readonly ProfilePhoto[];
+  readonly current: () => readonly ProfilePhoto[];
+  readonly changePhotos: (
+    change: (photos: readonly ProfilePhoto[]) => readonly ProfilePhoto[],
+  ) => void;
+}
+
+/** The store's own list, read outside a render — stable, so nothing below re-creates on it. */
+const currentDraftPhotos = () => useProfileDraft.getState().photos;
+
+/**
+ * The step's bench: the workbench beside the draft, whose every change writes the ids it
+ * yields into `draft.photoIds` (`profileDraft.store`).
+ */
+export function useDraftPhotoBench(): PhotoBench {
+  const photos = useProfileDraft((state) => state.photos);
+  const changePhotos = useProfileDraft((state) => state.changePhotos);
+  return { photos, current: currentDraftPhotos, changePhotos };
+}
+
+/**
  * What the step may say about the photo library, which is less than the OS distinguishes.
  *
  * `undetermined` and `denied` are one case here — *ask again by pressing the control* —
@@ -94,10 +134,8 @@ function asAppError(cause: unknown): AppError {
   return isAppError(cause) ? cause : unknownFailure('The photo could not be uploaded.', cause);
 }
 
-export function useProfilePhotos() {
+export function useProfilePhotos({ photos, current, changePhotos }: PhotoBench) {
   const picking = useImagePicking();
-  const photos = useProfileDraft((state) => state.photos);
-  const changePhotos = useProfileDraft((state) => state.changePhotos);
   const [standing, setStanding] = useState<PhotoStepStanding>(READY);
 
   /**
@@ -112,31 +150,27 @@ export function useProfilePhotos() {
     (photo: ProfilePhoto) => {
       // Removed while it waited its turn. Uploading it would put bytes in the store that
       // nothing will ever name, and write a result onto a tile that is gone.
-      const held = useProfileDraft.getState().photos;
+      const held = current();
       if (!held.some((candidate) => candidate.uri === photo.uri)) return Promise.resolve();
 
       return uploadProfilePhoto({
         uri: photo.uri,
         mimeType: photo.mimeType,
         onProgress: (progress) =>
-          changePhotos((current) =>
-            recordUpload(current, photo.uri, { kind: 'uploading', progress }),
-          ),
+          changePhotos((held) => recordUpload(held, photo.uri, { kind: 'uploading', progress })),
       }).then(
         // The verdict is written down with the id and nothing here reads it. Whether a
         // flagged photo is worth a sentence — and which one — is the step's, and the
         // queue that runs the uploads has no business holding an opinion about it.
-        ({ photoId, review }) =>
-          changePhotos((current) =>
-            recordUpload(current, photo.uri, { kind: 'uploaded', photoId, review }),
-          ),
+        (arrived) =>
+          changePhotos((held) => recordUpload(held, photo.uri, { kind: 'uploaded', ...arrived })),
         (cause: unknown) =>
-          changePhotos((current) =>
-            recordUpload(current, photo.uri, { kind: 'failed', error: asAppError(cause) }),
+          changePhotos((held) =>
+            recordUpload(held, photo.uri, { kind: 'failed', error: asAppError(cause) }),
           ),
       );
     },
-    [changePhotos],
+    [changePhotos, current],
   );
 
   const enqueue = useCallback(
@@ -170,7 +204,7 @@ export function useProfilePhotos() {
   const add = useCallback(async () => {
     setStanding(READY);
 
-    const room = slotsLeft(useProfileDraft.getState().photos);
+    const room = slotsLeft(current());
     // Not reachable through the row — at three there is no add control at all — but the
     // ceiling is a rule rather than a layout, and a rule that only holds where the layout
     // agrees with it is one waiting for a second caller.
@@ -186,7 +220,7 @@ export function useProfilePhotos() {
       return;
     }
 
-    const held = useProfileDraft.getState().photos;
+    const held = current();
     const addition = addPhotos(
       held,
       picked.map((image) => ({ uri: image.uri, mimeType: image.mimeType })),
@@ -195,7 +229,7 @@ export function useProfilePhotos() {
     setStanding({ refusedAtTheCeiling: addition.refused > 0, access: 'granted' });
     changePhotos(() => addition.photos);
     enqueue(addition.photos.slice(held.length));
-  }, [changePhotos, enqueue, pickOne]);
+  }, [changePhotos, current, enqueue, pickOne]);
 
   /**
    * Swap one photo for another the player picks and crops now, **keeping its place**.
@@ -222,7 +256,7 @@ export function useProfilePhotos() {
         return;
       }
 
-      const held = useProfileDraft.getState().photos;
+      const held = current();
       const replaced = replacePhoto(held, uri, {
         uri: arrival.uri,
         mimeType: arrival.mimeType,
@@ -234,25 +268,25 @@ export function useProfilePhotos() {
       changePhotos(() => replaced);
       enqueue(replaced.filter((photo) => !held.some((was) => was.uri === photo.uri)));
     },
-    [changePhotos, enqueue, pickOne],
+    [changePhotos, current, enqueue, pickOne],
   );
 
   const retry = useCallback(
     (uri: string) => {
       setStanding(READY);
-      const photo = useProfileDraft.getState().photos.find((held) => held.uri === uri);
+      const photo = current().find((held) => held.uri === uri);
       if (photo === undefined || photo.upload.kind !== 'failed') return;
 
-      changePhotos((current) => recordUpload(current, uri, { kind: 'uploading', progress: 0 }));
+      changePhotos((held) => recordUpload(held, uri, { kind: 'uploading', progress: 0 }));
       enqueue([photo]);
     },
-    [changePhotos, enqueue],
+    [changePhotos, current, enqueue],
   );
 
   const promote = useCallback(
     (uri: string) => {
       setStanding(READY);
-      changePhotos((current) => promoteToProfile(current, uri));
+      changePhotos((held) => promoteToProfile(held, uri));
     },
     [changePhotos],
   );
@@ -262,7 +296,7 @@ export function useProfilePhotos() {
       // The ceiling refusal goes with it: removing one is exactly what the refusal asked
       // for, and a message still on screen after it was acted on is a message that lies.
       setStanding(READY);
-      changePhotos((current) => removePhoto(current, uri));
+      changePhotos((held) => removePhoto(held, uri));
     },
     [changePhotos],
   );

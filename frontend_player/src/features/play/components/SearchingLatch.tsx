@@ -32,13 +32,13 @@
  * never a stage"*: the count is the result, it appears once, and `useLiveRegion` says
  * something only when it changes.
  *
- * ## A `Modal`, for the same three reasons the sheet is one
+ * ## A `ModalStage`, for the same three reasons the sheet is one
  *
- * Siblings hidden natively, `accessibilityViewIsModal` inside, and — the one that matters here
- * — **Android's hardware back arrives at `onRequestClose` and is answered with nothing**. That
- * is *no escape* stated to the platform rather than left to the absence of a control. The
- * screen behind still spreads `behindOverlay` itself, which is the half a `Modal` cannot do
- * for it.
+ * Siblings hidden by the stage — the native window on iOS, the root host on Android —
+ * `accessibilityViewIsModal` inside, and — the one that matters here — **Android's hardware
+ * back arrives at `onRequestClose` and is answered with nothing**. That is *no escape* stated
+ * to the platform rather than left to the absence of a control. The screen behind still
+ * spreads `behindOverlay` itself, which is the half the stage cannot do for it.
  *
  * The transition is skipped under reduced motion, which is `BottomSheet`'s own choice for the
  * same question and read from the same context — one subscription for the tree rather than one
@@ -59,9 +59,9 @@
  * the one sentence that carries the answer.
  */
 
-import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { theme, useLiveRegion, useReducedMotion } from '@/shared/ui';
+import { ModalStage, theme, useLiveRegion, useReducedMotion } from '@/shared/ui';
 
 import { PLAY_LIVE_REGIONS } from './accessibilityPresentation';
 import type { SearchingStatus } from './searchingPresentation';
@@ -81,14 +81,15 @@ export function SearchingLatch({ visible, status }: SearchingLatchProps) {
   useLiveRegion(visible ? (status.count ?? null) : null, PLAY_LIVE_REGIONS.searching);
 
   return (
-    <Modal
+    <ModalStage
       visible={visible}
       // Android's hardware back, answered with nothing: a latch is not a destination, so
       // there is nowhere for it to go back to.
       onRequestClose={NO_ESCAPE}
       animationType={reducedMotion ? 'none' : 'fade'}
+      layer="sheet"
     >
-      <View style={s.stage} accessibilityViewIsModal>
+      <View style={s.stage} accessibilityViewIsModal testID="searching-latch-stage">
         {/* Unlabelled: the headline below is the accessible announcement, and an indicator
             naming the same thing would say it twice (`CalculatingScreen`). */}
         <ActivityIndicator size="large" color={theme.color.coral} accessibilityElementsHidden />
@@ -99,7 +100,7 @@ export function SearchingLatch({ visible, status }: SearchingLatchProps) {
 
         {status.count === undefined ? null : <Text style={s.count}>{status.count}</Text>}
       </View>
-    </Modal>
+    </ModalStage>
   );
 }
 

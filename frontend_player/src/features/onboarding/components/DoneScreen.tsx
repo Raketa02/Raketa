@@ -3,12 +3,12 @@
  * worth.
  *
  * **It is the end of the first part now, not the end of onboarding.** It used to sit on the
- * far side of the seven social steps and their commit, on the argument that the summary should
+ * far side of the eight social steps and their commit, on the argument that the summary should
  * follow the write that makes it true of the account. What that cost was the whole of the
  * second part standing between a player and the number they had just spent a minute per
  * sport producing — so the summary comes first, and **this screen is the door into the
  * second part** for a player who still owes one. A player who does not continues to the data
- * screen exactly as before, and the commit at the end of the seven now lands there instead.
+ * screen exactly as before, and the commit at the end of the eight now lands there instead.
  *
  * The argument it gave up is real and small: a player who reads this and then abandons the
  * second part has been shown ratings that are theirs either way — a Skill rating is written
@@ -55,6 +55,7 @@ import { useRunResults, type RunResult } from '../hooks/useRunResults';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { OnboardingChrome } from './OnboardingChrome';
+import { useHardwareBack } from '@/shared/lib/platform';
 import { ratingStatusLabel } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/ratingFormat';
@@ -111,11 +112,23 @@ export function DoneScreen() {
    * **Not yet answered reads as *has one***, which is the fail-safe direction and the same
    * default the pass used to apply: the data screen leads to the app, the entry gate there
    * has the last word, and it turns a player who really is owed the second part straight
-   * into it. The other default walks a set-up player through seven steps and ends on a commit
+   * into it. The other default walks a set-up player through eight steps and ends on a commit
    * the server refuses.
    */
   const player = useCurrentUser();
   const owesTheSecondPart = !(player.data?.hasPlayerProfile ?? true);
+  /**
+   * **The device's back is claimed and refused, because this screen draws none.**
+   *
+   * Every screen in onboarding is reached by `replace`, so the group holds one entry per push
+   * — and the push behind this one is the welcome screen, from which the only way forward is
+   * to rate a sport again. An unclaimed press popped to exactly there.
+   * [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md): *"Back and
+   * forward move freely inside each part and never cross between them."* A press that does
+   * nothing is what the missing back control has already said.
+   */
+  useHardwareBack(() => {});
+
   const onwards = owesTheSecondPart ? INTO_THE_SECOND_PART : ONWARDS;
   // Empty with no pass running, which is the same as a pass that rated nothing: this
   // screen accounts for *this* walk, and there is nothing to account for. Reachable only

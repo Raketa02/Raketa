@@ -8,7 +8,7 @@
 
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 
-import type { ResultConversation } from '../domain/conversation';
+import type { ResultArgument } from '../domain/resultArgument';
 import type { Game } from '../domain/game';
 
 import {
@@ -16,15 +16,22 @@ import {
   COUNTER_LABEL,
   CORRECT_LABEL,
   UNSCORED_FACTS,
+  barLabels,
   clockLine,
   courtLine,
+  forecastSentence,
+  formatEyebrow,
   gameEyebrow,
   outcomeLine,
+  playerRowName,
+  recordLabel,
   resultBody,
   scoreProblemLine,
+  seatLevelLine,
   setLabel,
   sideLabels,
   spokenScore,
+  resultTitle,
   standingLine,
   worthLine,
 } from './gamePresentation';
@@ -38,8 +45,8 @@ const GAME: Game = {
   kind: 'COUNTED',
   standing: 'AWAITING_ANSWER',
   seats: [
-    { side: 'A', playerId: 'me', nickname: 'me_' },
-    { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+    { side: 'A', playerId: 'me', name: 'me_' },
+    { side: 'B', playerId: 'them', name: 'tomek.p' },
   ],
   plannedAt: '2026-09-01T09:00:00Z',
   proposals: [],
@@ -48,7 +55,7 @@ const GAME: Game = {
 
 /** The two people any of these sentences can name: you, and the player across the net. */
 const YOU: NamedPlayer = { kind: 'you' };
-const THEM: NamedPlayer = { kind: 'player', nickname: 'tomek.p' };
+const THEM: NamedPlayer = { kind: 'player', name: 'tomek.p' };
 
 const PROPOSAL = {
   side: 'A',
@@ -78,23 +85,23 @@ const COUNTER = {
 } as const;
 
 /** The disagreement, read from the side that put `PROPOSAL` up. */
-const ARGUING: ResultConversation = { kind: 'both-stand', ours: PROPOSAL, theirs: COUNTER };
+const ARGUING: ResultArgument = { kind: 'both-stand', ours: PROPOSAL, theirs: COUNTER };
 
 /** One agreement, as the two sides read it — six hours from `READ_AT`, measured from the score. */
-const AGREED_WITH_OURS: ResultConversation = {
+const AGREED_WITH_OURS: ResultArgument = {
   kind: 'agreed',
   agreement: { with: 'ours', by: THEM, settlesAt: '2026-09-05T15:00:00Z' },
   ours: PROPOSAL,
 };
 
-const AGREED_WITH_THEIRS: ResultConversation = {
+const AGREED_WITH_THEIRS: ResultArgument = {
   kind: 'agreed',
   agreement: { with: 'theirs', by: YOU, settlesAt: '2026-09-05T15:00:00Z' },
   theirs: COUNTER,
 };
 
 /** The same agreement over a disagreement, where each side has already used its one turn. */
-const AGREED_OVER_BOTH: ResultConversation = { ...AGREED_WITH_OURS, theirs: COUNTER };
+const AGREED_OVER_BOTH: ResultArgument = { ...AGREED_WITH_OURS, theirs: COUNTER };
 
 describe('silence confirming, which has to be visible before it happens', () => {
   /**
@@ -118,22 +125,82 @@ describe('silence confirming, which has to be visible before it happens', () => 
 
   it('names the entry window too, so a game does not quietly become a ghost', () => {
     const line = standingLine(
-      { kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z' },
+      { kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z', seatOpen: false },
       READ_AT,
     );
 
     expect(line).toContain('3 days');
   });
 
+  /**
+   * **The hour's ending** ([ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+   * §3): the wire names nobody by design, the heading is the shortage's, and the body says nobody
+   * filled the seat — singles and doubles differing by one clause — over the ghost's own fact.
+   */
+  it('heads the hour’s call-off with the shortage and says nobody filled the seat', () => {
+    const singles = { kind: 'called-off', ending: { how: 'the-hour', format: 'singles' } } as const;
+    const doubles = { kind: 'called-off', ending: { how: 'the-hour', format: 'doubles' } } as const;
+
+    expect(resultTitle(singles)).toBe('The game was called off for lack of players');
+    expect(resultBody(singles)).toBe(
+      'Nobody filled the seat in time, so the singles game is called off. Nobody is marked for it — not you, not them.',
+    );
+    expect(resultBody(doubles)).toBe(
+      'Nobody filled the seat in time, so the doubles game is called off. Nobody is marked for it — not you, not any of them.',
+    );
+    expect(standingLine(singles, READ_AT)).toBe('Called off');
+    expect(resultBody(singles)).not.toMatch(/\bby\b|who/);
+  });
+
+  /**
+   * **The ending block, keyed by how it ended** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §8): a departure's heading says the game was called off for lack of players and its body
+   * names who left, singles and doubles differing by one clause.
+   */
+  it('heads a departure with the shortage and names the leaver in the body', () => {
+    const tomek = { kind: 'player', name: 'tomek.p' } as const;
+    const singles = {
+      kind: 'called-off',
+      ending: { by: tomek, how: 'departure', format: 'singles' },
+    } as const;
+    const doubles = {
+      kind: 'called-off',
+      ending: { by: tomek, how: 'departure', format: 'doubles' },
+    } as const;
+
+    expect(resultTitle(singles)).toBe('The game was called off for lack of players');
+    expect(resultBody(singles)).toBe(
+      'tomek.p left, so the singles game is called off. Nobody is marked for it — not you, not them.',
+    );
+    expect(resultTitle(doubles)).toBe('The game was called off for lack of players');
+    expect(resultBody(doubles)).toBe(
+      'tomek.p was the last to leave, so the doubles game is called off. Nobody is marked for it — not you, not any of them.',
+    );
+  });
+
+  it('never says cancel of an ending, and never names a presser', () => {
+    const tomek = { kind: 'player', name: 'tomek.p' } as const;
+    const endings = [
+      { by: tomek, how: 'departure', format: 'singles' },
+      { how: 'the-hour', format: 'singles' },
+    ] as const;
+    for (const ending of endings) {
+      const argument = { kind: 'called-off', ending } as const;
+      expect(`${resultTitle(argument)} ${resultBody(argument)}`).not.toMatch(
+        /cancel|called the game off/i,
+      );
+    }
+  });
+
   it('drops the clause rather than inventing a deadline when the wire sent none', () => {
-    expect(standingLine({ kind: 'awaiting-entry' }, READ_AT)).toBe(
+    expect(standingLine({ kind: 'awaiting-entry', seatOpen: false }, READ_AT)).toBe(
       'Nobody has said this one happened yet.',
     );
   });
 });
 
 describe('an unscored game reads as an evening, not as an error', () => {
-  const unscored: ResultConversation = { kind: 'unscored' };
+  const unscored: ResultArgument = { kind: 'unscored' };
 
   it('says what it still is, and that nobody is marked for it', () => {
     const body = resultBody(unscored);
@@ -158,6 +225,16 @@ describe('an unscored game reads as an evening, not as an error', () => {
 describe('nobody is penalised, which is a sentence and not an omission', () => {
   it('says so on the game that never happened', () => {
     expect(resultBody({ kind: 'never-played' })).toContain('Nobody is marked');
+  });
+
+  /**
+   * **The fourth end is drawn as the ghost is** (#419 §3): neither an evening nor a game that
+   * never happened, so nothing anybody is measured on moves (ADR-0163) — and the screen says so
+   * rather than leaving the reader to wonder whether calling it off cost them.
+   */
+  it('says so on the game that was called off', () => {
+    const ending = { how: 'the-hour', format: 'doubles' } as const;
+    expect(resultBody({ kind: 'called-off', ending })).toContain('Nobody is marked');
   });
 
   it('says so on the disagreement, on both sides of it', () => {
@@ -209,7 +286,10 @@ describe('the clock, which is how silence is made visible', () => {
 
   it('runs on the entry window too, so a game does not quietly become a ghost', () => {
     expect(
-      clockLine({ kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z' }, READ_AT)?.figure,
+      clockLine(
+        { kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z', seatOpen: false },
+        READ_AT,
+      )?.figure,
     ).toBe('3 days');
   });
 
@@ -362,6 +442,45 @@ describe('an agreement, which the proposing side could not see at all', () => {
   });
 });
 
+describe('the eyebrow on the plan lead', () => {
+  const doubles: Game = {
+    ...GAME,
+    seats: [
+      { side: 'A', playerId: 'me', name: 'me_' },
+      { side: 'A', playerId: 'partner', name: 'kasia_w' },
+      { side: 'B', playerId: 'them', name: 'tomek.p' },
+      { side: 'B', playerId: 'other', name: 'marekb' },
+    ],
+  };
+
+  /**
+   * **The format and the kind, and nothing else** ([#414](https://github.com/Raketa02/Raketa/issues/414)):
+   * the card under it names the people and the plan names the day, so the handles and *arranged n
+   * ago* go. The format is read off the seats, as the Now card's retired eyebrow read it. **Not
+   * uppercased here** — the header's style does that, and a listener would get the letters.
+   */
+  it.each([
+    ['singles, counted', GAME, 'Singles · Counted'],
+    ['singles, friendly', { ...GAME, kind: 'FRIENDLY' } as const, 'Singles · Friendly'],
+    ['doubles, counted', doubles, 'Doubles · Counted'],
+    ['doubles, friendly', { ...doubles, kind: 'FRIENDLY' } as const, 'Doubles · Friendly'],
+  ])('reads the format and the kind — %s', (_, game, eyebrow) => {
+    expect(formatEyebrow(game)).toBe(eyebrow);
+  });
+
+  /** **`Counted`, never `Competitive`** — that is a search's word (§5.4 #8). */
+  it('never says competitive', () => {
+    expect(formatEyebrow(GAME).toLowerCase()).not.toContain('competitive');
+  });
+
+  /** A `GameKind` this build cannot read drops the clause, and the format stands. */
+  it('drops the kind where the build cannot read one', () => {
+    const { kind: _kind, ...unreadable } = GAME;
+
+    expect(formatEyebrow(unreadable)).toBe('Singles');
+  });
+});
+
 describe('the rest', () => {
   it('says what a confirmed result said about you, and nothing when it said nothing', () => {
     expect(outcomeLine('WIN')).toBe('You won.');
@@ -379,10 +498,10 @@ describe('the rest', () => {
     const doubles: Game = {
       ...GAME,
       seats: [
-        { side: 'A', playerId: 'me', nickname: 'me_' },
-        { side: 'A', playerId: 'partner', nickname: 'kasia_w' },
-        { side: 'B', playerId: 'them', nickname: 'tomek.p' },
-        { side: 'B', playerId: 'other', nickname: 'marekb' },
+        { side: 'A', playerId: 'me', name: 'me_' },
+        { side: 'A', playerId: 'partner', name: 'kasia_w' },
+        { side: 'B', playerId: 'them', name: 'tomek.p' },
+        { side: 'B', playerId: 'other', name: 'marekb' },
       ],
     };
 
@@ -395,7 +514,7 @@ describe('the rest', () => {
     const erased: Game = {
       ...GAME,
       seats: [
-        { side: 'A', playerId: 'me', nickname: 'me_' },
+        { side: 'A', playerId: 'me', name: 'me_' },
         { side: 'B', playerId: 'them' },
       ],
     };
@@ -427,5 +546,96 @@ describe('who a sentence names, and who it deliberately does not', () => {
   it('still calls the two columns of a score sides, never people', () => {
     expect(sideLabels(2)).toEqual({ ours: 'Your side', theirs: 'Their side' });
     expect(sideLabels(1)).toEqual({ ours: 'You', theirs: 'Them' });
+  });
+});
+
+describe('the court’s pairing, in words', () => {
+  /**
+   * The sentence under the percentage says what a confirmed score **does** — the counted game
+   * moves everybody, the friendly moves nobody — and is dropped, never guessed, for a kind this
+   * build cannot read. The check is the same one `worthLine`'s is: the two kinds say opposite
+   * things about movement, and neither reads as a failure.
+   */
+  it('says a counted game moves everybody’s level and a friendly moves nothing', () => {
+    expect(forecastSentence('COUNTED')).toMatch(/counted/i);
+    expect(forecastSentence('COUNTED')).toMatch(/moves/);
+    expect(forecastSentence('FRIENDLY')).toMatch(/friendly/i);
+    expect(forecastSentence('FRIENDLY')).toMatch(/nothing moves/i);
+    expect(forecastSentence(undefined)).toBeUndefined();
+  });
+
+  /**
+   * The bar's two labels are **stems**, because a segment half a card wide cannot hold sixty-four
+   * characters: `You + {partner stem}` against `{stem} + {stem}` in doubles, `You` against
+   * `{stem}` in singles. A handle that is a stem already is drawn whole.
+   */
+  it('labels the bar with stems — you and your partner against the other side', () => {
+    const doubles = barLabels(
+      [
+        { side: 'A', playerId: 'me', name: 'tomek.p' },
+        { side: 'A', playerId: 'p', name: 'Zofia.B' },
+        { side: 'B', playerId: 'o1', name: 'kuba_w' },
+        { side: 'B', playerId: 'o2', name: 'Ola Nowak' },
+      ],
+      'me',
+    );
+
+    expect(doubles).toEqual(['You + Zofia', 'kuba_w + Ola']);
+  });
+
+  it('labels a singles bar with you and one stem', () => {
+    const singles = barLabels(
+      [
+        { side: 'B', playerId: 'o', name: 'kuba_w' },
+        { side: 'A', playerId: 'me', name: 'tomek.p' },
+      ],
+      'me',
+    );
+
+    expect(singles).toEqual(['You', 'kuba_w']);
+  });
+
+  /** A seat `users` can no longer answer for is the unknown player's `?`, on the bar as anywhere. */
+  it('draws the unknown player’s mark for a seat with no handle', () => {
+    expect(
+      barLabels(
+        [
+          { side: 'A', playerId: 'me' },
+          { side: 'B', playerId: 'o' },
+        ],
+        'me',
+      ),
+    ).toEqual(['You', '?']);
+  });
+
+  /**
+   * The level row is `the-words.md` §6.4's — `{level} · {band} · likely {low}–{high}` — with the
+   * confidence as a fourth clause, `{n}% sure`. Two decimals, decimal comma, on every figure; the
+   * band's published name as it came; the percentage whole.
+   */
+  it('prints the level row as a fixture reads it', () => {
+    expect(
+      seatLevelLine({
+        playerId: 'me',
+        level: 2.71,
+        band: 'Established',
+        range: { low: 2.55, high: 2.87 },
+        confidence: 74,
+      }),
+    ).toBe('2,71 · Established · likely 2,55 – 2,87 · 74% sure');
+  });
+
+  /** The row's own name: the handle whole with the one mark that says it is yours. */
+  it('names a row by the whole handle, and marks yours', () => {
+    expect(playerRowName({ name: 'tomek.p', yours: false })).toBe('tomek.p');
+    expect(playerRowName({ name: 'tomek.p', yours: true })).toBe('tomek.p (you)');
+    expect(playerRowName({ yours: false })).toBe('?');
+  });
+
+  /** What the tap is called: the record it opens, by whose it is. */
+  it('names the control by the record it opens', () => {
+    expect(recordLabel({ name: 'tomek.p', yours: false })).toBe('tomek.p’s record');
+    expect(recordLabel({ name: 'tomek.p', yours: true })).toBe('Your record');
+    expect(recordLabel({ yours: false })).toBe('?’s record');
   });
 });

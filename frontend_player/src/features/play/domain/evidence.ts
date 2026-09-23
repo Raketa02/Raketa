@@ -140,6 +140,10 @@ export interface SocialVibeEvidence extends TagRelationships {
  *
  * A candidate's own radius is a dock and never a gate, so the second fact is one the searcher
  * is owed rather than a penalty applied behind their back.
+ *
+ * `km` is **the engine's input** — whole kilometres, cell to cell, what the term was scored on
+ * — and no screen prints it: the distance a surface prints is the candidate's own one-decimal
+ * `distanceKm`, measured spot to spot (ADR-0174 §2).
  */
 export interface DistanceEvidence {
   readonly kind: 'distance';

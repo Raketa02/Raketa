@@ -30,3 +30,13 @@ export function parseGameRouteParams(
   const result = gameRouteParams.safeParse(params);
   return result.success ? result.data : undefined;
 }
+
+/**
+ * **Where a game screen is**, spelled once for the two surfaces that push it.
+ *
+ * It lived on `GamesSection` while that section was the only door. The rail that replaced it is
+ * `features/plans`' ([#367](https://github.com/Raketa02/Raketa/issues/367)), so the path crosses a
+ * feature boundary and a second spelling of it at the call site is how one of them goes stale — it
+ * sits beside the schema that validates what comes back out of it.
+ */
+export const GAME_ROUTE = '/games/[gameId]';

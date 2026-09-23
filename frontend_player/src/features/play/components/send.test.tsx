@@ -67,7 +67,7 @@ import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
 
 import { courtEntryLabel } from './findAGamePresentation';
-import { fillSeatsLabel } from './builderPresentation';
+import { USE_MATCHMAKING_LABEL } from './builderPresentation';
 import { WITHHELD_SEAT_LINE } from './courtPresentation';
 import { engineFillStatus, poolRankingStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
@@ -109,7 +109,7 @@ function card(playerId: string): Wire['CandidateSchema'] {
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname: NAMES[playerId] ?? 'anon',
+      name: NAMES[playerId] ?? 'anon',
       area_code: 'A+050612+0019938',
       social_tags: [],
       level: 2.8,
@@ -204,6 +204,7 @@ const readBack = (live: readonly Wire['CandidateSchema'][]): Wire['ShortlistResp
 
 /** One open challenge of the reader's own, holding one of the people on this court. */
 const myChallengeWith = (playerId: string): Wire['ChallengeListResponse'] => ({
+  read_at: '2026-08-31T10:00:00Z',
   challenges: [
     {
       challenge_id: '22222222-0000-4000-8000-000000000002',
@@ -287,7 +288,7 @@ async function openAFullCourt() {
   act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' })));
   await waitFor(() => expect(screen).toHavePathname('/play/builder'));
 
-  fireEvent.press(await screen.findByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+  fireEvent.press(await screen.findByLabelText(USE_MATCHMAKING_LABEL));
   await screen.findByText(ENGINE_FILL);
   act(() =>
     jest.advanceTimersByTime(searchingFloorMs({ kind: 'fill', seats: 4, collapsed: false })),
@@ -511,18 +512,23 @@ describe('a refused send', () => {
     await openAFullCourt();
     refuse('open_challenge_stands');
     transport.on('GET', CHALLENGES, () => json(myChallengeWith(C)));
+    // The shell reads this list too, for the tab bar's badge, so what is asserted is the read
+    // **this refusal** adds rather than the total — one request, and never one per seat.
+    const before = transport.requestsTo('GET', CHALLENGES).length;
 
     await pressSend();
 
     expect(await screen.findByText(openChallengeLine('cyryl'))).toBeTruthy();
-    expect(transport.requestsTo('GET', CHALLENGES)).toHaveLength(1);
+    expect(transport.requestsTo('GET', CHALLENGES).length - before).toBe(1);
   });
 
   /** The pair can be between two invitees, and that game is not this player's to read. */
   it('names nobody when the game in the way is not one of the organiser’s', async () => {
     await openAFullCourt();
     refuse('open_challenge_stands');
-    transport.on('GET', CHALLENGES, () => json<Wire['ChallengeListResponse']>({ challenges: [] }));
+    transport.on('GET', CHALLENGES, () =>
+      json<Wire['ChallengeListResponse']>({ read_at: '2026-08-31T10:00:00Z', challenges: [] }),
+    );
 
     await pressSend();
 
@@ -552,6 +558,7 @@ describe('a refused send', () => {
   it('reads nothing for a refusal that is about neither the gates nor the pair', async () => {
     await openAFullCourt();
     refuse('court_origin_not_found');
+    const before = transport.requestsTo('GET', CHALLENGES).length;
 
     await pressSend();
 
@@ -559,7 +566,8 @@ describe('a refused send', () => {
       await screen.findByText(challengeErrorMessage(refusalError('court_origin_not_found'))),
     ).toBeTruthy();
     expect(transport.requestsTo('GET', `${SEARCHES}/${LINEUP_ID}`)).toHaveLength(0);
-    expect(transport.requestsTo('GET', CHALLENGES)).toHaveLength(0);
+    // Again a delta: the badge's own read is the shell's and is not this screen's to suppress.
+    expect(transport.requestsTo('GET', CHALLENGES).length).toBe(before);
   });
 });
 
@@ -569,7 +577,8 @@ describe('with no connection', () => {
    * send**, so a tap deferred to the next reconnect would carry a deadline nobody chose. The
    * control closes and the sentence says to wait — Part 11's *button disabling is UX*, riding
    * on top of the `networkMode: 'always'` override that is the mechanism
-   * (`features/challenges/hooks/sendOptions.ts`, and `sendOptions.test.ts` holds that half).
+   * (`features/challenges/hooks/challengeMutationOptions.ts`, and its own test holds that
+   * half).
    *
    * **Where this sits against the ticket.** #274's acceptance criterion reads *"a send with no
    * connection waits rather than fails"*, and taken as a statement about the **mechanism** it

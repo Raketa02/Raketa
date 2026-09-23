@@ -36,9 +36,8 @@
  * `accessibilityState` offers only `{disabled, selected, checked, busy, expanded}` — **no
  * `pressed`**, which §E6 asks for three times. *Prefer the role that carries the state; where
  * no role carries it, the label carries it; never style alone.* A seat selected for a swap is
- * therefore `selected`, and no name here restates a state a role already announces: the swap
- * toggle is *Swap players* and not *Swap players, on*, and a grid cell names its slot and lets
- * `checked` say the rest.
+ * therefore `selected` and its name says nothing about being held, and a grid cell names its
+ * slot and lets `checked` say the rest.
  *
  * ## What is *not* here
  *
@@ -79,6 +78,7 @@ import { balanceLabel } from './balancePresentation';
 import { GAP_WORD } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, unfilledSeatLine } from './courtPresentation';
 import {
+  DECK_ANSWER_WORDS,
   levelRow,
   metaLine,
   type LevelRowFacts,
@@ -100,9 +100,15 @@ const FIT_DENOMINATOR = 100;
  * [7.10](../../../../docs/design-system.md#710-the-fit-pill)'s reason: Part 17 records that
  * the deleted fit badge's threshold *"named a scale the deleted engine defined"*, so a number
  * on this platform says what it is out of.
+ *
+ * **Rounded, because the pill is.** Fit arrives with its decimals on and `FitPill` makes it a
+ * whole number to draw it; a listener hearing *Fit 78,42131 out of 100* beside a reader seeing
+ * `✦ 78` would be the two registers on two numbers, which is the one thing §20.3's *spoken in
+ * a different order than it is drawn* does not license. `whyFitControlWord` rounds for the
+ * same reason and always has.
  */
 export function fitSentence(fit: number): string {
-  return `Fit ${fit} out of ${FIT_DENOMINATOR}`;
+  return `Fit ${Math.round(fit)} out of ${FIT_DENOMINATOR}`;
 }
 
 /** Everything the card draws about its subject, as the card already holds it. */
@@ -305,17 +311,88 @@ export function rungOfferLabel(offer: string, price: string): string {
   return `${offer}, ${price}`;
 }
 
-/** The deck card's two buttons. It is §20.3's card with two actions instead of one. */
+/**
+ * The deck card's **spoken name** — the same rule as `candidateCardLabel`, read on a card that
+ * makes no case.
+ *
+ * Identifying facts, in the order the card draws them, because there is no argument to move
+ * behind them: the deck card draws no reason line and no concern (ADR-0169 §7 — the tiles, the
+ * tags and the intro are the card), so §20.3's one divergence from visual order does not reach
+ * it. The intro is spoken inside its quotation marks, so a listener hears it as the person's
+ * own words rather than the card's; the tiles are spoken as clauses and a tile with no figure
+ * says nothing (`deckTileClauses`).
+ *
+ * The card is **one element**, the body, whose action is the long press that opens the record;
+ * the three buttons below the stage are three more, each named for the person
+ * (`deckAnswerLabels`). The fit pill, the mark and the stamps are not elements: the first two
+ * merge, and the stamps are hidden because they are feedback for a thumb.
+ */
+export interface DeckCardSpokenFacts {
+  readonly name: string;
+  readonly fit: number;
+  readonly level: LevelRowFacts;
+  /** `ON_COURT_CLAUSE`, or nothing — the drawing surface's one answer, spoken. */
+  readonly onCourt?: string;
+  /** The deck's meta line, already composed — with its third clause where the deal said so. */
+  readonly meta?: string;
+  /** The intro, already quoted, or nothing where they wrote none. */
+  readonly intro?: string;
+  readonly socialTags: readonly string[];
+  readonly tiles: readonly string[];
+}
+
+export function deckCardLabel(facts: DeckCardSpokenFacts): string {
+  return sentences([
+    facts.name,
+    fitSentence(facts.fit),
+    levelRow(facts.level),
+    facts.onCourt ?? '',
+    facts.meta ?? '',
+    facts.intro ?? '',
+    ...facts.socialTags,
+    ...facts.tiles,
+  ]);
+}
+
+/**
+ * A face or a card on the radar, spoken: `Filip N., 1,9 km, Padel 2,60` — the whole name, the
+ * one-decimal distance, the reading's sport and their level in it
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §26).
+ *
+ * **One sentence for the three states.** A face at 24 pt, a face with its level under it and
+ * the card are one person drawn at three widths, and a listener navigates by people rather
+ * than by zoom: the name is what tells the elements apart, and the distance and the level are
+ * what the card prints in full and the face abbreviates. Every face and card is a button — a
+ * face flies to them, a card opens the record — and the sheet is the accessible path to acting
+ * (§7.8): nothing on the field itself answers anybody.
+ *
+ * The level is `formatLevel`'s comma spelling, so the spoken figure is the drawn one; the
+ * sport is the pane's own word for it (`sportLabel`), handed in rather than looked up, because
+ * a label composed here from a code would be a second place the sport is named.
+ */
+export function radarTileLabel(facts: {
+  readonly name: string;
+  readonly distance: string;
+  readonly sportName: string;
+  readonly level: number;
+}): string {
+  return `${facts.name}, ${facts.distance}, ${facts.sportName} ${formatLevel(facts.level)}`;
+}
+
+/** The deck's three buttons. It is §20.3's card with three actions beside it instead of one. */
 export interface DeckAnswerLabels {
   readonly pass: string;
   readonly accept: string;
+  /** `Marek Z.’s record` — the *i*, and the long press's own name. */
+  readonly record: string;
 }
 
 /**
  * `Not today, Marek` · `Let's play, Marek`.
  *
- * The 🎾 is hidden, per §E6 — *"otherwise it announces as 'tennis ball let's play'"* — and,
- * like the ✦, it is hidden by never entering the sentence rather than by a rule about glyphs.
+ * The ball is hidden, per §E6 — *"otherwise it announces as 'tennis ball let's play'"* — and,
+ * like the ✦, it is hidden by never entering the sentence rather than by a rule about glyphs:
+ * it is a drawing with no words in it (`DeckBall`).
  *
  * **There is no gesture to announce.** [#231](https://github.com/Raketa02/Raketa/issues/231)
  * §3 decided UI Open decision #9 against a swipe, so the deck's contract is two named buttons
@@ -323,7 +400,11 @@ export interface DeckAnswerLabels {
  * reader who could not perform one.
  */
 export function deckAnswerLabels(name: string): DeckAnswerLabels {
-  return { pass: `Not today, ${name}`, accept: `Let's play, ${name}` };
+  return {
+    pass: `${DECK_ANSWER_WORDS.pass}, ${name}`,
+    accept: `${DECK_ANSWER_WORDS.accept}, ${name}`,
+    record: `${name}’s record`,
+  };
 }
 
 /**
@@ -436,37 +517,39 @@ export function clearSeatLabel(seat: {
 }
 
 /**
- * A seated handle on the forecast card — `Your side, Marek, why fit 78` (§20.4).
+ * A seated handle on the forecast card — `Your side, Marek, player record` (§20.4).
  *
- * **The one way in to `SH.whyfit` for somebody already seated**, and the reason it had to be
- * built: the pool is the surface that explains a person and `pickable` removes everybody
- * already on the court, so a seated player's Fit was unreachable — which ⚡ *Let the engine
- * fill the seats* turns from awkward into total, because that court is four people the
- * searcher never chose and never saw a card for (§20.4.1).
+ * **It names the record it opens, not the Fit.** A face is a picture of a *person*, and
+ * somebody tapping one is asking who they are; the pairing's arithmetic moves behind a row
+ * inside the record that says what it is
+ * ([#384](https://github.com/Raketa02/Raketa/issues/384)). A button that promised *why fit 78*
+ * and opened a photograph, a Level and a run of form would be the one kind of label that is
+ * worse than none.
  *
  * It opens with the **same place clause a seat's own spoken name opens with** — *your side*,
  * *your side, your partner*, *their side* — and takes `PLACE` rather than the heading the row
  * draws, for §1's reason: a formatter composes from a code, never from another surface's
  * message. The heading says *Your side* where the partner's own name says *Your side, your
- * partner*, which is §20.4's rule that the role disambiguates two seats on one half. That is also what hides the two side headings — each name
- * now names its own side, exactly as 7.12 hides the court's caption and side labels because
- * each seat does.
+ * partner*, which is §20.4's rule that the role disambiguates two seats on one half. That is
+ * also what hides the two side headings — each name now names its own side, exactly as 7.12
+ * hides the court's caption and side labels because each seat does.
  *
- * The clause is spelled here rather than lower-casing {@link whyFitSheetLabel}, on `PLACE` and
- * `SIDE`'s own precedent one block up: **two tables and not one lower-cased at the call site**
+ * **Your own face carries the sheet's other title**, because it opens the other view: *how
+ * others see you* is what that sheet is, and a listener who heard *player record* on their own
+ * seat would reasonably expect a settings screen.
+ *
+ * Both clauses are spelled here rather than lower-cased from the sheet's own titles, on `PLACE`
+ * and `SIDE`'s precedent one block up: **two tables and not one lower-cased at the call site**
  * — a transformation over a composed sentence is a rule that breaks on the first proper noun.
- *
- * **The figure is rounded, because this button names the sheet it opens.** `whyFitColumn`
- * writes the whole column against `Math.round(fit)` and the sheet's title and accessible name
- * are that number, so a served `78,4` announced whole here would promise *why fit 78,4* and
- * open *Why fit 78*. It is the one place a Fit is rounded outside that column, and it is
- * rounded *to* it — `signedFigure`'s own rule that a figure is rounded where it is printed.
  */
+const RECORD_CLAUSE = 'player record';
+const OWN_RECORD_CLAUSE = 'how others see you';
+
 export function seatedNameLabel(
   place: SeatPlace,
-  seated: { readonly name: string; readonly fit: number },
+  seated: { readonly name: string; readonly self: boolean },
 ): string {
-  return `${PLACE[place]}, ${seated.name}, why fit ${Math.round(seated.fit)}`;
+  return `${PLACE[place]}, ${seated.name}, ${seated.self ? OWN_RECORD_CLAUSE : RECORD_CLAUSE}`;
 }
 
 /**
@@ -560,15 +643,6 @@ export function poolHeaderLabel(
 }
 
 /**
- * The swap toggle — a `switch`, named by what it does.
- *
- * `checked` carries the state, so the name does not: §20.2's *prefer the role that carries the
- * state*, which is 6.8's own argument about its column heads read on a control instead of a
- * grid.
- */
-export const SWAP_TOGGLE_LABEL = 'Swap players';
-
-/**
  * `SH.whyfit`'s accessible name — **not** its visible title (§20.6).
  *
  * The title draws `Why ✦ {score}`, and the ✦ must not be spoken. It is the one place in the
@@ -580,9 +654,12 @@ export const SWAP_TOGGLE_LABEL = 'Swap players';
  * is where focus lands on the way *in* — **the title, not the first action**, one rule for all
  * of them, because `SH.propose`'s first action is *send* and landing focus there by default
  * would make the worst outcome the cheapest to trigger.
+ *
+ * Rounded, with `whyFitTitle` and for its reason: the sheet is opened by a control that has
+ * always named a whole number, and it must not announce a different one.
  */
 export function whyFitSheetLabel(fit: number): string {
-  return `Why fit ${fit}`;
+  return `Why fit ${Math.round(fit)}`;
 }
 
 /**

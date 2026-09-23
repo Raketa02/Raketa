@@ -126,20 +126,84 @@ review comment and a test description all use the same word.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
 - **The shell** — the five tabs a signed-in player is inside, and the **one stack** under
-  them. `Now · Around · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
+  them. `Now · Players · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
   `TabShell`. Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it,
   which is the whole of what
   [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. _Avoid_: "the tab
   navigator" — there isn't one.
+- **Players** — the second tab, and **the deck is the whole of it**
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1):
+  key `players`, label _Players_, Feather `users`, route `/players`, a single-screen root like
+  the other flanking tabs. It was _Around_, a placeholder, and the rename is whole. The tab has
+  **no title row** — its header is the _Deck | Radar_ toggle, with the right slot left for the
+  chip — and it opens on Deck every time, because the shell keeps no per-tab history and the
+  toggle is the screen's own state. Players answers _who would I like to play with?_; Play
+  answers _who is available and even on Thursday?_ _Avoid_: "Around", which no longer exists;
+  "Match me", which survives as a word only in _Matched!_; "the deck tab" — the tab is Players
+  and the deck is what is on it.
+- **Radar** — the root's term ([`CONTEXT.md`](../CONTEXT.md)): the second pane of the Players
+  tab, behind the toggle, **built** since
+  [ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md). What is
+  the client's: it is a pane and not a route, so the tab can never open on it — `RadarPane`
+  inside `DeckScreen`, its own frame on the app's third dark surface with no scroller, because
+  the field takes the drag; its view and selection are `store/radarView`'s for the life of the
+  process and a cold start opens at home; its geometry is `domain/radarGeometry`'s pure
+  functions — worklets, since
+  [ADR-0176](../docs/adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md) — and
+  the field's tiles ride one transform whose three values live on the UI thread, written by
+  `react-native-gesture-handler`'s pan and pinch and read by `react-native-reanimated`'s
+  animated styles: the one surface in the app on either library. **At the floor a stack** —
+  players whose spots lie nearer than one face is wide, folded into one marker a tap opens
+  ([ADR-0177](../docs/adr/0177-the-pinch-lets-go-where-it-is-and-a-stack-opens-on-a-tap.md)):
+  `domain/radarGeometry`'s `Stack`, the field's own open state by id, and no term of the
+  root's, because it is a drawing of spots the server already served. **Its record sheet has a
+  foot** — _Not today_ · _Let's play_, or what the spec's §5 table calls the standing relation,
+  which on the client is `domain/standingRelation`'s fold of the row's admitting code, the
+  reader's two interest lists and the challenges feature's court, in the order matched › court ›
+  liker › said yes › open — and an answer from it is the deck's own with the reading's
+  `search_id` for its origin, marking the row's `answered` and removing nobody
+  (`hooks/useRadarAnswers`). _Avoid_: "the map" — there is no basemap, no street and no
+  address; `radar` the glyph, which is still not drawn (ADR-0135); "the radar tab"; a foot on
+  the deck's _i_ sheet, which fills the slot with nothing by decision.
+- **Reading** — the root's term: what `POST /radar` answers. On the client it is `Reading` in
+  `domain/reading` — the envelope and `RadarRow[]`, each row the deal's `Candidate` plus a
+  required `distanceKm` and `bearingDeg` and `ratings[]` — held under `searchKeys.reading(sport)`
+  with **no radius in the key**, stale after five minutes, refetched on a pane opened past the
+  window, on a sport switch (a new key) and on a cold start, and **never appended to** — a
+  reading is not a hand (`hooks/useReading`). A row the wire gives no spot is dropped at the
+  mapper. _Avoid_: "the radar deal"; "the radar's hand"; a reading that "spends" anything.
+- **Reach** — the root's term: the viewer's own search radius, read as how far the radar draws.
+  On the client it arrives twice and is named for each: `reachKm` off the profile surface, known
+  before the reading is and what the geometry is built on — the ladder's widest stop is the
+  first at or above 2,2 × it, the opening stop the first at or above 1,8 ×, and a pan
+  rubber-bands when its edge reaches the field's focus (`boundCentre`) — and `radiusKmUsed` off
+  the pool, which is the empty sentence's number, as the words say. _Avoid_: "range", which is
+  the pool's word for the count; "the city".
+- **Drawn spot** — the root's term: the one fixed point inside a player's cell the radar draws
+  them at, worked out by the server. The client **computes no geometry beyond scaling**: it
+  places a row from its served `distanceKm` and `bearingDeg` (`pointOf`, north up) and never
+  derives, rounds or moves a spot. _Avoid_: "their location", "their position" — nobody's exact
+  place exists; a spot computed on the client.
+- **Bearing** — the root's term: `bearing_deg`, the compass direction from the viewer's drawn
+  spot to theirs. On the client it is `bearingDeg` on a `RadarRow`, **required** there and on no
+  other candidate — a reading's row only, never inside the card (ADR-0107's rule) — and the one
+  input beside `distanceKm` a point is drawn from. North is up on the field and the field never
+  rotates. _Avoid_: "heading", "direction" as a field name; a bearing derived on the client.
 - **The reset** — `resetShellStack`, the shell's only navigation move: throw the stack away
   and lay a new one down. Four tabs lay down one screen and ⚡Play lays down two, which is
   why back from Play's entry leaves Play rather than walking it. **A Play session ends
   exactly when it runs.** _Avoid_: "switching tabs" as though it were a push.
-- **A placeholder tab** — one of the four with no screen behind it yet. It states what its
-  tab will be and that it is not built, in one sentence, so a player can tell it from a
-  bug. Three of the four are **citations** of decisions taken elsewhere, and **Now never
-  says nothing is happening** — it is where a send lands. _Avoid_: "empty state" (that is a
-  screen with a real answer of nothing) and "coming soon".
+- **A placeholder tab** — a tab with no screen behind it yet, and **there is none now**. For
+  as long as one existed it stated what its tab would be and that it was not built, in one
+  sentence, so a player could tell it from a bug; the sentence was a **citation** of a decision
+  taken elsewhere. Five tabs left the table and none was deleted: Play, Chats and Now by being
+  built, Around by retiring when the deck moved in as Players, and **You** — the last — by
+  being built as onboarding laid out flat (ADR-0179). The union and the table went with it,
+  because a shape kept for a case that cannot recur is not a fact. What survives is the rule
+  the placeholders were written under: **no sentence the shell writes says nothing is
+  happening**, and `shellCopy.test.ts` still holds every line to it. _Avoid_: "empty state"
+  (that is a screen with a real answer of nothing) and "coming soon" — a screen that lands
+  with its contract says in one line what it is, never that.
 
 ### The onboarding flow
 
@@ -158,9 +222,12 @@ profile editor that later edits the same values.
   straight from the entry gate, which is a genuine pass of one sport — and it **ends** in
   one place, when the player reaches the app. Between passes there is **no pass**, and
   that absence is load-bearing: it is what lets a resumed run begin one without adopting a
-  finished walk's queue. **Onboarding happens once, at the beginning** — there is no
-  re-take from inside the app — so a link naming a sport outside the running pass is sent
-  to welcome rather than into the middle of a flow. _Avoid_: **"run"** — that is one
+  finished walk's queue. **Onboarding happens once, at the beginning — and a pass has an
+  origin**: welcome, or the Skill passport's _Add a sport_, which begins a pass of exactly one
+  sport and ends back on the passport
+  ([ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+  §3). A link naming a sport outside the running pass is still sent to welcome rather than
+  into the middle of a flow — a second door is not a shortcut. _Avoid_: **"run"** — that is one
   Assessment, and a pass is a
   sequence of them; **"session"** — that is the auth session, and the two have different
   lifetimes; also "onboarding state", "wizard".
@@ -172,22 +239,45 @@ profile editor that later edits the same values.
   _Avoid_: "paused run", "saved run" — both suggest a server-side state, and there is
   none; "abandoned run" — that **is** a server-side transition and is the permanent way
   out, where this is the temporary one.
-- **Social step** — one of the **seven** screens of onboarding's **second part**: tags,
-  photos, availability, location, radius, gender, opt-in, in that order. The step names are
-  the route segments, so `/radius` is the screen that asks for a Search radius and there is
-  no second spelling of the seven. The order is not arbitrary at two points: **location
-  before radius**, because a distance is a distance _from_ somewhere, and **gender with the
-  matching constraints rather than with the tags**, because a preference over who you play
-  with narrows who is put in front of you rather than describing you. **The opt-in is
-  always last** — it is the consent that ends the part and the step that carries the finish.
-  **The part is the unit, not the step** — back and forward move freely between steps and
-  never cross out of the part, the first step has no back control, and the last is followed
-  by the profile commit rather than by an eighth screen
+- **Social step** — one of the **eight** screens of onboarding's **second part**: tags,
+  intro, photos, availability, location, radius, gender, opt-in, in that order. The step
+  names are the route segments, so `/radius` is the screen that asks for a Search radius and
+  there is no second spelling of the eight. The order is not arbitrary at three points: **the
+  intro straight after the tags**, because the tags ask what kind of player somebody is in the
+  platform's words and the line is the same question in their own
+  ([ADR-0170](../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
+  §5); **location before radius**, because a distance is a distance _from_ somewhere; and
+  **gender with the matching constraints rather than with the tags**, because a preference
+  over who you play with narrows who is put in front of you rather than describing you. **The
+  opt-in is always last** — it is the consent that ends the part and the step that carries
+  the finish. **The part is the unit, not the step** — back and forward move freely between
+  steps and never cross out of the part, the first step has no back control, and the last is
+  followed by the profile commit rather than by a ninth screen
   ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). _Avoid_: "wizard
   step", "page"; also "onboarding step" for a question in the questionnaire — that is a
   **position** in a run, and the two move by different rules.
+- **Intro shape refusal** — the two of `intro_not_admitted`'s three reasons that are facts
+  about the string itself, `too_long` and `multiline`, which the intro step reads off the
+  Profile draft and shuts _Next_ on before anything is sent — and the You tab's _Intro_ reads
+  off its draft and shuts _Save_ on — in the **same three-member vocabulary** the wire's
+  refusal carries, so one sentence table serves the refusal a screen pre-empts and the one
+  the commit or the intro write brings back. The third, `contains_contact`, is **the
+  server's pattern and never this app's**: a copy of it would be a staler one on every phone
+  the day it is tuned from a refusal, so it lands at the write — six screens later on the
+  step, one press later on the tab, drawn in the same place under the box — and the step
+  says the rule up front instead. Counted in **code points**, as the server's `len`
+  counts, and trimmed first, as the server trims. The [Intro](../CONTEXT.md) itself is the
+  root glossary's. _Avoid_: "validation" — the client validates nothing, it pre-empts two
+  refusals whose authority stays on the server; "content filter" — nothing here reads what
+  the line says.
 - **Profile draft** — every answer the second part has collected, held **on the client**
-  until the one commit that ends the part. In memory, never persisted, and never sent
+  until the one commit that ends the part. It is the part's and only the part's: the You tab
+  edits the same facts against the same rules and holds **no draft of this kind** — each
+  screen there holds a draft of one fact beside the profile read until its _Save_, and the
+  photos hold none at all. Three of its fields start **empty** because empty
+  is a real answer — no photo, a blank week, and the intro box with nothing in it — and the
+  intro is held **as typed**, untrimmed, so a round trip finds the box as it was left; what
+  the commit carries is the trimmed line, or no field at all. In memory, never persisted, and never sent
   anywhere before that commit — which is what makes moving between steps free and what makes
   leaving mid-part restart at step one. Its absence is a state: no draft means the player is
   not in the part, which is how a link naming a step in the middle is told from a player who
@@ -216,21 +306,31 @@ profile editor that later edits the same values.
   **reason code** rather than a sentence. The gate is mutual, so `WOMEN_ONLY` does not only
   filter what a player sees — it hides them from every man, including men who searched for
   anybody, and that is the half nobody would guess. The rule decides _whether there is a
-  cost_; this app's copy says it, on the step, **at the moment of the press**. Learning it
-  from an empty inbox is not acceptable
+  cost_; this app's copy says it **at the moment of the press, on every surface that takes
+  the value** — the step, and since [#472](https://github.com/Raketa02/Raketa/issues/472)
+  the You tab's _Who you play with_, which draws the same group (`GenderControls`) under a
+  _Save_ of its own. Learning it from an empty inbox is not acceptable
   ([ADR-0096](../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
   _Avoid_: "filter" — a filter is one-directional and this deliberately is not; "privacy
   setting" — it changes who is matched, not what is shown, and neither value is ever drawn
-  on any surface but the step that takes it.
-- **Photo workbench** — the pictures the photos step is holding, each with the upload it is
-  in the middle of, beside the Profile draft and in the same store. Not an answer: a local
-  `file://` URI is worthless to the server and an upload in flight has nothing to commit, so
-  what reaches the draft is **derived** from it — the ids of the photos that arrived, in the
-  player's order. One store because the two share one lifetime and that derivation is the
-  invariant; two would be two things to reset and a sync somebody forgets. _Avoid_: "photo
-  state", "upload queue" — the queue is one promise chain inside the step's hook, and it is
-  not what this holds.
-- **Profile options** — the **one read** the seven steps are drawn from: the Social tag
+  to anybody but its owner, on the two screens that take it and on the row's line only as
+  _Matched with …_, never the gender (ADR-0179 §4).
+- **Photo workbench** — the pictures a photos screen is holding, each with the upload it is
+  in the middle of. **It has two homes** (ADR-0179 §2). On the step it sits beside the
+  Profile draft in the same store, and it is not an answer: a local `file://` URI is
+  worthless to the server and an upload in flight has nothing to commit, so what reaches the
+  draft is **derived** from it — the ids of the photos that arrived, in the player's order.
+  One store because the two share one lifetime and that derivation is the invariant; two
+  would be two things to reset and a sync somebody forgets. On the You tab it sits beside
+  the Profile surface, **seeded once** from the profile's photos — each restored tile drawn
+  from the signed address `GET /photos/{id}` answers, because a restored photo has no device
+  copy — and the same derivation is a `PUT /players/me/photos` on every change that moves
+  the ids: the step has no _Save_, so the tab has none, and the row is the state. Either way
+  the hook that picks and uploads is one and reads the bench _as it is now_, because the
+  queue runs between renders. _Avoid_: "photo state", "upload queue" — the queue is one
+  promise chain inside the hook, and it is not what this holds; "draft" for the tab's bench —
+  nothing on it waits for a button.
+- **Profile options** — the **one read** the eight steps are drawn from: the Social tag
   vocabulary with its grouping, how many tags a profile must hold, and the Search radius
   bounds. Reference data owned by TanStack Query, fetched once for the whole part, and the
   reason no client restates a vocabulary or a bound the commit re-validates against. Ids and
@@ -238,19 +338,27 @@ profile editor that later edits the same values.
   this build has no words for is dropped rather than drawn — the answer `toSport` gives an
   unknown sport. _Avoid_: "config" and "settings"; neither is about this player, and both
   invite something per-player being added to it.
-- **Profile surface** — the **one read** the Play screens hold about the player: the
-  availability grid, the Search radius and the per-sport Play intent, in one round trip across
-  the two aggregates that own them. Deliberately **not the whole profile**, and the two
-  absences on it are different absences — gender and the gender preference are a _standing
-  refusal_ that never comes back out of this API, and tags, photos and the location area are a
-  _deferral_ this same route grows when **You** is built. Its home is `player_profile/`, not
-  `play/`, because the three **writes** are: one unkeyed `PUT` per fact, and a read whose
-  paired writes live in another feature is a read in the wrong feature. Of the three facts
-  only the radius is written from Find a game — a search carries no radius and never will, so
-  the profile is the only place a slider there can mean anything. _Avoid_: "the profile" for
-  this — it is a surface over one, and calling it the profile is how a fourth field gets added
-  to a body scoped to three; also "play screen read", which names a caller rather than the
-  facts.
+- **Profile surface** — the **one read** this app holds about the player's declared facts:
+  the availability grid, the Search radius and the per-sport Play intent, in one round trip
+  across the two aggregates that own them — and, since the route **grew** the day **You** was
+  built ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
+  tags, the photos with their verdicts and the intro, read on #471, and the standing
+  Proposals opt-in with its evidence and the **owner's own** gender and preference — the one
+  shape that carries them — read on #472; there is no `has_location`, because a profile
+  cannot be committed without an area and a flag that cannot be false is a branch nobody
+  tests. Its home is
+  `player_profile/`, not `play/`, because the **writes** are: one unkeyed `PUT` per fact, and a
+  read whose paired writes live in another feature is a read in the wrong feature. **Two
+  screens draw it now.** Find a game reads the week and the radius as a search's working copy —
+  and the radius is the one fact written from there, as the first half of pressing the card;
+  the **You** tab reads every one of them as a fact with a door, and its screens write the
+  week, the radius, the tags, the intro and each of the two gender groups on a **button** and
+  never on release — the photos on every change to the row, and the opt-in on **every press**,
+  the same answer included, because a re-affirmation against these words is a fact the stream
+  keeps — so a slider on You and the search on Play move one number two ways. _Avoid_: "the
+  profile" for this — it is a surface over one, and calling
+  it the profile is how a field gets added to a body scoped to what the tab draws; also "play
+  screen read", which names one of two callers rather than the facts.
 
 ### The Play tab
 
@@ -260,7 +368,9 @@ nine do not exist on the backend, and the first four are the shape
 long, and what it must never remember. The stores are `features/play/store/`; the rules are
 `features/play/domain/`. The **Declaration interstitial** is the exception on both counts — it
 is a screen this app draws over a write and a refusal the backend already owns, and it is
-listed here because it is a Play surface rather than a profile one.
+listed here because it is a Play surface rather than a profile one. The deck is the Players
+tab's now and is listed under [Routing](#routing); what Play keeps of it is the feature that
+draws it.
 
 - **Play session** — **one visit to the Play tab**: the Working copy and the Line-up built on
   it, and nothing else. It begins when the shell lays the Play stack down and **ends exactly
@@ -318,17 +428,21 @@ listed here because it is a Play surface rather than a profile one.
   first two are minted by a mutation and read by id from `searchKeys.detail(search_id)`; **the
   deal is the exception**, because nothing reads one back by id and a second one is not a second
   copy — `POST /deck` excludes everybody already dealt for a day, so asking twice spends the
-  player's own pool. It is held under `searchKeys.deck(sport, week, under)`, keyed by **the
+  player's own pool. It is held under `searchKeys.deck(sport, under)`, keyed by **the
   question rather than the answer**, which is the only key that can be built before the request
-  and therefore the only one under which _already asked_ is a fact. `under` is the radius and the
-  declaration: they are not on the request, they change the answer, and leaving them out is the
-  deck answering _Widen in You_ with the deal that ran before the widening. The entry holds the
+  and therefore the only one under which _already asked_ is a fact. `under` is the radius: it is
+  not on the request, it changes the answer, and leaving it out is the deck answering _Widen in
+  You_ with the deal that ran before the widening. The declaration was in it and is not, and
+  neither is a week — the deck reads no declaration and runs on the profile's grid
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1, §2).
+  The entry holds the
   Origin search **and the rows**, which is what lets a Line-up's seats be ids and nothing else:
   every name, level and photograph on a court is read back off them. **Nothing in Play
   background-refetches** — `staleTime: Infinity`, no refetch on focus — because foregrounding
   the app would otherwise reorder the pool under the player's finger. What _does_ refetch on the
-  ordinary defaults: the profile and its week, the ratings behind the sport chips, and the Match
-  me count. **Re-sorting costs no round trip** and neither does re-arranging four people; only
+  ordinary defaults: the profile and its week, the ratings behind the sport chips, and the
+  outstanding-yes count. **Re-sorting costs no round trip** and neither does re-arranging four
+  people; only
   changing who is on the court does. _Avoid_: "results", and "the pool" for all three — a deal
   and a shortlist are not pools.
 - **Withheld seat** — a seated player the **live gates no longer admit**, found as a **set
@@ -409,13 +523,16 @@ listed here because it is a Play surface rather than a profile one.
   it verifies nothing about a person and it is a label with no ground; "photo review", which is
   the uploader's surface and a different fold of the same code (`player_profile` warns where a
   card marks); a **tick** anywhere in this app that is not `shared/ui/Tick`'s drawn geometry.
-- **Social tag row** — the competitive card's row of up to six of the candidate's Social tags,
-  and the **overlap** drawn over it. The ones the searcher also chose are tinted and carry
-  `· you too` in words; the intersection is `matched[]`'s, off the wire, and is never recomputed
-  from a profile read. `domain/socialTagOverlap` is the rule and `SocialTagRow` draws it, which
-  is why the type and the component do not share a name. _Avoid_: "chips" — nothing here is
-  pressable, so they are tags (6.4); tinting a `complementary` or `clashing` pair, which is a
-  different relationship and reaches the card as prose.
+- **Social tag row** — a row of up to six of somebody's Social tags, and the **overlap** drawn
+  over it. The ones the reader also chose are tinted and carry `· you too` in words; on a
+  candidate card the intersection is `matched[]`'s, off the wire, and is never recomputed from a
+  profile read. **The rule and the drawing are two layers**: `SocialTagRow` and the four-answer
+  `SocialTagOverlap` are `shared/`'s, because the competitive card and the record sheet both draw
+  the row, while `play/domain/socialTagOverlap` — the rule that reads one of those answers off a
+  **candidate** — is Play's, because a candidate row is. That is why the type and the component do
+  not share a name. _Avoid_: "chips" — nothing here is pressable, so they are tags (6.4); tinting
+  a `complementary` or `clashing` pair, which is a different relationship and reaches the card as
+  prose.
 - **Stat box** — the drawn shape the competitive card states a **record block** and an **at
   stake** pair in (both are the root [`CONTEXT.md`](../CONTEXT.md)'s terms, not this file's):
   `StatBox`, a recessed `paper2` box with a name over a figure, three across and then two.
@@ -426,13 +543,16 @@ listed here because it is a Play surface rather than a profile one.
   which is a surface and this is a box inside one.
 - **Run of form, drawn** — five squares, one per result, oldest to newest and **never padded**: a
   run of three is three squares and the space after them, because the length is the statement.
-  Won is `ink` and lost is `muted` — a **lightness** step at 3,24:1, derived in
-  `recordSquares.test.ts`, so it reads with no hue perception at all — and because a square
-  carries no word, the whole row reaches a listener as **one counted clause** against the run's
-  own length (_3 of the last 5 won_) rather than as five elements. An outcome this build cannot
-  read takes the **whole field** with it at the mapper, for the same reason: half a run cannot be
-  drawn honestly, and _Counted_ beside it goes on printing. _Avoid_: a fifth square in a neutral
-  fill, which claims a game nobody played; five spoken states, which reads the row as a table.
+  `RunOfForm` is `shared/ui`'s, because the record block and the record sheet both draw it and a
+  second copy would be a second thing to keep in step with a **pinned** geometry test. Won is
+  `ink` and lost is `muted` — a **lightness** step at 3,24:1, derived from the component's own
+  `RUN_OF_FORM_FILL` in `recordSquares.test.ts`, so it reads with no hue perception at all — and
+  because a square carries no word, the whole row reaches a listener as **one counted clause**
+  against the run's own length (_3 of the last 5 won_) rather than as five elements. An outcome
+  this build cannot read takes the **whole field** with it at the mapper, for the same reason:
+  half a run cannot be drawn honestly, and _Counted_ beside it goes on printing. _Avoid_: a
+  fifth square in a neutral fill, which claims a game nobody played; five spoken states, which
+  reads the row as a table.
 - **Singles-only stake** — the rule that hides _Win, counted_ / _Lose, counted_ on a doubles seat.
   It is `domain/atStake` rather than the component's, because it is a thing somebody could be
   **wrong** about; the component is handed a pair or nothing. A **refusal to draw** and not an
@@ -498,63 +618,124 @@ listed here because it is a Play surface rather than a profile one.
   _Best fit_ is withheld precisely when the returned order already is best-fit order, so a row
   drawn from the server's list alone would make _Closest_ a one-way door. _Avoid_: a hardcoded
   row of four, which is three-quarters a lie today; deriving offerability from the rows.
-- **The pin** — the pool's one reordering that is **not** a comparator: somebody with a live yes
-  towards the searcher (`inclusion_reason == INTEREST_LIFT`) sits first **in the served order
-  only**, whatever they scored, and drops into their honest place the moment any chip is tapped.
-  It is **not** the `+12` #231 struck, and the falsifier is the printed number — a bonus is
-  arithmetic on a published figure, changes what _best_ means silently and survives every
-  re-sort, where a pin changes a **position**, prints the number the wire served, names itself
-  on the card it moved, and releases. _Avoid_: calling it a boost or a bonus; adding anything to
-  `fit` on this side.
+- ~~**The pin**~~ — **struck**
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). It
+  was the pool's one reordering that was not a comparator: somebody with a live yes towards the
+  searcher sat first in the served order only, whatever they scored, and released on any chip.
+  It touched no number — which was why it was not the `+12` #231 struck, and that refusal still
+  stands — and it still put a 51 above thirty people at 80 on a list about who fits. _A yes
+  informs; it never takes over_: the engine's `+14` nudge on the liker's rank key is where they
+  sit, and the served order is the order. _Avoid_: lifting anybody client-side for any reason;
+  adding anything to `fit` on this side; reading the **[interest tags](#the-play-tab)** as a
+  position.
+- **Interest tags** — the two tags a yes between the reader and the person on a card earns,
+  drawn on **both** list cards — beside the handle on the competitive card's identity row, under
+  the name on the social card's `CardHead` where its sentence used to be — and never on the deck
+  card (ADR-0169 §8). **Wants to play you** is volt, bound to the row's admitting code
+  (`inclusion_reason == INTEREST_LIFT`) and worded by its liveness twin, and the
+  **[marked card](#glossary--design-system-terms)**'s green border travels with that word alone.
+  **You said yes** is `base`, the plain pill, on somebody in the reader's **own** `GET /interest`
+  outgoing list for the sport on screen — `saidYesTo`, client-side, no code and no nudge — and it
+  is deliberately not volt, because volt is _they want you_. At most one tag on a card: either
+  interest tag over the coral **best match**, because a fact about a person outranks a fact
+  about a list; both interest facts true is a mutual and a mutual is not on the list, and should
+  one ever be, _Wants to play you_ wins. The read is the deck's, held once and `select`ed two
+  ways (`useOutstandingInterest`, `useOutgoingInterest`), and a deck tap moves the list on its
+  own reply. _Avoid_: "liked you" / "you liked them"; a third tag for _nothing in particular_;
+  a border on _You said yes_; drawing the outgoing list as a list anywhere.
 - **Best match tag** — the coral tag on the row with the **highest ✦ on screen** — one card or
   none, the server-first row on a tie. It is keyed to **the ordering in force** rather than to a
   tapped chip, because _Best fit_ is withheld exactly when the served order already is fit
   order; it is hidden under _Closest_, _Evenest_ and _Most reliable_; and where it and the
-  **[interest tag](#glossary--design-system-terms)** fall on one card the interest tag replaces
-  it. It is the competitive card's alone, because that is the card with a tag slot beside the
-  handle. _Avoid_: handing it to the runner-up when the top row is taken; reading _Best fit_ as
-  a threshold — it is a **sort**, and it hides nobody.
+  **[interest tags](#the-play-tab)** fall on one card the interest tag replaces it. It is the
+  competitive card's alone, because that is the card with a tag slot beside the handle; the
+  social card draws the two interest tags and no _best match_. _Avoid_: handing it to the
+  runner-up when the top row is taken; reading _Best fit_ as a threshold — it is a **sort**, and
+  it hides nobody.
 - **Pending seat replacement** — **the seat the pool was opened against**, held route-locally
   and discharged by the first add: where that seat is occupied the add is a **replacement**, and
   the screen names whom it replaces before it happens. It **needs no clearing rule**, because
   the court pops rather than pushes and the route unmounts with it. _Avoid_: holding it in a
   store, which reintroduces exactly the bug the pop already prevents.
-- **Play segment** — the **two ways through the Play tab** as one control, drawn on both
-  screens and never on the tab bar: _Find a game_ and _Match me_. The halves move in opposite
-  directions, and that is the whole of it — _Find a game_ is an **arrival**, so it calls [the
-  reset](#routing) and ends the Play session, where _Match me_ is an ordinary push with Find a
-  game left underneath. It is design-system 6.3, specified since the document was locked and
-  built for this. _Avoid_: "the play tabs" — the bar has the tabs, and this is inside one of
-  them; `router.back()` for the left half, which lands correctly on most paths and silently
-  wrongly on the rest.
+- ~~**Play segment**~~ — **struck** ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+  §1). It was the two ways through the Play tab as one control, _Find a game_ and _Match me_,
+  drawn on both screens; the deck is the Players tab now, Play opens on Find a game with nothing
+  above its mode section, and nothing in the app links to a deck route under Play. The design-
+  system 6.3 control it was built for is the Players tab's _Deck | Radar_ toggle now, beside
+  the mode segment Find a game still draws. _Avoid_: "Match me" for the deck; "the play tabs".
 - **Outstanding yeses** — your **own** _Let's play_ yeses still standing in the sport on
   screen, read from `GET /interest` and **filtered by sport**, so that the number is about the
   deck it is drawn under. It is the one figure in the tab that background-refetches, because
   the rule against that is about **orderings** — a pool reordering under a finger — and a count
-  has no order to lose. The prototype counted people who had waved at _you_, and that number
-  **cannot exist**: an incoming yes never crosses the wire in either direction, which is what
-  makes saying yes low-stakes. It moves on a tap's **own response** rather than on a refetch.
-  It is drawn as a **sentence on the deck's ending** and nowhere else: it was `Match me · 3` on
-  the segment until that was struck, because a number in that position reads as _how many cards
-  are waiting_, which is the count the deck refuses to publish anywhere.
-  _Avoid_: "Match me count" — the segment carries no number; "unread", "inbox" and "badge" —
+  has no order to lose. It moves on a tap's **own response** rather than on a refetch. It is
+  never drawn as itself: what the deck prints is **[yeses to give](#the-play-tab)** — the cap
+  less this — on the counter, since
+  [ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §5; before
+  that it was a sentence on the deck's ending, and before that `Match me · 3` on a segment,
+  struck because a number in that position reads as _how many cards are waiting_. The prototype
+  counted people who had waved at _you_; that count exists now, as **want to play you**, and it
+  is a different number on a different envelope.
+  The same read carries **who** the yeses went to, as ids per sport and nothing else, for the
+  **[interest tags](#the-play-tab)** and the challenge screen's invitee's line; the mutual list
+  crosses the same way under its own name (`MutualInterest`, `matchedWith`) for one reader — the
+  radar's sheet saying _You're matched_ (ADR-0174 §4) — and is still never the list _You said
+  yes_ is drawn from.
+  _Avoid_: "Match me count" — the segment is gone, and carried no number while it stood;
+  "unread", "inbox" and "badge" —
   there is no inbox and the bar carries no badge;
   counting the outgoing list, which is this app answering a question the response answers.
+- **Yeses to give** — `cap − outstanding` for the sport on screen, both off `GET /interest`'s
+  row (the mapper carries the cap now, and `ttl_days` beside it), printed as the second half of
+  the deck's **counter** — _8 left · 12 yeses to give_ — and drawn only once the read has landed,
+  because a nought is a claim the ceiling acts on. **At nought a stranger's card settles and a
+  liker's card flies** (`domain/yesBudget`): a yes that closes a mutual is never outstanding, so
+  the cap exempts it, and the server stays the authority — a `409` still returns the card. The
+  first half, _N left_, is `pool.remaining` plus the cards unanswered in hand, and it is true of
+  the whole pool because the envelope now says what is beyond the hand. _Avoid_: "yeses left",
+  which reads as cards; holding the cap or the 21 days on this side — both cross on the wire.
+- **Want to play you** — `pool.want_to_play_you` on the deal's envelope — **and on the
+  reading's, computed by the deck's own rule** (ADR-0174 §5): how many people have a live yes
+  towards the viewer in this sport that would be dealt to them, drawn as the volt chip in the
+  Players header — _2 want to play you_ — at one and above and **never at nought**, on either
+  pane, and decremented when a yes on a card carrying `inclusion_reason` comes back mutual —
+  on every held deal and on the held reading alike. **A count and never a list**: nothing on any
+  route names who
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4, which
+  reverses ADR-0109 §2 by exactly this one number). The liker is unmarked on the deck and lands
+  where the nudge puts them; **on the radar's record sheet they are marked** — _Wants to play
+  you_, §10's tag, above the two buttons — because the radar has no order to make the chip's
+  promise findable with (ADR-0174 §4, narrowing ADR-0109 §2 by that one sentence). _Avoid_:
+  "likes", "matches waiting", "inbox"; a badge on the bar, which stays refused; reading the chip
+  as _how many cards are behind this one_ — that is the counter's; two chips with two numbers —
+  the reading's is the deck's; the sentence on the deck card, which stays unmarked.
+- **The stamps** — _LET'S PLAY_ and _NOT TODAY_, two outlined words the deck card wears under
+  the thumb, one volt and one white, tilted, **invisible at rest**, fading in with the drag and
+  full at the threshold (95pt) where a release commits the answer in the drag's direction
+  (ADR-0169 §3). They are **feedback and never controls**: hidden from assistive technology,
+  unspoken, and their words are the two buttons' own (`STAMP_WORDS`), so what a drag reveals and
+  what a listener hears cannot drift. The three round buttons under the stage — ✕, i and a
+  drawn tennis ball — are the path that is never removed. _Avoid_: "swipe buttons"; a stamp
+  that is pressable; a stamp without its button.
 
-### The result conversation
+### The result argument
 
 Five client-only concepts, all of them in `features/games/`. The domain terms — Game, Result,
 Score, Proposal, Correction, Counter, Acceptance, Standing — are the **root glossary's** and are
 not restated here; what follows is only what this client had to invent to draw them.
 
-- **Result conversation** — **the seven screen states** a game can be in for the player reading
-  it, folded in `domain/conversation.ts` from the standing, the standing proposal and which seat
-  is theirs: awaiting an entry · never played · our score stands · their score stands · both
-  stand · confirmed · unscored, plus _not yours_ for a link that has gone stale. It is what
+- **Result argument** — **the seven screen states** a game can be in for the player reading
+  it, folded in `domain/resultArgument.ts` from the standing, the standing proposal and which
+  seat is theirs: awaiting an entry · never played · our score stands · their score stands ·
+  both stand · confirmed · unscored, plus _not yours_ for a link that has gone stale. It is what
   decides whether a screen offers a **correction** or a **counter** — the same request and
   completely different news — so nothing outside that file reads a `GameStanding` directly.
-  _Avoid_: "the result state" (there are two clocks and neither is a state machine), and naming
-  a screen after the act, since one route takes three.
+  _Avoid_: "the result **conversation**", which this client used until
+  [ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) gave the
+  glossary word to the Conversation context — two things called _conversation_ in one codebase
+  is how somebody eventually subscribes the wrong one, and this one's own terms are Proposal,
+  Correction, Counter and Acceptance. Also avoid "the result state" (there are two
+  clocks and neither is a state machine), and naming a screen after the act, since one route
+  takes three.
 - **The score draft** — the grid as it is being typed: one entry per row it draws, each cell
   holding what somebody put there as characters. Characters rather than numbers because `''` and
   `'0'` are different facts — losing a set to love is a result and an unfilled cell is not — and
@@ -577,19 +758,402 @@ not restated here; what follows is only what this client had to invent to draw t
   heading a score column with a handle.
 - **The court's handles** — what a seat says about the person in it, and **the whole of it**: no
   Level, no band, no area, no run of form, because those are what a _searcher_ reads to decide
-  about a game that might happen. They are drawn in the eyebrow — _Padel · with kasia_w, tomek.p
-  and marekb_, which is what tells two padel games in a week apart — and in the two sentences
-  about something a **person** did: putting a score up, and agreeing with one. Always the
-  **whole** handle
-  ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4), and the
-  unknown player's `?` for a seat `users` can no longer answer for. _Avoid_: shortening one, and
-  dropping a seat that has no handle — the court keeps its shape and loses a word.
+  about a game that might happen. They are drawn in the eyebrow — _Padel · with Kasia Wójcik,
+  Tomek Przybylski and Marek Baran_, which is what tells two padel games in a week apart — and in
+  the two sentences about something a **person** did: putting a score up, and agreeing with one.
+  Always the **whole** name
+  ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4, read
+  through [ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md):
+  the seat carries the **Name** and never the nickname, which is a handle drawn on a record and
+  said nowhere — the term keeps its word for the reason the specs do), and the unknown player's
+  `?` for a seat `users` can no longer answer for. _Avoid_: shortening one, and dropping a seat
+  that has no name — the court keeps its shape and loses a word.
+- **The plan slot** — the one `ReactNode` `GameScreen` grew when it stopped being only the result
+  argument ([#368](https://github.com/Raketa02/Raketa/issues/368)): a child the screen renders on
+  its **entry arm** and knows nothing about, filled by `features/plans`
+  ([ADR-0149](../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+  §2). **Three slots since [#414](https://github.com/Raketa02/Raketa/issues/414)** — `card`, the
+  Now card without its doors; `court`, the pairing #415 fills; `plan` — drawn in that order on the
+  plan lead, all opaque. **Neither type crosses** — there is no Plan, no ladder and no rung in
+  this feature, and `eslint.config.mjs` refuses the import. _Avoid_: a second screen for a game
+  that is being planned (a hand-off mid-standing gives a player two screens for one game depending
+  which day they tap it), and passing the screen anything that says which of its two routes
+  mounted it.
+- **The entry lead** — which of two things an `AWAITING_ENTRY` arm leads with: **the plan** while
+  the moment is still ahead, **the score** once it is here — and **the plan** while a seat is
+  open, whatever the clock says. One standing over two landings, which is what §5.2 means by
+  _Planning_ arriving at the Planning arm and _Needs result_ arriving at the score grid. It is folded in
+  `features/plans` — the ladder reads a plan, and now the court — and **derived from the card's
+  own door**, so the two cannot disagree: _the verb names what you arrive at_. It changes **what
+  leads and never what is offered**: _We played_ is available on every arm with a full court, one
+  press away on the ones that do not lead with it, and **withheld while a seat is open** — which
+  is the domain's answer (`actsOffered`), not the lead's. _Avoid_: a rung crossing into
+  `features/games`, a second table mapping rungs to landings, and reading it as a permission —
+  entry is gated on the window and the court, and nothing else.
+- **The court acts** — the fourth `ReactNode` slot on `GameScreen`, drawn **last** on the plan
+  lead under _We played_: the acts on the court itself — _Leave this game_
+  ([ADR-0162](../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)), and #419's
+  fill and call-off beside it. Every one is a **challenge** act reached from a game — the seat
+  that reopens is the challenge's — so the control, its sheet and its words are
+  `features/challenges`', exported through its `types.ts` and composed by `features/plans`, which
+  also decides whether one is drawn at all (the agreed moment). _Avoid_: the screen reading the
+  slot, a leave control on the card or in the chat, and `features/games` learning what a
+  challenge is.
 - **The read instant** — `read_at`, the moment every standing and deadline in the list was
   folded against. **Every duration on these screens is measured from it and never from the
   device clock**, so a countdown cannot drift out of agreement with the word printed beside it.
   There is no date and no clock time anywhere in the feature: this platform has no calendar to
   print one against. _Avoid_: "now" — the phone's now is exactly the value that must not be
   used.
+
+### The room
+
+Eight client-only concepts, in `features/conversations/`, `shared/lib/platform/`, `shared/ui/`
+and — for the one of them two features now read — `shared/date/`. **The quick chip is not among them**: the
+questions are about the plan's slots and the words are §22.4's, so both are `features/plans`' and
+only the row that draws them is the room's. The domain terms — Conversation, Message,
+System line, Member — are the **root glossary's** and are not restated here; what follows is only
+what this client had to invent to draw the room
+([#364](https://github.com/Raketa02/Raketa/issues/364)) and to keep it current
+([#365](https://github.com/Raketa02/Raketa/issues/365)).
+
+- **Stream entry** — what one row of the room draws: a recorded **Entry** the server has
+  answered for, or a **Sending message**, which is a message this phone has posted and the server
+  has not answered for yet. `streamOf` puts what is going out after what has landed and drops a
+  send the moment its message arrives, matched on `client_message_id` — so a resumed send can
+  never draw twice. A sending message carries **no moment**: the instant something happened is the
+  server's, and the phone's clock is the value the whole feature refuses. _Avoid_: "pending
+  message" (the send is the one act here that is _not_ pending), and giving one a `seq` — the
+  sequence is the server's and inventing a place in it is a claim, not a placeholder.
+- **The side line** — _You two are a side. Fill the seats to find your opponents._, the one
+  system line a room is **born** with, and only a doubles room: `SIDE_FORMED` at `seq` 1, the
+  ninth code, drawn as the other eight are
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). It
+  names nobody — its `actor_id` is `null`, it is about both people on the side and addressed to
+  them — and which rooms carry it is the server's; the client infers nothing from the sport.
+  _Avoid_: "welcome message", "Matched!" in the room (the yes screen's word, never the stream's);
+  drawing it for a tennis mutual.
+- **The invitee's line** — _You said yes to {name} on Players_, one line under the organiser's
+  card on the challenge screen, drawn exactly when the organiser is in the reader's own outgoing
+  list for the challenge's sport (ADR-0169 §8). Client-side off the deck's read, the reader's
+  **own act**, and nothing about why the engine picked them, which ADR-0143 still refuses to say.
+  _Avoid_: "they matched you" — a challenge is not a mutual; drawing it under any seat but the
+  organiser's.
+- **The platform day** — which calendar day an instant falls on **in `Europe/Warsaw`**, the one
+  zone this platform arranges in. It is what the **day separator** is computed from, and the
+  reason is one sentence: a device zone would put two people in one room on two different days.
+  The same zone the plan's day and hour are recorded in, which is what lets a separator and a
+  `DAY_RECORDED` line agree about which day Saturday is — and it is why the conversion is
+  `shared/date/platformZone.ts`' rather than a feature's: the plan's day row is its third caller,
+  and two implementations would put two surfaces of one screen on two different days. _Avoid_: the
+  device's zone anywhere, a per-message clock — there is none, on purpose — and `Intl` with a
+  `timeZone`, which can silently fall back to exactly the device day this exists to refuse.
+- **The day separator** — the only time-shaped thing the stream draws, between entries on
+  different platform days. A room lives at most a few days, so the fact worth having is _was this
+  today_. _Avoid_: "timestamp".
+- **The chat door** — the way into a room from somewhere that is not the Chats list, drawn as
+  _Open the chat_. It is a **client join over `GET /conversations`** and it **fails soft**: no
+  route serves a challenge or a game its conversation, so the surface finds the row whose id
+  matches and draws nothing when there is none. The words live in `features/conversations` so the
+  three surfaces that draw one cannot say three different things. _Avoid_: a `conversation_id` on
+  anything but a conversation, and a disabled door — no door is the answer.
+- **The live channel** — the one long-lived connection this app opens: `LiveStreamPort` over
+  Server-Sent Events, held for as long as a room is on screen in the foreground, and **never one
+  per row of a list**. It is a **platform port** like the position and the photo library, on the
+  same second argument: a transport cannot be driven from a test either. _Avoid_: "socket" or
+  "websocket" in this app's prose — the channel is unidirectional by construction and that is a
+  decision, not an implementation detail.
+- **The nudge** — one frame off that channel, and the whole of what it says is _this room moved_.
+  The wire carries `{ v, conversation_id, last_seq }`; **the number stops at the port**, because
+  the answer to a nudge is a re-read from the client's **own** high-water mark and a number handed
+  up is a number somebody eventually pages from. _Avoid_: "event" or "push" for one, treating a
+  missing frame as a gap to detect, and any arithmetic on `last_seq` above the port.
+- **Live state** — the three-way _live · not live · held_ a room draws about itself, folded in
+  `domain/liveState.ts` from the channel's standing and the account's. **Live is the absence of a
+  claim** rather than a claim: an open channel, one still connecting and one deliberately closed
+  behind a backgrounded app are one answer, because in all three the honest thing to draw is
+  nothing. _Avoid_: a _Live_ badge, a connection indicator, and reading the port's status directly
+  in a component — _only in the foreground, and only after a connect attempt has failed_ is the
+  pair of conditions that gets dropped there.
+- **Held** — the account cannot write anywhere another player sees it, and can always read. On this
+  screen that greys the composer and every chip behind **one** pre-emptive note. It reaches the
+  client only as the `account_held` refusal — no read serves it — and **nothing in this build can
+  open a case**, which is a named exception recorded in `domain/liveState.ts`. _Avoid_: "suspended"
+  or "banned", a note per control, and hiding the room.
+- **The swipe row** — a list row that slides left to **reveal** one control behind it, and the
+  control's act is never the swipe's: `shared/ui/SwipeRow`, on React Native's own `PanResponder`,
+  claiming a touch only on a move that has travelled the **intent distance** across and further
+  across than down, and never on the press — so a tap stays a tap on the door and a drift stays the
+  list's scroll. A row rests **closed** or **revealed** and never in between. The Chats
+  conversation row reveals _Leave the game_, which is the departure's door (`DepartureDoor`,
+  `features/challenges`', **composed in by the shell** because neither feature may import the
+  other — and whose sheet reads `leavingWouldEnd` off the court's row on that feature's list, so
+  it says _calls the game off — for {name} too_ or _closes this court for {name}_ where the
+  reader is the last other seat, [ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+  §9); the organiser's challenge row, **while nobody has joined**, reveals _Remove the
+  challenge_ (`RemovalDoor`, the same feature's own, so nothing is composed); every other row
+  reveals nothing and does not move. Both doors are one shape — an `ActDoor` a surface draws
+  however a door looks there, on `useActDoor`, which holds when the sheet is up and that a
+  refusal's re-read is paid on dismissal — and the same act is the card's **accessibility
+  action**, because a swipe is a gesture a screen reader consumes. _Avoid_: "swipe to delete" or
+  "swipe to leave" — the swipe reveals a word and the sheet behind it acts; a row that slides to
+  show nothing; a gesture library.
+
+### The yes screen
+
+One client-only concept, in `features/challenges/`
+([ADR-0167](../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
+_Yes_ is what the app already calls both acts — _I'm in_ is a yes, _Let's play_ is a yes that met
+another — and this is the screen a yes lands on.
+
+- **The yes screen** — the one-shot, full-phone screen a yes lands on the instant it is
+  answered: the faces on the court reader first, one lime word, two pills, on the app's one
+  dark ground, with the tab bar stood down. Keyed by the challenge and by **which yes** it is —
+  a challenge's, whose word is _Challenge!_, whose picture is the court in two sides with a `vs`,
+  and whose _Later_ is the Chats list; a mutual's, whose word is _Matched!_, whose picture is you
+  and them with no `vs` and no empty seat in every sport, and whose _Later_ is a pop
+  ([#434](https://github.com/Raketa02/Raketa/issues/434)) — and it reads everything it draws
+  from the challenge the query cache holds, fetching it on open where the deck never held it. Its
+  two doors are the only ways out: _Open the chat_ waits on the button for the room and lands as
+  `[Chats list, the room]`; _Later_ goes back. **A tile** is the face the app draws everywhere,
+  with two initials over a poster and an outlined empty seat as its two additions; **the spoken
+  sentence** is the picture as one header, built from whole handles. _Avoid_: "the celebration"
+  or "the moment" (not terms), "the match screen" (the word is copy on one face of it and never a
+  noun for a game), pushing it from anywhere but a yes, and re-showing it — every exit removes it.
+
+### The plan
+
+Eleven client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
+three recordings — are [ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)'s,
+re-keyed on the **challenge** and given an **anchor** by
+[ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md),
+and are owed to the root glossary by [#332](https://github.com/Raketa02/Raketa/issues/332); what
+follows is only what this client had to invent to let a room fill one in
+([#366](https://github.com/Raketa02/Raketa/issues/366)).
+
+- **The slot order** — `where · day · hour`, spelled once in `domain/slots.ts` and read by the
+  card, by the quick chips one feature over and by the game screen's checklist. It is the order
+  people discuss them in and of **decreasing negotiability**, and it is what _in slot order_ means
+  everywhere that phrase appears. _Avoid_: a second spelling of it, and _part of day_ — that was
+  the source's second slot and it is not one.
+- **The day row** — the days a plan may still name: **today + 6, clamped to the row's
+  `anchor + PLAN_HORIZON`**, so it shrinks as the week runs out and is **empty** inside the entry
+  grace. _Today_ is the surface's own `read_at` — the room's in the chat, the games list's on the
+  game screen — and the anchor rides on the plan row: the challenge's send until the game exists,
+  then `planned_at`, only ever later, so the row **widens** when the court fills. _Avoid_: a
+  calendar, a date picker, "expired" — the row shrinking is not a deadline passing — and deriving
+  the anchor from a game, which a room without one does not have.
+- **The hour row** — the thirty-five half hours between 06:00 and 23:00. _Bounded chips the
+  platform offered, never a free instant_: the grid is a convention and
+  `the_hour_is_not_offered` is what makes it true. _Avoid_: a wheel, a free-text time, and
+  narrowing the row once an hour is set — a plan is never unmade.
+- **The slot chip** — a pressable pill reading **its value or its name**, and the only surface in
+  the app that edits a plan. `Chip` here because the plan is edited; `Tag` on the game screen
+  because it is read. It goes **busy with the value it already had** while its write is going out.
+  _Avoid_: "lock", a locked border, a `locked by everybody` pill and a complete state — filling the
+  third slot **is** the lock and there is nothing left to draw about one.
+- **The count line** — `2 of 4 in — you can plan now, lock when everyone's here`, drawn **where
+  the lock button will be, exactly while the room has no game** (ADR-0164 §5): the room's members
+  over the sport's seats. It is the note #324 owes an absent control — the button is **absent,
+  never greyed** — and it becomes the button on the nudge that brings the game. A singles room
+  never draws it, because two yeses is the whole court and the room opens with its game. _Avoid_:
+  a disabled lock with a reason on it, counting seats from the plan, and drawing it on a game with
+  a seat left open — that court has its game and the button, and the server's
+  `the_court_is_not_whole` is a sentence.
+- **The line-up, as the card reads it** — `LineUp`: `{ complete: true }`, or
+  `{ complete: false, members, seats }`. **Complete means the court has become a game** (ADR-0165
+  §1: the line-up having completed), never that the count is full — three of four with a game is
+  a seat left open on a complete line-up. Folded by the room (`lineUpOf`, handed the sport's seat
+  count), handed to the card, and read by `lockControl` as its `waiting` state before the slot
+  count; the game screen hands `LINE_UP_COMPLETE`. _Avoid_: an optional count standing in for the
+  fact, and deriving completeness from `members === seats`.
+- **The quick chip** — one of at most three questions above the room's composer, **one per
+  unfilled plan slot in slot order plus _On my way_ when the agreed day is today**. A chip **posts
+  words and changes nothing**: filling the slot it asks about would record an agreement nobody had
+  yet. The conditional fallback is what caps the row at three; unconditional it would be exactly
+  four. The rule and the words are this feature's because both read the slot order; the **row** is
+  the room's, because a chip is a message and the send is the composer's. _Avoid_: naming a
+  weekday, a part of a day or a venue in one — a chip naming Saturday is wrong six days a week.
+- **The plan tags** — the same three slots **read** rather than edited, on the game screen's
+  **score lead**: `Tag`s and never `Chip`s, because _a control that cannot be operated must not
+  offer the affordance of one_ (ADR-0149 §4 as amended by #414), and **one accessibility element**,
+  because they are one fact in three parts with no action. The way to change one is the chat door
+  beneath them. On the **plan lead** the plan is the chat's editable card, reused as it is, with
+  the panel inside it through its `note` slot. _Avoid_: an `editable` prop on the card — the two
+  drawings share a slot vocabulary and no behaviour — and a dot on one of these, which is the
+  sport's and only the sport's.
+- **The checklist** — three lines, capped, in one order on the game screen's **score lead**
+  (both entry arms until #414): **what is true now**, **what is still to agree** (the whole list,
+  in slot order), and **what it moves**, which is **cited rather than written**: `features/games`'
+  own `worthLine`. On the plan lead the card's bars and the counter carry the first two and the
+  eyebrow's kind word the third. _Avoid_: a fourth line, a second sentence about what a game is
+  worth, and a branch per rung.
+- **The composed game screen** — `GameScreenWithPlan`, the thing both of the game screen's routes
+  mount: the join over games, plans and the player's rooms, the fold that says which act the entry
+  arm leads with, and the three children that fill the screen's slots — the Now card with its
+  doors off, the court's pairing, and the plan (`GameScreenPlan`, editable, on the plan lead;
+  `GamePlan`, read-only, on the score lead). It is here rather than in `features/games` because
+  every half of it reads a plan, and it is **one component rather than two lines in each route
+  file** because a composition spelled twice drifts at one of them. _Avoid_: composing it at a
+  call site, and giving it anything that says which of the two addresses mounted it.
+- **The past combination** — a day and an hour that together name a moment that has gone. It is
+  refused **in written copy rather than by a disabled control**, because the two are filled in
+  either order and either can be the second, so the sentence names **both** remedies and no value.
+  _Avoid_: pre-empting it on the client — the platform has one opinion about _now_ and it is the
+  server's.
+
+### Now
+
+Eight client-only concepts, all of them in `features/plans/` — the rail and its card are this
+feature's because a card needs a **plan** beside a **game** and ADR-0149 §1's arrow runs one way
+([`the-loop-components.md`](../docs/specs/the-loop/the-loop-components.md) §3.4). What follows is
+only what this client had to invent to draw what is happening today and next
+([#367](https://github.com/Raketa02/Raketa/issues/367),
+[#413](https://github.com/Raketa02/Raketa/issues/413)).
+
+- **The ladder** — the four rungs a game's card is named by, **read in order**, in
+  `domain/ladder.ts`: _a seat is open_ → **Needs a player**, _the agreed point has passed_ →
+  **Needs result**, _all three slots filled_ → **Game on**, otherwise **Planning**. The
+  conditions overlap on purpose and the order is what resolves them: **the clock outranks the
+  checklist**
+  ([ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md) §3),
+  so rungs 3 and 4 are reached only while the point is still ahead — **the calendar is not a
+  rung** ([ADR-0166](../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)): a game on its
+  own day is _Game on_ or _Planning_ by its slots, and the day row says _Today_ — and
+  **the open seat outranks the clock**
+  ([ADR-0162](../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #411 rule
+  5): a court somebody left cannot be played or recorded until somebody is in that seat, so the
+  rung is read off the court before the plan is asked anything. _Avoid_: restating _and the moment
+  still ahead_ as a condition of its own — the order already says it — a _Today_ rung or any
+  card named after the calendar, reading a rung anywhere but here, and asking the wire for the
+  rung: nothing on it names one, and `player_id: null` is the whole of what it says.
+- **The open seat** — a seat somebody has **left** and nobody has filled: `player_id: null` on
+  the wire, `playerId` absent here, and **still a seat** — it keeps its place and its side, the
+  court keeps its size, and every surface that draws the court draws it empty: the builder's
+  dashed outline on the card, an **Open seat** row on the players card, `An open seat` in the
+  card's spoken name. It stays open until it is filled, the game is called off, or the window
+  closes into _Never played_. _We played_ is withheld while one is open. _Avoid_: dropping the
+  seat (a three-person doubles game), drawing `?` in it (that is a person `users` cannot name),
+  and a plus (nothing on these courts is pressable).
+- **The agreed moment** — whether the plan's agreed point is behind the games list's instant:
+  `momentHasPassed`, the first clock rung's own test, exported for the one control that is drawn
+  only while it is ahead — _Leave this game_. The rung alone cannot say it, because _Needs a
+  player_ outranks _Needs result_. _Avoid_: reading it against the phone's clock, and a second
+  comparison beside the ladder's.
+- **The agreed point** — the moment a plan names: the agreed **instant** when the day and the hour
+  are both recorded, the **start of the following local day** when only the day is, and **nothing**
+  when no day is. **Later rather than earlier**, so nobody is asked for a result before they could
+  have played. It is the server's field and is never recomputed on this side. _Avoid_: deriving one
+  from the day and the hour here — that is a zone conversion, and a second answer to _when is this
+  game_ on one screen.
+- **The rail** — `YOUR GAMES · n`, **one card, swipe**. A rail rather than a list, because
+  _a game awaiting an entry, one awaiting an answer and one that never happened are one thing at
+  three moments of its life_ and a rail keeps that refusal by not being a list at all: there is
+  nowhere to put a shelf. The order is **the server's, newest arrangement first**, and it is
+  **stable** where a clock sort silently re-orders a player's cards between sessions. _Avoid_:
+  shelves, a re-sort, and calling it a list.
+- **The card name** — which of eleven cards a game draws, folded at read time from the standing,
+  the court, the slot count and the clock: the five rungs, **Confirm the result** (one name over
+  four `AWAITING_ANSWER` arms), **Counted**, **Uncounted**, **Never played**, **Called off** (the
+  fourth end, [ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md) — shelved a
+  day from `calledOffAt`, read before the window and the entry, and since
+  [ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+  §8 the one ending's card that offers something: _What happened?_ and the trash),
+  and the named gap for a standing this build cannot read. It is the
+  **tag**, and every slot on the card that differs by name is a **table lookup on it** — the stage
+  dot, the accent, the door's word — so a twelfth name fails `pnpm typecheck` in one file.
+  _Avoid_: a status column, a client state machine, a switch over the names, and a twelfth card.
+- **The shell** — one dark card for all eleven names: **header · slots + court · footer**. The
+  Planning card is the first drawn for real; every other name is the same shell on **soft
+  defaults** until its own design arrives, so the rail does not mix two visual languages and a
+  card flipping under a thumb does not jump layouts. _Avoid_: a second card component, and a
+  layout that changes shape rather than content between two names.
+- **The stage dot** — the tag's dot on this card is **the stage's, not the sport's**: `arranging`
+  while the game is still in the players' hands (Planning, Needs a player, Needs result, Confirm
+  the result), `mint` where it is settled (Game on, Counted), the quiet hairline on the three
+  endings nobody scored. It is legal because **the sport is the word beside it** — `PADEL`,
+  `PADEL · FRIENDLY` — and nothing writes _singles_ or _doubles_: the court says the format.
+  _Avoid_: a sport dot here, urgency as the pill's variant, and a dot on a card that names no
+  sport.
+- **The slot rows** — three, in the app's own order (**where · day · hour**, read from `slots.ts`),
+  each a **settled bar**, a label (`WHERE` · `DAY` · `TIME`) and a value. **Bright is agreed, dim is
+  not**: a settled slot draws its value big and white — the place without its court, `Sunday`
+  `9 Aug`, the hour in mono — and an unsettled one draws _Not agreed yet_ small and grey. The card
+  fills with brightness as the plan does. `TIME` is the card's word for the `hour` slot; the
+  chat's chip keeps `Hour`. **On the day of the game the day row reads `Today` `14 Sep`**
+  ([ADR-0166](../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)) — `dayIsToday` in
+  `slots.ts`, the plan's day against the platform day of the games list's `read_at`, the one
+  definition the quick chips' _On my way_ also reads; the card is the only surface that says it,
+  and _Today_ is the only word it says. _Avoid_: a figure, a line, a gloss, a countdown on any of
+  them, a row that shrinks when its slot is empty, _Tomorrow_ or _Yesterday_, and _Today_ on the
+  chat's chip or the game screen's tag.
+- **The accent** — one table by name for the settled bar's colour **and** the wide door's variant:
+  `volt` on Planning (_the plan is settled here_ — a meaning volt has on this card and nowhere
+  else), mint on everything else as the soft default. _Avoid_: a volt bar over a mint door, and
+  volt on `primary`.
+- **The line under the slots** — the one fact the shell keeps from before: **Needs result's
+  window** (`{duration} left`, folded against `read_at`, obeying nothing) and **the endings'
+  standing** (`gameStandingLine`, cited). Nothing on the three plan-led rungs, and **nothing on
+  the called-off card** ([ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+  §8), whose tag is the whole of what it says. _Avoid_: the gloss coming back under another name,
+  and a checklist on the card.
+- **The two doors** — **the wide door** is the next thing to do and its word changes with the
+  stage: `Finish the plan` · `Open` · `Fill the seat` · `We played` · `Confirm the result`, one per
+  name, none on three of the endings, and **`What happened?`** on the called-off card, which
+  opens the game screen whose heading says who ([ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+  §8); it **navigates and never writes**. `Fill the seat` is the one door that runs something
+  first — the challenge screen's fill, a search that reaches nobody — and it is
+  `features/challenges`' `FillTheSeat` drawn in the door's place, only while the agreed moment is
+  ahead. **The bubble** beside it is the icon door to the room, drawn only where there is one.
+  **The trash** takes the bubble's place on the called-off card and is not a door: it is
+  `features/games`' `RemoveCard` — the dismissal, `POST /games/{id}/dismissal`, the reader's own
+  — which clears the card from Now at once, on the reply, with no sheet; `mayBeCleared` names the
+  one card that carries it. **The body is not a door.** _Avoid_: a pressable body, a disabled
+  control where a card offers nothing, a door that writes, a third door, and the trash on any
+  other ending.
+- **The fill** — the game screen's fourth slot, `fill`, drawn **directly under the card** on
+  the plan lead ([ADR-0175](../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+  §4): a **challenge** act reached from a game, composed by `plans` through
+  `challenges/types.ts` and handed its rule as `offered` — a seat open, and the moment ahead. It
+  is the one act the screen draws for the court: `Call it off` is gone for everybody,
+  `Leave this game` is the Chats row's swipe alone, and `Open the chat` is the Now card's
+  bubble and the tab. The slot was `courtActs`, drawn last with the three. _Avoid_: `plans`
+  learning what a seat's answer is, an act mounted and unmounted by its rule rather than handed
+  it, any of these on the card or in the chat, and a leave or a call-off anywhere on the screen.
+
+### The sportsmanship card
+
+Three client-only concepts, all in `features/sportsmanship/`. The domain terms — the card,
+stars, blank, settled court — are the **root glossary's** and are not restated here; the word
+**rating** is Skill rating's everywhere in this app, so nothing in this feature is spelled with
+it.
+
+- **The star draft** — what the player has said so far on one card, held as a player id to
+  their stars for exactly as long as the card is on screen. **Absence is blank**, which is what
+  makes _leave anybody blank_ representable without a sixth value on a five-point scale, and a
+  map keyed by person is what makes _two answers about one player_ unrepresentable rather than
+  validated. Pressing the star that already stands **clears the row** — a rule about what an
+  answer is, in `domain/stars.ts` and never in the drawing, because sending is final and a
+  finger that slipped is the one person _leave anybody blank_ has to be true for. _Avoid_:
+  spelling a blank as `0` or as a null, and "the ratings" for what is typed — nothing is a
+  rating until it is sent, and not even then by this app's vocabulary.
+- **The rated court** — the evening a card is about, as **this feature declares it**: a game
+  id, its sport, and who was on the court. `GET /sportsmanship` answers ids and nothing else on
+  purpose, so the words come from the games list the card is drawn beside, and `Game` satisfies
+  the shape structurally rather than the feature adopting another feature's entity. A card
+  whose court is not in the list is **dropped**, because there would be nobody to name.
+  _Avoid_: reading the games cache from this feature, and re-deriving the seven-day window on
+  this side — which cards are open is the server's answer and this client holds no clock it
+  could be right with.
+- **The star row, drawn** — five 44pt targets, flush, with a drawn 24pt pentagram inside each
+  ([6.13](docs/design-system.md#613-the-star-row)). `StarRow` is `shared/ui`'s: it has a touch
+  rule, a press state, a fill pair and three pinned ratios, which is a design-system object
+  whether or not a second feature draws it. Given is `ink` and blank a `muted` outline — the
+  run of form's own pair at 3,24:1, so it reads with no hue perception, plus a **shape**
+  difference the squares could not have — and each star is **its own accessibility element**
+  with only the standing one `selected`, because a listener has no row to count along. _Avoid_:
+  a zero star, half stars, and marking every filled star selected, which reads the row out as a
+  table.
 
 ### Data and errors
 
@@ -650,13 +1214,15 @@ not restated here; what follows is only what this client had to invent to draw t
 ### Platform and delivery
 
 - **Platform port** — a narrow TypeScript interface in `shared/lib/platform/` over one
-  native capability, with exactly two implementations: the real one that imports the
-  native module, and a fake in `src/test-support/platform.ts`. Two exist —
-  `LocationPort` and `ImagePickingPort` — and each is **the only importer of its module**,
-  the way `shared/lib/auth` is the only importer of the keychain. The reason is not
-  tidiness: a native module has no JS underneath it, so a feature that imports one is a
-  feature no test can drive. _Avoid_: "device module", "native service" — a module holding
-  both capabilities is the utils bucket this app bans, and a capability is one file.
+  capability the app cannot run in a test, with exactly two implementations: the real one that
+  imports the module, and a fake in `src/test-support/platform.ts`. Three exist —
+  `LocationPort`, `ImagePickingPort` and `LiveStreamPort` — and each is **the only importer of
+  its module**, the way `shared/lib/auth` is the only importer of the keychain. The reason is
+  not tidiness: a native module has no JS underneath it, so a feature that imports one is a
+  feature no test can drive — and **the third one is a socket rather than a native module**,
+  here on that argument alone, which is why _platform_ and not _native_ is the word. _Avoid_:
+  "device module", "native service" — a module holding several capabilities is the utils bucket
+  this app bans, and a capability is one file.
 - **Permission state** — the four answers a platform port gives about a capability:
   `undetermined | granted | denied | blocked`. **Denied and blocked are different
   refusals** — denied can be asked again at the moment the player understands why; blocked
@@ -669,12 +1235,28 @@ not restated here; what follows is only what this client had to invent to draw t
   while the player is elsewhere is a movement trail, a different privacy class from the
   one anybody agreed to, and nothing in this app asks for it. A fix is **coarsened the
   moment it is read** — the Location area is what the app keeps, and the fix itself does
-  not outlive the function that asked for it.
+  not outlive the function that asked for it. **Read again on a cold start**, and on a return
+  from the background when the last read is more than a day old, through the same port and
+  with the same accuracy, by `useLocationRefresh` — never merely on foreground, and never
+  with a prompt: the refresh checks the permission and asks nobody, so a revoked one leaves
+  the stored area where it is
+  ([ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §6).
+  The location **step**'s own re-read on foreground is a different thing and stands: the
+  player is on the screen that shows the area, and what is on it should be near where they
+  are. _Avoid_: a silent read on every foreground — outside that screen a read on every
+  return is a movement trail taken one foreground at a time, which is what the day was
+  chosen against.
 - **Foregrounded** — the app coming back to the front, as `useOnForeground` reports it:
   `AppState` becoming `active`, read through the focus manager `wireFocusManager` already
   feeds. One listener for the whole app (docs/architecture.md Part 13), so _foreground_ has
   one meaning rather than one per screen. _Avoid_: a second `AppState` listener in a
   feature — that is the one that disagrees about what `inactive` means.
+- **Returned to** — a screen coming back to the top of its stack, as `useOnReturn` reports
+  it: the navigator's focus **after a blur**. A stack keeps the screen under the top one
+  mounted, so a pop is neither a mount nor a foreground and nothing re-reads on it unless the
+  screen says so. _Avoid_: "focused" for this — `useFocusEffect` fires on the way in as well,
+  and a mount is not a return; and teaching `focusManager` to mean it, which would refetch
+  every query in the app on every pop.
 
 - **New Architecture** — React Native's Fabric/TurboModules runtime, enabled
   (`newArchEnabled`). A dependency blocking it is technical debt with a plan, not an
@@ -735,8 +1317,9 @@ comment and a commit message all use the same word.
   control**: pressed (`coral`) and selected (`ink`) are things the reader has done to the card,
   where **marked** (`voltStroke`, 1pt) is a standing fact about whoever is drawn on it. The
   press still wins over it, it announces nothing, and it is **never the only cue** — a caller
-  that draws it also draws the word. Today its one caller is the competitive candidate card,
-  bound to the tag being drawn rather than to the code beneath it.
+  that draws it also draws the word. Its callers are the two list cards, bound to the _Wants to
+  play you_ tag being drawn — the tag's kind, never its colour or the code beneath it — so the
+  reader's own _You said yes_, a plain tag, draws no outline (ADR-0169 §8).
 - **Eyebrow vs form label** — an **eyebrow** labels a region you are _reading_; a **form
   label** labels a control you are about to _operate_. Not interchangeable.
 - **Slot square** — the day / time / hour / range selectors, sharing a four-state
@@ -758,6 +1341,13 @@ comment and a commit message all use the same word.
   screen that names its denominator and reports one through `accessibilityValue`; a **meter**
   visualises a number the row beside it has already printed and is **hidden from assistive
   technology**. _Avoid_: using either word for the other, or calling a meter a progress bar.
+- **A meter's tone** — which of three fills it draws in, `good` · `neutral` · `poor`. It is
+  the **caller's** reading of the figure and never the meter's own: where a number turns poor
+  is a fact about what the number means, so one ladder is read by every surface drawing it and
+  a bar can never disagree with a pill above it about one ratio. _Avoid_: "the meter's
+  threshold", which puts the ladder in the primitive, and treating the tone as the carrier of
+  a value — it is always the third cue, behind the bar's length and the figure printed beside
+  it.
 - **Accessible name** — what a control announces. It is **copy**, not a component detail: it
   is localisable, it quotes formatted numbers, and it is composed from codes in a
   `*Presentation.ts`, never written as a template in the component that draws the control.

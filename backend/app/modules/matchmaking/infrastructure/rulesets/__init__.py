@@ -34,20 +34,26 @@ from types import MappingProxyType
 from typing import Mapping
 
 from app.engines.matchfit.ruleset import Ruleset, validate_ruleset
-from app.modules.matchmaking.infrastructure.rulesets import r2026_08_26_a
+from app.modules.matchmaking.infrastructure.rulesets import (
+    r2026_08_26_a,
+    r2026_09_08_a,
+    r2026_09_15_a,
+)
 
 #: Every ruleset this build carries, by version. Keyed by the stamp that rides on
 #: a result, so an old search's ``ruleset_version`` names a row that is still here.
 RULESETS: Mapping[str, Ruleset] = MappingProxyType(
     {
         r2026_08_26_a.VERSION: validate_ruleset(r2026_08_26_a.RULESET),
+        r2026_09_08_a.VERSION: validate_ruleset(r2026_09_08_a.RULESET),
+        r2026_09_15_a.VERSION: validate_ruleset(r2026_09_15_a.RULESET),
     }
 )
 
 #: The ruleset every search runs under. Changing this line is a ruleset release:
 #: an offline diff, a deploy, and one line per changed constant in the pull
 #: request saying what the hypothesis is and what would falsify it.
-LIVE_RULESET_VERSION = r2026_08_26_a.VERSION
+LIVE_RULESET_VERSION = r2026_09_15_a.VERSION
 
 #: Resolved once, at import, from a constant — **never from the environment, a
 #: setting, a header or a hash of the searcher.** The A/B split that would select

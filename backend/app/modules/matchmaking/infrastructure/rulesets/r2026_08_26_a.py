@@ -26,6 +26,24 @@ inert** — the reliability term already renormalises over the strands that arri
 than assumed: the three walkthrough golden files move by **0.016 and 0.009 Fit
 points** on two readings, no order changes and nobody crosses the floor.
 
+**And it was edited a second time, for the same kind of reason and not a
+different one** (``docs/adr/0160``). *Answers about results* entered the
+vocabulary, and a strand vector here is validated as **exhaustive** over it, so
+this dataset had to say something about a name that did not exist when it
+shipped. What it says is **nought in both modes** — which is not a weight anybody
+chose but the fact restated: no search this version ever ran could read a strand
+the platform could not publish. The five real weights are untouched, the vectors
+still sum to a hundred, and ``min_observations`` is the same three it always was,
+now spelled once per strand because the field's shape moved under it. A *number*
+moving would still be a new dataset; a vocabulary widening is not one.
+
+**And a third time, for the deck's cool-off** (``docs/adr/0169`` §6, released as
+``2026.09.15-a``). ``InterestRules`` gained ``deck_cool_off_days`` — a required
+row, because a ruleset with a hole in it is one the validator cannot read as a
+whole — and this dataset says **nought**: *no window after a shared court* is
+what its deck did, and a number it never ran under would be a lie of the other
+kind. The same rule as the strand's edit above: the shape moved, no number did.
+
 No recorded search read either of the two struck weights, or any of the others:
 reliability has stood down platform-wide for every search this version has run,
 because ``NoPlayerScoresExist`` answered its provider. The precedent for editing
@@ -363,6 +381,9 @@ RULESET = Ruleset(
                     {
                         ReliabilityStrand.SHOWS_UP: 33,
                         ReliabilityStrand.ANSWERS_CHALLENGES: 29,
+                        # Zero, and the zero is the honest number: this dataset
+                        # ran while the name did not exist (``docs/adr/0160``).
+                        ReliabilityStrand.ANSWERS_RESULTS: 0,
                         ReliabilityStrand.KEEPS_PLANS: 18,
                         ReliabilityStrand.SETTLES_UP: 13,
                         ReliabilityStrand.SPORTSMANSHIP: 7,
@@ -393,6 +414,7 @@ RULESET = Ruleset(
                     {
                         ReliabilityStrand.SHOWS_UP: 33,
                         ReliabilityStrand.ANSWERS_CHALLENGES: 23,
+                        ReliabilityStrand.ANSWERS_RESULTS: 0,
                         ReliabilityStrand.KEEPS_PLANS: 15,
                         ReliabilityStrand.SETTLES_UP: 12,
                         ReliabilityStrand.SPORTSMANSHIP: 17,
@@ -506,7 +528,19 @@ RULESET = Ruleset(
     # to*. It is a **dock, not an exclusion**: refusing to show a genuinely good
     # match over one missed game is the block's job, not the matcher's.
     reliability=ReliabilityRules(
-        min_observations=3,
+        # The single number this dataset shipped with, spelled once per strand
+        # because the *shape* changed under it (``docs/adr/0160``). Every value
+        # is the three it always was, including the strand it prices at nothing.
+        min_observations=MappingProxyType(
+            {
+                ReliabilityStrand.SHOWS_UP: 3,
+                ReliabilityStrand.ANSWERS_CHALLENGES: 3,
+                ReliabilityStrand.ANSWERS_RESULTS: 3,
+                ReliabilityStrand.KEEPS_PLANS: 3,
+                ReliabilityStrand.SETTLES_UP: 3,
+                ReliabilityStrand.SPORTSMANSHIP: 3,
+            }
+        ),
         horizon_days=365,
         published_score_bar=70,
     ),
@@ -591,6 +625,14 @@ RULESET = Ruleset(
         # Falsified by answer rate by open-challenge bucket. If answer rate does
         # not fall as load rises, the signal is measuring nothing and all three
         # rungs are noise.
+        #
+        # **They did not move when the answer window doubled** (`docs/adr/0151`),
+        # and that is a decision rather than an oversight: these count *seats
+        # awaiting your answer*, so a window twice as long roughly doubles the
+        # steady-state count and every rung bites at half the invitation rate.
+        # Nobody has measured the falsifier above, and moving two numbers at once
+        # makes neither of them falsifiable — the window's own reading is answer
+        # rate against time since invitation, which a re-cut rung would confound.
         challenge_load_rungs=(
             ChallengeLoadRung(at_least=3, points=-4, prints=ChallengeLoad.SOME),
             ChallengeLoadRung(at_least=5, points=-8, prints=ChallengeLoad.BUSY),
@@ -676,5 +718,12 @@ RULESET = Ruleset(
         ttl_days=21,
         outstanding_cap_per_sport=20,
         pass_suppress_days=30,
+        # Nought, and nought is the honest number: this dataset ran while the
+        # row did not exist, and *no window after a court* is what its deck
+        # did. The shape changed under it, on the precedent ``docs/adr/0160``
+        # set when the sixth strand widened a vector this file validates as
+        # exhaustive — the row is ``docs/adr/0169`` §6's; the edit is that
+        # record's kind of edit, and the header above says so.
+        deck_cool_off_days=0,
     ),
 )

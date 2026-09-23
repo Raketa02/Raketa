@@ -46,6 +46,8 @@ import type { PlayIntent, SearchMode } from '../domain/vocabulary';
 
 import { isDoubles } from '../domain/lineup';
 
+import { builderTitle } from './builderPresentation';
+
 /** The screen's own title, and the one ⚡ opens on. */
 export const FIND_A_GAME_TITLE = 'Find a game';
 
@@ -333,15 +335,19 @@ export const DECLARATION_EYEBROW = 'Kept on your profile';
  * ([#293](https://github.com/Raketa02/Raketa/issues/293)). A sentence pointing at a control
  * that is not drawn is worse than no sentence.
  *
- * So it says the two readers instead, and they are the two ADR-0094 names. **Somebody else's
- * search** reads it — the intent alignment term's signature is `(my_mode, their_intent)`, so
- * this is the half of a pairing the player contributes when a stranger finds them. And **Match
- * me**, because `POST /deck` carries no mode and *"without one there is nothing at all to go
- * on"*. The player's own search reads neither, which is §6.4's rule and is why the segment on
+ * So it says the two readers instead. **Somebody else's search** reads it — the intent
+ * alignment term's signature is `(my_mode, their_intent)`, so this is the half of a pairing the
+ * player contributes when a stranger finds them. And **a yes on Players that becomes a game**:
+ * the deck itself reads no declaration any more — every deal runs under one ruler
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §2), which retired *and by Match me* from this sentence — but the court a mutual opens is a
+ * friendly when either of the two declared *for fun* (§8), and that is the declaration read.
+ * The player's own search reads neither, which is §6.4's rule and is why the mode segment on
  * the other side of the answer is not mentioned here.
  */
 export const DECLARATION_BODY =
-  'Read when somebody else’s search finds you, and by Match me. Asked once for this sport.';
+  'Read when somebody else’s search finds you, and when a yes on Players becomes a game. ' +
+  'Asked once for this sport.';
 
 /** Unreachable from the flow — the Play tab is behind a rating — and said rather than drawn. */
 export const NO_RATED_SPORT_LINE =
@@ -354,23 +360,27 @@ export const NO_RATED_SPORT_LINE =
  * about to open, because *Search* names the machinery and this screen's own act is *build a
  * line-up*: a player pressing it lands on an empty court seating nobody but themselves, and a
  * control that said only *Search* would leave the court a surprise. It is the one way through
- * for a competitive game — the deck is the other half of `PlaySegment`, and never a second
- * copy of this one.
+ * for a competitive game — the deck is the Players tab's, and never a second copy of this one.
  *
  * Every sentence below branches on the **seat count** and none of them counts for itself:
  * `isDoubles` is `domain/lineup`'s, for the reason recorded there — *four* is a word
  * about a Sport, and a squash court must never be told to build one.
  *
- * **The title names the game rather than the furniture.** It was `builderTitle`'s outright —
- * *Build the four* against *Set up the match* — and those two are one sentence in two
- * registers: one counts seats and the other names an occasion, so the pair only reads as a
- * pair to somebody who has seen both. *Doubles* and *singles* are the sport's own words, they
- * are already what `builderEyebrow` prints one screen on, and they differ by one word rather
- * than by all of them. `builderTitle` keeps its own: it titles a screen that fills seats, and
- * it has a third thing to say the moment somebody is sitting in one.
+ * **The control names the game rather than the furniture.** It was the builder's title
+ * outright — *Build the four* against *Set up the match* — and those two are one sentence in
+ * two registers: one counts seats and the other names an occasion, so the pair only reads as a
+ * pair to somebody who has seen both. *Doubles* and *singles* are the sport's own words, and
+ * they differ by one word rather than by all of them.
+ *
+ * **And the builder now carries these same two words as its own title**, which is why this
+ * reads `builderTitle` rather than repeating the pair. **The control names the screen it
+ * opens** — `whyFitControlWord`'s rule and its reason — so a button promising *Build a
+ * doubles* cannot land somebody on a heading that says something else. What is decided here is
+ * still this control's own question, *what does pressing this do*; what it no longer does is
+ * hold a second copy of the answer.
  */
 export function courtEntryTitle(seats: number): string {
-  return isDoubles(seats) ? 'Build a doubles' : 'Build a singles';
+  return builderTitle(seats);
 }
 
 /**

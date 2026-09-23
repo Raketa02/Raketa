@@ -13,7 +13,10 @@ ports, and Docker images are built separately for development and production.
 
 ## Capabilities
 
-- User signup with domain validation for email, nickname, and password strength.
+- User signup with domain validation for email and password strength — credentials only —
+  and **the naming** (`PUT /api/v1/users/me/name`): a name, free text that every screen says,
+  and a unique nickname, drawn as `@…` on a record and the You tab
+  ([ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
 - Login with access and refresh JWT issuance.
 - Refresh-token rotation with server-side token state and replay protection.
 - Idempotent logout that does not leak token existence.
@@ -88,7 +91,7 @@ expressed as immutable domain events:
 
 The aggregate can be created from history with `User.from_history(...)`, records
 new events through an internal `EventRecorder`, and exposes pending events with
-`pull_events()`. Value objects (`Email`, `Nickname`, `RawPassword`,
+`pull_events()`. Value objects (`Email`, `Name`, `Nickname`, `RawPassword`,
 `HashedPassword`) keep validation and normalization close to the domain.
 
 The `auth` module models refresh-token state separately. Refresh tokens are JWTs
@@ -211,8 +214,18 @@ value outside that set fails at startup rather than being accepted silently.
 
 **Only `local` runs today.** `development` and `staging` are defined and validated
 but not provisioned: no domain is registered, so neither has a host or a database.
-Selecting one without setting `APP_HOST` and `WRITER_DB_URL` is a startup failure
-naming the missing variable — never a silent fallback.
+
+**Every deployed environment** — `development`, `staging` and `production` alike —
+must be given `APP_HOST`, `WRITER_DB_URL` and `REDIS_URL` explicitly. Each of the
+three has a default that is a service name out of `docker-compose-local.yml`, so
+inheriting one points a deployment at a laptop. Selecting a deployed environment
+without setting all three is a startup failure naming the missing variable — never
+a silent fallback.
+
+Those three, and **not yet** the photo settings, which have compose defaults of
+their own and no refusal — see the note in
+[`docs/environments.md`](../docs/environments.md) under *How each app refuses to
+fall back*.
 
 `APP_ENV` supplies the defaults for the three settings that always move together.
 Each stays overridable by setting it explicitly:
@@ -307,6 +320,8 @@ serving HTTP.
 | `CHALLENGE_LAPSE_INTERVAL_SECONDS` | How often it runs. **Not `ANSWER_WINDOW`**, which is the promise the invitation makes and is domain. |
 | `RATING_CATCH_UP_ENABLED` | Enables the hourly rating catch-up, which moves a Level on every confirmed counted result. **The only job whose absence a player would notice** — nothing announces a confirmation, so this is the whole path a result has to a rating. |
 | `RATING_CATCH_UP_INTERVAL_SECONDS` | How often it runs. **Not the update rule**, which is `engines/racketskill/results.py` and is domain — an environment that could pick a K-factor decides how a marketplace rates people. |
+| `CONVERSATION_SWEEP_ENABLED` | Enables the hourly conversation sweep, which destroys every room whose episode is over. **Destroyed, not delisted** — turning it off changes no answer, because the end is derived and every route already refuses past it; what stops is the rows going away. |
+| `CONVERSATION_SWEEP_INTERVAL_SECONDS` | How often it runs. **Not `CONVERSATION_GRACE`**, which is how long a room outlives its game and is domain. |
 | `SCALE_PRESSURE_ENABLED` | Enables the scale-pressure probe — trigger 1's event-loop lag monitor, which also closes the fifteen-minute scoring window. |
 | `SCALE_PRESSURE_INTERVAL_SECONDS` | How often it ticks. The tick *is* the measurement: the probe records how much later than this the loop got back to it. **Not the trigger's 15-minute window and not its thresholds** — those are domain, in `matchmaking/domain/scale_triggers.py`. |
 | `GUNICORN_WORKERS` | How many workers this container runs. Read by `docker/api/startup.prod.sh` and by trigger 4's arithmetic, so the memory reading is about the fleet that exists. It selects no behaviour: it is a multiplier inside a log record. |
@@ -485,11 +500,15 @@ Three rules shape that layer, and each is a way a relationship fixture goes wron
   accidental reason — no rating, out of range, the wrong gender preference — is absent too,
   and a naive claim passes; the histogram is counted first-in-declaration order, so
   `excluded_by_gate[OPEN_CHALLENGE] >= 4` names the reason exactly.
-- **One code cannot be reached at all.** An accepted seat keeps a challenge open and
-  nothing ends a game without `matches`, so `PREVIOUS_ACCEPT` is permanently gated out of
-  every card. It is listed as unreachable **by name**, with the reason, and contracted by a
-  demand in `tests/demands/` rather than by a fixture — and the run goes red on the day it
-  *is* drawn, which is how it moves back to the promised side.
+- **One code is not reached by these fixtures.** A pair is `OPEN_CHALLENGE`-gated while
+  they are still **arranging**, and this cohort's accepted seat is exactly that — a
+  co-invitee's seat on a doubles court with an unanswered seat beside it — so
+  `PREVIOUS_ACCEPT` is drawn on no card here. It is **not** unreachable on the platform:
+  [ADR-0142](../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
+  §1 releases a pair the moment their line-up completes, so a pair who finished arranging a
+  game are shown each other again. The code is listed as absent **by name**, with that
+  reason, and the release is contracted by a demand in `tests/demands/` — and the run goes
+  red on the day the code *is* drawn here, which is how it moves to the promised side.
 
 Two costs are printed on the report rather than hidden. The pass's suppression is a Redis
 TTL that **fails soft** while its durable row never expires, so the run is idempotent for
@@ -498,11 +517,48 @@ complaint names the cache rather than accusing the fixture. And the deal that ea
 pass's origin key is remembered for a day (ADR-0131), so `make seed` leaves the
 protagonist's deck that many cards short.
 
+A fourth layer arranges four more courts and **never plays them**
+([ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)). It
+exists because every game the played history writes carries a moment somebody said they
+played, so every one of them is past its entry window as far as a plan is concerned — *the
+game leaving `AWAITING_ENTRY` is the only thing that freezes the slots*, and a database made
+only of played games can draw a plan card in exactly one state. `app/seeds/plans.py` sends
+four tennis courts, answers every seat, and then writes their plans to **nought, one, two
+and three slots** through the three routes a player presses. *Nought* is the row that reads
+oddly and is the point: a plan is born by being used, so no slots means the court carries
+**nothing in the store** and `GET /plans` still lists it — a row with three empty slots and
+its anchor, because a row exists for every court the reader holds an accepted seat on
+([ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+§4) — the state is asserted as hard as the other three, because a layer that quietly
+reached three of four reads as having reached four. It is the one layer that writes in the **present**, and its cost is on the report: four
+arranged games count toward nothing, because a game inside its entry window is neither
+played nor a ghost.
+
+Behind all of it is a fifth layer, and it is the only one that **writes nothing until the
+outbox has run**. A conversation is *told* — its rooms are opened and grown from events
+`challenges`, `games` and `plans` publish, by contexts that do not know it exists
+([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) §5) —
+so there is no *open a room* use case for a fixture to call and deliberately none.
+`app/seeds/rooms.py` drains the transactional outbox in process, exactly as the embedded
+worker drains it under the API, and every acceptance, completion, *we played* and slot the
+layers above already seeded arrives at the room it belongs to. What it then writes is the one
+thing a room cannot be told: somebody saying something, through `SendMessage`, enough of it
+to reach **a room long enough to page backward through**.
+
+It reaches three of the four room shapes a screen has to draw — a two-member room whose
+game is recorded, a doubles room whose membership is still growing, and the deep one — and
+**names the fourth on the report rather than in a docstring**: a room carrying every
+system-line code needs a `SeatsInvited`, nothing here performs a fill, and a fill would cost
+a real search that seats somebody new and moves the gate histogram this run asserts. A
+fixture that quietly reached three of four reads as having reached four.
+
 Scope is what is **modeled**: players, onboarding assessments, Skill ratings, Player
-profiles, Challenges and Blocks. Clubs, Courts, Bookings and Matches have no aggregates, so they
-have no scenarios; each adds its own when it exists. A walk over `app/seeds/` asserts the
-package **writes** those six contexts and reaches every other one — matchmaking, today —
-only through that context's own use cases.
+profiles, Challenges, Blocks and Plans. Clubs, Courts, Bookings and Matches have no aggregates,
+so they have no scenarios; each adds its own when it exists. A walk over `app/seeds/` asserts
+the package **writes** those contexts and reaches every other one — matchmaking, today —
+only through that context's own use cases. Conversations is on neither side of that walk,
+and that is the point: the seed never writes one, and the rooms in the database are there
+because the outbox delivered what the others wrote.
 
 Six rules hold this together, and each exists because of a specific way seed data goes
 wrong:
@@ -722,7 +778,7 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and ten jobs are in it today: the
+  `app/bootstrap/jobs.py` is the register, and twelve jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
   held for more than 24 hours that no committed profile currently names; the
   **photo re-review backfill**, which asks the reviewer about the photos nobody
@@ -732,21 +788,36 @@ process and no second deployable.
   intent drift and availability staleness — which write no value anywhere and each
   raise a standing question instead; the **interest expiry loop**, which removes
   every *Let's play* whose twenty-one days have passed; the **scale-pressure
-  probe**, whose work is measuring how late the event loop woke it; and the
+  probe**, whose work is measuring how late the event loop woke it; the
   **challenge lapse loop**, which writes down every answer window that passed with
-  nothing in it. Two of them take no database session: the roll, whose whole input
-  and output are in Redis, and the backfill, whose whole input and output are the
-  object store.
+  nothing in it; the **rating catch-up**, which is the whole path a confirmed
+  result has to a Level; and the **conversation sweep**, which destroys every room
+  whose episode is over. Two of them take no database session: the roll, whose
+  whole input and output are in Redis, and the backfill, whose whole input and
+  output are the object store.
 
-  The expiry loop is the only job here that deletes anything, and **correctness
-  does not depend on it running**: every read of the interest ledger is bounded by
-  `now`, so a lapsed yes lifts nobody and counts against nobody's cap whether or
-  not it has been swept. What the loop buys is a table the size of what is live,
-  and one figure that could not be bought later — *yeses that expired having never
-  lifted anybody*, `INTEREST_TTL`'s only day-one falsifier, which a lapsed row
-  leaves no trace to compute.
+  **Two of them delete things, and they delete different kinds of thing.** The
+  interest expiry loop removes a row; the conversation sweep removes an
+  aggregate — a room and its whole stream, *destroyed, not delisted*
+  ([ADR-0142](../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md),
+  with its instant moved by
+  [ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)).
+  **Correctness depends on neither.** Every read of the interest ledger is bounded
+  by `now`, so a lapsed yes lifts nobody and counts against nobody's cap whether
+  or not it has been swept; and a room's end is derived on every read — the
+  game's clock off its own stream, or its challenge being over, asked of
+  `challenges` — so every route on it answers `conversation_not_found` past that
+  instant and every list has already dropped it. What the expiry loop buys is a
+  table the size of what is live plus one figure that could not be bought later — *yeses that
+  expired having never lifted anybody*, `INTEREST_TTL`'s only day-one falsifier,
+  which a lapsed row leaves no trace to compute. What the sweep buys is that the
+  destruction is **real**, which is the whole difference between a room that is
+  over and a record with no end. `CONVERSATION_GRACE` is domain, in
+  `app/modules/conversations/domain/lifetime.py`; only
+  `CONVERSATION_SWEEP_INTERVAL_SECONDS` is configuration.
 
-  The lapse loop is the only job here that **appends a domain event**, and it is
+  The lapse loop is one of two jobs here that **append a domain event** — the
+  other is the rating catch-up — and it is
   the clearest case of a loop bought for the record rather than for correctness. A
   seat past its answer window already reads as lapsed, its pair already releases
   and its challenge already stands as `LAPSED`, because a standing is folded from

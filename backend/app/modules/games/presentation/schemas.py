@@ -2,11 +2,13 @@
 
 Three rules decide everything below.
 
-**The standing is derived and travels as a code.** ``GameStanding`` is five values and
+**The standing is derived and travels as a code.** ``GameStanding`` is six values and
 the words for them are the client's (``docs/adr/0022``). It is on the response
 because it is a fold of the record against the moment the list was read — and it
 is **not** on the aggregate, in the store, or anywhere a second copy could go
-stale.
+stale. **The one thing a reader's own act changes about this list is which games
+are in it** (``docs/adr/0172`` §5): a called-off game the reader has dismissed is
+left off their rail, derived on every read, and nothing about the game moves.
 
 **Every deadline is a moment the backend computed**, never a duration and never a
 rule the client applies. A phone renders *how long you have* by subtracting from
@@ -30,6 +32,7 @@ people on the court can see between them, and none of the three names anybody.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -93,9 +96,14 @@ class StateResultRequest(BaseModel):
 
 
 class SeatingSchema(BaseModel):
-    """One person, on one side. The court is frozen at the plan.
+    """One position on one side: a person, or a seat somebody has left.
 
-    **A handle, and nothing else about them** (``docs/adr/0141``). A Level, a
+    **The court is frozen until somebody leaves it** (``docs/adr/0162``). An
+    open seat is drawn, never dropped — `player_id` is `null` and the seat keeps
+    its place — so a four with one seat open is still a four and the client
+    folds *Needs a player* from it. Nothing on the wire names that rung.
+
+    **A name, and nothing else about them** (``docs/adr/0141``). A Level, a
     band, an area and a run of form are what a *searcher* reads to decide about a
     game that might happen, and a gate decided they may see them; this is the
     record of a game that did, and it re-publishes nobody's profile off the back
@@ -105,16 +113,53 @@ class SeatingSchema(BaseModel):
     """
 
     side: GameSide
-    player_id: UUID
-    nickname: str | None = Field(
+    player_id: UUID | None = Field(
+        ...,
+        description=(
+            "Who holds this seat. ``null`` on a seat somebody has **left** and "
+            "nobody has filled yet: the seat stays, drawn empty, and the game "
+            "is awaiting a player before it can be recorded as played. "
+            "**Always present** — a seat is never dropped."
+        ),
+    )
+    name: str | None = Field(
         default=None,
         description=(
-            "The whole handle, and **nothing may derive a familiar form from "
+            "The whole name, and **nothing may derive a familiar form from "
             "it** — every sentence naming somebody uses all of it or names "
-            "nobody (``docs/adr/0107``).\n\n"
-            "``null`` where ``users`` no longer has this account. The seat "
-            "stays: dropping it would publish a three-person doubles game, and "
-            "the screen has a side to name instead."
+            "nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the "
+            "nickname: a handle is drawn on a record and said nowhere.\n\n"
+            "``null`` where ``users`` no longer has this account, and on an "
+            "open seat — never for an unnamed player, whom the entry gate holds "
+            "at the naming step. The seat stays: dropping it would publish a "
+            "three-person doubles game, and the screen has a side to name "
+            "instead."
+        ),
+    )
+
+
+class CalledOffBySchema(BaseModel):
+    """Who called the game off, and what they are called (``docs/adr/0172`` §4).
+
+    **The name is carried because the court cannot supply it**: the leaver whose
+    departure called the game off has been **vacated** — their seat is drawn
+    `player_id: null` — so the seats alone could not name them. It is the same
+    name a seat carries, read in the same set read, and it is `null` for the
+    same reason a seat's is: an account `users` no longer answers for.
+
+    **A departure is told from a press by whether this player still holds a
+    seat on the game.** The presser does; the leaver's seat is open. No second
+    field says which — the record already does.
+    """
+
+    player_id: UUID
+    name: str | None = Field(
+        default=None,
+        description=(
+            "The whole name, and **nothing may derive a familiar form from "
+            "it** (``docs/adr/0107``, ``docs/adr/0171``). ``null`` where "
+            "``users`` no longer has the account — never for an unnamed "
+            "player, whom the entry gate holds at the naming step."
         ),
     )
 
@@ -235,7 +280,30 @@ class GameSchema(BaseModel):
         default=None,
         description=(
             "When *we played* stops being sayable and the game becomes a game "
-            "that never happened. ``null`` once somebody has said it happened."
+            "that never happened. ``null`` once somebody has said it happened, "
+            "and ``null`` on a game that was called off — the window no longer "
+            "matters, and a card that shelved itself by it would stay for eight "
+            "days."
+        ),
+    )
+    called_off_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When somebody called it off, while a seat was open "
+            "(``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; "
+            "then the act's own instant, which is what the ending card is "
+            "shelved from — a day later, as `played_at` and `entry_closes_at` "
+            "already shelve the other endings. Who is `called_off_by`."
+        ),
+    )
+    called_off_by: CalledOffBySchema | None = Field(
+        default=None,
+        description=(
+            "The player who called it off, and their name (``docs/adr/0172`` "
+            "§4). ``null`` on every standing but `CALLED_OFF`. The last leaver, "
+            "whose seat is drawn open — or whoever pressed *Call it off*, who "
+            "still holds one; which of the two is read off the seats, and the "
+            "game screen's heading is keyed on it."
         ),
     )
     seats: list[SeatingSchema] = Field(
@@ -293,3 +361,187 @@ class GameListResponse(BaseModel):
 
     read_at: datetime
     games: list[GameSchema]
+
+
+# ---------------------------------------------------------------------------
+# The pairing read — ``docs/adr/0161``
+# ---------------------------------------------------------------------------
+
+#: The default that spells **omitted** — *this field does not apply here* — the
+#: matcher's sentinel spelled again for the matcher's reason, on the one read in
+#: this context that needs it.
+#:
+#: A field carrying it is not in the schema's ``required`` list, so it generates
+#: as ``field?: T``, and the pairing route is declared
+#: ``response_model_exclude_unset=True`` so it is genuinely absent from the JSON
+#: rather than present as ``null``. Every absence on this response is *this does
+#: not apply* — a forecast that could not be computed, stakes on a friendly —
+#: and none of them is a measured nothing, so nothing here is ever ``null``.
+OMITTED: Any = None
+
+
+class GamePairingRangeSchema(BaseModel):
+    """The likely range a seat's Level sits in — μ ± σ as RacketSkill published it.
+
+    Named for its surface rather than reusing the card's ``LikelyRangeSchema``:
+    a second class of that name would not shadow the card's in the contract, it
+    would rename it (``docs/adr/0159``'s rule, one context over).
+    """
+
+    low: float
+    high: float
+
+
+class GamePairingSeatSchema(BaseModel):
+    """One seat on the court and the Level of the person in it.
+
+    **This is not a card**, and it is not the seat on `GET /games` either — that
+    one carries a name and nothing else (``docs/adr/0141``), and it is
+    untouched. What is here is the four figures a record's skill panel and a
+    player card already publish, read beside the game for as long as the game
+    has not happened.
+    """
+
+    player_id: UUID
+    level: float = Field(..., description="Their Level, as RacketSkill published it.")
+    band: str = Field(
+        ...,
+        description=(
+            "The Level band's published name, as a key — RacketSkill's own "
+            "vocabulary, exactly as the player card and the record print it. "
+            "The band's numeric edges are **not** here: they are not a second "
+            "range to compare `range` against."
+        ),
+    )
+    range: GamePairingRangeSchema = Field(
+        ...,
+        description=(
+            "The likely range their Level sits in, as the play card ships it. "
+            "**The client computes nothing** — not this from `confidence`, and "
+            "not a band from `level`."
+        ),
+    )
+    confidence: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description=(
+            "How sure the platform is, as a whole percentage — `rating`'s own "
+            "figure and never re-derived here."
+        ),
+    )
+
+
+class GamePairingForecastSchema(BaseModel):
+    """How even this court's game is forecast to be, **read in your direction**.
+
+    ``provisional`` travels inside the forecast rather than beside it, on the
+    engine's own rule: the failure guarded against is a screen showing the
+    number without its caveat. **It is never `true` on a game today** — a
+    line-up is frozen at the plan, so no side is short — and the field is kept
+    because the shape is the court's. When a seat can be open, the answer is
+    *omitted*, never provisional.
+    """
+
+    pct: int = Field(..., ge=0, le=100)
+    sigma_group: float = Field(
+        ..., description="The confidence is part of the claim, so it crosses with it."
+    )
+    provisional: bool
+    assumption: str | None = Field(
+        ...,
+        description=(
+            "What the provisional figure assumed, as a code the client renders "
+            "in its own words. Null when nothing was assumed — which, on a "
+            "game, is always."
+        ),
+    )
+
+
+class GamePairingSplitSchema(BaseModel):
+    """The two side strengths the forecast was read from, **in your direction**.
+
+    `your_side` is yours wherever you sit, and `gap` is `your_side − their_side`
+    — **signed and served**, so two readers on opposite sides see the sign flip
+    and neither subtracts two rounded figures the engine subtracted unrounded.
+    A side's strength is not the mean of the people on it, which is why these
+    are numbers only the engine has.
+    """
+
+    your_side: float
+    their_side: float
+    gap: float
+
+
+class GamePairingAtStakeSchema(BaseModel):
+    """What a **counted** game on this court would do to your Level.
+
+    The rating engine's own update rule read forward, **side against side** —
+    the pair the result will deliver if the game is played, and the same pair
+    for everybody on your side.
+    """
+
+    win_delta: float
+    loss_delta: float
+
+
+class GamePairingResponse(BaseModel):
+    """What this platform makes of your court, computed when you asked.
+
+    **Read beside the game and stored nowhere.** Everything here is as-of-now
+    and means what a card means *because this game has not happened*; the route
+    refuses once it has. Nothing on `GET /games` changes: a seat there still
+    carries a name and nothing else.
+
+    **Three blocks, and each is omitted on its own ground.** `forecast` and
+    `split` go together — one computation — and are omitted when the pairing
+    cannot be computed: somebody on the court holds no rating in the sport, or
+    a seat could not be priced. There is no reason beside the absence; draw
+    nothing and say nothing. `at_stake` is omitted on a friendly, where a
+    counted result is *meaningless rather than unavailable*, and where the rule
+    has nothing to move or nothing to price against — you hold no rating in
+    the sport, or nobody across the net does. `seats` names the Level of
+    everybody the platform holds one for, and a court with an unrated member
+    still names the rated ones.
+    """
+
+    read_at: datetime = Field(
+        ...,
+        description=(
+            "The instant the game's standing was folded at and the pairing "
+            "computed against."
+        ),
+    )
+    forecast: GamePairingForecastSchema = Field(
+        OMITTED,
+        description=(
+            "How even the game is forecast to be, in your direction. **Omitted "
+            "when the pairing cannot be computed**, and always together with "
+            "`split`."
+        ),
+    )
+    split: GamePairingSplitSchema = Field(
+        OMITTED,
+        description=(
+            "The evidence behind `pct`: between what and what, on the scale you "
+            "already read Levels on. **Omitted together with `forecast`.**"
+        ),
+    )
+    at_stake: GamePairingAtStakeSchema = Field(
+        OMITTED,
+        description=(
+            "What a counted result would do to your Level. **Omitted on a "
+            "friendly** — meaningless rather than unavailable — and omitted "
+            "where you hold no rating in this sport, or nobody on the other "
+            "side does. A side with one unrated seat is priced over the "
+            "people on it who are rated, because that is what the result will "
+            "do. Never a pair of zeros."
+        ),
+    )
+    seats: list[GamePairingSeatSchema] = Field(
+        ...,
+        description=(
+            "One row per seat whose person holds a rating in this sport, in the "
+            "court's own order. Somebody unrated is simply not here."
+        ),
+    )

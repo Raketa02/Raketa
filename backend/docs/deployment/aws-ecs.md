@@ -11,10 +11,16 @@
 > memory. See [ADR-0010](../../../docs/adr/0010-local-first-development-aws-deferred.md).
 >
 > **Before reactivating, re-read this against the current code.** Dormant infrastructure
-> drifts silently — in particular, check that every setting in
-> [`../../app/core/config.py`](../../app/core/config.py) that has no default is present
-> in [`../../deploy/ecs/taskdef.json`](../../deploy/ecs/taskdef.json). A missing env var
-> shows up as a task that starts and immediately dies.
+> drifts silently — and it did: the task definition went eleven days without three of the
+> variables the settings object demands, which is a task that starts and immediately dies
+> ([#341](https://github.com/Raketa02/Raketa/issues/341)).
+>
+> **That particular drift is now a build gate.** `make taskdef` at the repository root
+> boots [`../../deploy/ecs/taskdef.json`](../../deploy/ecs/taskdef.json) through
+> [`../../app/core/config.py`](../../app/core/config.py) and names anything it fails to
+> supply; CI runs it on every backend pull request. Run it before reactivating rather than
+> comparing the two files by eye. It asserts **presence**, not the values behind the secret
+> ARNs — those are still yours to check.
 
 This service is built to run on **ECS Fargate**, pulling images from **ECR**,
 secrets from **Secrets Manager**, logs to **CloudWatch**, and serving traffic
@@ -61,10 +67,24 @@ GitHub Actions ──build──▶ ECR (image)
      --secret-string '{
         "JWT_SECRET_KEY":"<generate-with-openssl-rand>",
         "WRITER_DB_URL":"postgresql+asyncpg://<user>:<pwd>@<rds-endpoint>:5432/<db>",
-        "READER_DB_URL":"postgresql+asyncpg://<user>:<pwd>@<rds-endpoint>:5432/<db>"
+        "READER_DB_URL":"postgresql+asyncpg://<user>:<pwd>@<rds-endpoint>:5432/<db>",
+        "REDIS_URL":"redis://<elasticache-endpoint>:6379/0",
+        "PHOTO_STORAGE_SECRET_KEY":"<the-photo-bucket-secret-key>"
      }' \
      --region $AWS_REGION
    ```
+
+   **Every key here is referenced by the task definition, and the set is checked.** Adding
+   a variable to `taskdef.json` without adding it to this payload gives a task that cannot
+   pull its secrets; `make taskdef` catches the reverse — a settings object that demands a
+   variable the task definition does not supply — but it reads nothing from AWS and cannot
+   see this command. Keep the two in step by hand.
+
+   `REDIS_URL` needs somewhere to point. **No ElastiCache provisioning steps are written
+   here**, because none have ever been run; the ephemeral store is a real prerequisite of a
+   deployed environment and not an optional extra — the application refuses to start
+   without the variable, on the reasoning in
+   [`../../app/infrastructure/redis_client.py`](../../app/infrastructure/redis_client.py).
 
 5. **RDS PostgreSQL** with TLS enforced:
    - Parameter group: `rds.force_ssl = 1`.
@@ -77,6 +97,22 @@ GitHub Actions ──build──▶ ECR (image)
 6. **ECS cluster + ALB + Target Group**
    - ALB listener on `:443` with an ACM certificate.
    - Target group health check path: `/health`, port `traffic-port` (8000), interval 30s, threshold 2.
+   - Target group **deregistration delay** — set it to the application's own
+     `--graceful-timeout`, in
+     [`../../docker/api/startup.prod.sh`](../../docker/api/startup.prod.sh), which is the
+     number that leads. Read it out of there rather than choosing one here; §4b is the
+     argument, including why this comes *down* to meet the timeout and the timeout never
+     goes up to meet it. It is a target-group **attribute** rather than a creation
+     parameter, so a target group that is merely created keeps AWS's default of **300** —
+     five minutes of drain before the container is even told to stop, on every deploy. It
+     is a second call:
+
+     ```bash
+     aws elbv2 modify-target-group-attributes \
+       --target-group-arn <tg-arn> \
+       --attributes Key=deregistration_delay.timeout_seconds,Value=30 \
+       --region $AWS_REGION
+     ```
    - For **mTLS**: configure the listener to require client certs and attach a trust store (S3-hosted CA bundle of your clients). FastAPI does not terminate mTLS — the ALB does.
 
 7. **Register the initial task definition**
@@ -163,6 +199,63 @@ make ecr-push
 # Force a service rollout onto the latest task def
 make ecs-deploy
 ```
+
+## 4b. Shutdown: which number leads
+
+Three deadlines govern a rolling deploy, and **gunicorn's `--graceful-timeout` is the
+one that leads.** It is in
+[`../../docker/api/startup.prod.sh`](../../docker/api/startup.prod.sh) and it is **30
+seconds**: how long the application gives itself, after SIGTERM, to finish what it is
+serving. Everything else is measured against it, and not all in the same direction:
+the deadline that falls **after** that window outlives it; the drain that falls
+**before** it matches it.
+
+| Setting | Where | Today | Why |
+| --- | --- | --- | --- |
+| `--graceful-timeout` | `docker/api/startup.prod.sh` | **30** | **Leads.** An SSE stream ([ADR-0147](../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)) lives until its access token expires, so a deploy severs open streams rather than waiting them out. That is the intended trade — the client reconnects, and the nudge design means a severed stream costs latency, never data. |
+| `stopTimeout` | `deploy/ecs/taskdef.json` | **40** | Follows. When the ECS agent stops asking and sends SIGKILL. The ten-second margin covers what the gunicorn master does *after* its graceful window closes — force-kill stragglers, reap them, exit — so the container exits on its own rather than being killed. It is a ceiling, not a wait: a healthy stop still finishes at about 30s. |
+| `deregistration_delay.timeout_seconds` | the ALB target group — not in this repository | **30**, if §1 step 6 was followed | Follows, by **matching** rather than outliving, because it is the one deadline that falls *before* SIGTERM: ECS drains the target first and tells the container to stop second, so this window and the graceful one are two budgets in sequence rather than two deadlines on one — which is why equality here is not the dead heat row 2 was. AWS defaults it to 300, and the default is why it is lowered to meet the graceful timeout rather than the timeout raised to meet it: the only connection that can hold a drain past the graceful window is one the graceful window then severs anyway, so every second of the default beyond 30 buys nothing and the deploy pays for all of them. |
+
+**Do not raise the graceful timeout to meet a drain window.** That is the wrong direction
+for the reason in the third row.
+
+**The third row's ordering is the ECS task lifecycle's, and it is the opposite of the way
+this was first filed.** A task being replaced enters `DEACTIVATING`, where **ECS** waits for
+the target to finish deregistering; only then does it reach `STOPPING`, which is where
+SIGTERM lands. So nothing holds a target draining *after* the process stopped serving — the
+drain is what the deploy waits on *before* the process is told to stop.
+[#372](https://github.com/Raketa02/Raketa/issues/372) and
+[ADR-0147](../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
+§8 both describe it the other way round. The number and the direction they settle stand; what
+changes is the defect behind them — a deploy that takes five minutes per task, rather than a
+stream held open against a process that has stopped.
+
+**And the delay is a ceiling rather than a wait.** A deregistering target with nothing in
+flight on it completes **immediately**, which is every request this API has served so far —
+so the 300 costs nothing until a connection is long-lived, and ADR-0147's stream is the
+first thing to make it visible. It is also why the graceful timeout is what this matches
+rather than undercuts: when the delay elapses the balancer **closes** whatever connections
+are still open on that target, so a drain shorter than the application's own window would
+cut requests the application was willing to finish.
+
+`stopTimeout` was unset before [#345](https://github.com/Raketa02/Raketa/issues/345),
+which is not the same as unbounded: Fargate supplies **30** when the key is absent —
+exactly the graceful timeout — so the agent's SIGKILL landed on the same second the
+master would have force-killed its own stragglers. Fargate accepts 2–120 and rejects
+anything outside it at `RegisterTaskDefinition`.
+
+**The first two rows are a build gate, not a convention.** `make taskdef` reads the flag
+out of the entrypoint and the integer out of the task definition and fails if the
+deadline does not strictly outlive the drain, so changing one without the other cannot
+merge.
+
+**The third row is not a gate, and cannot be while the target group is not committed.**
+Nothing in this repository describes that resource, so there is no file for a check to
+read — which is why the number is written into §1 step 6, in the step that creates the
+thing it belongs to, and a provisioner is what applies it. Committing the balancer and its
+target group as infrastructure is
+[#396](https://github.com/Raketa02/Raketa/issues/396); if that lands, §1 step 6's line
+moves into it rather than becoming wrong.
 
 ## 5. Smoke testing the deploy
 

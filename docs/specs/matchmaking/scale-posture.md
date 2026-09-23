@@ -124,8 +124,10 @@ which amends ADR-0093's prose versions. In short:
 > *64 000 rather than ~32 000* while `bytes_per_row` was 782, a figure measured against
 > §7.2's specified row and never against the shipping one; at the measured **1 991** the same
 > arithmetic gives roughly **25 000 players**
-> ([#276](https://github.com/Raketa02/Raketa/issues/276)). Doubling is still what ADR-0112
-> bought.
+> ([#276](https://github.com/Raketa02/Raketa/issues/276)), and it still does at the **2 016**
+> the row measures with the intro on it
+> ([ADR-0170](../../adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+> Doubling is still what ADR-0112 bought.
 
 **Both ship instrumented in the first build**, as fixed-name structured log records:
 

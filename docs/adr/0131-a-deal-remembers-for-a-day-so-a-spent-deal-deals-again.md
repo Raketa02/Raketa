@@ -1,6 +1,7 @@
 # ADR-0131 — A deal remembers for a day, so that a spent deal deals again
 
-- **Status:** Accepted
+- **Status:** Accepted — **bounded 2026-09-16 by [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)** §4: a radar reading is not a deal and
+  never enters the memory.
 - **Date:** 2026-08-28
 
 ## Context
@@ -57,6 +58,11 @@ deck's natural exhaustion ([`matchmaking-engine.md`](../specs/matchmaking/matchm
 A deal excludes everybody the same player was dealt in the same sport within the last day,
 read from the durable `search` record — `surface = DECK`, `band = RETURNED` — and from
 nothing else.
+
+> **Bounded 2026-09-16 by [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §4.** A radar *reading* is a
+> recorded search with `surface = RADAR` and every drawn row `RETURNED`, and it is **not** a
+> deal: `surface = DECK` above is the whole of the memory's source. A look never counts as
+> dealt; only an answer given on the radar reaches the deck.
 
 ### 1. Domain, not ruleset and not configuration
 

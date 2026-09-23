@@ -12,7 +12,6 @@ import { SEAT_PLACES } from '../domain/lineup';
 
 import {
   PLAY_LIVE_REGIONS,
-  SWAP_TOGGLE_LABEL,
   availabilityDiffCellLabel,
   candidateActionLabel,
   candidateCardLabel,
@@ -22,6 +21,7 @@ import {
   fitSentence,
   poolHeaderLabel,
   provisionalForecastAnnouncement,
+  radarTileLabel,
   searchWeekCellLabel,
   seatLabel,
   whyFitRowLabel,
@@ -32,7 +32,7 @@ const MAREK = {
   name: 'Marek',
   fit: 78,
   level: { level: 2.71, band: 'Established', range: { low: 2.55, high: 2.87 } },
-  meta: { km: 4, theirAreaCode: 'A+050612+0019938', myAreaCode: 'A+050612+0019938' },
+  meta: { km: 4.3, theirAreaCode: 'A+050612+0019938', myAreaCode: 'A+050612+0019938' },
   reasons: ['0,12 above you', '3 slots you both ticked · next Tue evening'],
   concerns: ['A long way out'],
 } as const;
@@ -47,7 +47,7 @@ describe('the candidate card', () => {
       label.indexOf('Marek'),
       label.indexOf('Fit 78'),
       label.indexOf('Established'),
-      label.indexOf('4 km'),
+      label.indexOf('4,3 km'),
       label.indexOf('0,12 above you'),
       label.indexOf('A long way out'),
     ];
@@ -66,7 +66,7 @@ describe('the candidate card', () => {
     expect(marked.indexOf('Photo checked: on court')).toBeGreaterThan(
       marked.indexOf('Established'),
     );
-    expect(marked.indexOf('Photo checked: on court')).toBeLessThan(marked.indexOf('4 km'));
+    expect(marked.indexOf('Photo checked: on court')).toBeLessThan(marked.indexOf('4,3 km'));
     expect(candidateCardLabel(MAREK)).not.toContain('Photo checked');
     expect(candidateCardLabel(MAREK)).not.toMatch(/\.\s*\./);
   });
@@ -104,7 +104,7 @@ describe('the deck', () => {
 
     expect(pass).toBe('Not today, Marek');
     expect(accept).toBe("Let's play, Marek");
-    expect(accept).not.toContain('🎾');
+    expect(accept).not.toMatch(/🎾|ball/);
   });
 });
 
@@ -186,10 +186,6 @@ describe('the court', () => {
     for (const place of SEAT_PLACES) {
       expect(seatLabel(place, { kind: 'empty', unfilled: null })).not.toBe('');
     }
-  });
-
-  it('labels the swap toggle by what it does, and lets `checked` carry the state', () => {
-    expect(SWAP_TOGGLE_LABEL).toBe('Swap players');
   });
 });
 
@@ -336,5 +332,13 @@ describe('the pool header', () => {
 
     expect(said).not.toContain('·');
     expect(said).toContain('You, Karol');
+  });
+});
+
+describe('a face or a card on the radar', () => {
+  it('speaks the whole name, the one-decimal distance, the sport and the level', () => {
+    expect(
+      radarTileLabel({ name: 'Filip N.', distance: '1,9 km', sportName: 'Padel', level: 2.6 }),
+    ).toBe('Filip N., 1,9 km, Padel 2,60');
   });
 });

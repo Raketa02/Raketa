@@ -31,12 +31,20 @@ export interface SportChipsProps {
   readonly rated: readonly Sport[];
   readonly selected: Sport;
   readonly onChoose: (sport: Sport) => void;
+  /**
+   * The row on the Radar pane, over the field's ground rather than paper
+   * ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §7): the heading in the on-dark eyebrow grey and each chip in its `onDark` repaint. The
+   * same control reporting the same choice — a sport switched on the radar is switched on the
+   * deck and on Find a game, as before.
+   */
+  readonly onDark?: boolean;
 }
 
-export function SportChips({ rated, selected, onChoose }: SportChipsProps) {
+export function SportChips({ rated, selected, onChoose, onDark = false }: SportChipsProps) {
   return (
     <View style={s.section}>
-      <Text style={s.heading}>{SPORT_HEADING}</Text>
+      <Text style={[s.heading, onDark ? s.headingOnDark : undefined]}>{SPORT_HEADING}</Text>
       <View style={s.chips}>
         {rated.map((offered) => (
           <Chip
@@ -49,6 +57,7 @@ export function SportChips({ rated, selected, onChoose }: SportChipsProps) {
             dot={sportColour(offered)}
             selected={offered === selected}
             onPress={() => onChoose(offered)}
+            onDark={onDark}
           />
         ))}
       </View>
@@ -59,5 +68,6 @@ export function SportChips({ rated, selected, onChoose }: SportChipsProps) {
 const s = StyleSheet.create({
   section: { gap: theme.space.xs, paddingTop: theme.space.xs },
   heading: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
+  headingOnDark: { color: theme.color.onDarkTiny },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs },
 });

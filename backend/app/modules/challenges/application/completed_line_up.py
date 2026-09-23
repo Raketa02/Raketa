@@ -18,19 +18,22 @@ from __future__ import annotations
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant
 from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.planned_game import PlannedGameOpening
+from app.modules.challenges.domain.planned_game import PlannedGameHandover
 
 
 async def hand_over(
-    challenge: Challenge, *, at: Instant, games: PlannedGameOpening
+    challenge: Challenge, *, at: Instant, games: PlannedGameHandover
 ) -> None:
     """This challenge's completed court, in the port's vocabulary.
 
     **A friendly must be chosen.** A send carries the mode its search ran under;
-    the deck and a mutual yes carry none, because neither surface asks. The
-    absence resolves to **counted** — *a friendly is a thing people choose*, so
-    nobody may end up with one by accident, and the reverse default would leave
-    the games ledger empty on the surface most games come from.
+    the deck carries none, because it never asks; and a mutual yes carries
+    ``FOR_FUN`` exactly when either of the pair declared the sport *for fun*,
+    and none otherwise (``docs/adr/0169`` §8) — the choice read off two
+    declarations rather than off a tab. The absence resolves to **counted** —
+    *a friendly is a thing people choose*, so nobody may end up with one by
+    accident, and the reverse default would leave the games ledger empty on the
+    surface most games come from.
 
     Empty seats cannot reach here — a complete line-up has none — and they are
     filtered rather than asserted about, because this function's job is to

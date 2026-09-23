@@ -34,7 +34,7 @@
 
 import type { LocationArea } from '../domain/ProfileDraft';
 
-import type { LocationAccess } from '../hooks/useLocationStep';
+import type { LocationAccess } from '../hooks/useLocationCapture';
 
 /** The one control that reaches the device — named several times below, so once here. */
 export const USE_MY_LOCATION = 'Use my location';
@@ -70,16 +70,34 @@ export const ACCESS_TITLE: Readonly<
 };
 
 /**
- * What a refusal costs, and what to do about it.
+ * What to do about a refusal — the half of each sentence that is true on every screen.
  *
- * Both sentences end the same way on purpose: the consequence is the same whichever refusal
- * it was, and the player should not have to work out that the two screens they might be
- * looking at mean one thing.
+ * The You tab's *Where you play* cites the step's permission states (ADR-0179 §2), and this
+ * is the part it cites: how to undo the refusal. What it does **not** cite is the cost clause
+ * below, which is about finishing setting up — a player on the tab finished long ago and holds
+ * an area already, so that clause would be a sentence about somebody else.
  */
+export const ACCESS_HOW_TO: Readonly<
+  Record<Exclude<LocationAccess, 'unasked' | 'granted'>, string>
+> = {
+  refused: `Press ${USE_MY_LOCATION} again to allow it.`,
+  blocked: `Turn it on for Raketa in Settings, then press ${USE_MY_LOCATION} again.`,
+};
+
+/**
+ * What a refusal costs **on the step**: the same clause after either refusal, because the
+ * consequence is the same whichever it was and the player should not have to work out that
+ * the two screens they might be looking at mean one thing.
+ */
+const WITHOUT_AN_AREA_COST =
+  'You can finish setting up without an area — but until you set one, you cannot search for ' +
+  'players and no game can be suggested to you.';
+
+/** What a refusal costs, and what to do about it — the step's whole note. */
 export const ACCESS_BODY: Readonly<Record<Exclude<LocationAccess, 'unasked' | 'granted'>, string>> =
   {
-    refused: `Press ${USE_MY_LOCATION} again to allow it. You can finish setting up without an area — but until you set one, you cannot search for players and no game can be suggested to you.`,
-    blocked: `Turn it on for Raketa in Settings, then press ${USE_MY_LOCATION} again. You can finish setting up without an area — but until you set one, you cannot search for players and no game can be suggested to you.`,
+    refused: `${ACCESS_HOW_TO.refused} ${WITHOUT_AN_AREA_COST}`,
+    blocked: `${ACCESS_HOW_TO.blocked} ${WITHOUT_AN_AREA_COST}`,
   };
 
 /** The control that goes where pressing again cannot: the app's own settings page. */
@@ -111,3 +129,17 @@ export function continueLabel(area: LocationArea | undefined): string {
 export function captureLabel(area: LocationArea | undefined): string {
   return area === undefined ? USE_MY_LOCATION : LOCATION_SAVED;
 }
+
+/**
+ * **The one written trace of the cold-start refresh** — You's sentence, `the-words.md` §26.
+ *
+ * The area moves silently: on every launch and after a day in the background, the app reads
+ * the phone again and puts the cell, with no prompt and no toast
+ * ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §6). Silent motion with no written trace is the one thing that would surprise a careful
+ * player, so the tab says it once, statically — and it says the coarseness in the same
+ * breath, because *updates each time you open* on its own reads as tracking, and the
+ * kilometre is what makes it not.
+ */
+export const AREA_UPDATES_LINE =
+  'Your area updates each time you open Raketa; it is never finer than about a kilometre.';

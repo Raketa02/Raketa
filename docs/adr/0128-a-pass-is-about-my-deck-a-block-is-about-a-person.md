@@ -1,6 +1,8 @@
 # ADR-0128 — A pass is a statement about my deck; a block is a statement about a person
 
-- **Status:** Accepted
+- **Status:** Accepted — **the Context's *there is no Show them again* and §4 superseded
+  2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §5: a route clears a sport's pass suppression, dealt memory and
+  cool-off at once; the durable record stays. §1–§3 and §5 stand.
 - **Date:** 2026-08-27
 
 ## Context
@@ -56,6 +58,11 @@ opposite of the block's — because the two say different things.**
 A pass never reaches the shortlist, the line-up, or a forecast. The deck's exclusions
 (`the-engine.md` §10.3) are the deck's; a passed player is a full candidate everywhere else,
 immediately.
+
+> **Read on one more surface 2026-09-16 by [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §4.** A
+> pass may be *given* from the radar's record sheet; it is the same pass, about the same deck,
+> and the radar itself hides nobody for it — Magda, passed on Monday, is drawn on Tuesday's
+> radar and dealt on no deck for thirty days.
 
 The deck is a **judgement surface** — one person, yes or no, *not tonight*. A search is a
 **question about the pool**, and a search that hides people because of a swipe is a search that

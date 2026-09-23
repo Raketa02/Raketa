@@ -9,10 +9,11 @@
 import type { components } from '@/generated/schema';
 import type { Tokens } from '@/shared/lib/auth';
 
-import type { AuthenticatedUser } from '../domain/AuthenticatedUser';
+import type { AuthenticatedUser, Naming } from '../domain/AuthenticatedUser';
 
 type TokenResponse = components['schemas']['TokenResponse'];
 type UserResponse = components['schemas']['UserResponse'];
+type NamingResponse = components['schemas']['NamingResponse'];
 
 /**
  * `expires_in` is deliberately dropped. Expiry is discovered from the server's 401, not
@@ -28,14 +29,25 @@ export function toTokens(wire: TokenResponse): Tokens {
 }
 
 export function toAuthenticatedUser(wire: UserResponse): AuthenticatedUser {
+  // `null` on the wire is *not yet named* — the one read where it may be (ADR-0171 §2) — and
+  // it is carried as absence, which is how every other shape in this app spells a name it
+  // does not have. The entry gate reads the absence.
+  const name = wire.name ?? undefined;
+  const nickname = wire.nickname ?? undefined;
   return {
     id: wire.id,
     email: wire.email,
-    nickname: wire.nickname,
+    ...(name === undefined ? {} : { name }),
+    ...(nickname === undefined ? {} : { nickname }),
     // Kept where `is_admin` is dropped, because the app must branch on it: the entry gate
     // reads it to decide whether onboarding's second part is still owed. It defaults to
     // false on the wire for responses that are not about the authenticated player — such
     // as the one registration returns — and a brand-new account has no profile anyway.
     hasPlayerProfile: wire.has_player_profile,
   };
+}
+
+/** What the naming recorded: the name as normalised by the server, and the handle. */
+export function toNaming(wire: NamingResponse): Naming {
+  return { name: wire.name, nickname: wire.nickname };
 }

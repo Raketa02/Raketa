@@ -31,7 +31,7 @@ order (``docs/adr/0105``).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 import random
 from itertools import combinations
@@ -171,7 +171,12 @@ def seats_per_side(sport: Sport) -> int:
     return SPORT_SPECS[sport].players // 2
 
 
-def pool_for(context: SearchContext, engine: MatchFit) -> LineupPool:
+def pool_for(
+    context: SearchContext,
+    engine: MatchFit,
+    *,
+    excluding: frozenset[UUID] = frozenset(),
+) -> LineupPool:
     """Stages 1 to 6, ending in the top ``K`` by Fit rather than in twenty rows.
 
     The six shared stages are ``shortlist.py``'s own functions, called here
@@ -183,10 +188,37 @@ def pool_for(context: SearchContext, engine: MatchFit) -> LineupPool:
     reads; deciding who is *eligible* to be seated beside three strangers is not
     a reordering, and the number the card prints is the number the seat is
     chosen on. Ties break on the player id, which is unique.
+
+    ``excluding`` is the fill's own exclusion and empty on every other line-up:
+    everybody who has already **answered** the challenge being completed and left
+    it (``docs/adr/0150`` §4). It is applied after generation and before scoring,
+    which is where the deck applies its own — so these people are neither seated
+    by ⚡ nor offered to a hand, and ``NobodyIsAskedTwice`` stays the aggregate's
+    backstop instead of a screen somebody reaches after choosing a person.
+
+    **It is not a gate**, and deliberately not spelled as one: ``GATE_ROSTER``
+    counts ten codes and a candidate removed here was never refused for anything
+    about *them*, only for what they already told this one challenge. Which is
+    also why ``players_in_range`` is read off the **unfiltered** generation, as
+    the deck reads its own: how many people this search had in range is a fact
+    about the city, and narrowing it by who has answered one challenge would
+    make the pool look thinner than it is.
     """
 
     generation = generate(context)
-    scored = score_all(generation, context, engine)
+    scoreable = (
+        generation
+        if not excluding
+        else replace(
+            generation,
+            admitted=tuple(
+                candidate
+                for candidate in generation.admitted
+                if candidate.player_uuid not in excluding
+            ),
+        )
+    )
+    scored = score_all(scoreable, context, engine)
     admitted = tuple(row for row in scored if row.admission.admitted)
     withheld = tuple(row for row in scored if not row.admission.admitted)
     searcher = searcher_of(context)

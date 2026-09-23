@@ -2,6 +2,7 @@ import { theme } from '@/shared/ui/theme';
 
 import {
   SEAT_PLACES,
+  carriedOnto,
   changingMode,
   changingSport,
   courtHalfOf,
@@ -45,6 +46,32 @@ describe('an origin', () => {
     expect(sameOrigin(ORIGIN, { ...ORIGIN, sport: 'tennis' })).toBe(false);
     expect(sameOrigin(ORIGIN, { ...ORIGIN, mode: 'FOR_FUN' })).toBe(false);
     expect(sameOrigin(ORIGIN, { ...ORIGIN, week: [TUESDAY_EVENING] })).toBe(false);
+  });
+
+  /**
+   * **A composed week is never the same origin as an uncomposed one.** Absent is *the profile's
+   * grid, whatever it says today* — a challenge fill, which improvises no week — and `[]` is
+   * *every cell unticked*. A `?? []` anywhere in here would collapse the two silently, in the
+   * function the whole orphan model rests on.
+   */
+  it('tells a week nobody composed apart from a week somebody cleared', () => {
+    const uncomposed = { sport: ORIGIN.sport, mode: ORIGIN.mode };
+
+    expect(sameOrigin(uncomposed, { ...ORIGIN, week: [] })).toBe(false);
+    expect(sameOrigin(uncomposed, uncomposed)).toBe(true);
+  });
+
+  /** Two fills of two different courts are two origins, whatever else they agree about. */
+  it('differs on the challenge it completes', () => {
+    const finishing = { ...ORIGIN, completing: { challengeId: 'c1', accepted: ['player-a'] } };
+
+    expect(
+      sameOrigin(finishing, { ...finishing, completing: { challengeId: 'c2', accepted: [] } }),
+    ).toBe(false);
+    expect(sameOrigin(finishing, ORIGIN)).toBe(false);
+    expect(
+      sameOrigin(finishing, { ...finishing, completing: { challengeId: 'c1', accepted: [] } }),
+    ).toBe(true);
   });
 });
 
@@ -176,6 +203,30 @@ describe('a seat whose player the live gates no longer admit', () => {
   });
 });
 
+describe('a line-up moving onto another search’s list', () => {
+  /**
+   * `POST /forecasts` cites one search and refuses anybody it never showed, so a court moving
+   * onto a list can carry only the seats that list returned — and it keeps them in seat order,
+   * because where they sit is the origin's business and not the move's.
+   */
+  it('carries the seats the list returned, in seat order, and no others', () => {
+    expect(
+      carriedOnto(['player-a', 'player-b', 'player-c'], ['player-c', 'player-a', 'x']),
+    ).toEqual(['player-a', 'player-c']);
+  });
+
+  it('carries nobody off a list that returned none of them', () => {
+    expect(carriedOnto(['player-a', 'player-b'], ['x', 'y'])).toEqual([]);
+  });
+
+  it('carries everybody off a list that returned them all', () => {
+    expect(carriedOnto(['player-a', 'player-b'], ['player-b', 'player-a'])).toEqual([
+      'player-a',
+      'player-b',
+    ]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // The court's three: H-25's sides, the locked seats, and the swap truth table
 // ---------------------------------------------------------------------------
@@ -193,8 +244,8 @@ const seated = (accepted = false): BuildSeat => ({ kind: 'player', accepted });
 /** A full doubles court: you, your partner, and two opponents. */
 const FULL_DOUBLES: readonly BuildSeat[] = [{ kind: 'you' }, seated(), seated(), seated()];
 
-/** Swap mode off, nothing selected — the builder as it opens. */
-const RESTING = { swapping: false, selected: undefined } as const;
+/** Nothing held for a trade — the builder as it opens, and after every completed one. */
+const RESTING = undefined;
 
 describe("a seat's place", () => {
   it('is a side and a role, read off seat order rather than off the drawing', () => {
@@ -211,8 +262,8 @@ describe("a seat's place", () => {
   });
 
   it('follows you across the net, because a side is the half you are on', () => {
-    // The whole point of the swap toggle is *change sides, never seats*. A place read off the
-    // index alone would still call the far half theirs after you had moved into it.
+    // The whole point of a swap is *change sides, never seats*. A place read off the index
+    // alone would still call the far half theirs after you had moved into it.
     expect(seatPlaces([seated(), seated(), { kind: 'you' }, seated()])).toEqual([
       'THEIR_SIDE',
       'THEIR_SIDE',
@@ -244,7 +295,7 @@ describe('which half a place is on', () => {
 
   it('follows you across the net, because it reads a place and never an index', () => {
     // The composition every caller makes, on the one seating where an index would disagree:
-    // swap mode is *change sides, never seats*, so the half you are standing in is yours.
+    // a swap is *change sides, never seats*, so the half you are standing in is yours.
     expect(seatPlaces([seated(), seated(), { kind: 'you' }, seated()]).map(courtHalfOf)).toEqual([
       'theirs',
       'theirs',
@@ -263,8 +314,8 @@ describe('a locked seat', () => {
   });
 
   it('may not be emptied, which is why the clear badge is not drawn on one', () => {
-    // Two guard toasts and not four: a badge that is never drawn is a refusal nobody can
-    // trigger.
+    // The only reader `seatIsLocked` has left, and the only refusal on this court: a badge
+    // that is never drawn is a refusal nobody can trigger, so nothing has to say no out loud.
     expect(seatIsClearable(seated())).toBe(true);
     expect(seatIsClearable(seated(true))).toBe(false);
     expect(seatIsClearable({ kind: 'you' })).toBe(false);
@@ -273,59 +324,36 @@ describe('a locked seat', () => {
 });
 
 describe('a tap on a seat', () => {
-  it('opens the pool on an empty one, whether or not you are swapping', () => {
+  it('opens the pool on an empty one, held or not — there is nothing in it to trade', () => {
     expect(tapSeat(RESTING, 1, { kind: 'empty' })).toEqual({ kind: 'OPEN_POOL', seat: 1 });
-    expect(tapSeat({ swapping: true, selected: undefined }, 1, { kind: 'empty' })).toEqual({
-      kind: 'OPEN_POOL',
-      seat: 1,
-    });
+    expect(tapSeat(0, 1, { kind: 'empty' })).toEqual({ kind: 'OPEN_POOL', seat: 1 });
   });
 
-  it('offers a replacement for somebody you may replace', () => {
-    expect(tapSeat(RESTING, 2, seated())).toEqual({ kind: 'OPEN_POOL', seat: 2 });
+  it('selects, deselects and trades — the whole of what an occupied seat does', () => {
+    expect(tapSeat(RESTING, 1, seated())).toEqual({ kind: 'SELECT', seat: 1 });
+    expect(tapSeat(1, 1, seated())).toEqual({ kind: 'DESELECT' });
+    expect(tapSeat(1, 3, seated())).toEqual({ kind: 'SWAP', from: 1, to: 3 });
   });
 
-  it('refuses your own seat, and says how to change sides instead', () => {
-    expect(tapSeat(RESTING, 0, { kind: 'you' })).toEqual({
-      kind: 'REFUSE',
-      guard: 'SEAT_IS_YOURS',
-      seat: 0,
-    });
+  it('never opens the pool against somebody, because a tap no longer replaces anybody', () => {
+    // The row the toggle's removal deleted. Replacing is the clear badge and then the hole it
+    // leaves, which is why `seatIsClearable` and not this function is what gates a swap out.
+    expect(tapSeat(RESTING, 2, seated())).toEqual({ kind: 'SELECT', seat: 2 });
   });
 
-  it('refuses somebody who already accepted, because they keep their place', () => {
-    expect(tapSeat(RESTING, 3, seated(true))).toEqual({
-      kind: 'REFUSE',
-      guard: 'ALREADY_ACCEPTED',
-      seat: 3,
-    });
+  /**
+   * ADR-0150 §8: **an accepted seat is not a control** — no clear badge, no pool. What a tap on
+   * one does is the one thing a locked seat was always allowed: it changes sides.
+   */
+  it('selects somebody who already accepted for a trade, and never for the pool', () => {
+    expect(tapSeat(RESTING, 3, seated(true))).toEqual({ kind: 'SELECT', seat: 3 });
   });
 
-  it('selects, deselects and trades once you are swapping', () => {
-    expect(tapSeat({ swapping: true, selected: undefined }, 1, seated())).toEqual({
-      kind: 'SELECT',
-      seat: 1,
-    });
-    expect(tapSeat({ swapping: true, selected: 1 }, 1, seated())).toEqual({ kind: 'DESELECT' });
-    expect(tapSeat({ swapping: true, selected: 1 }, 3, seated())).toEqual({
-      kind: 'SWAP',
-      from: 1,
-      to: 3,
-    });
-  });
-
-  it('lets a locked seat change sides, which is the whole of what swapping is for', () => {
-    // *They can change sides, never seats.* The two guards are the replacement's, and
-    // replacement is what swap mode is off for.
-    expect(tapSeat({ swapping: true, selected: undefined }, 0, { kind: 'you' })).toEqual({
-      kind: 'SELECT',
-      seat: 0,
-    });
-    expect(tapSeat({ swapping: true, selected: 0 }, 3, seated(true))).toEqual({
-      kind: 'SWAP',
-      from: 0,
-      to: 3,
-    });
+  it('lets a locked seat change sides, which is the whole of what a swap is for', () => {
+    // *They can change sides, never seats.* Both refusals were the replacement's, and there is
+    // no replacement on a tap left to refuse.
+    expect(tapSeat(RESTING, 0, { kind: 'you' })).toEqual({ kind: 'SELECT', seat: 0 });
+    expect(tapSeat(0, 3, seated(true))).toEqual({ kind: 'SWAP', from: 0, to: 3 });
   });
 
   it('leaves an untouched court untouched — every outcome is a decision, never a write', () => {

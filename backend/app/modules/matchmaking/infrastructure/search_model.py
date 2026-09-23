@@ -86,17 +86,21 @@ class SearchORM(Base):
         # and a time-ordered UUID buys nothing.
         Index("ix_search_searcher_at", "searcher_id", "at"),
         # **A check constraint, not a convention.** ``mode`` is ``NULL`` exactly
-        # on the deck, which has no mode and scores against a declared Play
-        # intent instead; ``intent_read`` is the mirror. The record type asserts
-        # the same pair, and both are worth having: one refuses a row this build
-        # could write, and the other refuses a row any writer could.
+        # on the two surfaces that score under one ruler for everybody — the
+        # deck, and since ``docs/adr/0174`` the radar (``0027``); ``intent_read``
+        # is set on those two alone, where it records the declaration as it
+        # stood — and since ``docs/adr/0169`` the deck reads no declaration, so
+        # a deal by a viewer who never made one records ``NULL`` there too
+        # (``0022``). The record type asserts the same pair, and both are worth
+        # having: one refuses a row this build could write, and the other
+        # refuses a row any writer could.
         CheckConstraint(
-            "(mode IS NULL) = (surface = 'DECK')",
-            name="ck_search_mode_null_exactly_on_the_deck",
+            "(mode IS NULL) = (surface IN ('DECK', 'RADAR'))",
+            name="ck_search_mode_null_exactly_under_one_ruler",
         ),
         CheckConstraint(
-            "(intent_read IS NOT NULL) = (surface = 'DECK')",
-            name="ck_search_intent_read_set_exactly_on_the_deck",
+            "(intent_read IS NULL) OR (surface IN ('DECK', 'RADAR'))",
+            name="ck_search_intent_read_only_under_one_ruler",
         ),
         # The other pair that must never be half-written. A rung is taken *from
         # an offer*, so a row naming one without citing the search that made it
@@ -131,10 +135,11 @@ class SearchORM(Base):
     #: **Fixes the seat count.** There is no ``format`` column and there never
     #: will be — game format is a term this context refuses.
     sport: Mapped[str] = mapped_column(String(50), nullable=False)
-    #: ``NULL`` exactly when the surface is the deck, which has no mode.
+    #: ``NULL`` exactly when the surface is the deck or the radar, which have
+    #: no mode.
     mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    #: The mirror of ``mode``'s rule: non-null exactly on the deck. It records
-    #: the **declaration as it stood**, never the vector it mapped to.
+    #: The mirror of ``mode``'s rule: set on the deck and the radar alone. It
+    #: records the **declaration as it stood**, never the vector it mapped to.
     intent_read: Mapped[str | None] = mapped_column(String(20), nullable=True)
     surface: Mapped[str] = mapped_column(String(20), nullable=False)
     #: Orthogonal to the surface: an engine-pushed deck card is ``DECK`` +
@@ -295,9 +300,11 @@ class SearchCandidateORM(Base):
     #: rather than re-derived because the judgement belongs to the ruleset this
     #: row is stamped with.
     concerns: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
-    #: Whole kilometres, as the wire carried it. Null when the distance term
-    #: stood down, which is **omitted** on the wire and is not a zero.
-    distance_km: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: One decimal, spot to spot, as the wire carried it (``docs/adr/0174`` §2;
+    #: whole kilometres cell to cell before revision ``0026``). Null when the
+    #: distance term stood down, which is **omitted** on the wire and is not a
+    #: zero.
+    distance_km: Mapped[float | None] = mapped_column(Float, nullable=True)
     #: The card **as it was shown**, so a read-back answers the search that ran
     #: rather than the one that would run now. It holds a ``photo_id`` and never
     #: the link: a presigned URL is dead within the hour and this row is kept
@@ -319,3 +326,13 @@ class SearchCandidateORM(Base):
     #: lapsed key leaves no trace the pair was ever passed — and without it only
     #: plain pass rate is computable, never *pass rate on re-shown profiles*.
     suppression_lapsed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    #: The bearing from the viewer's drawn spot to this player's, north ``0``
+    #: and clockwise, a whole degree (``docs/adr/0174`` §2). **Radar readings
+    #: only**, null everywhere else: it is the one position field the deck does
+    #: not need, and it is recorded beside ``distance_km`` rather than in the
+    #: card because its value depends on who is looking.
+    bearing_deg: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: Every sport this player was rated in and the Level held there, as the
+    #: reading drew its sport chips. **Radar readings only**, null everywhere
+    #: else, and a blob for ``player_card``'s reason: it is what was shown.
+    ratings: Mapped[list[Any] | None] = mapped_column(NULLABLE_BLOB, nullable=True)

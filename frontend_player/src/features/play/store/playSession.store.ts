@@ -1,11 +1,15 @@
 /**
  * A **Play session**: the working copy of the week, and the line-up being built on it.
  *
- * It begins when the shell lays the Play stack down and ends when the shell lays any stack
- * down — which is one function, `resetShellStack`, and therefore a *definition* rather than a
- * line somebody must remember on every exit. That is the discipline `onboardingPass.end()`
- * already states, and [#261](https://github.com/Raketa02/Raketa/issues/261) identified the
- * function before there was anything for it to clear.
+ * It begins when the shell lays the Play stack down **or when a challenge is re-entered from
+ * Chats** ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
+ * §7), and it ends when the shell lays any stack down — which is one function,
+ * `resetShellStack`, and therefore a *definition* rather than a line somebody must remember on
+ * every exit. That is the discipline `onboardingPass.end()` already states, and
+ * [#261](https://github.com/Raketa02/Raketa/issues/261) identified the function before there was
+ * anything for it to clear. **The second door added a beginning and no ending**, which is what
+ * keeps that definition whole: nothing under `/chats/…` calls the reset, and the builder reached
+ * from there is a plain push whose send pops back.
  *
  * ## Why the visit, and not longer
  *
@@ -114,6 +118,27 @@ interface PlaySessionState {
    */
   readonly enter: (profileWeek: WorkingWeek) => void;
   /**
+   * Enter Play from **Chats** — a challenge re-entered, and the second door into a session.
+   *
+   * *"The session begins when the shell lays the Play stack down **or when a challenge is
+   * re-entered from Chats**, and it still ends in exactly one place"*
+   * ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) §7).
+   * One sentence moves and the important half does not: this adds a beginning and no ending, so
+   * `end` keeps its single caller and the reset stays the definition rather than a line somebody
+   * must remember on every exit.
+   *
+   * **The week is left undefined**, which is already the legal value meaning *fill against the
+   * grid the profile holds* — there was no *Find a game* on which to improvise one, and seeding
+   * a working copy nothing on this journey can edit would be a week travelling as
+   * `availability_override` on the strength of having been read rather than of having been
+   * asked for.
+   *
+   * It is called on the fill's **answer** rather than on the press: a fill that was refused
+   * re-entered nothing, and throwing away a line-up composed in Play to pay for a request that
+   * failed is the silent destruction the origin guard exists to prevent.
+   */
+  readonly enterOnAChallenge: () => void;
+  /**
    * Tick or untick one cell of the working copy. A no-op outside a session.
    *
    * **A tap on the offered cell also takes the mark off it.** The two facts are about the same
@@ -158,7 +183,10 @@ interface PlaySessionState {
    * **A seat taken from a different search starts a new line-up rather than mixing two.**
    * `POST /forecasts` would refuse the mixture — every player named must have appeared in the
    * one search — so a line-up spanning two origins is unsendable by construction, and holding
-   * one would only postpone the refusal to the moment it costs the most.
+   * one would only postpone the refusal to the moment it costs the most. The pool does not take
+   * that door when a court is standing: it moves the court onto the list with `seatAll`,
+   * carrying whoever that list can vouch for, because a pick that quietly emptied three seats
+   * is the destruction the origin guard exists to prevent.
    */
   readonly seat: (originSearchId: string, playerId: SeatedPlayerId) => void;
   /**
@@ -173,6 +201,12 @@ interface PlaySessionState {
    * An empty list clears the line-up rather than writing an empty one, which is `unseat`'s own
    * rule read from the other end: the engine seating nobody is a court with no line-up on it,
    * not a line-up with nobody in it.
+   *
+   * **The second caller is the pool, picking somebody off a list the line-up is not bound to.**
+   * That is the same rebinding wholesale — the court moves onto the list's own search, carrying
+   * the seats that search returned (`domain/lineup`'s `carriedOnto`) and the pick — and it is
+   * one write for `seat`'s own reason: written as `seat` per carried player, the store would pass
+   * through line-ups that never existed, the first of them a court with one person on it.
    */
   readonly seatAll: (originSearchId: string, playerIds: readonly SeatedPlayerId[]) => void;
   /** Take somebody off the court. The last one out leaves no empty line-up behind. */
@@ -196,18 +230,34 @@ interface PlaySessionState {
   readonly end: () => void;
 }
 
-export const usePlaySession = create<PlaySessionState>((set) => ({
+/**
+ * **No session** — the state before one begins, between two, and after the last.
+ *
+ * Written once because four places mean it: the store's initial value, both entries, and the
+ * end. It was four copies of the same four fields, which is how a fifth field added to the
+ * session gets cleared in three of them.
+ *
+ * `week: undefined` is the load-bearing one: a cleared week is a legal value the wire accepts,
+ * so *no session* and *a session whose every cell was unticked* are two different things and an
+ * empty array cannot tell them apart.
+ */
+const NO_SESSION = {
   week: undefined,
   lineup: undefined,
   addedForThisSearch: undefined,
   askedQuestions: NOTHING_ASKED,
-  enter: (profileWeek) =>
-    set({
-      week: seedWorkingWeek(profileWeek),
-      lineup: undefined,
-      addedForThisSearch: undefined,
-      askedQuestions: NOTHING_ASKED,
-    }),
+} as const satisfies Pick<
+  PlaySessionState,
+  'week' | 'lineup' | 'addedForThisSearch' | 'askedQuestions'
+>;
+
+export const usePlaySession = create<PlaySessionState>((set) => ({
+  ...NO_SESSION,
+  enter: (profileWeek) => set({ ...NO_SESSION, week: seedWorkingWeek(profileWeek) }),
+  // The same state `end` leaves behind, and deliberately not a call to it: what this *means* is
+  // an entry, and a session that began by being ended is a sentence the next reader has to
+  // undo. The week stays undefined — see the interface.
+  enterOnAChallenge: () => set(NO_SESSION),
   // Dropped rather than beginning a session, for the reason the pass drops a rating recorded
   // with no pass running: the grid is only reachable from a screen the entry seeded, so this
   // guards against a future caller rather than a case the flow produces.
@@ -247,13 +297,7 @@ export const usePlaySession = create<PlaySessionState>((set) => ({
       return { lineup: seats.length === 0 ? undefined : { ...state.lineup, seats } };
     }),
   discardLineup: () => set({ lineup: undefined }),
-  end: () =>
-    set({
-      week: undefined,
-      lineup: undefined,
-      addedForThisSearch: undefined,
-      askedQuestions: NOTHING_ASKED,
-    }),
+  end: () => set(NO_SESSION),
 }));
 
 /**

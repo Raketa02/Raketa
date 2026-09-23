@@ -14,6 +14,16 @@
  * `locked_seats` list — it is read off the envelope, so a read-back a month later still says
  * what it was.
  *
+ * ## And it is the same act again on a court somebody else built
+ *
+ * ⚡ pressed on a challenge is this use-case with the other ask
+ * ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)):
+ * the request **names the challenge and says nothing else about the court**, because the sport,
+ * the kind of evening and the locked seats are all read off it — and the gate steps aside for
+ * that one challenge, so the people who accepted come back as ordinary rows the builder can
+ * draw. What differs on this side is only what the *record* is stamped with, which is
+ * `challengeOrigin` below and nothing else: the same mint, the same court, the same rebinding.
+ *
  * ## The answer is a new record, and the line-up rebinds to it
  *
  * `POST /lineups` **mints a search**. So the four it seats came off *that* search's rows, and
@@ -42,9 +52,13 @@
  * suppresses. `answerableWithoutAWeekGrid` is the one place that is decided.
  */
 
+import { unknownFailure } from '@/shared/errors';
+import type { Sport } from '@/shared/vocabulary/sport';
+
 import { runLineup } from '../api/playSearchApi';
+import type { SearchEnvelope } from '../domain/candidate';
 import type { SeatedCourt } from '../domain/forecast';
-import type { PlayOrigin, SearchRecord } from '../domain/lineup';
+import type { CompletingChallenge, PlayOrigin, SearchRecord } from '../domain/lineup';
 import { answerableWithoutAWeekGrid, type RaisedPrompt } from '../domain/raisedPrompt';
 import { toLineupAnswer, toRunLineupRequest } from '../mappers/forecastMappers';
 import { toOriginSearch, toRaisedPrompts, type PromptQuotes } from '../mappers/searchMappers';
@@ -58,7 +72,11 @@ import type { SeatedPlayerId } from '../domain/lineup';
  * is what the *record* is stamped with — `SearchEnvelope` carries neither the sport nor the
  * week, so a line-up's validity could not be judged without folding them back on.
  */
-export interface FillSeatsAsk {
+export type FillSeatsAsk = FillTheCourtYouComposed | FinishTheCourtSomebodyBuilt;
+
+/** ⚡ on a court composed in Play, empty or part-seated. The origin is already known. */
+export interface FillTheCourtYouComposed {
+  readonly kind: 'search';
   /** What the builder is filling **for** — and what the new record is stamped with. */
   readonly origin: PlayOrigin;
   /** Whoever is already on the court, in seat order. Empty is ⚡ on an empty court. */
@@ -74,6 +92,28 @@ export interface FillSeatsAsk {
    * diff against one nobody holds (`mappers/searchMappers`).
    */
   readonly quotes: PromptQuotes;
+}
+
+/**
+ * ⚡ on a **challenge** — the half-built court somebody else's send left standing.
+ *
+ * It carries the challenge and the sport and nothing else, because everything else about the
+ * court is the challenge's: the request says only which challenge, and the *record* needs a
+ * sport because `SearchEnvelope` has never carried one.
+ *
+ * **No `quotes`, and therefore no prompts.** The four prompts are about the searcher's own
+ * *Find a game* values — a week they improvised, a radius they widened, a sport they have not
+ * declared — and this journey composes none of them: the press is on a court somebody else
+ * built, and the answer is pushed away from in the same beat, so a sheet raised here would
+ * stand in front of a screen that is already gone. Dismissal is *not now* and *not now*
+ * suppresses for thirty days, so asking here would **spend** the offer on the one surface that
+ * cannot honour it — `answerableWithoutAWeekGrid`'s own argument, one screen over.
+ */
+export interface FinishTheCourtSomebodyBuilt {
+  readonly kind: 'challenge';
+  readonly completing: CompletingChallenge;
+  /** The challenge's own sport. The **record** is stamped with it; the request never carries it. */
+  readonly sport: Sport;
 }
 
 /**
@@ -106,21 +146,51 @@ export interface FillSeatsOutcome {
 
 export async function fillSeats(ask: FillSeatsAsk): Promise<FillSeatsOutcome> {
   const response = await runLineup(
-    toRunLineupRequest({
-      sport: ask.origin.sport,
-      mode: ask.origin.mode,
-      lockedSeats: ask.lockedSeats,
-      sentWeek: ask.sentWeek,
-    }),
+    toRunLineupRequest(
+      ask.kind === 'challenge'
+        ? { completing: ask.completing.challengeId, sentWeek: undefined }
+        : {
+            sport: ask.origin.sport,
+            mode: ask.origin.mode,
+            lockedSeats: ask.lockedSeats,
+            sentWeek: ask.sentWeek,
+          },
+    ),
   );
 
   const { envelope, candidates, court } = toLineupAnswer(response);
+  const origin = ask.kind === 'challenge' ? challengeOrigin(ask, envelope) : ask.origin;
 
   return {
     // The origin is folded on here for `toOriginSearch`'s reason — the envelope carries the id
     // and the mode and neither the sport nor the week, because those were the request's.
-    record: { ...toOriginSearch(response, ask.origin), envelope, candidates, court },
+    record: { ...toOriginSearch(response, origin), envelope, candidates, court },
     playersInRange: envelope.pool.playersInRange,
-    prompts: answerableWithoutAWeekGrid(toRaisedPrompts(response, ask.quotes)),
+    prompts:
+      ask.kind === 'challenge'
+        ? []
+        : answerableWithoutAWeekGrid(toRaisedPrompts(response, ask.quotes)),
   };
+}
+
+/**
+ * The origin a challenge fill is stamped with — **read back off the answer, because that is the
+ * only place two of its three facts exist.**
+ *
+ * The request said only which challenge, so the record has to learn the rest from what came
+ * back: the **mode** is the one the engine resolved — inherited from a challenge that was sent
+ * with one, or read off the filler's own declared Play intent where it was not (ADR-0150 §5) —
+ * and it is on the envelope like every other fact about this answer. The **sport** is the
+ * challenge's and is the ask's, for `SearchEnvelope`'s standing reason: it has never carried
+ * one. The **week** is absent, which is *the profile's own grid* and is exactly what was asked.
+ *
+ * **A line-up answer with no mode is refused rather than bound.** `SearchEnvelope.mode` is null
+ * *exactly on the deck*, and this route is not the deck — so a null here is an answer no
+ * forecast could ever be asked under, `ForecastRequest.mode` being required. Inventing one is
+ * the one failure that would not show: every arrangement on the court would silently be priced
+ * under a weight vector nobody chose.
+ */
+function challengeOrigin(ask: FinishTheCourtSomebodyBuilt, envelope: SearchEnvelope): PlayOrigin {
+  if (envelope.mode === null) throw unknownFailure('a line-up answer carried no mode');
+  return { sport: ask.sport, mode: envelope.mode, completing: ask.completing };
 }

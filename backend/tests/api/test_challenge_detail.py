@@ -1,0 +1,458 @@
+"""The challenge detail read, end to end over HTTP.
+
+**The screen somebody answers on**, and the four things it promises that nothing
+else in this suite covers:
+
+**The pairing is recomputed for the reader.** The card block is assembled by the
+matcher when the screen is opened, in the reader's own direction — so this file
+wires the **real** port over the test's own index rather than a stub, and asserts
+against a Fit that was genuinely computed.
+
+**The card block is the arrangement's.** Two standings draw one and every other
+draws none; one level down, a seat that has left draws none either, inside a
+court that is still open.
+
+**Answering is never gated on any of it.** A reader with no rating in the sport
+gets the arrangement, a code saying whose gap the missing pairing is, and two
+buttons that still work.
+
+**One code for two refusals.** A challenge that is not yours and one that does
+not exist answer alike, because separating them would answer *is this id real*
+about a stranger's evening.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from tests.api import matchmaking_world as world
+
+
+@pytest.fixture
+async def searcher(client):
+    return await world.a_searcher(client)
+
+
+async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
+    """Three other players, each of them a **whole** player.
+
+    Built through the routes rather than appended straight to the log, which is
+    the one thing this file needs that ``test_challenges.py`` does not: an
+    invitee here is a *reader*, and ``searcher_facts`` reads a profile, a rating
+    and a declaration live from the aggregates. A person folded into the index
+    alone is somebody the index can describe and the pairing cannot be computed
+    **for** — which is a real state, and it is the one the *nothing to compute*
+    case below reaches deliberately rather than by accident.
+    """
+
+    people = {}
+    for name in ("ana", "bo", "cy"):
+        person = await world.a_searcher(client, name)
+        people[name] = {"id": person["id"], "token": person["token"]}
+    await world.fold_the_log(session_factory, candidate_source)
+    return people
+
+
+async def _an_undeclared_city(
+    client, session_factory, candidate_source, mu: float
+) -> dict:
+    """Three people the index can describe and who have declared no intent.
+
+    A real state and not a fixture trick: a rating and a declaration are two
+    separate acts, and somebody who was assessed and never said what kind of
+    evening they want has exactly this shape. They are seatable — ⚡ reads the
+    index — and a pairing cannot be computed **for** them.
+    """
+
+    people = {}
+    for name, delta in (("ana", 0.0), ("bo", 0.05), ("cy", -0.05)):
+        player_id, token = await world.a_signed_in_candidate(
+            client, session_factory, name, mu=mu + delta, intent=None
+        )
+        people[name] = {"id": player_id, "token": token}
+    await world.fold_the_log(session_factory, candidate_source)
+    return people
+
+
+async def _a_court(client, searcher) -> tuple[str, list[dict]]:
+    response = await world.lineup(client, searcher["token"])
+    assert response.status_code == 200, response.text
+    body = response.json()
+    court = [
+        {
+            "side": seat["side"],
+            "player_id": seat.get("player_id", str(searcher["id"])),
+        }
+        for seat in body["lineup"]["seats"]
+    ]
+    return body["search"]["search_id"], court
+
+
+async def _send(client, token: str, search_id: str, court: list[dict]) -> str:
+    response = await client.post(
+        "/api/v1/challenges",
+        json={"search_id": search_id, "court": court},
+        headers=world.auth(token),
+    )
+    assert response.status_code == 201, response.text
+    return response.json()["challenge_id"]
+
+
+async def _detail(client, token: str, challenge_id: str):
+    return await client.get(
+        f"/api/v1/challenges/{challenge_id}", headers=world.auth(token)
+    )
+
+
+async def _answer(client, token: str, challenge_id: str, how: str):
+    response = await client.post(
+        f"/api/v1/challenges/{challenge_id}/{how}", headers=world.auth(token)
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _seat_of(body: dict, player_id) -> dict:
+    return next(
+        seat for seat in body["seats"] if seat.get("player_id") == str(player_id)
+    )
+
+
+# ---------------------------------------------------------------------------
+# The card, drawn
+# ---------------------------------------------------------------------------
+
+
+async def test_an_invitee_reads_who_is_asking_and_what_the_platform_makes_of_it(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**The whole point of the screen**, and every block on it.
+
+    The person: a whole handle, an area, a Level, a band and a range. The
+    pairing: a Fit computed in *this reader's* direction, the terms that made it,
+    the basis it was renormalised over and a forecast. And no card on the
+    reader's own seat, because a pairing with yourself is not a question.
+    """
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+
+    them = people["ana"]
+    response = await _detail(client, them["token"], challenge_id)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert "pairing_absence" not in body
+    organiser = _seat_of(body, searcher["id"])
+    assert organiser["name"] == "searcher"
+    card = organiser["card"]
+    assert card["person"]["name"] == "searcher"
+    assert card["person"]["range"]["low"] <= card["person"]["level"]
+    assert card["pairing"]["terms"]
+    assert 0 <= card["pairing"]["forecast"]["pct"] <= 100
+    assert "card" not in _seat_of(body, them["id"])
+
+
+async def test_the_answer_is_folded_against_one_instant_the_response_names(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """``read_at`` is on the detail as it is on the list, and it is its own.
+
+    The detail is its own fold against its own instant, so the two reads carry
+    two moments rather than sharing one — and every deadline on this response is
+    rendered against the one beside it.
+    """
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+
+    body = (await _detail(client, people["ana"]["token"], challenge_id)).json()
+    listed = await client.get(
+        "/api/v1/challenges", headers=world.auth(people["ana"]["token"])
+    )
+
+    assert body["read_at"]
+    assert listed.json()["read_at"]
+    assert body["challenge_id"] == challenge_id
+
+
+async def test_the_list_gains_a_handle_on_every_seat_and_nothing_else(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**The list stays cheap** (``docs/adr/0143`` §1).
+
+    It gains an instant at the envelope and a handle on the seat, and it gains no
+    card: a card is a profile read and an object-store signature per person, and
+    the list is *every challenge you hold a seat in* with ended ones deliberately
+    in it — the bound is somebody's whole history of being asked.
+    """
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    await _send(client, searcher["token"], search_id, court)
+
+    listed = await client.get(
+        "/api/v1/challenges", headers=world.auth(people["ana"]["token"])
+    )
+
+    (one,) = listed.json()["challenges"]
+    seats = one["seats"]
+    assert {seat["name"] for seat in seats if seat["player_id"]} == {
+        "searcher",
+        "ana",
+        "bo",
+        "cy",
+    }
+    assert all("card" not in seat for seat in seats)
+
+
+async def test_the_forecast_is_the_courts_and_the_same_on_every_card(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**One figure, because a forecast is a fact about the game.**
+
+    A doubles court seats the reader beside one person and across from two, and
+    a per-seat one-a-side figure would print *how even would a game against
+    them be* about the teammate. What crosses instead is the court as it stands,
+    read in the reader's direction — so every card carries the same number, and
+    it is the number the game would actually deliver.
+    """
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+
+    body = (await _detail(client, people["ana"]["token"], challenge_id)).json()
+
+    forecasts = [
+        seat["card"]["pairing"]["forecast"]
+        for seat in body["seats"]
+        if "card" in seat
+    ]
+    assert len(forecasts) == 3
+    assert all(one == forecasts[0] for one in forecasts)
+    assert 0 <= forecasts[0]["pct"] <= 100
+
+
+# ---------------------------------------------------------------------------
+# The card's lifetime — ``docs/adr/0143`` §8
+# ---------------------------------------------------------------------------
+
+
+async def test_a_challenge_that_ended_draws_the_arrangement_and_the_handles_alone(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """The pair releases when a seat leaves, and a card is as-of-now.
+
+    A live card of a stranger on a screen reopenable for ever is a directory with
+    extra steps. **The names stay**, because the standing's own sentence names
+    them.
+    """
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    for name in ("ana", "bo", "cy"):
+        await _answer(client, people[name]["token"], challenge_id, "decline")
+
+    body = (await _detail(client, people["ana"]["token"], challenge_id)).json()
+
+    assert body["standing"] == "DECLINED"
+    assert "pairing_absence" not in body
+    assert all("card" not in seat for seat in body["seats"])
+    assert _seat_of(body, searcher["id"])["name"] == "searcher"
+
+
+async def test_a_seat_that_left_a_still_open_court_draws_no_card_and_the_others_do(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**One level down, the same rule** (``docs/adr/0143`` §8).
+
+    Somebody who declined inside a court that is still being filled has left, and
+    *that person is a stranger to you once more the moment they leave* — so their
+    seat keeps its handle and loses its card, while everybody still in keeps
+    both.
+    """
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    await _answer(client, people["ana"]["token"], challenge_id, "accept")
+    await _answer(client, people["cy"]["token"], challenge_id, "accept")
+    await _answer(client, people["bo"]["token"], challenge_id, "decline")
+
+    body = (await _detail(client, people["ana"]["token"], challenge_id)).json()
+
+    assert body["standing"] == "LINE_UP_INCOMPLETE"
+    left = _seat_of(body, people["bo"]["id"])
+    assert left["answer"] == "DECLINED"
+    assert left["name"] == "bo"
+    assert "card" not in left
+    assert "card" in _seat_of(body, searcher["id"])
+    assert "card" in _seat_of(body, people["cy"]["id"])
+
+
+async def test_the_reader_who_left_is_drawn_no_card_block_at_all(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**The same rule, asked about the reader** ([#394](https://github.com/Raketa02/Raketa/issues/394)).
+
+    The test above reads that court as somebody who **accepted**. This reads it as
+    the person who declined, on a court that is still being filled — and they were
+    being handed a card per remaining player, signed photograph URL included, for
+    people the pair rule had already released.
+
+    **No `pairing_absence` either.** The absence here is the same one an ended
+    standing produces — there is no card block on this read — and not
+    `COULD_NOT_BE_READ`, which means somebody's outage.
+    """
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    await _answer(client, people["ana"]["token"], challenge_id, "accept")
+    await _answer(client, people["cy"]["token"], challenge_id, "accept")
+    await _answer(client, people["bo"]["token"], challenge_id, "decline")
+
+    response = await _detail(client, people["bo"]["token"], challenge_id)
+    body = response.json()
+
+    assert body["standing"] == "LINE_UP_INCOMPLETE"
+    assert "pairing_absence" not in body
+    assert all("card" not in seat for seat in body["seats"])
+    # The whole point of enforcing this by not asking: no signature was minted,
+    # so there is none anywhere in the document to have leaked.
+    assert "photo_url" not in response.text
+
+
+async def test_the_reader_who_left_keeps_the_arrangement_and_every_handle(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**Only the card goes.** The row and the screen still have to be readable:
+    §13's sentences for a departed reader quote nobody, and the arrangement is how
+    they find out the court is still standing without them."""
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    await _answer(client, people["ana"]["token"], challenge_id, "accept")
+    await _answer(client, people["bo"]["token"], challenge_id, "decline")
+
+    body = (await _detail(client, people["bo"]["token"], challenge_id)).json()
+
+    assert len(body["seats"]) == 4
+    assert _seat_of(body, searcher["id"])["name"] == "searcher"
+    assert _seat_of(body, people["ana"]["id"])["name"] == "ana"
+    mine = _seat_of(body, people["bo"]["id"])
+    assert mine["answer"] == "DECLINED"
+    assert mine["name"] == "bo"
+
+
+async def test_a_reader_who_left_an_awaiting_court_is_drawn_none_either(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """`standing_of` holds `AWAITING_ANSWERS` while **any** seat is awaiting, so a
+    padel four sits there with this reader's answer already given — and that is the
+    arm the client was drawing a card block on until #392. Both live standings ask
+    the one question of the reader's own seat."""
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    await _answer(client, people["bo"]["token"], challenge_id, "decline")
+
+    body = (await _detail(client, people["bo"]["token"], challenge_id)).json()
+
+    assert body["standing"] == "AWAITING_ANSWERS"
+    assert "pairing_absence" not in body
+    assert all("card" not in seat for seat in body["seats"])
+
+
+# ---------------------------------------------------------------------------
+# The three absences, and the refusal — §2 and §6
+# ---------------------------------------------------------------------------
+
+
+async def test_a_reader_with_nothing_declared_still_answers_their_challenge(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**Answering is never gated on the pairing.**
+
+    Being asked to play a sport you have declared nothing for is how this feature
+    works rather than a corner of it: the arrangement answers, the code says
+    whose gap the missing pairing is — theirs, not an outage's — and the two
+    buttons still work. A `503` here, or a screen that drew nothing, would turn
+    *you have not finished setting up* into *you cannot answer your challenge*.
+    """
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _an_undeclared_city(
+        client, session_factory, candidate_source, searcher["mu"]
+    )
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    them = people["ana"]
+
+    body = (await _detail(client, them["token"], challenge_id)).json()
+    accepted = await _answer(client, them["token"], challenge_id, "accept")
+
+    assert body["standing"] == "AWAITING_ANSWERS"
+    assert body["pairing_absence"] == "NOTHING_TO_COMPUTE"
+    assert all("card" not in seat for seat in body["seats"])
+    assert _seat_of(body, searcher["id"])["name"] == "searcher"
+    assert accepted["standing"] in {"AWAITING_ANSWERS", "LINE_UP_INCOMPLETE"}
+
+
+async def test_a_matcher_this_process_cannot_reach_is_a_code_and_not_a_failure(
+    client, session_factory, candidate_source, searcher
+):
+    """**The production wiring, exercised.** Nothing overrides the port here.
+
+    Under ``ASGITransport`` there is no index on the application's state and no
+    Redis pool, which is exactly the shape of an outage — and the promise is that
+    it costs the pairing and never the screen. A ``503`` here would turn somebody
+    else's outage into *you cannot answer your challenge*.
+    """
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+
+    response = await _detail(client, people["ana"]["token"], challenge_id)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["pairing_absence"] == "COULD_NOT_BE_READ"
+    assert all("card" not in seat for seat in body["seats"])
+    assert _seat_of(body, searcher["id"])["name"] == "searcher"
+
+
+async def test_a_stranger_is_told_the_challenge_does_not_exist(
+    client, session_factory, candidate_source, searcher
+):
+    """**One code for two cases.** Separating them would answer *is this id real*
+    about a stranger's evening, which is the refusal the answer routes already
+    make and the reason this route could be keyed on a challenge id at all."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    _, stranger = await world.register(client, "stranger")
+
+    theirs = await _detail(client, stranger, challenge_id)
+    nothing = await _detail(client, people["ana"]["token"], str(searcher["id"]))
+
+    assert theirs.status_code == 404
+    assert theirs.json()["code"] == "challenge_not_found"
+    assert nothing.status_code == 404
+    assert nothing.json()["code"] == "challenge_not_found"

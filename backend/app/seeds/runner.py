@@ -148,11 +148,18 @@ from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import AssessmentNotFound
 from app.modules.rating.domain.ids import PlayerId, assessment_stream_id
 from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
-from app.modules.users.application.commands import RegisterUserCommand
+from app.modules.users.application.commands import (
+    NameUserCommand,
+    RegisterUserCommand,
+)
+from app.modules.users.application.name_user import NameUser
 from app.modules.users.application.register_user import RegisterUser
 from app.modules.users.domain.ports import UserRepository
 from app.seeds.catalog import (
     ACCOUNTS,
+    CENTRE,
+    REFERENCE_CENTRE,
+    SEED_CENTRE_VARIABLE,
     SEED_CONSENT_COPY_VERSION,
     SEED_PASSWORD,
     AbandonedRun,
@@ -178,6 +185,12 @@ from app.seeds.cohort import (
 )
 from app.seeds.games import SeededGames, write_the_played_history
 from app.seeds.guard import refuse_unless_seedable
+from app.seeds.loop import (
+    SeededLoop,
+    assert_the_loop,
+    costs as loop_costs,
+    write_the_loop,
+)
 from app.seeds.pairs import SeededPairs, write_the_relationships
 from app.seeds.photos import (
     SEED_IMAGE_MEDIA_TYPE,
@@ -186,7 +199,10 @@ from app.seeds.photos import (
     the_store_answers,
 )
 from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
+from app.seeds.plans import SeededPlans, costs as plan_costs, write_the_plans
+from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import assert_the_screens
+from app.seeds.sportsmanship import SeededOpinions, write_what_players_said
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
 #: developer command reads as a broken database. The engine's own ceiling is well
@@ -275,6 +291,7 @@ class _UseCases:
     profiles: PlayerProfileRepository
     declarations: PlayIntentDeclarationRepository
     register: RegisterUser
+    name: NameUser
     create: CreateAssessment
     submit: SubmitAnswer
     complete: CompleteAssessment
@@ -324,6 +341,9 @@ def _build(
             uow=uow,
             clock=clock,
             events=events,
+        ),
+        name=NameUser(
+            users=users, event_store=event_store, uow=uow, clock=clock, events=events
         ),
         create=CreateAssessment(
             engine=engine,
@@ -419,7 +439,7 @@ async def _seed_account(
         photos=photos,
     )
     player_id, registered = await _ensure_registered(
-        use_cases, email=account.email, nickname=account.nickname
+        use_cases, email=account.email, name=account.name, nickname=account.nickname
     )
     scenarios = tuple(
         [
@@ -451,33 +471,46 @@ def _clock_for(account: SeedAccount, now: Instant) -> Clock:
 
 
 async def _ensure_registered(
-    use_cases: _UseCases, *, email: str, nickname: str
+    use_cases: _UseCases, *, email: str, name: str, nickname: str
 ) -> tuple[UUID, bool]:
-    """Register this address, or find the account already at it.
+    """Register this address and name the account, or find the one already there.
 
-    Takes the two values rather than an account, because a named account and a
-    cohort member are the same registration: both are an address derived from a
-    name, and two copies of this function would be two places for *is it already
-    there* to be answered differently.
+    Takes the values rather than an account, because a named account and a
+    cohort member are the same registration: both are an address derived from
+    the fixture's own id — a slug, a ring position — and two copies of this
+    function would be two places for *is it already there* to be answered
+    differently.
+
+    **Two acts, as a player performs them** (``docs/adr/0171`` §2): sign-up is
+    credentials only and the naming is its own use case, so a seeded account
+    has the two events a real one has. The naming is asked on every run — it
+    is the act's own idempotence that makes a second run write nothing, an
+    unchanged re-naming recording no event — so a pool that dealt an account a
+    different name is corrected rather than left as the first run wrote it.
     """
 
     existing = await use_cases.users.get_by_email(email)
-    if existing is not None:
-        return existing.id, False
-
-    user = await use_cases.register.execute(
-        RegisterUserCommand(
-            email=email,
-            nickname=nickname,
-            password=SEED_PASSWORD,
-            # A seeded account attests like any other, because it is registered
-            # through the aggregate rather than around it (``docs/adr/0029``).
-            # The claim is the fixture's, made on behalf of a player who does
-            # not exist, and it never leaves a developer's machine.
-            adult_attested=True,
+    if existing is None:
+        user = await use_cases.register.execute(
+            RegisterUserCommand(
+                email=email,
+                password=SEED_PASSWORD,
+                # A seeded account attests like any other, because it is
+                # registered through the aggregate rather than around it
+                # (``docs/adr/0029``). The claim is the fixture's, made on behalf
+                # of a player who does not exist, and it never leaves a
+                # developer's machine.
+                adult_attested=True,
+            )
         )
+        player_id, registered = user.id, True
+    else:
+        player_id, registered = existing.id, False
+
+    await use_cases.name.execute(
+        NameUserCommand(user_id=player_id, name=name, nickname=nickname)
     )
-    return user.id, True
+    return player_id, registered
 
 
 async def _ensure_profile(
@@ -517,6 +550,7 @@ async def _ensure_profile(
             proposals_opt_in=profile.proposals_opt_in,
             consent_copy_version=SEED_CONSENT_COPY_VERSION,
             consent_surface=ConsentSurface.ONBOARDING,
+            intro=profile.intro,
         )
     )
     for sport, intent in profile.intents:
@@ -830,7 +864,7 @@ async def _seed_member(
         photos=photos,
     )
     player_id, registered = await _ensure_registered(
-        use_cases, email=member.email, nickname=member.nickname
+        use_cases, email=member.email, name=member.name, nickname=member.nickname
     )
     rated = tuple(
         [
@@ -936,6 +970,7 @@ def _profile_of(
         ),
         latitude=member.latitude,
         longitude=member.longitude,
+        intro=member.intro,
     )
 
 
@@ -1101,6 +1136,21 @@ class SeedReport:
     #: The played history, and the pairs it spent. ``None`` on the same callers
     #: and for the same reason.
     played: SeededGames | None = None
+    #: The four arranged-and-never-played games, and the plans on them.
+    #: ``None`` on the same callers and for the same reason as the two above.
+    plans: SeededPlans | None = None
+    #: The loop's own states — a game at every moment of its life, the two courts
+    #: sent for the ends they reach, and the fill — with the claims read back off
+    #: the screens they are for. ``None`` on the same callers and for the same
+    #: reason as the layers above.
+    loop: SeededLoop | None = None
+    #: The rooms the seeded acceptances earned, once the outbox was delivered.
+    #: ``None`` on the callers that drive the populations without the layers
+    #: above them, exactly as the two above are.
+    rooms: SeededRooms | None = None
+    #: The cards those evenings left behind, and what the published fold makes
+    #: of them. ``None`` on the same callers and for the same reason.
+    opinions: SeededOpinions | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1162,11 +1212,55 @@ async def run(settings: Settings | None = None) -> SeedReport:
         played = await write_the_played_history(
             session_factory, settings=settings, now=now, photos=photos
         )
+        # **After the games and before anything reads a record**, because a card
+        # is drawn for a court that is over: nothing here arranges an evening,
+        # and every rating it writes is about one the layer above just wrote.
+        # It spends no pair and runs no search, so its position relative to the
+        # relationships is free — it sits here because it belongs to the
+        # evenings rather than to the inboxes.
+        opinions = await write_what_players_said(session_factory, now=now)
         # **After both populations and before every claim.** An edge is a real
         # search or deal run as the sender, so it needs everybody in the index —
         # and the claims are read off what the edges made true.
         pairs = await write_the_relationships(
             session_factory, settings=settings, now=now, photos=photos
+        )
+        # **After the relationships and before the delivery.** A plan needs a
+        # game still inside its entry window and every other layer's games are
+        # played, so this one arranges four more and stops — and it has to run
+        # before the outbox is drained, so that the four system lines it writes
+        # reach the rooms in the same pass everything else does. It holds a
+        # delivery barrier of its own as well, because a plan line is hung on
+        # the room its challenge opened and that opening is an earlier event.
+        plans = await write_the_plans(
+            session_factory, settings=settings, now=now
+        )
+        # **After the plans and before the delivery**, on the plans layer's own
+        # reason twice over: the cards this layer reaches are the ones no other
+        # layer draws, and the lines it writes have to reach their rooms in the
+        # same pass everything else's do.
+        written = await write_the_loop(
+            session_factory, settings=settings, now=now
+        )
+        # **After every layer that writes and before the screens.** A room is
+        # *told* through the outbox by contexts that do not know it exists
+        # (``docs/adr/0146`` §5), so nothing above this line opened one — the
+        # acceptances, the completions and the *we played*s are all sitting in
+        # the queue. Delivering here is the same barrier the candidate index's
+        # tick is, for the same reason: the assertions read the real path, and
+        # the real path has a poller in front of it.
+        rooms = await open_the_rooms(
+            session_factory, settings=settings, now=now
+        )
+        # **After the rooms, because half its claims are about them.** A room is
+        # told through the outbox and an ended one is destroyed by a sweep, so a
+        # claim about which lines a standing room carries has to be made on the
+        # far side of both.
+        loop = SeededLoop(
+            written=written,
+            claims=await assert_the_loop(
+                session_factory, settings=settings, now=now
+            ),
         )
         screens = await assert_the_screens(
             session_factory,
@@ -1183,6 +1277,10 @@ async def run(settings: Settings | None = None) -> SeedReport:
             screens=screens,
             pairs=pairs,
             played=played,
+            plans=plans,
+            rooms=rooms,
+            loop=loop,
+            opinions=opinions,
             photographs=photographs,
         )
     finally:
@@ -1216,6 +1314,29 @@ COHORT_DISCLAIMER = (
 )
 
 
+def _centre_lines() -> list[str]:
+    """Where the population sits, and how to put a simulator there.
+
+    A seeded account is moved the moment somebody signs into it from a phone —
+    the client puts the phone's own position on the profile at every cold start
+    (``docs/adr/0174`` §6) — so the one thing a developer has to know about the
+    seed's geography is the cell to pin their simulator to. Printed on every run,
+    because a reseed is exactly when the simulator gets reset too.
+    """
+
+    where = (
+        "the reference, London"
+        if CENTRE == REFERENCE_CENTRE
+        else f"{SEED_CENTRE_VARIABLE}; the committed cohort measures from London"
+    )
+    return [
+        f"Centred on {CENTRE.latitude},{CENTRE.longitude} ({where}). Pin the iOS "
+        f"simulator there before signing in — `make sim-location`, or "
+        f"`xcrun simctl location booted set {CENTRE.latitude},{CENTRE.longitude}` "
+        f"— or the first cold start moves the account to wherever the device is.",
+    ]
+
+
 def report(run_report: SeedReport) -> list[str]:
     """The run, as lines a developer reads — address, password, state, id."""
 
@@ -1223,6 +1344,7 @@ def report(run_report: SeedReport) -> list[str]:
     lines = [
         f"Seeded {len(seeded)} account(s) and {len(run_report.members)} cohort "
         f"member(s). Password for all of them: {SEED_PASSWORD}",
+        *_centre_lines(),
         "",
     ]
     for entry in seeded:
@@ -1245,15 +1367,25 @@ def report(run_report: SeedReport) -> list[str]:
     lines.extend(["", *_cohort_lines(run_report.members)])
     if run_report.played is not None:
         lines.extend(["", *_played_lines(run_report.played)])
+    if run_report.opinions is not None:
+        lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])
     if run_report.pairs is not None:
         lines.extend(["", *_relationship_lines(run_report.pairs)])
+    if run_report.plans is not None:
+        lines.extend(["", *_plan_lines(run_report.plans)])
+    if run_report.rooms is not None:
+        lines.extend(["", *_room_lines(run_report.rooms)])
+    if run_report.loop is not None:
+        lines.extend(["", *_loop_lines(run_report.loop)])
     if run_report.screens:
         lines.extend(["", "The screens, read as the protagonist:"])
         lines.extend(f"  {line}" for line in run_report.screens)
     lines.extend(["", COHORT_DISCLAIMER])
     costs = list(run_report.pairs.costs if run_report.pairs else ())
     costs.extend(run_report.played.costs if run_report.played else ())
+    costs.extend(plan_costs(run_report.plans) if run_report.plans else ())
+    costs.extend(loop_costs(run_report.loop) if run_report.loop else ())
     if not run_report.photographs:
         costs.append(
             "the object store did not answer, so this run seeded no "
@@ -1269,6 +1401,45 @@ def report(run_report: SeedReport) -> list[str]:
     return lines
 
 
+def _loop_lines(loop: SeededLoop) -> list[str]:
+    """What the loop's own layer wrote, and what the screens then drew.
+
+    **Written and claimed in one block**, unlike every other layer: the two halves
+    run either side of the delivery — the rooms have to be told before a line can
+    be read back — and printing them apart would put the claims a screenful away
+    from the rows that reach them.
+    """
+
+    return [
+        "The loop's own states — a game at every moment of its life:",
+        *(f"  {line}" for line in loop.written.games),
+        *(f"  {line}" for line in loop.written.courts),
+        *(f"  {line}" for line in loop.claims),
+    ]
+
+
+def _room_lines(rooms: SeededRooms) -> list[str]:
+    """The rooms the delivery opened, the ones the sweep took away, and the one
+    shape this fixture does not reach.
+
+    **The gap is on the report rather than in a docstring**, on the rule the two
+    relationship costs already follow: a fixture that quietly reached three of
+    four shapes reads as having reached four, and the person it misleads is the
+    one about to build the screen.
+    """
+
+    return [
+        "The rooms, once the outbox was delivered and the ended ones swept:",
+        f"  {rooms.delivered} event(s) delivered · {rooms.said} message(s) said "
+        f"· {rooms.swept.destroyed} room(s) destroyed",
+        *(f"  {line}" for line in rooms.rooms),
+        "  not reached · a room carrying every system-line code. It needs a "
+        "`SeatsInvited`, and nothing here performs a fill — which would cost a "
+        "real search that seats somebody new and move the gate histogram this "
+        "run asserts.",
+    ]
+
+
 def _played_lines(played: SeededGames) -> list[str]:
     """What the platform has watched this cohort do, one line per game.
 
@@ -1280,6 +1451,42 @@ def _played_lines(played: SeededGames) -> list[str]:
     return [
         "The played history:",
         *(f"  {one.line}" for one in played.games),
+    ]
+
+
+def _plan_lines(plans: SeededPlans) -> list[str]:
+    """The four card states, each read back off ``GET /plans``' own use case.
+
+    **Nought is a row on this list**, and it is the one that reads oddly: a plan
+    at no slots is a game with *no plan*, so the line says so rather than
+    printing three empty values a client can never be sent.
+    """
+
+    return [
+        "The plans, on games nobody has played:",
+        *(f"  {line}" for line in plans.plans),
+    ]
+
+
+def _opinion_lines(opinions: SeededOpinions) -> list[str]:
+    """The cards that were answered, and what the record will print off them.
+
+    **The second half is read back and not computed**, which is the only reason
+    it is worth printing: the figure a developer sees here is the one
+    ``sportsmanship`` publishes when a record is opened, so a fold that started
+    disagreeing with the fixture would show up in this section rather than on a
+    screen nobody looked at.
+
+    And the figure is what **every** reader of that record is shown, the subject
+    included (``docs/adr/0179`` §5) — so signing in as one of these people and
+    opening *How others see you* is one way to check this section, and opening
+    theirs from somebody else's pool is the other.
+    """
+
+    return [
+        "What other players said:",
+        *(f"  card · {line}" for line in opinions.cards),
+        *(f"  published · {line}" for line in opinions.published),
     ]
 
 
@@ -1316,6 +1523,9 @@ def _relationship_lines(pairs: SeededPairs) -> list[str]:
         lines.append(f"      {edge.line}")
         lines.append(f"      claims: {edge.relationship.claim}")
     lines.extend(f"  {line}" for line in pairs.inboxes)
+    lines.append(f"  {pairs.withdrawn}")
+    lines.append(f"  {pairs.half_built.sent}")
+    lines.append(f"  {pairs.half_built.mutual_born}")
     return lines
 
 

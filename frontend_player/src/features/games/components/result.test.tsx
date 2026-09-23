@@ -1,5 +1,5 @@
 /**
- * **The result conversation, walked the way a player walks it**: the real route tree, the real
+ * **The result argument, walked the way a player walks it**: the real route tree, the real
  * shell, and only `fetch` faked.
  *
  * Four of the ticket's acceptance criteria are assertions in this file and not opinions
@@ -16,14 +16,16 @@ import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { AppError } from '@/shared/errors';
 
-import type { ResultConversation } from '../domain/conversation';
+import type { ResultArgument } from '../domain/resultArgument';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
+import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 import {
   GAMES_PATH,
   GATE_USER,
   launchSignedIn,
   stubGames,
+  stubPlans,
   stubGate,
 } from '@/test-support/onboardingRouter';
 import {
@@ -36,6 +38,7 @@ import {
 
 import {
   ACCEPT_LABEL,
+  CALLED_OFF_FOR_LACK_OF_PLAYERS,
   CANCEL_LABEL,
   COUNTER_IS_THEIR_SCORE,
   COUNTER_LABEL,
@@ -55,6 +58,7 @@ import {
 import { gameErrorMessage } from './gameErrorMessage';
 
 const GAME_ID = '8f14e45f-ceea-467a-9dd1-4bd9c39d4a58';
+const CHALLENGE_ID = 'cccccccc-0000-4000-8000-000000000003';
 const RESULT_PATH = `${GAMES_PATH}/${GAME_ID}/result`;
 const ACCEPTANCE_PATH = `${RESULT_PATH}/acceptance`;
 
@@ -69,15 +73,15 @@ const THEIR_HANDLE = 'tomek.p';
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return {
     game_id: GAME_ID,
-    challenge_id: 'cccccccc-0000-4000-8000-000000000003',
+    challenge_id: CHALLENGE_ID,
     sport: 'PADEL',
     kind: 'COUNTED',
     standing: 'AWAITING_ENTRY',
     planned_at: '2026-09-01T09:00:00Z',
     entry_closes_at: '2026-09-09T09:00:00Z',
     seats: [
-      { side: 'A', player_id: ME, nickname: 'me_' },
-      { side: 'B', player_id: OPPONENT, nickname: THEIR_HANDLE },
+      { side: 'A', player_id: ME, name: 'me_' },
+      { side: 'B', player_id: OPPONENT, name: THEIR_HANDLE },
     ],
     proposals: [],
     ...over,
@@ -175,15 +179,74 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** Land in the app with these games, and open the first of them from the Now tab. */
-async function openGame(served: Wire['GameSchema'], sport = 'Padel') {
+/**
+ * Land in the app with these games, on the first of them — **at the screen's own address**.
+ *
+ * It used to walk in from Now's card, and the card is no longer a door: since
+ * [#413](https://github.com/Raketa02/Raketa/issues/413) the body is not pressable and an ending
+ * carries no door at all, so two of the arms this file walks cannot be reached from the rail. The
+ * rail's doors are the rail's tests' (`nowRail.test.tsx`, `gamePlan.test.tsx`); what this file is
+ * about is the screen's eight states, and `GameScreen` is state-keyed — the arm is the standing's
+ * wherever it is entered from, which is §5.2's own reason there is no deep-link parameter.
+ */
+async function openGame(served: Wire['GameSchema']) {
   stubGames(transport, [served], READ_AT);
-  await launchSignedIn();
-
-  const row = await screen.findByLabelText(new RegExp(`^${sport} · with `));
-  fireEvent.press(row);
+  await launchSignedIn(`/games/${GAME_ID}`);
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME_ID}`));
+  // The route resolves before the screen is drawn; the back control is on every arm.
+  await screen.findByLabelText('Back');
 }
+
+/**
+ * The same walk, and then the press that reveals the grid.
+ *
+ * **An entry arm with nothing agreed leads with the plan**, so the grid is one press away rather
+ * than the screen ([#368](https://github.com/Raketa02/Raketa/issues/368),
+ * `the-loop-screens.md` §5.2). Nothing in this file stubs a plan, so every `AWAITING_ENTRY` game
+ * it walks arrives on the Planning arm — and the press is `We played`, the same verb the card's
+ * own door carries. It is a second helper rather than a branch inside the first, so every
+ * assertion below says which arm it is standing on.
+ */
+async function openTheGrid(served: Wire['GameSchema']) {
+  await openGame(served);
+
+  fireEvent.press(screen.getByText(WE_PLAYED));
+}
+
+/**
+ * **The grid closes only where something is behind it**, which is the two entry landings §5.2
+ * names: on the plan lead it opened over the plan, so `Leave it as it is` puts it back; on the
+ * score lead it *is* the screen, so there is nothing to go back to and no cancel is drawn. Both
+ * halves are asserted here because the footer is this screen's, and the fold that chooses between
+ * them is `features/plans`' (`gamePlan.test.tsx`).
+ */
+describe('the grid on an entry arm', () => {
+  it('offers a way back where it opened over the plan', async () => {
+    await openTheGrid(game());
+
+    expect(screen.getByText(ENTER_LABEL)).toBeTruthy();
+    expect(screen.getByText(CANCEL_LABEL)).toBeTruthy();
+  });
+
+  it('is the screen itself once the agreed point has passed, so nothing closes it', async () => {
+    // The agreed point is behind the fold, which is the rung that lands a card on the grid.
+    stubPlans(transport, [
+      {
+        challenge_id: CHALLENGE_ID,
+        anchor: '2026-09-01T09:00:00Z',
+        place: 'Zabłocie Sport',
+        day: '2026-09-04',
+        hour: '20:00',
+        agreed_point: '2026-09-04T18:00:00Z',
+      },
+    ]);
+    await openGame(game());
+
+    expect(screen.getByText(ENTER_LABEL)).toBeTruthy();
+    expect(screen.queryByText(WE_PLAYED)).toBeNull();
+    expect(screen.queryByText(CANCEL_LABEL)).toBeNull();
+  });
+});
 
 /** Press one value key on the pad, into whichever cell the caret is on. */
 function type(figure: string) {
@@ -206,37 +269,45 @@ const bodies = (path: string) => transport.requestsTo('POST', path).map((request
 const refusal = (code: string) =>
   new AppError('conflict', 'business-conflict', 'test failure', { code });
 
-describe('the list on the Now tab', () => {
+describe("the card on Now's rail", () => {
+  /**
+   * **The card's sentence is the screen's sentence**, still — the rail is `features/plans`' since
+   * [#367](https://github.com/Raketa02/Raketa/issues/367), but the gloss it draws under a game that
+   * is not being arranged is this feature's `gameStandingLine`, so a player who reads a card, taps
+   * it and finds a different deadline is the state one caller exists to prevent.
+   *
+   * What the empty rail draws is the rail's own suite's, and moved there with it.
+   */
   it('says what each game is asking, and the screen says the same sentence', async () => {
     const served = awaitingAnswer('B');
     stubGames(transport, [served], READ_AT);
     await launchSignedIn();
 
-    // The row's own sentence is the screen's: a player who reads a row, taps it and finds a
-    // different deadline is the state `standingLine` having one caller exists to prevent.
     const line = await screen.findByText(/If you say nothing for 23 hours/);
 
     expect(line).toBeTruthy();
-  });
-
-  /**
-   * Now *"deliberately never says nothing is happening"*, and a challenge whose line-up has not
-   * completed is not a game yet — so an empty list draws no section rather than an emptiness.
-   */
-  it('draws nothing at all when there are no games', async () => {
-    await launchSignedIn();
-    await screen.findByText(/not built yet/);
-
-    expect(screen.queryByText('Your games')).toBeNull();
   });
 });
 
 describe('entering a result', () => {
   it('says when saying nothing stops being possible, before the clock runs', async () => {
+    // On the score lead: the agreed point is behind the fold. The plan lead draws no standing
+    // line since #414 — the card and the counter carry it — so the window is asserted where it
+    // is still said.
+    stubPlans(transport, [
+      {
+        challenge_id: CHALLENGE_ID,
+        anchor: '2026-09-01T09:00:00Z',
+        place: 'Zabłocie Sport',
+        day: '2026-09-04',
+        hour: '20:00',
+        agreed_point: '2026-09-04T18:00:00Z',
+      },
+    ]);
     await openGame(game());
 
     const said = standingLine(
-      { kind: 'awaiting-entry', entryClosesAt: '2026-09-09T09:00:00Z' },
+      { kind: 'awaiting-entry', entryClosesAt: '2026-09-09T09:00:00Z', seatOpen: false },
       READ_AT,
     );
 
@@ -247,7 +318,7 @@ describe('entering a result', () => {
 
   it('sends the score absolutely, with no act named on it', async () => {
     transport.on('POST', RESULT_PATH, () => json(game()));
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn(
       [
@@ -264,7 +335,7 @@ describe('entering a result', () => {
   });
 
   it('refuses a level set with a sentence rather than a closed control', async () => {
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn([['6', '6']], ['You', 'Them']);
     fireEvent.press(screen.getByText(ENTER_LABEL));
@@ -274,7 +345,7 @@ describe('entering a result', () => {
   });
 
   it('refuses a score that names nobody, which is the invariant and not a sanity check', async () => {
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn(
       [
@@ -442,7 +513,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
    */
   it('counts past its own ceiling rather than refusing a real evening', async () => {
     transport.on('POST', RESULT_PATH, () => json(game()));
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn(
       [
@@ -476,7 +547,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
   });
 
   it('moves the caret across the row and then down, so a score is four taps', async () => {
-    await openGame(game());
+    await openTheGrid(game());
 
     type('6');
 
@@ -489,7 +560,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
   });
 
   it('draws the sport’s own grid, in the sport’s own word for a row', async () => {
-    await openGame(game({ sport: 'SQUASH' }), 'Squash');
+    await openTheGrid(game({ sport: 'SQUASH' }));
 
     expect(screen.getByLabelText('Game 5, You, empty')).toBeTruthy();
     expect(screen.queryByLabelText('Set 1, You, empty')).toBeNull();
@@ -507,6 +578,109 @@ describe('the ends', () => {
     for (const fact of UNSCORED_FACTS) expect(screen.getByText(fact)).toBeTruthy();
     expect(screen.queryByText(ENTER_LABEL)).toBeNull();
     expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
+  });
+
+  /**
+   * **The fourth end, drawn as the ghost is** (#419 §3, ADR-0163): the title and the standing
+   * line the ticket fixes, the ghost's own body — nothing anybody is measured on moves — and
+   * nothing to press: no plan, no doors, no act on the court, and no pairing asked for, because
+   * the read is `enabled` on `AWAITING_ENTRY` alone and answers `pairing_is_history` anyway.
+   * With `called_off_by` null it is the hour's (ADR-0175 §3), and the body says so.
+   */
+  it('reads a called-off game as its fourth end and offers nothing', async () => {
+    await openGame(
+      game({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+      }),
+    );
+
+    const ending = { how: 'the-hour', format: 'singles' } as const;
+    expect(screen.getByText(resultTitle({ kind: 'called-off', ending }))).toBeTruthy();
+    expect(screen.getByText(standingLine({ kind: 'called-off', ending }, READ_AT))).toBeTruthy();
+    expect(screen.getByText(resultBody({ kind: 'called-off', ending })!)).toBeTruthy();
+    expect(screen.queryByText(WE_PLAYED)).toBeNull();
+    expect(screen.queryByText(ENTER_LABEL)).toBeNull();
+    expect(screen.queryByText(/Open the chat/)).toBeNull();
+    expect(screen.queryByText(/Leave this game|Call it off|Fill the seat/)).toBeNull();
+    expect(screen.queryByText(/The plan/)).toBeNull();
+    expect(transport.requestsTo('GET', `${GAMES_PATH}/${GAME_ID}/pairing`)).toEqual([]);
+  });
+
+  /**
+   * **The ending block, keyed by how it ended** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §8): a departure is told from a press by whether `called_off_by` still holds a seat, and the
+   * heading and body follow — the shortage and who left on a singles and on a doubles, the
+   * presser's name on the button's, and *You* where the reader pressed it.
+   */
+  describe('the called-off ending block', () => {
+    const PARTNER = 'cccccccc-0000-4000-8000-000000000004';
+    const tomek = { kind: 'player', name: THEIR_HANDLE } as const;
+    const calledOff = (
+      seats: Wire['GameSchema']['seats'],
+      by: Wire['CalledOffBySchema'],
+    ): Wire['GameSchema'] =>
+      game({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+        called_off_by: by,
+        seats,
+      });
+
+    it('says a singles game was called off for lack of players, and that the opponent left', async () => {
+      await openGame(
+        calledOff(
+          [
+            { side: 'A', player_id: ME, name: 'me_' },
+            { side: 'B', player_id: null, name: null },
+          ],
+          { player_id: OPPONENT, name: THEIR_HANDLE },
+        ),
+      );
+
+      const ending = { by: tomek, how: 'departure', format: 'singles' } as const;
+      expect(screen.getByText(resultTitle({ kind: 'called-off', ending }))).toBeTruthy();
+      expect(screen.getByText(resultBody({ kind: 'called-off', ending })!)).toBeTruthy();
+      expect(screen.getByText(standingLine({ kind: 'called-off', ending }, READ_AT))).toBeTruthy();
+    });
+
+    it('says a doubles game was called off for lack of players, and who was the last to leave', async () => {
+      await openGame(
+        calledOff(
+          [
+            { side: 'A', player_id: ME, name: 'me_' },
+            { side: 'A', player_id: null, name: null },
+            { side: 'B', player_id: null, name: null },
+            { side: 'B', player_id: null, name: null },
+          ],
+          { player_id: OPPONENT, name: THEIR_HANDLE },
+        ),
+      );
+
+      const ending = { by: tomek, how: 'departure', format: 'doubles' } as const;
+      expect(screen.getByText(resultTitle({ kind: 'called-off', ending }))).toBeTruthy();
+      expect(screen.getByText(resultBody({ kind: 'called-off', ending })!)).toBeTruthy();
+    });
+
+    /**
+     * **Whoever `called_off_by` names, the heading is the shortage's** (ADR-0175 §1): nobody
+     * presses a call-off any more, and a record naming somebody still seated — written while
+     * somebody could — folds as a departure by the person it names.
+     */
+    it('never heads the ending with a presser', async () => {
+      const court: Wire['GameSchema']['seats'] = [
+        { side: 'A', player_id: ME, name: 'me_' },
+        { side: 'A', player_id: PARTNER, name: 'kasia_w' },
+        { side: 'B', player_id: OPPONENT, name: THEIR_HANDLE },
+        { side: 'B', player_id: null, name: null },
+      ];
+      await openGame(calledOff(court, { player_id: OPPONENT, name: THEIR_HANDLE }));
+
+      expect(screen.getByText(CALLED_OFF_FOR_LACK_OF_PLAYERS)).toBeTruthy();
+      expect(screen.queryByText(/called the game off/)).toBeNull();
+    });
   });
 
   it('draws a confirmed result with both sides named, and nothing to press', async () => {
@@ -611,7 +785,7 @@ describe('what the aggregate refuses, on screen', () => {
     ['a_score_must_name_a_winner', 400],
   ])('says what happened when it refuses with %s', async (code, status) => {
     transport.on('POST', RESULT_PATH, () => errorResponse(status, code));
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn([['6', '4']], ['You', 'Them']);
     fireEvent.press(screen.getByText(ENTER_LABEL));
@@ -668,17 +842,17 @@ const COUNTER = {
 } as const;
 
 /** One agreement, as the two sides read it. Six hours from `READ_AT`, measured from the score. */
-const AGREED_WITH_OURS: ResultConversation = {
+const AGREED_WITH_OURS: ResultArgument = {
   kind: 'agreed',
   agreement: {
     with: 'ours',
-    by: { kind: 'player', nickname: 'tomek.p' },
+    by: { kind: 'player', name: 'tomek.p' },
     settlesAt: '2026-09-05T15:00:00Z',
   },
   ours: PROPOSAL,
 };
 
-const AGREED_WITH_THEIRS: ResultConversation = {
+const AGREED_WITH_THEIRS: ResultArgument = {
   kind: 'agreed',
   agreement: { with: 'theirs', by: { kind: 'you' }, settlesAt: '2026-09-05T15:00:00Z' },
   theirs: PROPOSAL,

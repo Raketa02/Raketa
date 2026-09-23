@@ -101,6 +101,27 @@ const color = {
    *  belongs on the volt fill beside it. Derived in Tag.test.tsx. */
   voltStroke: '#698A0F',
 
+  /** A STAGE STILL BEING ARRANGED — the dot on the Now card's tag while the game is in the
+   *  players' hands: the plan before it is played (*Planning*), the result after it (*Needs
+   *  result*, *Confirm the result*). Mint is the settled stage and `onDarkHair` the quiet
+   *  endings; this is the third dot, and the meaning is named rather than the hue (#413).
+   *
+   *  ON DARK ONLY. It is drawn on `night`, inside the on-dark tag and as the Now card's *Fill
+   *  the seat* fill (6.1's `arranging` button, #429), and nowhere on paper — so there is no
+   *  soft and no line. Nothing borders it; the one thing that writes on it writes in `ink`,
+   *  7,05:1, because white on it is 2,48:1 (Button.tsx).
+   *
+   *  (!) MEASURED, then lifted. Mock 1 draws the dot at #87641A — hue 40,7°, which is `amber`
+   *  (39,5°) within a degree and within a step of lightness, at 2,45 on `night` and 1,61 on the
+   *  tag it sits in. That is the value the ticket itself calls invisible on `night`, and a dot
+   *  nobody can see carries no meaning there. So the hue and the saturation are the mock's and
+   *  ONLY the lightness is raised, to the step past the first that clears 1.4.11's 3:1 on the
+   *  tag's ground (.46 clears it at 3,12; a ratio one rounding from failing is one the next
+   *  tuning takes under, `photoScrim`'s rule): 5,35 on `night`, 3,49 on `onDarkTag` over it,
+   *  3,17 on `onDarkFill` over it. 31° off `coral` and 28° off `volt`, so it is neither's
+   *  family. Derived in Tag.test.tsx. */
+  arranging: '#D29B28',
+
   // --- On-dark-card child colours (the dark card repaints its children) ---
   onDarkTiny: 'rgba(255,255,255,0.68)', // 6.97 on night
   onDarkEyebrow: 'rgba(255,255,255,0.52)', // 4.74 on night
@@ -142,6 +163,76 @@ const color = {
    *  with nothing left in it) and the pin is the next step that has room — a ratio one
    *  rounding away from failing is one the next tuning of anything takes under. */
   photoScrim: 'rgba(10,52,65,0.70)',
+
+  /** THE YES SCREEN'S GROUND — the app's ONE dark screen, and no other surface's
+   *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   *  §2, docs/design-system.md Part 16 2026-09-14). The design system stays paper-only and
+   *  15.4's *there is no dark mode* stands: this is one ground and not a theme, drawn as a
+   *  radial glow from the centre value out to the edge value with the SVG the poster already
+   *  uses. The record calls them the prototype's dropped stage colours, knowingly readmitted —
+   *  the design wins — and the next dark surface argues for its own record rather than reusing
+   *  these two. Not a `Soft`, not an `Ink`, not a `Line`: nothing writes on them but the one
+   *  screen's own children, which are the on-dark tokens above.
+   *
+   *  MEASURED off the three mocks at 1x, and NOT the stage colours' bytes: the spec expected
+   *  `#08222B` `#071C24` `#0B2B36` `#24505E` to the byte, and the rendered mocks do not hold
+   *  them — the brightest ground pixel is `#1F3B47`–`#203C48` in all three and the darkest
+   *  `#14252C`–`#15252D`, which is what is recorded, since a value is written for what was
+   *  drawn (the author confirms against the mock's source at the look). Hue 198°, which is
+   *  `night`'s family (194°) at a lower saturation. What sits on them, computed: `volt` 9,30 on
+   *  the centre and 12,59 on the edge; white 11,66 / 15,78; white on `onDarkFill` over the
+   *  centre 6,94 (the *Later* label); `onDarkEyebrow` over the centre 4,41, which is under AA
+   *  and is carried by a word — `vs` — that is decorative and never spoken. Derived in
+   *  yesGround.test.ts. */
+  yesGroundCentre: '#203C48',
+  yesGroundEdge: '#14252C',
+
+  /** THE DECK CARD'S WASH — the app's SECOND dark surface, and it is a surface and not a screen
+   *  ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   *  §7, docs/design-system.md Part 16 2026-09-15). One gradient over the lower part of the
+   *  card, from nothing to this: `ink` at .94, so the card's foot is the app's own text colour
+   *  over whatever photograph or poster is under it, and the name, the tags and the tiles sit on
+   *  `surface` and the on-dark tokens as they would on a dark card.
+   *
+   *  NOT `photoScrim`, deliberately. The panel's scrim is a flat tint pinned so that white over
+   *  the worst photograph is computable (5,24 at .70); this is a scrim over a picture a player
+   *  decides about, and a face wants the whole card — so the wash RAMPS, and its worst case is
+   *  stated at the name's own top edge rather than over the whole box (`DeckCard.tsx` holds the
+   *  ramp; the row in Part 16 holds the arithmetic). The value is the foot's; the ramp's stops
+   *  are the drawing's own, as the yes screen's glow keeps its centre and reach in `YesGround`.
+   *  Nothing else may draw it: the day a second card wears a wash, ADR-0169 §7's fence has
+   *  become the rule. */
+  deckWash: 'rgba(16,27,32,0.94)',
+
+  /** THE RADAR'S GROUND — the app's THIRD dark surface, and a field rather than a card or a
+   *  screen ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   *  §7, docs/design-system.md Part 16 2026-09-16). One radial glow from the centre value out
+   *  to the edge value, drawn with the SVG the yes ground already uses, under the Players
+   *  header, the field, the zoom cluster and the footer of the Radar pane and nothing else;
+   *  the deck pane beside it is paper. Argued for its own record, as ADR-0167 §2 said the next
+   *  dark surface would be: a map of the night rather than a screen.
+   *
+   *  MEASURED off mock 1 at 1x, as the yes ground was: the brightest ground pixel around the
+   *  viewer's tile is `#1B323D` and the darkest at the bottom edge `#111C22`. Hue 199°–201°,
+   *  which is `night`'s family (194°) at the yes ground's saturation — the two grounds are
+   *  neighbours by design and are NOT one token, because a value is written for what was
+   *  drawn. What sits on them, computed: white 13,37 on the centre and 17,31 on the edge; `volt`
+   *  10,67 / 13,81 (the you tile's ring and the chip); `onDarkTiny` over the centre 7,05 (the
+   *  counter, the footer's hint, a level under a face); `onDarkEyebrow` over the centre 4,80 (a
+   *  ring's label); `onDarkHair` over it 1,61, which is a hairline and not text. `coral` and
+   *  `mint` are 3,43 and 3,28 on the centre and are NOT drawn on it as text: the card is paper
+   *  and every sport dot and tag line sits on that. Derived in radarGround.test.ts. */
+  radarGroundCentre: '#1B323D',
+  radarGroundEdge: '#111C22',
+
+  /** THE ZOOM CLUSTER'S BED — `ink` at .5 over the radar's ground, and the one dark-on-dark
+   *  tile in the app. Mock 15 draws the three squares DARKER than the ground they sit on
+   *  (`#15222A` against `#192D37`), where every on-dark tile so far is lighter (`onDarkTag`,
+   *  `onDarkFill`); `ink` at .5 composites to `#16262E` on the centre value, which is the mock
+   *  within a step. White on it is 15,48 — the `+`, `−` and ◉ are white — and against the ground
+   *  it is 1,16, which is a shape read by its contents and not by its edge. Nothing else may
+   *  draw it. Derived in radarGround.test.ts. */
+  radarControl: 'rgba(16,27,32,0.5)',
 } as const;
 
 /**
@@ -265,7 +356,39 @@ const font = {
  * `letterSpacing` and `lineHeight` are in POINTS, pre-converted from the prototype's em.
  */
 const type = {
+  /** `h1` is the largest sans role a SURFACE reaches for. `display` (26 / 700) was added on
+   *  2026-09-08 for one thing — the Now card's figure slot holding a weekday — and retired with
+   *  that slot on 2026-09-12 (#413): the day is an `h2` row now. A token nothing references is a
+   *  lie about the system (docs/design-system.md Part 14 #1), and the next sans word above 19 is
+   *  a decision to make again rather than a role to reach for — which is what `yesWord` below is:
+   *  a decision made for one word, with one use, and not `display` back under a new name. */
   h1: { fontFamily: font.sans[700], fontSize: 19, letterSpacing: -0.57, lineHeight: 24 },
+  /** THE YES SCREEN'S ONE WORD — *Challenge!*, *Matched!* — and nothing else's
+   *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   *  §2). The heaviest weight the app loads, and a size measured off the mocks rather than taken
+   *  from the record's *about 30*: `Challenge!` is 164–168pt wide with a 25–27pt cap in the two
+   *  challenge mocks and `Matched!` 145 x 24 in the third, and Archivo 800 at 32 sets the first
+   *  at 169 and the second at 147 — the width is matched, and the mock's face has a taller cap
+   *  than Archivo's. Tracking continues the sans ramp past `display`'s -0.035em: -0.040em at 32
+   *  is -1,28. Line height 36, on 3.3's own reasoning for a sans word with ascenders.
+   *  ONE USE. A second surface that wants a word this size reopens ADR-0167 §2 rather than
+   *  reaching for this role, which is the whole of why it is named for the screen. */
+  yesWord: { fontFamily: font.sans[800], fontSize: 32, letterSpacing: -1.28, lineHeight: 36 },
+  /** THE DECK CARD'S NAME — one ~24pt sans role, heavy, one use
+   *  ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   *  §7). NOT the retired `display` back: 3.3's reasoning applies again and this is the word it
+   *  applies to — a face you decide about wants the name at the size the mocks draw it, 24 / 700
+   *  measured across the nine, with the sans ramp's -0.035em (-0,84) and a 28 line for the
+   *  ascenders. `surface` over the wash, with the on-media shadow. A second surface that wants a
+   *  name this size reopens ADR-0169 §7 rather than reaching for this role. */
+  deckName: { fontFamily: font.sans[700], fontSize: 24, letterSpacing: -0.84, lineHeight: 28 },
+  /** THE DECK'S TWO STAMPS — *LET'S PLAY* and *NOT TODAY*, outlined words rotated over the card
+   *  under the thumb, invisible at rest (ADR-0169 §3, §7). The heaviest weight the app loads at
+   *  22, TRACKED WIDE rather than tight — +0,05em, 1,1 — because a rubber stamp is set spaced
+   *  and the mocks draw it so; uppercased by the stamp's style, never by the copy, which is the
+   *  two buttons' own words. The outline, the tilt and the corner are the drawing's own
+   *  (`DeckStage.tsx`). Feedback and never a control: nothing announces it. ONE USE. */
+  deckStamp: { fontFamily: font.sans[800], fontSize: 22, letterSpacing: 1.1, lineHeight: 26 },
   h2: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
   /** The onboarding question itself. The prototype's 650 maps to 700. */
   question: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
@@ -304,6 +427,14 @@ const num = {
   m: { fontFamily: font.mono[600], fontSize: 17, letterSpacing: -0.6, lineHeight: 17 },
   s: { fontFamily: font.mono[500], fontSize: 14, letterSpacing: -0.49, lineHeight: 18 },
   xs: { fontFamily: font.mono[500], fontSize: 13, letterSpacing: -0.46, lineHeight: 17 },
+  /** THE RADAR'S SMALL MONO — a ring's label, a level under a face, the counter between ± and
+   *  the card's distance ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   *  §7, docs/design-system.md Part 16 2026-09-16). `tiny`'s 11 / 16 box in the mono family at
+   *  the inline weight, with the ramp's −0,035em (−0,385): the mocks set every one of those four
+   *  figures at the size the sans secondary text is, and `xs` at 13 is a step too large for a
+   *  label on a hairline. A size and not a scale of `xs`, for 15.3's reason — the pair changes
+   *  together with the record. */
+  tiny: { fontFamily: font.mono[500], fontSize: 11, letterSpacing: -0.385, lineHeight: 16 },
 } as const;
 
 /**
@@ -349,9 +480,11 @@ const radius = {
   cardDark: 15,
   card: 13,
   popover: 13,
+  bubble: 13,
   toast: 12,
-  /** The ⚡Play disc. Not the avatar rule — `round(30 x 0.33)` lands on 10 and the disc is
-   *  not a face; 11 is the prototype's measured value, kept (docs/design-system.md 10.2).
+  /** The ⚡Play disc. **There is no avatar rule here to be measured against** — see `avatar`
+   *  below. The disc is not a face and 11 is the prototype's measured value, kept
+   *  (docs/design-system.md 10.2).
    *  The active state's RING is this grown by `size.tabBar.ringGap + ringStroke` on every
    *  side, which is arithmetic the bar does rather than a second radius token. */
   fab: 11,
@@ -364,6 +497,18 @@ const radius = {
    *  squares of the deleted 6.7 are NOT being restored, and a cell that borrowed their
    *  radius would be the first step back toward a booking grid. */
   availabilityCell: 10,
+  /** The door row's lead square. Between `btn` and `segThumb`: a 28pt square at 10 reads as a
+   *  small button, which it is not — the row is the control and the square is its glyph's
+   *  ground — and at 8 reads as a chip's thumb. Named for the object, as `availabilityCell` is. */
+  rowLead: 9,
+  /** **There is no avatar rule in this system, and this is not one.** The formula that
+   *  derived a face's corner from its box — `round(size x 0.33)` — went with 7.4's seat
+   *  avatar in the 2026-08-25 reset, and #338 refused to bring an avatar back: no Avatar
+   *  element, no avatar hue, no avatar radius rule, and `POSTER_HUES` stays `CourtPoster`'s
+   *  closed set unwidened. A face in a box is `CandidatePhoto`, which owns its 33 % share of
+   *  its OWN width one folder over, and a row's face is a photograph or a poster.
+   *  What is left here is a VALUE nothing draws — 4.2 keeps it named, because `court` below
+   *  is named for its role rather than borrowing this one and that argument needs its foil. */
   avatar: 9,
   /** The court's ground. A card at 13 is a surface a finger rests on; a court is a picture
    *  inside one, and 4.2's rule reads the other way for it — the smaller the surface, the
@@ -384,6 +529,7 @@ const radius = {
   tag: 6,
   dot: 6,
   meter: 3,
+  bubbleTail: 3,
   bar: 2,
   /** The chip is the only true pill. Compute as height / 2. */
   pill: 999,
@@ -392,6 +538,12 @@ const radius = {
 // ---------------------------------------------------------------------------
 // Component metrics
 // ---------------------------------------------------------------------------
+
+/** The smallest round mark in the app — the sport dot's, and the typing indicator's. One size. */
+const SPORT_DOT = 6;
+
+/** How far a finger travels across before a swipe row — and the deck — claims the touch. See `swipeRow`. */
+const SWIPE_INTENT = 12;
 
 const size = {
   btn: 34, // 32 tertiary-in-card · 34 default · 40 screen action · 42 result primary
@@ -412,6 +564,12 @@ const size = {
   timeSquare: 32,
   meter: 5,
   bar: 4,
+  /** The 3pt bar that carries a semantic — 5.4's note, and 5.4 as amended, the challenge
+   *  row's urgency stripe. One number because there are now two drawings of it: the note
+   *  wears it as a `borderLeftWidth` on a card, the row draws it as a full-height View
+   *  beside its content and never becomes a Note. Two implementations of a 3 is exactly
+   *  what a token is for. */
+  semanticBar: 3,
   /** The run-of-form square — 7.13. Five of them plus four `space.xxs` gaps is 52pt, which
    *  fits the narrowest phone's third of a card with the block's label above it. It is a mark
    *  rather than a target: nothing in the record block is pressable, so 6.5's 44pt does not
@@ -422,6 +580,12 @@ const size = {
    *  Geometry and reasoning: docs/design-system.md 7.8. The 30% ceiling the tick marks
    *  is a domain constant, NOT a design value — it does not belong here. */
   ring: 72,
+  /** The ring's two other homes, both still inside a dark card (Part 16, 2026-09-17 — ADR-0179
+   *  §1, §2): the You tab's header card draws the Player Score at 56, and the reliability
+   *  screen draws it at 74 beside the tone ladder's word. Diameters only — the stroke, the tick
+   *  and the overshoot are the one ring's, whichever size it is drawn at. */
+  ringSm: 56,
+  ringLg: 74,
   ringStroke: 6,
   ringTick: 2,
   ringTickOvershoot: 3,
@@ -554,6 +718,134 @@ const size = {
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
    *  `hitSlop` around it would leave the words beside it inert. */
   switch: { track: 40, height: 23, knob: 18, row: 44 },
+  /** The yes screen's tile — a face at this screen's two sizes, and the initials over a poster
+   *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   *  §2, §3). MEASURED off the mocks at 1x: 64 x 64 in the singles mock, 54 x 54 in the doubles
+   *  one — a step smaller, because four of them and a `vs` have to sit across the narrowest
+   *  phone's 290pt of content (4 x 54 + 6 + 2 x 15 + the word is 262). The corner is NOT here:
+   *  it fits at 19,6–20,8 on the 64 tile and 17,2–17,7 on the 54, which is a third of the box
+   *  either way — `playerPhotoRadius`'s own ratio — so the tile is `PlayerPhoto`'s `face` box at
+   *  these sizes and no second radius exists to drift from the first.
+   *
+   *  `initials` is the SHARE of the tile the two letters are set at — 22pt in the 64 tile and
+   *  18–19 in the 54, both 0,34 of the box — kept as a ratio for `RADIUS_RATIO`'s reason: two
+   *  sizes of one drawn object, and a point value per size is two numbers to keep in step. It
+   *  is the one font size in the app computed from a box, and it is computed inside the tile
+   *  that owns the box; a type role for it would be a role with a size per caller. */
+  yesTile: { singles: 64, doubles: 54, initials: 0.34 },
+  /** The swipe row — 6.15. A list row that slides left to REVEAL one control behind it, and
+   *  the two numbers that are the gesture's own rather than the row's.
+   *
+   *  `reveal` is the control's width and how far the card can travel: `btn` type at 12pt
+   *  puts *Leave the game* at about 95pt, and `space.md` either side of it lands on the grid
+   *  at 120. `intent` is how far a finger travels across before the row claims the touch —
+   *  under it a tap is a tap and a drift is the list's scroll, which is the one thing this
+   *  control must never take. Four steps of the grid, about a fingertip's width. */
+  swipeRow: { reveal: 120, intent: SWIPE_INTENT },
+  /** THE DECK'S DRAG — ADR-0169 §3, and the second gesture in the app after the swipe row's.
+   *
+   *  `commit` is the threshold: the stamp is full there and a release past it commits the
+   *  answer in the drag's direction — the mock's 95, kept as measured. `intent` is how far a
+   *  finger travels across before the stage claims the touch, and it is the swipe row's own
+   *  number READ FROM THERE rather than a second 12: it is the same finger deciding between a
+   *  tap, a scroll and a drag, and one rule about that is one number. `flight` is how far a
+   *  committed card travels off the stage, past the widest phone's width so it leaves rather
+   *  than stops; `tilt` is the most a card turns under the thumb, reached at twice the commit
+   *  distance and measured off the two swipe mocks. */
+  deckSwipe: { commit: 95, intent: SWIPE_INTENT, flight: 480, tilt: 12 },
+  /** THE DECK'S THREE ROUND BUTTONS — ✕, i, the ball — measured off the mock at 1×: 54, 42 and
+   *  66. Circles rather than 6.1's 10pt rectangle, through `Button`'s `pill` shape (4.2 as
+   *  amended: the third user, fenced to this row); the i is under 6.5's 44 and takes `hit.btn`.
+   *  The sizes say which of the three is which — the yes is the largest and coral, the pass a
+   *  step smaller and white, the record smallest — which is the 1:2 ratio the two named
+   *  buttons used to carry, read as diameters.
+   *
+   *  `ball` is the yes's mark's box: the tennis ball is DRAWN (`DeckBall.tsx`) since 2026-09-15,
+   *  where it was the 🎾 as text at `num.levelLarge`'s 26 — and clipped above, because an
+   *  emoji is taller than a line box the height of its font size. 26 is that footprint kept,
+   *  so the disc's proportion is still the mock's; not a new number. */
+  deckAnswer: { pass: 54, record: 42, accept: 66, ball: 26 },
+  /** THE RADAR — the sizes of the field's drawn objects, every one of them the spec's own
+   *  ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   *  §7, `the-radar.md` §7.2–7.4). Points; the kilometres, the ladder and the thresholds are
+   *  the geometry's and live in `features/play/domain/radarGeometry.ts`, because a stop on a
+   *  ladder is a rule about the map and not a size of anything drawn.
+   *
+   *  `you` is the viewer's tile; `faceWide` and `faceCloser` are a player's face above and at
+   *  10 km across; `face` is the card's identity face — the same 34 the viewer's tile is, which
+   *  is what makes the card read as the tile opened. `card` is the card's width, ~190 in the
+   *  spec and 190 on the grid. `stroke` is the ring around a face and the volt ring around the
+   *  viewer, 2 as the mocks draw it. `cluster` is one of the three squares on the right edge,
+   *  `btn`'s 34 as mock 15 measures. The three rules that read as sizes and are not — a ring is
+   *  drawn at 26 pt of radius or more, at 3,5 field widths or less, and the viewer sits at 42 %
+   *  of the field's height at home — are the geometry's own constants, because each is a rule
+   *  about where something is rather than how big it is drawn. */
+  radar: {
+    you: 34,
+    faceWide: 24,
+    faceCloser: 30,
+    face: 34,
+    card: 190,
+    stroke: 2,
+    cluster: 34,
+  },
+  /** THE ON-COURT MARK'S TICK — a small vector check before the words, everywhere the mark is
+   *  drawn (ADR-0169 §7, 7.15 as amended). NOT 6.8's 12 × 12: that box beside *ON COURT* at
+   *  `type.tag` does not fit a 74pt panel (`onCourtMarkFit.test.ts`). The tick is sized as a
+   *  SHARE of the words' own font size — 0,72, about the cap height — so it reads as part of the
+   *  line at every placement, and its stroke is 1,5 for the same reason 6.8's is 2: at 7pt a 2pt
+   *  stroke is a blob. Same path as `Tick`, in a smaller box. */
+  onCourtTick: { share: 0.72, stroke: 1.5 },
+  /** The text field — 6.13. `row` is the box at ONE line, and it is `btnXl`: the field and
+   *  the button it sits above are the same control height, which is what four shipped auth
+   *  boxes have drawn since sign-up. It is written as its own number rather than borrowed
+   *  inline, because 6.13 is entitled to state its height; that the two agree is DERIVED in
+   *  `TextField.test.tsx` rather than typed here twice.
+   *
+   *  There is no cap token and that is deliberate. A field that grows stops at a number of
+   *  LINES, and the number is the caller's — the two surfaces that need one, the composer and
+   *  the plan's *where*, have not been drawn on a phone, and #338 §1's rule is that a number
+   *  is written only for what a device drew. What the component owns is the arithmetic: one
+   *  `type.rlValue` line per step, and the box's vertical padding is `(row - lineHeight) / 2`
+   *  rather than a fourth number. */
+  textField: { row: 42 },
+  /** The message bubble — the conversation's, and the one number this map's stream needed.
+   *
+   *  `maxShare` is how much of the stream's width one bubble may take, and it is a SHARE for
+   *  `railCardRatio`'s reason: the stream is as wide as the phone is, so a point value would be
+   *  a different sentence on every device. 0,78 is derived from both ends. The gap it leaves on
+   *  the far side is what says which side spoke — on the narrowest stream this app draws, a 320pt
+   *  column, that gap is 70pt, unmistakably a gap rather than a ragged edge. And what it holds is
+   *  a readable line: 78 % of a 345pt column is 269pt, which at `type.rlValue` is roughly 47
+   *  characters — inside the 45-to-75 band a column of prose is set in.
+   *
+   *  There is no height and no minimum. A bubble is as tall as what somebody typed, and a
+   *  one-character message drawn to a floor would be a box with a letter rattling in it. */
+  bubble: { maxShare: 0.78 },
+  /**
+   * The typing indicator's dots — three of them, in the other side's bubble. **A bubble's width
+   * comes from its text and this one has none**, so these two are its own numbers: a dot the
+   * sport dot's size, so the smallest round mark in the app is one size, and a gap of one step,
+   * so three of them read as a group rather than as a row. Read off the mock's proportions;
+   * no device has drawn them (Part 16).
+   */
+  typing: { dot: SPORT_DOT, gap: space.xs },
+  /** The star row — 6.13. Five whole stars, and the two numbers are a target and a glyph.
+   *
+   *  `target` is 6.5's minimum reached BY GEOMETRY rather than by slop, the way 6.8's cell
+   *  and 6.11's row are: five stars is five adjacent targets, and horizontal `hitSlop` is
+   *  bounded by the neighbour, so a 24pt glyph with slop around it would be five targets
+   *  overlapping each other. Five of them is 220pt against the 266pt a card leaves on the
+   *  narrowest phone, so the row fits without a gap between the targets — and the gap is
+   *  deliberately absent for that reason as well: a dead 6pt strip between two stars is a
+   *  tap that answers nothing.
+   *
+   *  `glyph` is the drawing inside it. The star is GEOMETRY and not a glyph in a font
+   *  (`Star.tsx`), so it does not scale with Dynamic Type and does not vary by platform
+   *  font — the same decision 6.8's tick takes, and here it also settles a question a font
+   *  could not answer: Archivo ships no U+2605, and Feather has no filled counterpart to
+   *  its `star` (ADR-0135). */
+  star: { target: 44, glyph: 24 },
   /** The court — 7.12, and the drawn object whose numbers cannot be derived.
    *
    *  `space` is the drawing's own box and every coordinate below is in it. The 1,32 aspect
@@ -610,6 +902,18 @@ const size = {
      * standing in it rather than a badge with four squares over it.
      */
     header: 84,
+    /**
+     * The court **on the Now card** — beside the three plan slots, with a face and three
+     * letters in every seat (#413).
+     *
+     * **88, measured against mock 1 at 1×** — the card is 340pt wide in the mock and the
+     * court's ground 88 × 116, which is the drawing's own 1,32 — and a number only for what
+     * a device drew. It is not derived from `header`: at 88 the seat is 21pt by `seatRatio`,
+     * which is what the mock's tiles measure, and the ratio governs rather than the floor.
+     * Fixed rather than a share of the slots column beside it, for `build`'s reason — a
+     * court that grew with the phone would put a different face size on every device.
+     */
+    card: 88,
     sideLabelOpacity: 0.6,
     line: {
       bound: 0.3,
@@ -652,9 +956,16 @@ const size = {
    *  stay the thing being read. */
   ripple: 92,
   rippleStroke: 2,
-  sportDot: 6,
+  sportDot: SPORT_DOT,
   infoGlyph: 14,
   tabIcon: 16,
+  /** The door row's lead — 5.5 as amended for the You tab (Part 16, 2026-09-17): a `paper2`
+   *  square before the title with a Feather glyph in it, the one new element on that tab. A
+   *  square rather than a bare glyph so the thirteen rows' leads read as one column whatever
+   *  each glyph's own extent is; 28 keeps the row at 6.5's minimum with `space.sm` above and
+   *  below it, and the glyph is a step under `tabIcon` because it sits inside a fill. */
+  rowLead: 28,
+  rowLeadGlyph: 15,
   /** The ⚡Play disc — 28 until the bar was built, unreferenced by anything, and off the
    *  3pt grid at both values. **30**, which is what #227 drew and measured. */
   fab: 30,
@@ -675,24 +986,61 @@ const size = {
    *  inside the level bar, which leaves a bounded multiplier and nothing else. **Derived,
    *  never chosen** — `tabBarLabelCap.test.ts` measures the five shipped labels against the
    *  real Archivo 700 advances in the narrowest phone's column and recomputes it, so a
-   *  sixth tab or a longer word goes red rather than truncating on somebody's phone. */
+   *  sixth tab or a longer word goes red rather than truncating on somebody's phone. It was
+   *  1.7 over *Around* and is 1.6 over *Players*, the longer word that replaced it
+   *  (ADR-0169 §1) — the one step the seventh letter costs. */
   tabBar: {
     /** ADR-0135: Feather `zap`, inside the disc, smaller than the 16pt box the flanks use. */
     bolt: 15,
     ringGap: 2,
     ringStroke: 2,
-    labelMaxScale: 1.7,
+    labelMaxScale: 1.6,
+    /** The Chats badge — 10.2, and the one badge the bar carries.
+     *
+     *  **18, and it is the digit's own box rounded to the grid.** The count is mono and tabular
+     *  (1.4: numbers are monospaced always), and the smallest mono role is `num.xs`, whose line
+     *  box is 17 — the same borrowing 7.10's fit pill already made, for 15.3's reason: a
+     *  seventh size step for one mark is what that section says not to add. Eighteen is 17 on
+     *  the 3pt grid, and it is a MINIMUM width rather than a diameter, because the badge has no
+     *  cap: a two-digit count spreads it into a lozenge at `radius.pill` and the digits stay
+     *  tabular, so 1 -> 2 does not reflow the column.
+     *
+     *  `badgeRise` is how far it stands above the 16pt icon box, and it is **not a new number**:
+     *  it is the 4 the active ring already takes out of the bar's own 6pt top padding, leaving
+     *  the same 2pt of clearance to the hairline. The bar's height never changes — a bar that
+     *  grew on arriving somewhere would move the four things that did not change in order to
+     *  announce the one that did.
+     *
+     *  Everything else is borrowed rather than invented: `coralInk` fill and a white mark at
+     *  5,89, which is 6.1 `primary`'s treatment and the correction the Play disc three columns
+     *  away already took once; the horizontal padding and the overlap over the icon are
+     *  `space.xxs`. **No device has drawn this**, and `tabBadgeFit.test.ts` is what holds the
+     *  arithmetic that a device would otherwise have to. */
+    badge: 18,
+    badgeRise: 4,
   },
   grabber: { width: 36, height: 4 },
   sheetClose: 28,
   popoverWidth: 250,
   popoverArrow: 11,
+  /** The rail's page dots — 7.18, and Part 8's sizes before that. Five points resting; the
+   *  one you are on keeps the height and grows to fourteen, so the state has a SHAPE channel
+   *  and is never carried by tone alone (Part 13). Gap is `space.xxs`.
+   *
+   *  These two numbers did not move; what moved is what draws them. Part 8 had them as
+   *  decoration on a strip, in `coral`. A full-width card leaves the rail with no peek, so the
+   *  dots became the affordance — and the fill is `color.ink`, because 1.2's coral list closes
+   *  at five plus the Chats badge and a coral FILL there means *attend to this*, which a page
+   *  indicator is not. **Not pressable** — 7.9's own hitSlop arithmetic, one section over. */
   pagerDot: 5,
   pagerDotActive: 14,
   /** Horizontal page gutter, both sides. Content width = screen width - gutters. */
   gutter: space.lg,
-  /** The card rail's peek IS the affordance. A RATIO, never 268pt — on a 320pt phone
-   *  a fixed 268 leaves no peek at all. */
+  /** The PEEKING rail's card — 7.7's first geometry, where the peek IS the affordance. A
+   *  RATIO, never 268pt: on a 320pt phone a fixed 268 leaves no peek at all.
+   *
+   *  There is a second rail and it has no ratio, because its card is the content width
+   *  whole. What carries the affordance there is 7.18's dots. */
   railCardRatio: 0.74,
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
@@ -710,6 +1058,11 @@ const hit = {
   /** Anchored inside the tile, not over its corner — see `size.photoTile`. All four sides
    *  are equal because none of them crosses an edge. */
   photoRemove: { top: 8, bottom: 8, left: 8, right: 8 },
+  /** The people list's row (7.19): a 38pt face is the row's height, and the rows sit
+   *  `space.sm` apart — so 3 a side lifts it to 44 and leaves 3 of the 9pt gap between two
+   *  targets, which is the neighbour rule read vertically. No horizontal slop: the row is
+   *  already the card's width. */
+  peopleRow: { top: 3, bottom: 3 },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -793,20 +1146,24 @@ const shadow = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Motion — one entrance, one sheet, one popover, one fade, and one ripple. Nothing else
-// moves.
+// Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, and
+// the yes screen's entrance, which is the first and the fade composed. Nothing else moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
 // Every one of these is skipped when AccessibilityInfo.isReduceMotionEnabled is true.
 // ---------------------------------------------------------------------------
 
+/** The two durations the yes screen's entrance is composed from — see `motion.yesEntrance`. */
+const FADE = 200;
+const RISE = 300;
+
 const motion = {
-  fade: 200,
+  fade: FADE,
   /**
-   * One ring, expanding out of nothing and fading as it goes — **the only looping animation
-   * in the app**, and the only motion token whose duration is a cycle rather than a
-   * transition.
+   * One ring, expanding out of nothing and fading as it goes — one of **two looping animations
+   * in the app**, and the first motion token whose duration is a cycle rather than a
+   * transition. The second is `typing`, below.
    *
    * It is spent on the one thing in the product that is genuinely open-ended: the engine
    * seating a court, drawn under the court it is seating rather than over the screen. A
@@ -817,9 +1174,58 @@ const motion = {
    * at rest — the sentence beneath it is what carries the state, so nothing is lost.
    */
   ripple: 1400,
-  rise: 300,
+  /**
+   * The typing indicator's pulse — three dots, each brightest a third of a cycle after the one
+   * before it — and **the one thing in this app that animates although §1.5 says nothing has
+   * to**: three still dots are indistinguishable from a message that says `...`, and the motion
+   * is the whole signal. The argument is in Part 16 and on `TypingBubble.tsx`; the number is a
+   * cycle a reader sees as *now* rather than as a blink, and no device has drawn it.
+   *
+   * Skipped under reduced motion, where the dots are drawn still and the element's spoken name
+   * carries the fact — stated as a trade rather than a save, because a sighted reader with
+   * reduced motion gets the weaker of the two signals.
+   */
+  typing: 1200,
+  rise: RISE,
   sheet: 260,
   popover: 130,
+  /**
+   * The swipe row's card coming to rest once the finger lifts (6.15) — to revealed or to closed,
+   * never in between. Short enough to read as the card *landing* rather than travelling, since the
+   * finger has already done the travelling, and long enough that a card released a few points
+   * short of the threshold is seen to go back rather than to blink. Skipped under collapsed
+   * presentation, where the card is drawn at rest.
+   */
+  settle: 160,
+  /**
+   * The radar's flight — a tap on a face carries the view to them, centred, at the 3 km stop
+   * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §7: *about 400 ms*). One beat on the field's own transform, `easeDecel`, and skipped whole
+   * under collapsed presentation, where the view is simply there. The pinch and the drag are not
+   * here: a finger does its own travelling, and only the release back from past the reach's edge
+   * borrows `settle`.
+   */
+  flyTo: 400,
+  /**
+   * The yes screen's entrance — **one beat, composed of the durations above and no new one**
+   * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   * §2). The two sides slide in from the edges and meet at the centre over one `rise`; the word
+   * rises in over a second `rise`, starting half-way through the first so it lands as the sides
+   * meet; the buttons fade in last over one `fade`, once the word has landed. 650 ms end to end,
+   * which is the record's *about 600*, and the one success haptic fires as the word lands.
+   * Nothing loops. Skipped whole under reduced motion, where everything is simply there and
+   * nothing buzzes — and under a running screen reader (§20.11's collapse), where the haptic
+   * still fires once, because a buzz is not a picture.
+   */
+  yesEntrance: {
+    sides: RISE,
+    word: RISE,
+    /** When the word starts, after the sides do. */
+    wordAfter: RISE / 2,
+    buttons: FADE,
+    /** When the buttons start: the moment the word lands. */
+    buttonsAfter: RISE / 2 + RISE,
+  },
   /** The prototype's cubic-bezier(.2,.8,.2,1) — decelerating. */
   easeDecel: { x1: 0.2, y1: 0.8, x2: 0.2, y2: 1 },
   /** How long a state is SHOWN — the one thing here that reduced motion does not skip.

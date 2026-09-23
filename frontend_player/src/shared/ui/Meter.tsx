@@ -29,18 +29,55 @@
  * The share is clamped here rather than at the call site, for
  * [7.5](../../../docs/design-system.md#75-the-level-bar)'s reason: a value must land in the
  * same place everywhere, and a clamp per caller is how one number ends up drawn two ways.
+ *
+ * ## The fill takes a tone, and the tone is the caller's rule rather than the meter's
+ *
+ * The record card's metered rows are drawn in three fills where the why-fit row's are drawn in
+ * one ([#385](https://github.com/Raketa02/Raketa/issues/385)), so `tone` is a **step in an
+ * existing fill** and invents no colour — [15.2](../../../docs/design-system.md#152-adding-a-colour)'s
+ * own licence, and exactly what `FIT_HIGH` already is. What it deliberately does not carry is
+ * the ladder: *where* good becomes poor is a fact about the figure being drawn and belongs to
+ * whoever knows what the figure means, which on the record sheet is the one rule the pill above
+ * the card reads too. A meter that banded its own share would be a second opinion, and the
+ * screen would eventually show a green bar under a red pill for one ratio.
+ *
+ * **The three fills are derived, never eyeballed** — `meterTone.test.ts` holds each against the
+ * track it is drawn on and each pair against the other two, in lightness as well as in hue,
+ * because a tone is the third cue behind the bar's own length and the fraction printed two
+ * words earlier and must never be the only one.
  */
 
 import { StyleSheet, View } from 'react-native';
 
 import { theme } from './theme';
 
+/** The three steps, named for what the caller's own ladder said rather than for a colour. */
+export type MeterTone = 'good' | 'neutral' | 'poor';
+
+/**
+ * What each step is drawn in — read by the derivation test, so repainting one goes red rather
+ * than going unnoticed.
+ *
+ * `neutral` is 7.3's own `night`, which is what every meter drew before there was a tone and
+ * what one still draws when its caller has no ladder to read.
+ */
+export const METER_TONE_FILL: Readonly<Record<MeterTone, string>> = {
+  good: theme.color.mint,
+  neutral: theme.color.night,
+  poor: theme.color.red,
+};
+
 export interface MeterProps {
   /** How full, 0 to 1. Clamped here; the caller does the arithmetic, not the guarding. */
   readonly share: number;
+  /**
+   * What the caller's own ladder made of the figure. Defaults to `neutral`, which is 7.3's
+   * `night` — a meter whose caller grades nothing is drawn exactly as it always was.
+   */
+  readonly tone?: MeterTone;
 }
 
-export function Meter({ share }: MeterProps) {
+export function Meter({ share, tone = 'neutral' }: MeterProps) {
   const filled = Math.min(Math.max(share, 0), 1);
 
   return (
@@ -51,7 +88,9 @@ export function Meter({ share }: MeterProps) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <View style={[s.fill, { width: `${filled * 100}%` }]} />
+      <View
+        style={[s.fill, { width: `${filled * 100}%`, backgroundColor: METER_TONE_FILL[tone] }]}
+      />
     </View>
   );
 }
@@ -63,5 +102,6 @@ const s = StyleSheet.create({
     backgroundColor: theme.color.line2,
     overflow: 'hidden',
   },
-  fill: { height: '100%', borderRadius: theme.radius.meter, backgroundColor: theme.color.night },
+  // The fill's colour is the tone's and is set on the element — see `METER_TONE_FILL`.
+  fill: { height: '100%', borderRadius: theme.radius.meter },
 });

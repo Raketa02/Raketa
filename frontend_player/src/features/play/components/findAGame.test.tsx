@@ -21,6 +21,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   PROFILE_SURFACE_PATH,
+  profileSurface,
   launchSignedIn,
   stubGate,
   stubProfileOptions,
@@ -193,6 +194,66 @@ const profileWrites = () => [
   ...transport.requestsTo('PUT', PADEL_INTENT),
 ];
 
+describe('what the screen draws before its reads land', () => {
+  /**
+   * **A player who has declared is never asked to declare** — not even for the beat between
+   * the tab opening and the profile read landing.
+   *
+   * `findAGameStanding` is handed `profile?.playIntents ?? {}`, so *the read has not landed*
+   * and *this player has never declared* reach it as the same empty map and it answers
+   * `undeclared` for both. Drawn ungated, that put ADR-0094's interstitial in front of every
+   * player on every cold open — the one question on this screen that is supposed to be rare,
+   * shown to everybody, every time.
+   *
+   * The read is **held open by this test** rather than raced, which is what makes a bug
+   * reported as *sometimes* a deterministic verdict: the window is exactly as long as the
+   * request, so on a fast connection it is a flash and on a slow one it is the screen.
+   *
+   * What it asserts is only the window — that the question is not drawn while the answer is
+   * still coming. The test below covers the question arriving once the read says there is
+   * nothing declared, and `what the screen opens on` covers the declared read landing.
+   */
+  it('never asks for a declaration it has not finished reading', async () => {
+    let landed: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      landed = resolve;
+    });
+    transport.on('GET', PROFILE_SURFACE_PATH, async () => {
+      await held;
+      return json(
+        profileSurface({
+          availability: [{ day: 2, part: 'EVENING' }],
+          search_radius_km: 12,
+          play_intents: { PADEL: 'COMPETITIVE' },
+        }),
+      );
+    });
+
+    await reachPlay();
+
+    expect(screen.queryByText(declarationTitle('Padel'))).toBeNull();
+    expect(screen.queryByText(DECLARATION_BODY)).toBeNull();
+
+    // Let the held request finish so nothing is left in flight behind the assertions.
+    await act(async () => {
+      landed();
+    });
+  });
+
+  /** And the question still arrives the moment the read says there is genuinely no answer. */
+  it('asks once the read lands and says nothing was declared', async () => {
+    await openPlayUndeclared(
+      profileSurface({
+        availability: [{ day: 2, part: 'EVENING' }],
+        search_radius_km: 12,
+        play_intents: {},
+      }),
+    );
+
+    expect(screen.getByText(declarationTitle('Padel'))).toBeTruthy();
+  });
+});
+
 describe('what the screen opens on', () => {
   it('offers the sports the player is rated in, and opens on the first', async () => {
     await openPlay();
@@ -208,22 +269,26 @@ describe('what the screen opens on', () => {
    * where there is nothing to inherit from the mapping takes *for fun*.
    */
   it('opens the mode on the declaration', async () => {
-    await openPlay({
-      availability: [{ day: 2, part: 'EVENING' }],
-      search_radius_km: 12,
-      play_intents: { PADEL: 'NO_PREFERENCE' },
-    });
+    await openPlay(
+      profileSurface({
+        availability: [{ day: 2, part: 'EVENING' }],
+        search_radius_km: 12,
+        play_intents: { PADEL: 'NO_PREFERENCE' },
+      }),
+    );
 
     expect(isSelected('For fun, this search')).toBe(true);
     expect(isSelected('Competitive, this search')).toBe(false);
   });
 
   it('opens on a declared competitive intent', async () => {
-    await openPlay({
-      availability: [{ day: 2, part: 'EVENING' }],
-      search_radius_km: 12,
-      play_intents: { PADEL: 'COMPETITIVE' },
-    });
+    await openPlay(
+      profileSurface({
+        availability: [{ day: 2, part: 'EVENING' }],
+        search_radius_km: 12,
+        play_intents: { PADEL: 'COMPETITIVE' },
+      }),
+    );
 
     expect(isSelected('Competitive, this search')).toBe(true);
   });
@@ -241,11 +306,13 @@ describe('what the screen never writes', () => {
   /** Both declared, so the chip stays on a searchable sport: the fact under test is that
    *  neither control writes, and an undeclared tennis would draw no mode control at all. */
   it('changes the sport and the mode without touching the profile', async () => {
-    await openPlay({
-      availability: [{ day: 2, part: 'EVENING' }],
-      search_radius_km: 12,
-      play_intents: { PADEL: 'FOR_FUN', TENNIS: 'FOR_FUN' },
-    });
+    await openPlay(
+      profileSurface({
+        availability: [{ day: 2, part: 'EVENING' }],
+        search_radius_km: 12,
+        play_intents: { PADEL: 'FOR_FUN', TENNIS: 'FOR_FUN' },
+      }),
+    );
 
     fireEvent.press(screen.getByLabelText('Tennis'));
     fireEvent.press(screen.getByLabelText('Competitive, this search'));
@@ -303,11 +370,11 @@ describe('changed from your profile', () => {
 describe('the way onto the court', () => {
   /** Both sports declared, so switching the chip stays searchable rather than opening the
    *  interstitial — the fact under test is the court's shape and not the declaration. */
-  const BOTH_DECLARED: Wire['PlayerProfileReadResponse'] = {
+  const BOTH_DECLARED = profileSurface({
     availability: [{ day: 2, part: 'EVENING' }],
     search_radius_km: 12,
     play_intents: { PADEL: 'FOR_FUN', TENNIS: 'FOR_FUN' },
-  };
+  });
 
   /**
    * *The four* is a word about a Sport, and the chip is what changes it.
@@ -626,11 +693,11 @@ describe('the searching latch', () => {
 });
 
 describe('a sport nobody has declared in', () => {
-  const UNDECLARED: Wire['PlayerProfileReadResponse'] = {
+  const UNDECLARED = profileSurface({
     availability: [{ day: 2, part: 'EVENING' }],
     search_radius_km: 12,
     play_intents: {},
-  };
+  });
 
   /**
    * ADR-0094's one-tap interstitial — *"permanent, not a migration path"*. It is opened
@@ -822,9 +889,13 @@ describe('a sport nobody has declared in', () => {
     fireEvent.press(screen.getByLabelText('Play'));
 
     await waitFor(() => expect(screen).toHavePathname('/play'));
-    // The read landing is what takes the interstitial away, so its absence is the moment the
-    // declaration made elsewhere is on screen — which is the moment the segment must not move.
-    await waitFor(() => expect(screen.queryByText(declarationTitle('Padel'))).toBeNull());
+    // **The segment's arrival is what says the read landed**, and it has to be: the
+    // interstitial is now gated on that same read, so its absence is true before the answer
+    // is back as well as after — it stopped being a synchronisation point when it stopped
+    // being drawn on a screen that has not read anything yet. The declaration made elsewhere
+    // is on screen the moment the form is, which is the moment the segment must not move.
+    await screen.findByLabelText('Competitive, this search');
+    expect(screen.queryByText(declarationTitle('Padel'))).toBeNull();
     expect(isSelected('Competitive, this search')).toBe(true);
   });
 
@@ -901,11 +972,11 @@ describe('a sport nobody has declared in', () => {
  * the one control that does write says what it is going to write before it does.
  */
 describe('the declaration, standing under the switch', () => {
-  const DECLARED: Wire['PlayerProfileReadResponse'] = {
+  const DECLARED = profileSurface({
     availability: [{ day: 2, part: 'EVENING' }],
     search_radius_km: 12,
     play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'FOR_FUN' },
-  };
+  });
 
   /** The line as the copy deck writes it, so an assertion is never a spelling of one. */
   const line = (intent: Wire['PlayIntent'], mode: 'COMPETITIVE' | 'FOR_FUN') =>
@@ -975,11 +1046,13 @@ describe('the declaration, standing under the switch', () => {
 
   /** A sport with no declaration is `undeclared`, and none of this is drawn on it (#293). */
   it('is not on screen at all where there is nothing declared', async () => {
-    await openPlayUndeclared({
-      availability: [{ day: 2, part: 'EVENING' }],
-      search_radius_km: 12,
-      play_intents: {},
-    });
+    await openPlayUndeclared(
+      profileSurface({
+        availability: [{ day: 2, part: 'EVENING' }],
+        search_radius_km: 12,
+        play_intents: {},
+      }),
+    );
 
     for (const intent of ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'] as const) {
       for (const mode of ['COMPETITIVE', 'FOR_FUN'] as const) {

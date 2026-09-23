@@ -24,6 +24,8 @@ anything about anybody else.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from app.api.dependencies import (
@@ -32,6 +34,7 @@ from app.api.dependencies import (
     DomainEventStoreDep,
     EventPublisherDep,
     UnitOfWorkDep,
+    get_clock,
 )
 from app.bootstrap.composition import (
     build_block_query,
@@ -39,12 +42,14 @@ from app.bootstrap.composition import (
     build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_friendly_choice_query,
     build_open_challenge_query,
-    build_planned_game_opening,
+    build_planned_game_handover,
     build_origin_search_query,
     build_player_profile_repository,
     build_ruleset,
     build_search_store,
+    build_settled_game_query,
     build_user_repository,
 )
 from app.modules.blocks.domain.errors import BlockStateUnavailable
@@ -53,6 +58,7 @@ from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
 from app.modules.challenges.application.send_challenge import SendChallenge
+from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
 from app.modules.challenges.presentation.dependencies import get_send_challenge
 from app.modules.matchmaking.application.express_interest import ExpressInterest
 from app.modules.matchmaking.infrastructure.challenges_mutual_challenge import (
@@ -63,6 +69,7 @@ from app.modules.matchmaking.presentation.dependencies import (
     get_express_interest,
 )
 from tests.api import matchmaking_world as world
+from tests.unit.fake_event_store import FrozenClock
 
 
 @pytest.fixture
@@ -434,6 +441,10 @@ async def test_a_mutual_yes_opens_a_game_immediately(
     mine = await _challenges(client, searcher["token"])
     theirs = await _challenges(client, other["token"])
     assert len(mine) == 1
+    # **The tap names the game it opened** (``docs/adr/0154`` §5). The player who
+    # closed the loop gets a door to it rather than a sentence about it, and the
+    # id is the one both of their inboxes are about.
+    assert back.json()["challenge_id"] == mine[0]["challenge_id"]
     assert [one["challenge_id"] for one in mine] == [
         one["challenge_id"] for one in theirs
     ]
@@ -483,6 +494,7 @@ async def test_a_block_between_two_stale_yeses_mints_nothing(
 
     assert back.status_code in (200, 201), back.text
     assert back.json()["mutual"] is True, "the yes still landed"
+    assert back.json()["challenge_id"] is None, "there is no game to name"
     assert await _challenges(client, other["token"]) == []
     assert await _challenges(client, searcher["token"]) == []
 
@@ -512,6 +524,7 @@ async def test_a_gate_that_cannot_be_read_costs_the_game_and_never_the_yes(
 
     assert back.status_code in (200, 201), back.text
     assert back.json()["mutual"] is True, "the yes stands, and it is still mutual"
+    assert back.json()["challenge_id"] is None, "there is no game to name"
     listed = (await world.read_interest(client, other["token"])).json()
     assert [row["player_id"] for row in listed["mutual"]] == [str(searcher["id"])]
 
@@ -552,6 +565,7 @@ def _break_the_block_read(client) -> None:
                         events=build_event_publisher(db),
                     ),
                     open_challenges=build_open_challenge_query(db),
+                    settled_games=build_settled_game_query(db),
                     safety=CourtSafety(
                         blocks=Unreadable(),
                         holds=build_challenge_hold_query(db),
@@ -562,10 +576,437 @@ def _break_the_block_read(client) -> None:
                         ),
                     ),
                     clock=clock,
-                    planned_games=build_planned_game_opening(db),
+                    planned_games=build_planned_game_handover(db),
+                    friendly_choices=build_friendly_choice_query(db),
                 )
             ),
             unit_of_work=uow,
         )
 
     world.override(client, get_express_interest, factory)
+
+
+# ---------------------------------------------------------------------------
+# The withdraw — *Remove the challenge*, while nobody has joined (ADR-0165 §4)
+# ---------------------------------------------------------------------------
+
+
+async def _withdraw(client, token: str, challenge_id: str):
+    return await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal", headers=world.auth(token)
+    )
+
+
+async def _a_court_nobody_has_answered(
+    client, session_factory, candidate_source, searcher
+) -> tuple[str, dict]:
+    """A padel four just sent: three people deciding, nobody in but the
+    organiser. `AWAITING_ANSWERS`, and the state ``docs/adr/0142`` §2 refused
+    the withdraw in — reversed by ``docs/adr/0165`` §4."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = (
+        await _send(client, searcher["token"], search_id, court)
+    ).json()["challenge_id"]
+    return challenge_id, people
+
+
+async def _a_court_nobody_will_finish(
+    client, session_factory, candidate_source, searcher
+) -> tuple[str, dict]:
+    """A padel four with one acceptance on it and nobody left deciding.
+
+    One yes and two noes leaves the organiser and the acceptor in, two seats
+    open and nothing awaiting — `LINE_UP_INCOMPLETE`, reached through the routes
+    alone. It is the state the withdraw was written for, and the state it is
+    now refused in: somebody has joined, and the court is as much theirs.
+    """
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = (
+        await _send(client, searcher["token"], search_id, court)
+    ).json()["challenge_id"]
+    for name, act in (("ana", "accept"), ("bo", "decline"), ("cy", "decline")):
+        answered = await client.post(
+            f"/api/v1/challenges/{challenge_id}/{act}",
+            headers=world.auth(people[name]["token"]),
+        )
+        assert answered.status_code == 200, answered.text
+    assert answered.json()["standing"] == "LINE_UP_INCOMPLETE"
+    return challenge_id, people
+
+
+async def test_the_organiser_removes_a_challenge_nobody_has_answered(
+    client, session_factory, candidate_source, searcher
+):
+    """**The Phase 1 withdraw, admitted.** The reply is the redraw, at
+    `WITHDRAWN`, with every seat exactly as it was — three questions still on
+    the court with their deadlines — and the invitees are told the same: the
+    row reads `WITHDRAWN`, the detail draws no card, and a yes or a no meets
+    `challenge_is_over` rather than opening a room for a court that is over."""
+
+    challenge_id, people = await _a_court_nobody_has_answered(
+        client, session_factory, candidate_source, searcher
+    )
+    not_theirs = await _withdraw(client, people["cy"]["token"], challenge_id)
+    assert not_theirs.status_code == 403, not_theirs.text
+    assert not_theirs.json()["code"] == "withdraw_is_the_organisers"
+
+    withdrawn = await _withdraw(client, searcher["token"], challenge_id)
+
+    assert withdrawn.status_code == 200, withdrawn.text
+    body = withdrawn.json()
+    assert body["standing"] == "WITHDRAWN"
+    assert body["ended_at"] is not None
+    assert body["ended_by"] == str(searcher["id"]), "the organiser, off the stream"
+    assert body["game_id"] is None, "never a game"
+    invited = [
+        seat for seat in body["seats"] if seat["player_id"] != str(searcher["id"])
+    ]
+    assert [seat["answer"] for seat in invited] == [None, None, None]
+    assert all(seat["answer_by"] is not None for seat in invited)
+
+    for name, act in (("ana", "accept"), ("bo", "decline")):
+        (row,) = await _challenges(client, people[name]["token"])
+        assert row["standing"] == "WITHDRAWN"
+        detail = await client.get(
+            f"/api/v1/challenges/{challenge_id}",
+            headers=world.auth(people[name]["token"]),
+        )
+        assert detail.status_code == 200, detail.text
+        assert detail.json()["standing"] == "WITHDRAWN"
+        assert all("card" not in seat for seat in detail.json()["seats"])
+        assert "pairing_absence" not in detail.json()
+        refused = await client.post(
+            f"/api/v1/challenges/{challenge_id}/{act}",
+            headers=world.auth(people[name]["token"]),
+        )
+        assert refused.status_code == 409, refused.text
+        assert refused.json()["code"] == "challenge_is_over"
+
+
+async def test_a_court_somebody_has_joined_is_nobodys_to_remove_for_the_others(
+    client, session_factory, candidate_source, searcher
+):
+    """``docs/adr/0165`` §4 — B accepts and the organiser's removal is refused
+    with a named code; B leaves while C and D are still deciding and the
+    organiser is alone again, so it is admitted again. The room B's yes opened
+    is destroyed in the act, though B had already left it."""
+
+    challenge_id, people = await _a_court_nobody_has_answered(
+        client, session_factory, candidate_source, searcher
+    )
+    accepted = await client.post(
+        f"/api/v1/challenges/{challenge_id}/accept",
+        headers=world.auth(people["ana"]["token"]),
+    )
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["standing"] == "AWAITING_ANSWERS"
+    await world.deliver_the_outbox(session_factory)
+    rooms = await client.get(
+        "/api/v1/conversations", headers=world.auth(searcher["token"])
+    )
+    assert len(rooms.json()["conversations"]) == 1, rooms.text
+
+    refused = await _withdraw(client, searcher["token"], challenge_id)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "somebody_has_joined"
+    assert str(people["ana"]["id"]) not in refused.text, "the refusal names nobody"
+
+    left = await client.post(
+        f"/api/v1/challenges/{challenge_id}/departure",
+        headers=world.auth(people["ana"]["token"]),
+    )
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "AWAITING_ANSWERS", "C and D are still deciding"
+
+    withdrawn = await _withdraw(client, searcher["token"], challenge_id)
+
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["standing"] == "WITHDRAWN"
+    seats = {seat["player_id"]: seat for seat in withdrawn.json()["seats"]}
+    assert seats[str(people["ana"]["id"])]["answer"] == "LEFT"
+    assert seats[str(people["bo"]["id"])]["answer"] is None
+    await world.deliver_the_outbox(session_factory)
+    rooms = await client.get(
+        "/api/v1/conversations", headers=world.auth(searcher["token"])
+    )
+    assert rooms.json()["conversations"] == []
+
+
+async def test_a_withdrawn_challenge_keeps_its_row_and_says_what_it_is(
+    client, session_factory, candidate_source, searcher
+):
+    """A list that quietly dropped this morning's is a list that lies — and the
+    person who was asked has to be able to find out the court is closed."""
+
+    challenge_id, people = await _a_court_nobody_has_answered(
+        client, session_factory, candidate_source, searcher
+    )
+    await _withdraw(client, searcher["token"], challenge_id)
+
+    hers = await _challenges(client, people["ana"]["token"])
+
+    assert [row["standing"] for row in hers] == ["WITHDRAWN"]
+
+
+async def test_an_invitee_is_told_the_withdraw_is_the_organisers(
+    client, session_factory, candidate_source, searcher
+):
+    """**403 and not 404**: they hold a seat on this court and can already see
+    it, so pretending it is not there would be the wrong refusal. Somebody who
+    joined and somebody who said no are told the same — and told it before
+    anything about the court is read, so the one who joined never hears
+    `somebody_has_joined`. Somebody still deciding is told it in the removal
+    test above."""
+
+    challenge_id, people = await _a_court_nobody_will_finish(
+        client, session_factory, candidate_source, searcher
+    )
+
+    for name in ("ana", "bo"):
+        refused = await _withdraw(client, people[name]["token"], challenge_id)
+        assert refused.status_code == 403, refused.text
+        assert refused.json()["code"] == "withdraw_is_the_organisers"
+
+
+async def test_a_court_that_ended_by_itself_has_no_withdraw(
+    client, session_factory, candidate_source, searcher
+):
+    """One yes, two noes, and the yes taken back: the organiser is alone with
+    nobody deciding, and the court is over as `DECLINED` — by itself, a
+    departure being a no. The withdraw meets the word every act uses for an
+    ended challenge, and never a word about who has joined."""
+
+    challenge_id, people = await _a_court_nobody_will_finish(
+        client, session_factory, candidate_source, searcher
+    )
+    left = await client.post(
+        f"/api/v1/challenges/{challenge_id}/departure",
+        headers=world.auth(people["ana"]["token"]),
+    )
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "DECLINED"
+
+    refused = await _withdraw(client, searcher["token"], challenge_id)
+
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "challenge_is_over"
+
+
+async def test_a_withdrawal_does_not_come_back(
+    client, session_factory, candidate_source, searcher
+):
+    """Irreversible: re-asking the same people is a **new** challenge, and a
+    second press is refused as an ended challenge refuses everything."""
+
+    challenge_id, _ = await _a_court_nobody_has_answered(
+        client, session_factory, candidate_source, searcher
+    )
+    assert (await _withdraw(client, searcher["token"], challenge_id)).status_code == 200
+
+    again = await _withdraw(client, searcher["token"], challenge_id)
+
+    assert again.status_code == 409
+    assert again.json()["code"] == "challenge_is_over"
+
+
+async def test_a_stranger_cannot_withdraw_and_is_told_nothing_exists(
+    client, session_factory, candidate_source, searcher
+):
+    """One code for two cases, exactly as the answers refuse: separating them
+    would answer *is this id real* about a stranger's evening."""
+
+    challenge_id, _ = await _a_court_nobody_has_answered(
+        client, session_factory, candidate_source, searcher
+    )
+    _, outsider = await world.register(client, "zed")
+
+    refused = await _withdraw(client, outsider, challenge_id)
+
+    assert refused.status_code == 404
+    assert refused.json()["code"] == "challenge_not_found"
+
+
+# ---------------------------------------------------------------------------
+# When it ended — what a shelf life is subtracted from
+# ---------------------------------------------------------------------------
+
+
+async def test_a_row_that_still_stands_says_so_by_saying_nothing(
+    client, session_factory, candidate_source, searcher
+):
+    """``ended_at`` is ``null`` on the three standings that are not endings, and
+    it is **in** the row.
+
+    Every nullable field on this list is a measured nothing rather than an
+    absence, so a client reads one key and never two — *this challenge has not
+    ended* is the answer, not the lack of one.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    await _send(client, searcher["token"], search_id, court)
+
+    (row,) = await _challenges(client, searcher["token"])
+
+    assert row["standing"] == "AWAITING_ANSWERS"
+    assert "ended_at" in row
+    assert row["ended_at"] is None
+    assert "ended_by" in row and row["ended_by"] is None
+    assert "game_id" in row and row["game_id"] is None
+
+
+async def test_an_ended_row_carries_the_instant_its_shelf_life_is_measured_from(
+    client, session_factory, candidate_source, searcher
+):
+    """*An ended challenge keeps its row, in place, and it leaves 24 h after the
+    challenge ended* (`the-loop-screens.md` §1.1) — one subtraction,
+    ``read_at − ended_at``, and until #388 the field it subtracts did not exist.
+
+    **A withdrawal is dated by the act and not by a deadline.** The client used
+    to derive an ending from the latest ``answer_by`` on the court, which for a
+    withdrawal says nothing at all — so such a row was kept indefinitely. Every
+    deadline here is still two days out, and the instant served is neither of
+    them.
+    """
+
+    challenge_id, people = await _a_court_nobody_has_answered(
+        client, session_factory, candidate_source, searcher
+    )
+    assert (await _withdraw(client, searcher["token"], challenge_id)).status_code == 200
+
+    response = await client.get(
+        "/api/v1/challenges", headers=world.auth(people["ana"]["token"])
+    )
+    body = response.json()
+    (row,) = body["challenges"]
+
+    assert row["standing"] == "WITHDRAWN"
+    ended = datetime.fromisoformat(row["ended_at"])
+    assert datetime.fromisoformat(row["opened_at"]) <= ended
+    assert ended <= datetime.fromisoformat(body["read_at"])
+    deadlines = [seat["answer_by"] for seat in row["seats"] if seat["answer_by"]]
+    assert deadlines
+    assert all(ended < datetime.fromisoformat(one) for one in deadlines)
+
+
+async def test_a_court_everybody_turned_down_is_dated_by_the_seats(
+    client, session_factory, candidate_source, searcher
+):
+    """The other way an ending arrives at this route: not an act on the challenge
+    but the last person asked leaving it.
+
+    A decline is the one departure the wire cannot date exactly, and the bound is
+    the tighter of that seat's own deadline and the last thing that happened here.
+    **This route cannot pin which**, because it has no clock to move; what it can
+    show is that the answer is neither of the two instants the client used to have
+    to guess from — it is inside the request rather than two days out at a
+    deadline. The arithmetic is pinned in ``tests/unit/test_challenge_aggregate.py``.
+    """
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = (
+        await _send(client, searcher["token"], search_id, court)
+    ).json()["challenge_id"]
+    for name in ("ana", "bo", "cy"):
+        refused = await client.post(
+            f"/api/v1/challenges/{challenge_id}/decline",
+            headers=world.auth(people[name]["token"]),
+        )
+        assert refused.status_code == 200, refused.text
+
+    response = await client.get(
+        "/api/v1/challenges", headers=world.auth(searcher["token"])
+    )
+    body = response.json()
+    (row,) = body["challenges"]
+
+    assert row["standing"] == "DECLINED"
+    ended = datetime.fromisoformat(row["ended_at"])
+    assert datetime.fromisoformat(row["opened_at"]) <= ended
+    assert ended <= datetime.fromisoformat(body["read_at"])
+    deadlines = [seat["answer_by"] for seat in row["seats"] if seat["answer_by"]]
+    assert deadlines
+    assert all(ended < datetime.fromisoformat(one) for one in deadlines)
+    # Three nos bounded alike, and court order names one (docs/adr/0172 §3):
+    # the first invited seat in the court's fixed order.
+    first_invited = next(seat for seat in row["seats"] if seat["answer_by"])
+    assert row["ended_by"] == first_invited["player_id"]
+    assert first_invited["answer"] == "DECLINED"
+
+
+async def test_a_court_that_ran_out_is_named_for_the_last_window(
+    client, session_factory, candidate_source, searcher
+):
+    """``docs/adr/0172`` §3 — a lapse names the seat whose window was the last
+    to run out. Every deadline here was dated at the send, so they are one
+    instant and court order names the first invited seat; the fact the wire
+    pins is that the person named is one whose seat ran out, unswept."""
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    await _send(client, searcher["token"], search_id, court)
+    frozen = FrozenClock(
+        at=datetime.now(timezone.utc) + ANSWER_WINDOW + timedelta(hours=1)
+    )
+    world.override(client, get_clock, lambda: frozen)
+
+    (row,) = await _challenges(client, searcher["token"])
+
+    assert row["standing"] == "LAPSED"
+    first_invited = next(seat for seat in row["seats"] if seat["answer_by"])
+    assert row["ended_by"] == first_invited["player_id"], "court order"
+    assert first_invited["player_id"] != str(searcher["id"])
+    assert first_invited["answer"] is None, "unswept: the window closing is the leaving"
+    assert datetime.fromisoformat(first_invited["answer_by"]) == datetime.fromisoformat(
+        row["ended_at"]
+    )
+
+
+async def test_a_refused_mint_and_an_innocent_one_name_the_same_nothing(
+    client, session_factory, candidate_source, searcher
+):
+    """**The fold is the safety property** (``docs/adr/0154`` §3).
+
+    A pair already arranging a game and a pair a gate refused reach the wire as
+    the same ``challenge_id: null``. That is not a coincidence to be tidied up
+    later: if absence ever meant *a gate refused about one of you* and nothing
+    else, it would be the trace ``docs/adr/0095`` guarantees a block never leaves
+    anywhere in any response, and the field would have to go.
+
+    Here the innocent cause is this mutual's **own** half-built court. A padel
+    mutual is `LINE_UP_INCOMPLETE` with a side still to fill, so the pair rule
+    holds the second tap — over a court these two made themselves — and the
+    answer is still nothing, because a half-built court is not a game they have
+    but one they are still making.
+    """
+
+    other = await world.a_searcher(client, name="bea")
+    await world.fold_the_log(session_factory, candidate_source)
+    await world.a_yes(
+        client, session_factory, candidate_source, sender=searcher, towards=other["id"]
+    )
+    # **One search, cited twice.** It has to be taken before the mutual: once
+    # these two are arranging a court they leave each other's deck, so a search
+    # run afterwards would not show them and the origin could not resolve. A
+    # search record never expires, which is what makes the second tap reachable
+    # at all — and is the same property the stale-block test turns on.
+    origin = (await world.search(client, other["token"])).json()["search"]["search_id"]
+
+    opened = await world.express_interest(
+        client, other["token"], player_id=searcher["id"], search_id=origin
+    )
+    assert opened.json()["challenge_id"] is not None
+
+    again = await world.express_interest(
+        client, other["token"], player_id=searcher["id"], search_id=origin
+    )
+
+    assert again.status_code in (200, 201), again.text
+    assert again.json()["mutual"] is True, "the mutual is still what the rows say"
+    assert again.json()["challenge_id"] is None
+    assert len(await _challenges(client, other["token"])) == 1, "no second court"

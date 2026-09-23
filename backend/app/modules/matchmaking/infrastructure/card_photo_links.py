@@ -60,16 +60,31 @@ class PresignedCardPhotos:
         may live.
         """
 
+        return await self.links_over(
+            {
+                # A near miss records no card at all — it was shown to nobody —
+                # and that is not the same state as a card whose player has no
+                # photo. Neither has an address, so neither is in the answer.
+                row.player_id: row.card.photo_id
+                for row in rows
+                if row.card is not None and row.card.photo_id is not None
+            }
+        )
+
+    async def links_over(self, owned: Mapping[UUID, UUID]) -> Mapping[UUID, str]:
+        """The signing itself, over owner-and-photo pairs. **One implementation.**
+
+        Ordered by owner on the way in, because a mapping's iteration order is
+        the order twenty signatures happen in and a set is never the source of a
+        traversal (``docs/adr/0105`` §1). Nothing downstream can observe it —
+        the answer is a mapping — which is why the rule is stated on the
+        collection rather than on what happens to be visible.
+        """
+
         links: dict[UUID, str] = {}
-        for row in rows:
-            # A near miss records no card at all — it was shown to nobody — and
-            # that is not the same state as a card whose player has no photo.
-            # Neither has an address, so neither is in the answer.
-            photo_id = None if row.card is None else row.card.photo_id
-            if photo_id is None:
-                continue
-            links[row.player_id] = await self._storage.presigned_read_url(
-                PhotoRef(owner_id=row.player_id, photo_id=photo_id),
+        for owner_id in sorted(owned):
+            links[owner_id] = await self._storage.presigned_read_url(
+                PhotoRef(owner_id=owner_id, photo_id=owned[owner_id]),
                 valid_for_seconds=self._valid_for_minutes * 60,
             )
         return links

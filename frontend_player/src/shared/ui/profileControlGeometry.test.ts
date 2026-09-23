@@ -36,14 +36,7 @@
  */
 
 import { theme } from './theme';
-
-/**
- * The narrowest phone the app supports, and the only width these assertions run at.
- *
- * iPhone SE / iPhone 8 in points. Not a token: it is a fact about the device population,
- * not a value any component reads, and `theme.ts` holds only what components read.
- */
-const NARROWEST_SCREEN = 320;
+import { NARROWEST_SCREEN } from '@/test-support/fontMetrics';
 
 /** Part 0.2: content width is screen width less both gutters. Never a fixed 362. */
 const NARROWEST_CONTENT = NARROWEST_SCREEN - 2 * theme.size.gutter;

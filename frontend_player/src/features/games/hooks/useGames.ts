@@ -7,6 +7,7 @@
  * | `useGame` | one game **out of that list**, because there is no `GET /games/{id}` |
  * | `useStateResult` | `POST /result` — the entry, the correction and the counter |
  * | `useAcceptResult` | `POST /result/acceptance` — from across the net, one is enough |
+ * | `useDismissGame` | `POST /dismissal` — *Remove this card*, the reader's own, on a called-off game |
  *
  * ## Both writes invalidate and neither is optimistic
  *
@@ -31,12 +32,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
+import { challengeKeys, dropCourtOfGame } from '@/features/challenges/types';
 
 import type { Game } from '../domain/game';
 import { acceptResult } from '../use-cases/acceptResult';
+import { dismissGame } from '../use-cases/dismissGame';
 import { readGames } from '../use-cases/readGames';
 import { stateResult, type StatedResult } from '../use-cases/stateResult';
 
+import { dropCardOfGame } from './gameCache';
 import { gameKeys } from './gameKeys';
 
 export function useGames() {
@@ -56,12 +60,14 @@ export function useGames() {
  * not play in it*, because separating them would answer *is this id real* about four strangers'
  * evening, and this side keeps that refusal rather than undoing it with a 404 of its own.
  */
-export function useGame(gameId: string) {
+export function useGame(gameId: string | undefined) {
   const games = useGames();
 
   return {
     ...games,
-    game: games.data?.find((one) => one.gameId === gameId),
+    // No id is no game, which is `usePlan`'s shape one feature over: a room whose line-up has not
+    // completed asks with nothing and is answered with nothing, rather than with a sentinel.
+    game: gameId === undefined ? undefined : games.data?.find((one) => one.gameId === gameId),
   };
 }
 
@@ -85,6 +91,49 @@ export function useAcceptResult() {
     mutationFn: acceptResult,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: gameKeys.list() });
+    },
+  });
+}
+
+/**
+ * ***Remove this card*** — the dismissal, and **the card leaves the rail on the reply**
+ * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §5, §8).
+ *
+ * The one write in this feature whose reply is written into the list rather than only
+ * invalidating it, and the reason is what the reply *is*: `GET /games` omits a game its reader
+ * has dismissed, so a list without this game is exactly the next read's answer, arriving one
+ * round trip earlier — `useLeaveGame`'s argument for the leaver's own rows, one feature over.
+ * The list is then re-read as well, because the reply is one card and the list is every card.
+ *
+ * **And the challenge row goes with the card**
+ * ([ADR-0173](../../../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)):
+ * a called-off court is one fact on two of the reader's lists, and `GET /challenges` now
+ * subtracts its reader off the same set — so the row is dropped on the reply through the one
+ * write that list lets another feature make, and re-read as well. The Chats row's swipe meets
+ * the same act through a door of its own since ADR-0175 §5 (`useDismissCourt`, one feature
+ * over), which drops this list's card through `dropCardOfGame` in turn.
+ *
+ * **A refusal re-reads both lists and says nothing**: `game_is_not_called_off` means the card the
+ * reader pressed is not the card the server holds, and the fold the re-read lands on is the
+ * answer, as it is for a stale fill. Pending, never optimistic — the card stays until the reply
+ * says it is gone — and it pauses offline like every act in this feature: nothing about a
+ * dismissal is fixed by the moment it is tapped.
+ */
+export function useDismissGame() {
+  const client = useQueryClient();
+
+  return useMutation<void, AppError, string>({
+    mutationFn: dismissGame,
+    onSuccess: (_nothing, gameId) => {
+      dropCardOfGame(client, gameId);
+      dropCourtOfGame(client, gameId);
+      void client.invalidateQueries({ queryKey: gameKeys.list() });
+      void client.invalidateQueries({ queryKey: challengeKeys.list() });
+    },
+    onError: () => {
+      void client.invalidateQueries({ queryKey: gameKeys.list() });
+      void client.invalidateQueries({ queryKey: challengeKeys.list() });
     },
   });
 }

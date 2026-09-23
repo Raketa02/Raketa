@@ -7,14 +7,37 @@
  */
 
 export { AccountPanel } from './components/AccountPanel';
+/**
+ * The naming step — *How should people see you?* — onboarding's first screen, and this
+ * feature's on the second part's own precedent: the values it asks for are the users
+ * context's, and the follow-up that edits them will drive the same rules. See the screen.
+ */
+export { NamingScreen } from './components/NamingScreen';
+
+/**
+ * **The naming, from the You tab**
+ * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §7): the *Name* row the shell composes, the screen behind it the route file mounts, and
+ * the row's words for the suites that hold the tab to them.
+ */
+export { NameRow, YOU_NAME_ROUTE, type NameRowProps } from './components/NameRow';
+export { NameScreen } from './components/NameScreen';
+export { NAME_ROW_TITLE, SAVE_NAME, nameLine } from './components/namePresentation';
 export { SignInScreen } from './components/SignInScreen';
 export { SignUpScreen } from './components/SignUpScreen';
 
 export type {
   AuthenticatedUser,
+  Naming,
   Registration,
   SignInCredentials,
 } from './domain/AuthenticatedUser';
+
+/**
+ * Where an unnamed account is sent. The entry gate reaches for it, and one file spelling the
+ * route is one place to change it — `SOCIAL_STEPS_ENTRY`'s own argument.
+ */
+export const NAMING_STEP = '/name';
 
 export { authKeys } from './hooks/authKeys';
 export { useCurrentUser } from './hooks/useCurrentUser';

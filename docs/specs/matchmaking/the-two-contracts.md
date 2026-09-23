@@ -57,11 +57,12 @@ already carry that, and it would be the only context segment in the document.
 | Route | Surface | Returns |
 | --- | --- | --- |
 | `POST /api/v1/searches` | `SHORTLIST` | A ranked shortlist with full breakdowns |
-| `POST /api/v1/lineups` | `LINEUP` / `FILL_SEATS` | A seated line-up, three arrangements, forecasts |
+| `POST /api/v1/lineups` | `LINEUP` / `FILL_SEATS` | The pool it seated from, a seated line-up, three arrangements, forecasts |
 | `POST /api/v1/deck` | `DECK` | One deal: an ordered batch of cards |
+| `POST /api/v1/radar` | `RADAR` | One reading: everyone in the reach, by distance and bearing, with the deck's chip ([`the-radar.md`](the-radar.md) §2) |
 | `GET /api/v1/searches/{id}` | — | Any of the above, read back |
 
-**All three are `POST`s that create a search, and that is honest rather than tidy.**
+**All four are `POST`s that create a search, and that is honest rather than tidy.**
 [ADR-0104](../../adr/0104-the-search-record-is-the-answer-and-never-expires.md) makes every
 engine invocation a durable, unexpiring `search` row; a `GET` that writes one would be the
 only route in this backend lying about its verb.
@@ -102,6 +103,17 @@ nothing), `POST /passes`, and `GET /interest`. A fourth was added by
 [#237](https://github.com/Raketa02/Raketa/issues/237): `POST /prompt-declines`, write-only and
 with no Origin key, which answers *not now* to a prompt and writes no value anywhere. The four
 above are the ones that create searches, and that is what §1 is about.
+
+**And one route answers the matcher's numbers from another context's router**
+([ADR-0161](../../adr/0161-the-game-screen-draws-its-courts-pairing.md)):
+
+| Route | Surface | Returns |
+| --- | --- | --- |
+| `GET /api/v1/games/{game_id}/pairing` | — | One game's court priced for the reader: the forecast, the split, what is at stake, each seat's Level |
+
+It is `games`' route over `games`' port, signed by an adapter in the matcher's infrastructure,
+and it records nothing — the shape is in §5a below. It is here because the numbers are this
+engine's and the rule that produces them is stated in this file.
 
 ### `POST /searches` is deliberately not idempotent
 
@@ -214,7 +226,7 @@ Carried in full on every returned row, on every route, on the `POST` and on the 
 candidate: {
   player_id, fit, distance_km,
   player_card: { nickname, photo_id?, photo_url?, review?, area_code, social_tags[],
-                 level, band, range,
+                 intro?, level, band, range,
                  player_score?, counted_games?, last_five? },
   concerns: [ { term } ],
   terms: [ { term, weight, value, contribution, evidence: <closed union> } ],
@@ -298,8 +310,10 @@ additions.** The card is attached by the **backend** after `matchfit` returns �
 family with a different author, for the same reason as `at_stake` — and its contents are a closed
 list with two permanent refusals in it, a bio and activity recency
 ([ADR-0107](../../adr/0107-the-player-card-is-assembled-outside-the-engine.md)). `distance_km` is
-promoted out of the distance term's evidence and is an **integer**, so the *Closest* sort reads a
-field rather than reaching into a variant. `concerns` is the engine's own statement that a term is
+promoted out of the distance term's evidence, so the *Closest* sort reads a field rather than
+reaching into a variant — an integer until 2026-09-16, and **one decimal between two drawn
+spots** since ([ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+§2; the term still reads cell to cell). `concerns` is the engine's own statement that a term is
 genuinely weak — §12's warning line, judged where the weights are rather than by a client
 thresholding a value. Detail in [`the-play-screens.md`](the-play-screens.md) §1.
 
@@ -437,6 +451,71 @@ row when `open_seats == 1` and **omits it otherwise**. Everything else — *Best
 *Most reliable* — sorts client-side over fields already in the response, because a round trip
 per sort tap is latency spent on nothing.
 
+> **Amended 2026-09-11 by [#407](https://github.com/Raketa02/Raketa/issues/407): `candidates[]` on
+> a line-up is the pool it seated from, and not the seated alone.** The returned band used to be
+> exactly the people who sat down, in seat order — *a court is its answer, not a list*. It is also
+> the only list the builder reached from a challenge has: that journey mints no shortlist,
+> `POST /forecasts` and the send both refuse anybody the cited search never returned (ADR-0108
+> §3, `search_court_origin.py`), and a plain `POST /searches` is gated by the very challenge being
+> completed. So the pool over a fill court offered the one person just taken off a seat, or nobody.
+>
+> Now `candidates[]` is **`pool_for`'s top `K` by Fit, in Fit order, with the seated among them** —
+> `lineup.seats[].player_id` is looked up there, as `LineupSeatSchema` always said. `K` is ruleset
+> data (24 today) and a client never reads it from anywhere, exactly as it never reads twenty.
+> `position` on a line-up's recorded row is therefore a **place in the pool** and no longer a
+> seat — the Fit rank, unless a row above was dropped for a card that could not be assembled,
+> exactly as on a shortlist; who sat down is the response's `lineup` and, on the record, layer 4's
+> `seated` ([`the-group-objective.md`](the-group-objective.md) §6). **Exposure still counts the
+> seated only** — the court is what was shown, the rest of the pool is shown only if the player
+> opens the list, and a ⚡ that counted two dozen appearances would sink the top of every ranking
+> under the ±6 adjustment. A list opened off the record is shown and *under*-counted, the opposite
+> error from a shortlist's rows past the fold; neither is a gate. `POST /searches`
+> growing `completing_challenge_id` was the other shape and was refused: a shortlist is twenty by
+> rank key, so an accepted seat is not guaranteed a row on it, and a pick that moved the court
+> onto such a list would drop a seat ADR-0150 §8 says is not a control.
+
+### 5a. The game's pairing — `GET /games/{game_id}/pairing`
+
+[ADR-0161](../../adr/0161-the-game-screen-draws-its-courts-pairing.md). The forecast above,
+read for a court whose line-up is **frozen**, by somebody on it, while the game has not
+happened. One shape:
+
+```
+GamePairingResponse
+  read_at:   instant
+  forecast?: Forecast                          — the type above, omitted together with split
+  split?:    { your_side, their_side, gap }    — in the reader's direction
+  at_stake?: { win_delta, loss_delta }         — the reader's own
+  seats:     [ { player_id, level, band, range: {low, high}, confidence } ]
+```
+
+**It is the challenge card's number.** The read goes through the same use case the challenge
+detail's card is built on, so the forecast the challenge screen drew while the court was being
+arranged equals the game's once the line-up completes — asserted over HTTP. §9.9's equality
+test has a third reading: challenge card, game pairing, one figure.
+
+**In the reader's direction.** `split.gap == your_side − their_side`, signed and served, so two
+readers on opposite sides see the sign flip and the same `pct`. `at_stake` is the reader's own
+pair, and on a game it is priced **side against side** — every seat is known, and that is the
+pair the result will deliver (`one_side` in the rating engine's rule). The candidate card's
+`at_stake` prices *you against this person* because the other seats are unknown when a card is
+drawn; the two are different questions and, in a four, different numbers.
+
+**Three absences.** `forecast` and `split` are omitted together when the pairing cannot be
+computed — somebody on the court holds no rating in the sport, or a seat could not be priced —
+and there is **no reason beside the absence**. `provisional` is never `true` on a game and
+the field is kept because the shape is the court's: when a seat can be open, the answer is
+*omitted*, never a half-read forecast. `at_stake` is omitted on a friendly (meaningless rather
+than unavailable) and where the rule has nothing to move or nothing to price against — the reader
+unrated, or a whole side unrated; a side with one unrated seat is priced over its rated members,
+exactly as the update prices it. Never a pair of zeros. `seats`
+names whoever holds a rating, in the court's own order, from `rating`'s published figures and
+never from the index — and a court with an unrated member still names the rated ones.
+
+**Who and when.** Only somebody on the court — `404 game_not_found`, one code for two cases —
+and only while the game is `AWAITING_ENTRY` — `409 pairing_is_history` after. Nothing changes
+on `GET /games`: the seat there carries a handle and nothing else (ADR-0141).
+
 ---
 
 ## 6. The deck
@@ -446,12 +525,12 @@ else — and returns one deal: an ordered batch of cards, one `search` row, one 
 shared by every card in the deal.
 
 **The three refusals this body is written under are a mode, a widening and a pass window,
-and a grid is none of them.** *Match me* is reached from the screen the week is edited on,
-so a deal that ignored the edit would rank on a week the player had just replaced; the
-client cannot compute the difference itself, because a search that took a times rung ran on
-a grid with a slot the player never ticked and only the backend holds that. Like the
-shortlist's, it is an **ask and never a correction**: it writes no profile, and the offer to
-keep it — `KEEP_THESE_TIMES` — rides back on the response of the route that used it.
+and a grid is none of them.** The week is still an ask and never a correction — it writes no
+profile, and `KEEP_THESE_TIMES` rides back on the response of the route that used it. **The
+premise that made it worth asking is gone** ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1): the deck is reached from its own tab and
+no longer from the screen the week is edited on, so a deal from Players runs on the profile's
+week and raises no prompt; the override stays in the body for the day a caller has a week to
+send.
 
 **A deal is at most `DECK_DEAL_MAX` cards, 10**, and a spent deal deals again — a new request, a
 new `search_id`, the same exclusions plus everybody already dealt. **Exhausting a deal is not
@@ -459,20 +538,22 @@ exhausting the pool**: the honest empty state belongs to a fresh deal that came 
 never to a player who has seen ten of forty.
 
 **One-at-a-time is how the deck is shown, not how it is computed.** §9.11's ordering policy —
-people who already said yes, then high liveness above the floor, then the rest — is a property of
-a whole deal and cannot be evaluated one card at a time. **Its third band is no longer spread:**
-§9.11's λ = 14 is struck with the stage it belonged to
+the lifted by rank key, the person who said yes to you among them and unmarked, then the rest
+([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4) — is a property of a whole deal and cannot be evaluated one card at a time. **No band is
+spread:** §9.11's λ = 14 is struck with the stage it belonged to
 ([ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md)), so
-the deck's variety is that three-band order and `PASS_SUPPRESS`, and nothing in a deal moves on a
+the deck's variety is that two-band order and its exclusions, and nothing in a deal moves on a
 fact about the other cards. Per-card searches would also make the deck the highest-volume writer in the system
 by an order of magnitude for no analytic gain: the interesting unit is the deal, and *which
 card was accepted* is `position` on `search_candidate`, which already exists.
 
-**The weight vector is resolved backend-side and no mode crosses the wire.** The deck reads
-the viewer's declared `PlayIntent` for that sport: `COMPETITIVE → comp`, `FOR_FUN → fun`,
-**`NO_PREFERENCE → fun`**, not a third ruleset. The client deriving that mapping would be a
-domain rule in TypeScript; the response echoing a `mode` would fight the telemetry constraint
-that `mode` is `NULL` exactly when `surface = DECK`.
+**The weight vector is `fun` for every viewer and no mode crosses the wire** ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §2, superseding
+the `COMPETITIVE → comp`, `NO_PREFERENCE → fun` mapping that stood here). The deck reads no
+declaration; `INTENT_ALIGNMENT` stands down on it. The response echoing a `mode` would still
+fight the telemetry constraint that `mode` is `NULL` exactly when `surface = DECK`, and
+`intent_read` below still records what the viewer had declared, for history rather than for the
+vector. The envelope gains **`pool.remaining`** and **`pool.want_to_play_you`** (ADR-0169 §4,
+§5).
 
 > **Amendment to [`search-telemetry.md`](search-telemetry.md), found here.** That constraint
 > left the deck's own weight vector **unrecorded**: nothing on the `search` row says which

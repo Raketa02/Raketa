@@ -1,25 +1,31 @@
-"""*Match me* — one deal, and everything the deck decides for itself.
+"""The Players deal — one deal, and everything the deck decides for itself.
 
 **The order is the shortlist's order**, and it is load-bearing for the same
 reasons: read the searcher live, bind one snapshot with every live gate fact, run
 the pipeline, write the record and commit it before the answer goes anywhere,
 then note exposure. All of that is ``search_workbench.py``'s.
 
-**What is the deck's own is four things, and each of them is a refusal of
+**What is the deck's own is five things, and each of them is a refusal of
 something the shortlist does.**
 
-*It takes no mode.* The weight vector is resolved backend-side from the viewer's
-own declared Play intent — ``NO_PREFERENCE → fun``, never a third vector — and
-the **declaration as it stood** is what the record keeps, so a later change to
-the mapping does not rewrite history. The two travel together because they come
-from **one read**: the mode is a function of the declaration
-:meth:`SearchWorkbench.searcher_facts` applies to the row it just loaded.
+*It takes no mode and reads no declaration* (``docs/adr/0169`` §2). Every deal
+scores under the fun ruler, for every viewer, declared or not — the deck is a
+discovery surface, and *who would I like to play with?* is not a question about
+the kind of evening — so ``play_intent_not_declared`` is never raised here. The
+**declaration as it stood** is still what the record keeps, for history: for a
+viewer who never declared, as it stood is nothing.
 
-*It excludes three populations the shortlist does not.* Passed within
-``PASS_SUPPRESS``, already asked, already dealt. None of them is a gate — a gate
-is a statement about the city and these are statements about one player's own
-deck — and the first is **counted onto the record**, because it is the only thing
-that tells *your own passes emptied your deck* apart from *the pool is empty*.
+*It excludes four populations the shortlist does not.* Passed within
+``PASS_SUPPRESS``, already asked, already dealt, and **cooling off** — somebody
+the viewer has a court with, or had one with inside ``deck_cool_off_days``
+(``docs/adr/0169`` §6). None of them is a gate — a gate is a statement about the
+city and these are statements about one player's own deck — and the first is
+**counted onto the record**, because it is the only thing that tells *your own
+passes emptied your deck* apart from *the pool is empty*. **Three of the four
+read the viewer's last *Show them again*** (``docs/adr/0169`` §5): one moment
+off the reset ledger, applied to the pass record, the search record and the
+courts each in its own way, so that a reset clears them together and touches
+none of them.
 
 *The relaxation ladder does not reach it* (``docs/adr/0099``). There are no rung
 offers on a deal and no offer for a later one to cite, so ``rung_offers`` is
@@ -32,42 +38,45 @@ than a convenient spelling of it.
 not exhausting the pool**: the honest empty state belongs to a fresh deal that
 came back with nothing, never to a player who has seen ten of forty.
 
+*It says two numbers no other surface can* (``docs/adr/0169`` §4, §5): how many
+eligible people are beyond this hand, and how many people are waiting on the
+viewer. Both ride on the deal and on nothing else — they are as fresh as the
+hand, and a read-back a month later would print a count about a pool that has
+moved on.
+
 **Suppression fails soft and that is the whole point of it being a cache.** A
 deal during a Redis outage may repeat a card the player passed on last week; the
 alternative reading — *exclude what we could not check* — empties the deck in a
-city that has people in it. The durable pass record is untouched either way.
+city that has people in it. The durable pass record is untouched either way. The
+cool-off's read fails soft for the same reason, and it is a port rather than a
+cache.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import final
+from datetime import datetime
+from typing import Mapping, final
 from uuid import UUID
 
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
 from app.kernel import Instant, InvariantViolated
 from app.modules.matchmaking.application.commands import RunDeckDealCommand
+from app.modules.matchmaking.application.deck_exclusions import DeckExclusionReads
 from app.modules.matchmaking.application.search_workbench import (
     AnsweredCandidate,
     SearchWorkbench,
 )
 from app.modules.matchmaking.domain.deck import (
-    DEALT_MEMORY,
+    INHERITED_ON_THE_DECK,
     Deal,
-    DeckExclusions,
     deal,
-    mode_for_intent,
 )
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.index_staleness import IndexFreshness
-from app.modules.matchmaking.domain.interest import InterestLedger
-from app.modules.matchmaking.domain.ledgers import SuppressionLedger
-from app.modules.matchmaking.domain.passes import (
-    PassLedger,
-    suppression_lapsed_at,
-)
+from app.modules.matchmaking.domain.passes import suppression_lapsed_at
 from app.modules.matchmaking.domain.prompts import (
     RaisedPrompt,
     improvised_week,
@@ -77,7 +86,6 @@ from app.modules.matchmaking.domain.search_context import (
     SearchContext,
     SearcherFacts,
 )
-from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.domain.searches import (
     PoolDescription,
     SearchInitiation,
@@ -112,6 +120,14 @@ class DeckAnswer:
 
     record: SearchRecord
     sorts_available: tuple[SortOption, ...]
+    #: The people eligible after every deck exclusion who are not in this hand
+    #: (``docs/adr/0169`` §5). On the answer and not on the record, because it
+    #: is true of the moment the hand was dealt and of no later one.
+    remaining: int
+    #: How many people have a live yes towards the viewer that would be dealt
+    #: (``docs/adr/0169`` §4). A count and never a list: the ledger has no read
+    #: that names them and this answer carries nothing that could.
+    want_to_play_you: int
     #: The questions this deal raises and does not answer. At most one: the week
     #: it ran on, when that is not the week on the profile.
     prompts: tuple[RaisedPrompt, ...] = ()
@@ -127,31 +143,28 @@ class RunDeckDeal:
         workbench: SearchWorkbench,
         ruleset: Ruleset,
         engine: MatchFit,
-        searches: SearchStore,
-        suppression: SuppressionLedger,
-        interest: InterestLedger,
-        passes: PassLedger,
+        held_out: DeckExclusionReads,
     ) -> None:
         self._work = workbench
         self._ruleset = ruleset
         self._engine = engine
-        self._searches = searches
-        self._suppression = suppression
-        self._interest = interest
-        self._passes = passes
+        # **The four reads are shared with the radar** (``deck_exclusions.py``):
+        # its chip is this surface's rule, computed over these same stores, so
+        # there is one implementation of *whom the deck holds out* and the two
+        # chips cannot come to disagree.
+        self._held_out = held_out
 
     async def execute(self, command: RunDeckDealCommand) -> DeckAnswer:
         now = self._work.clock.now()
         stages: dict[str, int] = {}
 
         with self._work.timed(stages, "read_searcher"):
-            declared = await self._work.searcher_facts(
+            declared = await self._work.searcher_facts_under(
                 player_id=command.searcher_id,
                 sport=command.sport,
-                # **The deck's whole mode story, in one line.** It is a function
-                # of the declaration rather than a value, so the vector this deal
-                # runs under and the declaration recorded beside it are one read.
-                mode_of=lambda intent: mode_for_intent(intent, self._ruleset.intent),
+                # **The deck's whole mode story, in one line.** One ruler for
+                # everybody, and the declaration is loaded only to be recorded.
+                ruler=INHERITED_ON_THE_DECK,
             )
         await self._work.refuse_a_held_searcher(declared.player_id)
 
@@ -180,18 +193,27 @@ class RunDeckDeal:
                 surface=SearchSurface.DECK,
                 initiation=SearchInitiation.HUMAN,
                 for_a_newcomer=for_a_newcomer,
+                # **No challenge to except**: this surface names none, and the
+                # open-challenge gate excludes everybody the searcher is
+                # arranging with, exactly as it always has.
+                completing_challenge_id=None,
             )
 
         with self._work.timed(stages, "read_deck_exclusions"):
-            exclusions = await self._exclusions(command, in_box, now)
-            re_shows = await self._re_shows(command, in_box, now)
+            held_out = await self._held_out.for_a_deal(
+                searcher_id=command.searcher_id,
+                sport=command.sport,
+                in_box=in_box,
+                now=now,
+            )
+            re_shows = self._re_shows(held_out.passed_at, now)
 
         with self._work.scoring(stages):
             try:
                 dealt = deal(
                     context,
                     self._engine,
-                    exclusions=exclusions,
+                    exclusions=held_out.exclusions,
                     re_shows=re_shows,
                 )
             except InvariantViolated as broken:
@@ -221,54 +243,18 @@ class RunDeckDeal:
                 tuple(of_scored(row.scored) for row in rows),
                 surface=SearchSurface.DECK,
             ),
+            remaining=dealt.remaining,
+            want_to_play_you=dealt.want_to_play_you,
             # After the commit, like the shortlist's. The sheet rides on the
             # response of the route that used the week, so *Match me* has
             # already dealt by the time the question appears.
             prompts=() if week is None else (week,),
         )
 
-    # -- the three the deck adds to the gates --------------------------------
+    # -- the re-show flag ------------------------------------------------------
 
-    async def _exclusions(
-        self, command: RunDeckDealCommand, in_box: tuple[UUID, ...], now: Instant
-    ) -> DeckExclusions:
-        """Whom this deal holds out, and where each answer comes from.
-
-        Three reads, three stores, three different postures — which is the whole
-        of *the gate is the cache; the evidence is the row* seen from one method.
-
-        **Suppression** is the cache and it fails soft: an outage answers
-        *nobody*, which repeats a card rather than emptying a deal.
-        **Already asked** is the durable interest ledger, read over this player's
-        own outgoing yeses — their own rows, so it is not an inbox — and it lapses
-        with the yes, which is how ``INTEREST_TTL`` expiry *returns a person to
-        the deck*. **Already dealt** is the search record itself, bounded by
-        ``DEALT_MEMORY``, which is what makes a spent deal deal again.
-        """
-
-        suppressed = await self._suppression.suppressed_for(
-            passer_id=command.searcher_id, candidate_ids=in_box
-        )
-        outgoing = await self._interest.outgoing(
-            player_id=command.searcher_id, now=now
-        )
-        dealt = await self._searches.dealt_since(
-            searcher_id=command.searcher_id,
-            sport=command.sport,
-            since=now - DEALT_MEMORY,
-        )
-        return DeckExclusions(
-            suppressed=suppressed,
-            already_asked=frozenset(
-                yes.to_player_id
-                for yes in outgoing
-                if yes.sport is command.sport
-            ),
-            already_dealt=dealt,
-        )
-
-    async def _re_shows(
-        self, command: RunDeckDealCommand, in_box: tuple[UUID, ...], now: Instant
+    def _re_shows(
+        self, passed_at: Mapping[UUID, datetime], now: Instant
     ) -> frozenset[UUID]:
         """Which of these cards would be a **re-show**, from the record alone.
 
@@ -283,13 +269,15 @@ class RunDeckDeal:
         live-suppressed player is dealt; a flag derived from *the cache no longer
         holds them* would then call that a re-show, and the falsifier would be
         corrupted at exactly the moment extra re-shows are happening.
+
+        **A reset re-show is not flagged here, on purpose.** The flag says *the
+        window lapsed*, and after *Show them again* it has not: the card is dealt
+        with its pass inside the window. Which re-shows a reset caused is
+        answered by the reset ledger beside the pass record — a deal after the
+        reset moment, of somebody passed on before it — and that is the sample
+        ``docs/adr/0169`` §5 says the falsifier now has to exclude.
         """
 
-        passed_at = await self._passes.last_passed_at(
-            passer_id=command.searcher_id,
-            sport=command.sport,
-            candidate_ids=in_box,
-        )
         suppress_days = self._ruleset.interest.pass_suppress_days
         return frozenset(
             player_id
@@ -313,10 +301,12 @@ class RunDeckDeal:
     ) -> SearchRecord:
         """One deal's row, and the two columns only a deal ever writes.
 
-        ``mode`` is ``None`` and ``intent_read`` is the declaration, which the
-        record's own invariant asserts is a biconditional on the surface — and
-        the table asserts again in a check constraint, because one refuses a row
-        this build could write and the other refuses a row any writer could.
+        ``mode`` is ``None``, which the record's own invariant asserts is a
+        biconditional on the surface, and ``intent_read`` is the declaration as
+        it stood — ``None`` for a viewer who never made one, and set on no other
+        surface — which the invariant asserts too; the table asserts both again
+        in check constraints, because one refuses a row this build could write
+        and the other refuses a row any writer could.
 
         ``rung_offers`` is ``None`` — *not computed at all*, which is what the
         ladder not reaching the deck means — while ``radius_clamp_bit`` is still

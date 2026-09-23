@@ -21,9 +21,11 @@ import pytest
 from app.engines.matchfit.core import ReliabilityStrand
 from app.kernel import Instant, InvariantViolated, instant
 from app.modules.player_score.domain.strands import (
+    ANSWERED_RESULTS_WINDOW,
     PUBLISHED_WEIGHTS,
     PlayerScore,
     StrandRatio,
+    answered_results_since,
     out_of_a_hundred,
 )
 
@@ -118,8 +120,9 @@ def test_a_player_perfect_on_what_the_platform_can_see_is_published_at_a_hundred
 ) -> None:
     """The proof the basis is the strands present rather than the whole vector.
 
-    A blend over a hundred would cap somebody with two strands at 55, which reads
-    as a bad record and is really *we cannot see the rest of you*.
+    A blend over the whole vector would cap somebody with these two strands at
+    55, which reads as a bad record and is really *we cannot see the rest of
+    you*.
     """
 
     score = PlayerScore(
@@ -135,7 +138,7 @@ def test_a_player_perfect_on_what_the_platform_can_see_is_published_at_a_hundred
 def test_one_strand_alone_publishes_that_strand_s_own_figure() -> None:
     """A basis of one weight cancels, whichever weight it is.
 
-    Which is the honest answer while two of the five have a provider and most
+    Which is the honest answer while three of the six have a provider and most
     people have one of them: the number on the profile is what the platform has
     actually watched, and no weight can make a single observation say more.
     """
@@ -170,7 +173,7 @@ def test_every_strand_the_platform_has_a_word_for_carries_a_published_weight(
 
     A strand with no weight here would raise a ``KeyError`` inside the blend the
     day its provider landed — a runtime failure in a read, discovered by a player
-    rather than by a build. Three of the five have no provider and every one of
+    rather than by a build. Three of the six have no provider and every one of
     them is weighted, which is the point: the vector is written for the platform
     this will be, not the one it is.
     """
@@ -204,6 +207,49 @@ def test_the_struck_strand_has_no_weight_because_it_has_no_name() -> None:
 
     assert not hasattr(ReliabilityStrand, "CONFIRMS_RESULTS")
     assert "CONFIRMS_RESULTS" not in {strand.value for strand in PUBLISHED_WEIGHTS}
+
+
+def test_the_struck_strands_share_came_back_under_a_different_name() -> None:
+    """*Answers about results* enters at 15, the number *confirms results* held.
+
+    ``docs/adr/0140`` took the 15 out rather than redistributing it, precisely so
+    that a third live strand could take it back without anything else moving —
+    and this is that sentence being checkable. The other five are the numbers
+    they have always been.
+    """
+
+    assert PUBLISHED_WEIGHTS[ReliabilityStrand.ANSWERS_RESULTS] == 15
+    assert dict(PUBLISHED_WEIGHTS) == {
+        ReliabilityStrand.SHOWS_UP: 35,
+        ReliabilityStrand.ANSWERS_CHALLENGES: 20,
+        ReliabilityStrand.ANSWERS_RESULTS: 15,
+        ReliabilityStrand.KEEPS_PLANS: 12,
+        ReliabilityStrand.SETTLES_UP: 10,
+        ReliabilityStrand.SPORTSMANSHIP: 8,
+    }
+
+
+def test_the_one_window_here_agrees_with_the_matchers_horizon() -> None:
+    """**Two spellings of one judgement, and the cost is named** (``docs/adr/0160``).
+
+    This context may not read the matcher's ruleset — a provider importing the
+    consumer it serves is the arrow every port here keeps — so the twelve months
+    *answers about results* forgets after is written on this side and the
+    ``horizon_days`` past which the whole term stands down is written on the
+    other. Nothing at runtime makes them agree. This is what does, and it is the
+    reason the number cannot quietly drift.
+    """
+
+    from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
+
+    assert ANSWERED_RESULTS_WINDOW.days == LIVE_RULESET.reliability.horizon_days
+
+
+def test_the_window_narrows_and_never_widens_what_it_is_asked_about() -> None:
+    """The subtraction has one home, beside the number it subtracts."""
+
+    now = _AT
+    assert answered_results_since(now) == now - ANSWERED_RESULTS_WINDOW
 
 
 def test_a_blend_and_a_strand_round_through_the_same_function() -> None:

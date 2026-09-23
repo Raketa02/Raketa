@@ -17,7 +17,7 @@ ECS_SERVICE      ?= raketa-service
 
 .PHONY: help install test lint lint-imports format typecheck check test-gates openapi \
         gen-walkthroughs gen-cohort \
-        build-dev up down logs ps shell migrate seed seed-host \
+        build-dev up down down-v logs ps shell migrate seed seed-host sim-location \
         rebuild-candidate-index rebuild-candidate-index-host \
         photo-flag-rate photo-flag-rate-host \
         build-prod ecr-login ecr-push ecs-deploy
@@ -87,6 +87,9 @@ up:                ## bring up the dev stack (Postgres 17 + API + MinIO + photo-
 down:              ## tear down the dev stack
 	$(COMPOSE_LOCAL) down
 
+down-v:            ## tear down the dev stack AND drop its volumes — a fresh store next `make up`
+	$(COMPOSE_LOCAL) down -v
+
 logs:              ## tail api logs
 	$(COMPOSE_LOCAL) logs -f api
 
@@ -109,6 +112,18 @@ seed:              ## seed deterministic dev accounts into the running stack's d
 
 seed-host:         ## the same seed from the host — needs .env, like host-run uvicorn
 	poetry run python -m app.seeds
+
+# Where the seed is centred, as `make seed` will read it: the shell's SEED_CENTRE,
+# else .env.docker's, else the reference (London). The value is parsed by the
+# seed's own parser below rather than restated here, so the simulator and the
+# population cannot be pinned to two different cells.
+SEED_CENTRE ?= $(shell grep -E '^SEED_CENTRE=' .env.docker 2>/dev/null | tail -1 | cut -d= -f2-)
+
+sim-location:      ## pin the booted iOS simulator to the seed's centre (SEED_CENTRE, .env.docker, or London)
+	@centre=$$(SEED_CENTRE="$(SEED_CENTRE)" poetry run python -c \
+	  "from app.seeds.catalog import CENTRE; print(f'{CENTRE.latitude},{CENTRE.longitude}')" 2>/dev/null) \
+	  && xcrun simctl location booted set "$$centre" \
+	  && echo "iOS simulator pinned to $$centre — the seed's centre. Re-run after every simulator boot."
 
 ## ----- the candidate index (docs/adr/0110)
 ## The index is a projection of the event log, so a corrupt one is a command and

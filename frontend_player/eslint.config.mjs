@@ -78,6 +78,26 @@ const imagePickerImport = {
     'in a test — a native module has no JS implementation a test could drive.',
 };
 
+const liveStreamImport = {
+  group: ['react-native-sse'],
+  message:
+    'Only src/shared/lib/platform/liveStream.ts may import react-native-sse. A transport ' +
+    'cannot be driven from a test, so a screen that opened its own stream is a screen no ' +
+    'suite can put in front of a severed one — and one file owning the app’s only ' +
+    'long-lived connection is what keeps close-on-background and reconnect-with-a-fresh-token ' +
+    'in one place. Use the LiveStreamPort from @/shared/lib/platform, and fakeLiveStream() ' +
+    'from src/test-support/platform.ts in a test. See docs/adr/0147.',
+};
+
+const hapticsImport = {
+  group: ['expo-haptics'],
+  message:
+    'Only src/shared/lib/platform/haptics.ts may import expo-haptics. A native module cannot be ' +
+    'driven from a test, and *exactly one buzz, and none under reduced motion* is a rule a fake ' +
+    'can count — use the HapticsPort from @/shared/lib/platform, and fakeHaptics() from ' +
+    'src/test-support/platform.ts in a test. See docs/adr/0167 §2.',
+};
+
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -98,6 +118,28 @@ const featureImportsFromShared = {
     'src/shared/ must never import a feature — that reverses the dependency arrow and couples every future feature to this one. See docs/architecture.md Part 1.',
 };
 
+/**
+ * `features/games` never learns a plan exists — the one **one-way** edge between two features.
+ *
+ * [ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md) §4
+ * made *"`games` importing the Plan"* the **checkable** statement of ADR-0137's scoping, and
+ * [ADR-0149](../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+ * §1 carried it onto the client: `features/plans` may import `features/games`, and *"if
+ * `features/games` ever imports `features/plans`, the clause is broken — a grep, not a
+ * judgement."* This is that grep, and `pnpm test:boundaries` is what proves it still fires.
+ *
+ * It is one direction and not a wall: the card is composed at the **surface**, so the plan
+ * renders **into** the game screen as a child and neither type crosses.
+ */
+const planImportFromGames = {
+  group: ['@/features/plans', '@/features/plans/**', '**/features/plans/**', '../../plans/**'],
+  message:
+    'features/games must never import features/plans. A plan is composed at the surface and ' +
+    'renders into the game screen as a child, so games never learns a plan exists — that is ' +
+    'the client half of ADR-0145 §4, kept checkable by ADR-0149 §1. The arrow runs the other ' +
+    'way: features/plans may import features/games.',
+};
+
 const asyncStoragePath = {
   // Tokens belong in the OS keychain, not in JS-readable storage.
   name: '@react-native-async-storage/async-storage',
@@ -112,7 +154,37 @@ const CORE_PATTERNS = [
   secureStoreImport,
   locationImport,
   imagePickerImport,
+  liveStreamImport,
+  hapticsImport,
   observabilityVendorImports,
+];
+
+/**
+ * The two layers that stay pure TypeScript, as constants rather than as an inline literal.
+ *
+ * Named because a second block now needs exactly this set plus one ban — `features/games`' own —
+ * and a re-listing there is how the exemptions above go quietly out of date, which is the failure
+ * `sharedPatternsExcept` was written against one section down.
+ */
+const PURE_PATTERNS = [
+  ...CORE_PATTERNS,
+  generatedImports,
+  {
+    group: ['expo', 'expo-*', 'react-native', 'react-native-*', '@tanstack/*'],
+    message:
+      'domain/ and use-cases/ must stay pure TypeScript — no React Native, Expo, or data-fetching library. That purity is what makes them testable without a renderer.',
+  },
+];
+
+const PURE_PATHS = [
+  asyncStoragePath,
+  { name: 'react', message: 'domain/ and use-cases/ must stay pure TypeScript.' },
+  { name: 'react-native', message: 'domain/ and use-cases/ must stay pure TypeScript.' },
+  {
+    name: 'zustand',
+    message:
+      'State lives in store/ or hooks/, not in a domain rule. domain/ is pure functions over plain data.',
+  },
 ];
 
 const restrict = (patterns, paths = [asyncStoragePath]) => ['error', { patterns, paths }];
@@ -243,32 +315,7 @@ export default [
   // --- domain/ and use-cases/ are pure: no React, no RN, no Expo, no wire -----
   {
     files: ['src/features/*/domain/**', 'src/features/*/use-cases/**'],
-    rules: {
-      'no-restricted-imports': restrict(
-        [
-          ...CORE_PATTERNS,
-          generatedImports,
-          {
-            group: ['expo', 'expo-*', 'react-native', 'react-native-*', '@tanstack/*'],
-            message:
-              'domain/ and use-cases/ must stay pure TypeScript — no React Native, Expo, or data-fetching library. That purity is what makes them testable without a renderer.',
-          },
-        ],
-        [
-          asyncStoragePath,
-          { name: 'react', message: 'domain/ and use-cases/ must stay pure TypeScript.' },
-          {
-            name: 'react-native',
-            message: 'domain/ and use-cases/ must stay pure TypeScript.',
-          },
-          {
-            name: 'zustand',
-            message:
-              'State lives in store/ or hooks/, not in a domain rule. domain/ is pure functions over plain data.',
-          },
-        ],
-      ),
-    },
+    rules: { 'no-restricted-imports': restrict(PURE_PATTERNS, PURE_PATHS) },
   },
 
   // --- shared/ is beneath every feature and may not reach back up -------------
@@ -277,7 +324,7 @@ export default [
     rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS) },
   },
 
-  // --- the four sanctioned exceptions -----------------------------------------
+  // --- the five sanctioned exceptions -----------------------------------------
   {
     // The single chokepoint for credentials (ADR-0008).
     files: ['src/shared/lib/auth/**'],
@@ -296,6 +343,28 @@ export default [
     // Likewise: the photo library, and not the position.
     files: ['src/shared/lib/platform/imagePicking.ts'],
     rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(imagePickerImport)) },
+  },
+  {
+    // The live channel — and it is exempt from **two** bans, which no other file is.
+    //
+    // `react-native-sse` for the reason above: one file owns the transport. And
+    // `src/generated/` because ADR-0147 §7 requires the client to read the live envelope as the
+    // GENERATED type rather than as a hand-written mirror of it, and a stream body is not a
+    // response model — so the operation's own `200` generates as `unknown` and the frame is
+    // parsed against `LiveNudgeSchema` by name. The wire boundary's rule is that transport types
+    // stay out of components, hooks and domain; the module that reads the socket is the api/
+    // layer of this one route, and it has nowhere else to be, because a feature's api/ may not
+    // import the transport.
+    files: ['src/shared/lib/platform/liveStream.ts'],
+    rules: {
+      'no-restricted-imports': restrict(sharedPatternsExcept(liveStreamImport, generatedImports)),
+    },
+  },
+  {
+    // The motor — one verb, one file, the same one-file-wide exemption as the two native ports
+    // above it.
+    files: ['src/shared/lib/platform/haptics.ts'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(hapticsImport)) },
   },
   {
     // The single place fetch is configured.
@@ -332,6 +401,43 @@ export default [
     rules: { 'no-restricted-syntax': 'off' },
   },
 
+  // --- the one one-way edge between two features ------------------------------
+  //
+  // `features/plans` may import `features/games`; `features/games` may never import
+  // `features/plans` (ADR-0149 §1, keeping ADR-0145 §4's clause checkable on this side of the
+  // wire). It is **three blocks and not one**, because flat config replaces a rule rather than
+  // adding to it: a single `src/features/games/**` block would put the wire-type ban back over
+  // that feature's own api/ and mappers/, and would drop the purity ban from its domain/. Each
+  // block therefore restates the baseline block it shadows — by its constant, never by hand —
+  // with this one ban added.
+  //
+  // **`features/games` → `features/play` and `→ features/player_record` are declared edges,
+  // and neither is a ban's mirror.** #415 has the game screen's forecast block cite Play's
+  // balance words and level row through `play/types.ts` — `balanceWord`, `balanceTone`,
+  // `balanceLabel`, `levelRow` — rather than copy §B9's breaks a third time: words and a
+  // formatter, no screen and no state. The players card beside it opens `player_record`'s
+  // `PlayerRecordSheet` — a screen, on the same seam Play's builder already crosses — and
+  // borrows its `(you)` mark. Nothing here forbids either, because feature-to-feature imports
+  // through a `types.ts` are the sanctioned shape; they are written down so the next reader of
+  // this block does not take the one-way ban above for a rule that `games` imports nothing,
+  // and `scripts/test-import-boundaries.sh` asserts both edges stay open.
+  {
+    files: ['src/features/games/**'],
+    rules: {
+      'no-restricted-imports': restrict([...CORE_PATTERNS, generatedImports, planImportFromGames]),
+    },
+  },
+  {
+    files: ['src/features/games/api/**', 'src/features/games/mappers/**'],
+    rules: { 'no-restricted-imports': restrict([...CORE_PATTERNS, planImportFromGames]) },
+  },
+  {
+    files: ['src/features/games/domain/**', 'src/features/games/use-cases/**'],
+    rules: {
+      'no-restricted-imports': restrict([...PURE_PATTERNS, planImportFromGames], PURE_PATHS),
+    },
+  },
+
   // --- tests may describe the wire, because that is what makes drift fail ------
   {
     // A test's fake responses are typed from the generated schema on purpose: a
@@ -352,8 +458,9 @@ export default [
     // Jest's setup file runs *inside* the test environment, where the runner injects
     // `jest` as a global. Nothing in the file's location tells ESLint that, and the
     // test-file block above is keyed on `*.test.*` — which a setup file deliberately is
-    // not, because `testMatch` would then try to run it as a suite.
-    files: ['jest.setup.js'],
+    // not, because `testMatch` would then try to run it as a suite. The second file is
+    // the configuration's too: what `jest.config.js` maps reanimated's mock to.
+    files: ['jest.setup.js', 'src/test-support/reanimatedActual.js'],
     languageOptions: { globals: { jest: 'readonly' } },
   },
 

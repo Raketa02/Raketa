@@ -68,7 +68,7 @@ const finish = () => control(OPT_IN_FINISH_LABEL);
 const recorded = () => useProfileDraft.getState().draft?.proposalsOptIn;
 
 /**
- * A launch by a player the gate owes the second part to, walked to the last of the seven.
+ * A launch by a player the gate owes the second part to, walked to the last of the eight.
  *
  * **The area is captured on the way through**, which is not incidental to this suite: the
  * finish is closed for a part that is short of one, and a walk that skipped it would prove
@@ -86,7 +86,10 @@ async function reachTheOptInStep() {
   fireEvent.press(await screen.findByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
   fireEvent.press(await screen.findByLabelText('Continue'));
+  await waitFor(() => expect(screen).toHavePathname('/intro'));
 
+  // Nothing written: the intro is optional, and *Next* on an empty box carries none.
+  fireEvent.press(screen.getByLabelText('Next'));
   await waitFor(() => expect(screen).toHavePathname('/photos'));
   fireEvent.press(screen.getByLabelText('Continue'));
 

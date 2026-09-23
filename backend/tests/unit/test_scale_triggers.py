@@ -127,12 +127,15 @@ def test_the_trigger_reproduces_the_postures_own_stated_bound() -> None:
     assertion instead of leaving the document quietly wrong. It moved once, and
     that is the whole of #276: the figure said ~64 000 while ``BYTES_PER_ROW``
     was 782, which was measured against the row ``matchmaking-engine.md`` §7.2
-    *specified* and never against the row this codebase holds.
+    *specified* and never against the row this codebase holds. It moved again,
+    by 25 bytes a row, when the row gained the intro (``docs/adr/0170``) — and
+    the sentence in the document did not have to, because *roughly 25 000*
+    still holds.
     """
 
     footprint = footprint_of(rows=0, workers=4, limit_bytes=ONE_GB)
-    assert footprint.rows_at_trigger == 62_782
-    assert footprint.players_at_trigger == 25_112
+    assert footprint.rows_at_trigger == 62_003
+    assert footprint.players_at_trigger == 24_801
 
 
 def test_the_refresh_holds_one_copy_of_a_row_and_the_multiplier_is_named() -> None:

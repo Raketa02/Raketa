@@ -13,6 +13,7 @@
  */
 
 export { SocialTagsStep } from './components/SocialTagsStep';
+export { SocialIntroStep } from './components/SocialIntroStep';
 export { SocialPhotosStep } from './components/SocialPhotosStep';
 export { SocialAvailabilityStep } from './components/SocialAvailabilityStep';
 export { SocialLocationStep } from './components/SocialLocationStep';
@@ -45,22 +46,6 @@ export type { Gender, GenderPreference } from './domain/gender';
 export { useSocialStepAdmission, type SocialStepAdmission } from './hooks/useSocialStepAdmission';
 
 /**
- * Which poster a player id gets — exported because **Play draws other people's**.
- *
- * A candidate with no photograph gets the generated poster on every card in Play, and the
- * design system's contract is that *one player id always produces one poster*: the drawing is
- * `CourtPoster`'s and both sets it chooses from are the theme's, but **which** member of them
- * an id maps to is a feature's, and this is the feature that decided it. A second copy of the
- * hash in `play/` would be two posters for one person the day either copy is touched — which
- * is the drift `Tick` was extracted to prevent, in a place a type could not see it.
- *
- * It is a **re-export rather than a promotion to `shared/`**: `recoveryMessage.ts`'s rule is
- * that the *third copy* is the signal to move something, and there is no second copy. The
- * cross-feature import goes through this surface, which is what this file is for.
- */
-export { COURT_POSTER_COUNT, courtPosterFor } from './components/courtPosterFraming';
-
-/**
  * **The profile surface Play reads, and the two writes beside it.**
  *
  * One read of the week, the radius and the per-sport declaration
@@ -85,15 +70,80 @@ export {
 } from './hooks/useProfileSurface';
 
 /**
- * **The You tab's first real section** — one row per rated sport, and what each one has
- * declared ([#296](https://github.com/Raketa02/Raketa/issues/296)).
- *
- * Named by `shell`'s `YouScreen` and by nothing else. It is here rather than in `play/` for the
- * reason `PlayerProfileSurface` gives about the read it is drawn from: the three writes are
- * this feature's, and *You* was always going to draw the same three facts. It writes with
- * `PROFILE_SCREEN`, the one value of `PlayIntentSurface` that had no client behind it.
+ * **The location moves on a cold start** — silently, after a day in the background, never on
+ * a plain foreground ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §6). Called by the `(app)` layout with the entry gate's own answer, because that is the
+ * branch that knows a player is signed in and past onboarding; the feature owns the read, the
+ * coarsening and the write, and the layout owns nothing but the moment.
  */
-export { PlayIntentsSection } from './components/PlayIntentsSection';
+export { useLocationRefresh } from './hooks/useLocationRefresh';
+
+/**
+ * **This feature's rows on the You tab, and the screens behind them**
+ * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §1–§2). The shell composes the tab and names the rows; the route files under
+ * `(app)/(tabs)/you/` name the screens. Each row is a title, a live line off the read that
+ * carries the fact, and a door; each screen is the onboarding step's control under the tab's
+ * chrome with a *Save* — the week, the radius, the tags, the intro, each of the two gender
+ * groups — or written on every change to the row — the photos — or on every press — the
+ * opt-in — or the section as built, behind a row.
+ *
+ * `PlayIntentsSection` ([#296](https://github.com/Raketa02/Raketa/issues/296)) is drawn by
+ * `WhatKindOfGameScreen` and stays internal; `AreaUpdatesNote` moved into *Where you play*
+ * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §6), and its sentence `AREA_UPDATES_LINE` is exported for the suites that hold the tab to
+ * its words, as the rows' words are.
+ */
+export {
+  GameSuggestionsRow,
+  HowFarToLookRow,
+  IntroRow,
+  PhotosRow,
+  TagsRow,
+  WhatKindOfGameRow,
+  WhereYouPlayRow,
+  WhoYouPlayWithRow,
+  YourWeekRow,
+  type YouRowProps,
+} from './components/YouRows';
+export { YourWeekScreen } from './components/YourWeekScreen';
+export { HowFarToLookScreen } from './components/HowFarToLookScreen';
+export { WhereYouPlayScreen } from './components/WhereYouPlayScreen';
+export { WhatKindOfGameScreen } from './components/WhatKindOfGameScreen';
+export { PhotosScreen } from './components/PhotosScreen';
+export { TagsScreen } from './components/TagsScreen';
+export { IntroScreen } from './components/IntroScreen';
+export { WhoYouPlayWithScreen } from './components/WhoYouPlayWithScreen';
+export { GameSuggestionsScreen } from './components/GameSuggestionsScreen';
+export { AREA_UPDATES_LINE } from './components/locationPresentation';
+export {
+  AREA_LINE,
+  AREA_SET,
+  CLEAR_ALL,
+  GAME_SUGGESTIONS_TITLE,
+  HOW_FAR_TO_LOOK_TITLE,
+  INTRO_TITLE,
+  KIND_OF_GAME_LINE,
+  PHOTOS_TITLE,
+  READ_AGAIN,
+  REMOVE_INTRO,
+  SAVE,
+  SAVED,
+  SAVE_YOUR_WEEK,
+  TAGS_TITLE,
+  WHAT_KIND_OF_GAME_TITLE,
+  WHERE_YOU_PLAY_TITLE,
+  WHO_YOU_PLAY_WITH_TITLE,
+  YOUR_WEEK_TITLE,
+  gameSuggestionsLine,
+  introLine,
+  kindOfGameLine,
+  photosLine,
+  radiusLine,
+  tagsLine,
+  weekLine,
+  whoYouPlayWithLine,
+} from './components/youProfilePresentation';
 
 /**
  * The bounds a Search radius is held inside, and the words the figure is read with.

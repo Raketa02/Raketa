@@ -37,6 +37,7 @@ from app.modules.matchmaking.domain.searches import (
     LineupRecord,
     RecordedCombination,
     PoolDescription,
+    RatedSportRecord,
     RecordedCard,
     SearchCandidateRecord,
     SearchInitiation,
@@ -147,6 +148,34 @@ class SqlAlchemySearchStore:
             )
         )
         return int(counted.scalar_one())
+
+    async def sports_shown_in(
+        self, *, searcher_id: UUID, player_id: UUID
+    ) -> frozenset[Sport]:
+        """Every sport this searcher's own searches have shown that player in.
+
+        **Distinct sports and not searches**, which is what keeps the answer
+        small however many times a pair have been shown to each other: the caller
+        needs a partition to evaluate a gate in, and a hundred padel searches are
+        one partition.
+
+        Three predicates, and each is one of this port's standing rules: the
+        searcher, because *the searcher may read their own rows and nobody
+        else's*; the player, because this is a question about a pair; and the
+        band, because a near-miss row was shown to nobody at all.
+        """
+
+        rows = await self._session.scalars(
+            select(SearchORM.sport)
+            .distinct()
+            .join(SearchCandidateORM, SearchORM.id == SearchCandidateORM.search_id)
+            .where(
+                SearchORM.searcher_id == searcher_id,
+                SearchCandidateORM.player_id == player_id,
+                SearchCandidateORM.band == CandidateBand.RETURNED.value,
+            )
+        )
+        return frozenset(Sport(sport) for sport in rows)
 
     async def dealt_since(
         self, *, searcher_id: UUID, sport: Sport, since: datetime
@@ -270,24 +299,29 @@ def _lineup_blob(lineup: LineupRecord) -> dict[str, Any]:
     and allowed to change with the group vector.
     """
 
-    return {
+    blob: dict[str, Any] = {
         "combinations": lineup.combinations,
         "refused_by_gate": lineup.refused_by_gate,
         "refused_by_floor": lineup.refused_by_floor,
         "max_fit_rank_seated": lineup.max_fit_rank_seated,
-        "rows": [
-            {
-                "band": row.band.value,
-                "members": [str(one) for one in row.members],
-                "partner_id": str(row.partner_id),
-                "terms": [dict(term) for term in row.terms],
-                "degraded_terms": list(row.degraded_terms),
-                "side_gap": row.side_gap,
-                "forecast_pct": row.forecast_pct,
-            }
-            for row in lineup.rows
-        ],
     }
+    # Written only when recorded, so that its absence on the way back still
+    # reads as *not recorded* rather than as a null somebody wrote on purpose.
+    if lineup.seated is not None:
+        blob["seated"] = [str(one) for one in lineup.seated]
+    blob["rows"] = [
+        {
+            "band": row.band.value,
+            "members": [str(one) for one in row.members],
+            "partner_id": str(row.partner_id),
+            "terms": [dict(term) for term in row.terms],
+            "degraded_terms": list(row.degraded_terms),
+            "side_gap": row.side_gap,
+            "forecast_pct": row.forecast_pct,
+        }
+        for row in lineup.rows
+    ]
+    return blob
 
 
 def _lineup_record(blob: Mapping[str, Any] | None) -> LineupRecord | None:
@@ -301,11 +335,15 @@ def _lineup_record(blob: Mapping[str, Any] | None) -> LineupRecord | None:
 
     if blob is None:
         return None
+    seated = blob.get("seated")
     return LineupRecord(
         combinations=blob["combinations"],
         refused_by_gate=blob["refused_by_gate"],
         refused_by_floor=blob["refused_by_floor"],
         max_fit_rank_seated=blob["max_fit_rank_seated"],
+        # Absent on a row written while the returned band was the seated, and
+        # ``None`` is what that means: *not recorded*, never *nobody*.
+        seated=None if seated is None else tuple(UUID(one) for one in seated),
         rows=tuple(
             RecordedCombination(
                 band=CombinationBand(row["band"]),
@@ -486,6 +524,15 @@ def _candidate_row(
             }
         ),
         suppression_lapsed=candidate.suppression_lapsed,
+        bearing_deg=candidate.bearing_deg,
+        ratings=(
+            None
+            if candidate.ratings is None
+            else [
+                {"sport": rated.sport.value, "level": rated.level}
+                for rated in candidate.ratings
+            ]
+        ),
     )
 
 
@@ -509,17 +556,21 @@ def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
     The record block goes down the same way: ``player_score`` and
     ``counted_games`` as ``None`` where the player had none, which is the
     **omission** the wire draws and never a nought, and ``last_five`` as its
-    codes, oldest first, **unpadded**.
+    codes, oldest first, **unpadded**. So does ``intro`` — the one line of a
+    person's own words this row keeps, ``None`` where they wrote none, and
+    recorded here so a read-back quotes what the deal showed rather than what
+    the profile says now (``docs/adr/0170`` §3).
     """
 
     if card is None:
         return None
     return {
-        "nickname": card.nickname,
+        "name": card.name,
         "photo_id": None if card.photo_id is None else str(card.photo_id),
         "review": None if card.review is None else card.review.value,
         "area_code": card.area_code,
         "social_tags": list(card.social_tags),
+        "intro": card.intro,
         "level": card.level,
         "band": card.band,
         "range_low": card.range_low,
@@ -568,6 +619,15 @@ def _candidate_record(row: SearchCandidateORM) -> SearchCandidateRecord:
             )
         ),
         suppression_lapsed=row.suppression_lapsed,
+        bearing_deg=row.bearing_deg,
+        ratings=(
+            None
+            if row.ratings is None
+            else tuple(
+                RatedSportRecord(sport=Sport(rated["sport"]), level=rated["level"])
+                for rated in row.ratings
+            )
+        ),
     )
 
 
@@ -584,11 +644,15 @@ def _recorded_card(blob: Mapping[str, Any] | None) -> RecordedCard | None:
     # card this build cannot have shown.
     review = blob.get("review")
     return RecordedCard(
-        nickname=blob["nickname"],
+        name=blob["name"],
         photo_id=None if photo_id is None else UUID(photo_id),
         review=None if review is None else PhotoReviewDecision(review),
         area_code=blob["area_code"],
         social_tags=tuple(blob["social_tags"]),
+        # **A soft key, for ``review``'s reason.** A blob written before
+        # ``docs/adr/0170`` showed no line, and *no intro* is exactly what the
+        # absence means — so nothing is invented by reading it as one.
+        intro=blob.get("intro"),
         level=blob["level"],
         band=blob["band"],
         # **A hard key, like every other fact on this card.** There is no blob

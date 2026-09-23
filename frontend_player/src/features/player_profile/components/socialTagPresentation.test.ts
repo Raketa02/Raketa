@@ -11,26 +11,47 @@ import {
   socialTagCeilingTitle,
   socialTagsContinueLabel,
   socialTagsEyebrow,
+  socialTagsRule,
+  socialTagsSaveLabel,
 } from './socialTagPresentation';
 
 describe('the eyebrow', () => {
   it('carries the served rule alongside the position', () => {
     // Story 18: the floor is learned by reading the screen rather than by being stopped.
     expect(socialTagsEyebrow({ minimum: 2, maximum: 6 })).toBe(
-      'Setting up · Step 1 of 7 · Pick 2 to 6',
+      'Setting up · Step 1 of 8 · Pick 2 to 6',
     );
   });
 
   it('quotes the numbers that were served, not the ones this build expects', () => {
     expect(socialTagsEyebrow({ minimum: 3, maximum: 5 })).toBe(
-      'Setting up · Step 1 of 7 · Pick 3 to 5',
+      'Setting up · Step 1 of 8 · Pick 3 to 5',
     );
   });
 
   it('states the position alone until the bounds have arrived', () => {
     // A range with a blank in it is a rule stated wrong, which is worse than a rule not yet
     // stated — and the chips it governs are not on screen yet either.
-    expect(socialTagsEyebrow(undefined)).toBe('Setting up · Step 1 of 7');
+    expect(socialTagsEyebrow(undefined)).toBe('Setting up · Step 1 of 8');
+  });
+
+  it('is the rule alone that the You tab cites under its own group title', () => {
+    expect(socialTagsRule({ minimum: 2, maximum: 6 })).toBe('Pick 2 to 6');
+  });
+});
+
+describe('the save control on the You tab', () => {
+  it('shuts under the floor in the step’s own words, with the verb changed', () => {
+    // ADR-0179 §2: *Continue* is *Save*, shut under the floor with the step's own words.
+    expect(socialTagsSaveLabel({ kind: 'short', missing: 2 }, true)).toBe('Pick 2 tags to save');
+    expect(socialTagsSaveLabel({ kind: 'short', missing: 1 }, true)).toBe(
+      'Pick 1 more tag to save',
+    );
+  });
+
+  it('says Save while the draft differs and Saved while it is the profile’s own', () => {
+    expect(socialTagsSaveLabel({ kind: 'ready' }, true)).toBe('Save');
+    expect(socialTagsSaveLabel({ kind: 'ready' }, false)).toBe('Saved');
   });
 });
 

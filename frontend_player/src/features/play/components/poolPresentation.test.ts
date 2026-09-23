@@ -8,7 +8,8 @@
  */
 
 import {
-  awaitingBalanceLine,
+  POOL_LINEUP_COST,
+  leavingLine,
   poolLadderTitle,
   poolSeatedLine,
   rungCount,
@@ -149,21 +150,35 @@ describe('the header', () => {
     expect(poolSeatedLine({ filled: 1, seats: 2 })).toBe('1 of 2 seated');
     expect(poolSeatedLine({ filled: 2, seats: 2 })).toBe('2 of 2 seated');
   });
+});
 
-  it('promises the balance against the half that is actually empty', () => {
-    expect(awaitingBalanceLine(4)).toBe(
-      'Add somebody to their side and a running balance appears here.',
+describe('what a pick off another search’s list costs', () => {
+  /**
+   * The court is bound to one search and the list is another's — ⚡'s own record, or the strict
+   * search a rung widened — and the new origin can vouch only for the rows it returned. Whom
+   * that costs is **named**, before the tap, because a count tells the player nothing they can
+   * weigh and the court is one screen away.
+   */
+  it('names who leaves the court, one person or several', () => {
+    expect(leavingLine(['dorota_w'])).toBe(
+      'dorota_w isn’t on this list, so adding somebody from it takes dorota_w off the court.',
     );
-    expect(awaitingBalanceLine(2)).toBe('Add your opponent and a running balance appears here.');
+    expect(leavingLine(['dorota_w', 'ewa.m'])).toBe(
+      'dorota_w and ewa.m aren’t on this list, so adding somebody from it takes them off the court.',
+    );
+  });
+
+  it('never prints a count in the place of the names', () => {
+    expect(leavingLine(['dorota_w', 'ewa.m', 'filip'])).not.toMatch(/\d/);
   });
 
   /**
-   * *Their side* rather than the prototype's *far side*, and the words are `SIDE`'s: this app
-   * has one spelling of that half, and a second one written out here is how the two drift with
-   * nothing to catch it. Both Sports this branch can reach do have a far side — only padel and
-   * badminton have four seats — so the refusal is about the vocabulary, not the geometry.
+   * The widening sentence is the same rule said before the climb: somebody added off the strict
+   * list stays only if the wider one has them too. It used to promise the court *starts again*,
+   * which stopped being true the moment a pick carried the seats the new list could vouch for.
    */
-  it('never says far side, in either court shape', () => {
-    for (const seats of [2, 4]) expect(awaitingBalanceLine(seats)).not.toMatch(/far side/i);
+  it('says the court stays only as far as the wider list can vouch for it', () => {
+    expect(POOL_LINEUP_COST).toMatch(/stays on the court only if the wider list has them too/);
+    expect(POOL_LINEUP_COST).not.toMatch(/starts again/);
   });
 });

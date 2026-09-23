@@ -13,6 +13,8 @@ import { httpRequest } from '@/shared/lib/http';
 type TokenResponse = components['schemas']['TokenResponse'];
 type UserResponse = components['schemas']['UserResponse'];
 type UserCreateRequest = components['schemas']['UserCreateRequest'];
+type NameRequest = components['schemas']['NameRequest'];
+type NamingResponse = components['schemas']['NamingResponse'];
 type LoginRequest = components['schemas']['LoginRequest'];
 type LogoutResponse = components['schemas']['LogoutResponse'];
 type RefreshRequest = components['schemas']['RefreshRequest'];
@@ -80,6 +82,30 @@ export function me({ signal }: AuthApiOptions = {}): Promise<UserResponse> {
   return httpRequest<UserResponse>({
     method: 'GET',
     path: '/api/v1/users/me',
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
+ * Name yourself — *How should people see you?* — the one act that names a player, and it is
+ * repeatable ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §2).
+ *
+ * Both fields, always: the server records one event carrying both, and there is none for one
+ * without the other. It answers with the name **as recorded** — trimmed, runs of whitespace
+ * collapsed — rather than with a `UserResponse`, and the refusal it carries is the users
+ * context's own `nickname_already_taken`, on `details.field`, for the screen to put under the
+ * box.
+ */
+export function nameMe(
+  body: NameRequest,
+  { signal }: AuthApiOptions = {},
+): Promise<NamingResponse> {
+  return httpRequest<NamingResponse>({
+    method: 'PUT',
+    path: '/api/v1/users/me/name',
+    body,
     authenticated: true,
     signal,
   });

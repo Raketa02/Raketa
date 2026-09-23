@@ -1,11 +1,20 @@
-"""Who played, on which side, and what kind of evening it was.
+"""Who is on the court, on which side, and what kind of evening it was.
 
-**The line-up is settled at the plan and never afterwards.** ``challenges``'
-invariant is that *an acceptance is to the game, not to the side* — the
-membership is fixed the moment the last seat accepts, and the arrangement is
-still the organiser's to choose. This context takes the arrangement as it stood
-at that instant and freezes it, because a result is about the two sides that
-played and there is nothing here that can move anybody.
+**The line-up is frozen until somebody leaves it** (``docs/adr/0162``).
+``challenges``' invariant is that *an acceptance is to the game, not to the
+side* — the membership is settled the moment the last seat accepts, and the
+arrangement is still the organiser's to choose. This context takes the
+arrangement as it stood at that instant, and moves it in exactly two ways, both
+told by ``challenges`` in the transaction of the act: a seat is **vacated** when
+its occupant leaves the game, and the court is **re-seated** when the next
+completed line-up arrives for it. Nothing here moves anybody on its own, and a
+result is still about the two sides that played — which is why a result is
+refused while a seat is open.
+
+**An open seat is a seat.** It is drawn empty, in its place, so a four with one
+seat open is still a four and the court still says which side is short. Dropping
+it would publish a three-person doubles game (``docs/adr/0141``), and that
+sentence survives: a seat is never dropped, and now it can be open.
 
 **One string per seating on the wire**, the precedent ``challenges`` set for its
 seats: the event codec coerces scalars only, so a tuple of dataclasses comes back
@@ -67,41 +76,65 @@ class GameKind(str, Enum):
 @final
 @dataclass(frozen=True, slots=True)
 class Seating:
-    """One person, on one side. **Both fields required** — an empty seat cannot
-    reach this context, because a line-up completes before a game is planned."""
+    """One position on one side: a person, or — since somebody may leave — an
+    **open seat**.
+
+    ``player_id`` is ``None`` exactly when the seat is open. A line-up completes
+    before a game is planned, so an open seat never arrives at the plan; it
+    arrives by a departure, and it is filled by a re-seat.
+    """
 
     side: GameSide
-    player_id: UUID
+    player_id: UUID | None
+
+    @property
+    def is_open(self) -> bool:
+        return self.player_id is None
+
+    def vacated(self) -> "Seating":
+        """The same position, with nobody in it."""
+
+        return Seating(side=self.side, player_id=None)
 
     @property
     def code(self) -> str:
-        """``A|<uuid>``. The durable spelling, and the only one."""
+        """``A|<uuid>``, or ``A|`` for an open seat. The durable spelling, and
+        the only one."""
 
-        return f"{self.side.value}{_FIELD}{self.player_id}"
+        occupant = "" if self.player_id is None else str(self.player_id)
+        return f"{self.side.value}{_FIELD}{occupant}"
 
     @classmethod
     def from_code(cls, code: str) -> "Seating":
         parts = code.split(_FIELD)
         invariant(len(parts) == 2, f"a seating code with {len(parts)} fields: {code!r}")
         side, player_id = parts
-        return cls(side=GameSide(side), player_id=UUID(player_id))
+        return cls(
+            side=GameSide(side),
+            player_id=None if player_id == "" else UUID(player_id),
+        )
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class LineUp:
-    """The court that played, in the order ``challenges`` handed it over.
+    """The court, in the order ``challenges`` handed it over.
 
-    **Both sides are occupied and nobody sits twice**, checked here rather than
-    trusted: this is the one place the arrangement crosses out of the context
-    that built it, and a court with an empty side would make *the opposing side*
-    a question with no answer.
+    **Every seat is present, occupied or open, and nobody sits twice**, checked
+    here rather than trusted: this is the one place the arrangement crosses out
+    of the context that built it, and a court with a side missing would make
+    *the opposing side* a question with no answer. A side may be **short** —
+    every seat on it open — because that is what a singles court looks like
+    when the opponent has left; the result refusal, not this invariant, is what
+    keeps a score off it.
     """
 
     seatings: tuple[Seating, ...]
 
     def __post_init__(self) -> None:
-        players = [seating.player_id for seating in self.seatings]
+        players = [
+            seating.player_id for seating in self.seatings if seating.player_id
+        ]
         invariant(
             len(players) == len(set(players)),
             "a line-up seating somebody twice",
@@ -109,7 +142,7 @@ class LineUp:
         for side in GameSide:
             invariant(
                 any(seating.side is side for seating in self.seatings),
-                f"a line-up with nobody on side {side.value}",
+                f"a line-up with no seat on side {side.value}",
             )
 
     @classmethod
@@ -126,12 +159,36 @@ class LineUp:
 
     @property
     def players(self) -> frozenset[UUID]:
-        """Everybody who played. **The people who may act**, and nobody else."""
+        """Everybody on the court. **The people who may act**, and nobody else.
 
-        return frozenset(seating.player_id for seating in self.seatings)
+        The leaver is not among them: a departure opens their seat, and the
+        people who may act on a game are the people on its court *now*.
+        """
+
+        return frozenset(
+            seating.player_id for seating in self.seatings if seating.player_id
+        )
+
+    @property
+    def is_complete(self) -> bool:
+        """Whether every seat is occupied. **False while anybody has left.**"""
+
+        return all(not seating.is_open for seating in self.seatings)
+
+    def vacated_by(self, player_id: UUID) -> "LineUp":
+        """The same court with this person's seat open. They must be on it."""
+
+        invariant(
+            self.side_of(player_id) is not None,
+            "a departure by somebody who is not on the court",
+        )
+        return LineUp.of(
+            seating.vacated() if seating.player_id == player_id else seating
+            for seating in self.seatings
+        )
 
     def side_of(self, player_id: UUID) -> GameSide | None:
-        """Which side this person played on, or ``None`` if they did not play."""
+        """Which side this person is on, or ``None`` if they are not on the court."""
 
         for seating in self.seatings:
             if seating.player_id == player_id:
@@ -140,7 +197,9 @@ class LineUp:
 
     def players_on(self, side: GameSide) -> frozenset[UUID]:
         return frozenset(
-            seating.player_id for seating in self.seatings if seating.side is side
+            seating.player_id
+            for seating in self.seatings
+            if seating.side is side and seating.player_id
         )
 
     def counterparts_of(self, player_id: UUID) -> frozenset[UUID]:

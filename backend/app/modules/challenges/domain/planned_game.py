@@ -1,24 +1,45 @@
-"""The one thing this context asks somebody else to **do**.
+"""The one thing this context asks somebody else to **do** — three times over.
 
-Every other outward seam here is a *read*: ``domain/ports.py`` holds the
-repository, the two log queries and the four gates, each answering a question
-about a fact this context does not own. This is the exception, and it is in its
-own module for the reason ``matchmaking``'s ``MutualChallengeMinting`` is — it is
-a command, and the tables that describe reads have nothing to say about one.
+Every seam on ``domain/ports.py`` is a *read* about a fact this context owns or
+can fold — the repository, the log queries and the four gates. This is the
+exception, and it is in its own module for the reason ``matchmaking``'s
+``MutualChallengeMinting`` is: it is a command, and the tables that describe
+reads have nothing to say about one.
 
-**It fires exactly once per challenge, at the instant the line-up completes.**
-That is the only moment the arrangement is knowable: every seat accepted, nobody
-left to answer, and the membership settled for good. Before it there is nothing
-to record; after it the sides may still be swapped, but who played may not change.
+``settled_game.py`` and ``seatable_game.py`` beside it are the other seams that
+left ``ports.py``, and for the neighbouring reason — they are reads, but about a
+**game**, which is the one thing here this context does not know the shape of.
+The four are one arrow (``challenges -> games``) written four times: this one
+hands an arrangement over, hands a departure over and hands a call-off over,
+one asks whether anything more will happen to what came of it, one asks
+whether its seats may still change, and ``game_of_court.py`` asks which game a
+court became.
 
-**Inline, in the transaction of the accept**, and not through the outbox.
+**It fires at the instant a line-up completes, again at the instant somebody
+leaves the game it became** (``docs/adr/0162``), **again when a departure
+leaves at most one player on the court** (``docs/adr/0165`` §3,
+``docs/adr/0175`` §2), **again when the hour finds a court still short of a
+player** (``docs/adr/0175`` §3) — each of those two recording the court's own
+ending beside it (``docs/adr/0172`` §1) — **and once for the reader's own
+act**, the dismissal of a called-off court's row (``docs/adr/0175`` §5). The
+first hand-over used to be the only one — *every seat accepted, nobody left to
+answer, and the membership settled for good* — and the membership is no longer
+settled for good: a player may leave a game that has not happened, the seat
+opens on both records, and the **next** completed line-up hands over a re-seat
+of the same game rather than the opening of another. Which of the two a
+completion is, is the other side's to say: this context hands over the court
+and learns back an id, or nothing. Nobody presses a call-off any more
+(``0175`` §1): a reopened court ends by its seats or by its hour, and the game
+is **called off**, the fourth end, in that transaction.
+
+**Inline, in the transaction of the act**, and not through the outbox.
 ``docs/adr/0003`` is this repository's convention for side effects and is right
 nearly everywhere; it loses here twice. A subscriber would have to **re-derive
 whether this accept completed the line-up** by reading this aggregate again from
 outside — a second reader of this log and a second author of what *on* means —
 when the use case that just folded it is holding the answer. And the player who
-taps the last accept would be told the game is on by a screen that cannot yet
-show it, for however long a poller takes.
+taps the last accept, or *leave*, would be told by a screen that cannot yet show
+it, for however long a poller takes.
 
 **This context still does not know what a game is.** It hands over an
 arrangement in its own vocabulary — sides as their codes, players as ids — and
@@ -34,12 +55,14 @@ from app.kernel import Instant, Sport
 
 
 @runtime_checkable
-class PlannedGameOpening(Protocol):
-    """*Everybody accepted — there is now a game they might play.*
+class PlannedGameHandover(Protocol):
+    """*Everybody accepted — there is now a game they might play.* And:
+    *somebody left — that seat on it is open.* And: *this court is called off —
+    the game it became is called off with it.*
 
-    Signed by an adapter that calls the ``games`` command, wired in the
+    Signed by an adapter that calls the ``games`` commands, wired in the
     composition root with every other choice of implementation. The two contexts
-    meet at one sentence and neither learns the other's aggregates.
+    meet at two sentences and neither learns the other's aggregates.
     """
 
     async def open_planned_game(
@@ -63,13 +86,67 @@ class PlannedGameOpening(Protocol):
         other side needs and this context has no vocabulary for an evening that
         is or is not evidence.
 
-        **``None`` is an ordinary answer and never an error.** A game already
-        opened for this challenge is the expected one: the accept path is
-        idempotent under a retry, and there is exactly one game per arrangement.
-        A raise here would roll back somebody's acceptance, which is not the
-        thing being refused.
+        **An id is a game opened or a game re-seated, and ``None`` is an
+        ordinary answer and never an error.** A game already standing whole for
+        this challenge is the expected one: the accept path is idempotent under a
+        retry, and there is exactly one game per arrangement. A game standing
+        with a seat open is re-seated with this court, keeping its id and its
+        ``planned_at``. A raise here would roll back somebody's acceptance,
+        which is not the thing being refused.
 
-        It does **not** commit. The opening and the accept that caused it are one
-        transaction, and the boundary stays the use case's.
+        It does **not** commit. The hand-over and the accept that caused it are
+        one transaction, and the boundary stays the use case's.
+        """
+        ...
+
+    async def vacate_seat(
+        self, *, challenge_id: UUID, player_id: UUID, occurred_at: Instant
+    ) -> None:
+        """This player has left the game this challenge became. **Their seat
+        opens on it.**
+
+        Called after the challenge has asked ``SeatableGameQuery`` whether the
+        game's seats may still change, so what the other side refuses is its own
+        half — a game that has happened, or never will — and a refusal there
+        rolls the departure back with it. It does **not** commit.
+        """
+        ...
+
+    async def call_off(
+        self, *, challenge_id: UUID, by: UUID | None, occurred_at: Instant
+    ) -> None:
+        """This court has been ended with a seat open, and it had become a game.
+        **That game is called off.**
+
+        Called only on a court that has been a game, on two occasions, and on
+        each the challenge has already recorded the court's own ending
+        (``docs/adr/0172`` §1). After a departure that deserted the court
+        (``docs/adr/0165`` §3, ``docs/adr/0175`` §2), right after
+        :meth:`vacate_seat` for the same person — ``by`` is the leaver, whose
+        departure is what ended it, the same actor ``ChallengeCalledOff``
+        names. And after the hour found the court still short of a player
+        (``docs/adr/0175`` §3) — ``by`` is ``None``, because nobody's act
+        ended it. The other side reads no moment guard for this; what it
+        decides on its own is that **a game already ended by its clock stays
+        the end it is** (``docs/adr/0163`` §6) — a ghost is not un-ghosted,
+        and the court's own ending still stands on its record. It does
+        **not** commit.
+        """
+        ...
+
+    async def dismiss(
+        self, *, challenge_id: UUID, by: UUID, occurred_at: Instant
+    ) -> None:
+        """This reader clears the called-off court this challenge became from
+        their own lists (``docs/adr/0175`` §5). **The game records it**, on the
+        court's word that they were asked.
+
+        The reader's own act and nobody else's fact — the same event the
+        rail's trash writes on the game's stream, reached from the Chats row
+        for everybody the court asked, seated on the game or not. The challenge
+        has already been loaded as one of the reader's and found ``CALLED_OFF``
+        before this is called; the other side asks only that the game agrees.
+        Once per player: a second dismissal writes nothing. It does **not**
+        commit.
         """
         ...

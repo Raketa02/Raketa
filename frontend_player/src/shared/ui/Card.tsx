@@ -17,18 +17,37 @@
  * the reader can act on is the one they cannot see.
  */
 
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  type AccessibilityActionEvent,
+  type AccessibilityActionInfo,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { forwardRef, type ReactNode } from 'react';
 
 import { theme } from './theme';
 
 export interface CardProps {
   readonly children: ReactNode;
+  /**
+   * 5.1's pressed border, drawn on a card whose **control is inside it** rather than around it.
+   *
+   * Now's game card is the one such surface: it carries two actions — the body, which is the
+   * whole statement, and the ✉ beside it, which goes somewhere else — so it cannot be a
+   * `PressableCard` without swallowing the second into the first's one accessibility element
+   * ([#367](https://github.com/Raketa02/Raketa/issues/367)). What it still owes the player is the
+   * press *state*, and that is this: the same coral outline `PressableCard` draws, from the same
+   * table, so a second surface cannot draw a different one.
+   */
+  readonly pressed?: boolean;
   readonly style?: StyleProp<ViewStyle>;
 }
 
-export function Card({ children, style }: CardProps) {
-  return <View style={[s.card, style]}>{children}</View>;
+export function Card({ children, pressed = false, style }: CardProps) {
+  return <View style={[s.card, pressed ? s.pressed : undefined, style]}>{children}</View>;
 }
 
 export interface PressableCardProps extends CardProps {
@@ -47,6 +66,17 @@ export interface PressableCardProps extends CardProps {
   readonly disabled?: boolean;
   readonly accessibilityLabel: string;
   readonly accessibilityHint?: string;
+  /**
+   * Acts on the card that are not the press — offered in a screen reader's actions rotor.
+   *
+   * A card in a list is one element and one door, and a second act on it that a sighted player
+   * reaches by a **gesture** — a swipe, which assistive technology consumes before the card
+   * sees it — has to be reachable by a listener some other way (`the-words.md` §20.12, *never
+   * the only path*). This is that way: each action is named, and `onAccessibilityAction` says
+   * which one was taken. Absent on every card that is only a door.
+   */
+  readonly accessibilityActions?: readonly AccessibilityActionInfo[];
+  readonly onAccessibilityAction?: (event: AccessibilityActionEvent) => void;
 }
 
 /**
@@ -64,6 +94,8 @@ export const PressableCard = forwardRef<View, PressableCardProps>(function Press
     disabled = false,
     accessibilityLabel,
     accessibilityHint,
+    accessibilityActions,
+    onAccessibilityAction,
   },
   ref,
 ) {
@@ -73,6 +105,8 @@ export const PressableCard = forwardRef<View, PressableCardProps>(function Press
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
       // Selection reaches a screen reader as state. The border is the sighted half of
       // the same fact — never the only half, which is why callers also carry a word.
       accessibilityState={{ selected, disabled }}

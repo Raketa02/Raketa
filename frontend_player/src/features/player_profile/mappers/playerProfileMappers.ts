@@ -16,10 +16,12 @@
  * as a new member of the generated union, and this file stops compiling rather than letting
  * the tag disappear from the picker of the next build anybody ships.
  *
- * **The boundary runs both ways.** `toCommitRequest` is the outbound half: the part's six
+ * **The boundary runs both ways.** `toCommitRequest` is the outbound half: the part's
  * answers, in the app's own words, becoming the one body that ends it. It takes a value that
  * cannot hold a missing answer (`domain/profileCommit`), so the mapping is a renaming and
- * nothing else — no default, no omission, no field decided here.
+ * nothing else — no default, no omission, no field decided here. The intro is the one field
+ * that may be absent, and its absence was decided by the commit rather than here: the body
+ * carries it where the commit does and leaves it out where the commit did.
  */
 
 import type { components } from '@/generated/schema';
@@ -39,6 +41,7 @@ import type { PlayerProfileSurface, PlayIntentDeclarations } from '../domain/Pla
 import type { PhotoReview, UploadedPhoto } from '../domain/photoCollection';
 import type { ProfileOptions } from '../domain/ProfileOptions';
 import type { ProfileCommit } from '../domain/profileCommit';
+import type { ConsentSurface, RecordedProposalsOptIn } from '../domain/proposalsOptIn';
 
 type PlayerProfileOptionsResponse = components['schemas']['PlayerProfileOptionsResponse'];
 type PhotoResponse = components['schemas']['PhotoResponse'];
@@ -48,7 +51,10 @@ type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequ
 type WireDayPart = components['schemas']['DayPart'];
 type WireGender = components['schemas']['Gender'];
 type WireGenderPreference = components['schemas']['GenderPreference'];
+type WireConsentSurface = components['schemas']['ConsentSurface'];
+type ProposalsOptInResponse = components['schemas']['ProposalsOptInResponse'];
 type WirePhotoReview = components['schemas']['PhotoReviewDecision'];
+type ProfilePhotoResource = components['schemas']['ProfilePhotoResource'];
 type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
 type PlayerProfileReadResponse = components['schemas']['PlayerProfileReadResponse'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
@@ -73,6 +79,14 @@ const KNOWN_GROUP_IDS = new Set<SocialTagGroupId>(SOCIAL_TAG_GROUP_IDS);
 /** `undefined` for a tag this build has no words for — see the note above. */
 function toSocialTagId(served: WireSocialTag): SocialTagId | undefined {
   return KNOWN_TAG_IDS.has(served) ? served : undefined;
+}
+
+/**
+ * A served list of tags, the ones this build can name, **in the served order** — the
+ * vocabulary's, on the profile read and on the tags write's answer alike.
+ */
+export function toSocialTagIds(served: readonly WireSocialTag[]): readonly SocialTagId[] {
+  return served.flatMap((tag) => toSocialTagId(tag) ?? []);
 }
 
 function toSocialTagGroupId(served: WireSocialTagGroup): SocialTagGroupId | undefined {
@@ -119,21 +133,31 @@ const APP_PHOTO_REVIEW: Readonly<Record<WirePhotoReview, PhotoReview>> = {
 };
 
 /**
- * What the check concluded, or `allowed` where it said nothing this build understands.
+ * What the check concluded, or **nothing** where it said nothing this build understands.
  *
  * Two absences fold into the same answer and both are deliberate. The field is **optional
- * on the wire** — `GET /photos/{id}` carries no verdict at all, and so does any response
- * from a backend older than the one that added it — and a value outside the table is a
- * decision minted after this build shipped, which is the phone that has not been updated in
- * eight months. Neither is a reason to warn: a warning the app cannot phrase is a warning
- * it must not invent, and `null` is explicitly not `allowed` on the wire precisely so that
- * this decision is made here rather than assumed there.
+ * on the wire** — `null` on the upload is *the reviewer could not be asked*, omitted on the
+ * profile read is *nobody looked*, and a backend older than the one that added it says
+ * nothing — and a value outside the table is a decision minted after this build shipped,
+ * which is the phone that has not been updated in eight months. Neither is a reason to
+ * warn, and neither is a reason to say the check passed: a warning the app cannot phrase is
+ * a warning it must not invent, and `null` is explicitly not `allowed` on the wire
+ * ([ADR-0138](../../../../../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md))
+ * precisely so that this decision is made here rather than assumed there. So both are
+ * carried as the absence of a verdict, which the row on You reads as *not checked as on
+ * court* and the step reads as nothing to say.
  *
  * The same answer `toSocialTagId` gives a tag with no label, arrived at the same way — the
  * difference is only that a chip with no words can be dropped and a photograph cannot.
  */
-function toPhotoReview(served: PhotoResponse['review']): PhotoReview {
-  return served == null ? 'allowed' : (APP_PHOTO_REVIEW[served] ?? 'allowed');
+function toPhotoReview(served: PhotoResponse['review']): PhotoReview | undefined {
+  return served == null ? undefined : APP_PHOTO_REVIEW[served];
+}
+
+/** The pair as the workbench holds it: the id, and the verdict where there is one. */
+function toHeldPhoto(photoId: string, served: PhotoResponse['review']): UploadedPhoto {
+  const review = toPhotoReview(served);
+  return { photoId, ...(review === undefined ? {} : { review }) };
 }
 
 /**
@@ -151,7 +175,17 @@ function toPhotoReview(served: PhotoResponse['review']): PhotoReview {
  * decide about them.
  */
 export function toUploadedPhoto(response: PhotoResponse): UploadedPhoto {
-  return { photoId: response.photo_id, review: toPhotoReview(response.review) };
+  return toHeldPhoto(response.photo_id, response.review);
+}
+
+/**
+ * The signed address of a photo the profile already holds — the one thing `toUploadedPhoto`
+ * refuses to carry, wanted for the one reason it gives: a restored photo has **no device
+ * copy**, so the address is what its tile draws (`heldPhotos`). The expiry stays behind and
+ * the verdict is `null` on this route by design; nothing stores the address past the screen.
+ */
+export function toPhotoAddress(response: PhotoResponse): string {
+  return response.url;
 }
 
 /**
@@ -251,18 +285,60 @@ export function toPlayIntentDeclared(response: {
 }
 
 /**
- * The three facts the Play screens hold, out of the one read that carries them.
+ * The three facts the Play screens hold and the three the You tab edits, out of the one
+ * read that carries them.
  *
  * Nothing is defaulted here. An empty `availability` is *a cleared week*, which is a legal
- * answer and not a missing one, and an absent sport in `play_intents` is *undeclared*, which
- * is the set difference the search screen's interstitial is opened on.
+ * answer and not a missing one; an absent sport in `play_intents` is *undeclared*, which is
+ * the set difference the search screen's interstitial is opened on; an empty `photos` is *a
+ * profile holding none*, which the poster stands in for; and an omitted `intro` is *none was
+ * written*, never `''`. A tag this build has no words for is dropped, as the options mapping
+ * drops it, and the rest keep the served order — the vocabulary's. An omitted `gender` is *never
+ * asked* — a profile committed before the question existed — and is carried as the absence it
+ * is, never as `prefer-not-to-say`, which is an answer somebody gives; the screen pre-selects
+ * nothing.
  */
 export function toPlayerProfileSurface(response: PlayerProfileReadResponse): PlayerProfileSurface {
   return {
     week: toWeekCells(response.availability),
     searchRadiusKm: response.search_radius_km,
     playIntents: toPlayIntentDeclarations(response.play_intents),
+    socialTagIds: toSocialTagIds(response.social_tags),
+    photos: response.photos.map(toProfilePhotoHeld),
+    ...(response.intro === undefined ? {} : { intro: response.intro }),
+    proposalsOptIn: toRecordedProposalsOptIn(response.proposals_opt_in),
+    ...(response.gender === undefined ? {} : { gender: GENDER[response.gender] }),
+    genderPreference: GENDER_PREFERENCE[response.gender_preference],
   };
+}
+
+/**
+ * The two screens that ask the proposals question, in the two spellings that exist — a table
+ * for the day parts' reason: the profile screen keys a sentence by it, so a third surface on
+ * the wire stops this file compiling instead of producing a code the screen has no words for.
+ */
+const CONSENT_SURFACE: Readonly<Record<WireConsentSurface, ConsentSurface>> = {
+  ONBOARDING: 'onboarding',
+  PROFILE: 'profile',
+};
+
+/**
+ * The standing answer as the profile holds it — off the read, and off the opt-in write's own
+ * answer, which is the same shape: the route answers with the record it just made, moment and
+ * surface included, and that is what the screen draws rather than the press it sent.
+ */
+export function toRecordedProposalsOptIn(served: ProposalsOptInResponse): RecordedProposalsOptIn {
+  return {
+    accepted: served.accepted,
+    copyVersion: served.copy_version,
+    answeredAt: served.answered_at,
+    surface: CONSENT_SURFACE[served.surface],
+  };
+}
+
+/** One of the profile's photos, off the read: omitted is *nobody looked*, as `toPhotoReview` reads it. */
+function toProfilePhotoHeld(served: ProfilePhotoResource): UploadedPhoto {
+  return toHeldPhoto(served.photo_id, served.review);
 }
 
 /**
@@ -274,10 +350,13 @@ export function toPlayerProfileSurface(response: PlayerProfileReadResponse): Pla
  * producing a string the other end has never heard of. `prefer-not-to-say` would not even
  * survive a cast, which is the shape of bug a table cannot have.
  *
- * **Neither comes back.** No response shape this app reads carries a gender value out
+ * **Both come back, on exactly one shape.** No response that describes one player to another
+ * carries a gender value out
  * ([ADR-0096](../../../../../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)
- * §6), so these are one-directional by the contract and not by omission — there is nothing
- * to write an inbound half of.
+ * §6); the owner's own profile read does
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §4), so that *Who you play with* can open on the answer already given. So each table has
+ * an inbound half, read the other way and inverted so the two cannot disagree about a value.
  */
 const WIRE_GENDER: Readonly<Record<Gender, WireGender>> = {
   woman: 'WOMAN',
@@ -285,11 +364,32 @@ const WIRE_GENDER: Readonly<Record<Gender, WireGender>> = {
   'prefer-not-to-say': 'PREFER_NOT_TO_SAY',
 };
 
+const GENDER: Readonly<Record<WireGender, Gender>> = {
+  WOMAN: 'woman',
+  MAN: 'man',
+  PREFER_NOT_TO_SAY: 'prefer-not-to-say',
+};
+
 const WIRE_GENDER_PREFERENCE: Readonly<Record<GenderPreference, WireGenderPreference>> = {
   'women-only': 'WOMEN_ONLY',
   'men-only': 'MEN_ONLY',
   any: 'ANY',
 };
+
+const GENDER_PREFERENCE: Readonly<Record<WireGenderPreference, GenderPreference>> = {
+  WOMEN_ONLY: 'women-only',
+  MEN_ONLY: 'men-only',
+  ANY: 'any',
+};
+
+/** The outbound halves, for the two writes the You tab sends one value at a time. */
+export function toWireGender(gender: Gender): WireGender {
+  return WIRE_GENDER[gender];
+}
+
+export function toWireGenderPreference(preference: GenderPreference): WireGenderPreference {
+  return WIRE_GENDER_PREFERENCE[preference];
+}
 
 /**
  * Everything the second part collected, as the one body that ends it.
@@ -312,6 +412,10 @@ const WIRE_GENDER_PREFERENCE: Readonly<Record<GenderPreference, WireGenderPrefer
 export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileRequest {
   return {
     social_tag_ids: [...commit.socialTagIds],
+    // Present exactly when the commit holds one. Never `null` and never `''`: the wire
+    // reads both as *no intro*, and a body that spelled the absence three ways would be a
+    // body a later reader could tell apart by accident.
+    ...(commit.intro === undefined ? {} : { intro: commit.intro }),
     photo_ids: [...commit.photoIds],
     availability: toWireSlots(commit.availability),
     location: { latitude: commit.location.latitude, longitude: commit.location.longitude },

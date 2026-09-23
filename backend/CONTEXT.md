@@ -40,10 +40,20 @@ there; they are not repeated here.
   *sequential* retry; two concurrent duplicates collide on version 1 of one stream and the
   loser is told `concurrent_modification`, exactly as two concurrent assessment starts are.
   _Avoid_: "dedupe table", "request log".
-- **Event-sourced aggregate** vs **persisted-with-events entity** — the two persistence
-  shapes in this codebase, and a deliberate per-context choice. `User` is the former
-  (state rebuilt from its stream); `RefreshToken` is the latter (current state is the
-  truth, events provide audit + cross-context notification). Neither is the default.
+- **Event-sourced aggregate** vs **persisted-with-events entity** vs **stored aggregate** —
+  the three persistence shapes in this codebase, and a deliberate per-context choice.
+  `User` is the first (state rebuilt from its stream); `RefreshToken` is the second (current
+  state is the truth, events provide audit + cross-context notification). `SportsmanshipCard`
+  is the third and so far the only one: rows, and **no events at all**
+  ([ADR-0158](../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+  None is the default, and the third is the one that has to be argued for hardest, because
+  *state changes emit domain events* is a standing rule here — it earns the exemption by
+  having no life story (a card is born answered), no subscriber, and no derived standing
+  anybody folds from it. Distinguish it from a **durable ledger** — the matcher's interest,
+  pass, decline and deck-reset rows — which is a small fact with no aggregate around it at
+  all; this has
+  an aggregate, because the card and every answer on it are written together and every rule
+  about who may be on it holds across the whole of it.
 - **Durable event name** — the stable `"<context>.<event>"` string plus integer version
   registered in the event catalog, e.g. `users.user_registered` / v1. It is the wire
   contract for stored history and is **independent of the Python class name**.
@@ -149,12 +159,17 @@ there; they are not repeated here.
   `input_value=…`, which for an after-validator is the entire settings object, signing key
   included. _Avoid_: falling back, warning and continuing, a "strict mode" flag.
 - **Unprovisioned environment** — `development` and `staging`. Defined and validated, but
-  no domain is registered, so neither has a host or a database. Selecting one without
-  `APP_HOST` and `WRITER_DB_URL` is a startup refusal naming the missing variable. **No
-  placeholder hostname is written anywhere**, which is why "configured" can only mean
-  "somebody set it": there is nothing to compare a host against. _Avoid_: inventing
-  `api-dev.…`; a config file naming a host that does not exist describes infrastructure
-  that does not exist.
+  no domain is registered, so neither has a host or a database. **No placeholder hostname is
+  written anywhere**, which is why "configured" can only mean "somebody set it": there is
+  nothing to compare a host against. _Avoid_: inventing `api-dev.…`; a config file naming a
+  host that does not exist describes infrastructure that does not exist.
+- **Deployed environment** — `development`, `staging` and `production`: everything that is
+  not somebody's laptop. Selecting one without `APP_HOST`, `WRITER_DB_URL` and `REDIS_URL`
+  is a startup refusal naming the missing variable. The set is *deployed* rather than
+  *unprovisioned* because what makes those three defaults dangerous is that each is a
+  service name out of `docker-compose-local.yml`, and that is as true of `production` as of
+  the two nobody has built (#341). _Avoid_: exempting `production` on the grounds that it is
+  the real one — it is the one where inheriting a laptop costs most.
 - **Public-network scheme rule** — the platform rule that a URL a browser or a phone
   reaches over the internet is `https://` in every deployed environment, and unconstrained
   in `local`. The backend calls nothing over HTTP, so its only instance is `ALLOW_ORIGINS`:
@@ -505,6 +520,53 @@ there; they are not repeated here.
   is silent for exactly as long as nobody releases a ruleset with a new kind
   ([ADR-0106](../docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)).
   _Avoid_: "terms blob" for it — the store is open where the wire is closed, on purpose.
+- **Drawn distance** vs **cell distance** — the two kilometre figures a search holds about
+  one pair, and only one of them is a measurement. The **cell distance** is haversine
+  between two coarse centroids (`geography.distance_km`); it is what the `OUTSIDE_RADIUS`
+  gate applies and what the distance term reads, and its evidence prints it whole. The
+  **drawn distance** is the same haversine between the pair's two
+  [**Drawn spots**](../CONTEXT.md) — `geography.drawn_spot`, SHA-256 over the id's bytes,
+  the top 53 bits of each eight-byte half as one exact fraction, a bearing and an amount
+  along it to the square's edge in **degrees** — rounded half-to-even to one decimal and
+  floored at `0.1` by `geography.shown_kilometres`; it is what `distance_km` carries on
+  every candidate, what the record keeps and what *Closest* sorts
+  ([ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2).
+  `Generated` carries both and `admitted_of` is its one constructor;
+  `Scored.shown_distance_km` derives the print once for the response, the row and the sort;
+  `shortlist_determinism_probe` prints it under two hash seeds; and
+  `tests/unit/test_the_drawn_spot_prints_and_never_scores.py` walks `app/engines/`,
+  `gates.py` and `fence.py` for the word `drawn_spot` — a term or a gate that read it would
+  move a Fit with a digest. _Avoid_: "whole kilometres" for the wire — nothing prints one
+  since 2026-09-16 — and computing the drawn distance in `fence.py`, which is where
+  everything the scorer sees is assembled and where this one number must never be.
+
+- **Asked gates** vs **not asked** — how the radar's **reading** keeps five of the ten
+  gates without relaxing the other four, which
+  [ADR-0099](../docs/adr/0099-relaxation-offers-the-searchers-own-asks.md) forbids. `gates.asked_on`
+  names the set per surface — every surface asks all ten but `RADAR`, which asks `BLOCKED`,
+  `HELD_ACCOUNT`, `ACCOUNT_INACTIVE`, `GENDER_PREFERENCE` and `NOT_RATED`, with
+  `OUTSIDE_RADIUS` as the reach — and `gate_of` steps over a gate the surface does not ask
+  **without evaluating it**, never evaluating and overruling it. The histogram keeps ten keys
+  on every surface, so a reading records a **zero** under each gate it did not ask, which the
+  telemetry reads as *not asked* on a `RADAR` row and never as *nobody was excluded*
+  ([ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §3).
+  What follows the gates on a reading is `domain/radar.py`: everyone admitted is scored,
+  everyone scored is drawn, the floor is computed and not applied, and the order is the
+  printed distance then the id. _Avoid_: "relaxed" for a gate the radar drops, and a
+  `SearchContext` field carrying the set — it is derived from the surface so a context
+  cannot say one thing about its surface and another about its gates.
+
+- **Scores under one ruler** — `SearchSurface.scores_under_one_ruler`, true of the deck and
+  the reading and false of the three that take a mode from the request. The one place the
+  record's invariant and the context's stood-down terms read *which surfaces have no mode*;
+  the `search` table's two check constraints (`0027`) cannot read it and spell the surfaces
+  by name, and `tests/unit/test_search_store.py` holds that spelling to the property, so a
+  surface added to one and not the other goes red. The deck's own ledgers are shared the
+  same way: `application/deck_exclusions.py` holds the four reads behind the deal's
+  exclusions once, built once per request and handed to both use cases, and a reading asks
+  it **only for the chip** — `pool.want_to_play_you` is the deck's number by the deck's
+  rule, over a generation re-run under the deck's surface — and never for who it draws.
+  _Avoid_: "the deck's" as the test for a null mode, which is now half the truth.
 
 - **Tail reader** — `CandidateIndexTail`, the **candidate index's only writer**. It
   subscribes to `event_store` in `sequence_no` order and **not** to the outbox, and the two
@@ -639,6 +701,85 @@ there; they are not repeated here.
   because it is a **reader** that writes one derived scalar. _Avoid_: adding bucket
   management to it — a job whose name promises work it does not do is a job somebody adds the
   work back into.
+- **Nudge** — one of the live channel's **two** frames, and the one that says a room moved:
+  `{v, conversation_id, last_seq}`, and never content
+  ([ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
+  §3; it was the whole payload until
+  [ADR-0156](../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)
+  added *somebody is typing* beside it). It rides Redis pub/sub from an append to whichever servers hold an open stream, and
+  it rides Server-Sent Events from there to the phone — **the same three fields both hops**,
+  which is what makes at-most-once on either leg one harmless risk rather than two. It is
+  **news and not a cursor**: the client fetches from *its own* high-water mark through the
+  ordinary read path, so a lost frame is repaired by the next one for free and *may the UI
+  draw what it did not read from the authoritative path* becomes a thing the wire cannot
+  express. `last_seq` is the conversation row's allocator, so publishing costs no second
+  read. _Avoid_: calling it an event or a message — it announces that a room moved and says
+  nothing about what moved it, and the day it carries an entry the self-healing property is
+  gone.
+- **Typing heartbeat** — *this player is typing, as of now*, written to Redis with `TYPING_TTL`
+  on it and never anywhere durable
+  ([ADR-0156](../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
+  **A heartbeat and not a state**: there is no *stopped* call and there will not be one, because
+  every way a client can vanish — killed app, lost signal, dropped request — is a way a *stopped*
+  fails to arrive, and each of them would leave a room saying somebody is typing for ever. **The
+  TTL is what clears it**, which makes the failure mode the indicator *vanishing* rather than
+  sticking, and it must exceed `TYPING_CADENCE` or the indicator flickers on somebody still
+  typing. _Avoid_: a `typing: bool`, a rate limiter (the TTL is what bounds repetition), or a row
+  in Postgres — presence is the one fact here that must not outlive the room it is about.
+- **Typing roster** — *who is typing in this room right now*, which is **whatever has not
+  expired**. Read once per `TYPING_CHECK` by each open stream, as one keyed lookup: an index set,
+  `typing:{conversation}`, names who has typed lately so the read never has to scan the key space
+  or know who is *in* the room — and that index is a **hint**, since a member is reported only if
+  their own `typing:{conversation}:{player}` key is alive. The read writes nothing. _Avoid_:
+  reading it as evidence of anything — there is no *who stopped*, no *since when*, and no way to
+  ask about a moment other than this one.
+- **Typing frame** — the live channel's second frame, `{v, conversation_id, player_ids}`, named
+  `typing` on the SSE `event:` field. **It carries no `last_seq` and moves no sequence**: it is not
+  an entry, nothing was appended and the gapless allocator was never asked for a number — the one
+  invariant of ADR-0156. `player_ids` is sorted by the sender (ADR-0105) and **never contains the
+  reader**, who is filtered out on the way out because only the stream knows whose it is; an empty
+  list is how an indicator goes away, and it is the only clear there is. _Avoid_: a discriminator
+  inside the JSON — the event name is the kind, so a frame a client has never heard of is dropped
+  by the transport rather than by a branch somebody remembered to write; and bumping
+  `LIVE_CHANNEL_VERSION`, which would tell every shipped phone the envelope it parses had changed
+  when it had not.
+- **The conversation channel** — `conversation:{id}`, one Redis pub/sub channel per room,
+  subscribed and unsubscribed as streams open and close. Keyed on the **conversation and
+  never on a member**: per-user would force *who is in this room* into the append path, and
+  membership is derived from whichever record is arranging — a read bought to gain nothing.
+  Nothing is retained on it, which is the point: a subscriber that misses a notification
+  loses **latency, not data**. _Avoid_: Redis Streams here — durability on this leg buys
+  nothing a nudge does not already give away.
+- **Publisher soft, subscriber loud** — the two postures of the live channel's **bus**, and their
+  asymmetry is the whole degradation story. (Presence is on neither side of it: both typing ports
+  fail soft, and ADR-0156 §6 argues the departure — a roster is a courtesy read on the *command*
+  client, so failing it loud would let a merely slow store close every healthy stream.) A publish happens **after** the append has
+  committed, so `FailSoftNudgePublisher` swallows an outage: a room loses its liveness and
+  nobody loses a message. A subscription **is** the liveness, so it is unwrapped and a
+  failure closes the stream — **a chat that is not live has to look not-live**, because a
+  connection held open delivering nothing looks up to date (ADR-0147 §8). `/health` stays
+  about the **process** for the same reason it is safe to close: a health check that pinged
+  Redis would take sign-in, onboarding and challenges down with the chat. _Avoid_: wrapping
+  the subscriber "for symmetry" — the symmetry is what would hide the outage.
+- **The subscriber's own client** — the process's **second** Redis client, from
+  `create_redis_subscriber_client` and opened by the lifespan beside the command pool.
+  Connecting is bounded at `REDIS_CONNECT_TIMEOUT_SECONDS` and reading is not bounded at
+  all, because on a subscription **waiting is the operation** and a `socket_timeout` there
+  does not reconnect quietly — it raises at the caller every two seconds and loses whatever
+  was published in the gap ([#342](https://github.com/Raketa02/Raketa/issues/342)). One
+  client per **process**, not per stream: each open stream takes a `PubSub` off it. _Avoid_:
+  putting a blocking read on the pool a player's critical path draws commands from.
+- **Stream item type** — what a generator route yields, and the thing FastAPI 0.136.1
+  detects **once** and loses on every `include_router`. `app/api/streaming.py` puts it back
+  on the finished application, which is what makes the live envelope generated into
+  `openapi.player.json` rather than documented as an opaque string, and what makes every
+  frame validated through the declared model on the way out. **It has a second half since
+  ADR-0156**: a route that names its own SSE events must yield a `ServerSentEvent`, which the
+  framework reads as *this route declares nothing*, so the shim takes the narrowed `data`
+  annotation off a subclass instead — without it, adding the typing event would have deleted
+  `LiveNudgeSchema` from `components.schemas`. It is a dated shim with a test that goes red if it
+  stops matching. _Avoid_: hand-writing the SSE `itemSchema` in `openapi_extra` — that is the
+  mirror of a backend response ADR-0006 exists to forbid.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

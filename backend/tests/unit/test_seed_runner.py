@@ -50,7 +50,7 @@ from app.infrastructure.database.base import Base
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
 from app.modules.auth.presentation.schemas import LoginRequest
-from app.modules.users.domain.value_objects import Email, Nickname, RawPassword
+from app.modules.users.domain.value_objects import Email, Name, Nickname, RawPassword
 from app.modules.users.presentation.schemas import UserResponse
 from app.seeds import catalog
 from app.seeds.catalog import (
@@ -97,15 +97,42 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: `LivenessSignal` codes are facts about a pair, no distribution can exhibit
 #: one, and a court and a block are the only shapes two of them come in. Both are
 #: modeled — which is the whole of what this rule asks.
+#:
+#: `conversations` joined for one act rather than for the rooms. The seed opens
+#: no room and cannot: a room is *told*, through the outbox, by contexts that do
+#: not know it exists, so the fixture drains the queue and the rooms appear. What
+#: it does write is the one thing a room cannot be told — somebody saying
+#: something — through `SendMessage`, because a room long enough to page backward
+#: through is a screen state and no arrangement produces one.
+#:
+#: `plans` joined last, and it joined the ordinary way: three slot writes through
+#: the three use cases a request runs, on four games this fixture arranges and
+#: deliberately never plays. A plan is *born by being used*, so there is no
+#: opening act to seed and the write **is** the birth.
 WRITTEN_CONTEXTS = frozenset(
-    {"users", "rating", "player_profile", "challenges", "blocks", "games"}
+    {
+        "users",
+        "rating",
+        "player_profile",
+        "challenges",
+        "blocks",
+        "games",
+        "conversations",
+        "plans",
+    }
 )
 
 #: The contexts the seed path only **exercises**, through their own use cases.
 #: The assertions run real searches, deal real decks and compose real line-ups,
 #: and those use cases write the module's own durable ledgers — a search record,
 #: an interest row — which is not the same act as seeding an aggregate.
-EXERCISED_CONTEXTS = frozenset({"matchmaking"})
+#:
+#: `sportsmanship` joined on the day the record sheet needed *what other players
+#: said* to be non-empty, and it joined **here** rather than above for a reason
+#: the context chose: a card is not event-sourced and there is no aggregate to
+#: write. `AnswerTheCard` writes that module's own two tables through its own
+#: unit of work, which is the same shape as a search record.
+EXERCISED_CONTEXTS = frozenset({"matchmaking", "sportsmanship"})
 
 #: The repository builders the seed path may take from the composition root, and
 #: the context each of them writes an aggregate in. Written out by name, because
@@ -127,6 +154,16 @@ AGGREGATE_WRITERS = {
     # acceptance that filled the last seat, inline and inside `challenges`, so
     # nothing here opens one.
     "build_game_repository": "games",
+    # The messages, and **not the rooms**. A room is opened and grown by the
+    # outbox delivering somebody else's events, which needs no repository from
+    # this file at all; the repository is here because `SendMessage` takes one,
+    # and a seeded bubble goes through the use case a request runs like
+    # everything else.
+    "build_conversation_repository": "conversations",
+    # The three slot writes. There is no *open a plan* act to list beside it: a
+    # plan is born by being used, so the first slot write is the birth and this
+    # is the only repository the layer needs.
+    "build_plan_repository": "plans",
 }
 
 #: The two infrastructure modules the seed path may import, and neither is an
@@ -218,12 +255,17 @@ def test_the_walk_has_something_to_walk():
         "cohort.py",
         "games.py",
         "guard.py",
+        "loop.py",
         "pairs.py",
         "paths.py",
         "photos.py",
+        "plans.py",
+        "pool_history.py",
         "relationships.py",
+        "rooms.py",
         "runner.py",
         "screens.py",
+        "sportsmanship.py",
     }
 
 
@@ -271,13 +313,14 @@ def test_the_seed_path_writes_six_contexts_and_only_reads_the_rest():
     anywhere else is the line being crossed, and it is refused by name.
 
     **The matchmaking stores the seed does import are not the line, and that is
-    a decision rather than a gap.** `build_search_store`, `build_interest_ledger`
-    and `build_pass_ledger` are that module's own four durable ledgers — nothing
-    there is event-sourced (`backend/CLAUDE.md`, `the-engine.md` §12) — and they
-    are written by matchmaking's *own use cases*, which is exactly the shape §10
-    sanctioned. Writing a matchmaking **aggregate** would need a matchmaking
-    repository, and there is not one to import; the day somebody writes one, the
-    builder check above is what fails.
+    a decision rather than a gap.** `build_search_store`, `build_interest_ledger`,
+    `build_pass_ledger` and `build_deck_reset_ledger` are among that module's
+    own five durable ledgers — nothing there is event-sourced
+    (`backend/CLAUDE.md`, `the-engine.md` §12) — and they are written by
+    matchmaking's *own use cases*, which is exactly the shape §10 sanctioned.
+    Writing a matchmaking **aggregate** would need a matchmaking repository, and
+    there is not one to import; the day somebody writes one, the builder check
+    above is what fails.
 
     Equality in both directions, on purpose. A Clubs repository appearing is the
     scope creep the rule forbids; `rating` *disappearing* is the seed quietly
@@ -337,22 +380,34 @@ def test_every_address_is_on_a_reserved_tld():
 def test_every_account_is_addressed_by_its_state_and_shown_under_a_name():
     """**The slug addresses the account; it is never what a person sees.**
 
-    The two were one string, and a screen draws `nickname` — so the builder was
+    The two were one string, and a screen draws the name — so the builder was
     printing *said-yes-to-you* where a name goes, and a developer could not tell
     a court full of people from a list of test conditions. Splitting them keeps
     the address derived from the state, so an account still cannot be called one
     thing and reachable at another.
 
     The name is asserted to be a **dealt** one rather than merely different,
-    because `nickname` falls back to the slug for accounts a guard builds to
+    because `name` falls back to the slug for accounts a guard builds to
     refuse: this is the test that the fallback never reaches a real one.
     """
 
     for account in ACCOUNTS:
         assert account.email == f"{account.slug}@{SEED_EMAIL_DOMAIN}"
-        assert account.nickname == NAMES[account.slug]
-        assert account.nickname != account.slug
+        assert account.name == NAMES[account.slug]
+        assert account.name != account.slug
         assert account.description
+
+
+def test_every_account_is_named_first_last_with_a_lowercase_handle():
+    """``First Last`` and ``first_last`` (``docs/adr/0171`` §5): the seeded
+    court reads *Diego Fabregat left*, and the dot the nickname rule forced is
+    gone. The handle is a function of the name, so the pools' disjointness on
+    the name is disjointness on the one field that is unique."""
+
+    for account in ACCOUNTS:
+        first, last = account.name.split(" ")
+        assert first and last and "." not in account.name
+        assert account.nickname == f"{first.lower()}_{last.lower()}"
 
 
 def test_the_catalog_covers_the_states_a_screen_has_to_render():
@@ -397,6 +452,7 @@ def test_the_catalog_is_addressable_by_the_domain():
     RawPassword(SEED_PASSWORD)
     for account in ACCOUNTS:
         assert Email(account.email).value == account.email
+        assert Name(account.name).value == account.name
         assert Nickname(account.nickname).value == account.nickname
 
 
@@ -418,7 +474,7 @@ def test_an_unaddressable_catalog_is_refused_before_anything_is_written(
         (SeedAccount(slug="a", description="too short"),),
     )
 
-    with pytest.raises(ValueError, match="nickname"):
+    with pytest.raises(ValueError, match="name"):
         catalog._refuse_an_impossible_catalog()
 
 
@@ -589,6 +645,7 @@ def test_the_boundary_schemas_accept_every_seeded_address():
         assert UserResponse(
             id=UUID(int=0),
             email=account.email,
+            name=account.name,
             nickname=account.nickname,
             authority="USER",
             is_admin=False,
@@ -639,7 +696,10 @@ async def test_seeding_writes_an_event_stream_for_every_aggregate(session_factor
         streams = await _streams(session)
 
     assert len(seeded) == len(SEEDED_ACCOUNTS)
-    assert streams.get("user", 0) == len(SEEDED_ACCOUNTS)
+    # Two events per account, as a player writes them: the registration and the
+    # naming (``docs/adr/0171`` §2). One would be an account seeded around the
+    # act the gate holds every real account at.
+    assert streams.get("user", 0) == 2 * len(SEEDED_ACCOUNTS)
     assert streams.get("assessment", 0) >= sum(
         len(account.scenarios) for account in SEEDED_ACCOUNTS
     )

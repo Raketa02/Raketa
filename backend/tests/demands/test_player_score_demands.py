@@ -18,10 +18,12 @@ one thing that cannot be checked by reading the code, because the failure looks
 like a perfectly ordinary dictionary comprehension — and it is the rule whose
 breach would turn *no record* into *a bad record* everywhere downstream at once.
 
-**Two strands and never three.** *Keeps plans*, *settles up* and *sportsmanship*
-have no provider on this platform, and the assertions below say so by name rather
-than by asserting a length: the day one of them lands, a named assertion says
-which, and a length assertion would only say that something changed.
+**Three strands and never four.** *Keeps plans* and *settles up* have no
+provider on this platform and *sportsmanship* is published in its own right
+rather than as a strand (``docs/adr/0158``), and the assertions below say so by
+name rather than by asserting a length: the day one of them lands, a named
+assertion says which, and a length assertion would only say that something
+changed.
 """
 
 from __future__ import annotations
@@ -208,8 +210,43 @@ async def _refills(
     assert loaded is not None
     loaded.invite(
         _court(loaded.sport, organiser, replacement, already_in=still_in),
+        by=loaded.organiser_id,
         occurred_at=at,
     )
+    await repository.save(loaded)
+    await session.commit()
+
+
+async def _leaves(
+    session, challenge: Challenge, player_id: UUID, *, at: Instant
+) -> None:
+    """Somebody takes their yes back (``docs/adr/0165`` §1)."""
+
+    repository = _challenges(session)
+    loaded = await repository.load(challenge.id)
+    assert loaded is not None
+    loaded.leave(player_id, occurred_at=at)
+    await repository.save(loaded)
+    await session.commit()
+
+
+async def _withdraws(session, challenge: Challenge, *, at: Instant) -> None:
+    """The organiser removes a challenge nobody else is on (``docs/adr/0165``
+    §4) — whatever seats are still deciding.
+
+    This helper used to carry a ``past_the_standing_rule`` switch that recorded
+    the event straight onto the recorder, because no legal withdrawal could
+    catch an invitation whose day was still running and the state
+    ``docs/adr/0142`` §5 legislates for could not be built through ``withdraw``
+    at all. It can now, so the write is the ordinary path — the aggregate's own
+    rule, its fold, the repository, the codec and the store — and what is
+    exercised is the read and not a fixture's idea of one.
+    """
+
+    repository = _challenges(session)
+    loaded = await repository.load(challenge.id)
+    assert loaded is not None
+    loaded.withdraw(loaded.organiser_id, occurred_at=at)
     await repository.save(loaded)
     await session.commit()
 
@@ -223,6 +260,38 @@ async def _played(session, *, one: UUID, other: UUID, at: Instant) -> Game:
         score=Score.of((SetScore(a=6, b=4),)),
         occurred_at=instant(at + timedelta(hours=2)),
     )
+    await _games(session).save(game)
+    await session.commit()
+    return game
+
+
+async def _answered_a_score(
+    session, *, opener: UUID, answerer: UUID, at: Instant, counter: bool = False
+) -> Game:
+    """A game whose score was put in front of ``answerer``, and answered.
+
+    ``counter`` is the whole point of the strand: a player who believes the score
+    is wrong says so, and saying so is an answer. Both paths leave the same fact
+    on the record — *they replied inside the window* — and the ending they leave
+    the **game** in is deliberately different, which is what proves the strand is
+    not counting agreements.
+    """
+
+    game = _plan(one=opener, other=answerer, at=at)
+    proposed_at = instant(at + timedelta(hours=2))
+    game.state_result(
+        by=opener, score=Score.of((SetScore(a=6, b=4),)), occurred_at=proposed_at
+    )
+    if counter:
+        game.state_result(
+            by=answerer,
+            score=Score.of((SetScore(a=4, b=6),)),
+            occurred_at=instant(proposed_at + timedelta(hours=1)),
+        )
+    else:
+        game.accept_result(
+            by=answerer, occurred_at=instant(proposed_at + timedelta(hours=1))
+        )
     await _games(session).save(game)
     await session.commit()
     return game
@@ -298,7 +367,7 @@ async def test_a_score_read_answers_only_about_players_it_was_asked_about(
 
 
 # ---------------------------------------------------------------------------
-# The two strands that have a provider
+# The three strands that have a provider
 # ---------------------------------------------------------------------------
 
 
@@ -416,6 +485,78 @@ async def test_a_game_that_happened_and_a_plan_that_ghosted_are_one_strand(
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_score_answered_and_a_score_ignored_are_one_strand(
+    implementation, session
+):
+    """*Answers about results*, both halves, on the same person.
+
+    Two scores were put in front of them; they replied to one and let the other
+    run out. Both are opportunities and one is a good outcome, and the miss is
+    counted **without anything having swept it** — a window that has closed has
+    closed whether or not a job noticed.
+    """
+
+    port = implementation.build(session)
+    player, opener = new_uuid(), new_uuid()
+    await _answered_a_score(session, opener=opener, answerer=player, at=_ago(days=4))
+    await _played(session, one=opener, other=player, at=_ago(days=3))
+
+    score = (await port.scores_for([player], now=_now()))[player]
+    strand = score.strands[ReliabilityStrand.ANSWERS_RESULTS]
+
+    assert (strand.good, strand.opportunities) == (1, 2)
+    assert strand.value == 50
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_countering_a_score_is_answering_it_and_disagreeing_costs_nothing(
+    implementation, session
+):
+    """**The reason this strand could be built and the struck one could not.**
+
+    The game ends unscored — two scores stood and neither side gave way — and the
+    person who disagreed is published at a hundred. A strand counting agreements
+    would have docked them, and would have docked the other side too, for the one
+    act ``docs/adr/0049`` most wants a player to feel free to make.
+    """
+
+    port = implementation.build(session)
+    opener, counterer = new_uuid(), new_uuid()
+    await _answered_a_score(
+        session, opener=opener, answerer=counterer, at=_ago(days=4), counter=True
+    )
+
+    scores = await port.scores_for([opener, counterer], now=_now())
+
+    assert scores[counterer].strands[ReliabilityStrand.ANSWERS_RESULTS].value == 100
+    # The opener was asked nothing: their score was the question.
+    assert ReliabilityStrand.ANSWERS_RESULTS not in scores[opener].strands
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_only_this_strand_forgets_and_the_other_two_count_a_career(
+    implementation, session
+):
+    """**One window, and it belongs to one strand** (``docs/adr/0160``).
+
+    The same game, more than twelve months old, is still an opportunity for
+    *shows up* and is no longer one for *answers about results*. That asymmetry is
+    the decision rather than a coincidence: turning up is a commitment somebody
+    made, and answering a score is a habit of opening an app — a mark for
+    something that cheap to fail by accident has to be one a player can work off.
+    """
+
+    port = implementation.build(session)
+    player, opener = new_uuid(), new_uuid()
+    await _played(session, one=opener, other=player, at=_ago(days=400))
+
+    score = (await port.scores_for([player], now=_now()))[player]
+
+    assert ReliabilityStrand.SHOWS_UP in score.strands
+    assert ReliabilityStrand.ANSWERS_RESULTS not in score.strands
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
 async def test_an_answer_survives_the_seat_being_offered_to_somebody_else(
     implementation, session
 ):
@@ -513,11 +654,12 @@ async def test_one_strand_is_a_score_and_the_two_records_are_independent(
 async def test_the_published_number_is_the_blend_over_the_strands_that_are_there(
     implementation, session
 ):
-    """35 and 20 over a basis of 55, and never over a hundred.
+    """35, 20 and 15 over a basis of 70, and never over a hundred.
 
-    A player with both strands at a hundred is published at a hundred — which is
-    the assertion that the three standing-down names cost the number nothing,
-    because a blend over a basis of a hundred would have capped them at 55.
+    A player with all three live strands at a hundred is published at a hundred —
+    which is the assertion that the three standing-down names cost the number
+    nothing, because a blend over a basis of a hundred would have capped them at
+    70.
     """
 
     port = implementation.build(session)
@@ -527,9 +669,17 @@ async def test_the_published_number_is_the_blend_over_the_strands_that_are_there
     )
     await _answers(session, challenge, player, yes=True, at=_ago(days=2))
     await _played(session, one=player, other=new_uuid(), at=_ago(days=3))
+    await _answered_a_score(
+        session, opener=new_uuid(), answerer=player, at=_ago(days=3)
+    )
 
     score = (await port.scores_for([player], now=_now()))[player]
 
+    assert set(score.strands) == {
+        ReliabilityStrand.SHOWS_UP,
+        ReliabilityStrand.ANSWERS_CHALLENGES,
+        ReliabilityStrand.ANSWERS_RESULTS,
+    }
     assert score.published == 100
 
 
@@ -584,3 +734,86 @@ def test_every_registered_implementation_is_of_a_published_port():
     ]
 
     assert stray == []
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_day_that_ran_out_before_the_withdraw_is_still_silence(
+    implementation, session
+):
+    """**A withdrawal does not erase a lapse that had already happened.**
+
+    A padel four: one invitee accepts and later takes it back, the organiser
+    offers the seat they left on to somebody new, the other invitee says
+    nothing until their day runs out, and — with the newcomer still deciding
+    and nobody else on the court — the organiser removes it. The second invitee
+    was silent for the whole of their own window, and that is the fact
+    *answers challenges* exists to price. The exemption is narrow on purpose,
+    and this is the side of it that must not move.
+    """
+
+    port = implementation.build(session)
+    organiser, answerer, silent, newcomer = (new_uuid() for _ in range(4))
+    challenge = await _invited(
+        session,
+        organiser=organiser,
+        invitee=answerer,
+        beside=silent,
+        at=_ago(days=4),
+    )
+    await _answers(session, challenge, answerer, yes=True, at=_ago(days=4))
+    await _leaves(session, challenge, answerer, at=_ago(days=3))
+    await _refills(
+        session,
+        challenge,
+        organiser=organiser,
+        still_in=(silent,),
+        replacement=newcomer,
+        at=_ago(days=2, hours=12),
+    )
+    await _withdraws(session, challenge, at=_ago(days=1))
+
+    scores = await port.scores_for([answerer, silent], now=_now())
+
+    assert scores[silent].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 0
+    assert scores[answerer].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 100
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_challenge_that_stopped_existing_charges_nobody_a_lapse(
+    implementation, session
+):
+    """**Silence on a challenge that had stopped existing is not silence**
+    (`docs/adr/0142` §5).
+
+    An invitation is keyed by who was asked and when their day runs out, and a
+    lapse is decided on `now >= answer_by` alone — so a withdrawal that left the
+    seats exactly as they were, which is what a withdrawal does, would charge
+    somebody who was still deciding a lapse a day later, for a court nobody was
+    waiting on any more.
+
+    Absent, and not a nought: they were never given the chance to answer, so the
+    record they get for it is no record at all — exactly as the organiser's own
+    seat has none. The acceptance beside it is untouched — the answerer took it
+    back before the organiser could remove the court, since a court somebody
+    has joined is nobody's to remove, and a yes taken back is still an answer
+    given — which is what says the withdrawal dropped an invitation rather than
+    a challenge's whole history.
+    """
+
+    port = implementation.build(session)
+    organiser, answerer, deciding = new_uuid(), new_uuid(), new_uuid()
+    challenge = await _invited(
+        session,
+        organiser=organiser,
+        invitee=answerer,
+        beside=deciding,
+        at=_ago(days=4),
+    )
+    await _answers(session, challenge, answerer, yes=True, at=_ago(days=4))
+    await _leaves(session, challenge, answerer, at=_ago(days=3, hours=12))
+    await _withdraws(session, challenge, at=_ago(days=3))
+
+    scores = await port.scores_for([answerer, deciding], now=_now())
+
+    assert set(scores) == {answerer}
+    assert scores[answerer].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 100

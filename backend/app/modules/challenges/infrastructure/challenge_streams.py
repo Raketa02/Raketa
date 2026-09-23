@@ -126,6 +126,34 @@ async def streams_seating(
     return dict(streams)
 
 
+async def stream_of(
+    session: AsyncSession, codec: EventCodec, challenge_id: UUID
+) -> list[DomainEvent]:
+    """One challenge's whole stream, in version order, or nothing at all.
+
+    **The one read here that is not a substring match**, because the one caller
+    it has already knows the id: a fill names the challenge it completes
+    (``docs/adr/0150`` §2). It is one statement rather than two for the same
+    reason — the streams do not have to be *found* — and it uses the B-tree the
+    other two cannot.
+
+    It reads the log through the session like its neighbours rather than through
+    ``DomainEventStore``, so that *how a challenge stream is addressed* stays
+    written once in this module. An empty list is a challenge that does not
+    exist, which is a caller's ordinary answer and not a refusal.
+    """
+
+    rows = await session.execute(
+        select(EventStoreORM)
+        .where(
+            EventStoreORM.aggregate_type == CHALLENGE_AGGREGATE,
+            EventStoreORM.aggregate_id == challenge_id,
+        )
+        .order_by(EventStoreORM.version)
+    )
+    return [_decode(codec, row) for row in rows.scalars().all()]
+
+
 def _decode(codec: EventCodec, row: EventStoreORM) -> DomainEvent:
     return codec.decode(
         SerializedEventEnvelope(

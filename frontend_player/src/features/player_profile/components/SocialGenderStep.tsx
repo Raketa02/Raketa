@@ -1,5 +1,5 @@
 /**
- * Step six of onboarding's second part: **who do you want to play with?**
+ * Step seven of onboarding's second part: **who do you want to play with?**
  *
  * Two controls and one decision. The first asks the player their own answer; the second
  * asks who they are willing to be matched with, and the second is unanswerable in isolation
@@ -21,9 +21,12 @@
  * the moment a narrowing option is chosen and disappears when it is widened again.
  *
  * The rule that decides whether there is a cost is `reachOf`'s, the sentence is
- * `genderPresentation`'s, and what is left here is what a player sees and touches — the
- * same split the five steps before it made, and for the reason they made it: the profile
- * editor will obey these rules from a screen that looks nothing like this one.
+ * `genderPresentation`'s, and the two groups themselves are `GenderControls` — which is the
+ * split the five steps before it made, and for the reason they made it: the profile editor
+ * obeys these rules from a screen that looks nothing like this one. *Who you play with* on
+ * the You tab is that screen, and it draws the same two groups under a *Save* each
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2). What is left here is the onboarding around them.
  *
  * ## Required, and pre-answered in exactly one place
  *
@@ -37,14 +40,15 @@
  * touching the second control has answered it, at the widest setting, which is the only
  * default that takes nothing away from anybody.
  *
- * ## Nothing here comes back
+ * ## Nothing here reaches anybody else
  *
- * No response shape in this app carries a gender value out (ADR-0096 §6), so this screen is
- * the only place in the app either value is ever seen. It is not rendered on a card, a
- * profile or a shortlist, and **the scope note that says so is the first thing on the
- * screen** — above both questions rather than between them. It is one claim covering both
- * answers, and a player weighing whether to answer at all is weighing it before the first
- * press, not after it.
+ * No response that describes one player to another carries a gender value out (ADR-0096 §6):
+ * neither answer is rendered on a card, a profile or a shortlist. The one shape that carries
+ * them is the owner's own profile read (ADR-0179 §4), so that *Who you play with* can open on
+ * the answer already given — and **the scope note that says what the answers are used for is
+ * the first thing on the screen**, above both questions rather than between them. It is one
+ * claim covering both answers, and a player weighing whether to answer at all is weighing it
+ * before the first press, not after it.
  */
 
 import { useRouter } from 'expo-router';
@@ -52,20 +56,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Button, Note, theme } from '@/shared/ui';
 
-import { GENDERS, GENDER_PREFERENCES, reachOf, costsReach } from '../domain/gender';
 import { stepAfter } from '../domain/socialSteps';
 import { useProfileDraft } from '../store/profileDraft.store';
 
+import { GenderControl, GenderPreferenceControl } from './GenderControls';
 import {
   GENDER_CONTINUE_BLOCKED_HINT,
-  GENDER_HEADING,
   GENDER_SCOPE,
-  PREFERENCE_HEADING,
   PREFERENCE_IS_DURABLE,
-  PREFER_NOT_TO_SAY_COST,
-  genderLabel,
-  preferenceLabel,
-  reachNote,
 } from './genderPresentation';
 import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
@@ -79,11 +77,6 @@ export function SocialGenderStep() {
   // Where continuing leads is the step order's answer, not this screen's.
   const next = stepAfter('gender');
   const gender = draft?.gender;
-  // Never `undefined`: the draft holds `any` from the moment the part is entered, so there
-  // is no "not answered yet" state for this control to draw.
-  const preference = draft?.genderPreference;
-  const reach = preference === undefined ? undefined : reachOf(preference);
-  const note = reach === undefined ? undefined : reachNote(reach);
 
   return (
     <SocialStepLayout
@@ -116,55 +109,23 @@ export function SocialGenderStep() {
           below as much as of the answer above, which it could not claim from between them. */}
       <Note variant="info">{GENDER_SCOPE}</Note>
 
-      <Text style={s.label}>{GENDER_HEADING}</Text>
-
-      {/* Stacked full-width buttons, not chips: a chip is a filter over content a player can
-          already see (6.2), and these are the answers to the screen's question. The chosen
-          one is `dark` and the rest `secondary` — a luminance inversion — and `selected` is
-          announced by all three, because *not chosen* and *not a choice* are different
-          things to be told. Neither is `primary`: coral is the one accent and the continue
-          below has it. */}
-      <View style={s.answers}>
-        {GENDERS.map((value) => (
-          <Button
-            key={value}
-            label={genderLabel(value)}
-            size="lg"
-            variant={gender === value ? 'dark' : 'secondary'}
-            selected={gender === value}
-            onPress={() => answer({ gender: value })}
-          />
-        ))}
+      {/* Each group a step down from what is above it — the step's own rhythm, which the
+          tab does not share because there each group has a card of its own. */}
+      <View style={s.section}>
+        <GenderControl gender={gender} onChange={(value) => answer({ gender: value })} />
       </View>
 
-      {/* The one answer that costs its holder reach, said only when it is the one given.
-          `amber`: nothing has gone wrong and nothing is lost — it is a consequence of a
-          choice that can be changed on this screen, right now. */}
-      {gender !== undefined && costsReach(gender) ? (
-        <Note variant="amber">{PREFER_NOT_TO_SAY_COST}</Note>
-      ) : null}
-
-      <Text style={s.label}>{PREFERENCE_HEADING}</Text>
-
-      <View style={s.answers}>
-        {GENDER_PREFERENCES.map((value) => (
-          <Button
-            key={value}
-            label={preferenceLabel(value)}
-            size="lg"
-            variant={preference === value ? 'dark' : 'secondary'}
-            selected={preference === value}
-            onPress={() => answer({ genderPreference: value })}
+      {/* Never `undefined`: the draft holds `any` from the moment the part is entered, so
+          there is no "not answered yet" state for the control to draw — and no draft at all
+          is the part not entered, which `useSocialStepAdmission` has already refused. */}
+      {draft === undefined ? null : (
+        <View style={s.section}>
+          <GenderPreferenceControl
+            preference={draft.genderPreference}
+            onChange={(value) => answer({ genderPreference: value })}
           />
-        ))}
-      </View>
-
-      {/* The mutuality cost. **This is the sentence the record requires**, and it is here
-          rather than after the commit because a player who learned it from a quiet inbox
-          would have been told at the one moment it could not help them. `amber` for the
-          reason above: it is reversible, and the control that reverses it is directly
-          above. */}
-      {note === undefined ? null : <Note variant="amber">{note}</Note>}
+        </View>
+      )}
 
       <Text style={s.smallPrint}>{PREFERENCE_IS_DURABLE}</Text>
     </SocialStepLayout>
@@ -172,16 +133,6 @@ export function SocialGenderStep() {
 }
 
 const s = StyleSheet.create({
-  // `flab`, not `eyebrow`: each of these labels a control the player is about to operate
-  // rather than a region they are reading, and the two are not interchangeable.
-  label: {
-    ...theme.type.flab,
-    color: theme.color.ink,
-    textTransform: 'uppercase',
-    marginTop: theme.space.sm,
-  },
-  // Stacked, not a row: three labels side by side on a phone are three clipped words. The
-  // gap is the one between stacked controls in an action group.
-  answers: { gap: theme.space.sm },
+  section: { paddingTop: theme.space.sm },
   smallPrint: { ...theme.type.tiny, color: theme.color.muted },
 });

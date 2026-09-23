@@ -11,6 +11,12 @@ being non-empty — a property of the request. Hand-seating somebody and pressin
 is the same shape as ⚡ on an empty court, and ``search.surface`` records which of
 the two happened without the client having chosen between them.
 
+**Completing a challenge is a second such property, not a second route**
+(``docs/adr/0150`` §2). ``completing_challenge_id`` names the half-built court
+this fill finishes, and ``sport``, ``mode`` and ``locked_seats`` are refused
+beside it: all three are facts that challenge already holds, and a caller
+supplying one offers a second place for a fact to be true.
+
 **A seat may be unfilled and the line-up is still a `200`.** A four contains six
 pairs and every gate binds all of them (``docs/adr/0116``), so a four can be
 impossible where candidates are plentiful — and *three of four* is an honest
@@ -87,7 +93,13 @@ forecasts_router = APIRouter(prefix="/forecasts", tags=["forecasts"])
                 "offered.\n\n"
                 "`locked_seat_not_available` — somebody you seated by hand "
                 "cannot be seated in this line-up. **Which one is deliberately "
-                "not said.**"
+                "not said.** Completing a challenge, this means somebody on your "
+                "court has been blocked, held or deactivated since they "
+                "accepted — re-read the challenge.\n\n"
+                "`challenge_not_yours_to_fill` — the challenge you named is not "
+                "one of yours to complete. **One code for three cases**: no such "
+                "challenge, you hold no live seat on it, or nobody is arranging "
+                "it any more."
             ),
         },
         status.HTTP_503_SERVICE_UNAVAILABLE: {
@@ -121,8 +133,28 @@ forecasts_router = APIRouter(prefix="/forecasts", tags=["forecasts"])
         "engine optimises **for the group** and says so in "
         "`search.optimised_for`, because you may end up with a worse individual "
         "match than an empty court would have given you.\n\n"
+        "**Send `completing_challenge_id` to finish a half-built court**, and "
+        "send nothing else about it: the sport, the kind of evening and the "
+        "locked seats are read off that challenge. **Any live member may fill "
+        "it** — only the withdraw is the organiser's. The people who accepted "
+        "come back as ordinary rows so the builder can draw them, everybody who "
+        "has already answered that challenge is out of its own pool, and the "
+        "window is never re-stamped.\n\n"
+        "**Somebody who let your invitation run out is out of that court's own "
+        "pool, and out of nothing else.** Nobody is asked twice on one "
+        "challenge, so they are not a candidate for this fill for as long as "
+        "that court stands. Every **other** search of yours reaches them "
+        "immediately, in any sport: their seat reopened and the open-challenge "
+        "rule released them with it, because that rule holds the people still "
+        "arranging a game and they are not one of them.\n\n"
         "**A seated card shows the same number the shortlist showed.** Nothing "
-        "is re-scored when somebody sits down."
+        "is re-scored when somebody sits down.\n\n"
+        "**`candidates` is the pool the four were drawn from**, in Fit order, "
+        "with the seated among them — look a seat's `player_id` up there. It "
+        "is the list a pool opened on this answer draws, and the list "
+        "`POST /forecasts` and the send resolve a pick against, so a court "
+        "reached from a challenge has people to offer for its open seats "
+        "without a shortlist of its own."
     ),
 )
 async def run_lineup(
@@ -138,6 +170,7 @@ async def run_lineup(
             sport=payload.sport,
             mode=payload.mode,
             locked_seats=tuple(payload.locked_seats),
+            completing_challenge_id=payload.completing_challenge_id,
             availability_override=(
                 None
                 if payload.availability_override is None

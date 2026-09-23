@@ -2,6 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-26
+- **§6 amended by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)** — the owner's own profile read,
+  `GET /players/me/profile`, is the one response shape that carries `gender` and
+  `gender_preference` out; every shape a stranger reads stays clean, and §21's test asserts both
+  halves.
 
 ## Context
 

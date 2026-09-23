@@ -22,6 +22,17 @@
  * control that turns green must also change its words, and the screen that uses this is
  * responsible for that half.
  *
+ * **A settled button that is shut keeps its fill, and its arrival is the one thing here that
+ * moves** (amended 2026-09-18, for the You tab's *Save*s). The 40% dim says *not now* about
+ * an action; on a settled button the fill *is* the fact, and a fact at 40% reads as half a
+ * fact — so `Saved` under a draft that is the profile's own is drawn whole, and the words
+ * (past tense) and `accessibilityState.disabled` carry the *nothing to press* half between
+ * them. Arriving at `settled` from any other variant cross-fades the fill it came from into
+ * the mint over one `motion.fade`: the fill it arrived from is drawn over the new one and
+ * fades out, and never on the way back or on first mount, where the state simply is. Under
+ * reduced motion it simply is too — nothing is carried by the fade that the fill and the
+ * label do not both say.
+ *
  * **`on-dark` is the sixth variant, and it was specified in 6.1 and unbuilt** until Play's
  * one-tap declaration needed it. It is 5.2's repaint read as a control: `onDarkFill` over the
  * dark card, a white label, and `onDarkFillPressed` under the finger — the two tokens the
@@ -50,19 +61,54 @@
  * tile, tick-box row) — because volt is already the brightest value in the palette, and a
  * seventh hex invented to satisfy *the variant's pressed fill* would be a colour added to
  * describe a press.
+ *
+ * **`arranging` is a seventh variant, and it is volt's shape a second time** (added for the Now
+ * card's *Fill the seat*, [#429](https://github.com/Raketa02/Raketa/issues/429) F1). The card's
+ * tag carries a stage dot in `arranging` — *the game is still in the players' hands* — and the
+ * door under it was the settled green, which said the opposite of the errand it named. The
+ * theme's own note on the colour said *nothing writes on a 6pt dot*; a button is the first thing
+ * that does, and the arithmetic is volt's: white on it is 2,48:1 and fails, `ink` on it is
+ * 7,05:1, so the label is `ink` and never white. Its press is `opacity: .7` for volt's own
+ * reason — the colour has no darker companion, and one invented to describe a press would be a
+ * hex added for nothing. It is drawn on the dark card and nowhere else, where the theme fences
+ * the colour.
+ *
+ * **`shape` is a seventh option and it is not a variant**
+ * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §2). 4.2's rule is *the chip — the only true pill*, and every button is a 10pt rounded
+ * rectangle; the yes screen's two doors are pills, and the record opens that one exception on
+ * this screen rather than adding a second primitive. It is a shape and not a variant because
+ * it changes the corner and nothing else: *Open the chat* is the `volt` button in a pill and
+ * *Later* the `onDark` one, each with its own fill, label and press exactly as above. The
+ * default is 4.2's corner, so nothing that exists changes, and the next surface that wants a
+ * pill reopens the record rather than reaching for the prop.
  */
 
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
+import { useReducedMotion } from './overlay';
 import { theme } from './theme';
 
-export type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'settled' | 'volt' | 'onDark';
+export type ButtonVariant =
+  'primary' | 'dark' | 'secondary' | 'settled' | 'volt' | 'arranging' | 'onDark';
 
 /**
  * 32 tertiary-in-card · 34 default · 40 screen action · 42 the primary action on a
  * result screen. All four clear the 44pt reachable minimum once `hit.btn` is applied.
  */
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
+
+/** 4.2's 10pt corner, or the chip's pill — the yes screen's exception. See the module note. */
+export type ButtonShape = 'rounded' | 'pill';
 
 export interface ButtonProps {
   readonly label: string;
@@ -77,6 +123,8 @@ export interface ButtonProps {
   readonly onPress: () => void;
   readonly variant?: ButtonVariant;
   readonly size?: ButtonSize;
+  /** Defaults to the rounded rectangle every button is. `pill` is one screen's, by record. */
+  readonly shape?: ButtonShape;
   readonly disabled?: boolean;
   /** Blocks presses and swaps the label. A busy button is not a disabled button. */
   readonly busy?: boolean;
@@ -103,6 +151,7 @@ export function Button({
   onPress,
   variant = 'primary',
   size = 'md',
+  shape = 'rounded',
   disabled = false,
   busy = false,
   busyLabel,
@@ -115,6 +164,7 @@ export function Button({
   // The accessible name follows what is drawn. A button reading "Starting…" while it
   // announces "Rate 1 sport" hands two different apps to two different players.
   const shown = busy ? (busyLabel ?? label) : label;
+  const arrival = useArrivalAtSettled(variant);
 
   return (
     <Pressable
@@ -130,13 +180,28 @@ export function Button({
       style={({ pressed }) => [
         s.base,
         HEIGHT[size],
+        SHAPE[shape],
         FILL[variant],
         gloss !== undefined ? s.glossed : undefined,
         pressed && !blocked ? PRESSED[variant] : undefined,
-        blocked ? s.blocked : undefined,
+        // Never on `settled`: the fill is the fact, and the words say why it is shut.
+        blocked && variant !== 'settled' ? s.blocked : undefined,
         style,
       ]}
     >
+      {arrival === undefined ? null : (
+        // The fill it arrived from, over the new one and on its way out. Under the label,
+        // so the words are never what fades; inert, so it is never what is pressed.
+        <Animated.View
+          testID="button-arrival"
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            SHAPE[shape],
+            { backgroundColor: arrival.from, opacity: arrival.fade },
+          ]}
+        />
+      )}
       <View style={[s.labelBox, gloss !== undefined ? s.labelBoxGlossed : undefined]}>
         <Text style={[s.label, LABEL[variant]]} numberOfLines={1}>
           {shown}
@@ -149,9 +214,56 @@ export function Button({
   );
 }
 
+/**
+ * The arrival at `settled` — the module note's one motion.
+ *
+ * What it returns is the fill the button came from and the value that fades it out, or nothing
+ * while there is nothing on its way out: on first mount, on every variant that is not
+ * `settled`, on `settled` reached from `settled`, under reduced motion, and once the fade
+ * has finished. The variant is compared during render rather than in an effect so the old
+ * fill is on the first frame of the new state instead of one frame late, which would draw
+ * the mint whole for a frame and then put the coral back over it.
+ *
+ * The value rests at 1 between arrivals, so the layer is opaque on the frame it mounts and the
+ * fade runs 1 → 0; a variant that leaves `settled` mid-fade unmounts the layer, stops the
+ * timing and puts the value back to rest.
+ */
+function useArrivalAtSettled(
+  variant: ButtonVariant,
+): { readonly from: string; readonly fade: Animated.Value } | undefined {
+  const reduced = useReducedMotion();
+  const fade = useRef(new Animated.Value(1)).current;
+  const [seen, setSeen] = useState(variant);
+  const [from, setFrom] = useState<ButtonVariant>();
+
+  if (variant !== seen) {
+    setSeen(variant);
+    setFrom(variant === 'settled' && !reduced ? seen : undefined);
+  }
+
+  useEffect(() => {
+    if (from === undefined) return;
+
+    const timing = Animated.timing(fade, {
+      toValue: 0,
+      duration: theme.motion.fade,
+      useNativeDriver: true,
+    });
+    timing.start(({ finished }) => {
+      if (finished) setFrom(undefined);
+    });
+
+    return () => {
+      timing.stop();
+      fade.setValue(1);
+    };
+  }, [from, fade]);
+
+  return from === undefined ? undefined : { from: FILL[from].backgroundColor, fade };
+}
+
 const s = StyleSheet.create({
   base: {
-    borderRadius: theme.radius.btn,
     paddingHorizontal: theme.space.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -166,6 +278,11 @@ const s = StyleSheet.create({
   labelBoxGlossed: { gap: theme.space.xxs },
   gloss: { ...theme.type.tiny },
   blocked: { opacity: 0.4 },
+});
+
+const SHAPE = StyleSheet.create({
+  rounded: { borderRadius: theme.radius.btn },
+  pill: { borderRadius: theme.radius.pill },
 });
 
 const HEIGHT = StyleSheet.create({
@@ -186,6 +303,7 @@ const FILL = StyleSheet.create({
   },
   settled: { backgroundColor: theme.color.mintInk },
   volt: { backgroundColor: theme.color.volt },
+  arranging: { backgroundColor: theme.color.arranging },
 });
 
 const PRESSED = StyleSheet.create({
@@ -196,6 +314,8 @@ const PRESSED = StyleSheet.create({
   settled: { backgroundColor: theme.color.mint },
   // Not a fill. Volt has no darker companion and does not get one invented for a press.
   volt: { opacity: 0.7 },
+  // Volt's rule, for the same reason.
+  arranging: { opacity: 0.7 },
 });
 
 const LABEL = StyleSheet.create({
@@ -205,11 +325,13 @@ const LABEL = StyleSheet.create({
   secondary: { color: theme.color.ink },
   settled: { color: theme.color.surface },
   volt: { color: theme.color.ink },
+  // `ink` and never white: 2,48:1 against 7,05:1 — the module note.
+  arranging: { color: theme.color.ink },
 });
 
 /**
  * The gloss's ink, per variant — **the label's own colour wherever the system has no measured
- * secondary against that fill**, which is five of the six.
+ * secondary against that fill**, which is five of the seven.
  *
  * A `Record` over the union rather than a partial table: a variant with no gloss ink would
  * draw a second line in whatever `theme.type.tiny` inherits, which is nothing, and the failure
@@ -223,4 +345,5 @@ const GLOSS = StyleSheet.create({
   secondary: { color: theme.color.muted },
   settled: { color: theme.color.surface },
   volt: { color: theme.color.ink },
+  arranging: { color: theme.color.ink },
 });

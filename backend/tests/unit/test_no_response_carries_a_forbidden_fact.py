@@ -10,9 +10,15 @@ and every one of them is broken the same way: months later, by a helpful field
 added to a candidate row, in a diff where nothing looks wrong.
 
 - **gender** — a protected characteristic may **gate**; it may never be shown
-  or scored.
+  to anybody but its owner, or scored. The owner's own profile read is the one
+  shape that carries it (``docs/adr/0179`` §4), named in ``PERMITTED_ON`` — and
+  the rule is asserted from both sides below: refused everywhere else, and
+  **present** there, so the admission cannot quietly widen into a second shape
+  or quietly lapse from the first.
 - **a bio, or any player-authored free text** — the platform's first moderation
-  surface, and out of scope.
+  surface. ``docs/adr/0170`` admitted exactly one line, ``intro``, fenced at the
+  write; the words this rule catches are the ones a *paragraph* would arrive
+  under, and ``intro`` is deliberately not among them.
 - **activity recency, at any granularity** — *last seen* is a presence indicator
   and this product does not have one.
 - **a decline, a pass** — a refusal is not a notification, and a pass is
@@ -23,12 +29,25 @@ added to a candidate row, in a diff where nothing looks wrong.
   which says a row **it already showed** is no longer shown and names nobody.
 - **a birthdate or an age** — nothing in this backend collects one, and no gate
   may reopen it here.
-- **a real name** — the platform holds a **nickname**, and nothing may derive a
-  familiar form from it.
+- **a first, last, full or given name** — the platform holds the **Name** a
+  player typed, whole (``docs/adr/0171``), and nothing may derive a familiar
+  form from it: a ``first_name`` field would be the product addressing somebody
+  by a word they never gave it.
 - **a shard key** — the partition is derived, so there is no field for a future
   conjunct to attach to.
 - **an unsettled case** — the matcher never reads `cases`; the hold does its
   work at the gate.
+- **an individual sportsmanship rating** — *no individual rating is returned to
+  anybody, on any route, in any shape.* What may be published about a person is
+  an **average** beside how many different people it rests on, and to the subject
+  a coarse **band** with no count at all; a published average plus a count lets a
+  subject subtract, name each new rating exactly, and go and find the one person
+  who could have given it. ``stars`` is the word this rule can catch, and the
+  scope of that is worth being honest about: it is the word the write route uses
+  and the only one a leak would plausibly reuse, and it catches nothing about a
+  figure published under an honest name. The rest of the rule is structural —
+  ``SportsmanshipLedger`` has no method that answers *what did somebody say about
+  me*, so a route wanting to leak one has to grow a read first.
 
 **Matching is on the words of a property name, never on a substring.** So
 ``gender`` catches ``gender_preference`` and ``threshold`` is not a hold. Both
@@ -77,12 +96,14 @@ FORBIDDEN: dict[str, tuple[object, ...]] = {
     ),
     "a shard key": ("shard",),
     "an unsettled case": ("unsettled", "hold", ("case", "id")),
+    "an individual sportsmanship rating": ("stars",),
 }
 
-#: Fields that trip a rule above and are published **on purpose**, each with the
-#: reason it is not the thing the rule was written about. Kept as a named list
-#: rather than by loosening a rule, so admitting one is a decision somebody
-#: writes down instead of a signal quietly getting weaker.
+#: Fields that trip a rule above and are published **on purpose, on every shape
+#: they appear on**, each with the reason it is not the thing the rule was
+#: written about. Kept as a named list rather than by loosening a rule, so
+#: admitting one is a decision somebody writes down instead of a signal quietly
+#: getting weaker.
 PERMITTED: dict[str, str] = {
     "withheld": (
         "The read-back's statement that a row it recorded is no longer shown "
@@ -94,6 +115,29 @@ PERMITTED: dict[str, str] = {
         "gate: `withheld_reason` and `near_miss_count` are still refused, which "
         "is what keeps this an exemption for one field rather than a weakened "
         "rule."
+    ),
+}
+
+#: Fields that trip a rule above and are published **on one named shape and no
+#: other** — the narrower admission, keyed by the shape as well as the word.
+#: ``PERMITTED`` admits a word wherever it appears; this admits it in one place,
+#: and `test_a_shape_scoped_admission_reaches_exactly_the_shapes_it_names`
+#: asserts the word is *there*, so the admission is a claim about the contract
+#: rather than a hole in the walk.
+PERMITTED_ON: dict[tuple[str, str], str] = {
+    ("PlayerProfileReadResponse", "gender"): (
+        "The owner's own answer, on the route scoped to `me` (ADR-0179 §4). "
+        "ADR-0096 §6 — *no response shape carries a gender value out* — is "
+        "about responses that describe one player to another, and every one "
+        "of those is still refused. What this admits is a player reading the "
+        "fact they set, so the screen that asks the question can open on the "
+        "answer already given."
+    ),
+    ("PlayerProfileReadResponse", "gender_preference"): (
+        "The owner's own setting, on the same route and for the same reason: "
+        "*did I set women only, or not?* is the exact fact the reach sentence "
+        "exists to make legible, and a stranger's card still carries no trace "
+        "of it — a withheld row names no gate (ADR-0130)."
     ),
 }
 
@@ -194,18 +238,92 @@ def test_the_walk_reaches_the_shortlist_and_not_only_the_error_envelope():
     assert "ErrorResponse" in reached
     assert "ShortlistResponse" in reached, "the search route is not in the walk"
     assert "PlayerCardSchema" in reached
+    # The one shape admitted to carry a gender value out. A walk that did not
+    # reach it would pass the refusal for ever and prove nothing about it.
+    assert "PlayerProfileReadResponse" in reached, "the profile read is not in the walk"
+    # The player record describes **one person** rather than a pairing, which
+    # makes it the surface every forbidden fact is most plausibly added to next:
+    # a gender, an age or a *last seen* would each look like a helpful field on
+    # a sheet whose whole job is answering *who is this*.
+    assert "PlayerRecordResponse" in reached, "the record route is not in the walk"
     assert len(_properties()) > 50
+
+
+def _offenders(rule: str, spec: dict | None = None) -> set[str]:
+    """Every ``Schema.field`` in the document that trips `rule` and is admitted
+    by neither list."""
+
+    return {
+        f"{owner}.{field}"
+        for owner, field in _properties(spec)
+        if offends(field, FORBIDDEN[rule])
+        and field not in PERMITTED
+        and (owner, field) not in PERMITTED_ON
+    }
 
 
 @pytest.mark.parametrize("rule", sorted(FORBIDDEN))
 def test_no_response_schema_publishes_a_forbidden_fact(rule: str):
-    offenders = {
-        f"{owner}.{field}"
-        for owner, field in _properties()
-        if offends(field, FORBIDDEN[rule]) and field not in PERMITTED
-    }
+    offenders = _offenders(rule)
 
     assert offenders == set(), f"{rule} reaches a response: {sorted(offenders)}"
+
+
+def test_the_admission_is_for_one_shape_and_a_second_is_still_refused():
+    """Driven against a deliberately broken document: the owner's read carries
+    `gender` and so does a card. The admission must cover the first and the
+    walk must still name the second — otherwise ``PERMITTED_ON`` would have
+    been ``PERMITTED`` with extra steps."""
+
+    document = {
+        "paths": {
+            "/profile": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "$ref": "#/components/schemas/PlayerProfileReadResponse"
+                        }
+                    }
+                }
+            },
+            "/searches": {
+                "post": {
+                    "responses": {
+                        "200": {"$ref": "#/components/schemas/PlayerCardSchema"}
+                    }
+                }
+            },
+        },
+        "components": {
+            "schemas": {
+                "PlayerProfileReadResponse": {
+                    "properties": {"gender": {}, "gender_preference": {}}
+                },
+                "PlayerCardSchema": {"properties": {"gender": {}, "name": {}}},
+            }
+        },
+    }
+
+    assert _offenders("gender", document) == {"PlayerCardSchema.gender"}
+
+
+def test_a_shape_scoped_admission_reaches_exactly_the_shapes_it_names():
+    """The other half of ``PERMITTED_ON``: the admitted word is **on** the shape
+    it names. Without this, deleting `gender` from the profile read would leave
+    the refusal green and the You tab's *Who you play with* opening on nothing
+    — and adding it to a second shape is caught by the refusal above, so the
+    two tests together pin the word to exactly one place.
+    """
+
+    admitted_words = {field for _, field in PERMITTED_ON}
+    reached = {
+        (owner, field) for owner, field in _properties() if field in admitted_words
+    }
+
+    assert reached == set(PERMITTED_ON), (
+        f"the shape-scoped admissions and the contract disagree: "
+        f"admitted {sorted(PERMITTED_ON)}, found {sorted(reached)}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -235,6 +353,7 @@ def test_the_walk_refuses_the_fields_it_exists_to_refuse(field: str):
 @pytest.mark.parametrize(
     "field",
     [
+        "name",
         "nickname",
         "area_code",
         "fit",

@@ -32,9 +32,13 @@
  * Its **accessible name is not this string**: `whyFitSheetLabel` writes `Why fit 78`, because
  * the ✦ must not be spoken and a glyph is doing work in the visible one. It is the one place
  * in the feature where the two differ, and §20.6 records it as such.
+ *
+ * **Rounded, like every other drawing of this number.** Fit arrives with its decimals on; the
+ * pill makes it whole, the control beneath it always has, and a title carrying `Why ✦ 78,42131`
+ * would be the sheet disagreeing with the button that opened it.
  */
 export function whyFitTitle(fit: number): string {
-  return `Why ✦ ${fit}`;
+  return `Why ✦ ${Math.round(fit)}`;
 }
 
 /**

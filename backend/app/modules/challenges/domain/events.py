@@ -1,4 +1,4 @@
-"""The Challenges context's domain events — **six, and none of them a conclusion**.
+"""The Challenges context's domain events — **nine, and two of them conclusions**.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a sport, a mode and a window as their codes, a
@@ -21,6 +21,13 @@ sweep's, and it is emphatically **not** ``SeatDeclined``: *answers challenges* i
 a Strand over challenges that got an answer inside their window, and it is
 unmeasurable if silence and a no are one event.
 
+**One departure, written over an acceptance** (``docs/adr/0162``). ``SeatLeft``
+is somebody leaving a game they had agreed to, which can only happen on a court
+whose line-up had completed — so it is the one seat event the fold learns a
+second fact from: *this challenge has been a game*, which no arrangement of the
+seats can say once the departed's position has been given to somebody else. It
+is not an answer to an invitation and the history walk does not count it as one.
+
 **One re-seating.** ``SeatsInvited`` carries the **whole** resulting arrangement
 rather than a delta, because completing a half-built line-up moves accepted
 players across the net *and* fills the empty seats in one act; two events would
@@ -33,6 +40,25 @@ comes from.
 standing has exactly one place to be true (``standing.py``), and an event
 announcing a conclusion the fold already reaches would become the second — and it
 would be the one that got believed.
+
+**One withdrawal, and it is that rule's first exemption** (``docs/adr/0142``
+§3). ``ChallengeWithdrawn`` announces a conclusion, and it is allowed to because
+**no arrangement of the seats reaches it**: every other standing is a reading of
+the seats and the clock, and this one is a decision a person took, with nothing
+in the seats to fold it out of. So the event is not a second place for the fact
+to be true — it is the only place, and the fold reads it exactly as it reads an
+acceptance. That is the whole of the test any future candidate has to pass, and
+``tests/unit/test_challenge_aggregate.py`` runs it over this module rather than
+leaving it as prose.
+
+**One call-off, and it is the second exemption, passed in writing**
+(``docs/adr/0172`` §1). ``ChallengeCalledOff`` announces that the game this
+court became is called off — the fourth end, seen from the court — and the seats
+cannot reach it: they can reach *deserted* on a court that has been a game, and
+a court deserted by a fill's newcomer saying no is a game with a seat to fill,
+not a called-off one. Which of the two a deserted court is, only the act that
+took it knows, so the event is the fact's only home. The guards in the test
+above name the pair and no more.
 
 **Every seating event carries the seats, and that is what makes the log
 queryable.** A challenge's stream id is minted rather than derived from the
@@ -88,10 +114,25 @@ class ChallengeOpenedFromMutualInterest:
     because you now have an open game together* is true the moment the mutual is
     detected, and a challenge that had to be answered would make it not yet true.
 
-    It carries **no mode and no window**: nobody picked a kind of evening and no
-    grid was proposed from. The pair are seated in the court's first two
-    positions, which puts them one per side in a singles sport and both on one
-    side in a doubles one — half a game, with a side still to fill.
+    It carries **no window**: no grid was proposed from. The pair are seated in
+    the court's first two positions, which puts them one per side in a singles
+    sport and both on one side in a doubles one — half a game, with a side still
+    to fill.
+
+    **It carries a mode, and the mode is a friendly or nothing**
+    (``docs/adr/0169`` §8). Nobody *picked* a kind of evening — the deck asks
+    for none — but each of the pair may have declared one for the sport, and
+    the mint reads both: ``FOR_FUN`` when either declared *for fun*, ``None``
+    otherwise, which the hand-over resolves to counted. *Competitive* never
+    appears here, because two competitive declarers get a counted game by the
+    absence and not by a stamp; the aggregate refuses it.
+
+    **Nullable with a default, and only for rows written before it existed** —
+    the same addition ``SeatsInvited.invited_by`` argues for below rather than
+    a version 2. A row with no ``mode`` key was minted when every mutual was
+    counted, and ``None`` is exactly what those rows already meant: nothing
+    stored is reinterpreted, and the fold read ``None`` off this event before
+    the field was on it.
 
     ``organiser_id`` is the player whose yes closed the loop. Nothing about the
     standing turns on it while both seats are accepted; it is the seat the
@@ -104,6 +145,7 @@ class ChallengeOpenedFromMutualInterest:
     other_player_id: UUID
     seats: tuple[str, ...]
     occurred_at: datetime
+    mode: str | None = None
 
     def __post_init__(self) -> None:
         _retuple(self, "seats")
@@ -147,6 +189,86 @@ class SeatLapsed:
 
 
 @dataclass(frozen=True)
+class SeatLeft:
+    """One person left a court they had agreed to. It reopens **their** seat.
+
+    Written on an **accepted** seat of a challenge that still stands — a game,
+    or a court that is not whole yet (``docs/adr/0165`` §1). It used to be
+    written on an ``ON`` court and on no other, and carried *this court had
+    become a game* for free; the fold now notes that at the completion itself
+    and learns from this event only what it says. Its instant is folded too,
+    because a departure can end a court that was never a game and the ending
+    is dated by it.
+
+    A decision and not a judgement about an invitation — it is kept apart from
+    ``SeatDeclined`` for the same reason a lapse is, and it is **recorded and
+    not yet scored** (``docs/adr/0162`` §8).
+    """
+
+    challenge_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ChallengeWithdrawn:
+    """The organiser removed a challenge nobody else had joined
+    (``docs/adr/0165`` §4) — *Remove the challenge*, and that act alone since
+    ``docs/adr/0172`` §1 took *Call it off* to an event of its own.
+
+    **An event that is not about a seat**, which is exactly what makes it an
+    exemption rather than a breach: a fact about a seat is a fact the fold
+    already has, and this one is not in the seats anywhere.
+
+    It carries **no player**, and that is not an omission. Only the organiser
+    may remove a challenge, the organiser's seat is on the stream from the
+    opening event, and a second copy of *who* would be a second place for it to
+    be true — the failure ``SeatLapsed`` avoids by carrying the one player a
+    whole-court event could not otherwise name. The fold names the organiser as
+    the one whose act ended it off that seat. Whole-challenge and irreversible:
+    there is no ``ChallengeReopened`` beside this, because re-asking the same
+    people is a **new** challenge with fresh deadlines and its own ``answered``
+    set.
+    """
+
+    challenge_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ChallengeCalledOff:
+    """The game this court became was called off, and the court ended with it
+    (``docs/adr/0172`` §1).
+
+    Written by the two things that call a game off and by nothing else, in the
+    same transaction as the hand-over to ``games``: the **departure** that
+    leaves at most one player on a game — ``called_by`` the leaver — and, since
+    ``docs/adr/0175`` §3, **the hour**: a court still short of a player when
+    its moment passes is called off by the platform, and ``called_by`` is
+    ``None``. Nobody presses it any more (``0175`` §1). The seat, the court's
+    ending and the game's end commit together or none of them does.
+
+    **The second event here that is not about a seat**, and the second
+    exemption: a whole-court conclusion with an actor, which is why its field is
+    ``called_by`` — as on ``GameCalledOff`` — and not ``player_id``, the name a
+    seat's answer carries. It carries the actor because, unlike the withdrawal,
+    the act is not the organiser's by construction and no seat on the stream
+    says whose it was: the leaver's ``SeatLeft`` is one of several. **Nullable
+    at version 1**: a payload written before ``0175`` carries a player and still
+    decodes; the field widened, and no reader of it was ever outside this
+    process.
+
+    Whole-challenge and irreversible, as the withdrawal is: there is no fill, no
+    acceptance and no re-seat from it, and re-asking the same people is a
+    **new** challenge.
+    """
+
+    challenge_id: UUID
+    called_by: UUID | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class SeatsInvited:
     """The court as it now stands, and which of its seats are newly asked.
 
@@ -157,12 +279,49 @@ class SeatsInvited:
     ``newly_invited`` is stated rather than derived: *only the newly seated are
     invited* is the rule a notification path reads, and asking somebody twice
     reads as the platform having lost track of them.
+
+    ``invited_by`` is the member who filled the seats, and it is **not the
+    organiser**: ADR-0150 settled that *any live member may fill; only the
+    organiser may withdraw*, so a reader that took the organiser would name the
+    wrong person on a mutual-born doubles court. It is the only whole-court event
+    here that names a player, which is ``ChallengeWithdrawn``'s argument in
+    reverse — there the organiser is already on the stream, and here the filler
+    may be anybody on it.
+
+    **Nullable, and only for rows written before it existed** — which is also
+    why this is an addition rather than a version 2, against the letter of this
+    module's own docstring. Three things decide it and each is checkable.
+
+    *The rule's reason survives.* ``.claude/rules/domain-events.md`` asks that
+    *the rows already in the store must keep decoding*, and they do:
+    ``_coerce_payload`` walks the **payload's** keys, so a row written before this
+    field takes the default. Nothing stored is reinterpreted — a missing
+    ``invited_by`` reads as *nobody knows who filled these seats*, which is the
+    truth about those rows.
+
+    *A version 2 here costs two classes and buys nothing.*
+    ``EventCatalog.register`` binds one class to one ``(name, version)`` and
+    raises on a second, so *version 2 beside version 1* is two Python classes and
+    a fold with two branches for the life of the context — to express one
+    nullable field that changes no existing row's meaning.
+
+    *And the line that needs it could not be drawn otherwise.* The seats-invited
+    system line renders ``{name}`` from ``actor_id``, ADR-0150 lets **any live
+    member** fill, and the organiser is on the stream already — so taking the
+    organiser would name the wrong person on exactly the mutual-born doubles
+    court that record was written for.
+
+    **The rule still binds where it was aimed.** A field whose absence would have
+    to be *guessed at* rather than read as an honest nothing, or one that changes
+    what a stored row means, is still a version 2 — and then it is worth its two
+    classes.
     """
 
     challenge_id: UUID
     seats: tuple[str, ...]
     newly_invited: tuple[str, ...]
     occurred_at: datetime
+    invited_by: UUID | None = None
 
     def __post_init__(self) -> None:
         _retuple(self, "seats", "newly_invited")

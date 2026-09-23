@@ -96,10 +96,6 @@ ENVIRONMENT_PROFILES = {
     ),
 }
 
-#: The environments that must be explicitly provisioned before they can be selected.
-#: Neither exists yet, which is exactly why choosing one has to fail loudly.
-UNPROVISIONED = frozenset({Environment.DEVELOPMENT, Environment.STAGING})
-
 #: `DB_SSL_MODE` values that actually encrypt the connection. `disable` and `allow` do
 #: not — see `_build_db_ssl_context` in the database engine, which returns `False` for
 #: both, meaning asyncpg opens the socket in the clear.
@@ -121,8 +117,15 @@ DEFAULT_PHOTO_STORAGE_SECRET_KEY = "raketa_photos_pwd"
 #: than fall back on, exactly as the writer database's default is.
 DEFAULT_REDIS_URL = "redis://redis:6379/0"
 
-#: The environments a browser reaches over a public network. `local` is not one of them,
-#: which is what makes `http://localhost:3000` a legal allowed origin on a laptop.
+#: The environments that run somewhere other than a developer's machine. `local` is not
+#: one of them, which is what makes `http://localhost:3000` a legal allowed origin and
+#: `redis://redis:6379/0` a working address.
+#:
+#: It answers two questions, and used to answer only the first: which environments a
+#: browser reaches over a public network, and which ones may not inherit an address out
+#: of `docker-compose-local.yml`. The second was once asked of `development` and
+#: `staging` alone, under the name `UNPROVISIONED` — see the refusals below for why
+#: that was the wrong half of the set (#341).
 DEPLOYED = frozenset(
     {Environment.DEVELOPMENT, Environment.STAGING, Environment.PRODUCTION}
 )
@@ -394,17 +397,36 @@ class Settings(BaseSettings):
     # rather than an absence they have to infer.
     #
     # **`ANSWER_WINDOW` itself is emphatically not here.** How long an invitee has
-    # to answer is the promise the invitation makes — moving it moves what every
-    # outstanding challenge already said — and it lives in
+    # to answer is the promise the invitation makes — behaviour a domain test can
+    # observe, and an environment that could select it would be an environment
+    # that decides how long a player has to answer — and it lives in
     # `challenges/domain/answer_window.py`. Only this cadence is a setting.
+    # Moving it there moves nothing already sent: a seat's `answer_by` is stamped
+    # when the seat is invited, so every outstanding challenge keeps the promise
+    # it was sent with.
     #
     # Hourly, and the number it is chosen against is the window rather than the
     # backlog: a `SeatLapsed` is stamped with the moment the sweep noticed, so
-    # the interval is how late the record is, and an hour against a day is a
-    # twenty-fourth. Finer would buy a rounder timestamp and pay for it in a read
-    # that is not yet indexed.
+    # the interval is how late the record is, and an hour against a two-day
+    # window is a forty-eighth. Finer would buy a rounder timestamp and pay for
+    # it in a read that is not yet indexed.
     CHALLENGE_LAPSE_ENABLED: bool = True
     CHALLENGE_LAPSE_INTERVAL_SECONDS: float = 60 * 60
+
+    # --- the hour loop (docs/adr/0175 §3)
+    #
+    # **The second loop that appends a challenge event, and the first one
+    # correctness depends on.** A court that has been a game and is still short
+    # of a player when its agreed hour passes is called off by the platform —
+    # nobody's decision, since nobody presses *Call it off* any more — and the
+    # challenge's fold cannot reach that ending on its own: the hour is the
+    # plan's, which the challenge cannot read. Until this runs, such a row reads
+    # *needs a player* with nothing to press; so the interval is how long that
+    # dead minute lasts, and a minute is what it is chosen to be. The candidate
+    # read is every court somebody ever left, over an unindexed column, and the
+    # cost is stated there; finer than a minute buys nothing a player would see.
+    UNFILLED_COURT_ENABLED: bool = True
+    UNFILLED_COURT_INTERVAL_SECONDS: float = 60
 
     # --- the rating catch-up (docs/adr/0139)
     #
@@ -426,6 +448,30 @@ class Settings(BaseSettings):
     # rates people.
     RATING_CATCH_UP_ENABLED: bool = True
     RATING_CATCH_UP_INTERVAL_SECONDS: float = 60 * 60
+
+    # --- the conversation sweep (docs/adr/0153, docs/adr/0142)
+    #
+    # **Turning it off changes no rule a domain test could observe.** A room past
+    # its end answers `conversation_not_found` on every route and is gone from
+    # every list whether or not anything has swept it — the end is a fold over
+    # the room's own stream and is stored nowhere. What the loop buys is that the
+    # destruction is **real**: *destroyed, not delisted* means the entries stop
+    # existing rather than stopping being answered with, which is the whole
+    # difference between a room that is over and a record with no end.
+    #
+    # **`CONVERSATION_GRACE` itself is emphatically not here.** How long a room
+    # outlives the game it was opened for is behaviour a domain test can observe
+    # — and an environment that could select it would be an environment that
+    # decides how long two people keep each other — so it lives in
+    # `conversations/domain/lifetime.py` beside the derivation that reads it.
+    # Only this cadence is a setting.
+    #
+    # Hourly, and the number is chosen against what being late costs: nothing a
+    # player can see, because the reads are already right, so this is purely how
+    # long a dead room's rows sit in the table. Finer would buy a tidier database
+    # and pay for it in a walk that folds every live room's stream.
+    CONVERSATION_SWEEP_ENABLED: bool = True
+    CONVERSATION_SWEEP_INTERVAL_SECONDS: float = 60 * 60
 
     # --- the two scale triggers (docs/adr/0092, scale-posture.md §4)
     #
@@ -514,24 +560,36 @@ class Settings(BaseSettings):
         trips two is broken either way."""
         env = self.APP_ENV
 
-        if env in UNPROVISIONED:
+        if env in DEPLOYED:
             # "Configured" means somebody set it. There is nothing to compare a host
             # against, because no domain is registered and no placeholder hostname is
-            # written anywhere — which is the point: an unprovisioned environment is
-            # honest about being unprovisioned rather than falling back to the local
-            # defaults and pointing at a database that is not there.
+            # written anywhere — which is the point: a deployed environment is honest
+            # about what nobody told it rather than falling back to the local defaults
+            # and pointing at a database that is not there.
+            #
+            # **Every deployed environment, and once only the unbuilt two** (#341).
+            # These three were stated over `development` and `staging`, on the reading
+            # that what makes an address dangerous is the environment being
+            # unprovisioned. It is not. What makes it dangerous is that the default is
+            # a service name out of `docker-compose-local.yml`, which resolves on a
+            # laptop and nowhere else — and that was most true of the one environment
+            # the narrower set exempted. The committed ECS task definition selected
+            # `production`, supplied no `REDIS_URL`, and would have run against
+            # `redis://redis:6379/0` for ever: the permanently-degraded boot that
+            # `infrastructure/redis_client.py` says must not be reachable, reached
+            # through the door left open here.
             if "APP_HOST" not in provided:
                 raise ConfigurationError(
                     f"APP_HOST is not set, and APP_ENV selects '{env}', which is "
-                    f"defined but not provisioned. No host exists for it yet — set "
-                    f"APP_HOST explicitly or use 'local'."
+                    f"deployed. No host is registered for it — set APP_HOST "
+                    f"explicitly or use 'local'."
                 )
             if "WRITER_DB_URL" not in provided:
                 raise ConfigurationError(
                     f"WRITER_DB_URL is not set, and APP_ENV selects '{env}', which is "
-                    f"defined but not provisioned. Falling back to the local default "
-                    f"would point at a database that does not exist — set "
-                    f"WRITER_DB_URL explicitly or use 'local'."
+                    f"deployed. Falling back to the local default would point at a "
+                    f"database that does not exist — set WRITER_DB_URL explicitly or "
+                    f"use 'local'."
                 )
             if "REDIS_URL" not in provided:
                 # The same refusal as the database's, and for the same reason
@@ -542,13 +600,16 @@ class Settings(BaseSettings):
                 # name. A ledger that never works looks exactly like a quiet week.
                 raise ConfigurationError(
                     f"REDIS_URL is not set, and APP_ENV selects '{env}', which is "
-                    f"defined but not provisioned. Falling back to the local default "
-                    f"would point at an ephemeral store that does not exist, and the "
-                    f"ledgers behind it would degrade silently — set REDIS_URL "
-                    f"explicitly or use 'local'."
+                    f"deployed. Falling back to the local default would point at an "
+                    f"ephemeral store that does not exist, and the ledgers behind it "
+                    f"would degrade silently — set REDIS_URL explicitly or use "
+                    f"'local'."
                 )
 
         if env in DEPLOYED:
+            # A second question of the same set, kept separate because it is a rule
+            # about *values* rather than about what nobody supplied.
+            #
             # The backend's instance of the platform's **public-network scheme rule**: a
             # URL a browser reaches over the internet is `https://` in every deployed
             # environment. The backend calls nothing over HTTP, so `ALLOW_ORIGINS` is

@@ -43,7 +43,15 @@ import Svg, { Path } from 'react-native-svg';
 
 import { theme } from './theme';
 
-const TICK = 'M 2.5 6.5 L 5 9 L 9.5 3.5';
+/**
+ * The tick's path, in its own 12-unit box — **exported for the on-court mark**, which draws the
+ * same tick in a smaller box (`OnCourtMark`): one mark family, one drawing, and the scaling is
+ * the `viewBox`'s rather than a second path.
+ */
+export const TICK_PATH = 'M 2.5 6.5 L 5 9 L 9.5 3.5';
+export const TICK_SPACE = 12;
+
+const TICK = TICK_PATH;
 /** The crossed pair, at the tick's box. 6.9's add glyph is this drawing at 20 x 20. */
 const PLUS = 'M 6 2.5 V 9.5 M 2.5 6 H 9.5';
 /** The plus with its upright taken away, which is what a dropped slot is. */

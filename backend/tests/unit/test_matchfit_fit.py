@@ -340,6 +340,92 @@ def test_a_candidate_with_no_evidence_at_all_is_refused_rather_than_scored(
     in this engine exists to refuse.
     """
 
-    monkeypatch.setattr(fit_module, "read_terms", lambda *_: tuple(None for _ in Term))
+    monkeypatch.setattr(
+        fit_module, "read_terms", lambda *_, **__: tuple(None for _ in Term)
+    )
     with pytest.raises(InvariantViolated, match="every term of Fit stood down"):
         score(searcher(), candidate(player_id="nobody"), LIVE_RULESET)
+
+
+# ---------------------------------------------------------------------------
+# A term stood down by the search, and not by the pairing
+# ---------------------------------------------------------------------------
+
+
+def test_a_term_the_search_stands_down_is_not_read_and_renormalises_away() -> None:
+    """The deck's mechanism (``docs/adr/0169`` §2), stated over one pairing.
+
+    A caller may name terms it declines to read for **every** pairing. Each
+    stands down exactly as a term with nothing to read does — dropped from the
+    sum, its weight redistributed over the survivors — and it says so with a
+    code that is neither side's gap, because the candidate *did* declare and the
+    only thing that stopped it counting is the surface.
+    """
+
+    facts = dict(
+        tags=(SocialTag.PLAYS_TO_WIN.value, SocialTag.HERE_TO_COMPETE.value),
+        distance_km=2.0,
+    )
+    read = score(
+        searcher(tags=facts["tags"]),
+        candidate(declared_intent=PlayIntent.COMPETITIVE.value, **facts),
+        LIVE_RULESET,
+    )
+    unread = score(
+        searcher(tags=facts["tags"]),
+        candidate(declared_intent=PlayIntent.COMPETITIVE.value, **facts),
+        LIVE_RULESET,
+        stood_down=frozenset({Term.INTENT_ALIGNMENT}),
+    )
+
+    assert Term.INTENT_ALIGNMENT in {term.term for term in read.terms}
+    assert Term.INTENT_ALIGNMENT not in {term.term for term in unread.terms}
+    assert (
+        StoodDown(
+            term=Term.INTENT_ALIGNMENT,
+            reason=DegradedReason.NOT_READ_ON_THIS_SURFACE,
+        )
+        in unread.degraded_terms
+    )
+    assert sum(term.weight for term in unread.terms) == pytest.approx(WEIGHT_TOTAL)
+    for term in unread.terms:
+        matching = next(other for other in read.terms if other.term is term.term)
+        assert term.weight > matching.weight
+
+
+def test_a_declaration_moves_nobody_once_the_search_has_stood_the_term_down() -> None:
+    """Three candidates who differ only in what they declared come to one number.
+
+    The whole point of standing the term down on a surface: the opposite
+    declaration no longer reads the table's zero, and silence no longer buys the
+    renormalisation for free — neither is priced, so neither moves anybody.
+    """
+
+    facts = dict(
+        tags=(SocialTag.PLAYS_TO_WIN.value, SocialTag.HERE_TO_COMPETE.value),
+        distance_km=2.0,
+    )
+    points = {
+        declaration: score(
+            searcher(tags=facts["tags"]),
+            candidate(declared_intent=declaration, **facts),
+            LIVE_RULESET,
+            stood_down=frozenset({Term.INTENT_ALIGNMENT}),
+        ).points
+        for declaration in (
+            PlayIntent.COMPETITIVE.value,
+            PlayIntent.FOR_FUN.value,
+            PlayIntent.NO_PREFERENCE.value,
+            None,
+        )
+    }
+
+    assert len({round(value, 9) for value in points.values()}) == 1, points
+
+
+def test_a_search_standing_nothing_down_scores_exactly_as_before() -> None:
+    """The default is the empty set, so every pinned pairing is untouched."""
+
+    assert score(searcher(), candidate(), LIVE_RULESET) == score(
+        searcher(), candidate(), LIVE_RULESET, stood_down=frozenset()
+    )

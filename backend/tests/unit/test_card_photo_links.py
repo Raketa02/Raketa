@@ -55,11 +55,12 @@ def _row(
         distance_km=4,
         card=(
             RecordedCard(
-                nickname="ada",
+                name="ada",
                 photo_id=photo_id,
                 review=PhotoReviewDecision.ALLOWED,
                 area_code="LDN-CENTRAL",
                 social_tags=("PLAYS_TO_WIN",),
+                intro=None,
                 level=2.7,
                 band="Improver",
                 range_low=2.36,

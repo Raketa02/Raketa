@@ -25,6 +25,11 @@ import {
   stubGate as stubGateWith,
 } from '@/test-support/onboardingRouter';
 import {
+  pressHardwareBack,
+  stopWatchingHardwareBack,
+  watchHardwareBack,
+} from '@/test-support/hardwareBack';
+import {
   errorResponse,
   installTransport,
   json,
@@ -34,6 +39,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
+import { useDeferredRuns } from '../store/deferredRuns.store';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const ASSESSMENT_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
@@ -147,6 +153,10 @@ beforeEach(async () => {
   await clearStoredTokens();
   queryClient.clear();
   useOnboardingPass.getState().reset();
+  // *Continue later* defers a run, and a deferred run is what the gate is told to leave
+  // alone — so a suite that walks that door once and then launches again lands on welcome
+  // rather than on the review. It stayed invisible while that test was the last in the file.
+  useDeferredRuns.getState().reset();
 });
 
 afterEach(() => {
@@ -558,5 +568,35 @@ describe('leaving the flow from the review', () => {
     await waitFor(() => expect(screen).toHavePathname('/'));
     expect(transport.requestsTo('POST', ABANDONMENT_PATH)).toEqual([]);
     expect(transport.requestsTo('POST', COMPLETION_PATH)).toEqual([]);
+  });
+});
+
+/**
+ * **The device's back button, on a screen that draws none.**
+ *
+ * The review's one way out is the close control's confirm — *continue later* or *stop rating
+ * this sport*, both of which say what they cost. Every screen in onboarding `replace`s, so
+ * until 2026-09-10 Android's back popped through the group's single history entry to the
+ * screen the part began on: out of the run, past the confirm, and without either of the two
+ * answers it exists to collect.
+ * [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md): *"Back and
+ * forward move freely inside each part and never cross between them."*
+ *
+ * So the press is claimed and nothing happens, which is what a screen with no back control
+ * has already said. It does not open the confirm: answering the cheapest gesture on the
+ * screen with a modal would make an interruption the easiest thing to trigger.
+ */
+describe("the device's own back button", () => {
+  beforeEach(watchHardwareBack);
+  afterEach(stopWatchingHardwareBack);
+
+  it('is claimed and refused, leaving the run and its way out exactly where they were', async () => {
+    await resumeIntoTheReview();
+
+    expect(pressHardwareBack()).toBe(true);
+
+    expect(screen).toHavePathname(`/review/${ASSESSMENT_ID}`);
+    expect(screen.queryByRole('header', { name: 'Leave this rating?' })).toBeNull();
+    expect(transport.requestsTo('POST', ABANDONMENT_PATH)).toEqual([]);
   });
 });

@@ -26,7 +26,12 @@ from app.modules.matchmaking.domain.candidate_index import (
     Partition,
 )
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
-from app.modules.matchmaking.domain.geography import Point
+from app.modules.matchmaking.domain.geography import (
+    Point,
+    distance_km,
+    drawn_spot,
+    shown_kilometres,
+)
 from app.modules.matchmaking.domain.ports import (
     PairwiseCounterpart,
     PlayerScoreReading,
@@ -147,6 +152,7 @@ def row(
     profile_created_at: datetime = SETTLED,
     last_active_at: datetime | None = None,
     sport: str = SPORT.value,
+    intro: str | None = None,
 ) -> CandidateRow:
     """One index row. ``number`` fixes the player id and orders the ties."""
 
@@ -170,6 +176,7 @@ def row(
         declared_intent=declared_intent,
         social_tags=tags,
         tags_updated_at=SETTLED,
+        intro=intro,
         availability=slots,
         grid_updated_at=SETTLED,
         areas=(IndexedArea(latitude=latitude, longitude=longitude),),
@@ -180,6 +187,38 @@ def row(
         profile_created_at=profile_created_at,
         last_active_at=last_active_at,
         applied_through_sequence_no=1,
+    )
+
+
+def rows_printing_one_distance(
+    count: int, *, mus: tuple[float, ...] | None = None
+) -> tuple[CandidateRow, ...]:
+    """``count`` rows in the searcher's own cell whose cards print **one**
+    distance — *the same address*, as a sort sees it.
+
+    Since ``docs/adr/0174`` the print is spot to spot and one decimal, so two
+    people in one cell usually print two numbers; a test about a reading that
+    tells no rows apart has to find ids that agree. Found by pigeonhole rather
+    than chosen: inside one cell the print takes at most a dozen or so values,
+    so among a few dozen ids some bucket holds ``count``. Re-derived through the
+    domain's own functions so the fixture survives a change to the digest.
+
+    ``mus`` assigns a Level per row, in ascending id order.
+    """
+
+    viewer = drawn_spot(SEARCHER_ID, CENTRE)
+    buckets: dict[float, list[int]] = {}
+    for number in range(1, 200):
+        printed = shown_kilometres(
+            distance_km(viewer, drawn_spot(player(number), CENTRE))
+        )
+        found = buckets.setdefault(printed, [])
+        found.append(number)
+        if len(found) == count:
+            levels = mus or (SEARCHER_MU,) * count
+            return tuple(row(n, mu=mu) for n, mu in zip(found, levels, strict=True))
+    raise AssertionError(
+        "no bucket filled — the print takes more values than a cell can"
     )
 
 

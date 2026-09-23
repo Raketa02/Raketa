@@ -42,6 +42,7 @@ from app.modules.matchmaking.application.forecast_lineup import ForecastAnswer
 from app.modules.matchmaking.application.read_back_search import ReadBackAnswer
 from app.modules.matchmaking.application.run_lineup_search import LineupAnswer
 from app.modules.matchmaking.application.run_deck_deal import DeckAnswer
+from app.modules.matchmaking.application.run_radar_reading import RadarAnswer
 from app.modules.matchmaking.application.run_shortlist_search import ShortlistAnswer
 from app.modules.matchmaking.domain.lineups import LineupSeat, Side as CourtSide
 from app.modules.matchmaking.domain.prompts import RaisedPrompt
@@ -67,6 +68,7 @@ from app.modules.matchmaking.presentation.schemas import (
     PlayerCardSchema,
     PoolSchema,
     PromptSchema,
+    RatedSportSchema,
     RungOfferSchema,
     SearchEnvelope,
     ShortlistResponse,
@@ -108,10 +110,10 @@ def render_deal(answer: DeckAnswer, photos: PhotoLinks) -> ShortlistResponse:
     any of the four surfaces, so a deal that crossed in a second shape would be a
     deal that could not be read back through the one renderer this module has.
 
-    What differs is what the record says. ``mode`` is ``null`` — exactly on the
-    deck and nowhere else — the sort list is empty, and ``rung_offers`` is
-    ``null`` because the ladder does not reach here and the offers were not
-    computed at all.
+    What differs is what the record says. ``mode`` is ``null`` — on the deck
+    and the radar, the two surfaces that score under one ruler — the sort list
+    is empty, and ``rung_offers`` is ``null`` because the ladder does not reach
+    here and the offers were not computed at all.
 
     ``prompts`` is passed, and an empty list is the honest answer on a deal that
     ran on the profile's own week: the deck accepts an improvised grid now, so it
@@ -122,7 +124,48 @@ def render_deal(answer: DeckAnswer, photos: PhotoLinks) -> ShortlistResponse:
 
     return ShortlistResponse(
         search=_envelope(
-            answer.record, answer.sorts_available, prompts=answer.prompts
+            answer.record,
+            answer.sorts_available,
+            prompts=answer.prompts,
+            # **The two numbers only a deal can say** (``docs/adr/0169`` §4,
+            # §5), on the envelope's pool because they are facts about the
+            # pool — and passed rather than read off the record, because
+            # neither is recorded: both are true of this moment and of no
+            # later one, which is why the read-back omits them.
+            remaining=answer.remaining,
+            want_to_play_you=answer.want_to_play_you,
+        ),
+        candidates=[_candidate(row, photos) for row in answer.record.returned],
+    )
+
+
+def render_reading(answer: RadarAnswer, photos: PhotoLinks) -> ShortlistResponse:
+    """One reading, in **the same shape a deal crosses in** (``docs/adr/0174``
+    §2: *the deal envelope's shape, reused*).
+
+    The read-back's requirement, exactly as it binds the deal: a reading that
+    crossed in a second shape could not be read back through the one renderer
+    this module has. What differs is what the record says — ``mode`` is
+    ``null``, the sort list is empty, ``rung_offers`` is ``null`` — and the
+    two fields only a reading's rows carry, which ``_candidate`` renders off
+    the row wherever the row holds them.
+
+    ``want_to_play_you`` is passed, **the deck's number** (§5), and omitted at
+    zero rather than sent as ``0``: the radar draws a chip at one and above,
+    and a measured nought is the deal's to say. There is no ``remaining`` — a
+    reading draws everybody — and no ``prompts``, which is passed as an empty
+    list for the deal's reason: the reading is a `POST`, and an empty list
+    honestly says it raised none.
+    """
+
+    return ShortlistResponse(
+        search=_envelope(
+            answer.record,
+            answer.sorts_available,
+            prompts=(),
+            want_to_play_you=(
+                answer.want_to_play_you if answer.want_to_play_you > 0 else None
+            ),
         ),
         candidates=[_candidate(row, photos) for row in answer.record.returned],
     )
@@ -151,12 +194,14 @@ def render_read_back(
 
 
 def render_lineup(answer: LineupAnswer, photos: PhotoLinks) -> LineupResponse:
-    """The seated four: the envelope, the rows, and the court they sit on.
+    """The seated four: the envelope, the pool, and the court they sit on.
 
     **The rows come off the record**, exactly as a shortlist's do, so a seated
     card carries the same number the shortlist showed and nothing is re-scored
-    behind the player's back. The court is beside them because a seat is a fact
-    about *this* answer rather than about a person.
+    behind the player's back. The rows are the **pool** the four were drawn
+    from, in Fit order, and the court names its people by id among them — a
+    seat is a fact about *this* answer rather than about a person, and the list
+    beside it is what a pool opened on this record has to offer.
 
     ``optimised_for`` is ``GROUP`` when the searcher hand-seated anybody: from
     that moment the engine is filling seats around them and may hand the searcher
@@ -176,9 +221,9 @@ def render_lineup(answer: LineupAnswer, photos: PhotoLinks) -> LineupResponse:
             ),
         ),
         # **The same rows, in the same shape, on every surface.** A line-up's
-        # returned band is who sat down, so the list is the seated four minus
-        # the searcher — and a client that renders a shortlist row can render
-        # this one without a branch.
+        # returned band is the pool it seated from, the seated among them, so a
+        # client that renders a shortlist row can render this one without a
+        # branch — and can draw a pool from it (#407).
         candidates=[_candidate(row, photos) for row in answer.record.returned],
         lineup=LineupSchema(
             seats=[_seat(seat) for seat in answer.seats],
@@ -366,19 +411,29 @@ def _envelope(
     *,
     prompts: tuple[RaisedPrompt, ...] | None = None,
     optimised_for: OptimisedFor = OptimisedFor.SEARCHER,
+    remaining: int | None = None,
+    want_to_play_you: int | None = None,
 ) -> SearchEnvelope:
-    """The search's own facts, and the two that are about *now*.
+    """The search's own facts, and the four that are about *now*.
 
     ``prompts`` is ``None`` for *do not mention it at all* — the read-back, where
     a month-old question would be asked about a value that has since moved — and
     a list on the `POST`, where an empty one honestly says the search raised
-    none.
+    none. ``remaining`` and ``want_to_play_you`` are ``None`` on the same
+    argument for every surface but the deal, and omitted from the pool rather
+    than sent as null: a shortlist did not count nought people waiting, it did
+    not count.
     """
 
     pool = record.pool_description
     fields: dict[str, Any] = {}
     if prompts is not None:
         fields["prompts"] = [_prompt(raised) for raised in prompts]
+    counts: dict[str, Any] = {}
+    if remaining is not None:
+        counts["remaining"] = remaining
+    if want_to_play_you is not None:
+        counts["want_to_play_you"] = want_to_play_you
     # **Omitted rather than sent as null**, which is this module's own first
     # spelling: a search recorded before the area was kept did not measure a
     # nothing, it recorded nothing at all — and a card handed an empty code would
@@ -404,6 +459,7 @@ def _envelope(
             players_in_range=pool.players_in_range,
             window=pool.window,
             post_gate=pool.post_gate,
+            **counts,
         ),
         radius_clamp=record.radius_clamp_bit,
         sorts_available=list(sorts),
@@ -533,6 +589,15 @@ def _candidate(
         # Omitted rather than sent as zero when the term stood down, which is
         # what lets *Closest* sort a stood-down row last instead of first.
         fields["distance_km"] = row.distance_km
+    if row.bearing_deg is not None:
+        # A reading's row and no other's, by the record's own biconditional:
+        # rendered off the row so a read-back draws the compass that was drawn.
+        fields["bearing_deg"] = row.bearing_deg
+    if row.ratings is not None:
+        fields["ratings"] = [
+            RatedSportSchema(sport=rated.sport, level=rated.level)
+            for rated in row.ratings
+        ]
     if row.inclusion_reason is InclusionReason.INTEREST_LIFT:
         # **Only a reason that admits somebody crosses**, and the test is the
         # value rather than its presence: the store holds three and two of them
@@ -582,7 +647,7 @@ def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
     """
 
     fields: dict[str, Any] = {
-        "nickname": card.nickname,
+        "name": card.name,
         "area_code": card.area_code,
         "social_tags": list(card.social_tags),
         "level": card.level,
@@ -591,6 +656,10 @@ def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
         # `CandidateRow.range_low`.
         "range": {"low": card.range_low, "high": card.range_high},
     }
+    if card.intro is not None:
+        # Omitted where nothing was written, never `""`: a player who skipped
+        # has no line, not an empty one (`docs/adr/0170` §1).
+        fields["intro"] = card.intro
     if card.photo_id is not None and photo_url is not None:
         fields["photo_id"] = card.photo_id
         fields["photo_url"] = photo_url

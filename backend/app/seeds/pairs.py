@@ -26,12 +26,14 @@ exists the sender can no longer see the protagonist at all (an open challenge
 gates the pair), so a run that searched first would fail on its second pass with
 a message about a pool.
 
-**A seat's window is twenty-four hours and nothing here backdates it.** A
-database seeded yesterday has courts that have lapsed, and that is the right
-answer rather than a defect: the pair is released the moment the last seat goes,
-so the next ``make seed`` finds nothing standing and sends again. The alternative
-— backdating so a court looks fresh — is a fixture for a state no organiser ever
-had.
+**A seat's window runs from the send and nothing here backdates one.** A
+database left standing longer than ``ANSWER_WINDOW`` has courts that have lapsed,
+and that is the right answer rather than a defect: the pair is released the
+moment the last seat goes, so the next ``make seed`` finds nothing standing and
+sends again. The alternative — backdating so a court looks fresh — is a fixture
+for a state no organiser ever had. The window is named rather than spelled,
+because it has moved once already (``docs/adr/0151``) and a fixture citing its
+own copy of the old number is the stale citation that record refuses.
 """
 
 from __future__ import annotations
@@ -49,23 +51,29 @@ from app.engines.matchfit.ruleset import ChallengeLoadRung
 from app.kernel import Instant, Sport, exhaustive
 from app.modules.blocks.application.commands import BlockPlayerCommand
 from app.modules.blocks.domain.surface import BlockSurface
-from app.modules.challenges.application.commands import AnswerSeatCommand
+from app.modules.challenges.application.commands import (
+    AnswerSeatCommand,
+    WithdrawChallengeCommand,
+)
 from app.modules.challenges.application.read_challenges import ReadChallengesCommand
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.seats import SeatAnswer
-from app.modules.challenges.domain.standing import ENDED
+from app.modules.challenges.domain.standing import ENDED, Standing
 from app.modules.matchmaking.application.commands import (
     ExpressInterestCommand,
     ReadInterestCommand,
     RecordPassCommand,
+    RunLineupSearchCommand,
 )
 from app.modules.matchmaking.domain.deck import mode_for_intent
+from app.modules.matchmaking.domain.errors import LockedSeatNotAvailable
 from app.modules.matchmaking.domain.ports import PairwiseOutcome
 from app.modules.matchmaking.domain.searches import SearchRecord
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.ports import PhotoStorage
 from app.seeds.cohort import COHORT, Cohort, CohortMember
 from app.seeds.paths import (
+    TRACE_ID,
     ReadPaths,
     deal_a_deck,
     read_paths,
@@ -102,8 +110,10 @@ def _mode_declared_by(
     declares padel *competitive* and tennis *for fun*, a relationship account
     declares competitive throughout, and a cohort member takes whatever the
     intent cycle gave them. So the mode is read off the searcher's declaration
-    through ``mode_for_intent`` — the deck's own rule, so a fixture and a deal
-    cannot come to two answers about what ``NO_PREFERENCE`` inherits.
+    through ``mode_for_intent`` — the rule a court born without a mode resolves
+    one by (``docs/adr/0150`` §5; it was the deck's until ``docs/adr/0169``
+    §2), so a fixture and a fill cannot come to two answers about what
+    ``NO_PREFERENCE`` inherits.
 
     A sport the searcher never declared is refused **by name**: it is a search
     the platform would have nothing to score, and a `KeyError` here would name a
@@ -195,6 +205,11 @@ class SeededPairs:
 
     edges: tuple[WrittenEdge, ...]
     inboxes: tuple[str, ...]
+    #: The one court this run **ended on purpose**, as a line for the report.
+    #: It is not one of the eleven and it is not one of the inboxes: it is a
+    #: state rather than a relationship, and the only state in ``challenges``
+    #: that no arrangement of the seats can reach.
+    withdrawn: str
     costs: tuple[str, ...]
     the_deal_that_earned_the_pass: SearchRecord
     #: Whether that deal found a deck this run had **already spent**. ADR-0131
@@ -210,6 +225,26 @@ class SeededPairs:
     #: that could not tell them apart would complain that it had rotted when the
     #: truth is that somebody flushed Redis.
     the_suppression_reads_back: bool
+    #: The two courts this run leaves **half built on purpose**, one line each.
+    #: They are not relationships and not inboxes: they are the standing ⚡
+    #: *Fill the seats* is drawn on, and a database with none of them cannot draw
+    #: that screen at all (``docs/adr/0150``).
+    half_built: HalfBuiltCourts
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class HalfBuiltCourts:
+    """The two half-built courts, and what each one proved about the fill.
+
+    Two rather than one because they are two different challenges wearing one
+    standing: a court somebody **sent**, carrying a mode and a window and an
+    organiser who proposed something, and a court two mutual yeses **minted**,
+    carrying none of the three.
+    """
+
+    sent: str
+    mutual_born: str
 
 
 async def write_the_relationships(
@@ -247,7 +282,8 @@ async def write_the_relationships(
 
 
 async def _write(paths: ReadPaths, *, cohort: Cohort) -> SeededPairs:
-    """The eleven, then the inboxes the cohort carries."""
+    """The eleven, then the inboxes the cohort carries, then the one court that
+    was ended and the two that were left half built."""
 
     written: list[WrittenEdge] = []
     court: Challenge | None = None
@@ -291,9 +327,17 @@ async def _write(paths: ReadPaths, *, cohort: Cohort) -> SeededPairs:
             "record to read its own claims off."
         )
     inboxes = await _fill_the_inboxes(paths, cohort=cohort)
+    withdrawn = await _remove_a_court_nobody_answered(paths, cohort=cohort)
+    # **After the withdrawn court, and the order matters.** That layer walks the
+    # same organisers and stops on the first who can reach anybody; leaving two
+    # courts standing first would put an open challenge in its way and send it
+    # walking past the member it would otherwise have used.
+    half_built = await _leave_two_half_built_courts(paths, cohort=cohort)
     return SeededPairs(
         edges=tuple(written),
         inboxes=inboxes,
+        withdrawn=withdrawn,
+        half_built=half_built,
         costs=tuple(costs),
         the_deal_that_earned_the_pass=deal,
         the_deck_was_already_spent=spent,
@@ -644,7 +688,7 @@ async def _the_court_they_sent(paths: ReadPaths, organiser: str) -> Challenge | 
 
     organiser_id = paths.player(organiser)
     reader = paths.player(PROTAGONIST.email)
-    standing = await paths.read_challenges.execute(
+    _, standing = await paths.read_challenges.execute(
         ReadChallengesCommand(reader_id=reader)
     )
     for row in standing:
@@ -1088,3 +1132,544 @@ def _refuse_a_search_that_showed_nobody(
         f"relationship cannot be written at all. "
         f"Gates: {dict(sorted(record.counts.excluded_by_gate.items()))}."
     )
+
+
+# ---------------------------------------------------------------------------
+# The one court that is ended on purpose
+# ---------------------------------------------------------------------------
+
+
+async def _remove_a_court_nobody_answered(paths: ReadPaths, *, cohort: Cohort) -> str:
+    """One cohort member removes a padel court they sent before anybody answered.
+
+    **`WITHDRAWN` is one of two standings this database cannot reach by
+    waiting.** Five arrive from the seats and the clock — a send is awaiting, an
+    acceptance is on, a decline or a silent day is an ending — so every one of
+    them is somewhere in the eleven or the inboxes already. This one is a
+    decision a person took, and the only way a screen ever sees it is if
+    somebody takes it; the other, `CALLED_OFF`, is a departure's
+    (``docs/adr/0172``) and is taken on the loop layer's called-off game.
+
+    **Before anybody answers, because that is where the act now lives**
+    (``docs/adr/0165`` §4). A court somebody has joined is nobody's to end for
+    the others, so the withdraw is admitted exactly while nobody besides the
+    organiser holds an accepted seat — and a court sent to one person who then
+    accepted, which is what this fixture used to end, is the one state it is
+    refused in. The invitee's row reads *{name} withdrew this — that court is
+    closed* (`the-words.md` §13), on a seat they never answered.
+
+    **Neither seat is the protagonist's, and that is the constraint that picks
+    the pair.** A court she was *invited* to is `they-challenged-you`'s and is
+    named for a seat that is still hers to answer, and a court she organised
+    would put a removed challenge on the screens every assertion is read from.
+    So this is two cohort members, exactly as the inboxes are, for the same
+    reason: a state that is nobody's relationship belongs to the population and
+    not to the eleven.
+
+    **Idempotent by the state it writes rather than by a key.** A withdrawn
+    court is an ending, so the pair it held is released and a second run would
+    find nothing in its way; what stops it is the probe — *has this organiser
+    already ended one?* — which is the same question the report answers.
+
+    **It walks the candidate organisers rather than naming one**, exactly as the
+    inboxes do and for the same reason: whether a member can see anybody at all
+    is a question about their own pool that only a real search answers, and a
+    fixture that named one would discover on the day that it had named the wrong
+    one. Handle order puts the nearest ring first, so the walk almost always
+    ends on its first member.
+    """
+
+    for organiser in members_who_might_organise(cohort):
+        organiser_id = paths.player(organiser.email)
+        ended = await _the_court_they_ended(paths, organiser_id)
+        if ended is not None:
+            return (
+                f"withdrawn · {organiser.handle} has already ended challenge "
+                f"{ended.id}, and it still reads {Standing.WITHDRAWN.value}"
+            )
+        # **The plain search and not ``_a_search_that_showed``**: that one is the
+        # search and the refusal in one act because an *edge* names who it must
+        # surface, and this court names nobody in advance — who it asks is
+        # whoever the pool turns out to hold, and a member who can see nobody is
+        # the next member's turn rather than a failure.
+        record = await run_a_shortlist(
+            paths,
+            organiser.email,
+            Sport.PADEL,
+            _mode_declared_by(paths, _declarations_of(organiser), Sport.PADEL),
+        )
+        invitee = await _somebody_new_to(paths, organiser_id, record, cohort=cohort)
+        if invitee is None:
+            continue
+        challenge_id = await send_a_court(
+            paths,
+            organiser=organiser.email,
+            sport=Sport.PADEL,
+            record=record,
+            invitees=(invitee.email,),
+        )
+        withdrawn = await paths.withdraw.execute(
+            WithdrawChallengeCommand(
+                challenge_id=challenge_id, player_id=organiser_id
+            )
+        )
+        if withdrawn.standing is not Standing.WITHDRAWN:
+            raise EdgeRefused(
+                f"{organiser.handle} withdrew challenge {challenge_id} and it "
+                f"reads {withdrawn.standing.value}. The court was a padel four "
+                f"nobody had answered, which is a state the withdraw is "
+                f"admitted in."
+            )
+        return (
+            f"withdrawn · {organiser.handle} removed challenge {challenge_id} "
+            f"before {invitee.handle} answered the seat on it; it reads "
+            f"{withdrawn.standing.value} and the pair is released"
+        )
+    raise EdgeRefused(
+        "every cohort member who might organise ran a padel search and none of "
+        "them can see another member free to be asked, so this run has no court "
+        "to end. `WITHDRAWN` is then the one challenge standing no screen in "
+        "this database can draw. The rule that places the population is "
+        "`app/seeds/cohort.py`."
+    )
+
+
+async def _leave_two_half_built_courts(
+    paths: ReadPaths, *, cohort: Cohort
+) -> HalfBuiltCourts:
+    """Two courts left standing at ``LINE_UP_INCOMPLETE``, each proved fillable.
+
+    **The state the builder is re-entered from, and the one screen no other
+    layer leaves behind.** The withdrawn court above ends a send before it
+    reaches one; these two are left half built on purpose, because ⚡ *Fill the
+    seats* is drawn on exactly this standing and a database with none of them
+    cannot draw the screen at all.
+
+    **Two, because they are two different challenges wearing one standing**
+    (``docs/adr/0150``). A court somebody **sent** carries a mode, a window and
+    an organiser who proposed something; a court two mutual yeses **minted**
+    carries none of the three, seats its pair in the first two positions — both
+    on side A in a doubles sport — and has an "organiser" who is only whoever
+    said yes second. The second is the case that decided *any live member may
+    fill*, so a fixture holding only the first would leave that rule untested by
+    anything a person can sign in and look at.
+
+    **Neither court is the protagonist's**: a court she organised needs somebody
+    to accept it, and an accepted seat is ``PREVIOUS_ACCEPT`` on her own card,
+    which ``screens.py`` asserts is absent from this cohort by name.
+
+    **The proof is the ⚡ and never the send.** Running the fill writes a search
+    row and nothing outbound — *searching, browsing, seating and swapping produce
+    nothing outbound* — so the court is still half built when the run finishes,
+    which is the whole point of seeding one.
+    """
+
+    return HalfBuiltCourts(
+        sent=await _a_sent_court_left_half_built(paths, cohort=cohort),
+        mutual_born=await _a_mutual_born_court(paths, cohort=cohort),
+    )
+
+
+async def _a_sent_court_left_half_built(
+    paths: ReadPaths, *, cohort: Cohort
+) -> str:
+    """A padel four one member sent and one other member accepted a seat on.
+
+    Two seats open, nobody deciding, and a conversation already open between the
+    two who are in — which is ``LINE_UP_INCOMPLETE``'s own sentence.
+
+    **Idempotent by the state it leaves rather than by a key**, exactly as the
+    withdrawn court is: the probe is *does this organiser already hold a court
+    that is half built*, which is the same question the report answers.
+    """
+
+    for organiser in members_who_might_organise(cohort):
+        organiser_id = paths.player(organiser.email)
+        standing = await _their_half_built_court(paths, organiser_id, sent=True)
+        if standing is not None:
+            filled = await _the_fill_reaches_the_court(
+                paths, member_id=organiser_id, challenge=standing
+            )
+            return (
+                f"half built · {organiser.handle} already holds challenge "
+                f"{standing.id}, which reads "
+                f"{Standing.LINE_UP_INCOMPLETE.value}; {filled}"
+            )
+        record = await run_a_shortlist(
+            paths,
+            organiser.email,
+            Sport.PADEL,
+            _mode_declared_by(paths, _declarations_of(organiser), Sport.PADEL),
+        )
+        invitee = await _somebody_new_to(paths, organiser_id, record, cohort=cohort)
+        if invitee is None:
+            continue
+        if not await _the_fill_would_reach(
+            paths, organiser, seated=paths.player(invitee.email)
+        ):
+            continue
+        challenge_id = await send_a_court(
+            paths,
+            organiser=organiser.email,
+            sport=Sport.PADEL,
+            record=record,
+            invitees=(invitee.email,),
+        )
+        accepted = await paths.accept.execute(
+            AnswerSeatCommand(
+                challenge_id=challenge_id, player_id=paths.player(invitee.email)
+            )
+        )
+        if accepted.standing is not Standing.LINE_UP_INCOMPLETE:
+            raise EdgeRefused(
+                f"{invitee.handle} accepted a seat on {organiser.handle}'s padel "
+                f"four and it reads {accepted.standing.value}. A padel court sent "
+                f"to one person has two seats nobody was put in, so the only "
+                f"standing an acceptance can produce on it is "
+                f"{Standing.LINE_UP_INCOMPLETE.value}."
+            )
+        filled = await _the_fill_reaches_the_court(
+            paths, member_id=organiser_id, challenge=accepted.challenge
+        )
+        return (
+            f"half built · {organiser.handle} sent challenge {challenge_id} and "
+            f"{invitee.handle} accepted a seat on it; two seats are open and it "
+            f"reads {accepted.standing.value}; {filled}"
+        )
+    raise EdgeRefused(
+        "every cohort member who might organise ran a padel search and none of "
+        "them can see another member free to be asked, so this run has no court "
+        "to leave half built. `LINE_UP_INCOMPLETE` is then a standing no screen "
+        "in this database can draw, and ⚡ *Fill the seats* has no door. The "
+        "rule that places the population is `app/seeds/cohort.py`."
+    )
+
+
+async def _a_mutual_born_court(paths: ReadPaths, *, cohort: Cohort) -> str:
+    """Two cohort members say *Let's play* to each other, and a padel four opens.
+
+    **`LINE_UP_INCOMPLETE` from birth, with a whole side still open.** The pair
+    take the court's first two positions, which in a doubles sport is both of
+    them on side A — no window, and both seats accepted before anybody was
+    asked anything. **The mode is whatever the two declarations make it**
+    (``docs/adr/0169`` §8): ``FOR_FUN`` when either of the pair declared padel
+    *for fun*, absent otherwise — so the report prints it rather than asserting
+    one, because which pair the walk lands on is the cohort's business.
+
+    **And its room is born with the side line.** A doubles mutual's room opens
+    with ``SIDE_FORMED`` at ``seq`` 1 — the one code no other fixture reaches,
+    which is why ``loop.py``'s every-code claim names this function.
+
+    **The fill is run as the player whose yes arrived *first*, deliberately.**
+    The other one is the organiser, in the only sense the aggregate means it —
+    the seat the court is built out from — and if the fill were the organiser's
+    alone, this member would be looking at a court they can neither complete nor
+    leave. That is the case ``docs/adr/0150`` §1 was decided on, and this is
+    where a person can sign in and see it.
+
+    **It walks members rather than pairs, and costs at most two searches each.**
+    Whether two people can see *each other* is a question about two pools that
+    only two real searches answer, and walking pairs would be a search per pair.
+    So each candidate runs one search, the first cohort member it showed who is
+    free to be asked runs the second, and a pool that does not reach back is the
+    next candidate's turn rather than a failure.
+    """
+
+    for first in members_who_might_organise(cohort):
+        first_id = paths.player(first.email)
+        standing = await _their_half_built_court(paths, first_id, sent=False)
+        if standing is not None:
+            filled = await _the_fill_reaches_the_court(
+                paths, member_id=first_id, challenge=standing
+            )
+            return (
+                f"mutual-born · {first.handle} already holds the window-less "
+                f"court {standing.id}, which reads "
+                f"{Standing.LINE_UP_INCOMPLETE.value}; {filled}"
+            )
+        towards_second = await run_a_shortlist(
+            paths,
+            first.email,
+            Sport.PADEL,
+            _mode_declared_by(paths, _declarations_of(first), Sport.PADEL),
+        )
+        second = await _somebody_new_to(
+            paths, first_id, towards_second, cohort=cohort
+        )
+        if second is None:
+            continue
+        second_id = paths.player(second.email)
+        towards_first = await run_a_shortlist(
+            paths,
+            second.email,
+            Sport.PADEL,
+            _mode_declared_by(paths, _declarations_of(second), Sport.PADEL),
+        )
+        # **A yes cites the search that surfaced the person**, so a pool that
+        # does not reach back cannot write this edge at all — and that is the
+        # next candidate's turn rather than a refusal, exactly as *can this
+        # member see anybody* is.
+        if first_id not in returned_ids(towards_first):
+            continue
+        if not await _the_fill_would_reach(paths, first, seated=second_id):
+            continue
+        await paths.interest.execute(
+            ExpressInterestCommand(
+                from_player_id=first_id,
+                to_player_id=second_id,
+                sport=Sport.PADEL,
+                search_id=towards_second.id,
+            )
+        )
+        # The **second** yes is the one that mints, inline and in its own
+        # transaction — which is also what makes ``second`` the organiser and
+        # ``first`` the member this fixture then fills as.
+        await paths.interest.execute(
+            ExpressInterestCommand(
+                from_player_id=second_id,
+                to_player_id=first_id,
+                sport=Sport.PADEL,
+                search_id=towards_first.id,
+            )
+        )
+        minted = await _their_half_built_court(paths, first_id, sent=False)
+        if minted is None:
+            raise EdgeRefused(
+                f"{first.handle} and {second.handle} said *Let's play* to each "
+                f"other in padel and no window-less court stands between them. "
+                f"A mutual mints a challenge inline, in the transaction of the "
+                f"second yes, and a doubles one is "
+                f"{Standing.LINE_UP_INCOMPLETE.value} from birth."
+            )
+        filled = await _the_fill_reaches_the_court(
+            paths, member_id=first_id, challenge=minted
+        )
+        return (
+            f"mutual-born · {first.handle} and {second.handle} said *Let's play* "
+            f"to each other and court {minted.id} opened with both of them on "
+            f"side A; it reads {Standing.LINE_UP_INCOMPLETE.value} with "
+            f"{'no mode' if minted.mode is None else 'mode ' + minted.mode.value} "
+            f"and no window; {filled}"
+        )
+    raise EdgeRefused(
+        "no two cohort members were free to say *Let's play* to each other in "
+        "padel, so this run has no mutual-born court. That is the case "
+        "`docs/adr/0150` decided *any live member may fill* on, and without one "
+        "the rule is drawn by nothing a person can sign in and look at. The rule "
+        "that places the population is `app/seeds/cohort.py`."
+    )
+
+
+async def _their_half_built_court(
+    paths: ReadPaths, member_id: UUID, *, sent: bool
+) -> Challenge | None:
+    """A half-built court this member is on, of the kind asked for, if there is
+    one.
+
+    ``sent`` picks between the two, and it is read off the **window**: a send
+    stamps one from the grid its search ran on and a mutual mints none, so a
+    court with no window is one two yeses opened and no other court is. That is
+    the same fact ``mutual_born_challenges_that_became_games`` reads off the
+    opening event, asked here off the fold the screen already draws.
+
+    Read through the member's own list, because that is the read the Chats screen
+    makes: a probe that found it any other way would not have proved the screen
+    can.
+    """
+
+    _, standing = await paths.read_challenges.execute(
+        ReadChallengesCommand(reader_id=member_id)
+    )
+    for row in standing:
+        if row.standing is not Standing.LINE_UP_INCOMPLETE:
+            continue
+        if (row.challenge.window is not None) is sent:
+            return row.challenge
+    return None
+
+
+async def _the_fill_would_reach(
+    paths: ReadPaths, filler: CohortMember, *, seated: UUID
+) -> bool:
+    """Whether ⚡ run as this member could seat this person — asked **before**
+    anything is written, so a pair it refuses is the next candidate's turn.
+
+    **A search showing somebody is not the same as a fill seating them.** The
+    shortlist that surfaced the person is ordered by rank key — Fit plus the
+    liveness offset — and the line-up's pool is the top ``K`` by **Fit alone**,
+    with a locked seat resolving out of that pool or not at all. So two people
+    who have played together are lifted into each other's shortlists by
+    ``PREVIOUS_ACCEPT`` and can still sit below ``K`` on raw Fit, and the fill
+    the court then needs answers ``locked_seat_not_available`` for a person the
+    platform itself showed. Whether that happens depends on who else the played
+    history has lifted, which is a property of the **population** and not of
+    this pair — so it is asked of the product's own rule rather than re-derived
+    from a record that carries twenty rows and not the pool.
+
+    It runs the same command the fill runs, with the one seat locked and no
+    challenge named, and **writes nothing outbound**: a line-up seats nobody
+    and sends nothing. Only the refusal that names the locked seat is read as
+    *no*; anything else is the fill's own business, and it will say so itself.
+    """
+
+    try:
+        await paths.lineup.execute(
+            RunLineupSearchCommand(
+                searcher_id=paths.player(filler.email),
+                sport=Sport.PADEL,
+                mode=_mode_declared_by(paths, _declarations_of(filler), Sport.PADEL),
+                locked_seats=(seated,),
+                completing_challenge_id=None,
+                availability_override=None,
+                offered_by_search_id=None,
+                rung=None,
+                trace_id=TRACE_ID,
+            )
+        )
+    except LockedSeatNotAvailable:
+        return False
+    return True
+
+
+async def _the_fill_reaches_the_court(
+    paths: ReadPaths, *, member_id: UUID, challenge: Challenge
+) -> str:
+    """Run ⚡ from this court and refuse a search that cannot see the people on it.
+
+    **The claim is reachability, and it is the one that was structurally
+    impossible** (``docs/adr/0150``). A locked seat resolves out of the search's
+    own pool or not at all, and until the open-challenge gate learned to step
+    aside for one named challenge, everybody who accepted your court was by
+    construction absent from the pool of the search meant to finish it — so ⚡
+    with them locked was ``locked_seat_not_available``, every time. This asserts
+    the opposite, through the use case a request runs.
+
+    **An open seat is reported and does not refuse**, which is the one place this
+    layer is softer than the withdrawn court's. Whether the surrounding pool can
+    fill the remaining seats is a property of the **cohort**, and
+    ``screens.py`` already holds that clock under its own name and with its own
+    complaint; failing here for it would make one population problem go red twice
+    and would blame this court for something that has nothing to do with it.
+
+    **It writes nothing outbound**, so the court is still half built afterwards —
+    which is what makes running it safe in a fixture whose purpose is to leave
+    one standing.
+    """
+
+    answer = await paths.lineup.execute(
+        RunLineupSearchCommand(
+            searcher_id=member_id,
+            sport=None,
+            mode=None,
+            locked_seats=(),
+            completing_challenge_id=challenge.id,
+            availability_override=None,
+            offered_by_search_id=None,
+            rung=None,
+            trace_id=TRACE_ID,
+        )
+    )
+    # **The seats still in it, and not every seat that holds somebody.** A
+    # half-built court may carry a seat that answered and left — the pair
+    # releases the moment they do, and ``docs/adr/0150`` keeps them out of the
+    # fill by name: *nobody who has answered that challenge is a candidate for
+    # its own fill*. On a court at ``LINE_UP_INCOMPLETE`` nobody is deciding, so
+    # every live seat but the organiser's is an accepted one.
+    expected = frozenset(
+        seat.player_id
+        for seat in challenge.seats
+        if seat.player_id is not None
+        and seat.player_id != member_id
+        and seat.is_accepted()
+    )
+    # The searcher's own seat is one of these, so it is dropped: what this
+    # asserts is who was seated **beside** them, which is the pool's answer.
+    seated = frozenset(
+        UUID(seat.player_id)
+        for seat in answer.seats
+        if seat.player_id is not None and UUID(seat.player_id) != member_id
+    )
+    missing = expected - seated
+    if missing:
+        raise EdgeRefused(
+            f"⚡ on challenge {challenge.id} came back without "
+            f"{sorted(str(one) for one in missing)}, who hold seats on it. The "
+            f"open-challenge gate steps aside for the challenge being completed "
+            f"and for nothing else, so a court member missing from its own fill "
+            f"means one of the four fail-closed gates now excludes them — or "
+            f"that the exemption stopped being applied. "
+            f"Gates: {dict(sorted(answer.record.counts.excluded_by_gate.items()))}."
+        )
+    open_seats = [seat for seat in answer.seats if seat.player_id is None]
+    reached = (
+        f"⚡ as a member seated {len(seated)} of {len(answer.seats) - 1} beside "
+        f"them, the court's own {len(expected)} among them, optimising for the "
+        f"group"
+    )
+    if not open_seats:
+        return reached
+    reasons = sorted(
+        {seat.unfilled_reason.value for seat in open_seats if seat.unfilled_reason}
+    )
+    return (
+        f"{reached} · {len(open_seats)} seat(s) still open, reading "
+        f"{reasons or ['no reason recorded']} — the cohort's own clock, held by "
+        f"`app/seeds/screens.py`"
+    )
+
+
+async def _the_court_they_ended(
+    paths: ReadPaths, organiser_id: UUID
+) -> Challenge | None:
+    """A challenge this organiser has already withdrawn, if there is one.
+
+    Read through the organiser's own list, because that is the read the Chats
+    screen makes: a probe that found it any other way would not have proved the
+    screen can.
+    """
+
+    _, standing = await paths.read_challenges.execute(
+        ReadChallengesCommand(reader_id=organiser_id)
+    )
+    for row in standing:
+        if (
+            row.challenge.organiser_id == organiser_id
+            and row.standing is Standing.WITHDRAWN
+        ):
+            return row.challenge
+    return None
+
+
+async def _somebody_new_to(
+    paths: ReadPaths, organiser_id: UUID, record: SearchRecord, *, cohort: Cohort
+) -> CohortMember | None:
+    """The first cohort member this search showed who is free to be asked, or
+    nobody.
+
+    **Nobody is an answer here and not a refusal**, because *can this member see
+    anybody* is a question about their own pool that only a real search answers —
+    the same posture ``_who_can_reach`` takes about the inboxes. The refusal
+    belongs to the walk, once every candidate has been asked.
+
+    **The loaded three are held out by name.** Their whole fixture is a *count*
+    of unanswered seats, and a court that arrived and left inside one run is a
+    depth that was briefly wrong for a reason nobody reading the report could
+    see.
+
+    Sorted by handle, so which member this is depends on the population rather
+    than on what order a search happened to return.
+    """
+
+    shown = returned_ids(record)
+    already = {
+        row.counterpart_id
+        for row in await paths.history.open_challenges(organiser_id)
+    }
+    loaded = {member.handle for member in members_who_carry_an_inbox(cohort)}
+    for member in sorted(cohort.members, key=lambda one: one.handle):
+        if member.handle in loaded:
+            continue
+        player = paths.player(member.email)
+        if player in shown and player not in already:
+            return member
+    return None

@@ -35,10 +35,19 @@
  * `INTENT_ALIGNMENT`'s, and it reads `my_mode` **off the evidence** rather than off the
  * envelope — the evidence carries the mode the engine actually used, on every candidate, deck
  * included, where the envelope's is null (§2).
+ *
+ * ## And one of them reads the pair, not the evidence
+ *
+ * `DISTANCE`'s prints the candidate's **`distanceKm`** — one decimal, spot to spot, the number
+ * the deck card and the record print for the same person — and never the evidence's `km`, which
+ * is the engine's input: whole, cell to cell, and still whole on the wire
+ * ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+ * §2). So every entry point takes the pair beside the evidence, and a surface that selects a
+ * line and a surface that prints it hand over the same one.
  */
 
 import { counted } from '@/shared/formatting/counted';
-import { formatLevel } from '@/shared/formatting/ratingFormat';
+import { formatDistanceKm, formatLevel } from '@/shared/formatting/ratingFormat';
 import { slotName } from '@/shared/vocabulary/availabilityPresentation';
 import { socialTagName } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
@@ -199,14 +208,35 @@ function tagList(tagIds: readonly SocialTagId[]): string {
 }
 
 /**
- * How far away they are.
+ * What a reason line reads **off the pair** rather than off the evidence — one field today.
+ *
+ * `distanceKm` sits on the candidate and not on the distance evidence, for ADR-0107's reason
+ * (a distance is a fact about a pair) and now for a second: the two are **different numbers**.
+ * The evidence's `km` is what the engine scored — whole, cell to cell; the candidate's is the
+ * one-decimal spot-to-spot distance every surface prints. Structurally a `Candidate` and a
+ * challenge's pairing both, so each hands itself over rather than a field picked off it.
+ */
+export interface PairFacts {
+  readonly distanceKm?: number;
+}
+
+/**
+ * How far away they are — **the pair's one decimal, through the one formatter**, so the sentence
+ * on the sheet is the number on the card.
  *
  * The second sentence is a fact the searcher is owed rather than a penalty applied behind
  * their back: *"somebody who set a small radius is not refusing to be found, and the searcher
  * is shown the fact rather than having the person removed."*
+ *
+ * A fired distance term always carries the pair's distance — `distance_km` is omitted only
+ * when the term stood down, and a stood-down term has no evidence — so the absence is a row the
+ * contract does not produce. It says nothing rather than falling back to the evidence's whole
+ * kilometres: printing the engine's input under a card that prints the spot distance is the
+ * disagreement this reading exists to remove.
  */
-export function distanceReason(evidence: DistanceEvidence): string {
-  const away = `${evidence.km} km away`;
+export function distanceReason(evidence: DistanceEvidence, pair: PairFacts): string | undefined {
+  if (pair.distanceKm === undefined) return undefined;
+  const away = `${formatDistanceKm(pair.distanceKm)} away`;
   return evidence.outsideTheirRadius ? `${away} — outside the ring they set` : away;
 }
 
@@ -217,8 +247,13 @@ export function distanceReason(evidence: DistanceEvidence): string {
  * caller drops the line. A term whose evidence this build cannot read never reaches here at
  * all: an unknown `kind` is stopped at the mapper, and §3 rules a card's reason line one of
  * the placements where an unreadable code is *dropped* rather than named.
+ *
+ * The pair travels beside the evidence for the one renderer that reads it. The **parameter** is
+ * required rather than optional so the surface that asks *does this say something* and the
+ * surface that prints it hand over the same pair; the **field** inside it stays optional because
+ * `distanceKm` is optional on every candidate, which is why `distanceReason` answers its absence.
  */
-export function reasonLine(evidence: Evidence): string | undefined {
+export function reasonLine(evidence: Evidence, pair: PairFacts): string | undefined {
   switch (evidence.kind) {
     case 'level_fit':
       return levelFitReason(evidence);
@@ -235,6 +270,6 @@ export function reasonLine(evidence: Evidence): string | undefined {
     case 'social_vibe':
       return socialVibeReason(evidence);
     case 'distance':
-      return distanceReason(evidence);
+      return distanceReason(evidence, pair);
   }
 }

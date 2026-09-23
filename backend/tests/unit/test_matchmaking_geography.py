@@ -1,28 +1,49 @@
-"""The bounding box and the distance — and why one is not the other.
+"""The bounding box, the distance, the drawn spot — and why none is another.
 
 **The box is the only spatial truth**, and it is a cheap over-approximation the
 radius gate then corrects. The two claims worth holding are that the box never
 rejects somebody the ring would have admitted (a false negative there is a person
 who silently does not exist), and that it *does* admit its own corners (which is
 why the gate is still needed).
+
+**The drawn spot is a print and never a measurement** (``docs/adr/0174`` §2). It
+is one fixed point inside a player's cell, derived from a stable digest of who
+they are, and the three claims below are the whole of what makes it safe to
+serve: it never leaves the cell, it is the same on every process (carried by
+``shortlist_determinism_probe``, which prints it under two hash seeds), and it
+moves only when the cell does.
 """
 
 from __future__ import annotations
 
 from math import cos, radians
+from pathlib import Path
+from uuid import UUID, uuid5
 
 import pytest
 
+from app.kernel import InvariantViolated
 from app.modules.matchmaking.domain.areas import area_code_of
 from app.modules.matchmaking.domain.geography import (
+    HALF_CELL_DEGREES,
     KM_PER_DEGREE_OF_LATITUDE,
     Point,
     bounding_box,
     distance_km,
-    whole_kilometres,
+    drawn_spot,
+    shown_kilometres,
 )
 
 LONDON = Point(latitude=51.51, longitude=-0.13)
+
+#: `backend/`, which the source walk below reads from.
+ROOT = Path(__file__).resolve().parents[2]
+
+ANIA = UUID("11111111-1111-1111-1111-111111111111")
+
+#: Enough ids to make a claim about *every* player rather than about one, drawn
+#: under a namespace so the list is the same on every run.
+MANY = tuple(uuid5(ANIA, f"player-{n}") for n in range(400))
 
 
 def test_a_point_is_no_distance_from_itself():
@@ -99,12 +120,106 @@ def test_the_box_wraps_the_antimeridian():
     assert box.contains(Point(latitude=0.0, longitude=-179.99))
 
 
-def test_whole_kilometres_never_round_up():
-    """A card saying *3 km* under a 3 km radius must not be a row the radius gate
-    excluded, so the printed figure is never larger than the measurement."""
+def test_the_printed_distance_is_one_decimal_and_never_below_a_tenth():
+    """*1,9 km* where the card said *2 km*, and *0,1 km* for somebody in the same
+    cell — never *0,0*, which would claim the platform knows two people share a
+    building."""
 
-    assert whole_kilometres(3.9) == 3
-    assert whole_kilometres(0.0) == 0
+    assert shown_kilometres(1.94) == 1.9
+    assert shown_kilometres(10.26) == 10.3
+    assert shown_kilometres(0.0) == 0.1
+    assert shown_kilometres(0.04) == 0.1
+    assert shown_kilometres(0.05) == pytest.approx(0.1)
+
+
+def test_a_negative_distance_is_a_broken_precondition_and_not_a_print():
+    with pytest.raises(InvariantViolated):
+        shown_kilometres(-0.1)
+
+
+def test_a_drawn_spot_never_leaves_the_cell():
+    """The whole privacy argument: *neighbourhood-true, building-false*. A spot
+    outside the cell would be a claim about a place the platform never held."""
+
+    for player_id in MANY:
+        spot = drawn_spot(player_id, LONDON)
+        assert abs(spot.latitude - LONDON.latitude) < HALF_CELL_DEGREES, player_id
+        assert abs(spot.longitude - LONDON.longitude) < HALF_CELL_DEGREES, player_id
+
+
+def test_the_digest_can_never_put_a_spot_on_the_cells_edge():
+    """*Inside by construction* has to survive the digest's worst case. A
+    fraction read as ``int / 2**64`` rounds its top values to exactly ``1.0``
+    — a double has 53 bits — and a spot at the edge is a spot in two cells."""
+
+    from app.modules.matchmaking.domain.geography import _unit_fraction
+
+    assert _unit_fraction(b"\xff" * 8) < 1.0
+    assert _unit_fraction(b"\x00" * 8) == 0.0
+
+
+def test_a_cell_is_the_square_the_location_rounds_into():
+    """Half a cell is half of the last decimal place the platform keeps —
+    ``0.005°`` at two places — so a spot cannot be read back into anything
+    finer than the area a player published. Pinned as the number, so that a
+    change to the derivation shows up here rather than in a radar that draws
+    people across a cell boundary."""
+
+    assert HALF_CELL_DEGREES == 0.005
+
+
+def test_a_drawn_spot_is_the_same_for_every_viewer_and_moves_only_with_the_cell():
+    """Fixed per player: two viewers cannot average it away, and a player who
+    moves to another cell carries the same offset into it."""
+
+    here = drawn_spot(ANIA, LONDON)
+    again = drawn_spot(ANIA, Point(latitude=51.51, longitude=-0.13))
+    elsewhere = drawn_spot(ANIA, Point(latitude=52.23, longitude=21.01))
+
+    assert here == again
+    assert elsewhere.latitude - 52.23 == pytest.approx(here.latitude - 51.51)
+    assert elsewhere.longitude - 21.01 == pytest.approx(here.longitude - -0.13)
+
+
+def test_two_players_in_one_cell_are_drawn_apart():
+    """Which is what lets *Closest* tell them apart at all — and the reason the
+    print is a fiction inside the cell and a truth between cells."""
+
+    spots = {drawn_spot(player_id, LONDON) for player_id in MANY}
+
+    assert len(spots) == len(MANY)
+
+
+def test_the_spot_is_spread_over_the_cell_and_not_pinned_to_its_middle():
+    """A digest that produced a corner for everybody would be a code for the
+    cell, not a spot in it. Every quadrant is reached and the amount varies."""
+
+    quadrants = set()
+    reach = set()
+    for player_id in MANY:
+        spot = drawn_spot(player_id, LONDON)
+        north = spot.latitude - LONDON.latitude
+        east = spot.longitude - LONDON.longitude
+        quadrants.add((north >= 0, east >= 0))
+        reach.add(round(max(abs(north), abs(east)) / HALF_CELL_DEGREES, 1))
+
+    assert len(quadrants) == 4
+    assert len(reach) > 5
+
+
+def test_the_geography_reads_no_process_hash():
+    """``docs/adr/0105``: the offset comes from a stable digest and never from
+    ``hash()``. Asserted structurally, because the behavioural check cannot
+    catch the substitution it names — a ``UUID``'s ``hash()`` is its integer
+    and agrees across seeds — so the two-seed run that carries the print is the
+    shortlist determinism probe, and this walk is what guards the source."""
+
+    source = (
+        ROOT / "app" / "modules" / "matchmaking" / "domain" / "geography.py"
+    ).read_text()
+
+    assert "hash(" not in source
+    assert "hashlib" in source
 
 
 def test_an_area_code_is_stable_and_names_nothing_finer_than_the_platform_holds():

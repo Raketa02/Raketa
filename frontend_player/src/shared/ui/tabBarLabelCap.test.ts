@@ -28,18 +28,15 @@
  * one `cmap` walk, on `contrast.ts`'s argument for the luminance formula.
  */
 
-import { largestStepThatFits, readFace, widthOf } from '@/test-support/fontMetrics';
+import {
+  NARROWEST_SCREEN,
+  largestStepThatFits,
+  readFace,
+  widthOf,
+} from '@/test-support/fontMetrics';
 
 import { TAB_BAR_TABS } from './TabBar';
 import { theme } from './theme';
-
-/**
- * The narrowest phone the app supports, in points — iPhone SE / iPhone 8, and the width
- * `profileControlGeometry.test.ts` decides the other three drawn controls at.
- *
- * Not a token: it is a fact about the device population, not a value any component reads.
- */
-const NARROWEST_SCREEN = 320;
 
 /**
  * The bar is equal columns edge to edge — no gutter, unlike every scrolling screen — so a
@@ -103,7 +100,7 @@ describe('the column the label has to fit', () => {
 
 describe('the cap', () => {
   it('is derived from the longest shipped label', () => {
-    expect(LONGEST).toBe('Around');
+    expect(LONGEST).toBe('Players');
     expect(theme.size.tabBar.labelMaxScale).toBe(
       largestStepThatFits(width(LONGEST, theme.type.tag.fontSize), AVAILABLE),
     );
@@ -133,13 +130,14 @@ describe('why the label is `tag` and not `eyebrow`', () => {
     expect(theme.type.tag).not.toHaveProperty('letterSpacing');
   });
 
-  it('would lose 8,6pt of a 64pt column to eyebrow tracking, and cap lower for it', () => {
+  it('would lose 10pt of a 64pt column to eyebrow tracking, and cap lower for it', () => {
     // The other member of the 9.5 pair, drawn the way an eyebrow is drawn: uppercase, tracked.
+    // Seven letters at 1,43pt each — it was 8,6pt over the six of *Around*.
     const tracking = theme.type.eyebrow.letterSpacing;
     const eyebrowWidth = width(LONGEST.toUpperCase(), theme.type.eyebrow.fontSize, tracking);
     const flat = width(LONGEST.toUpperCase(), theme.type.eyebrow.fontSize);
 
-    expect(eyebrowWidth - flat).toBeCloseTo(8.6, 1);
+    expect(eyebrowWidth - flat).toBeCloseTo(10.0, 1);
     expect(largestStepThatFits(eyebrowWidth, AVAILABLE)).toBeLessThan(
       theme.size.tabBar.labelMaxScale,
     );

@@ -69,7 +69,7 @@ a migration or a seed run — not only for a process serving HTTP.
 | App | Refused when | Because |
 | --- | --- | --- |
 | backend | `APP_ENV` is not one of the four | A typo must not silently change behaviour. `prd` used to make production behave as non-production. |
-| backend | `development`/`staging` with no `APP_HOST` or `WRITER_DB_URL` | Neither is provisioned; falling back points at a database that does not exist. |
+| backend | **any deployed environment** with no `APP_HOST`, `WRITER_DB_URL` or `REDIS_URL` | Each shipped default is a service name out of `docker-compose-local.yml`. It resolves on a laptop and nowhere else, so falling back points at a database, or an ephemeral store, that does not exist. |
 | backend | `production` with the default `JWT_SECRET_KEY` | It is public in this repository's history, so every token it signs is forgeable. |
 | backend | `production` with `DEBUG=true` | It serves verbose errors to callers. |
 | backend | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway, so it cannot be mistaken for working configuration. |
@@ -87,7 +87,26 @@ every log record — but it is never the offending value of the refusal that pri
 ## How each app refuses to fall back
 
 The mechanism differs, because what each app *could* fall back to differs. The outcome is the
-same: an unprovisioned environment cannot be selected by accident.
+same for the three addresses the backend cannot run without: **a deployed environment is asked
+for its own host, database and ephemeral store, and may inherit none of them.**
+
+That is stated over *deployed* rather than over *unprovisioned*, and it once was not (#341).
+The three refusals were written for `development` and `staging` — the environments nobody had
+built — on the reading that being unbuilt is what makes an address dangerous. It is not. What
+makes it dangerous is that the default is a compose service name, and that is equally true of
+`production`, which was the one environment left able to inherit one. The committed ECS task
+definition did: it selected `production`, supplied no `REDIS_URL`, and would have booted
+against `redis://redis:6379/0` for ever.
+
+**Three compose service names are still inheritable, and are not refused today.**
+`PHOTO_STORAGE_ENDPOINT_URL` defaults to `http://minio:9000`, `PHOTO_REVIEW_ENDPOINT_URL` to
+`http://photo-review:8000`, and `PHOTO_STORAGE_ACCESS_KEY` to the shipped MinIO key — whose
+*secret* half is refused in production while the key itself is not. A production process
+today resolves all three to a laptop's dev stack. `app/core/config.py` says of the first pair
+that "both are `None` in a deployed environment"; they are not, because the default is the
+local one rather than `None`. This is the same failure as #341 in a context that has not been
+argued out yet — the photo sidecar has no container in the task definition at all — so it is
+named here rather than quietly fixed. **Do not read the rule above as covering it.**
 
 - **The backend has defaults that would be wrong**, so it asks whether somebody actually *set*
   a value — `model_fields_set`, not "differs from a sentinel". That is forced by the
@@ -135,7 +154,13 @@ URL that simply has no scheme. One typo, one complaint.
    contract, not by memory.
 2. **Dangerous configuration refuses to boot**, checked where every construction path sees it.
 3. **A refusal names the variable and the reason, and never the value.**
-4. **An unprovisioned environment fails loudly rather than falling back.**
+4. **A deployed environment fails loudly rather than falling back.** It is asked for its own
+   host, database and ephemeral store; none of the three may be inherited from the local
+   defaults. [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md)'s rule 5
+   stated this of *unprovisioned* environments, and its
+   [2026-09-10 amendment](adr/0028-four-environment-model-and-typed-configuration.md#amendment--2026-09-10-rule-5-binds-every-deployed-environment-not-only-the-unbuilt-ones)
+   restates it over every deployed one — with the three photo settings named there as still
+   uncovered.
 5. **No placeholder hostname is written anywhere**, in any app or template. A config file
    naming a host that does not exist describes infrastructure that does not exist.
 6. **A public-network URL is `https://` in every deployed environment**; a server-to-server URL
@@ -278,10 +303,19 @@ The day a domain is registered, this is a configuration task rather than a redes
    `backend/docs/deployment/aws-ecs.md`.
 2. **Issue a TLS certificate** for every public-network host. Rule 6 is not satisfiable
    without one, which is the intended ordering.
-3. **Set the backend's variables**: `APP_ENV`, and — because the environment is unprovisioned
-   until somebody says otherwise — `APP_HOST` and `WRITER_DB_URL` explicitly. Then
-   `JWT_SECRET_KEY` (`openssl rand -hex 32`), `DB_SSL_MODE` (one of `require`, `verify-ca`,
-   `verify-full`), and `ALLOW_ORIGINS` as an explicit `https://` list rather than a wildcard.
+3. **Set the backend's variables**: `APP_ENV`, and — because nothing deployed may inherit the
+   local defaults — `APP_HOST`, `WRITER_DB_URL` and `REDIS_URL` explicitly. Then
+   `JWT_SECRET_KEY` (`openssl rand -hex 32`), `PHOTO_STORAGE_SECRET_KEY`, `DB_SSL_MODE` (one of
+   `require`, `verify-ca`, `verify-full`), and `ALLOW_ORIGINS` as an explicit `https://` list
+   rather than a wildcard — or an explicit empty list, which is what it is today, because no
+   browser client exists and the mobile app sends no `Origin` header.
+
+   **Do not maintain this list by reading it.** `make taskdef` builds the settings object
+   out of `backend/deploy/ecs/taskdef.json` and names whatever it does not supply — and
+   checks the container's stop deadline against the application's own drain while it is
+   there; that check, and not this paragraph, is what CI enforces. The paragraph is
+   here because a checklist a human follows should say what is coming — it went eleven days
+   out of date once, and the check is what makes that recoverable rather than invisible.
 4. **Set the player app's variables**: `EXPO_PUBLIC_ENV` and `EXPO_PUBLIC_API_URL`
    (`https://`). At this point the per-environment bundle-identifier question deferred by
    [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md) becomes live for the
@@ -303,3 +337,4 @@ The day a domain is registered, this is a configuration task rather than a redes
 | The backend's settings, profile and refusals in detail | `backend/README.md`, `backend/CONTEXT.md` |
 | The player app's config, app identity and badge | `frontend_player/README.md`, `frontend_player/docs/architecture.md` Part 14 |
 | What each variable is, per app | each app's `.env.example` |
+| Whether the deployment artifact supplies them | `make taskdef` — [`check-taskdef.sh`](../.github/scripts/check-taskdef.sh) |

@@ -20,9 +20,10 @@
  */
 
 import { playerName } from '@/shared/formatting/playerName';
+import { ON_COURT_CLAUSE } from '@/shared/ui';
 
 import type { AtStake, Candidate, SearchEnvelope } from '../../domain/candidate';
-import { isTagEvidence, type Evidence } from '../../domain/evidence';
+import { isTagEvidence, type Evidence, type ScoredTerm } from '../../domain/evidence';
 import { wearsOnCourtMark, type MarkablePhoto } from '../../domain/onCourtMark';
 import { selectConcern, selectReasons, type ReasonSelection } from '../../domain/reasonSelection';
 import type { SocialTagOverlap } from '../../domain/socialTagOverlap';
@@ -32,7 +33,6 @@ import { balanceReading } from '../balancePresentation';
 import { concernLine } from '../concernPresentation';
 import { livenessLine } from '../livenessPresentation';
 import {
-  ON_COURT_CLAUSE,
   recordClauses,
   socialTagClauses,
   stakeClauses,
@@ -40,7 +40,7 @@ import {
   type MetaLineFacts,
   type RecordBlockFacts,
 } from '../playerCardPresentation';
-import { reasonLine } from '../reasonPresentation';
+import { reasonLine, type PairFacts } from '../reasonPresentation';
 
 /**
  * Everything a card reads off one candidate, resolved once.
@@ -87,6 +87,24 @@ export interface CandidateFactsInput {
   readonly envelope: SearchEnvelope;
   /** The terms this surface renders a value for — the card's **own** exported set. */
   readonly drawn: readonly Term[];
+  /**
+   * Whether this surface draws the **argument** — the reason lines, and the concern under
+   * them. Default `true`, which is the two cards that have always drawn one.
+   *
+   * **It is not a filter, and that is the whole of why it exists.** `drawn` takes a term off
+   * the list *because the card states it somewhere else*, which is a claim about one fact;
+   * this says the surface makes no case at all, and the lines are therefore not composed. The
+   * difference shows up in the **label**: a card whose lines were filtered to nothing still
+   * has reasons to speak, and one that argues nothing must not speak any — §20.3 lets the
+   * spoken order differ from the drawn one, never the content.
+   *
+   * The competitive card sets it `false` (2026-09-09): its case is `SH.whyfit`'s, opened by a
+   * named control on every row, and twenty rows each carrying three sentences is a list nobody
+   * reads. Everything that card **measures** is untouched — the panel, the pill, the band, the
+   * record blocks — so what it loses is prose and not a fact. The social and deck cards keep
+   * theirs: neither has a sheet behind it, and on the deck the sentence **is** the card.
+   */
+  readonly argues?: boolean;
   /**
    * The **Social tag row**, passed in by the card that draws it — and omitted by the two that
    * do not ([#311](https://github.com/Raketa02/Raketa/issues/311)).
@@ -149,8 +167,8 @@ export interface CandidateFactsInput {
 }
 
 export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
-  const { candidate, envelope, drawn, socialTags, record, stake, photo } = input;
-  const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
+  const { candidate, envelope, drawn, argues = true, socialTags, record, stake, photo } = input;
+  const name = playerName({ kind: 'player', name: candidate.card.name });
   const level = levelFactsOf(candidate);
   // Read once for both registers, exactly as the tag row and the record block are: the panel
   // draws the mark from this answer and the label speaks it from the same one, so a
@@ -161,8 +179,10 @@ export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
   // draws it as a row must state it here, because the row itself announces nothing (§20.1).
   const balance = drawn.includes('PREDICTED_BALANCE') ? balanceOf(candidate) : undefined;
   const meta = drawn.includes('DISTANCE') ? metaFactsOf(candidate, envelope) : undefined;
-  const reasons = reasonLinesOf(candidate, drawn, socialTags);
-  const concerns = concernLinesOf(candidate);
+  // Not composed rather than composed and dropped: what is not here cannot reach the label,
+  // and the label is the one place a card can say something it does not draw.
+  const reasons = argues ? reasonLinesOf(candidate, drawn, socialTags) : [];
+  const concerns = argues ? concernLines(candidate) : [];
   const tagClauses = socialTags === undefined ? [] : socialTagClauses(socialTags);
 
   return {
@@ -261,7 +281,7 @@ function reasonLinesOf(
   drawn: readonly Term[],
   socialTags: SocialTagOverlap | undefined,
 ): readonly string[] {
-  return spoken(
+  return reasonLines(
     selectReasons({
       drawn,
       terms: candidate.terms,
@@ -272,9 +292,10 @@ function reasonLinesOf(
       // always did. The named gap is the why-fit sheet's, which prints the column.
       saysSomething: (term) =>
         term.evidence !== null &&
-        reasonLine(term.evidence) !== undefined &&
+        reasonLine(term.evidence, candidate) !== undefined &&
         !restatesTheTagRow(term.evidence, socialTags),
     }),
+    candidate,
   );
 }
 
@@ -305,14 +326,24 @@ function restatesTheTagRow(evidence: Evidence, row: SocialTagOverlap | undefined
   return evidence.matched.some((id) => drawn.has(id));
 }
 
-/** The selection, as the sentences it names. `hidden` is no line rather than an empty one. */
-function spoken(selection: ReasonSelection): readonly string[] {
+/**
+ * The selection, as the sentences it names. `hidden` is no line rather than an empty one.
+ *
+ * **Exported**, because the challenge screen's card draws reason lines off the same selection
+ * ([#361](https://github.com/Raketa02/Raketa02/issues/361)): a second copy of this `switch` is a
+ * second place for a selection arm to be forgotten, and the arm that would be forgotten is
+ * `hidden` — the one whose whole job is not printing a blank row.
+ *
+ * The pair is the same one the caller's `saysSomething` handed `reasonLine`: a distance line is
+ * selected and printed from the candidate's own `distanceKm`, never the evidence's kilometres.
+ */
+export function reasonLines(selection: ReasonSelection, pair: PairFacts): readonly string[] {
   switch (selection.kind) {
     case 'terms':
       // `saysSomething` already dropped every row this can decline for, so nothing is lost
       // here — the filter is what keeps the promise of three from printing two.
       return selection.terms.flatMap((term) =>
-        term.evidence === null ? [] : (reasonLine(term.evidence) ?? []),
+        term.evidence === null ? [] : (reasonLine(term.evidence, pair) ?? []),
       );
     case 'liveness':
       return [livenessLine(selection.reason)];
@@ -321,11 +352,22 @@ function spoken(selection: ReasonSelection): readonly string[] {
   }
 }
 
-/** The one concern a card draws, as a sentence. All of them are the why-fit sheet's. */
-function concernLinesOf(candidate: Candidate): readonly string[] {
+/**
+ * The one concern a card draws, as a sentence. All of them are the why-fit sheet's.
+ *
+ * Takes the two lists rather than a `Candidate`, so the challenge screen's card — which holds a
+ * narrower pairing and no candidate at all — reads the same rule. `saysSomething` is here rather
+ * than at the call sites because *can this evidence be written as a concern* is a fact about the
+ * copy, and a caller passing its own answer is a caller that can disagree with the sentence that
+ * gets drawn.
+ */
+export function concernLines(pairing: {
+  readonly terms: readonly ScoredTerm[];
+  readonly concerns: readonly Term[];
+}): readonly string[] {
   return selectConcern({
-    terms: candidate.terms,
-    concerns: candidate.concerns,
+    terms: pairing.terms,
+    concerns: pairing.concerns,
     saysSomething: (term) => term.evidence !== null && concernLine(term.evidence) !== undefined,
   }).flatMap((term) => (term.evidence === null ? [] : (concernLine(term.evidence) ?? [])));
 }

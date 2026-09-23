@@ -22,6 +22,8 @@ from app.modules.matchmaking.infrastructure.candidate_index_model import (
     CandidateRowORM,
 )
 from app.modules.player_profile.domain.events import (
+    IntroChanged,
+    IntroWritten,
     PhotosChanged,
     SearchRadiusChanged,
     SocialTagsChanged,
@@ -95,6 +97,56 @@ async def test_a_full_onboarding_becomes_one_row_and_one_set_of_facts(
     assert facts.proposals_opt_in is True
     assert facts.gender == "FEMALE"
     assert facts.profile_created_at is not None
+
+
+async def test_a_written_intro_lands_on_the_facts_row(session_factory) -> None:
+    """The line is projected like the tags, so the card is assembled from the
+    row (``docs/adr/0170`` §3) — and a player who wrote none has ``None`` there,
+    which is what the wire omits."""
+
+    player, silent = uuid4(), uuid4()
+    await append(session_factory, profile_created(player))
+    await append(session_factory, opt_in(player))
+    await append(
+        session_factory, IntroWritten(player, "Moved from Wrocław in May.", START)
+    )
+    await append(session_factory, profile_created(silent))
+
+    await _tick(session_factory, build_tail())
+
+    async with session_factory() as session:
+        facts = await session.get(CandidatePlayerFactsORM, player)
+        nothing = await session.get(CandidatePlayerFactsORM, silent)
+    assert facts is not None and facts.intro == "Moved from Wrocław in May."
+    assert nothing is not None and nothing.intro is None
+
+
+async def test_a_withdrawn_intro_clears_the_column(session_factory) -> None:
+    """The edit follows the commit's line into the same column, and a
+    withdrawal is a ``None`` that lands — not a movement the row-writer drops
+    because there is nothing in it. Without this, a line taken back on the You
+    tab would stand on every card until the player wrote another."""
+
+    player = uuid4()
+    await append(session_factory, profile_created(player))
+    await append(
+        session_factory, IntroWritten(player, "Moved from Wrocław in May.", START)
+    )
+    await append(
+        session_factory, IntroChanged(player, "Will travel for a hard game.", START)
+    )
+    tail = build_tail()
+    await _tick(session_factory, tail)
+    async with session_factory() as session:
+        edited = await session.get(CandidatePlayerFactsORM, player)
+    assert edited is not None and edited.intro == "Will travel for a hard game."
+
+    await append(session_factory, IntroChanged(player, None, START))
+    await _tick(session_factory, tail)
+
+    async with session_factory() as session:
+        withdrawn = await session.get(CandidatePlayerFactsORM, player)
+    assert withdrawn is not None and withdrawn.intro is None
 
 
 async def test_a_second_tick_over_the_same_log_applies_nothing(

@@ -14,10 +14,11 @@ which reads fail closed, and the one that drifted would be the one that quietly
 softened a gate.
 
 **What is deliberately not here** is everything a surface decides for itself: the
-mode (a shortlist takes it from the request, a deck reads a declaration), the
-exclusions, the order, the relaxation ladder — which does not reach the deck at
-all — and the prompts. A workbench that decided any of those would be the second
-implementation this one exists to prevent, wearing a helpful name.
+mode (a shortlist takes it from the request, a deck runs on one ruler for
+everybody), the exclusions, the order, the relaxation ladder — which does not
+reach the deck at all — and the prompts. A workbench that decided any of those
+would be the second implementation this one exists to prevent, wearing a helpful
+name.
 
 **The order the caller must keep is still the caller's**, and it is stated in
 each use case: read the searcher, bind once, run the pipeline, record and commit,
@@ -42,6 +43,10 @@ from app.modules.matchmaking.application.outward_reads import (
     live_block_set,
     read_demand,
 )
+from app.modules.matchmaking.application.refusals import (
+    rated_in,
+    refuse_a_held_player,
+)
 from app.modules.matchmaking.domain.cards import (
     CardIdentity,
     CardRecord,
@@ -60,7 +65,6 @@ from app.modules.matchmaking.domain.errors import (
     PlayerProfileNotCommitted,
     PlayIntentNotDeclared,
     SearchNotRecorded,
-    SportNotRated,
 )
 from app.modules.matchmaking.domain.geography import Point
 from app.modules.matchmaking.domain.interest import InterestLedger
@@ -87,6 +91,7 @@ from app.modules.matchmaking.domain.search_context import (
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
+    RatedSportRecord,
     RecordedCard,
     SearchCandidateRecord,
     SearchInitiation,
@@ -105,12 +110,13 @@ from app.modules.player_profile.domain.availability import (
     AvailabilitySlot,
 )
 from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.domain.profile import PlayerProfile
 from app.modules.player_profile.domain.ports import (
     PlayerProfileRepository,
     PlayIntentDeclarationRepository,
 )
 from app.modules.rating.domain.ports import SkillRatingRepository
-from app.shared.domain.errors import AccountHeld
+from app.modules.rating.domain.skill_rating import SkillRating
 
 
 @final
@@ -165,15 +171,22 @@ class AnsweredCandidate:
     #: forward (``docs/adr/0139``), and ``None`` only where one of the two holds
     #: no rating in this sport.
     at_stake: AtStake | None
+    #: **The radar's two, and ``None`` on every other surface.** The bearing from
+    #: the viewer's drawn spot to this player's, and every sport they are rated
+    #: in with the Level held there (``docs/adr/0174`` §2). Attached here beside
+    #: the card for the reason the card is: neither is a fact the scorer may
+    #: see, and both are recorded so a read-back never recomputes them.
+    bearing_deg: int | None = None
+    ratings: tuple[RatedSportRecord, ...] | None = None
 
     def recorded_card(self) -> RecordedCard:
         """The card as it was shown, from the sources that assembled it.
 
-        The nickname, the photo id and that photo's on-court verdict come from
+        The name, the photo id and that photo's on-court verdict come from
         ``users``, the Player profile and the photo store through
-        :class:`PlayerCardSource`; the area, the tags, the Level and its band are
-        already on the index row, because those are facts a player changes about
-        themselves. Assembled once, here, and **both the response and the
+        :class:`PlayerCardSource`; the area, the tags, the intro, the Level and
+        its band are already on the index row, because those are facts a player
+        changes about themselves. Assembled once, here, and **both the response and the
         read-back render this one** — so the card on the wire and the card in the
         record cannot disagree about what was shown.
 
@@ -198,11 +211,14 @@ class AnsweredCandidate:
 
         indexed = self.scored.generated.row
         return RecordedCard(
-            nickname=self.card.nickname,
+            name=self.card.name,
             photo_id=self.card.photo_id,
             review=self.card.review,
             area_code=self.scored.fenced.area_code,
             social_tags=tuple(indexed.social_tags),
+            # Off the row, like the tags — and off the *row* rather than the
+            # fenced candidate, which deliberately never carries it.
+            intro=indexed.intro,
             level=indexed.mu,
             band=indexed.band,
             # **Read off the row, never recomputed** — see
@@ -329,6 +345,34 @@ class SearchWorkbench:
             )
         return snapshot, freshness
 
+    def partitions_beside(
+        self, bound: CandidateSnapshot
+    ) -> Mapping[Sport, CandidateSnapshot]:
+        """This process's index for **every** sport — the one already bound, and
+        the others bound here, once each.
+
+        The radar's sport chips are read across partitions (``radar.py``): a
+        card's own Level comes off the index row in the reading's sport, and the
+        chips beside it come off the same index in the others, so the two
+        cannot disagree about what somebody published. **The search's own
+        partition is the container the search bound**, never a second call to
+        the source — a refresh between the two would hand back a container the
+        bound one disagrees with (``docs/adr/0112``: bound once, never re-read).
+        Walked in the sport registry's own order, never a set's
+        (``docs/adr/0105``), and none of the others is asked about its
+        freshness: the ladder binds the partition the search runs in, and a
+        chip is a fact about a person rather than about who is in range.
+        """
+
+        return {
+            sport: (
+                bound
+                if bound.partition == Partition.for_sport(sport)
+                else self._candidates.snapshot(Partition.for_sport(sport))
+            )
+            for sport in Sport
+        }
+
     # -- the searcher's own facts -------------------------------------------
 
     async def searcher_facts(
@@ -345,27 +389,18 @@ class SearchWorkbench:
         be run.
 
         **The mode is a function of the declaration, and each surface says which
-        function**, because that is exactly what the two surfaces disagree about.
-        A shortlist's is a constant — which tab you are on, decided before
-        anything was read — and the deck's is
-        ``matchmaking/domain/deck.py``'s ``mode_for_intent``, mapping the viewer's
-        own declaration and never selecting a third vector. Passing a function
-        rather than a value is what keeps it **one read**: the declaration the
-        mode was chosen from is the declaration recorded as ``intent_read``, and
-        there is no second load for the two to disagree across.
+        function**, because that is exactly what the surfaces disagree about. A
+        shortlist's is a constant — which tab you are on, decided before
+        anything was read — and a fill on a court born without a mode resolves
+        one from the filler's declaration through ``mode_for_intent``. Passing
+        a function rather than a value is what keeps it **one read**: the
+        declaration the mode was chosen from is the declaration recorded as
+        ``intent_read``, and there is no second load for the two to disagree
+        across. **A surface that reads no declaration is the other method**,
+        because the ``409`` here is the whole of what it declines.
         """
 
-        profile = await self._profiles.load(player_id)
-        if profile is None:
-            raise PlayerProfileNotCommitted(
-                "the searcher has not committed a player profile"
-            )
-        ratings = await self._ratings.find_all_for(player_id=player_id)
-        rated = next((r for r in ratings if r.sport is sport), None)
-        if rated is None:
-            raise SportNotRated(
-                f"the searcher holds no rating for {sport.value}"
-            )
+        profile, rated = await self._profile_and_rating(player_id, sport)
         declaration = await self._declarations.load(
             player_id=player_id, sport=sport
         )
@@ -374,33 +409,64 @@ class SearchWorkbench:
                 f"the searcher has not declared a Play intent for "
                 f"{sport.value}"
             )
-        return SearcherFacts(
-            player_id=player_id,
-            sport=sport,
+        return _searcher_facts(
+            player_id,
+            sport,
+            profile,
+            rated,
             mode=mode_of(declaration.intent),
-            mu=rated.mu,
-            sigma=rated.sigma,
-            tags=tuple(tag.value for tag in profile.social_tags.tags),
-            grid=profile.availability,
-            radius_km=profile.search_radius.kilometres,
-            area=Point(
-                latitude=profile.location.latitude,
-                longitude=profile.location.longitude,
-            ),
-            gender=profile.gender,
-            gender_preference=profile.gender_preference,
             declared_intent=declaration.intent,
-            profile_created_at=profile.created_at,
         )
+
+    async def searcher_facts_under(
+        self, *, player_id: UUID, sport: Sport, ruler: SearchMode
+    ) -> SearcherFacts:
+        """The same read, for a surface that scores under **one ruler** and
+        reads no declaration — the deck (``docs/adr/0169`` §2).
+
+        The declaration is still loaded, once, and **recorded as it stood**:
+        ``intent_read`` is history, and for a viewer who never declared, as it
+        stood is nothing. What this method refuses is the ``409`` — a
+        declaration is a fact about the kind of evening somebody wants, and a
+        discovery surface asks no such question. The two refusals before it
+        stand, in their order: without a profile there is no radius to search
+        on, and without a rating in the sport there is no Level to gate against.
+        """
+
+        profile, rated = await self._profile_and_rating(player_id, sport)
+        declaration = await self._declarations.load(
+            player_id=player_id, sport=sport
+        )
+        return _searcher_facts(
+            player_id,
+            sport,
+            profile,
+            rated,
+            mode=ruler,
+            declared_intent=None if declaration is None else declaration.intent,
+        )
+
+    async def _profile_and_rating(
+        self, player_id: UUID, sport: Sport
+    ) -> tuple[PlayerProfile, SkillRating]:
+        """The two refusals every surface owes, in the order they are owed."""
+
+        profile = await self._profiles.load(player_id)
+        if profile is None:
+            raise PlayerProfileNotCommitted(
+                "the searcher has not committed a player profile"
+            )
+        rated = await rated_in(self._ratings, player_id=player_id, sport=sport)
+        return profile, rated
 
     async def refuse_a_held_searcher(self, searcher_id: UUID) -> None:
-        """**The hold points both ways.** A held player can still sign in."""
+        """**The hold points both ways.** A held player can still sign in.
 
-        held = await read_demand(
-            AccountHoldQuery, lambda: self._holds.held_among([searcher_id])
-        )
-        if searcher_id in held:
-            raise AccountHeld("this account is under a hold")
+        The words and the read are ``refusals.py``'s, shared with the deck's
+        reset, so the two surfaces cannot come to refuse differently.
+        """
+
+        await refuse_a_held_player(self._holds, searcher_id)
 
     # -- what one search was asked for ---------------------------------------
 
@@ -520,6 +586,7 @@ class SearchWorkbench:
         surface: SearchSurface,
         initiation: SearchInitiation,
         for_a_newcomer: bool,
+        completing_challenge_id: UUID | None,
     ) -> SearchContext:
         """Every live fact, resolved **once per search as a set**, never per row.
 
@@ -531,6 +598,20 @@ class SearchWorkbench:
         ``read_demand``. The two ledgers below are the module's own and carry
         their posture in the wrapper around them; the interest ledger is the
         module's own too and is **durable**, so it fails like the record does.
+
+        ``completing_challenge_id`` is the **one** challenge the open-challenge
+        gate steps aside for (``docs/adr/0150`` §3). It is **stated by every
+        caller and never defaulted**, which is ``standing_of``'s rule one context
+        over: a surface added later has to say which challenge it is exempting,
+        rather than inheriting an answer from a default nobody chose. It is an
+        argument rather than a condition reconstructed here: a reader asking why
+        this search can see the people it is arranging with finds the answer in
+        the call. The
+        gate is not weakened and its meaning does not move — it still excludes
+        everybody the searcher is arranging with, **except the people already
+        sitting on the court this search exists to finish**, which is the same
+        rule read correctly. The other three surfaces pass ``None`` and get the
+        gate they always had.
         """
 
         blocked = await live_block_set(self._blocks, searcher.player_id)
@@ -606,7 +687,13 @@ class SearchWorkbench:
                 held_player_ids=frozenset(str(one) for one in held),
                 unshowable_player_ids=frozenset(str(one) for one in unshowable),
                 open_challenge_ids=frozenset(
-                    str(challenge.counterpart_id) for challenge in challenges
+                    str(challenge.counterpart_id)
+                    for challenge in challenges
+                    # **The exemption is a smaller set, never a gate that fired
+                    # and was ignored.** ``GATE_ROSTER`` is unchanged, the
+                    # histogram still counts ten codes, and a court member
+                    # excluded for any of the other nine still falls out.
+                    if challenge.challenge_id != completing_challenge_id
                 ),
             ),
             terms=LiveTermFacts(
@@ -657,7 +744,7 @@ class SearchWorkbench:
         # every read the *context* binds. A stood-down term is a search with one
         # fewer term in it; a stood-down card block would publish *the platform
         # has watched nothing of these twenty people*, which is a claim. An
-        # outage refuses here, exactly as an unreadable nickname does.
+        # outage refuses here, exactly as an unreadable name does.
         scores = await self._player_scores.readings_for(wanted)
         rows: list[AnsweredCandidate] = []
         for row in returned:
@@ -719,15 +806,24 @@ class SearchWorkbench:
         card: RecordedCard | None,
         at_stake: AtStake | None,
         suppression_lapsed: bool | None = None,
+        bearing_deg: int | None = None,
+        ratings: tuple[RatedSportRecord, ...] | None = None,
     ) -> SearchCandidateRecord:
         """One row of the record — **the whole row that was shown, not a summary.**
 
         The card, the at-stake block and the distance are recorded beside the
         breakdown because none of the three can be reconstructed later: a
-        nickname changes, a Level moves, a player leaves an area, and a Level
+        name changes, a Level moves, a player leaves an area, and a Level
         delta is priced against ratings that keep moving. A read-back that
         re-read them would answer a different search and call it the same one
-        (``docs/adr/0109``).
+        (``docs/adr/0109``). The radar's bearing and sport chips are recorded
+        on the same argument.
+
+        **A returned row was not withheld, whatever the floor concluded.** On
+        every other surface that is a tautology — a row the floor refused is a
+        near miss — and on the radar it is the rule: the floor is computed and
+        not applied (``docs/adr/0174`` §3), so a drawn row under it is a drawn
+        row, and ``withheld_reason`` is a fact about the near-miss band alone.
         """
 
         floor = self._ruleset.floors.quality_floor
@@ -750,7 +846,9 @@ class SearchWorkbench:
             their_slot_count=len(row.generated.row.availability),
             days_away=row.generated.overlap.days_away,
             inclusion_reason=row.inclusion_reason,
-            withheld_reason=row.withheld_reason,
+            withheld_reason=(
+                row.withheld_reason if band is CandidateBand.NEAR_MISS else None
+            ),
             missing_terms=row.missing_terms,
             reliability_penalty_applied=row.reliability_penalty_applied,
             reliability_penalty_decisive=row.reliability_penalty_decisive(floor),
@@ -765,6 +863,10 @@ class SearchWorkbench:
             # asserts as a biconditional: a shortlist row is not a card, and a
             # near miss was dealt to nobody.
             suppression_lapsed=suppression_lapsed,
+            # Set on a drawn row and ``None`` everywhere else, on the same
+            # biconditional: only the radar draws a spot with a compass.
+            bearing_deg=bearing_deg,
+            ratings=ratings,
         )
 
     def recorded_rows(
@@ -801,6 +903,8 @@ class SearchWorkbench:
                 suppression_lapsed=(
                     None if lapsed is None else lapsed[row.scored.player_id]
                 ),
+                bearing_deg=row.bearing_deg,
+                ratings=row.ratings,
             )
             for position, row in enumerate(returned, start=1)
         ) + tuple(
@@ -832,7 +936,7 @@ class SearchWorkbench:
         self,
         sport: Sport,
         now: Instant,
-        returned: tuple[Scored, ...],
+        shown: tuple[Scored, ...],
         for_a_newcomer: bool,
     ) -> None:
         """Add one appearance each to the week's bucket. **After the commit.**
@@ -843,6 +947,11 @@ class SearchWorkbench:
         refusal above — a search that ran and was recorded is a search that
         happened, whatever Redis thought.
 
+        ``shown`` is what the surface counts as shown, which is the caller's
+        call and not this method's: every returned row on a list, and the
+        **seated only** on a court, whose returned band is the pool it drew
+        from (#407).
+
         **A newcomer's search writes both families**, over the same rows: being
         volunteered into a newcomer's list is being shown, plus one further fact
         about who was looking. Two writes rather than a flag on one, because they
@@ -850,12 +959,45 @@ class SearchWorkbench:
         """
 
         week = week_of(now)
-        shown = [UUID(row.player_id) for row in returned]
-        await self._exposure.record_shown(sport=sport, week=week, player_ids=shown)
+        player_ids = [UUID(row.player_id) for row in shown]
+        await self._exposure.record_shown(
+            sport=sport, week=week, player_ids=player_ids
+        )
         if for_a_newcomer:
             await self._exposure.record_shown_to_a_newcomer(
-                sport=sport, week=week, player_ids=shown
+                sport=sport, week=week, player_ids=player_ids
             )
+
+
+def _searcher_facts(
+    player_id: UUID,
+    sport: Sport,
+    profile: PlayerProfile,
+    rated: SkillRating,
+    *,
+    mode: SearchMode,
+    declared_intent: PlayIntent | None,
+) -> SearcherFacts:
+    """The searcher, from the two aggregates just read. **Never as they sent.**"""
+
+    return SearcherFacts(
+        player_id=player_id,
+        sport=sport,
+        mode=mode,
+        mu=rated.mu,
+        sigma=rated.sigma,
+        tags=tuple(tag.value for tag in profile.social_tags.tags),
+        grid=profile.availability,
+        radius_km=profile.search_radius.kilometres,
+        area=Point(
+            latitude=profile.location.latitude,
+            longitude=profile.location.longitude,
+        ),
+        gender=profile.gender,
+        gender_preference=profile.gender_preference,
+        declared_intent=declared_intent,
+        profile_created_at=profile.created_at,
+    )
 
 
 def _by_player(

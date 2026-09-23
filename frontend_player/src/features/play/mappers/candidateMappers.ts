@@ -187,6 +187,10 @@ export function toSearchEnvelope(response: ShortlistResponse): SearchEnvelope {
       radiusKmUsed: pool.radius_km_used,
       playersInRange: pool.players_in_range,
       window: toWindow(pool.window) ?? null,
+      // The deal's two counts, kept omitted where the answer is not a deal: a nought is a
+      // measured nought and crosses, and an absence is *this surface has no such number*.
+      ...(pool.remaining === undefined ? {} : { remaining: pool.remaining }),
+      ...(pool.want_to_play_you === undefined ? {} : { wantToPlayYou: pool.want_to_play_you }),
     },
     radiusClamp: response.search.radius_clamp,
     optimisedFor: toOptimisedFor(response.search.optimised_for) ?? null,
@@ -267,7 +271,7 @@ export function toCandidate(row: CandidateSchema): Candidate {
     // absence, and what lets *Closest* sort a stood-down row last instead of first.
     ...(row.distance_km === undefined ? {} : { distanceKm: row.distance_km }),
     card: {
-      nickname: row.player_card.nickname,
+      name: row.player_card.name,
       ...(row.player_card.photo_url === undefined ? {} : { photoUrl: row.player_card.photo_url }),
       // Omitted where nobody looked, and omitted again where the verdict is a word this
       // build has never seen — the two collapse, because both are *this card cannot say a
@@ -278,6 +282,9 @@ export function toCandidate(row: CandidateSchema): Candidate {
       level: row.player_card.level,
       band: row.player_card.band,
       range: { low: row.player_card.range.low, high: row.player_card.range.high },
+      // The one line they wrote, verbatim, and omitted where they wrote none — the contract
+      // never sends an empty string, and the card closes the gap rather than quoting one.
+      ...(row.player_card.intro === undefined ? {} : { intro: row.player_card.intro }),
       // Omitted rather than zero where the platform has watched nothing — the same two
       // spellings of absence as `distance_km`, and what lets *Most reliable* sort a player
       // with no record last instead of first.

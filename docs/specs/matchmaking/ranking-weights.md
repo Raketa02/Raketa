@@ -309,42 +309,59 @@ half-the-live-terms bar. It stays true that the evidence gate excludes nobody to
 > arrive — so what moves is the integer rounding: 0.016 and 0.009 Fit points on the two
 > reliability readings in the walkthrough goldens, no reordering and no floor crossing.
 
-| Strand | Comp | Fun | Was (comp/fun, of six) |
+> **Amended again by [ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md),
+> and the sixth name is not the struck one.** *Answers about results* counts **answers** to a
+> score put in front of somebody — accepting and countering alike — where *confirms results*
+> counted agreements and, because silence already confirms a lone score, could only ever have
+> counted disagreements. It enters at the share the struck name held, so the two vectors below
+> are **restored rather than retuned**: the rescaling above is undone exactly, because the five
+> survivors were the same ratios re-expressed over a smaller vocabulary. Released as
+> `2026.09.08-a`; the two walkthrough readings round back by the same 0.016 and 0.009.
+> `min_observations` becomes **a bar per strand** in the same release — five here, three
+> everywhere else.
+
+| Strand | Comp | Fun | Was, five-name (comp/fun) |
 |---|--:|--:|---|
-| Shows up | 33 | 33 | 25 / 32 |
-| Answers challenges | **29** | 23 | 22 / 22 |
-| Keeps plans | 18 | 15 | 14 / 14 |
-| Settles up | 13 | 12 | 10 / 12 |
-| Sportsmanship | 7 | **17** | 5 / 16 |
+| Shows up | 25 | 32 | 33 / 33 |
+| Answers challenges | 22 | 22 | 29 / 23 |
+| **Answers about results** | **24** | 4 | — |
+| Keeps plans | 14 | 14 | 18 / 15 |
+| Settles up | 10 | 12 | 13 / 12 |
+| Sportsmanship | 5 | **16** | 7 / 17 |
 
 **The decomposition earns its complexity, and here is the proof rather than the assertion.**
-Take two candidates identical on three strands at 0.75:
+Take two candidates with a record of five of the six strands — *keeps plans* has no provider,
+so it is absent from both readings and the vectors renormalise over the rest — identical on
+three of them at 0.75:
 
-| | keeps plans | sportsmanship | **comp** | **fun** |
+| | answers about results | sportsmanship | **comp** | **fun** |
 |---|--:|--:|--:|--:|
-| P | 0.95 | 0.55 | **0.772** | 0.746 |
-| Q | 0.55 | 0.95 | 0.728 | **0.754** |
+| P | 0.95 | 0.55 | **0.794** | 0.722 |
+| Q | 0.55 | 0.95 | 0.706 | **0.778** |
 
 The two modes order them **oppositely**. A single blended score cannot express that, which is
 §9.3.4's argument, now checkable: **the decomposition is justified for exactly as long as such a
 pair exists.** If a later ruleset flattens the two vectors until none does, the decomposition
 has stopped paying and should collapse to the published number.
 
-**The inversion narrowed when the sixth strand was struck, and it is now asserted rather than
-assumed.** The widest pair was *confirms results* against *sportsmanship*, at 24/4 versus 5/16;
-what is left is 18/7 versus 15/17, and `tests/unit/test_matchfit_terms.py` holds the pair above
-so the day none inverts is a red build rather than a quiet one.
+**The inversion narrowed when the sixth strand was struck and widened again when a sixth name
+returned, and it is asserted rather than assumed throughout.** The widest pair was *confirms
+results* against *sportsmanship* at 24/4 versus 5/16; the strike left *keeps plans*' 18/7 versus
+15/17; *answers about results* restores 24/4 versus 5/16, and
+`tests/unit/test_matchfit_terms.py` holds the pair above so the day none inverts is a red build
+rather than a quiet one.
 
-There are **three** blends of the same five strands in this system, and confusing them is a live
-risk: the published Player Score at `35/20/12/10/8`
+There are **three** blends of the same six strands in this system, and confusing them is a live
+risk: the published Player Score at `35/20/15/12/10/8`
 ([`the-five-numbers.md`](the-five-numbers.md) §4), and these two. The reliability *floor* reads
 the published one — the one deliberate exception, recorded there.
 
-**Three strands stand down and two are live** (ADR-0140). *Shows up* and *answers challenges*
-have a provider; *keeps plans* needs a plan with a moment, *settles up* needs court money and
-*sportsmanship* needs a rating surface, and none of the three exists. The strand vector
-renormalises within itself over whatever arrives, exactly as §10 renormalises the terms — which
-is why a strand with no provider costs the reading nothing.
+**Three strands stand down and three are live** (ADR-0140, ADR-0160). *Shows up*, *answers
+challenges* and *answers about results* have a provider; *keeps plans* needs a plan with a
+moment, *settles up* needs court money, and *sportsmanship* has a surface now but the matcher may
+not read it ([ADR-0158](../../adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+The strand vector renormalises within itself over whatever arrives, exactly as §10 renormalises
+the terms — which is why a strand with no provider costs the reading nothing.
 
 - **Falsified by:** ghost rate and answer rate regressed on each strand **separately**. A strand
   that predicts nothing on its own is a strand whose weight belongs to its neighbours. **The

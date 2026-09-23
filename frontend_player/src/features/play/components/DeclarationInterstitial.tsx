@@ -32,6 +32,14 @@
  * the rating tail, the drift prompt and the profile screen write through their own paths and
  * cannot reach this one.
  *
+ * **The deck has since left** ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §2): it deals everybody under one ruler and reads no declaration, so `play_intent_not_declared`
+ * is never raised by it and this screen has one caller again. `declaredOn` stays a prop — the
+ * surface is still the caller's fact, recorded beside the write — but its type names the one
+ * Play surface that still writes here, because a member nothing can send is a value the contract
+ * keeps for the events that carry it and this component does not. The argument above is kept as
+ * the record of why the seam was cut where it was.
+ *
  * **It is not the mode toggle, and the two must never be collapsed.** This writes a
  * `PlayIntent` with three values; the toggle chooses a `SearchMode` with two. That arity gap
  * is ADR-0094's central move, and `domain/playMode` holds the whole argument.
@@ -99,13 +107,13 @@ import { playErrorMessage } from './playErrorMessage';
  * wire union, so a member the contract drops or renames makes this type unassignable *there*
  * — the same red build, on the same `pnpm typecheck`, without transport reaching `components/`.
  */
-export type PlayDeclarationSurface = 'SEARCH_SWITCH' | 'DECK';
+export type PlayDeclarationSurface = 'SEARCH_SWITCH';
 
 export interface DeclarationInterstitialProps {
   readonly sport: Sport;
   /** This app's word for that sport — the caller already drew it on a chip. */
   readonly sportName: string;
-  /** Which of the two Play screens this is. See the module note — it is the caller's to say. */
+  /** Which Play screen this is. See the module note — it is the caller's to say. */
   readonly declaredOn: PlayDeclarationSurface;
 }
 

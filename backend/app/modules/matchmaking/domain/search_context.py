@@ -44,6 +44,24 @@ from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
 
+#: The terms the deck declines to read, for every pairing (``docs/adr/0169``
+#: §2). One today: under one ruler for everybody, a candidate who declared
+#: *competitive* would otherwise lose the intent term's whole weight for wanting
+#: a different evening than the ruler assumes, and one who declared *for fun*
+#: would be paid for agreeing with a vector the viewer never chose. So the term
+#: stands down on the deck — its weight renormalises away by the mechanism a term
+#: already uses when it has nothing to read — and a declaration moves nobody, up
+#: or down. Find a game is untouched: its mode still selects its vector and the
+#: term still reads. **The radar stands it down too** (``docs/adr/0174`` §3):
+#: it runs under the deck's ruler so that one pair prints one Fit on both panes
+#: of Players, and the rule is read off the surface's own ``scores_under_one_ruler``
+#: rather than spelled twice.
+#:
+#: Declared here rather than in ``deck.py`` because the fact rides on the
+#: **context** — ``score_all`` and the reciprocal read both ask it, and each
+#: surface's terminal stage calls those without knowing which surface it is.
+STOOD_DOWN_ON_THE_DECK: frozenset[Term] = frozenset({Term.INTENT_ALIGNMENT})
+
 #: How long a player is new for. **A date, never a flag** — the window is clocked
 #: from the profile commit and computed where it is read, because a stored
 #: ``is_newcomer`` boolean goes stale hourly and a date never does
@@ -115,8 +133,11 @@ class SearcherFacts:
     gender_preference: GenderPreference
     #: The declaration this search's mode was chosen beside. Recorded rather than
     #: read: a shortlist takes its mode from the request, and the declaration is
-    #: what the 409 checks and what the deck will read.
-    declared_intent: PlayIntent
+    #: what its 409 checks. **``None`` only on the deck**, which reads no
+    #: declaration and refuses nobody for lacking one (``docs/adr/0169`` §2) —
+    #: it records the declaration as it stood, and for a viewer who never
+    #: declared, as it stood is nothing.
+    declared_intent: PlayIntent | None
     profile_created_at: datetime
 
     def __post_init__(self) -> None:
@@ -245,6 +266,22 @@ class SearchContext:
     #: the composition root, because *no provider exists* is a fact about the
     #: wiring rather than about the numbers.
     absent_terms: frozenset[Term]
+
+    @property
+    def stood_down_terms(self) -> frozenset[Term]:
+        """The terms **this search** does not read, for every pairing.
+
+        A fact about the surface and never about a person or the platform:
+        ``absent_terms`` beside it is what the wiring lacks, and a term function
+        reports what a pairing lacks. This is the third kind — the search
+        declining to ask — and it is derived from the surface so a context
+        cannot be built saying one thing about its surface and another about
+        which terms it reads.
+        """
+
+        if self.surface.scores_under_one_ruler:
+            return STOOD_DOWN_ON_THE_DECK
+        return frozenset()
 
     def absorption_tally(self, player_id: UUID) -> int | None:
         """How often this candidate has been volunteered into a newcomer's list.

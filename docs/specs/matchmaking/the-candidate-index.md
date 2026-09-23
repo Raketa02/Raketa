@@ -50,6 +50,8 @@ exists in the store now.
 | `player_profile.location_changed` / v1 | `area`, centroid |
 | `player_profile.search_radius_changed` / v1 | `search_radius_km` |
 | `player_profile.proposals_opt_in_answered` / v1 | `proposals_opt_in` |
+| `player_profile.intro_written` / v1 | `intro` — the one text fact here, read by the card and never by the scorer ([ADR-0170](../../adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)) |
+| `player_profile.intro_changed` / v1 | `intro` — the You tab's edit of the same line, whose `null` **clears** the column ([ADR-0179](../../adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §6) |
 | `rating.rating_initialised` / v1 | μ, σ, `confidence`, band and its edges, **the likely range**, `status`, `calibration_priority` |
 | `auth.refresh_token_issued` / v1 · `auth.refresh_token_rotated` / v1 | `last_active_at` — see §2.3 |
 
@@ -146,9 +148,11 @@ values and the rounding lives in the engine, so a consumer deriving μ ± σ for
 own a rounding rule for a number `rating` publishes — the same argument that put the band's
 edges here rather than in a table of four somewhere downstream.
 
-Measured at **1 991 bytes a row** as `__slots__` objects, held once per gunicorn worker —
+Measured at **2 016 bytes a row** as `__slots__` objects, held once per gunicorn worker —
 [`candidate_row_bench.py`](../../research/bench/matcher-scale/candidate_row_bench.py), which
-imports this type rather than copying it. The **782** this said until
+imports this type rather than copying it (1 991 before the row gained the intro,
+[ADR-0170](../../adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md) — a slot
+on every row and a line on the cohort's share of them). The **782** this said until
 [#276](https://github.com/Raketa02/Raketa/issues/276) was measured against
 `matchmaking-engine.md` §7.2's row — two `int` bitmasks, scalar area columns, epoch ints — and
 never against this one. **Half the row** is vocabulary strings the projection copies per

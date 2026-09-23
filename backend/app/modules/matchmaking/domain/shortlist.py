@@ -65,7 +65,7 @@ from app.engines.matchfit.v1 import (
     read_signals,
     reverse_mode,
 )
-from app.kernel import invariant, iso_weekday
+from app.kernel import IsoWeekday, invariant, iso_weekday
 from app.modules.matchmaking.domain.candidate_index import CandidateRow
 from app.modules.matchmaking.domain.fence import (
     area_of,
@@ -80,7 +80,8 @@ from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.geography import (
     Point,
     bounding_box,
-    whole_kilometres,
+    drawn_spot,
+    shown_kilometres,
 )
 from app.modules.matchmaking.domain.geography import distance_km as measure_distance
 from app.modules.matchmaking.domain.measurements import Overlap, overlap_of
@@ -93,6 +94,7 @@ from app.modules.matchmaking.domain.searches import (
     StagedCounts,
     WithheldReason,
 )
+from app.modules.player_profile.domain.availability import AvailabilitySlot
 
 
 @final
@@ -103,10 +105,17 @@ class Generated:
     It carries the two measurements generation already made — the distance and
     the grid overlap — because both are read again downstream, and measuring
     either twice is how two answers to one question get into a system.
+
+    **Two distances, and they are different facts.** ``distance_km`` is cell to
+    cell: the gate applied it and the term will read it. ``drawn_distance_km``
+    is spot to spot (``docs/adr/0174`` §2) and is the one the card prints; it
+    reaches :attr:`Scored.shown_distance_km` and nothing else, so a Fit cannot
+    move with where inside a cell somebody happens to be drawn.
     """
 
     row: CandidateRow
     distance_km: float
+    drawn_distance_km: float
     overlap: Overlap
     #: The candidate's id as the live reads key them. Parsed **once**, here,
     #: because the index spells an id as a string for the gate walk's sake and
@@ -184,8 +193,8 @@ class Scored:
         return tuple(term.value for term in self.admission.live if term not in fired)
 
     @property
-    def shown_distance_km(self) -> int | None:
-        """Whole kilometres, as the wire carries them — or ``None``.
+    def shown_distance_km(self) -> float | None:
+        """One decimal, spot to spot, as the wire carries it — or ``None``.
 
         ``None`` when the distance term stood down, which is **omitted** on the
         wire and is not a zero: a candidate whose distance could not be read is
@@ -200,7 +209,7 @@ class Scored:
 
         if any(stood.term is Term.DISTANCE for stood in self.fit.degraded_terms):
             return None
-        return whole_kilometres(self.generated.distance_km)
+        return shown_kilometres(self.generated.drawn_distance_km)
 
     @property
     def reliability_penalty_applied(self) -> bool:
@@ -269,6 +278,46 @@ def ids_in_box(
     )
 
 
+def viewer_spot_of(context: SearchContext) -> Point:
+    """Where the searcher is drawn — the origin every print is measured from.
+
+    Worked out once per search rather than per row: the spot is a digest of the
+    searcher's own id over their own cell, and neither moves during a search.
+    """
+
+    return drawn_spot(context.searcher.player_id, context.searcher.area)
+
+
+def admitted_of(
+    row: CandidateRow,
+    *,
+    distance_km: float,
+    viewer: Point,
+    searcher_slots: tuple[AvailabilitySlot, ...],
+    today: IsoWeekday,
+) -> Generated:
+    """One row past the gates, measured — **the one constructor of ``Generated``.**
+
+    The cell distance arrives already measured, because the caller needed it
+    for the gate; the drawn distance is measured here, spot to spot, and this
+    is the only place it is — beside :func:`generate` rather than in
+    ``fence.py`` on purpose, since the fence is where everything the scorer
+    sees is assembled and this is the one distance that must never be
+    assembled there (``docs/adr/0174`` §2).
+    """
+
+    player_uuid = UUID(row.player_id)
+    return Generated(
+        row=row,
+        distance_km=distance_km,
+        drawn_distance_km=measure_distance(
+            viewer, drawn_spot(player_uuid, area_of(row))
+        ),
+        overlap=overlap_of(searcher_slots, slots_of(row), today),
+        player_uuid=player_uuid,
+    )
+
+
 def generate(context: SearchContext) -> Generation:
     """``sport ∧ bounding box of the searcher's radius ∧ every gate``.
 
@@ -286,6 +335,7 @@ def generate(context: SearchContext) -> Generation:
 
     box = context.box
     centre = context.searcher.area
+    viewer = viewer_spot_of(context)
     searcher_slots = context.searcher.grid.slots
     today = iso_weekday(context.now.isoweekday())
     me = str(context.searcher.player_id)
@@ -306,11 +356,12 @@ def generate(context: SearchContext) -> Generation:
             excluded[refused.value] += 1
             continue
         admitted.append(
-            Generated(
-                row=row,
+            admitted_of(
+                row,
                 distance_km=distance,
-                overlap=overlap_of(searcher_slots, slots_of(row), today),
-                player_uuid=UUID(row.player_id),
+                viewer=viewer,
+                searcher_slots=searcher_slots,
+                today=today,
             )
         )
     return Generation(
@@ -343,9 +394,16 @@ def score_all(
         # **The platform's own gaps are named here and not in the engine.** A
         # term function reports whichever side of the pairing was empty; a term
         # with no provider at all is nobody's gap, and ``absent`` is a fact about
-        # this wiring rather than about the numbers.
+        # this wiring rather than about the numbers. The terms the **surface**
+        # declines to read are the third kind, and the engine is told those
+        # before it reads, so they are never read at all.
         fit = attributed(
-            engine.score(searcher=searcher, candidate=fenced, ruleset=ruleset),
+            engine.score(
+                searcher=searcher,
+                candidate=fenced,
+                ruleset=ruleset,
+                stood_down=context.stood_down_terms,
+            ),
             context.absent_terms,
         )
         modified = ModifiedFit(
@@ -368,6 +426,7 @@ def score_all(
                     ruleset,
                     context.absent_terms,
                     newcomer=_is_new(candidate.row, context),
+                    stood_down=context.stood_down_terms,
                     # **The one lift that admits.** It is read here, at stage 5,
                     # rather than at stage 6 where the other liveness facts are:
                     # the floor is what it exempts from, and a candidate the
@@ -493,6 +552,11 @@ def _reciprocal(
         searcher=them,
         candidate=_searcher_as_candidate(row, context, searcher),
         ruleset=context.ruleset,
+        # **Stood down in both directions.** The deck reads no intent for a
+        # pairing, and the reverse pairing is the same pairing read from the
+        # other chair: a term the surface declined to ask must not reach the
+        # reciprocity signal by the back door.
+        stood_down=context.stood_down_terms,
     )
     return Reciprocal(fit_ab=row.modified.points, fit_ba=reverse.points, mode=mode)
 
@@ -517,7 +581,11 @@ def _searcher_as_candidate(
     return ScorableCandidate(
         player_id=str(facts.player_id),
         level=LevelReading(mu=facts.mu, sigma=facts.sigma),
-        declared_intent=facts.declared_intent.value,
+        # ``None`` for a viewer who never declared, which only the deck and the
+        # radar admit — and both stand the term down before it could read it.
+        declared_intent=(
+            None if facts.declared_intent is None else facts.declared_intent.value
+        ),
         tags=facts.tags,
         grid=searcher.grid,
         radius_km=float(facts.radius_km),

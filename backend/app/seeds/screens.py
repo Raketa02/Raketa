@@ -76,7 +76,9 @@ from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import Instant, Sport
+from app.modules.challenges.application.read_challenge import ReadChallengeCommand
 from app.modules.challenges.application.read_challenges import ReadChallengesCommand
+from app.modules.challenges.domain.answer_window import ANSWER_WINDOW_HOURS
 from app.modules.challenges.domain.seats import SeatAnswer
 from app.modules.challenges.domain.standing import ENDED
 from app.modules.games.domain.standing import GameStanding
@@ -112,6 +114,7 @@ from app.seeds.paths import (
     TRACE_ID,
     ReadPaths,
     deal_a_deck,
+    read_a_radar,
     read_paths,
     returned_ids,
     run_a_shortlist,
@@ -142,6 +145,12 @@ from app.seeds.relationships import (
 #: How many cards a deal must produce. Deliberately below ``deck_deal_max``: a
 #: deck asserted at its ceiling would be asserting the cap rather than the pool.
 CARDS_A_DEAL_MUST_CARRY = 3
+
+# **How long an invited seat has is read off the domain, never restated here.**
+# Nothing in this package backdates a challenge, so how stale a database may be
+# and still draw the inbound-court screen *is* that number — and a refusal
+# carrying its own copy would send a developer looking for a court that lapsed
+# hours before the sentence said it could.
 
 
 class ScreenIsEmpty(RuntimeError):
@@ -214,6 +223,7 @@ async def assert_the_screens(
             lines.extend(
                 await _the_eleven(paths, pool, line_up, pairs=pairs)
             )
+            lines.append(await _refuse_a_radar_that_hides_anybody(paths, pool))
             lines.extend(
                 await _the_record_block(
                     paths,
@@ -255,6 +265,7 @@ async def _the_full_battery(
         _refuse_a_window_with_only_one_side(pool),
         _refuse_a_reason_line_that_cannot_be_drawn(paths, pool),
         _refuse_a_deck_that_deals_nothing(deck, spent=spent),
+        _refuse_a_deal_on_which_every_card_reads_alike(deck, spent=spent),
         court,
     ]
     lines.extend(await _refuse_a_ladder_that_adds_nobody(paths))
@@ -395,18 +406,24 @@ CANNOT_BE_DRAWN: Mapping[str, str] = {
         "member has ever signed in — the seed writes no session and will not "
         "fabricate one"
     ),
-    "PREVIOUS_ACCEPT": (
-        "unreachable while nothing closes a challenge every seat accepted. "
-        "`SeatAccepted` makes a seat `ACCEPTED` and *open* is `AWAITING_ANSWERS "
-        "| ON | LINE_UP_INCOMPLETE`, so a pair with an accepted seat is "
-        "permanently `OPEN_CHALLENGE`-gated and the signal is unreachable on "
-        "every surface. **Results shipped and did not change this** "
-        "(`docs/adr/0137`): a played, confirmed, settled game leaves its "
-        "challenge exactly as open as it was, which is what the played history's "
-        "own cost line says out loud. So the code stays narrowed out by name and "
-        "contracted by a demand in `tests/demands/` instead of by a fixture"
-    ),
 }
+
+# **`PREVIOUS_ACCEPT` was named above until the pool got a history, and it moved
+# twice.** *Open* was `AWAITING_ANSWERS | ON | LINE_UP_INCOMPLETE`, so any pair with an
+# accepted seat was `OPEN_CHALLENGE`-gated for ever and the signal could not be drawn
+# anywhere; `docs/adr/0142` §1 made *open* mean **still arranging**, so a completed
+# line-up releases its pair and the code became drawable (#343). Both halves of that are
+# contracted by demands in `tests/demands/`.
+#
+# It stayed absent from **this** pool for one more reason after that: every accepted
+# seat the eleven relationship fixtures write sits on a court still being arranged, and
+# the games that seat the protagonist seat her as the **invitee**, so the accepts were
+# hers and the tally they leave sits on her card in *their* pools. `pool_history.py`
+# reverses that — she organises four of its five courts, so eight of the people in her
+# pool have accepted a seat **from her**, and every one of their cards carries the
+# tally. The code is promised now, and the assertion below has stopped stating an
+# absence and started requiring the witness.
+#
 
 
 def _printable_codes(ruleset: Ruleset) -> frozenset[str]:
@@ -485,11 +502,12 @@ def _refuse_a_reason_line_that_cannot_be_drawn(
 def _refuse_a_deck_that_deals_nothing(record: SearchRecord, *, spent: bool) -> str:
     """*The deck deals >= N cards.*
 
-    A different surface and not a second read of the same one: the deck resolves
-    its weight vector from the viewer's **declaration** rather than from a mode,
-    orders on three bands, and applies exclusions no shortlist has. A cohort that
-    fills a list and empties a deal is a cohort that has proved half of what it
-    promised.
+    A different surface and not a second read of the same one: the deck scores
+    under **one ruler** for every viewer and reads no declaration, orders on two
+    bands, and applies exclusions no shortlist has — a cool-off among them, which
+    is why ``pool_history.py`` keeps the two faces the deck must deal past it. A
+    cohort that fills a list and empties a deal is a cohort that has proved half
+    of what it promised.
 
     **Read off the deal this run already made** rather than off a fresh one.
     ``DEALT_MEMORY`` is a day, so a second deal deals the remainder — and a
@@ -517,6 +535,39 @@ def _refuse_a_deck_that_deals_nothing(record: SearchRecord, *, spent: bool) -> s
     )
 
 
+def _refuse_a_deal_on_which_every_card_reads_alike(
+    record: SearchRecord, *, spent: bool
+) -> str:
+    """*The deal quotes a line on one card and closes up on another.*
+
+    The mocks put an intro on every card and most players will have none
+    (``docs/adr/0170``), so the deck card is built against both — and a deal on
+    which every card happened to read the same way would leave one of the two
+    layouts undrawn. The lines are ``cohort.INTROS``' and are asserted here off
+    the **recorded** cards rather than off the declaration, because the claim
+    is that the line reached a card and not that somebody wrote one.
+    """
+
+    if spent:
+        return (
+            f"intro · {THE_POPULATED_PLAYER.slug} · padel: **not read** — the "
+            f"deal this run found was already spent (see the deck line above)."
+        )
+    cards = [row.card for row in record.returned if row.card is not None]
+    quoted = [card for card in cards if card.intro is not None]
+    closed = [card for card in cards if card.intro is None]
+    if not quoted or not closed:
+        raise ScreenIsEmpty(
+            f"the deck dealt {len(cards)} card(s), {len(quoted)} quoting a line "
+            f"and {len(closed)} without one — both layouts have to be on the "
+            f"table, and `cohort.INTROS` is where the lines are declared."
+        )
+    return (
+        f"intro · {THE_POPULATED_PLAYER.slug} · padel: {len(quoted)} card(s) "
+        f"quote a line and {len(closed)} close up"
+    )
+
+
 async def _refuse_a_court_that_cannot_be_filled(
     paths: ReadPaths,
 ) -> tuple[str, SearchRecord]:
@@ -534,6 +585,7 @@ async def _refuse_a_court_that_cannot_be_filled(
             sport=Sport.PADEL,
             mode=SearchMode.COMPETITIVE,
             locked_seats=(),
+            completing_challenge_id=None,
             availability_override=None,
             offered_by_search_id=None,
             rung=None,
@@ -728,6 +780,7 @@ async def _as_the_engine_would_fill(
         surface=SearchSurface.SHORTLIST,
         initiation=SearchInitiation.ENGINE,
         for_a_newcomer=searcher.is_new_at(now),
+        completing_challenge_id=None,
     )
     return run_the_pipeline(context, paths.engine).counts.excluded_by_gate
 
@@ -935,7 +988,7 @@ def _refuse_a_card_the_platform_watched_nothing_of(pool: SearchRecord) -> str:
         and card.counted_games <= LAST_FIVE
     ]
     drawn = [
-        (card.nickname, card.counted_games, len(card.last_five)) for card in cards
+        (card.name, card.counted_games, len(card.last_five)) for card in cards
     ]
     for wanted, found, why in (
         (
@@ -1083,11 +1136,14 @@ async def _refuse_a_pair_with_nothing_between_them(
     ``SharedHistory`` refuses a record of no games, so a pair who arranged and
     never played carries none at all — which means the modifier stands down for
     everybody until two people on this platform have actually played. What is
-    asserted is the **input**, read through the port the matcher reads, because
-    the modifier itself is unreachable on a card by construction: nothing ends a
-    challenge every seat accepted, so a pair that has played can never be shown
-    each other again. That is a fact about the platform rather than about this
-    fixture, and it is stated here rather than discovered in a ranking.
+    asserted is the **input**, read through the port the matcher reads, and it
+    is the input rather than the card because no card in *this* cohort can carry
+    the modifier: the pairs that have played are cohort members, and the pool
+    every assertion here is read from is the protagonist's, who has played
+    nobody. It is no longer unreachable on the platform — `docs/adr/0142` §1
+    releases a pair the moment their line-up completes, so two people who have
+    played are shown each other again — which is a change of reason and not of
+    assertion.
     """
 
     handle = PLAYED_GAMES[0].organiser
@@ -1226,6 +1282,7 @@ async def _the_eleven(
         _refuse_an_absence_with_no_gate_behind_it(paths, pool, deck, line_up),
         await _refuse_a_block_only_one_side_can_see(paths),
         await _refuse_a_seat_that_is_not_hers_to_answer(paths),
+        await _refuse_a_challenge_screen_with_nobody_on_it(paths),
         await _refuse_a_pass_the_deck_still_deals(paths, pool, pairs=pairs),
     ]
 
@@ -1456,9 +1513,11 @@ def _refuse_a_refusal_no_card_carries(
     """*``they-turned-down-your-court`` is in the pool, carrying the refusal.*
 
     A declined seat reopens and that person returns to the deck immediately, so
-    this is the one pairwise answer a card can carry at all — the accept's
-    counterpart is permanently gated and is narrowed out by name in
-    ``CANNOT_BE_DRAWN``. ``PREVIOUS_DECLINE`` is a **silent** signal, so the claim
+    this is the one pairwise answer a card in **this cohort** carries — the
+    accept's counterpart is still arranging a game and is gated on that, and the
+    code is narrowed out by name in ``CANNOT_BE_DRAWN`` for a reason that is now
+    about these fixtures rather than about the platform (`docs/adr/0142` §1).
+    ``PREVIOUS_DECLINE`` is a **silent** signal, so the claim
     is read off the row's recorded raw input rather than off a reason line: what
     is asserted is that the matcher saw the refusal, which is what a silent
     signal owes anybody.
@@ -1595,7 +1654,7 @@ async def _refuse_a_seat_that_is_not_hers_to_answer(paths: ReadPaths) -> str:
 
     her = paths.player(PROTAGONIST.email)
     organiser = paths.player(THEY_CHALLENGED_YOU.account.email)
-    standing = await paths.read_challenges.execute(
+    _, standing = await paths.read_challenges.execute(
         ReadChallengesCommand(reader_id=her)
     )
     courts = [
@@ -1607,9 +1666,9 @@ async def _refuse_a_seat_that_is_not_hers_to_answer(paths: ReadPaths) -> str:
         raise ScreenIsEmpty(
             f"'{THEY_CHALLENGED_YOU.account.slug}' sent {PROTAGONIST.slug} a "
             f"court and her own list carries no open one from them, across "
-            f"{len(standing)} challenge(s). A seat's window is twenty-four hours "
-            f"and nothing here backdates one, so a court seeded yesterday has "
-            f"lapsed — seed again."
+            f"{len(standing)} challenge(s). A seat's window is "
+            f"{ANSWER_WINDOW_HOURS} hours and nothing here backdates one, so "
+            f"a court seeded longer ago than that has lapsed — seed again."
         )
     court = courts[0].challenge
     hers = court.seat_of(her)
@@ -1647,6 +1706,197 @@ async def _refuse_a_seat_that_is_not_hers_to_answer(paths: ReadPaths) -> str:
         f"{THEY_CHALLENGED_YOU.account.slug} reads {courts[0].standing.value}: "
         f"{PROTAGONIST.slug} on side {hers.side.value} answering by "
         f"{hers.answer_by:%Y-%m-%d %H:%M}, one seat accepted and one still out"
+    )
+
+
+async def _refuse_a_challenge_screen_with_nobody_on_it(paths: ReadPaths) -> str:
+    """*The court she is answering names who is asking, and prices playing them.*
+
+    The one screen in this fixture whose card is **recomputed rather than
+    replayed** (``docs/adr/0143``). Every other card here was recorded by the
+    search that dealt it; this one is scored when the screen opens, in **her**
+    direction, against somebody whose search she cannot read — which is the whole
+    reason the port exists and the one thing no other assertion in this file
+    touches.
+
+    **What is asserted is a drawn card and not a shape.** A pairing block is
+    allowed to be absent for two named reasons, and both of them are the fixture
+    failing rather than the product working: the protagonist is rated and has
+    declared for this sport, and the run has just ticked the index it is about to
+    read. So an absence here is reported as the refusal it is, with the code that
+    says whose gap it would have been.
+
+    **The two absences are not fixtures, and that is written down rather than
+    left as a gap.** *Nothing to compute* needs a reader with no rating in the
+    sport they were challenged in, and a challenge only reaches somebody through
+    a search or a mutual yes — both of which need that rating on both sides — so
+    there is no way to seat one through the real routes. *Could not be read*
+    needs the matcher broken, which is a dependency override rather than a state
+    a database can hold. Both are contracted in ``tests/api/`` instead, where an
+    override is the right instrument.
+    """
+
+    her = paths.player(PROTAGONIST.email)
+    organiser = paths.player(THEY_CHALLENGED_YOU.account.email)
+    _, standing = await paths.read_challenges.execute(
+        ReadChallengesCommand(reader_id=her)
+    )
+    courts = [
+        row
+        for row in standing
+        if row.challenge.organiser_id == organiser and row.standing not in ENDED
+    ]
+    if not courts:
+        raise ScreenIsEmpty(
+            f"'{THEY_CHALLENGED_YOU.account.slug}' sent {PROTAGONIST.slug} no "
+            f"court that still stands, so there is no challenge screen to draw "
+            f"a card on. The seat assertion above says why."
+        )
+    detail = await paths.read_challenge.execute(
+        ReadChallengeCommand(challenge_id=courts[0].challenge.id, reader_id=her)
+    )
+    absent = None if detail.court is None else detail.court.absent
+    if detail.court is None or absent is not None:
+        why = "the standing draws none" if absent is None else absent.value
+        raise ScreenIsEmpty(
+            f"{PROTAGONIST.slug}'s challenge screen draws no card block: {why}. "
+            f"She is rated and declared for {courts[0].challenge.sport.value} and "
+            f"this run ticked the index before reading, so both absences are "
+            f"this fixture failing rather than the product working."
+        )
+    card = detail.card_for(organiser)
+    if card is None:
+        raise ScreenIsEmpty(
+            f"the card block came back with nobody in it: "
+            f"'{THEY_CHALLENGED_YOU.account.slug}' organises the court "
+            f"{PROTAGONIST.slug} holds a seat on, and a screen that priced "
+            f"everybody except the person asking is the one card it owes her."
+        )
+    return (
+        f"court · {PROTAGONIST.slug} reads "
+        f"{THEY_CHALLENGED_YOU.account.slug}'s card on challenge "
+        f"{courts[0].challenge.id}: {card.person.name}, level "
+        f"{card.person.level:.2f} in band {card.person.band}, Fit "
+        f"{card.pairing.fit:.0f} over {len(card.pairing.terms)} term(s) with "
+        f"{len(card.pairing.degraded_terms)} stood down, forecast "
+        + (
+            "absent — no game can be arranged out of what is left of this court"
+            if card.pairing.forecast is None
+            else f"{card.pairing.forecast.pct}%"
+        )
+    )
+
+
+async def _refuse_a_radar_that_hides_anybody(
+    paths: ReadPaths, pool: SearchRecord
+) -> str:
+    """*Her padel reading draws her whole pool, the courts and the pass included.*
+
+    The radar applies no judgement and none of the deck's exclusions
+    (``docs/adr/0174`` §3): everybody her pool showed is on it, and so is
+    everybody the pool's ``OPEN_CHALLENGE`` gate held out — a court with her is a
+    line on the sheet and never a hole on the map — and the person she said
+    *not today* to, who is gone from her deck and still on her radar. The two
+    blocked accounts are absent, on the one gate the radar keeps.
+
+    **Read as a fresh reading rather than off a record the run already
+    produced**, because a reading costs the next surface nothing: it enters no
+    dealt memory and notes no exposure, so this is the one surface a fixture can
+    read as often as it likes. Every row is asserted to carry a bearing and its
+    sport chips, and the chip on the envelope is asserted to be at least one —
+    ``said-yes-to-you`` is waiting, and the deck would deal them.
+
+    **Three of the five gates are proved here, and two cannot be.** The
+    histogram shows the block gate firing on the two named for it and the
+    gender gate firing at all — the cohort carries every preference — while the
+    open-challenge and level gates read **zero** on a reading, which is *not
+    asked* and never *nobody excluded*. A hold and a disabled account have no
+    producer in this build (nothing can hold or disable anybody), so those two
+    are proved over a fixture city in ``tests/api/test_radar.py`` instead, and
+    that file is where the five are proved together.
+    """
+
+    answer = await read_a_radar(paths, PROTAGONIST.email, Sport.PADEL)
+    record = answer.record
+    drawn = returned_ids(record)
+    missing_from_the_pool = sorted(
+        str(row.player_id) for row in pool.returned if row.player_id not in drawn
+    )
+    if missing_from_the_pool:
+        raise ScreenIsEmpty(
+            f"{len(missing_from_the_pool)} of the {len(pool.returned)} rows in "
+            f"{PROTAGONIST.slug}'s padel pool are missing from her radar. The "
+            f"radar asks five gates and applies no floor, so everyone a "
+            f"shortlist showed is inside its reach: {missing_from_the_pool}."
+        )
+    for named in (*ABSENT_ON_THE_OPEN_CHALLENGE_GATE, YOU_PASSED_THEM):
+        if _card_for(paths, record, named) is None:
+            raise ScreenIsEmpty(
+                f"'{named.account.slug}' is missing from {PROTAGONIST.slug}'s "
+                f"padel radar. A court with her and a *not today* hold people "
+                f"out of her deck and not off her map: the radar asks neither "
+                f"the open-challenge gate nor the pass suppression, and an "
+                f"absence here is one of them reaching a surface it does not "
+                f"belong to. Gates: "
+                f"{dict(sorted(record.counts.excluded_by_gate.items()))}."
+            )
+    for named in ABSENT_ON_THE_BLOCKED_GATE:
+        if _was_scored(paths, record, named):
+            raise ScreenIsEmpty(
+                f"'{named.account.slug}' is on {PROTAGONIST.slug}'s padel radar "
+                f"and one of them blocked the other. The block gate is one of "
+                f"the five the radar keeps, and it fails closed."
+            )
+    gates = record.counts.excluded_by_gate
+    if gates.get(GateCode.BLOCKED.value, 0) < len(ABSENT_ON_THE_BLOCKED_GATE):
+        raise ScreenIsEmpty(
+            f"{len(ABSENT_ON_THE_BLOCKED_GATE)} account(s) are named for the "
+            f"block gate and it excluded {gates.get(GateCode.BLOCKED.value, 0)} "
+            f"from {PROTAGONIST.slug}'s padel radar. An absence is not the "
+            f"claim — the histogram is. Gates: {dict(sorted(gates.items()))}."
+        )
+    if gates.get(GateCode.GENDER_PREFERENCE.value, 0) < 1:
+        raise ScreenIsEmpty(
+            f"the gender gate excluded nobody from {PROTAGONIST.slug}'s padel "
+            f"radar, over a cohort that carries every preference. It is one of "
+            f"the five the radar keeps. Gates: {dict(sorted(gates.items()))}."
+        )
+    not_asked = (GateCode.OPEN_CHALLENGE, GateCode.LEVEL)
+    if any(gates.get(code.value, 0) for code in not_asked):
+        raise ScreenIsEmpty(
+            f"a gate the radar does not ask excluded somebody from "
+            f"{PROTAGONIST.slug}'s padel radar: a zero there means *not asked*, "
+            f"and a count means the deck's judgement reached a surface that "
+            f"promised none. Gates: {dict(sorted(gates.items()))}."
+        )
+    without_a_compass = [
+        str(row.player_id)
+        for row in record.returned
+        if row.bearing_deg is None or not row.ratings
+    ]
+    if without_a_compass:
+        raise ScreenIsEmpty(
+            f"{len(without_a_compass)} row(s) on {PROTAGONIST.slug}'s padel "
+            f"radar carry no bearing or no sport chips: {without_a_compass}. A "
+            f"drawn spot is a bearing and a distance, and a card's chips are "
+            f"every sport its player is rated in — which is at least this one."
+        )
+    if answer.want_to_play_you < 1:
+        raise ScreenIsEmpty(
+            f"{PROTAGONIST.slug}'s padel radar says nobody wants to play her, and "
+            f"'{SAID_YES_TO_YOU.account.slug}' has a live yes towards her that "
+            f"the deck would deal. The chip is the deck's number computed by the "
+            f"deck's rule, so a nought here is that rule refusing the one "
+            f"account named for it."
+        )
+    return (
+        f"radar · {PROTAGONIST.slug} · padel: {record.counts.n_returned} drawn of "
+        f"{record.counts.n_generated} in the box, every pool row among them, "
+        f"{len(ABSENT_ON_THE_OPEN_CHALLENGE_GATE)} courts and the pass drawn, "
+        f"BLOCKED {gates.get(GateCode.BLOCKED.value, 0)} and GENDER_PREFERENCE "
+        f"{gates.get(GateCode.GENDER_PREFERENCE.value, 0)} on the histogram with "
+        f"the four not asked at nought, and {answer.want_to_play_you} waiting on "
+        f"the deck's count"
     )
 
 

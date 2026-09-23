@@ -14,6 +14,9 @@ from app.modules.blocks.presentation.routes import router as blocks_router
 from app.modules.challenges.presentation.routes import (
     router as challenges_router,
 )
+from app.modules.conversations.presentation.routes import (
+    router as conversations_router,
+)
 from app.modules.games.presentation.routes import router as games_router
 from app.modules.matchmaking.presentation.deck_routes import (
     passes_router,
@@ -29,7 +32,9 @@ from app.modules.matchmaking.presentation.lineup_routes import (
 from app.modules.matchmaking.presentation.prompt_decline_routes import (
     router as prompt_declines_router,
 )
+from app.modules.matchmaking.presentation.radar_routes import router as radar_router
 from app.modules.matchmaking.presentation.routes import router as searches_router
+from app.modules.plans.presentation.routes import router as plans_router
 from app.modules.player_profile.presentation.photo_routes import (
     router as photos_router,
 )
@@ -45,8 +50,14 @@ from app.modules.player_profile.presentation.profile_surface_routes import (
 from app.modules.player_profile.presentation.routes import (
     router as player_profile_router,
 )
+from app.modules.player_record.presentation.routes import (
+    router as player_record_router,
+)
 from app.modules.rating.presentation.routes import ratings_router
 from app.modules.rating.presentation.routes import router as assessments_router
+from app.modules.sportsmanship.presentation.routes import (
+    router as sportsmanship_router,
+)
 from app.modules.users.presentation.routes import router as users_router
 
 player_api_router = APIRouter(prefix="/api/v1")
@@ -66,7 +77,12 @@ player_api_router.include_router(lineups_router)
 player_api_router.include_router(forecasts_router)
 player_api_router.include_router(interest_router)
 player_api_router.include_router(deck_router)
+player_api_router.include_router(radar_router)
 player_api_router.include_router(passes_router)
 player_api_router.include_router(prompt_declines_router)
 player_api_router.include_router(challenges_router)
+player_api_router.include_router(conversations_router)
 player_api_router.include_router(games_router)
+player_api_router.include_router(plans_router)
+player_api_router.include_router(sportsmanship_router)
+player_api_router.include_router(player_record_router)

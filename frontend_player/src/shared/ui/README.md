@@ -85,8 +85,60 @@ Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `No
 and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile` and
 `PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`
 with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`, `Switch`,
-`FitPill`, `BalanceBar`, `Court`, `Meter`, `Segment` and `Toast` with `ToastHost`. Import them
-from `@/shared/ui`.
+`FitPill`, `BalanceBar`, `Court`, `Meter`, `Segment` and `Toast` with `ToastHost`; by the
+chat map: `TextField` (6.13, which auth's four boxes moved onto in the same commit) and
+`PagerDots` (7.18, Now's rail); ahead of the record sheet: `SocialTagRow`, `RunOfForm`, and
+`PhotoPanel` with `PlayerPhoto`, `OnCourtMark` and `courtPosterFor` under it; and by the
+sportsmanship card: `StarRow` with `Star`; and by the Chats list's _Leave the game_: `SwipeRow`
+(6.15), a row that slides left on `PanResponder` to reveal one control, with its arithmetic in
+`swipeRowGeometry.ts`; and by the You tab: `DoorRow` (5.5 as amended, Part 16 2026-09-17), a
+fact with a screen behind it — a `paper2` lead square with a Feather glyph, a title, a **live**
+line off a read and a chevron, spoken as _title, live line_; what a row says while its read is
+on its way or has failed is `shared/errors`' `liveLine`, because a read's standing turned into a
+sentence is an errors concern and not a drawing. `DarkCard` gained `PressableDarkCard` for the
+tab's header card, as `Card` has `PressableCard`. Import them from `@/shared/ui`.
+
+**`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
+card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with
+`SCORE` beneath; `ringLg` (74) on the reliability screen, with the tone ladder's word beside it
+and nothing beneath (Part 16, 2026-09-17; ADR-0179 §1–§2). The `size` changes the diameter and
+nothing else — one stroke, one tick, one overshoot, one type role for the figure — and the
+caller may hand the `figure` to print, because a Player Score is out of a hundred and not a
+percentage. The `label` beneath became optional for the reliability screen's reason.
+
+**Six of those arrived by promotion rather than by being built here**, and the promotion is the
+interesting half ([#375](https://github.com/Raketa02/Raketa/issues/375),
+[#384](https://github.com/Raketa02/Raketa/issues/384)). Five were the competitive candidate
+card's and one was the profile photos step's, and the record sheet draws all six
+([#373](https://github.com/Raketa02/Raketa/issues/373)): copying any of them would be a second
+thing to keep in step — `RunOfForm`'s three contrast ratios are **pinned** in
+`recordSquares.test.ts` and `OnCourtMark`'s cap is derived per panel in `onCourtMarkFit.test.ts`,
+and a second copy of either would be values those tests never see — and importing them out of
+`features/play/` would point the arrow the wrong way for a feature that is not Play's sibling by
+accident. `PlayerPhoto` also **lost the word _candidate_ on the way down**: a candidate is Play's
+name for a row a search returned, and what the switch draws is a player. **What came down is the drawing and the shape it takes; what stayed is the
+rule.** `play/domain/socialTagOverlap` reads the row's four answers off a **candidate**, which is
+a search result and Play's alone, and hands the value down — so a second surface serves its own
+and neither re-derives the other's. `RUN_OF_FORM_FILL` is exported for the same reason
+`BALANCE_INK` and `FIT_HIGH` are: the ratio a drawn object is held to is derived off the drawn
+object, never off the token it happens to use today.
+
+**`StarRow` is 6.13, and it is here for the reason `Tick` is rather than for a second
+caller's.** It is the sportsmanship card's alone today
+([#386](https://github.com/Raketa02/Raketa/issues/386)), and a control with a touch rule, a
+press state, a fill pair and three pinned contrast ratios is a design-system object whether or
+not two features draw it — the same standing `AvailabilityGrid`, `RadiusSlider` and `TickBox`
+have, each with one caller. `STAR_FILL` is exported for `RUN_OF_FORM_FILL`'s reason, and it is
+**that same pair**: `ink` given against `muted` blank, taken deliberately so that _tell two
+states of one mark apart_ has one answer in this system rather than two, with its three ratios
+re-derived on `surface` in `starRow.test.ts` because 2.5 states fixed pairs and a ground is
+half of one. The star is **drawn** rather than typed, which `Tick` already argued — geometry
+does not scale with Dynamic Type and does not vary by platform font — with one addition that is
+this component's own: **Archivo ships no U+2605** and ADR-0135 fixed the icon family as Feather,
+which has no filled counterparts, so a five-star row is precisely the case where there was
+nothing to type. What it deliberately does **not** own is what a second press means: it reports
+every press with the value pressed, exactly as 6.8's cell fires whether or not it is ticked, and
+clearing is a rule about what an answer is.
 
 **`Segment` is 6.3, specified since the document was locked and built only now.** Its own
 closing line is why it exists in that shape — _"nothing uses it today; it is specified so the
@@ -125,6 +177,18 @@ printed** — the why-fit row draws `×{weight} → {value}` two words earlier �
 is the double announcement 6.8 hides its column heads to avoid (`the-words.md` §20.8). There
 is no prop to pass one through, which is what stops somebody helpfully adding
 `accessibilityRole="progressbar"` and having every row announced twice.
+
+**The meter's fill takes a `tone` and the ladder does not come with it.** Three steps in an
+existing fill — `mint` · `night` · `red` — because the record card stacks three metered rows in
+one column where the why-fit sheet draws one fill for all of them
+([#385](https://github.com/Raketa02/Raketa/issues/385)). What the component deliberately does
+not hold is **where** a figure turns poor: that is a fact about the figure and belongs to
+whoever knows what it means, which on the record sheet is the same rule that tints the
+reliability pill above the card. A meter that banded its own share would be a second opinion,
+and the screen would eventually show a green bar under a red pill for one ratio. `METER_TONE_FILL`
+is exported so `meterTone.test.ts` derives the ratios off the component rather than off the
+theme — and the pair bound there is stated in `L*` rather than as a contrast ratio, because
+three fills that each clear their track cannot also be 3:1 from one another.
 
 **Two OS questions, one collapse.** `overlay.tsx` reads reduced motion **and** whether a
 screen reader is running, and `useCollapsedPresentation()` is the single condition either
@@ -190,12 +254,13 @@ described in `viewBox` units and the caller gives it a box, so one drawing serve
 tile and a 27pt avatar. It draws a player — three poses, flat, in `ink`, with **no face and
 no likeness** — over a two-stop gradient on one of the sixteen hues in `POSTER_HUES`, and
 `hue` is the **one colour prop in this system that does not come from `theme.color`**
-(ADR-0134). Both choices are the _caller's_: the design system's contract is that one player
-id produces one poster, and which hue and pose an id maps to belongs to the feature, exactly
-as the ring's ceiling belongs to the engine. Its gradient id comes from `useId()` and never
-from data — the prototype composed it from the player id and the width, so a screen drawing
-one person twice emitted duplicates. It, `ConfidenceRing` and `Tick` are what need
-`react-native-svg`.
+(ADR-0134). Both choices are `courtPosterFraming`'s, beside it: the design system's contract
+is that one player id produces one poster, and the hash that decides which is a promotion out
+of `player_profile/` made once four surfaces drew other people's posters — one person in two
+colours on two screens is exactly the drift a second copy of that hash would produce. Its
+gradient id comes from `useId()` and never from data — the prototype composed it from the
+player id and the width, so a screen drawing one person twice emitted duplicates. It,
+`ConfidenceRing` and `Tick` are what need `react-native-svg`.
 
 **The photo tile** (6.9) is a row before it is a tile: `PhotoRow` is always three slots
 wide and pads itself with undrawn space, which is where the ceiling lives — at three photos
@@ -227,10 +292,29 @@ hidden from assistive technology here so they are not read a second and a third 
 it draws both arrive as props, because those four numbers are served and product's to
 retune — what reaches the component is where the thumb goes and what the figure says.
 
+**The text field** (6.13) is one control in two shapes — a **one line** capped by the caller's
+`maxLength`, and one that **grows an `rlValue` line at a time to a cap** and then scrolls — and
+they are one component because they differ by a number rather than by what they take. Its cap is
+a count of **lines** and it belongs to the caller: neither surface that needs a growing field has
+been drawn on a phone, so what the design system owns is the arithmetic, one line per step with
+the box's padding derived so that one grown line **is** the one-line box. The **field** is the
+touch surface, not the input — the box alone is 42 against a 44 minimum, and a grown box's value
+is 16pt tall inside 13pt of padding — so a press anywhere on the label, the box or the message
+moves the caret in, and at 57 the control clears the minimum on its own geometry with no
+`hitSlop` granted. The label is a real `Text` bound by `accessibilityLabel` and never a
+placeholder, and it is always drawn: the field that wants the **name without the drawing** is the
+composer, and that prop arrives with it. **The reveal is the field's**, named for the field it
+operates on, so a sign-up form's two password boxes are not two buttons both called _Show_, and
+it dims by 6.6's `.7` rather than the `.6` it was drawn with in `features/auth/`. Android is told twice
+— `includeFontPadding: false` and `textAlignVertical: 'top'` — because a line box is taller there
+than `lineHeight` and a multiline value is centred rather than topped, and both are properties
+iOS ignores.
+
 **A feature never keeps a second copy of one of these.** If a primitive does not do what
-a screen needs, extend the primitive — the two auth-form controls that remain in
-`features/auth/components/AuthControls.tsx` are there because the design system genuinely
-specifies no text field and no _ended badly_ note variant, and each says so in place.
+a screen needs, extend the primitive — the one auth-form control that remains in
+`features/auth/components/AuthNotice.tsx` is there because the design system genuinely
+specifies no _ended badly_ note variant, and it says so in place. The field beside it left
+for 6.13, and the placeholder button before that for `Button`.
 
 **The tab bar** (10.2) is the app's bottom chrome, and it is the drawn object only — it
 takes the active tab and a press handler and knows nothing about routes or stacks. **Its

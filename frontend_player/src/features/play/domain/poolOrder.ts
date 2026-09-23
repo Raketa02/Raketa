@@ -43,7 +43,7 @@
  * orderings it can perform over the fields a `Candidate` actually carries — the same §3 drop a
  * social tag with no words takes.
  *
- * ## A pin is not a bonus — and this is the distinction to read before deleting one
+ * ## A yes informs; it never takes over — the bonus was struck, and then the pin went too
  *
  * §C5 specified the Best-fit comparator as *"the fit score plus **12** for anyone who said yes
  * to you in Match me"*, and [#231](https://github.com/Raketa02/Raketa/issues/231) struck it:
@@ -51,19 +51,16 @@
  * a bonus, so adding twelve here would score the wire's own ranking a second time.
  * `PoolScreen`'s module note keeps that refusal in writing, and it still stands.
  *
- * **The pin below is the opposite move, and every difference is load-bearing.** A bonus is
- * arithmetic on a published figure — it changes what *best* means, silently, on a number the
- * card is printing two lines away, and it survives every re-sort because it has become part of
- * the score. A pin is a **position**: it touches no number, it is visible and named on the card
- * it moved (the tag beside the handle says *why* that row is first), and it exists only in the
- * order the rows arrived in — the moment the player asks for closest, evenest or most reliable,
- * the pinned row **drops into its honest place** and the tag travels down with it.
- *
- * So the falsifier is *what does the printed Fit say*. Under the `+12`, a 41 sorted above an
- * 88 and printed 41, which is the ranking disagreeing with itself. Under the pin, a 41 sorts
- * first, prints 41, and says *Wants to play you* — which is a different claim, made out loud.
- * A reader who arrives here on the trail of #231 is looking at the right file and the wrong
- * mechanism ([#310](https://github.com/Raketa02/Raketa/issues/310)).
+ * What replaced it for a while was a **pin** ([#310](https://github.com/Raketa02/Raketa/issues/310)):
+ * a liker forced to the top of the served order, printed with their own number and named by
+ * the tag beside their handle, released by any chip. It touched no figure, which is what made
+ * it not a bonus — and it still put a 51 above thirty people at 80 on a list whose whole job is
+ * *who fits this court*. [ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8 removed it: an incoming yes is **a tag and a nudge, never a pin**. The engine's `+14` on
+ * the liker's rank key already places them earlier than their Fit alone would, never above a
+ * genuinely better pairing, and that is where they are drawn. **The served order is the
+ * order**, and this file holds no rule that moves anybody in it. A reader who arrives here on
+ * the trail of #231 or #310 is looking at the right file and a mechanism that is gone.
  *
  * ## *Best fit* is a sort, and never a filter
  *
@@ -76,7 +73,7 @@
  */
 
 import type { Candidate } from './candidate';
-import { SORT_OPTIONS, type InclusionReason, type SortOption } from './vocabulary';
+import { SORT_OPTIONS, type SortOption } from './vocabulary';
 
 type Comparator = (one: Candidate, other: Candidate) => number;
 
@@ -149,56 +146,23 @@ export function pickable(
 }
 
 /**
- * Which admitting codes are lifted to the top of the served order — **a table, not a check.**
- *
- * `INCLUSION_TAG_WORD`'s discipline for `INCLUSION_TAG_WORD`'s reason: `InclusionReason` is a
- * union of one *today*, and `inclusionReason !== undefined` would silently pin a second
- * admitting code — somebody admitted for something that is not interest at all, put at the top
- * of the list under a tag saying they want to play you. Keyed by the union, a second code
- * arrives with an answer here or does not compile.
- */
-const PINS: Readonly<Record<InclusionReason, boolean>> = {
-  INTEREST_LIFT: true,
-};
-
-const pinnedFirst = (rows: readonly Candidate[]): readonly Candidate[] => {
-  const lifted = (row: Candidate) => row.inclusionReason !== undefined && PINS[row.inclusionReason];
-  const up = rows.filter(lifted);
-  // Nothing lifted is the common case and the list is returned untouched, which is `orderPool`'s
-  // own shape one level down: a rule that reorders nobody hands back the array it was given.
-  return up.length === 0 ? rows : [...up, ...rows.filter((row) => !lifted(row))];
-};
-
-/**
  * The rows, in the order the screen should draw them.
  *
  * `undefined` is *the order they arrived in*, which is the engine's own ranking and the pool's
- * default — **plus the pin**, which exists in that order and in no other. `Array.prototype.sort`
- * is stable, so a sort leaves rows it cannot separate exactly where the answer put them, and
- * `pinnedFirst` preserves the served order within each of its two halves for the same reason.
+ * default — **and the array it was given**, untouched: a rule that reorders nobody hands back
+ * what it was handed. `Array.prototype.sort` is stable, so a chosen sort leaves rows it cannot
+ * separate exactly where the answer put them.
  *
- * **The pin releases on any chosen sort, including one that reorders nothing.** It is a property
- * of *the order the player is in*, not of whether the comparator moved anybody: `EVENEST` has a
- * word and no ordering, and a `MOST_RELIABLE` over rows the platform has watched nothing of
- * separates nobody — in both the player has still left the served order, and leaving it is the
- * whole condition. See the module note on why this is not the `+12` #231 struck.
- *
- * **`BEST_FIT` releases it too, and that is a decision with a cost worth naming.**
- * [#310](https://github.com/Raketa02/Raketa/issues/310) says the pin exists *"in the default
- * (as-served) order **only**"* and that a pinned row *"moves under **every** re-sort"*, so this
- * follows the ticket rather than the three chips its prose happens to list. What it costs is the
- * one thing this file argues for two sections up: where the server withheld `BEST_FIT` and the
- * row added it back as **the way back**, tapping it returns fit order *without* the pin, which is
- * not quite the list the player left. That is accepted rather than overlooked — the alternative
- * is a pin that survives a sort, which is the property that makes a bonus a bonus, and *the way
- * back* is a way back to an **ordering** and never to a decoration on top of one.
+ * A liker — `inclusionReason === 'INTEREST_LIFT'` — is a row like any other here. The tag on
+ * their card is `candidateTag`'s and their place in the served order is the engine's; under a
+ * chosen sort they take the comparator's answer like everybody else, which is the only reading
+ * under which the printed number and the position agree on every row (see the module note).
  */
 export function orderPool(
   rows: readonly Candidate[],
   sort: SortOption | undefined,
 ): readonly Candidate[] {
-  if (sort === undefined) return pinnedFirst(rows);
-  const compare = COMPARATOR[sort];
+  const compare = sort === undefined ? undefined : COMPARATOR[sort];
   return compare === undefined ? rows : [...rows].sort(compare);
 }
 
@@ -233,12 +197,12 @@ const WEARS_BEST_MATCH: Readonly<Record<SortOption, boolean>> = {
  * because *the highest ✦ on screen* is a fact about a list and not about a card — but the coral
  * tag lives in `IdentityRow`, which is the competitive card's alone
  * ([#309](https://github.com/Raketa02/Raketa/issues/309) left `CandidateCardSocial` untouched),
- * so a for-fun pool draws no *best match*. The pin still reorders it and the interest sentence
- * still explains why: the tag is what is missing there, not the rule.
+ * so a for-fun pool draws no *best match*; its two interest tags are drawn there all the same,
+ * because those are facts about a person and not about a list.
  *
- * It names the highest row **even when that row is the pinned one**. The two tags collide on
- * one card and `candidateTag` resolves it — the volt one replaces the coral one, *"because it's
- * the stronger fact"* — and handing the coral tag to the runner-up instead would be the card
+ * It names the highest row **even when that row is a liker's**. The two tags collide on one
+ * card and `candidateTag` resolves it — the volt one replaces the coral one, *"because it's the
+ * stronger fact"* — and handing the coral tag to the runner-up instead would be the card
  * saying *best match* about a row that is not the best match.
  */
 export function bestMatchId(

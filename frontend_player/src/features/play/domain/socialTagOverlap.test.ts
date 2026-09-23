@@ -43,7 +43,7 @@ function candidate(over: Partial<Candidate> = {}): Candidate {
     playerId: 'p1',
     fit: 78,
     card: {
-      nickname: 'marek',
+      name: 'marek',
       areaCode: 'A+050612+0019938',
       socialTags: [...THEIRS],
       level: 2.8,
@@ -226,5 +226,36 @@ describe('the cap', () => {
     );
 
     expect(row.kind === 'unknown' ? row.tags : []).toHaveLength(6);
+  });
+
+  /**
+   * **The deck's order runs before the cap** (ADR-0169 §7): a shared tag published seventh is
+   * the one a served-order cap would cut off, and it is exactly the one the deck wants first.
+   * In the served order the same seventh is cut — the row is *what they published*.
+   */
+  it('puts a shared tag first before capping, when asked for the deck’s order', () => {
+    const seven = [
+      ...THEIRS,
+      'LAUGHS_OFF_MISTAKES',
+      'WARMS_UP_PROPERLY',
+      'HERE_TO_IMPROVE',
+      'SHARES_A_LIFT',
+    ] as const;
+    const seventhShared = candidate({
+      card: { ...candidate().card, socialTags: [...seven] },
+      terms: [tagTerm('SOCIAL_VIBE', { matched: ['SHARES_A_LIFT'] })],
+    });
+
+    const deck = socialTagOverlap(seventhShared, 'shared-first');
+    expect(deck.kind === 'shared' ? deck.tags.map((tag) => tag.id) : []).toEqual([
+      'SHARES_A_LIFT',
+      ...seven.slice(0, 5),
+    ]);
+    expect(deck.kind === 'shared' ? deck.tags[0]?.shared : false).toBe(true);
+
+    const served = socialTagOverlap(seventhShared);
+    expect(served.kind === 'shared' ? served.tags.map((tag) => tag.id) : []).toEqual([
+      ...seven.slice(0, 6),
+    ]);
   });
 });

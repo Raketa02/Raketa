@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import Depends
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
@@ -32,6 +33,7 @@ from app.bootstrap.composition import (
 from app.bootstrap.events import EventRuntime, get_event_runtime
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.session import get_db
+from app.infrastructure.redis_client import get_redis
 from app.kernel import Clock
 from app.modules.auth.application.token_rotation import TokenRotator
 from app.modules.auth.domain.ports import (
@@ -135,3 +137,27 @@ def get_token_rotator(
 
 
 TokenRotatorDep = Annotated[TokenRotator, Depends(get_token_rotator)]
+
+
+def get_ephemeral_store_or_nothing() -> Redis | None:
+    """The process's Redis pool, or nothing where it never came up.
+
+    **``None`` rather than a raise**, which is the one place this differs from
+    the matcher's ``EphemeralStoreDep`` — that declaration's name for the
+    opposite posture, and the reason this one is not called that. A search that
+    cannot read its ledgers is a search that cannot answer; the routes that ask
+    for this answer regardless, and a store that is not there reaches the
+    reader as *the pairing could not be read* rather than as a failed screen
+    (``docs/adr/0143`` §6, ``docs/adr/0161``). Two contexts declare that
+    posture — a challenge's detail and a game's pairing — so it is declared
+    once, here, beside the other platform-wide seams. It stays a ``Depends`` so
+    a test can override it.
+    """
+
+    try:
+        return get_redis()
+    except RuntimeError:
+        return None
+
+
+StoreOrNothingDep = Annotated[Redis | None, Depends(get_ephemeral_store_or_nothing)]

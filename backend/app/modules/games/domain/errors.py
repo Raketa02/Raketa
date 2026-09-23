@@ -16,6 +16,14 @@ agreement.
 repository's standing rule: a refusal states the class of problem and the client
 re-reads the sources it already owns. There is nothing to disclose in a game a
 player was on the court for, but the rule is kept so it stays a rule.
+
+**The pairing read has two refusals of its own** (``docs/adr/0161``), and the
+first is a ``404`` where the acts above say ``403``. An act on a game is made by
+somebody holding a game id the list already gave them, so *you were not on this
+court* is a caller's bug; a **read** keyed on an id is the shape a directory is
+probed through, and ``game_not_found`` is ``challenge_not_found``'s argument
+verbatim — one code for two cases, because separating them would answer *is
+this id real* about four strangers' evening.
 """
 
 from __future__ import annotations
@@ -24,16 +32,17 @@ from app.shared.domain.errors import (
     BadRequestError,
     ConflictError,
     ForbiddenError,
+    NotFoundError,
 )
 
 
 class YouWereNotOnThisCourt(ForbiddenError):
-    """Somebody who did not play, acting on the result.
+    """Somebody who is not on the court, acting on the game.
 
-    **The people who may act are the people who were seated when the line-up
-    completed** — never a leaver, never somebody who declined, never a spectator.
-    A game's line-up is frozen at the plan, so this is answerable from the record
-    alone and needs no other context to be asked.
+    **The people who may act are the people on the court now** — never somebody
+    who left, never somebody who declined, never a spectator. The line-up is on
+    the record, so this is answerable from it alone and needs no other context to
+    be asked.
     """
 
     code = "you_were_not_on_this_court"
@@ -41,6 +50,104 @@ class YouWereNotOnThisCourt(ForbiddenError):
     def __init__(self) -> None:
         super().__init__(
             "Only the players of this game may enter or answer its result."
+        )
+
+
+class TheCourtHasAnOpenSeat(ConflictError):
+    """*We played* said about a court with a seat open.
+
+    #411 rule 5 withholds the entry on the client while a seat is open, and this
+    is what makes that a rule rather than a promise (``docs/adr/0162`` §3): a
+    score on a three-person doubles game is a score with a side the engine
+    cannot price and a seat with no outcome to give anyone. The seat stays open
+    until it is filled, the game is called off, or the entry window closes.
+    """
+
+    code = "the_court_has_an_open_seat"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This game has a seat open, so it cannot be recorded as played."
+        )
+
+
+class NotAGameToCallOff(ConflictError):
+    """A call-off asked of a game that is not awaiting its entry with a seat open.
+
+    **One code for both halves** (``docs/adr/0163`` §2), because they are one
+    sentence — *this is not a game that can be called off*. A court standing
+    whole that will not play lets its window lapse into *Never played*, as it
+    always has (#411 rule 4); a game that has already ended by its clock stays
+    the end it is, because a call-off that reached a ghost would flip a standing
+    the platform has already drawn and un-charge a strand after the fact.
+
+    The challenge guarantees the open seat by construction — *Call it off* is
+    admitted in ``LINE_UP_INCOMPLETE`` and nowhere else — and the use case steps
+    over a game already ended by its clock rather than raising this, so on the
+    withdrawal route neither half is a code a client meets. The aggregate keeps
+    the refusal all the same: the button is UX, and the server is the
+    correctness mechanism.
+    """
+
+    code = "not_a_game_to_call_off"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Only a game awaiting its entry with a seat open can be called off."
+        )
+
+
+class TheGameWasCalledOff(ConflictError):
+    """*We played* said about a game somebody called off.
+
+    Its own code rather than the ghost's ``the_entry_window_has_closed`` or the
+    umbrella ``the_result_is_settled``, for the ghost's own reason: the entry is
+    the one act a player composes by hand, and it is told which end it met. The
+    acceptance meets the umbrella, as it does on a ghost — a tap on a score that
+    is already on the table needs no such precision.
+    """
+
+    code = "the_game_was_called_off"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This game was called off, so it cannot be recorded as played."
+        )
+
+
+class GameIsNotCalledOff(ConflictError):
+    """A dismissal asked of a game on any standing but ``CALLED_OFF``.
+
+    Its own code (``docs/adr/0172`` §5), because the other endings' cards are
+    the record for the day they stay — *Never played*, *Counted* and
+    *Uncounted* carry a score or a strand's verdict — and a live game's card is
+    the game. Widening the trash is a design of its own and is out of scope by
+    name, so the refusal says which standing the act wants rather than an
+    umbrella.
+    """
+
+    code = "game_is_not_called_off"
+
+    def __init__(self) -> None:
+        super().__init__("Only a called-off game's card can be dismissed.")
+
+
+class TheGameIsNotOpenToSeating(ConflictError):
+    """A seat asked to change on a game that is not awaiting its entry.
+
+    After *we played* — or after the entry window closed on silence — the
+    line-up is the record of an evening and nothing on it moves. ``challenges``
+    asks the moment guard before it gets here and refuses with its own
+    ``game_is_history``, so this is the aggregate's backstop rather than the
+    code a client meets — and it has its own code because a code is unique
+    across the platform, and this one names what *this* record refuses.
+    """
+
+    code = "the_line_up_is_settled"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This game has happened, or never will, so its line-up is settled."
         )
 
 
@@ -64,7 +171,9 @@ class TheResultIsSettled(ConflictError):
     **A settled result is final** — there is no support correction path and no
     reversal — and *over* includes the game that produced no result at all: two
     people who were both on court and cannot agree what happened is not a result,
-    and reopening it a day later is the arbitration this platform refused.
+    and reopening it a day later is the arbitration this platform refused. It
+    includes a game that was **called off**, too, on the acceptance — the entry
+    names that end with its own code (``TheGameWasCalledOff``).
     """
 
     code = "the_result_is_settled"
@@ -185,3 +294,37 @@ class TheResultIsAlreadyAccepted(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("Your side has already accepted this result.")
+
+
+class NoGameOfYoursHasThatId(NotFoundError):
+    """A game id that names nothing this reader was on the court of.
+
+    **Two cases and one code, deliberately.** The game does not exist, or it
+    exists and this player did not play in it — and the two answer identically,
+    because an answer that separated them would tell a caller whether a
+    stranger's game id is real. ``YouWereNotOnThisCourt`` is the same fact
+    refused to an **act**, and stays a ``403`` there.
+    """
+
+    code = "game_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("No game of yours has that id.")
+
+
+class PairingIsHistory(ConflictError):
+    """A pairing asked for about a game that has happened, or never will.
+
+    The pairing means what a card means *because this game has not happened*
+    (``docs/adr/0143``): after it has, the values are a claim about people made
+    from a record that has moved on. So the read answers only while the game is
+    awaiting an entry — never after *we played*, never after the entry window
+    closed on silence, and never after it was called off.
+    """
+
+    code = "pairing_is_history"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This game has happened, or never will, so there is no pairing to read."
+        )

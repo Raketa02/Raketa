@@ -20,6 +20,8 @@ from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
+    IntroChanged,
+    IntroWritten,
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
@@ -59,6 +61,10 @@ EVENTS = [
     SearchRadiusChanged(player_id=PLAYER, search_radius_km=25, occurred_at=AT),
     GenderChanged(player_id=PLAYER, gender="MAN", occurred_at=AT),
     GenderPreferenceChanged(player_id=PLAYER, gender_preference="ANY", occurred_at=AT),
+    IntroWritten(player_id=PLAYER, intro="Moved from Wrocław in May.", occurred_at=AT),
+    IntroChanged(
+        player_id=PLAYER, intro="Will travel for a hard game.", occurred_at=AT
+    ),
     ProposalsOptInAnswered(
         player_id=PLAYER,
         accepted=True,
@@ -92,6 +98,30 @@ def test_an_event_decodes_back_into_the_event_that_was_appended(event):
     )
 
     assert decoded == event
+
+
+def test_a_withdrawn_intro_decodes_back_as_the_absence_it_recorded():
+    """The one event here whose payload carries a ``null`` on purpose: a
+    withdrawal is ``intro: None``, and it has to come back as ``None`` rather
+    than as a missing key the class would refuse or a string it would fold."""
+
+    codec = domain_event_codec()
+    withdrawn = IntroChanged(player_id=PLAYER, intro=None, occurred_at=AT)
+
+    encoded = codec.encode(withdrawn)
+    decoded = codec.decode(
+        SerializedEventEnvelope(
+            id=new_uuid(),
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=encoded.payload,
+            occurred_at=AT,
+        )
+    )
+
+    assert encoded.event_type == "player_profile.intro_changed"
+    assert decoded == withdrawn
+    assert decoded.intro is None
 
 
 def test_every_event_this_context_records_has_a_durable_name():

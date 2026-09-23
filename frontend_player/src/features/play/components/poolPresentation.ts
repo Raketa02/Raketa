@@ -35,15 +35,31 @@
  */
 
 import { counted } from '@/shared/formatting/counted';
+import { sentenceList } from '@/shared/formatting/sentenceList';
 
 import type { RelaxedAsk } from '../domain/candidate';
 import type { Window } from '../domain/vocabulary';
 
-import { SIDE } from './accessibilityPresentation';
-import { isDoubles } from '../domain/lineup';
 import { windowLabel } from './searchPresentation';
 
-/** The screen's title. It says what the player is here to do, and the court says the rest. */
+/**
+ * The screen's title. It says what the player is here to do, and the court says the rest.
+ *
+ * **It was dropped for a day** in favour of `Padel · doubles · for fun`, promoted out of the
+ * eyebrow — on the argument that a list of people with an *Add to the court* on every row says
+ * *pick players* for itself. What that missed is the screen next door: the court made the same
+ * promotion, so two screens carried one heading, which named the **search** on both and the
+ * **screen** on neither. A title's first job is telling you which of two you are on.
+ *
+ * **And it is now the header's only line.** That eyebrow came back over this title and read as
+ * a caption on what the card below already draws — the Sport under the court, the seats
+ * counted, and both of them in that card's own spoken name — so it is deleted rather than kept
+ * as a third arrangement of two lines.
+ *
+ * Sentence case, like every other screen name in this app — *Your court photos*, *Check your
+ * answers*, *Your starting ratings*. A capitalised *Players* would make this the one Title
+ * Case heading in the product.
+ */
 export const POOL_TITLE = 'Pick players';
 
 /**
@@ -79,13 +95,32 @@ export const POOL_LADDER_BODY =
  * What a line-up costs when the list is replaced — the other half of rule 9's reversibility.
  *
  * A widened search is a **new** search, and `POST /forecasts` refuses a four whose members did
- * not all appear in the search it cites. So somebody added off the strict list cannot be
- * carried onto the widened one, and that is said before the tap rather than discovered by the
- * court emptying itself afterwards.
+ * not all appear in the search it cites. So somebody added off the strict list travels onto the
+ * widened one only if that list returned them too (`domain/lineup`'s `carriedOnto`), and that
+ * is said before the tap rather than discovered by the court emptying itself afterwards. Whom
+ * it actually costs is said again on the widened list, by name — `leavingLine`.
  */
 export const POOL_LINEUP_COST =
-  'Widening runs a new search. Anybody you have added came off this one, so the court starts ' +
-  'again on the new list.';
+  'Widening runs a new search. Anybody you have added stays on the court only if the wider ' +
+  'list has them too.';
+
+/**
+ * Who a pick off **this** list would take off the court — **said, rather than assumed.**
+ *
+ * The court is bound to one search and this list is another's: ⚡'s own record, or the strict
+ * search a rung widened. A pick moves the court onto this list, and the new origin can vouch
+ * only for the people it returned — so whoever it never showed leaves the court with the tap.
+ * `replacingLine`'s own argument: the court is one screen away and the player cannot see it,
+ * so a seat emptied without a sentence is a destruction they find out about afterwards.
+ *
+ * Named, and never counted: *two players leave* tells the player nothing they can weigh, and
+ * the two names are the whole of the decision.
+ */
+export function leavingLine(names: readonly string[]): string {
+  const verb = names.length === 1 ? 'isn’t' : 'aren’t';
+  const them = names.length === 1 ? (names[0] ?? '') : 'them';
+  return `${sentenceList(names)} ${verb} on this list, so adding somebody from it takes ${them} off the court.`;
+}
 
 /**
  * A rung's price — **the total above the floor**, and the window if this rung would move it.
@@ -215,29 +250,22 @@ export function poolSeatedLine(court: { readonly filled: number; readonly seats:
   return `${court.filled} of ${court.seats} seated`;
 }
 
-/**
- * What stands where the reading will be, **until there is a game to read**.
+/*
+ * **`awaitingBalanceLine` stood here** — *Add somebody to their side and a running balance
+ * appears here*, in two court shapes, promising the figure that would arrive once the far
+ * half had somebody in it.
  *
- * The engine serves a forecast from the first person added and gets there by assuming an empty
- * seat matches the player opposite, so a figure drawn over a one-sided court is the assumption
- * talking. What the card says instead is the act that would make it a reading — and the sentence
- * is written for the **shape of the court on screen** (`theirSideSeated` is the rule it
- * promises against).
+ * It is removed (2026-09-09), and the header draws nothing where a reading has not landed.
+ * The act it named is the entire purpose of the screen it sat on: a list of people with an
+ * *Add to the court* on every row is directly beneath it, and the court above it draws its own
+ * empty seats. A sentence explaining the absence, under a picture of the absence, over a list
+ * offering to end it, was the screen saying one thing three times — and *hidden, never blank*
+ * is the discipline every other absence on these screens already takes.
  *
- * **It is *their side*, not the prototype's *far side*, and the words are `SIDE`'s.** This app
- * has one spelling of that half — the one `clearSeatLabel` puts mid-sentence — and writing a
- * second one here is how the two drift apart with nothing to catch it. *Far* would have been
- * true of both Sports this branch can reach, since only padel and badminton have four seats;
- * it is refused for the vocabulary rather than for the geometry.
- *
- * A singles court takes its own sentence rather than bending that one: there is no side to
- * fill, because the second seat **is** the opponent. That branch is also the whole of squash,
- * which has two seats — so nothing this function says is ever read against a court with no net.
+ * The rule it promised against, `theirSideSeated`, is untouched: the reading is still gated on
+ * somebody being across the net rather than on a full court, because a forecast over a
+ * one-sided court is the engine's empty-seat assumption talking.
  */
-export function awaitingBalanceLine(seats: number): string {
-  const act = isDoubles(seats) ? `Add somebody to ${SIDE.theirs}` : 'Add your opponent';
-  return `${act} and a running balance appears here.`;
-}
 
 /**
  * The control back to the court — **the pool's only way back**.

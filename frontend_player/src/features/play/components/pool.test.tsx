@@ -13,8 +13,9 @@
  *   back to the returned order survives leaving it.
  * - **The Best-fit comparator adds no `+12`.** The lift is an admission the engine already
  *   made, and re-applying it would score the wire's own ranking twice.
- * - **The pin is not that `+12`**: somebody who already said yes sits first in the served order
- *   with the number they were served, and drops into their honest place on any re-sort.
+ * - **And there is no pin either**: somebody who already said yes sits where the server placed
+ *   them with the number they were served, tagged *Wants to play you*; somebody the reader said
+ *   yes to is tagged *You said yes* and moved nowhere (ADR-0169 §8).
  * - **One coral *best match* tag, on the highest number, and only where the order is about the
  *   number at all.**
  * - **The header prints the balance word beneath the tinted number**, with the assumption as
@@ -25,6 +26,7 @@
 
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { router } from 'expo-router';
+import { StyleSheet, type TextStyle } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
@@ -36,6 +38,7 @@ import {
   launchSignedIn,
   stubGate,
   stubInterest,
+  stubOutgoingYeses,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
@@ -47,6 +50,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
+import { searchKeys } from '../hooks/searchKeys';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
 
@@ -59,11 +63,10 @@ import {
 } from './accessibilityPresentation';
 import { balanceLabel, balanceWord } from './balancePresentation';
 import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD } from './builderPresentation';
-import { levelRow } from './playerCardPresentation';
+import { YOU_SAID_YES_WORD, levelRow } from './playerCardPresentation';
 import {
   POOL_COURT_LABEL,
   POOL_TITLE,
-  awaitingBalanceLine,
   poolLadderTitle,
   poolSeatedLine,
   replacingLine,
@@ -115,7 +118,7 @@ function card(
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname: NAMES[playerId] ?? 'anon',
+      name: NAMES[playerId] ?? 'anon',
       area_code: 'A+050612+0019938',
       social_tags: [],
       level: 2.8,
@@ -254,7 +257,9 @@ async function openThePool() {
   await waitFor(() => expect(screen).toHavePathname('/play/builder'));
   fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
   await waitFor(() => expect(screen).toHavePathname('/play/pool'));
-  await screen.findByText(POOL_TITLE);
+  // Settled on the pool's **own** control rather than on its title: the title is the three
+  // facts the search ran under now, which is the same string the court underneath still draws.
+  await screen.findByLabelText(POOL_COURT_LABEL);
 }
 
 /**
@@ -302,7 +307,9 @@ async function openTheSinglesPool(
   await waitFor(() => expect(screen).toHavePathname('/play/builder'));
   fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
   await waitFor(() => expect(screen).toHavePathname('/play/pool'));
-  await screen.findByText(POOL_TITLE);
+  // Settled on the pool's **own** control rather than on its title: the title is the three
+  // facts the search ran under now, which is the same string the court underneath still draws.
+  await screen.findByLabelText(POOL_COURT_LABEL);
 }
 
 const addLabel = (playerId: string) => `Add ${NAMES[playerId]} to the court`;
@@ -357,9 +364,21 @@ describe('arriving', () => {
     );
 
     fireEvent.press(screen.getByLabelText(addLabel(B)));
-    // The eyebrow is written from the origin's sport and mode, neither of which crosses on a
-    // read-back: a record rebuilt from the response alone would have lost both.
-    expect(screen.getByText('Padel · doubles · for fun')).toBeTruthy();
+    // The Sport under the court is written from the **origin**, which does not cross on a
+    // read-back: a record rebuilt from the response alone would have no name to put there.
+    //
+    // It is half of what this used to assert. The origin's other field, the mode, was drawn in
+    // an eyebrow reading `Padel · doubles · for fun`, and that line is gone from both of Play's
+    // inner screens — so the mode survives on the record and in the bodies the court sends,
+    // and is no longer anything a player can see here.
+    // Picked out by its register, as the test below does: the screens under this one name the
+    // Sport too, and the uppercased eyebrow is the pool's own caption and nothing else's.
+    const captions = screen
+      .getAllByText(sportLabel('padel'), { includeHiddenElements: true })
+      .map((node) => StyleSheet.flatten(node.props.style as TextStyle))
+      .filter((style) => style?.textTransform === 'uppercase');
+
+    expect(captions).toHaveLength(1);
   });
 });
 
@@ -399,6 +418,58 @@ const crossedForecast = (full = false): Wire['ForecastResponse'] => ({
 
 describe('the header', () => {
   /**
+   * **The screen is named for what it is here to do, and by one line only.**
+   *
+   * Two arrangements were tried and both are gone. `Padel · doubles · for fun` promoted into
+   * the title put this screen and the court it is pushed over under **one heading**, naming
+   * the search on both and the screen on neither — a title's first job is telling you which of
+   * two you are on. Kept as 10.3's eyebrow over the title instead, it read as a caption on
+   * what the header card below already draws: the Sport under the court, the seats counted,
+   * and both of them in that card's own spoken name.
+   */
+  it('is named for what it is here to do, and carries nothing above that name', async () => {
+    await openThePool();
+
+    expect(screen.getByRole('header', { name: POOL_TITLE })).toBeTruthy();
+    // The court underneath is called something else, which is the whole of the reversal.
+    expect(screen.queryByRole('header', { name: 'Build a doubles' })).toBeNull();
+    // The Sport survives on the header card, under the court — asserted in the test below
+    // this one — and nothing draws the three facts as a line any more.
+    expect(screen.queryByText(/^Padel · /, { includeHiddenElements: true })).toBeNull();
+  });
+
+  /**
+   * **The Sport is under the picture, not on it.**
+   *
+   * [7.12](../../../../docs/design-system.md#712-the-court)'s caption is a band *inside* the
+   * drawing, absolutely positioned along the bottom edge over its own gradient — which at the
+   * header's width lands across the near baseline of a court that has four faces on it. Out
+   * here it is the same eyebrow, centred on the same width, and the picture is left to be a
+   * picture. Asserted on the drawn style, because *under* and *inside* are the same string in
+   * both places and only the box tells them apart.
+   */
+  it('draws the sport under the court rather than inside it', async () => {
+    await openThePool();
+
+    // Hidden, and it always was: the element around the picture announces `poolHeaderLabel`,
+    // which opens with the Sport — so the word is drawn for a reader and merged for a listener
+    // (§20.1). Moving it out of the drawing did not change which of the two it is.
+    const shown = { includeHiddenElements: true };
+    await screen.findByLabelText(POOL_COURT_LABEL);
+    // The screens under this one are still mounted and name the Sport too, so the header's own
+    // word is picked out by the register it is in: an uppercased eyebrow, which is the caption's
+    // and nothing else's on this stack.
+    const eyebrows = screen
+      .getAllByText(sportLabel('padel'), shown)
+      .map((node) => StyleSheet.flatten(node.props.style as TextStyle))
+      .filter((style) => style?.textTransform === 'uppercase');
+
+    expect(eyebrows).toHaveLength(1);
+    expect(eyebrows[0]?.position).toBeUndefined();
+    expect(eyebrows[0]?.textAlign).toBe('center');
+  });
+
+  /**
    * The court is underneath and this screen **pops** back onto it — the same `back` the row's
    * own *back to the court* control performs, drawn once at the top of the screen so the way
    * out of the second level of Play is not a gesture a player has to know about.
@@ -436,16 +507,21 @@ describe('the header', () => {
 
   /**
    * The engine answers from the first add, and gets there by assuming the empty seat matches
-   * the player opposite — so over a one-sided court the figure is the assumption talking. What
-   * the card offers instead is the act that would make it a reading.
+   * the player opposite — so over a one-sided court the figure is the assumption talking.
+   *
+   * **Nothing stands in its place.** A sentence naming the act that would make it a reading
+   * was drawn here until 2026-09-09; the list underneath is already offering that act on every
+   * row, so what the card does now is not draw the block at all.
    */
   it('withholds the reading while everybody added is beside you', async () => {
     await openThePool();
     fireEvent.press(await screen.findByLabelText(addLabel(B)));
 
-    expect(await screen.findByText(awaitingBalanceLine(4))).toBeTruthy();
+    // The count is the header's proof of life: the card is on screen and the seat did land.
+    expect(await screen.findByText(poolSeatedLine({ filled: 2, seats: 4 }))).toBeTruthy();
     expect(screen.queryByText(formatPercent(67))).toBeNull();
     expect(screen.queryByText(balanceWord(67))).toBeNull();
+    expect(screen.queryByLabelText(splitRowLabel(SIDES, SPLIT))).toBeNull();
   });
 
   /**
@@ -470,8 +546,6 @@ describe('the header', () => {
 
     // Every figure in the split row is the engine's; §11.3's check is looking for arithmetic.
     expect(screen.getByLabelText(splitRowLabel(SIDES, SPLIT))).toBeTruthy();
-    // And the sentence it replaces is gone: the card says one of the two, never both.
-    expect(screen.queryByText(awaitingBalanceLine(4))).toBeNull();
   });
 
   /**
@@ -549,15 +623,14 @@ describe('the header', () => {
   });
 
   /**
-   * A singles court has no partner and no side to fill, so the sentence is written for the
-   * shape of the court on screen rather than bent to fit one wording.
+   * A singles court arrives on the same card, counted for two seats rather than four — and
+   * with the same silence under it, because nobody is across the net there either.
    */
-  it('asks for an opponent rather than a side on a singles court', async () => {
+  it('counts a singles court for two, and reads nothing over one empty seat', async () => {
     await openTheSinglesPool();
 
     expect(await screen.findByText(poolSeatedLine({ filled: 1, seats: 2 }))).toBeTruthy();
-    expect(screen.getByText(awaitingBalanceLine(2))).toBeTruthy();
-    expect(screen.queryByText(awaitingBalanceLine(4))).toBeNull();
+    expect(screen.queryByLabelText(splitRowLabel(SIDES, SPLIT))).toBeNull();
   });
 
   /**
@@ -755,14 +828,17 @@ describe('the record block on a pool row', () => {
 });
 
 /**
- * **The pin and the tag** — [#310](https://github.com/Raketa02/Raketa/issues/310)'s three rules,
- * walked on a competitive pool because that is the card the two tags are drawn on.
+ * **The two interest tags and the best match** —
+ * [ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8: *a yes informs; it never takes over.*
  *
- * The fixture is the one that separates a pin from the `+12` above it: the lifted row is
- * **eight points behind** the top of the list, so the served order draws it first with a 71
- * printed beside it, and every chip drops it back to where 71 belongs.
+ * The fixture is the one that used to separate a pin from the `+12` above it, and it now
+ * separates a nudge from a pin: the lifted row is **eight points behind** the top of the list,
+ * and it is drawn third with a 71 printed beside it, because the server's `+14` already put it
+ * where the server thinks it belongs and this client no longer forces it above two better
+ * pairings ([#310](https://github.com/Raketa02/Raketa/issues/310)'s pin is gone).
  */
-describe('the pin and the best match', () => {
+describe('the interest tags and the best match', () => {
   /** C already said yes and scores least; B has the highest number and D sits between them. */
   function servedWithALift(over: Partial<Wire['SearchEnvelope']> = {}) {
     const rows: Wire['ShortlistResponse'] = {
@@ -782,24 +858,24 @@ describe('the pin and the best match', () => {
       .getAllByLabelText(/^Add .* to the court$/)
       .map((control) => control.props.accessibilityLabel as string);
 
-  it('lifts somebody who already said yes above two higher numbers, and prints their own', async () => {
+  it('draws somebody who already said yes where the server placed them, with their own number', async () => {
     servedWithALift();
     await openThePool();
     await screen.findByLabelText(addLabel(B));
 
-    expect(drawnOrder()).toEqual([addLabel(C), addLabel(B), addLabel(D)]);
-    // The whole of *a pin is not a bonus*: the row moved and the figure did not — 71 is what
-    // the wire served and 71 is what the pill prints, on the row now sitting first.
+    // No pin: a 71 among a 79 and a 74 is third, which is where the wire served it.
+    expect(drawnOrder()).toEqual([addLabel(B), addLabel(D), addLabel(C)]);
     expect(screen.getByText('71')).toBeTruthy();
     expect(screen.getByText('Wants to play you')).toBeTruthy();
   });
 
-  it('drops them into their honest place on a re-sort, with the tag still on them', async () => {
+  it('keeps the tag on them through every re-sort', async () => {
     servedWithALift();
     await openThePool();
     fireEvent.press(await screen.findByLabelText(sortLabel('CLOSEST')));
 
     expect(drawnOrder()).toEqual([addLabel(C), addLabel(D), addLabel(B)]);
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText(sortLabel('BEST_FIT')));
 
@@ -808,13 +884,56 @@ describe('the pin and the best match', () => {
     expect(screen.getByText('Wants to play you')).toBeTruthy();
   });
 
+  it('says You said yes on the person the reader said it to, in this sport', async () => {
+    servedWithALift();
+    stubOutgoingYeses(transport, [D, 'PADEL']);
+    await openThePool();
+
+    // Found rather than got: the list lands after the rows, and the row gains the tag then.
+    expect(await screen.findAllByText(YOU_SAID_YES_WORD)).toHaveLength(1);
+    // And nudges nobody: the reader's yes says nothing about D's willingness.
+    expect(drawnOrder()).toEqual([addLabel(B), addLabel(D), addLabel(C)]);
+  });
+
+  it('draws no You said yes for a yes given in another sport', async () => {
+    servedWithALift();
+    stubOutgoingYeses(transport, [D, 'TENNIS']);
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+    // An absence proves nothing until the list has been read; wait for the read to have landed.
+    await waitFor(() => expect(queryClient.getQueryData(searchKeys.interest())).toBeDefined());
+
+    expect(screen.queryByText(YOU_SAID_YES_WORD)).toBeNull();
+  });
+
+  it('draws both tags on the social card as tags, where the sentence was', async () => {
+    const rows: Wire['ShortlistResponse'] = {
+      search: envelope(SEARCH_ID, { mode: 'FOR_FUN' }),
+      candidates: [
+        card(B, { fit: 79 }),
+        card(D, { fit: 74 }),
+        card(C, { fit: 71, inclusion_reason: 'INTEREST_LIFT' }),
+      ],
+    };
+    transport.on('POST', SEARCHES, () => json(rows));
+    transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () => json(rows));
+    stubOutgoingYeses(transport, [D, 'PADEL']);
+
+    await openThePool();
+
+    expect(await screen.findByText(YOU_SAID_YES_WORD)).toBeTruthy();
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText('They already said yes to you')).toBeNull();
+    // Served order here too — and the social card carries no coral tag.
+    expect(drawnOrder()).toEqual([addLabel(B), addLabel(D), addLabel(C)]);
+    expect(screen.queryByText('Best match')).toBeNull();
+  });
+
   it('puts one coral tag on the highest number in the order the rows arrived in', async () => {
     servedWithALift();
     await openThePool();
     await screen.findByLabelText(addLabel(B));
 
-    // Exactly one, and on B — who is second on screen, because the pin moved a lower row above
-    // them and the tag is about the number rather than about the position.
     expect(screen.getAllByText('Best match')).toHaveLength(1);
   });
 
@@ -861,6 +980,15 @@ describe('the pin and the best match', () => {
 
     expect(screen.getByText('Wants to play you')).toBeTruthy();
     // Not moved to the runner-up: the coral tag names the best match or nobody.
+    expect(screen.queryByText('Best match')).toBeNull();
+  });
+
+  it('gives the best-fit row You said yes over the coral tag, and hands the coral tag to nobody', async () => {
+    servedWithALift();
+    stubOutgoingYeses(transport, [B, 'PADEL']);
+    await openThePool();
+
+    expect(await screen.findByText(YOU_SAID_YES_WORD)).toBeTruthy();
     expect(screen.queryByText('Best match')).toBeNull();
   });
 });
@@ -1148,6 +1276,29 @@ describe('adding somebody', () => {
   });
 
   /**
+   * **A court with no seat left still draws every row, and the control on each says no.**
+   *
+   * Read on a singles court, which is the one shape a pool can fill without emptying its own
+   * list: two seats, so one add is a full court, and the row for everybody else is still on
+   * screen to be checked. The rows are worth reading whether or not there is a seat — the
+   * ladder is still there, the way back is the header's — so the answer is a **dead control**
+   * rather than a vanished one: a list that silently changed shape says nothing about why.
+   */
+  it('draws the add dead once the court has no seat left, rather than taking it away', async () => {
+    await openTheSinglesPool();
+    fireEvent.press(await screen.findByLabelText(addLabel(B)));
+
+    await waitFor(() => expect(screen.queryByLabelText(addLabel(B))).toBeNull());
+    const add = screen.getByLabelText(addLabel(C));
+
+    // Both registers: dimmed for a reader, `disabled` for a listener — never colour alone.
+    expect(add.props.accessibilityState?.disabled).toBe(true);
+
+    fireEvent.press(add);
+    expect(usePlaySession.getState().lineup).toEqual({ originSearchId: SEARCH_ID, seats: [B] });
+  });
+
+  /**
    * G7's *"leaving the pool halfway through replacing somebody should be forgotten"* is
    * satisfied by the pop: the route unmounts and takes the pending seat with it, so leaving
    * without adding anybody has changed nothing at all.
@@ -1224,6 +1375,13 @@ describe('replacing somebody', () => {
    * The pool is opened **against a seat**, and where that seat is occupied the add is a
    * replacement — said before it happens, because the court is one screen away and a silent
    * swap of one handle for another is a destruction found out about afterwards.
+   *
+   * **Driven through the route rather than off the court** (2026-09-09). A tap on an occupied
+   * seat opened this; it trades two seats now, and the court's own way to change who is on it
+   * is the clear badge and then the hole it leaves — the walk the test below this one takes.
+   * The seat is a route parameter, so the state is still one the pool can be put in, and this
+   * is what it says when it is: a screen that stopped saying *replacing* while still replacing
+   * somebody is the silent destruction the sentence exists to prevent.
    */
   it('names whom an add would replace, and swaps exactly them', async () => {
     await openThePool();
@@ -1232,14 +1390,43 @@ describe('replacing somebody', () => {
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/play/builder'));
 
-    fireEvent.press(
-      await screen.findByLabelText(
-        seatLabel('YOUR_PARTNER', { kind: 'player', name: NAMES[B] ?? '', level: 2.8 }),
-      ),
+    act(() =>
+      router.push({ pathname: '/play/pool', params: { search: SEARCH_ID, seat: String(1) } }),
     );
     await waitFor(() => expect(screen).toHavePathname('/play/pool'));
 
     expect(await screen.findByText(replacingLine(NAMES[B] ?? ''))).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText(addLabel(C)));
+
+    expect(usePlaySession.getState().lineup).toEqual({
+      originSearchId: SEARCH_ID,
+      seats: [C],
+    });
+  });
+
+  /**
+   * **The court's own way to change who is on it**, now that a tap on a seat trades.
+   *
+   * Two acts where there was one, and both were already on the seat: the × takes somebody off
+   * — drawn on exactly the seats a replacement was ever allowed against — and the hole it
+   * leaves opens the pool, which is the row every empty seat has always had. Nothing says
+   * *replacing*, because by then there is nobody in the seat to replace.
+   */
+  it('takes somebody off with the badge, and the hole they leave opens the pool', async () => {
+    await openThePool();
+    fireEvent.press(await screen.findByLabelText(addLabel(B)));
+
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+
+    fireEvent.press(await screen.findByLabelText(`Remove ${NAMES[B]} from your side`));
+    fireEvent.press(
+      await screen.findByLabelText(seatLabel('YOUR_PARTNER', { kind: 'empty', unfilled: null })),
+    );
+    await waitFor(() => expect(screen).toHavePathname('/play/pool'));
+
+    expect(screen.queryByText(replacingLine(NAMES[B] ?? ''))).toBeNull();
 
     fireEvent.press(screen.getByLabelText(addLabel(C)));
 

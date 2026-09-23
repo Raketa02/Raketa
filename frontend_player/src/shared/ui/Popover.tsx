@@ -12,12 +12,12 @@
  *
  * ## Three decisions worth knowing
  *
- * **It is a `Modal`, like the sheet, and that is what settles 5.2 and 9.3 at once.** 7.6
- * requires the popover to render through the overlay root and never as a descendant of a
+ * **It sits on `ModalStage`, like the sheet, and that is what settles 5.2 and 9.3 at once.**
+ * 7.6 requires the popover to render through the overlay root and never as a descendant of a
  * dark card, because the dark card repaints its children and `zIndex` is scoped to the
- * parent in React Native. A `Modal` is a separate native window: it is not in the layer
- * order at all and no repaint reaches it. That is also why 9.3's overlay host still has no
- * consumer — it becomes necessary for the first overlay that has to stay in the tree.
+ * parent in React Native. On iOS the stage is a `Modal`, a separate native window that is not
+ * in the layer order at all; on Android it is a layer 9.3's root-level host draws above
+ * everything, ordered over a toast by `theme.layer.popover` (ADR-0178).
  *
  * **Position is measured from the trigger, and the trigger is one prop doing two jobs** —
  * the popover is anchored to it and focus returns to it on close. Measurement happens when
@@ -39,7 +39,6 @@
 
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import {
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -50,6 +49,7 @@ import {
 
 import { CloseControl } from './CloseControl';
 import { InfoGlyph } from './InfoGlyph';
+import { ModalStage } from './ModalStage';
 import { moveAccessibilityFocus, useReducedMotion, type FocusTarget } from './overlay';
 import { theme } from './theme';
 
@@ -130,14 +130,14 @@ export function Popover({ visible, trigger, title, body, closeLabel, onClose }: 
   );
 
   return (
-    <Modal
+    <ModalStage
       visible={visible}
-      transparent
-      // Android's hardware back. Required there, ignored on iOS.
+      // Android's hardware back. iOS never asks.
       onRequestClose={onClose}
       animationType={reducedMotion ? 'none' : 'fade'}
+      layer="popover"
     >
-      <View style={s.stage}>
+      <View style={s.stage} testID="popover-stage">
         {/* Dismissal, not a control: the popover's close carries the name, and a second
             unnamed button spanning the screen is noise in the reading order. */}
         <Pressable
@@ -171,7 +171,7 @@ export function Popover({ visible, trigger, title, body, closeLabel, onClose }: 
           <Text style={s.body}>{body}</Text>
         </View>
       </View>
-    </Modal>
+    </ModalStage>
   );
 }
 

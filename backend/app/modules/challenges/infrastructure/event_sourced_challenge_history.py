@@ -1,8 +1,10 @@
-"""``ChallengeHistoryQuery`` over the event log — its four facts.
+"""``ChallengeHistoryQuery`` over the event log — its five facts.
 
-**Three of them are the matcher's and the fourth is ``player_score``'s**
-(``docs/adr/0140``): *did you answer inside your day* is the same walk over the
-same stream, tallied per person instead of per pair.
+**Three of them are the matcher's history, the fourth is ``player_score``'s**
+(``docs/adr/0140``) — *did you answer inside your day* is the same walk over the
+same stream, tallied per person instead of per pair — **and the fifth is the
+matcher's fill** (``docs/adr/0150``), which is the only one that reads a single
+named stream rather than searching for the streams somebody sits in.
 
 **The third read this context has over the log, and the first with a reader
 outside it.** It shares ``challenge_streams.py`` with the other two, so the
@@ -44,8 +46,10 @@ from app.application.ports.events import EventCodec
 from app.kernel import Instant
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.events import (
+    ChallengeCalledOff,
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
+    ChallengeWithdrawn,
     SeatAccepted,
     SeatDeclined,
     SeatsInvited,
@@ -59,10 +63,15 @@ from app.modules.challenges.domain.ports import (
     AnsweringRecord,
     AnswerTally,
     ChallengeCounterpart,
+    HalfBuiltLineUp,
     SharedChallenge,
 )
 from app.modules.challenges.domain.seats import Seat, SeatAnswer
-from app.modules.challenges.infrastructure.challenge_streams import streams_seating
+from app.modules.challenges.domain.standing import ENDED
+from app.modules.challenges.infrastructure.challenge_streams import (
+    stream_of,
+    streams_seating,
+)
 from app.shared.domain import DomainEvent
 
 #: The two events that are an **answer**, and the answer each one is.
@@ -167,6 +176,7 @@ class EventSourcedChallengeHistory:
                     counterpart_id=other,
                     origin=_origin_of(challenge, other),
                     opened_at=challenge.opened_at,
+                    challenge_id=challenge.id,
                 )
         rows = sorted(
             newest.values(),
@@ -183,10 +193,16 @@ class EventSourcedChallengeHistory:
         **Keyed on exactly the set it was asked about**, and a zero is measured:
         the seats were counted and none of them was theirs to answer.
 
-        No standing is consulted, and none is needed. A seat that is awaiting at
-        ``now`` is one whose holder is still wanted, and a challenge holding one
-        has not ended by construction — so asking the standing as well would be
-        a second reading of the same seats.
+        **The standing is consulted, for one ending.** A seat that is awaiting
+        at ``now`` is one whose holder is still wanted — unless its organiser
+        removed the challenge while the seat's day was still running
+        (``docs/adr/0165`` §4), which is the one ending the seats cannot show:
+        a decline and a lapse leave nothing awaiting, and a withdrawal leaves
+        the seats exactly as they were. This read used to say *a challenge
+        holding an awaiting seat has not ended by construction*, and the
+        pre-answer removal broke the construction — so it asks the fold rather
+        than inheriting the answer, at the cost of one fold per stream it was
+        already replaying.
         """
 
         wanted = set(player_ids)
@@ -197,6 +213,8 @@ class EventSourcedChallengeHistory:
         streams = await streams_seating(self._session, self._codec, wanted)
         for events in streams.values():
             challenge = Challenge.from_history(events)
+            if challenge.standing_at(now) in ENDED:
+                continue
             for seat in challenge.seats:
                 if seat.player_id in wanted and seat.is_awaiting_at(now):
                     counts[seat.player_id] += 1
@@ -216,6 +234,13 @@ class EventSourcedChallengeHistory:
         **Absent rather than a measured zero.** Somebody nobody has ever invited
         has not failed to answer anybody, and the record they get is no record at
         all.
+
+        **And an invitation whose challenge was withdrawn under it is in neither
+        half either** (``docs/adr/0142`` §5). Silence on a challenge that had
+        stopped existing is not silence, and this read is the only place that
+        could tell: the seats are left exactly as they were by a withdrawal, so
+        a lapse decided on ``now >= answer_by`` alone would charge a
+        still-deciding invitee for a court nobody was waiting on any more.
         """
 
         wanted = set(player_ids)
@@ -249,6 +274,63 @@ class EventSourcedChallengeHistory:
             for player_id, at in latest.items()
         }
 
+    async def half_built_line_up(
+        self, *, challenge_id: UUID, member_id: UUID, now: Instant
+    ) -> HalfBuiltLineUp | None:
+        """One named court, folded, for a member who is still on it.
+
+        **One stream, addressed rather than searched for.** The other four reads
+        here start by asking *which streams seat these people*, which is a
+        substring match over every challenge the platform has recorded; this one
+        is handed the id and reads the stream by it.
+
+        **Three refusals and one answer.** Nothing at that id, a member holding
+        no live seat, and a challenge nobody is arranging any more all answer
+        ``None`` — one refusal for three cases, on the port's own rule.
+
+        **The two sets are computed against the same fold and the same instant**,
+        so *seated* and *gone* cannot disagree about anybody: everybody live on
+        the court is seated, and everybody the challenge has already asked and
+        does not still hold is gone. The member themselves is in neither, because
+        a search never returns its own searcher and a fill never re-invites the
+        person pressing it.
+
+        **The gone set is the aggregate's own ``already_asked_at``**, which is
+        ``answered`` *plus the clock*: a lapsed seat joins ``answered`` only when
+        the sweep records it, and this read is right either side of that.
+        """
+
+        events = await stream_of(self._session, self._codec, challenge_id)
+        if not events:
+            return None
+        challenge = Challenge.from_history(events)
+        if not challenge.is_being_arranged_at(now):
+            return None
+        live = challenge.players_in_it_at(now)
+        if member_id not in live:
+            return None
+        return HalfBuiltLineUp(
+            challenge_id=challenge.id,
+            sport=challenge.sport,
+            mode=challenge.mode,
+            # **In the court's own order**, which is the arrangement these people
+            # are actually sitting in — the order a fill hands the engine as its
+            # locked seats, and the one the builder opens on.
+            seated_ids=tuple(
+                seat.player_id
+                for seat in challenge.seats
+                if seat.player_id is not None
+                and seat.player_id in live
+                and seat.player_id != member_id
+            ),
+            # **Off the clock as well as off the answers**
+            # (``Challenge.already_asked_at``): a seat whose day ran out is not
+            # in ``answered`` until a sweep has appended one, and this read must
+            # not depend on a loop having been past — otherwise the fill would
+            # offer back somebody the aggregate refuses the moment the loop runs.
+            answered_and_gone=challenge.already_asked_at(now) - live,
+        )
+
 
 def _invitations_in(
     events: Iterable[DomainEvent], wanted: Collection[UUID]
@@ -273,6 +355,28 @@ def _invitations_in(
     still holding one. **Only the answer *events* set it**: a later seating event
     restates the whole court, including seats that have already answered, and
     reading the answer off the restatement would date it from the wrong moment.
+
+    **A withdrawal drops every invitation still open under it**, and only those:
+    an invitation whose day had already run out was genuine silence before
+    anybody withdrew anything, and it stays in the denominator. Dropping is the
+    only spelling available — *neither answered nor lapsed* is exactly what
+    absence from this mapping means, and it is what the organiser's own seat
+    already is.
+
+    **The rule was here before the aggregate could reach the state, and now it
+    can.** A withdraw used to be legal only in ``LINE_UP_INCOMPLETE``, which is
+    reached only when no seat is awaiting — so at the instant of a legal
+    withdrawal every unanswered invitation was already past its deadline, and
+    this rule was written for a stream nothing could write. ``docs/adr/0165``
+    §4 admits the withdraw before anybody has answered, so a removed challenge
+    now holds invitations whose day was still running, and this is the walk
+    that keeps them out of the denominator; the aggregate's own ``lapse`` draws
+    the same line on the write side and records none of them. This read is
+    ``player_score``'s and is a **walk over history**, not a fold of the
+    aggregate: it must be right about a stream, and a denominator that was
+    right only because a rule in another module happened to order two rungs a
+    particular way is a denominator that goes wrong silently the day that order
+    is revisited — which is the day that arrived.
     """
 
     invitations: dict[tuple[UUID, Instant], Instant | None] = {}
@@ -284,6 +388,17 @@ def _invitations_in(
                     continue
                 if seat.player_id in wanted:
                     invitations.setdefault((seat.player_id, seat.answer_by), None)
+        elif isinstance(event, (ChallengeWithdrawn, ChallengeCalledOff)):
+            # Either recorded conclusion draws the line; a call-off cuts no day
+            # short by construction — both acts that record one are admitted
+            # with nobody deciding — and the aggregate's ``lapse`` reads the
+            # same rule off the same conclusion, so the two cannot disagree.
+            ended_at = Instant(event.occurred_at)
+            invitations = {
+                (player_id, answer_by): answered_at
+                for (player_id, answer_by), answered_at in invitations.items()
+                if answered_at is not None or answer_by <= ended_at
+            }
         elif isinstance(event, (SeatAccepted, SeatDeclined)):
             if event.player_id not in wanted:
                 continue

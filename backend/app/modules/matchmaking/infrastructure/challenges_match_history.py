@@ -149,6 +149,7 @@ class ChallengesButNobodyHasPlayed:
                 counterpart_id=one.counterpart_id,
                 origin=_origin(one.origin),
                 opened_at=one.opened_at,
+                challenge_id=one.challenge_id,
             )
             for one in open_with
         )

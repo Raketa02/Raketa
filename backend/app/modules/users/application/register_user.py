@@ -2,7 +2,8 @@ from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOf
 from app.kernel import Clock
 from app.modules.auth.domain.ports import PasswordHasher
 from app.modules.users.application.commands import RegisterUserCommand
-from app.modules.users.domain.errors import EmailAlreadyRegistered, NicknameAlreadyTaken
+from app.modules.users.application.user_stream import USER_AGGREGATE
+from app.modules.users.domain.errors import EmailAlreadyRegistered
 from app.modules.users.domain.events import UserRegistered
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.domain.user import User
@@ -10,21 +11,22 @@ from app.modules.users.domain.value_objects import (
     AdultAttestation,
     Email,
     HashedPassword,
-    Nickname,
     RawPassword,
 )
 from app.shared.ids import new_uuid
 
 
 class RegisterUser:
-    """Create a new user with a hashed password.
+    """Open an account with a hashed password — **credentials only**.
 
-    Reads twice (email + nickname) before insert to surface a domain-specific
-    conflict instead of relying on a DB unique-constraint violation.
+    Reads the email before insert to surface a domain-specific conflict instead
+    of relying on a DB unique-constraint violation. The nickname's read moved to
+    the act that carries it, the naming (``docs/adr/0171`` §2): a fresh account
+    is unnamed.
 
-    **The attestation is refused before either read.** It is built alongside the
-    other value objects, above the two lookups, so a caller who answered nothing
-    is told so without learning which emails and nicknames are taken.
+    **The attestation is refused before the read.** It is built alongside the
+    other value objects, above the lookup, so a caller who answered nothing is
+    told so without learning which emails are taken.
     """
 
     def __init__(
@@ -45,19 +47,15 @@ class RegisterUser:
 
     async def execute(self, command: RegisterUserCommand) -> User:
         email = Email(command.email)
-        nickname = Nickname(command.nickname)
         raw_password = RawPassword(command.password)
         attestation = AdultAttestation(command.adult_attested)
 
         if await self._users.get_by_email(email.value):
             raise EmailAlreadyRegistered()
-        if await self._users.get_by_nickname(nickname.value):
-            raise NicknameAlreadyTaken()
 
         user = User.register(
             user_id=new_uuid(),
             email=email,
-            nickname=nickname,
             password_hash=HashedPassword(self._hasher.hash(raw_password.value)),
             attestation=attestation,
             occurred_at=self._clock.now(),
@@ -68,9 +66,9 @@ class RegisterUser:
         registered_event = pending_events[0]
         if not isinstance(registered_event, UserRegistered):
             raise RuntimeError("user registration must start with UserRegistered")
-        
+
         await self._event_store.append(
-            aggregate_type="user",
+            aggregate_type=USER_AGGREGATE,
             aggregate_id=user.id,
             expected_version=0,
             events=pending_events,

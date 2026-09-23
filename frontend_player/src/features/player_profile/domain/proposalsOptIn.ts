@@ -2,7 +2,7 @@
  * The **Proposals opt-in**'s rule, which is one sentence long: *an answer that has not been
  * given is not an answer.*
  *
- * The opt-in is the only field of the seven with **no default in either direction**
+ * The opt-in is the only field of the eight with **no default in either direction**
  * (`CONTEXT.md` — *Skipping is not consent*). Every other step either ships with a sensible
  * value or has a genuinely empty answer: a blank week means no preference, no photos is a
  * complete reply, and the radius opens at the served default. This one has neither. So the
@@ -39,6 +39,33 @@
  */
 
 import type { ProposalsOptIn } from './ProfileDraft';
+
+/**
+ * Where an answer was given — the two screens that ask the question, in this app's own
+ * spelling. See `playerProfileMappers` for the wire's.
+ *
+ * A vocabulary of its own rather than the generated union aliased, because the profile screen
+ * **keys copy by it**: *from setting up* against *from this screen* is a sentence a reader
+ * branches on, which is the one thing `PlayIntentSurface` — recorded beside a fact and read by
+ * nothing — is not. A third surface arrives through `pnpm gen:api` and stops the mapper's
+ * table compiling, which is where a code with no words should fail.
+ */
+export type ConsentSurface = 'onboarding' | 'profile';
+
+/**
+ * The answer as the profile holds it — **the current one**, with the evidence recorded beside
+ * it: when, against which words, and from which of the two screens.
+ *
+ * It extends the draft's pair rather than restating it because the two halves are the same
+ * fact at two moments: what the step collects is what the commit records, and what the
+ * profile read serves back is that record with its moment and its surface attached. The
+ * history — every answer this player ever gave — is the stream's, and nothing serves it.
+ */
+export interface RecordedProposalsOptIn extends ProposalsOptIn {
+  /** An instant, as the wire spells one. Drawn as a day, in the platform's zone. */
+  readonly answeredAt: string;
+  readonly surface: ConsentSurface;
+}
 
 /**
  * Where the step stands: not asked yet, or asked and answered one way or the other.

@@ -49,7 +49,7 @@ function row(over: Partial<Wire['CandidateSchema']> = {}): Wire['CandidateSchema
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname: 'Marek Z.',
+      name: 'Marek Z.',
       photo_url: 'https://photos.example/marek?sig=abc',
       area_code: 'A+050612+0019938',
       social_tags: ['PLAYS_TO_WIN'],
@@ -231,13 +231,34 @@ describe('the envelope', () => {
 
     expect(toSearchEnvelope(response({ pool })).pool.window).toBeNull();
   });
+
+  /**
+   * The deal's two counts — *N left* and *N want to play you* — cross on the pool and on a
+   * deal only (ADR-0169 §4, §5). Both are carried as served, a nought included: `0` waiting is
+   * a measured nought and the chip's own rule not to draw it is the chip's.
+   */
+  it('carries the deal’s two counts, a nought included', () => {
+    const pool = { ...response().search.pool, remaining: 23, want_to_play_you: 0 };
+
+    expect(toSearchEnvelope(response({ pool })).pool).toMatchObject({
+      remaining: 23,
+      wantToPlayYou: 0,
+    });
+  });
+
+  it('omits both counts where the answer is not a deal', () => {
+    const pool = toSearchEnvelope(response()).pool;
+
+    expect(pool).not.toHaveProperty('remaining');
+    expect(pool).not.toHaveProperty('wantToPlayYou');
+  });
 });
 
 describe('the candidate', () => {
   it('renames the wire’s fields and keeps the order it was given', () => {
     const candidate = toCandidate(row({ terms: [OVERLAP] }));
 
-    expect(candidate.card.nickname).toBe('Marek Z.');
+    expect(candidate.card.name).toBe('Marek Z.');
     expect(candidate.terms[0]?.evidence).toEqual({
       kind: 'availability_overlap',
       sharedCount: 3,
@@ -260,6 +281,14 @@ describe('the candidate', () => {
   /** Omitted rather than zero — what lets *Most reliable* sort a player with no record last. */
   it('omits the Player Score where the platform has watched nothing', () => {
     expect(toCandidate(row()).card).not.toHaveProperty('playerScore');
+  });
+
+  /** The one line a player wrote, verbatim — and omitted, never emptied, where they wrote none. */
+  it('carries the intro as written, and omits it where there is none', () => {
+    const card = { ...row().player_card, intro: 'Will travel for a hard game.' };
+
+    expect(toCandidate(row({ player_card: card })).card.intro).toBe('Will travel for a hard game.');
+    expect(toCandidate(row()).card).not.toHaveProperty('intro');
   });
 
   it('carries the counted games and the run of form, oldest to newest', () => {
@@ -513,6 +542,6 @@ describe('a withheld row', () => {
     });
 
     expect(list.candidates).toHaveLength(1);
-    expect(list.candidates[0]?.card.nickname).toBe('Marek Z.');
+    expect(list.candidates[0]?.card.name).toBe('Marek Z.');
   });
 });

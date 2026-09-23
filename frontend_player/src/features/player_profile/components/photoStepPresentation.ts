@@ -33,9 +33,12 @@ import type { PhotoAccess } from '../hooks/useProfilePhotos';
 
 import { stepEyebrow } from './socialStepPresentation';
 
+/** The rule the eyebrow carries — cited alone under the You tab's group title (ADR-0179 §2). */
+export const PHOTOS_RULE = 'On-court only — up to three';
+
 /** The eyebrow, carrying the rule beside the position — the tags step's shape. */
 export function photosEyebrow(): string {
-  return `${stepEyebrow('photos')} · On-court only — up to three`;
+  return `${stepEyebrow('photos')} · ${PHOTOS_RULE}`;
 }
 
 /**

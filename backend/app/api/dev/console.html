@@ -87,11 +87,11 @@
     <div class="body">
       <p class="note" id="roster-note">Loading…</p>
       <div class="row">
-        <input id="filter" placeholder="filter by address or handle" size="34">
+        <input id="filter" placeholder="filter by address, name or nickname" size="34">
         <button id="reload-roster">Reload</button>
       </div>
       <table>
-        <thead><tr><th>Address</th><th>Handle</th><th>Player id</th><th></th></tr></thead>
+        <thead><tr><th>Address</th><th>Name</th><th>Nickname</th><th>Player id</th><th></th></tr></thead>
         <tbody id="roster"></tbody>
       </table>
     </div>
@@ -121,7 +121,7 @@
         <span id="search-note" class="note"></span>
       </div>
       <table>
-        <thead><tr><th>Handle</th><th>Fit</th><th>Distance</th><th>Player id</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Fit</th><th>Distance</th><th>Player id</th><th></th></tr></thead>
         <tbody id="candidates"></tbody>
       </table>
     </div>
@@ -226,13 +226,18 @@ async function loadRoster() {
 
 function renderRoster() {
   const needle = $("filter").value.trim().toLowerCase();
+  // A seeded account is always named; an account somebody registered by hand
+  // against the seed TLD and never named reads as the gap it is.
   const rows = accounts.filter((a) =>
-    !needle || a.email.toLowerCase().includes(needle) || a.nickname.toLowerCase().includes(needle));
+    !needle || a.email.toLowerCase().includes(needle)
+      || (a.name || "").toLowerCase().includes(needle)
+      || (a.nickname || "").toLowerCase().includes(needle));
   const body = $("roster");
   body.replaceChildren(...rows.map((account) =>
     el("tr", {},
       el("td", {}, account.email),
-      el("td", {}, account.nickname),
+      el("td", {}, account.name || "— unnamed —"),
+      el("td", {}, account.nickname ? "@" + account.nickname : "—"),
       el("td", { class: "id" }, account.player_id),
       el("td", {},
         el("button", {
@@ -261,13 +266,13 @@ async function actAs(account) {
     say($("search-note"), "");
     say($("challenge-note"), "");
     $("identity").className = "";
-    text($("identity"), account.nickname);
+    text($("identity"), account.name || account.email);
     text($("identity-id"), account.email + " · " + account.player_id);
     $("sign-out").disabled = false;
     $("search-pane").hidden = false;
     $("answer-pane").hidden = false;
     renderRoster();
-    say(note, "Acting as " + account.nickname + ".", "good");
+    say(note, "Acting as " + (account.name || account.email) + ".", "good");
     await loadSports();
     await loadChallenges();
   } catch (error) {
@@ -328,7 +333,7 @@ function renderCandidates(candidates) {
         "withheld — recorded, and the live gates no longer admit it"));
     }
     return el("tr", {},
-      el("td", {}, candidate.player_card.nickname),
+      el("td", {}, candidate.player_card.name),
       el("td", {}, String(candidate.fit)),
       el("td", {}, candidate.distance_km === undefined ? "—" : candidate.distance_km + " km"),
       el("td", { class: "id" }, candidate.player_id),

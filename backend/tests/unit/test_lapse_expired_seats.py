@@ -9,9 +9,14 @@ in the log, so that *answers challenges* has a denominator.
 Run against the **real** adapter and a real (SQLite) session rather than a
 double, because the half worth asserting is exactly the half a double would
 invent: which streams the loop even looks at. A seat's deadline is its seating
-event plus the answer window and nothing else, so *every challenge opened at or
-before ``now`` minus a day* is the candidate set — a claim about the store, not
-about the aggregate.
+event plus the window that stood when it was invited, so *every challenge opened
+at or before ``now`` minus the shortest window this log has ever stamped* is the
+candidate set — a claim about the store, not about the aggregate.
+
+**And the window has moved once already** (``docs/adr/0151``), which is what the
+last two cases here are for: a seat is swept at *its own* deadline whichever
+window stamped it, so a change to the number cannot leave the record late for the
+seats in flight across it.
 
 **A lapse is not a decline**, and this file is where that stops being a comment.
 """
@@ -22,6 +27,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+import pytest
 from sqlalchemy import select
 
 from app.application.events import EventStreamVersionConflict
@@ -41,7 +47,12 @@ from app.modules.challenges.application.lapse_expired_seats import (
     LapseExpiredSeats,
     Swept,
 )
-from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
+from app.modules.challenges.domain import answer_window
+from app.modules.challenges.domain.answer_window import (
+    ANSWER_WINDOW,
+    SHORTEST_WINDOW_EVER_STAMPED,
+    WINDOWS_EVER_STAMPED,
+)
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.seats import SeatAnswer, SeatPlan, Side
 from app.modules.challenges.domain.standing import Standing
@@ -281,6 +292,7 @@ async def test_a_mutual_born_challenge_has_no_window_to_pass(session_factory):
             Challenge.opened_from_mutual_interest(
                 challenge_id=new_uuid(),
                 sport=Sport.TENNIS,
+                mode=None,
                 organiser_id=ORGANISER,
                 other_player_id=ALICE,
                 occurred_at=SENT_AT,
@@ -317,14 +329,21 @@ async def test_the_sweep_changes_no_reading(session_factory):
 
 
 async def test_a_challenge_younger_than_the_window_is_not_a_candidate(session_factory):
-    """The one thing the read narrows on, and it narrows on it exactly.
+    """The one thing the read narrows on, and the window it narrows with.
 
-    A seat's deadline is its seating event plus the answer window, so a challenge
-    opened after ``now`` minus a day has no seat that could have lapsed — and a
-    loop that read it anyway would grow with every send rather than with the
-    backlog.
+    A seat's deadline is its seating event plus the window that stood when it was
+    invited, so a challenge opened after ``now`` minus the **shortest** window
+    this log has ever stamped holds no seat that could have lapsed under any of
+    them — and a loop that read it anyway would grow with every send rather than
+    with the backlog.
+
+    The cutoff is deliberately not ``ANSWER_WINDOW``. Today's number applied to
+    yesterday's seats **under-names**: every seat still running on a shorter
+    window lapses before a cutoff written from the longer one goes looking for
+    it, which is the failure the two cases below drive.
     """
 
+    now = instant(SENT_AT + ANSWER_WINDOW + timedelta(hours=1))
     async with session_factory() as session:
         old = await _record(session, a_tennis_challenge())
         young = await _record(
@@ -339,16 +358,129 @@ async def test_a_challenge_younger_than_the_window_is_not_a_candidate(session_fa
                     SeatPlan(side=Side.A, player_id=ORGANISER),
                     invited(BOB, Side.B, 1),
                 ),
-                occurred_at=at(2),
+                occurred_at=instant(
+                    now - SHORTEST_WINDOW_EVER_STAMPED + timedelta(minutes=1)
+                ),
             ),
         )
 
         candidates = await build_lapsing_challenge_query(session).may_have_lapsed(
-            now=instant(SENT_AT + ANSWER_WINDOW + timedelta(hours=1))
+            now=now
         )
 
         assert candidates == (old.id,)
         assert young.id not in candidates
+
+
+def test_the_ledger_still_carries_every_window_this_repository_has_shipped():
+    """The one thing about the ledger a test can know: what is already in the log.
+
+    ``WINDOWS_EVER_STAMPED`` is a claim about **history**, and nothing in a
+    running process can tell you what a seat committed last month was stamped
+    with. What a test can hold is that the values this repository has actually
+    shipped are still in it — #217's day, and today's two.
+
+    It exists for the one way the ledger can be mismaintained without going red
+    anywhere else: a future lengthening that **replaces** the old value instead
+    of appending it. ``min`` would then move up with the constant, the sweep
+    would narrow past every seat still running on the shorter window, and the
+    record would be late for all of them — the exact failure this cutoff was
+    introduced to end.
+    """
+
+    assert timedelta(hours=24) in WINDOWS_EVER_STAMPED
+    assert ANSWER_WINDOW in WINDOWS_EVER_STAMPED
+    assert SHORTEST_WINDOW_EVER_STAMPED == min(WINDOWS_EVER_STAMPED)
+
+
+def _sent_under(window, *, invitee=ALICE) -> Challenge:
+    """A challenge whose invited seat is stamped with ``window`` rather than today's.
+
+    The stamp is the whole point: ``answer_by`` is written onto the seat when the
+    seat is invited and folded back off the stream, so a seat sent before the
+    number moved keeps the promise it was sent with. Patching the constant for
+    the length of the send is how a stream from another era is written without
+    hand-forging an event.
+    """
+
+    with pytest.MonkeyPatch.context() as era:
+        era.setattr(answer_window, "ANSWER_WINDOW", window)
+        return a_tennis_challenge(invitee=invitee)
+
+
+async def test_a_seat_on_the_window_that_has_since_lengthened_is_swept_on_time(
+    session_factory,
+):
+    """A shorter stamp than today's, swept at **its own** deadline.
+
+    This is the live case: the window became forty-eight hours
+    (``docs/adr/0151``) while seats stamped with the old twenty-four were still
+    running. A cutoff written from today's number goes looking for them a whole
+    day after they ran out, and the ``SeatLapsed`` that *answers challenges*
+    counts is written a day late for every one of them — a denominator that was
+    wrong for as long as it took, on a loop whose entire job is the record.
+    """
+
+    stamped = SHORTEST_WINDOW_EVER_STAMPED
+    assert stamped < ANSWER_WINDOW, "this case needs a window shorter than today's"
+
+    challenge = _sent_under(stamped)
+    its_own_deadline = instant(SENT_AT + stamped + timedelta(minutes=1))
+
+    async with session_factory() as session:
+        await _record(session, challenge)
+
+        candidates = await build_lapsing_challenge_query(session).may_have_lapsed(
+            now=its_own_deadline
+        )
+        assert candidates == (challenge.id,)
+
+        swept = await _sweep(session, now=its_own_deadline).execute()
+        assert swept == Swept(seats=1, challenges=1, conflicts=0)
+
+
+async def test_a_seat_on_a_window_that_has_since_shortened_is_still_swept(
+    session_factory,
+):
+    """A longer stamp than today's, and the sweep still names it.
+
+    The mirror of the case above, and the one a future **shortening** puts every
+    outstanding seat into at once: they keep the longer promise they were sent
+    with, and the cutoff has to reach them anyway.
+
+    **This one pins a property rather than reproducing a bug, and it says so
+    because the difference matters.** ADR-0151 §7 reads the asymmetry the other
+    way round — *"survives lengthening and would not have survived shortening"* —
+    and the predicate does not agree: ``occurred_at <= now - W`` is monotone in
+    ``now`` and holds no cursor, so a stream that qualifies once qualifies for
+    ever and the only thing any window can cost is **lateness**. A shortening
+    makes the cutoff *wider*, which over-names and is free; it was the lengthening
+    above that had a bug. So there is no shortening regression to drive, and what
+    is asserted instead is the invariant that would make one impossible if the
+    ledger were ever mismaintained: the sweep never narrows on a window longer
+    than one a live seat carries.
+    """
+
+    stamped = ANSWER_WINDOW * 2
+    challenge = _sent_under(stamped)
+    still_running = instant(SENT_AT + ANSWER_WINDOW + timedelta(hours=1))
+    its_own_deadline = instant(SENT_AT + stamped + timedelta(minutes=1))
+
+    async with session_factory() as session:
+        await _record(session, challenge)
+
+        # A candidate long before it owes anything — over-naming, and free.
+        assert await build_lapsing_challenge_query(session).may_have_lapsed(
+            now=still_running
+        ) == (challenge.id,)
+        early = await _sweep(session, now=still_running).execute()
+        assert early == Swept(seats=0, challenges=0, conflicts=0)
+
+        assert await build_lapsing_challenge_query(session).may_have_lapsed(
+            now=its_own_deadline
+        ) == (challenge.id,)
+        swept = await _sweep(session, now=its_own_deadline).execute()
+        assert swept == Swept(seats=1, challenges=1, conflicts=0)
 
 
 # ---------------------------------------------------------------------------

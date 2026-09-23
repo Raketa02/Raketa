@@ -69,18 +69,16 @@ from uuid import UUID
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, instant
-from app.modules.challenges.application.commands import (
-    SeatChoice,
-    SendChallengeCommand,
-)
+from app.modules.challenges.application.commands import SendChallengeCommand
 from app.modules.challenges.application.court_safety import CourtSafety
-from app.modules.challenges.domain.challenge import Challenge, refuse_a_bad_court
-from app.modules.challenges.domain.errors import (
-    AnOpenChallengeStandsWithThisPair,
-    TheCourtDidNotComeFromThatSearch,
-    TheLineUpIsNoLongerSendable,
+from app.modules.challenges.application.court_verification import (
+    CourtVerification,
+    everybody_on,
+    newly_asked,
+    seats_of,
 )
-from app.modules.challenges.domain.origins import SentFromSearch
+from app.modules.challenges.domain.challenge import Challenge, refuse_a_bad_court
+from app.modules.challenges.domain.errors import TheCourtDidNotComeFromThatSearch
 from app.modules.challenges.domain.ports import (
     ChallengeRepository,
     CourtOrigin,
@@ -88,7 +86,6 @@ from app.modules.challenges.domain.ports import (
     OriginSearchQuery,
 )
 from app.modules.challenges.domain.seats import SeatPlan
-from app.shared.domain.errors import AccountHeld
 from app.shared.ids import new_uuid
 
 
@@ -107,9 +104,10 @@ class SendChallenge:
         clock: Clock,
     ) -> None:
         self._challenges = challenges
-        self._open_challenges = open_challenges
         self._origins = origins
-        self._safety = safety
+        self._court = CourtVerification(
+            safety=safety, open_challenges=open_challenges
+        )
         self._uow = uow
         self._clock = clock
 
@@ -121,11 +119,6 @@ class SendChallenge:
         """
 
         at = instant(self._clock.now())
-        on_the_court = frozenset(
-            choice.player_id
-            for choice in command.court
-            if choice.player_id is not None
-        )
 
         # 1. The shape of the court, before anything is read at all. The
         #    aggregate owns the rule and runs it again below; what is here is the
@@ -140,10 +133,7 @@ class SendChallenge:
         #    returns. It is about the caller and nobody else, so it is asked
         #    before a single fact about another person — or about a search that
         #    may not be theirs — is read.
-        if command.organiser_id in await self._safety.held_among(
-            [command.organiser_id]
-        ):
-            raise AccountHeld("this account is under a hold")
+        await self._court.refuse_a_held_caller(command.organiser_id)
 
         # 3. The search the court was built on, which is where the sport, the
         #    kind of evening, the window and every seat's position come from.
@@ -158,21 +148,14 @@ class SendChallenge:
             occurred_at=at,
         )
 
-        # 4. The two about everybody else. **Both are read before either is
-        #    judged**: a press that fixed one and was refused for the other is
-        #    the same interruption twice, and the client's remedy for a refused
-        #    send re-reads both sources it owns. Only one code can cross an
-        #    envelope that has one, so the safety refusal wins and the message —
-        #    a diagnostic, never copy — carries the second.
-        admitted = await self._safety.admits(on_the_court)
-        pairs = await self._open_challenges.open_pairs_among(on_the_court, now=at)
-        if not admitted:
-            raise TheLineUpIsNoLongerSendable(
-                "Somebody on this court can no longer be invited to it"
-                + (", and an open challenge already stands on it." if pairs else ".")
-            )
-        if pairs:
-            raise AnOpenChallengeStandsWithThisPair()
+        # 4. The two about everybody else, in the order and with the refusal
+        #    ``court_verification.py`` holds for both presses. **This send
+        #    excepts no challenge**: every open pair on this court refuses it,
+        #    which is the whole of the rule and the thing a fill narrows by
+        #    exactly one id.
+        await self._court.refuse_a_court_that_moved(
+            everybody_on(command.court), at=at
+        )
 
         await self._challenges.save(challenge)
         await self._uow.commit()
@@ -188,47 +171,29 @@ class SendChallenge:
         origin = await self._origins.court_origin(
             search_id=command.search_id,
             organiser_id=command.organiser_id,
-            invitee_ids=self._invitees(command),
+            invitee_ids=newly_asked(
+                command.court, frozenset({command.organiser_id})
+            ),
         )
         if origin is None:
             raise TheCourtDidNotComeFromThatSearch()
         return origin
 
     @staticmethod
-    def _invitees(command: SendChallengeCommand) -> frozenset[UUID]:
-        return frozenset(
-            choice.player_id
-            for choice in command.court
-            if choice.player_id is not None
-            and choice.player_id != command.organiser_id
-        )
-
     def _arrangement(
-        self, command: SendChallengeCommand, origin: CourtOrigin
+        command: SendChallengeCommand, origin: CourtOrigin
     ) -> tuple[SeatPlan, ...]:
         """The court as the aggregate takes it, each invitation citing its seat.
 
-        **Per seat, never per challenge.** A doubles send draws three invitees
-        from one search at three positions, so a challenge-level origin would
-        keep the search and lose every position — and the position is what the
-        telemetry join needs.
+        **The organiser is the whole of who is *already in* on a send**, and
+        naming them as a set rather than as a comparison is what lets a fill —
+        where *already in* is every live member — build its arrangement through
+        the same function (``court_verification.seats_of``).
         """
 
-        return tuple(
-            self._seat(choice, command, origin) for choice in command.court
-        )
-
-    @staticmethod
-    def _seat(
-        choice: SeatChoice, command: SendChallengeCommand, origin: CourtOrigin
-    ) -> SeatPlan:
-        if choice.player_id is None or choice.player_id == command.organiser_id:
-            return SeatPlan(side=choice.side, player_id=choice.player_id)
-        return SeatPlan(
-            side=choice.side,
-            player_id=choice.player_id,
-            origin=SentFromSearch(
-                search_id=command.search_id,
-                position=origin.positions[choice.player_id],
-            ),
+        return seats_of(
+            command.court,
+            search_id=command.search_id,
+            origin=origin,
+            already_in=frozenset({command.organiser_id}),
         )

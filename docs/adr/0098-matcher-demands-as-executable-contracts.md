@@ -60,6 +60,33 @@
 > Everything else here is untouched — above all the discipline itself, which is what made three
 > provider arrivals three composition-root edits.
 
+> **Amended 2026-09-08 by [#380](https://github.com/Raketa02/Raketa/issues/380): opponent
+> variety returns, with its consumer named.** The 2026-08-26 amendment above withdrew it and
+> said what would bring it back — *if a later term wants variety, it returns as that term's
+> demand and signs for it*. The **player record** ([ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md))
+> is that consumer, and the return is on exactly those terms rather than as a reinstatement:
+>
+> - It is **not** a seventh published statistic on `PlayerScoreQuery`, and `player_score` does
+>   not compute it. It is `SubjectVariety` on `player_record`'s own register, answered by
+>   `OpponentVarietyQuery` on `games` — which owns both inputs, since both are facts about
+>   which of this platform's games happened and who was on the court for them.
+> - It is **not a strand**, and it is in no weighted score. It prices no promise; it describes
+>   a habit, and it neither raises nor lowers a Player Score. **The matcher still never reads
+>   it** — that is unchanged by this amendment, and the paragraph in
+>   `matchmaking/domain/ports.py` saying so is unchanged with it.
+> - The demand is **executable from its first commit**, over every registered implementation,
+>   which is the whole reason a withdrawn contract could be brought back rather than
+>   remembered: a demand nobody executes is a demand satisfied by accident.
+>
+> **One shape is worth naming because it is the opposite of every other read in this record.**
+> Everything demanded here answers about a *collection*, because the matcher's caller always
+> holds twenty rows and asks once. This fold is deliberately **unbounded** — that is what makes
+> it a career statistic rather than a window, and a window here would be a second horizon that
+> must not disagree with `RELIABILITY_HORIZON_DAYS` — so it answers about **one player and can
+> never be called over a collection**. The fence is the signature, on both sides of the seam and
+> asserted there, because an unbounded fold behind a set-shaped read is one somebody eventually
+> calls inside the walk over five hundred candidates §4 bounds.
+
 ## Context
 
 Of the eight Fit terms in

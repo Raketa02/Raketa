@@ -59,6 +59,10 @@ def _row(row: Scored) -> dict[str, object]:
             move.signal.value for move in (row.liveness.reasons if row.liveness else ())
         ],
         "inclusion": row.inclusion_reason.value if row.inclusion_reason else None,
+        # The print, spot to spot: the one number here derived from a digest of
+        # the player id rather than from the ruleset, and the reason a digest
+        # was used — two workers must print one distance (``docs/adr/0174``).
+        "shown_distance_km": repr(row.shown_distance_km),
     }
 
 

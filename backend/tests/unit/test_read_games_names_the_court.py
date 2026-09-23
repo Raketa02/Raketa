@@ -1,6 +1,6 @@
 """Reading games back asks **once** about everybody, and never once per seat.
 
-The claim lives in three docstrings — ``PlayerHandles``, ``ReadGames.execute``
+The claim lives in three docstrings — ``PlayerNames``, ``ReadGames.execute``
 and ``docs/adr/0141`` §4 — and it is the kind of claim that goes quietly wrong:
 a handle read inside the loop that renders a seat is correct on every screen and
 costs sixteen round trips on a list of four doubles games. Nothing else in the
@@ -8,7 +8,7 @@ suite would notice, because the answer would be identical.
 
 The second half is the shape of a missing one. A player ``users`` can no longer
 answer for **keeps their seat** — the opposite of the shortlist, where a card
-with no nickname is not a card and the row is dropped — because a court with a
+with no name is not a card and the row is dropped — because a court with a
 seat taken out of it is a three-person doubles game.
 """
 
@@ -45,12 +45,12 @@ class Directory:
 
 @dataclass
 class Handles:
-    """``PlayerHandles`` over a dict, remembering **every** question it was asked."""
+    """``PlayerNames`` over a dict, remembering **every** question it was asked."""
 
     known: Mapping[UUID, str] = field(default_factory=dict)
     asked: list[tuple[UUID, ...]] = field(default_factory=list)
 
-    async def handles_of(
+    async def names_of(
         self, player_ids: Collection[UUID]
     ) -> Mapping[UUID, str]:
         # **The order is recorded, not just the membership.** A ``frozenset``
@@ -99,7 +99,7 @@ async def test_one_question_for_a_whole_list_and_never_one_per_seat():
             a_game(me, partner, three, four, at=instant(NOW - timedelta(days=1))),
         )
     )
-    handles = Handles(
+    names = Handles(
         known={
             me: "me_",
             partner: "kasia_w",
@@ -111,15 +111,15 @@ async def test_one_question_for_a_whole_list_and_never_one_per_seat():
     )
 
     _, found = await ReadGames(
-        games=directory, handles=handles, clock=FixedClock()
+        games=directory, names=names, clock=FixedClock()
     ).execute(me)
 
-    assert handles.asked == [tuple(sorted({me, partner, one, two, three, four}))], (
+    assert names.asked == [tuple(sorted({me, partner, one, two, three, four}))], (
         "a read per game — or per seat — answers the same and costs a round trip "
         "each; and the union is handed over in an order, never as a set "
         "(``docs/adr/0105`` §1)"
     )
-    assert all(one_game.handles[me] == "me_" for one_game in found), (
+    assert all(one_game.names[me] == "me_" for one_game in found), (
         "every game in the list is folded against the one answer"
     )
 
@@ -133,32 +133,79 @@ async def test_an_empty_list_asks_about_nobody_rather_than_not_asking():
     case keeps one rule at the port instead of two half-rules either side of it.
     """
 
-    handles = Handles()
+    names = Handles()
 
     _, found = await ReadGames(
-        games=Directory(), handles=handles, clock=FixedClock()
+        games=Directory(), names=names, clock=FixedClock()
     ).execute(new_uuid())
 
     assert found == ()
-    assert handles.asked == [()]
+    assert names.asked == [()]
 
 
 async def test_a_player_users_cannot_answer_for_keeps_their_seat():
     """**The opposite of the shortlist's rule, and deliberately.**
 
-    A card with no nickname is not a card, so that row goes. A seat with no
-    nickname is still somebody who was on the court, so it stays and the handle
+    A card with no name is not a card, so that row goes. A seat with no
+    name is still somebody who was on the court, so it stays and the name
     is what goes missing (``docs/adr/0141`` §3).
     """
 
     me, partner, one, two = (new_uuid() for _ in range(4))
-    handles = Handles(known={me: "me_", partner: "kasia_w", one: "tomek.p"})
+    names = Handles(known={me: "me_", partner: "kasia_w", one: "tomek.p"})
 
     _, (found,) = await ReadGames(
         games=Directory(games=(a_game(me, partner, one, two),)),
-        handles=handles,
+        names=names,
         clock=FixedClock(),
     ).execute(me)
 
     assert len(found.game.line_up.seatings) == 4
-    assert two not in found.handles
+    assert two not in found.names
+
+
+async def test_the_leaver_who_called_it_off_is_named_though_their_seat_is_open():
+    """``docs/adr/0172`` §4 — ``called_off_by`` is one more id in the union the
+    read already asks about, because the leaver's seat is **vacated** on the
+    game and the court cannot supply the name."""
+
+    me, partner, one, two = (new_uuid() for _ in range(4))
+    game = a_game(me, partner, one, two, at=NOW)
+    game.vacate(two, occurred_at=instant(NOW - timedelta(hours=2)))
+    game.call_off(by=two, occurred_at=instant(NOW - timedelta(hours=1)))
+    names = Handles(
+        known={me: "me_", partner: "kasia_w", one: "tomek.p", two: "marekb"}
+    )
+
+    _, found = await ReadGames(
+        games=Directory(games=(game,)), names=names, clock=FixedClock()
+    ).execute(me)
+
+    assert names.asked == [tuple(sorted({me, partner, one, two}))]
+    (row,) = found
+    assert row.game.called_off_by == two
+    assert row.names[two] == "marekb"
+
+
+async def test_a_game_the_reader_dismissed_is_left_off_their_rail_and_nobody_elses():
+    """``docs/adr/0172`` §5 — derived on every read: the aggregate folds who
+    has dismissed it and the rail subtracts its reader. The other players'
+    rails are untouched, and so is the record."""
+
+    me, partner, one, two = (new_uuid() for _ in range(4))
+    game = a_game(me, partner, one, two, at=NOW)
+    game.vacate(two, occurred_at=instant(NOW - timedelta(hours=2)))
+    game.call_off(by=two, occurred_at=instant(NOW - timedelta(hours=1)))
+    game.dismiss(by=me, occurred_at=instant(NOW - timedelta(minutes=5)))
+    directory = Directory(games=(game,))
+    names = Handles(known={me: "me_", partner: "kasia_w", one: "tomek.p"})
+
+    _, mine = await ReadGames(games=directory, names=names, clock=FixedClock()).execute(
+        me
+    )
+    _, theirs = await ReadGames(
+        games=directory, names=names, clock=FixedClock()
+    ).execute(partner)
+
+    assert mine == ()
+    assert [row.game.id for row in theirs] == [game.id]

@@ -43,28 +43,43 @@ from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
 from app.modules.challenges.domain.seats import seats_per_side
 from app.modules.matchmaking.domain.searches import LAST_FIVE
+from app.modules.player_profile.domain.intro import Intro
 from app.seeds import catalog
 from app.seeds.catalog import (
     PROTAGONISTS,
+    REFERENCE_CENTRE,
+    SEED_CENTRE_VARIABLE,
+    Centre,
+    seed_centre,
     THE_BLANK_WEEK_PLAYER,
     THE_POPULATED_PLAYER,
     AnswerPolicy,
     answer_key,
 )
 from app.seeds.clock import NEWCOMER_WINDOW_DAYS, FixedClock, days_before
+from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.seeds.cohort import (
     ARCHETYPES,
     ARTIFACT,
     BAND_HISTOGRAM,
     COHORT,
+    EVERY_PLAYED_GAME,
+    GHOSTED_AT_LEAST_DAYS_AGO,
+    INTROS,
     PLAYED_GAMES,
+    PROTAGONIST_GAMES,
+    PROTAGONIST_HANDLE,
     RINGS,
+    WHAT_PLAYERS_SAID,
     Cohort,
     _distance_between,
+    _distance_of,
     _ring_in,
     as_document,
     generate,
+    latitude_of,
 )
+from app.modules.matchmaking.domain.geography import Point, distance_km
 from app.seeds.games import write_the_played_history
 from app.seeds.pairs import write_the_relationships
 from app.seeds.photos import DeclaredVerdict
@@ -150,7 +165,8 @@ def test_the_played_history_records_no_answer_the_platform_gave():
     would get believed, because it is the one a reader can see.
     """
 
-    played = as_document(generate())["played_games"]
+    document = as_document(generate())
+    played = document["played_games"] + document["protagonist_games"]
     assert played, "the artifact records no played game at all"
 
     for game in played:
@@ -160,6 +176,8 @@ def test_the_played_history_records_no_answer_the_platform_gave():
             "side_a",
             "side_b",
             "won_by",
+            "entered",
+            "answered",
         }, game
 
 
@@ -177,14 +195,124 @@ def test_no_declared_pair_plays_twice():
     assert len(pairs) == len(set(pairs)), "a pair shares two courts"
 
 
-def test_the_protagonist_plays_in_none_of_them():
-    """A game with her in it would take that person out of the pool every other
-    assertion in `screens.py` is read from — permanently, because nothing closes
-    a challenge every seat accepted."""
+def test_the_protagonist_plays_in_none_of_the_cohorts_own():
+    """**Two lists, and the split is the claim.** `PLAYED_GAMES` exists so the
+    cards *in* her pool reach every state a card can be in, and a row of it that
+    seated her would be answering a second question in the same table.
+
+    Her own evenings are `PROTAGONIST_GAMES`, which is checked below."""
 
     played = {handle for game in PLAYED_GAMES for handle in game.players}
 
     assert all(handle.startswith("cohort-") for handle in played), played
+
+
+def test_her_own_history_seats_her_on_side_b_and_never_organising():
+    """The two strands that exist because of where she sits.
+
+    An organiser's seat is accepted at birth, so an organiser answers no
+    invitation and has no *answers challenges*; and the side that **states** the
+    score is asked nothing, so a protagonist on side A has no *answers about
+    results*. Both would go missing silently — as an absent row rather than as a
+    failure — which is why this is a test and not a comment.
+    """
+
+    assert PROTAGONIST_GAMES, "her record has no evenings behind it"
+
+    for game in PROTAGONIST_GAMES:
+        assert game.side_b[0] == PROTAGONIST_HANDLE, game
+        assert PROTAGONIST_HANDLE not in game.side_a, game
+        assert game.organiser != PROTAGONIST_HANDLE, game
+
+
+def test_her_record_reaches_a_figure_that_is_not_a_full_bar():
+    """**Every strand she has is a fraction somebody could work off.**
+
+    A fixture of tidy evenings publishes nothing but 100% and never draws the
+    card's whole point: a penalty you can look up and watch lift. So one
+    arrangement is a ghost, one score goes unanswered, and this asserts the two
+    are actually there rather than trusting a comment above the rows.
+    """
+
+    ghosts = [game for game in PROTAGONIST_GAMES if game.was_a_ghost]
+    unanswered = [
+        game for game in PROTAGONIST_GAMES if game.was_scored and not game.answered
+    ]
+    played = [game for game in PROTAGONIST_GAMES if not game.was_a_ghost]
+
+    assert len(ghosts) == 1, [game.played_days_ago for game in PROTAGONIST_GAMES]
+    assert len(unanswered) == 1, [game.won_by for game in PROTAGONIST_GAMES]
+    assert {game.won_by for game in played} == {"A", "B"}, "the run is one colour"
+
+
+def test_her_opponents_are_fewer_than_her_games():
+    """*Opponent variety* is distinct people over counted games, so a fixture
+    where no pair ever plays twice publishes 100% and proves nothing about the
+    row. A completed line-up releases its pair, so this is reachable — and the
+    writer's probe has to key on the day for it to be written."""
+
+    played = [game for game in PROTAGONIST_GAMES if not game.was_a_ghost]
+    opponents = {
+        handle
+        for game in played
+        for handle in game.players
+        if handle != PROTAGONIST_HANDLE
+    }
+
+    assert len(opponents) < len(played), (sorted(opponents), len(played))
+
+
+def test_a_declared_ghost_is_old_enough_to_be_one():
+    """**A plan is a ghost only once its entry window has closed**, and that
+    window is an ordinary week plus a day — not the day a score's window is.
+
+    A ghost declared inside it is a game still *awaiting its entry*, which the
+    record leaves out of **both** halves of *shows up*: the bar reads full, the
+    strand is a lie by omission, and nothing fails. It cost a seeded run exactly
+    that, which is why the floor is derived from `games`' own constants here
+    rather than typed beside them.
+    """
+
+    assert GHOSTED_AT_LEAST_DAYS_AGO > (PLAN_HORIZON + ENTRY_GRACE).days
+
+    for game in PROTAGONIST_GAMES:
+        if game.was_a_ghost:
+            assert game.played_days_ago >= GHOSTED_AT_LEAST_DAYS_AGO, game
+
+
+def test_nobody_is_rated_by_somebody_they_never_played():
+    """A card is drawn for an evening, and a **ghost** is not one: there is
+    nobody to rate for a game the platform says did not happen."""
+
+    together: dict[str, set[str]] = {}
+    for game in EVERY_PLAYED_GAME:
+        if game.was_a_ghost:
+            continue
+        for pair in game.pairs:
+            one, other = sorted(pair)
+            together.setdefault(one, set()).add(other)
+            together.setdefault(other, set()).add(one)
+
+    assert WHAT_PLAYERS_SAID, "nobody says anything about anybody"
+    for subject, said in WHAT_PLAYERS_SAID.items():
+        for rater in said:
+            assert rater in together.get(subject, set()), (rater, subject)
+
+
+def test_somebody_is_rated_by_nobody():
+    """**The absence is the state most players are in**, and the record omits
+    the zone rather than publishing a nought. A fixture where everybody has been
+    rated cannot draw it."""
+
+    rated = set(WHAT_PLAYERS_SAID)
+    played_by_somebody = {
+        handle
+        for game in EVERY_PLAYED_GAME
+        if not game.was_a_ghost
+        for handle in game.players
+    }
+
+    assert played_by_somebody - rated, "everybody who played has been rated"
 
 
 def test_a_court_seats_what_its_sport_seats():
@@ -321,6 +449,129 @@ def _draw_in_a_subprocess(hash_seed: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 1b. The centre: the artifact's is fixed, the run's may move
+# ---------------------------------------------------------------------------
+
+
+def test_the_artifact_is_drawn_around_the_reference_whatever_the_shell_says():
+    """`generate()` defaults to London. **The shell cannot move the artifact.**
+
+    A developer who has exported `SEED_CENTRE` for `make seed-host` then runs
+    `make gen-cohort` or this suite, and neither may notice: the committed
+    population measures from the reference, and only the drawn `COHORT` — the
+    run's — is translated. Two centres, one of them fixed, or the artifact test
+    above would be a function of whoever last ran it.
+    """
+
+    assert REFERENCE_CENTRE == Centre(latitude=51.51, longitude=-0.13)
+    assert generate().centre == REFERENCE_CENTRE
+    assert as_document(generate())["centre"] == {
+        "latitude": 51.51,
+        "longitude": -0.13,
+    }
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        (None, REFERENCE_CENTRE),
+        ("", REFERENCE_CENTRE),
+        ("   ", REFERENCE_CENTRE),
+        ("50.06,19.94", Centre(latitude=50.06, longitude=19.94)),
+        # Whitespace, and a phone's full-precision fix rounds to the cell — the
+        # same rounding the profile commit does on the way in.
+        (" 50.0614 , 19.9372 ", Centre(latitude=50.06, longitude=19.94)),
+        ("-33.87,151.21", Centre(latitude=-33.87, longitude=151.21)),
+        ("51.51,-0.13", REFERENCE_CENTRE),
+    ],
+)
+def test_the_centre_is_parsed_from_the_environment(raw, expected):
+    """A pure function of the record, exhaustively (`docs/environments.md`)."""
+
+    environ = {} if raw is None else {SEED_CENTRE_VARIABLE: raw}
+
+    assert seed_centre(environ) == expected
+
+
+@pytest.mark.parametrize(
+    "raw, complaint",
+    [
+        ("50.06", "latitude,longitude"),
+        ("50.06,19.94,7", "latitude,longitude"),
+        ("Kraków", "latitude,longitude"),
+        ("50.06;19.94", "latitude,longitude"),
+        ("91,19.94", "off the globe"),
+        ("50.06,181", "off the globe"),
+    ],
+)
+def test_a_centre_that_is_not_a_place_is_refused_by_name(raw, complaint):
+    with pytest.raises(ValueError, match=complaint):
+        seed_centre({SEED_CENTRE_VARIABLE: raw})
+
+
+def test_a_moved_cohort_is_the_same_figure_somewhere_else():
+    """**Translation, not regeneration.** Every member keeps their handle, ring
+    and draws, sits on the new centre's meridian, and is exactly as far from the
+    new centre as they were from the old one — because a degree of latitude is
+    the same length everywhere, which is the fact the rings are built on. This
+    is what lets a developer in Kraków seed around their own phone without a
+    single distance in the ring table, the walkthroughs or the assertions
+    changing underneath them.
+    """
+
+    krakow = Centre(latitude=50.06, longitude=19.94)
+    reference, moved = generate(), generate(centre=krakow)
+
+    assert moved.centre == krakow
+    assert len(moved.members) == len(reference.members)
+    for there, here in zip(moved.members, reference.members, strict=True):
+        assert (there.handle, there.ring, there.archetype) == (
+            here.handle,
+            here.ring,
+            here.archetype,
+        )
+        assert there.longitude == krakow.longitude
+        assert there.latitude == round(
+            here.latitude + (krakow.latitude - REFERENCE_CENTRE.latitude), 2
+        )
+        # Everything but the position is the same draw.
+        assert replace(there, latitude=0.0, longitude=0.0) == replace(
+            here, latitude=0.0, longitude=0.0
+        )
+        was = distance_km(
+            Point(
+                latitude=REFERENCE_CENTRE.latitude,
+                longitude=REFERENCE_CENTRE.longitude,
+            ),
+            Point(latitude=here.latitude, longitude=here.longitude),
+        )
+        now = distance_km(
+            Point(latitude=krakow.latitude, longitude=krakow.longitude),
+            Point(latitude=there.latitude, longitude=there.longitude),
+        )
+        assert now == pytest.approx(was, abs=0.01), there.handle
+
+
+def test_every_ring_lands_on_a_cell_wherever_the_centre_is():
+    """`LocationArea` rounds to two decimal places on the way in. A ring that
+    rounds to a different cell than the one it was placed on is a ring that
+    moved between the seed and the database, so the offsets and the centre are
+    both two-decimal and their sum is put back on the grid."""
+
+    for centre in (REFERENCE_CENTRE, Centre(latitude=50.06, longitude=19.94)):
+        for ring in RINGS:
+            latitude = latitude_of(ring, centre)
+            assert latitude == round(latitude, 2), (ring.code, centre)
+            assert _distance_of(ring) == pytest.approx(
+                distance_km(
+                    Point(latitude=centre.latitude, longitude=centre.longitude),
+                    Point(latitude=latitude, longitude=centre.longitude),
+                ),
+                abs=0.01,
+            )
+
+
+# ---------------------------------------------------------------------------
 # 2. The declarations themselves
 # ---------------------------------------------------------------------------
 
@@ -374,6 +625,44 @@ def test_three_members_carry_a_photograph_and_it_is_one_of_each_verdict():
 
     assert len(carried) == len(DeclaredVerdict), carried
     assert set(carried.values()) == set(DeclaredVerdict), carried
+
+
+def test_a_few_members_wrote_a_line_and_most_did_not():
+    """**Both cards are drawn** (`docs/adr/0170`): the mocks put a line on every
+    card and most players will have none, so the deck has to show a card that
+    quotes one beside a card that closes up. Every carrier is in the nearest
+    ring, where the protagonist's pool is, so the line reaches a card."""
+
+    carriers = {
+        member.handle: member.intro
+        for member in COHORT.members
+        if member.intro is not None
+    }
+
+    assert carriers == dict(INTROS)
+    assert 0 < len(carriers) < len(COHORT.members) // 2, carriers
+    assert all(_ring_in(handle) == RINGS[0].code for handle in carriers), carriers
+    assert any(
+        COHORT.by_handle(handle).photograph is not None for handle in carriers
+    ), "no card carries a photograph and a line together"
+
+
+def test_every_seeded_line_is_one_the_platform_admits():
+    """The fence the commit runs, run at import: a seeded line carrying contact
+    or over the cap would fail `make seed` at the first profile, and this says
+    so before a database is touched. The protagonist's line goes through the
+    same check."""
+
+    lines = list(INTROS.values()) + [
+        account.profile.intro
+        for account in PROTAGONISTS
+        if account.profile is not None and account.profile.intro is not None
+    ]
+
+    assert lines, "nothing to check would be a check that passes for nothing"
+    for line in lines:
+        admitted = Intro.written(line)
+        assert admitted is not None and admitted.text == line, line
 
 
 def test_no_named_account_carries_a_photograph():
@@ -634,6 +923,7 @@ async def test_the_cohort_reaches_every_screen_it_promises(
         "absences ·",
         "block ·",
         "pass ·",
+        "radar ·",
         "record block ·",
         "run of form ·",
         "player score ·",

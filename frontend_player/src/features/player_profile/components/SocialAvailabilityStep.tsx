@@ -1,5 +1,5 @@
 /**
- * Step three of onboarding's second part: **when do you usually play?**
+ * Step four of onboarding's second part: **when do you usually play?**
  *
  * Seven days by three parts of the day, and that is the finest precision this step may
  * produce. There is no clock time, no hour picker and no date picker on this screen, and
@@ -34,11 +34,13 @@
  * and no renderer — and the geometry is `AvailabilityGrid`'s. What is left in this file is
  * which week is on screen and where it is kept, which is the same split the tags and photos
  * steps made and for the same reason: the profile editor will obey these rules from a screen
- * that looks nothing like this one.
+ * that looks nothing like this one. **That screen exists now** — the You tab's *Your week*
+ * (ADR-0179 §2) — and the grid it shares with this step is `WeekGrid`: the control, with the
+ * step's chrome left here where it belongs.
  *
  * ## The week lives in the draft
  *
- * Every press writes through to the part's client-held draft, so walking to step four and
+ * Every press writes through to the part's client-held draft, so walking to step five and
  * back finds the same cells ticked. Nothing is sent anywhere: the draft is in memory until
  * the one commit at the end of the part
  * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
@@ -46,12 +48,10 @@
 
 import { useRouter } from 'expo-router';
 
-import { AvailabilityGrid, Button } from '@/shared/ui';
-import { cellLabel, dayLabel, dayPartHead } from '@/shared/vocabulary/availabilityPresentation';
-import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
+import { Button } from '@/shared/ui';
 
 import type { AvailabilitySlot } from '../domain/ProfileDraft';
-import { toggleCell, isTicked, weekStanding } from '../domain/availabilityWeek';
+import { toggleCell, weekStanding } from '../domain/availabilityWeek';
 import { stepAfter } from '../domain/socialSteps';
 import { useProfileDraft } from '../store/profileDraft.store';
 
@@ -59,6 +59,7 @@ import { availabilityContinueLabel, availabilityEyebrow } from './availabilityPr
 import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
+import { WeekGrid } from './WeekGrid';
 
 export function SocialAvailabilityStep() {
   const router = useRouter();
@@ -95,19 +96,7 @@ export function SocialAvailabilityStep() {
         )
       }
     >
-      <AvailabilityGrid
-        columnHeads={DAY_PARTS.map(dayPartHead)}
-        rows={WEEKDAYS.map((day) => ({
-          key: String(day),
-          label: dayLabel(day),
-          cells: DAY_PARTS.map((part) => ({
-            key: `${day}-${part}`,
-            selected: isTicked(week, { day, part }),
-            onPress: () => press({ day, part }),
-            accessibilityLabel: cellLabel({ day, part }),
-          })),
-        }))}
-      />
+      <WeekGrid week={week} onPressCell={press} />
     </SocialStepLayout>
   );
 }

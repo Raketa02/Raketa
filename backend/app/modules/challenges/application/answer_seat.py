@@ -21,8 +21,20 @@ call rather than an event, exactly as a mutual yes opening a challenge is.
 
 **A decline is not a cancellation.** It reopens exactly the seat it was given and
 the people who already agreed are still in — and if the last of them leaves, the
-standing settles on its own, because what remains is the organiser alone on an
-empty court.
+standing settles on its own, because what remains is one person on an empty
+court (``docs/adr/0165`` §3, organiser-blind).
+
+**What both answers share is not here.** Loading a challenge of yours, folding
+the standing the write produced and reading the court back is
+``challenge_of_yours.py``, because the withdraw does all three too and none of
+them is about an answer.
+
+**The moment is checked on a court that has been a game, and nothing else is.**
+A newcomer accepting into a reopened court is joining a game with a plan, and a
+plan may name a moment that has gone (``docs/adr/0162`` §4): *Sunday* accepted
+on Monday is a seat on a game whose moment is over, so the acceptance is refused
+with the same code the fill and the departure use. A court that was never a game
+costs no read.
 
 **No hold and no gate is re-checked here, and that is not an oversight.** The five
 facts are re-verified when a challenge is *minted*, because that is the act that
@@ -37,67 +49,23 @@ from __future__ import annotations
 from typing import final
 
 from app.application.ports import UnitOfWork
-from app.kernel import Clock, Instant, instant
-from app.modules.challenges.application.completed_line_up import hand_over
+from app.kernel import Clock, instant
+from app.modules.challenges.application.challenge_of_yours import AChallengeOfYours
 from app.modules.challenges.application.commands import AnswerSeatCommand
-from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.errors import NoChallengeOfYoursHasThatId
+from app.modules.challenges.application.completed_line_up import hand_over
+from app.modules.challenges.application.seat_change import (
+    refuse_a_court_closed_to_seating,
+)
 from app.modules.challenges.application.read_challenges import StandingChallenge
-from app.modules.challenges.domain.planned_game import PlannedGameOpening
-from app.modules.challenges.domain.ports import ChallengeRepository
+from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
+from app.modules.challenges.domain.planned_game import PlannedGameHandover
+from app.modules.challenges.domain.ports import ChallengeRepository, PlayerNames
+from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 from app.modules.challenges.domain.standing import Standing
 
 
-class _AnswerSeat:
-    """What both answers share: load the challenge, or refuse to admit it exists."""
-
-    def __init__(
-        self,
-        *,
-        challenges: ChallengeRepository,
-        uow: UnitOfWork,
-        clock: Clock,
-    ) -> None:
-        self._challenges = challenges
-        self._uow = uow
-        self._clock = clock
-
-    async def _yours(self, command: AnswerSeatCommand) -> Challenge:
-        """That challenge, if this player is on its court.
-
-        **The two ways this refuses are one code**: no such challenge, and a
-        challenge that is not yours. Separating them would answer *is this
-        challenge id real* about a stranger's evening.
-        """
-
-        challenge = await self._challenges.load(command.challenge_id)
-        if challenge is None or not any(
-            seat.holds(command.player_id) for seat in challenge.seats
-        ):
-            raise NoChallengeOfYoursHasThatId()
-        return challenge
-
-    async def _written(self, challenge: Challenge, at: Instant) -> Standing:
-        """Append the answer and read the standing it produced.
-
-        The standing is folded **after** the write and against the same instant
-        the answer was recorded at, so an accept that completed a four and the
-        ``ON`` it produced are one reading and not two. **It does not commit** —
-        an accept has one more thing to do first.
-        """
-
-        await self._challenges.save(challenge)
-        return challenge.standing_at(at)
-
-    async def _committed(
-        self, challenge: Challenge, standing: Standing
-    ) -> StandingChallenge:
-        await self._uow.commit()
-        return StandingChallenge(challenge=challenge, standing=standing)
-
-
 @final
-class AcceptSeat(_AnswerSeat):
+class AcceptSeat(AChallengeOfYours):
     """*Yes.* It matters on its own, whatever the other seats do.
 
     **The only answer that can complete a line-up**, which is why it is the only
@@ -110,16 +78,30 @@ class AcceptSeat(_AnswerSeat):
         self,
         *,
         challenges: ChallengeRepository,
+        names: PlayerNames,
+        court_games: GameOfCourtQuery,
         uow: UnitOfWork,
         clock: Clock,
-        planned_games: PlannedGameOpening,
+        planned_games: PlannedGameHandover,
+        games: SeatableGameQuery,
     ) -> None:
-        super().__init__(challenges=challenges, uow=uow, clock=clock)
+        super().__init__(
+            challenges=challenges,
+            names=names,
+            court_games=court_games,
+            uow=uow,
+            clock=clock,
+        )
         self._planned_games = planned_games
+        self._games = games
 
     async def execute(self, command: AnswerSeatCommand) -> StandingChallenge:
         at = instant(self._clock.now())
-        challenge = await self._yours(command)
+        challenge = await self._yours(command.challenge_id, command.player_id)
+        # Only on a court that has been a game; every other court costs no read.
+        await refuse_a_court_closed_to_seating(
+            challenge, at=at, games=self._games
+        )
         challenge.accept(command.player_id, occurred_at=at)
         standing = await self._written(challenge, at)
         if standing is Standing.ON:
@@ -127,18 +109,20 @@ class AcceptSeat(_AnswerSeat):
             # fires at the instant the arrangement is knowable and settled —
             # in this transaction, so the accept and the game it produced
             # commit together or neither does (``domain/planned_game.py``).
+            # On a court that has been a game it is a **re-seat** of the same
+            # game rather than the opening of another.
             await hand_over(challenge, at=at, games=self._planned_games)
-        return await self._committed(challenge, standing)
+        return await self._committed(challenge, standing, at)
 
 
 @final
-class DeclineSeat(_AnswerSeat):
+class DeclineSeat(AChallengeOfYours):
     """*No.* It reopens one seat and retires nothing."""
 
     async def execute(self, command: AnswerSeatCommand) -> StandingChallenge:
         at = instant(self._clock.now())
-        challenge = await self._yours(command)
+        challenge = await self._yours(command.challenge_id, command.player_id)
         challenge.decline(command.player_id, occurred_at=at)
         return await self._committed(
-            challenge, await self._written(challenge, at)
+            challenge, await self._written(challenge, at), at
         )

@@ -1,6 +1,10 @@
 # ADR-0141 — A game names the people on its court, and the court is the gate
 
-- **Status:** Accepted
+- **Status:** Accepted — **amended in one sentence by
+  [ADR-0161](0161-the-game-screen-draws-its-courts-pairing.md)**: the seat on `GET /games`
+  still carries the handle and nothing else, and a seat's Level is read *beside* the game,
+  through a port, for the duration of `AWAITING_ENTRY`. *No `player_card` to hang them on
+  later* stays true.
 - **Date:** 2026-09-06
 
 ## Context
@@ -80,6 +84,12 @@ row a reader has already seen **is** that trace. Re-gating would leak the thing 
 to protect, while hiding a word rather than a person: the `player_id` stays in the list
 either way, because a seat cannot be dropped without publishing a three-person doubles
 game.
+
+> **That last clause is narrowed 2026-09-12 by [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md).** A seat still cannot be dropped — and
+> it can now be **open**: somebody who leaves the game before it is played has their seat
+> drawn with `player_id: null`, in its place, so the court still says which side is short and
+> a four with one seat open is still a four. The argument survives its conclusion; the
+> conclusion was one word too narrow.
 
 [ADR-0096](0096-gender-preference-mutual-gate-invisible-to-the-scorer.md) and
 [ADR-0124](0124-the-matcher-gates-account-state-never-age.md) are gates on who may be

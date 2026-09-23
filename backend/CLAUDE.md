@@ -22,9 +22,10 @@ make openapi     # emit openapi.{player,dev}.json — the player contract the cl
 make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
 make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
 make migrate     # alembic upgrade head inside the API container
-make seed        # the named accounts, the cohort and the games they have played, then
-                 # reads every Play screen as the protagonist and refuses a database
-                 # that cannot draw one. Needs the stack up (Postgres + Redis, and
+make seed        # the named accounts, the cohort, the games they have played and four
+                 # more nobody has played — whose plans reach nought, one, two and
+                 # three slots — then reads every Play screen as the protagonist
+                 # and refuses a database that cannot draw one. Needs the stack up (Postgres + Redis, and
                  # MinIO for the three photographs — without it the run says so and
                  # seeds the rest); make seed-host on the host
                  # Then http://localhost:8000/dev — the dev console, the thing that answers
@@ -94,24 +95,26 @@ Rules to preserve:
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
   transaction; handlers perform side effects after commit. **One deliberate exception,
-  and it is the matchmaking module's four durable ledgers** — the `search` record,
-  `interest`, the **pass** record and the **prompt decline** (`the-engine.md` §12:
-  *nothing here is event-sourced*, and an interest is *durable without being an aggregate
-  with a life story*). All four are small facts with no life story, and **nothing
-  *subscribes* to one being written**: a lift is a read on the next search, the
-  suppression a pass writes is a cache its use case fills after the commit rather than a
-  subscriber, and a decline is read by one filter on the next search. The one thing a
+  and it is the matchmaking module's five durable ledgers** — the `search` record,
+  `interest`, the **pass** record, the **prompt decline** and the **deck reset**
+  (`the-engine.md` §12: *nothing here is event-sourced*, and an interest is *durable
+  without being an aggregate with a life story*). All five are small facts with no life
+  story, and **nothing *subscribes* to one being written**: a lift is a read on the next
+  search, the suppression a pass writes is a cache its use case fills after the commit
+  rather than a subscriber, a decline is read by one filter on the next search, and a
+  reset is one moment the next deal reads three ways. The one thing a
   write here does cause is a **call, never a subscription** — a second *Let's play*
   facing the first opens a challenge **inline, in the same transaction** through a port
   `challenges` signs (#251), because *that player has left the deck for good* is a
   promise that must not wait for a poller. The exemption is about the interest row
   needing no event of its own, and that is unchanged.
-  The authority naming all four is `the-engine.md` §12;
-  ADR-0128 decides what a pass *is* and says nothing about event sourcing, and ADR-0094
+  The authority naming all five is `the-engine.md` §12;
+  ADR-0128 decides what a pass *is* and says nothing about event sourcing, ADR-0094
   says of the decline in its own words that *declining a prompt is not a domain fact and
   earns no event* — its amendment moved the suppression out of Redis and kept that
-  sentence literally. A new context does **not** inherit this — it needs the same argument made in
-  an ADR.
+  sentence literally — and the reset argued for itself in ADR-0169's amendment of
+  2026-09-15, which is the rule: a new one does **not** inherit this — it needs the same
+  argument made in an ADR.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural
@@ -151,10 +154,16 @@ Rules to preserve:
   writes in the past**: a score is confirmed when its window closes, so a game seeded an
   hour ago is a game still awaiting an answer, and each one is written on its own
   backdated clock while every relationship is still written at the run's own now.
-  **Five counted games costs five distinct opponents** — nothing ends a challenge every
-  seat accepted, so a pair that has played can never be shown each other again, which is
-  why no game seats the protagonist and why the tennis opponents live in ring d, past the
-  furthest rung her ladder is ever offered. And **the photographs are a declared verdict
+  **Five counted games costs five distinct opponents**, and that cost is now *kept*
+  rather than forced: a completed line-up releases its pair
+  ([ADR-0142](../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
+  §1, #343), so a pair that has played is shown each other again. Rewriting the rows would
+  move `cohort.json` for nothing. **No game seats the protagonist, and that reason
+  inverted**: a game with her in it used to take that person *out* of the pool every
+  `screens.py` assertion is read from, and would now put them back *in* carrying an
+  `ACCEPTED` tally — which is `PREVIOUS_ACCEPT`, named in `CANNOT_BE_DRAWN` as absent. The
+  tennis opponents live in ring d for the ladder's sake, which was always a separate
+  reason and is untouched. And **the photographs are a declared verdict
   and generated bytes**: `PhotoReview` is a port the fixture supplies like the clock,
   because what a check concluded about a synthetic image is a thing a workbench chooses
   rather than discovers — the note itself is written by the domain's own constructors, so
@@ -172,9 +181,12 @@ Rules to preserve:
   no non-search constructor, a send cites the search its court was built on — and that cost
   is the check: an origin that resolves proves the protagonist was genuinely findable
   through gender, level and radius before any lift is claimed. **`PREVIOUS_ACCEPT` is
-  narrowed out by name**: `SeatAccepted → ACCEPTED`, nothing ends a game without `matches`,
-  so that pair is permanently `OPEN_CHALLENGE`-gated and the code is contracted by a demand
-  in `tests/demands/` rather than fixtured. **Absence claims assert the gate histogram**,
+  narrowed out by name, and the name is now about the fixtures**: a pair is
+  `OPEN_CHALLENGE`-gated while they are **still arranging**, which this cohort's accepted
+  seat is — a co-invitee's seat on a doubles court with an unanswered seat beside it. It is
+  no longer unreachable on the platform (ADR-0142 §1 releases a completed line-up), so what
+  `tests/demands/` contracts is the **release** and the half-built court that does not
+  release, rather than a permanence. **Absence claims assert the gate histogram**,
   not the absence, because an account gated for an accidental reason is absent too and a
   naive claim passes. Two costs are **printed on the report** rather than hidden: the
   pass's suppression is a Redis TTL that fails soft while its row never expires — so the
@@ -182,6 +194,31 @@ Rules to preserve:
   the **cache** — and the deal that earned the pass's origin key leaves the protagonist's
   deck a day short (ADR-0131). This is the only place the seed writes `challenges` and
   `blocks`, and it writes them through their own use cases like everything else.
+- **The last layer is the loop's own states, and it is the one that tells as it
+  writes** (`app/seeds/loop.py`). Everything above it seeds the *Play* screens and the
+  two layers before it reach a game arranged and a plan half agreed; this reaches
+  everything between *the plan is complete* and *the score moved a Level*, plus the
+  three challenge endings no other layer arrives at. Four things about it are
+  load-bearing. **A card is folded and not declared**: the nine names the Now rail draws
+  live in the client's `features/plans/domain/gameCard.ts`, and the claim here re-derives
+  each one off `GET /games` and `GET /plans` as the player whose rail it is — so a card
+  name that stops being reachable fails on a seed run rather than on somebody's phone.
+  **Two of the nine are stated absences, and the arithmetic is the argument**:
+  `uncounted` needs both proposal windows closed, which is a day after the entry and
+  exactly when an ended card leaves the rail, so that state reaches the game screen
+  through *Details* and never the rail; and `unreadable` is the client's gap for a
+  standing this build has no word for, which a fixture cannot produce without inventing
+  an event. **It is the one layer that cannot leave the delivery to the end**: a
+  membership line is written only where a room already existed and a slot or played line
+  is hung on a room *through its game*, so every line it seeds depends on an earlier
+  event having been delivered — and the outbox orders by a `created_at` that is one
+  **second** granular on SQLite, which is the database `make check` runs the whole seed
+  against. So it drains between writes, and two batches are two orders nobody has to
+  guess. And **its fill seats exactly one member and they say no**: a yes could complete
+  the line-up of the very court `pairs.py` asserts is still half built, and a mutual
+  mints again only once the last one it minted is finished with (ADR-0152) — so the cost
+  of `SEATS_INVITED` is a `PREVIOUS_DECLINE` on one pair rather than somebody else's
+  fixture.
 - **Photo bytes live behind `PhotoStorage`, and the re-encode behind
   `ImageTranscoder`** ([ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md)).
   One S3-compatible adapter serves MinIO locally and S3 deployed — same class, different
@@ -239,6 +276,30 @@ Rules to preserve:
   `RecordedCard` stores the code, so the read-back draws the shield that *was* drawn
   (ADR-0109) — the mirror of `photo_url`, which cannot be stored because it dies within the
   hour. `GET /photos/{id}` is untouched, and the note still crosses on no route at all.
+  **And the owner reads what stands beside each of their own photographs on the profile
+  read** ([ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+  §8, #466): `GET /players/me/profile` carries `photos[].review` — the same three-valued
+  reading, one `HEAD` per photograph the profile holds, at most three, gathered — beside
+  the tags, the intro, the standing opt-in answer and **the two values no other shape may
+  carry, the owner's own `gender` and `gender_preference`** (§4). That is ADR-0096 §6's
+  fence moved rather than lowered: `tests/unit/test_no_response_carries_a_forbidden_fact.py`
+  admits the two words on that one schema by name (`PERMITTED_ON`) and asserts from both
+  sides — refused on every other shape, and *present* on that one, so the admission can
+  neither widen nor lapse unnoticed. The location area is still not served, and no
+  `has_location` stands in for it.
+  **And the six writes the tab needs land on the same surface** (ADR-0179 §6, §8, #467):
+  `PUT /players/me/{social-tags,photos,intro,gender,gender-preference,proposals-opt-in}`,
+  one unkeyed `PUT` per fact, each the aggregate's own transition — so *Later changes, from
+  the profile screen* is now a true heading. The intro's is the one that needed a new event,
+  `IntroChanged` (`player_profile.intro_changed` / v1), whose `None` is the withdrawal;
+  `IntroWritten` stays the commit's, the fold keeps the latest of either, and the candidate
+  projection reads both so a card follows the edit and a withdrawal **clears** the column.
+  Each re-validates as the commit re-validates, under the commit's codes; the photos are
+  checked against the same port the upload used, and an empty list clears; **the two gender
+  writes and the intro's answer `204`** so that *served on one route and no other* (§4) and
+  *the card, the record and its author* (ADR-0170 §3) stay literally true of the response
+  shapes — `tests/unit/test_intro.py`'s sweep is what caught the fourth; and the opt-in
+  **always records**, its surface being the route's (`PROFILE`) and never the body's.
 - **Background work is an `asyncio` loop in the API process, and a job must be safe to
   run beside itself** ([ADR-0092](../docs/adr/0092-periodic-jobs-as-embedded-loops.md)).
   `PeriodicJob` (`app/infrastructure/jobs/`) is the whole mechanism — the outbox worker
@@ -246,14 +307,14 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Eleven jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Twelve jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
   (intent drift, availability staleness), which write no value anywhere — each raises a
   question into the prompt ledger and stops, and every threshold behind them is domain
   in `matchmaking/domain/prompts.py` while only the cadences are settings — and the
-  **interest expiry loop**, the only one that deletes anything. Turning that one off
+  **interest expiry loop**, the first of two that delete anything. Turning that one off
   changes no rule a domain test could observe (every ledger read is bounded by `now`,
   so a lapsed yes lifts nobody whether or not it has been swept); what it buys is a
   table the size of what is live, and the one figure a lapsed row could ever be asked
@@ -308,6 +369,21 @@ Rules to preserve:
   has recorded — the same cost profile as every other read in `games`. The **rule** it applies
   is `engines/racketskill/results.py` and is emphatically not configuration: an environment
   that could pick a K-factor is an environment that decides how a marketplace rates people.
+  The twelfth is the **conversation sweep**
+  ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)),
+  the second that deletes anything and the only one that deletes an **aggregate** — a room
+  and its whole stream, *destroyed, not delisted*. Correctness does not depend on it: a
+  room's end is derived on every read — the game's clock off its own stream, or its
+  challenge being over, asked of `challenges` — so every route on it answers
+  `conversation_not_found` past that instant and every list has already dropped it, whether
+  or not anything has swept. What it buys is that the destruction is **real**, which is the
+  whole difference between a room that is over and a record with no end. Like the lapse
+  loop its read names **candidates rather than conclusions**, and here it could not do
+  otherwise: a store that could answer *which rooms have ended* would be the stored
+  `ends_at` ADR-0153 §5 refuses. It leaves a hole in `event_store.sequence_no`, which the
+  candidate index's tail is built for — a gap is stepped over once the snapshot horizon
+  proves it permanent, so a destruction costs that projection a tick of lag and never an
+  event. `CONVERSATION_GRACE` is domain; only the cadence is a setting.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -365,19 +441,57 @@ Rules to preserve:
   floor.py`, with the reason printed; the newcomer and zero-exposure lifts reorder and
   never admit. All three numbers are ruleset rows and only the sweep's cadence is a
   setting.
-- **The deck reads a declaration, and a pass is a statement about my deck**
-  ([ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
+  **And the tap says whether a game came of it**
+  ([ADR-0154](../docs/adr/0154-a-mutual-names-the-game-it-has-and-names-nothing-when-it-has-none.md),
+  #370). `MutualChallengeMinting` kept `UUID | None` and **moved its meaning** — from *what
+  this call minted* to *the game these two have*, so a repeat tap held by 0152's idempotence
+  guard is answered with the game that guard is holding it on rather than with silence. The
+  ids were already in the guard's hand; `express_interest` was discarding them, which is the
+  whole of what #370 was. It rides out on `ExpressedInterestResponse.challenge_id`, additive
+  and nullable, and `mutual` does not move: reporting it `false` because a gate refused would
+  say something about the other person no refusal may. **`None` covers two unrelated causes
+  and may not be narrowed to one** — a game still being *arranged* (a send, or this mutual's
+  own half-built doubles court), and a gate that refused or could not be read — which is
+  ADR-0130's *a withholding is stated, the gate is not named* applied one route over. Giving
+  the first case an id, which is one port read away, would make absence mean *a gate refused
+  about one of you* and the field would have to go; §3 of the record is where that is
+  written down. `mutual_born_challenges_that_became_games` answers **newest first** for it, so
+  the row named to a player is not set iteration order (ADR-0105).
+- **The deck reads no declaration, and a pass is a statement about my deck**
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md),
+  [ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
   `the-two-contracts.md` §6). `POST /api/v1/deck` takes **the sport and the week this one
   deal runs on** and creates a search: there is no mode on the wire in either direction,
-  because the deck resolves the weight vector backend-side from the viewer's declared Play
-  intent — `NO_PREFERENCE → fun`, never a third vector — and `search.intent_read` records
-  **the declaration as it stood**, so a later change to the mapping does not rewrite
-  history. Its order is its whole variety (three bands, then `PASS_SUPPRESS`); the
-  **relaxation ladder does not reach it** — the week is the only ask beside the sport, and
-  it is an ask like the shortlist's: it writes nothing, and the deal comes back carrying
-  `KEEP_THESE_TIMES`, which is the offer to save it; and a spent deal deals again — a new
-  `search_id`, the same exclusions plus everybody dealt within `DEALT_MEMORY`, so only a
-  *fresh* deal that came back empty is the honest empty state.
+  because **every deal scores under the fun ruler for every viewer**, declared or not —
+  `INHERITED_ON_THE_DECK` in `matchmaking/domain/deck.py`, a fact about the surface and
+  never a function of anything the viewer said, so `play_intent_not_declared` is never
+  raised here and `search.intent_read` records **the declaration as it stood** for history
+  alone, `NULL` for a viewer who never made one (migration `0022`). **The intent term
+  stands down for every pairing on the deck** — `STOOD_DOWN_ON_THE_DECK` on the
+  `SearchContext`, threaded to the engine as `stood_down` so the term is never read and
+  says `NOT_READ_ON_THIS_SURFACE`, the fourth `DegradedReason`, which is neither side's gap
+  — so a declaration moves nobody, up or down, and one pair has two Fits: Find a game is
+  untouched. Its order is its whole variety (**two bands** — the lifted, the person who said
+  yes among them by rank key and unmarked beyond `inclusion_reason`, then the rest — then
+  `PASS_SUPPRESS`); the **relaxation ladder does not reach it** — the week is the only ask
+  beside the sport, and it is an ask like the shortlist's: it writes nothing, and the deal
+  comes back carrying `KEEP_THESE_TIMES`, which is the offer to save it; and a spent deal
+  deals again — a new `search_id`, the same exclusions plus everybody dealt within
+  `DEALT_MEMORY`, so only a *fresh* deal that came back empty is the honest empty state.
+  **The fourth exclusion is the cool-off** (ADR-0169 §6): somebody the viewer has a live
+  challenge or game with, and for `deck_cool_off_days` — a ruleset row of its own,
+  released as `2026.09.15-a` at the pass window's thirty, nought in the two datasets that
+  never knew it — after the court is behind them. It is read through `SharedCourtQuery`,
+  the **seventh** matcher demand, answered over `games`' own directory by
+  `infrastructure/games_shared_courts.py` and failing **soft** like the suppression cache;
+  **deck only** — Find a game keeps ADR-0142 §1's release. **And the envelope says two
+  numbers no other surface can**: `pool.remaining`, the eligible beyond the hand, and
+  `pool.want_to_play_you`, the live yeses that would be dealt with the dealt memory
+  deliberately not applied — a fold over the lift's own read and never a second one, so
+  the chip and the hand cannot disagree. Both are omitted on every other surface and on a
+  read-back, and the latter is the **one count** ADR-0109 §2's sentence is narrowed to
+  admit: `tests/unit/test_no_response_carries_an_inbox.py` refuses every other spelling of
+  incoming interest on every response type, and a list anywhere.
   `POST /api/v1/passes` is **write-only and answers `204`**: no route returns a pass, to
   anyone, in any shape, and `PASS_SUPPRESS` crosses the wire in **no shape at all**. It
   has three boundaries, all the opposite of a block's — deck only, one-directional, never
@@ -387,6 +501,21 @@ Rules to preserve:
   outage repeats a card and never empties a deal. Two telemetry columns exist for the one
   falsifier `PASS_SUPPRESS` has — `search.n_excluded_by_suppression` and
   `search_candidate.suppression_lapsed`, both **deck deals only**, both check-constrained.
+  **And a pass can be cleared, by one route that touches none of the three stores it
+  clears** (ADR-0169 §5 and its amendment, #440). `POST /api/v1/deck/reset` is *Show them
+  again*: it writes **one moment** to the `deck_reset` table — per player, per sport,
+  append-only, the module's fifth durable ledger — and the next deal reads that moment
+  three ways (`domain/deck.py`: `cleared_by_reset` over the pass record, `dealt_memory_from`
+  over the search record, `cooling_off` over the courts). The Redis keys are left to
+  lapse and the deal subtracts what the record says was cleared, because a reset that had
+  to reach the cache could fail soft and answer a `204` that was a lie. *Already asked*
+  is not cleared, a court still ahead is held out whatever was pressed, and the
+  `suppression_lapsed` flag is **not** widened to a reset re-show — the reset row beside
+  the pass record is what names those. **The cap steps aside for a yes that closes a
+  mutual** (ADR-0169 §3): `express_interest` reads the other side's yes *before* the cap,
+  and a yes that is answered the instant it is written was never outstanding. And
+  `ttl_days` crosses beside `cap` on every `outstanding` row, read off the ruleset at
+  response time, so the deck's ending can print *21* without the client holding it.
   **`application/search_workbench.py` is the seam the two surfaces share** — read the
   searcher, bind the snapshot and every live gate fact, attach the card and the at-stake
   block, record, commit, note exposure — so a shortlist and a deal cannot come to two
@@ -419,8 +548,54 @@ Rules to preserve:
   gender — are re-evaluated live, so a row they no longer admit **keeps its place and states
   that it is withheld** while naming no gate and carrying no person. That is why both routes
   render `SearchRecord` through one function and why the row records the card, the concerns,
-  the whole-kilometre distance and the at-stake block: what a read-back cannot reproduce off
+  the one-decimal distance and the at-stake block: what a read-back cannot reproduce off
   the row, it would have to re-read from sources that have moved on.
+- **The fill names the challenge it completes, and the gate steps aside for that one court**
+  ([ADR-0150](../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)).
+  Half the mechanism had been written and unreachable since it was authored: `Challenge.invite`
+  had no caller anywhere in `app/`, and ⚡ from a challenge could not have worked if it had —
+  `_locked` resolves a hand-seated player *out of this search's own pool or not at all*,
+  `gate_of` excludes everybody in `open_challenge_ids`, and ADR-0142 holds that pair for the
+  whole of `LINE_UP_INCOMPLETE`, so **everybody who accepted your half-built court was by
+  construction absent from the pool of the search meant to finish it.** Four things fix it and
+  each is narrow on purpose. `POST /lineups` grows one optional **`completing_challenge_id`**,
+  and `sport`, `mode` and `locked_seats` are **refused beside it** rather than made optional —
+  all three are facts that challenge holds, and a caller supplying one could lock somebody who
+  is not in the challenge or forget somebody who is. `search_workbench.bind` takes that id and
+  builds `open_challenge_ids` from every open challenge **except** it, which is why
+  `OpenChallenge` and `SharedChallenge` grew a `challenge_id`: the exemption is an **input**,
+  the roster still counts ten codes, and a court member excluded for any of the other nine
+  still falls out — so `locked_seat_not_available` stops being unreachable on this path and
+  starts meaning *somebody has been blocked, held or deactivated since they accepted*.
+  `pool_for` takes an `excluding` set so **nobody who has answered that challenge is a
+  candidate for its own fill**, which keeps `NobodyIsAskedTwice` a backstop rather than a
+  screen a player reaches after choosing somebody. And **`POST /challenges/{id}/seats`** is
+  the send's shape minus the mint: it re-verifies the send's five facts with the pair rule
+  excepting this one court by id, resolves origins for the **newly seated only**, and calls
+  `Challenge.invite`. **Any live member may fill; a court that was never a game is nobody's to
+  withdraw once somebody else has joined it** (ADR-0165 §4, below) — the case that decides the fill is the mutual-born doubles
+  challenge, `LINE_UP_INCOMPLETE` from birth with an "organiser" who is only whoever's yes
+  arrived second. The mode is **inherited, or
+  resolved from the filler's declared Play intent** on the deck's own rule, and the **window
+  is never re-stamped**, so a mutual-born challenge stays window-less for life. **A mutual's
+  own mode is decided at the mint, and it is a friendly or nothing** (ADR-0169 §8): the mint
+  reads both declarations for the sport through `FriendlyChoiceQuery` — a port in
+  `challenges`' words, adapted over `player_profile`'s declaration repository and never over
+  the matcher's `mode_for_intent`, whose *no preference → fun* is about weight vectors and
+  not about anybody's evening — and stamps `FOR_FUN` when either chose one; *competitive*,
+  *no preference* and *undeclared* all leave it absent and the hand-over reads counted.
+  The aggregate refuses `COMPETITIVE` on a mutual, and the event's `mode` is nullable with a
+  default rather than a version 2, on `SeatsInvited.invited_by`'s argument: a row without it
+  was minted when every mutual was counted, and `None` is what it already meant. The cost is
+  recorded rather than softened, on the port and on the two routes that meet it: **a lapsed
+  invitee is out of that challenge's own pool for as long as it stands** — `already_asked_at`
+  feeding `NobodyIsAskedTwice`, per aggregate, and asking them again is a **new** challenge. It is
+  **not** the pair rule and reaches no other search: that rule holds the people still arranging
+  a game, and a seat that left is not one of them (#393, which retracted ADR-0150 §4's *every
+  sport*). `HalfBuiltCourtQuery` is the **sixth** matcher demand and the only
+  one whose posture is `CLOSED` without being a gate: a fill that cannot read the court it
+  names would silently become an ordinary ⚡ over a pool that still excludes the very people
+  it was meant to seat around.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix. The one
   exception is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
   second client: one no-build `console.html` behind a `FileResponse` at `/dev`, and one
@@ -446,14 +621,104 @@ Rules to preserve:
   `app/modules/games/` is the sixth context and the second event-sourced racket-sport one;
   it adds **no table and no migration**, because the streams live in `event_store` beside
   everybody else's. Four things about it are load-bearing and none of them is obvious from
-  the code alone. **Nothing creates a game over HTTP** — `challenges` calls
-  `PlannedGameOpening` **inline, in the transaction of the acceptance that filled the last
-  seat**, on `MutualChallengeMinting`'s argument: a subscriber would have to re-derive
-  *did this accept complete the line-up* by reading somebody else's aggregate, and the
-  player who taps the last accept would be told the game is on by a screen that cannot yet
-  show it. **The three ends are folded and never stored, and nothing announces one** —
-  there is no `ResultConfirmed`, no sweep and no job, because a derived standing has
-  exactly one place to be true; *silence confirms* is a clock passing, so the test for it
+  the code alone. **Nothing creates a game over HTTP, and nothing moves a seat on one over
+  HTTP either** — `challenges` calls `PlannedGameHandover` **inline, in the transaction of
+  the acceptance that filled the last seat**, on `MutualChallengeMinting`'s argument: a
+  subscriber would have to re-derive *did this accept complete the line-up* by reading
+  somebody else's aggregate, and the player who taps the last accept would be told the game
+  is on by a screen that cannot yet show it. **A yes can be taken back, and a court is over
+  when one is left**
+  ([ADR-0162](../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md),
+  [ADR-0165](../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)):
+  `POST /challenges/{id}/departure` writes `LEFT` over an accepted seat on any court that
+  still stands — half built, awaiting, or a game; there is no `not_a_game_yet` — and, where
+  the court has become a game, hands `vacate_seat` over on the same port in the same
+  transaction, so `SeatVacated` opens the seat on the game — drawn `player_id: null`, never
+  dropped — and the next completed line-up hands over a **re-seat** of the same game
+  (`LineUpReseated`, same id, same `planned_at`) rather than the opening of another. A result
+  is refused while a seat is open (`the_court_has_an_open_seat`), every fold reads the
+  current court, and the pairing read omits the forecast, the split and the stakes until it
+  is whole. The **moment guard** is three ports and no arrow moves: `games` demands
+  `AgreedMoment` of the Plan in its own words (signed in `plans/infrastructure/`, contracted
+  on `game_demands.py`), publishes `SeatableCourt` (`games_demands.py`), and `challenges`
+  reads it through its own `SeatableGameQuery` — on the departure, the fill and the
+  acceptance, and only on a court that has been a game; a half-built court has no moment
+  to guard. The challenge folds one fact beside its seats for this, `game_opened`, **off
+  the acceptance that completed the line-up** (and the mint of a mutual-born singles) —
+  never off `SeatLeft`, which can now be written on a court that was never a game. **The
+  ending rule is organiser-blind**: `standing.py`'s `deserted` — *at most one player on it
+  and no seat awaiting an answer* — replaces the *no live seat besides the organiser's*
+  clause, and **a departure is a no**, so before a game the fold reaches `DECLINED` and the
+  room ends with its challenge, and the ending is dated by the departure's own instant
+  (`departed_at`, folded off `SeatLeft` for #388's reason). **On a game the fold reaches no
+  ending by the seats alone, and the court ends with its game**
+  ([ADR-0172](../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md),
+  #453): `Challenge.leave` asks the same rule as it records the departure and, when it
+  fires on a court that has been a game, writes `ChallengeCalledOff(called_by=the leaver)`
+  right after the `SeatLeft` — the seventh standing, `CALLED_OFF`, the second conclusion an
+  event may announce, passed on ADR-0142 §3's test because the seats can reach *deserted*
+  and cannot say whether that game is called off (a fill's newcomer's *no* deserts a game
+  too, and ends nothing). The use case then hands `call_off` over on the same port right
+  after the seat, so the seat, the court's ending and the game's end commit together or
+  none does: the game is `CALLED_OFF` **naming the leaver** (`called_off_by`, off
+  `GameCalledOff.called_by`, the field ADR-0163 §4 kept for this day — their seat is
+  vacated, so the court cannot supply the name), singles included, and the room is
+  destroyed by whichever of `challenges.called_off` and `games.called_off` is delivered
+  first, the other finding nothing (`telling.py` names both). The game admits that caller
+  because it folds `departed` off `SeatVacated` — *the people who may act are the people who
+  were on the court*. **Every ending names whose act it was** — `ended_by` on the challenge
+  read, read by the same fold that dates it (`ending_of`): the leaver or the presser off
+  `Conclusion`, the organiser off the stream for a withdrawal, and for the two folded
+  endings the occupant of the seat whose leaving is read — a no or a departure on
+  `DECLINED`, never a lapse, an exact instant outranking a bound and court order breaking
+  what is left. **And `game_id` is on the challenge read, read from `games` and never
+  recorded**: `GameOfCourtQuery` is the fourth port on the arrow `challenges → games`, asked
+  once per list about the courts the fold says have been a game, and once per act for the
+  redraw — before the commit, because it is the store the act just wrote to. **The withdrawal
+  route is two acts, told apart by whether the court has been a game** (ADR-0165 §4–§5,
+  #426), and since ADR-0172 §1 two events. On a court that was never a game it is ***Remove
+  the challenge***: the organiser's,
+  admitted **exactly while nobody besides the organiser holds an accepted seat** — before
+  anybody has answered, and again once everybody who joined has left, whatever seats are
+  still deciding — and refused with `somebody_has_joined` the moment one person is in, since
+  a court somebody has joined is nobody's to end for the others; from there the organiser
+  leaves like anybody else. ADR-0142 §2's pre-answer refusal is reversed, and the
+  withdraw-and-resend it guarded against is an accepted risk with its falsifier named. Two
+  things follow from a removed challenge holding seats whose day is still running, and both
+  are asserted: an answer on one meets `challenge_is_over` (the seat's own refusals first,
+  then the challenge's), and neither `seats_awaiting_answers` nor the lapse loop counts
+  it — the read asks the fold, and `Challenge.lapse` records no day the removal cut short,
+  which is ADR-0142 §5 on the write side; `WITHDRAWN` is this act's alone. **A court that
+  has been a game is nobody's to end, and the route refuses it with `court_has_been_a_game`**
+  ([ADR-0175](../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+  §1; *Call it off* lived here under ADR-0163 and ADR-0172 §1 and is gone). Such a court is
+  called off two ways and no third, each recording `ChallengeCalledOff` — never a withdrawal
+  — and handing `call_off` over on the same port in the same transaction, so `GameCalledOff`
+  is the fourth end — read first by `standing_of`, in `SETTLED`, out of `PLAYED`, and **in
+  no tally**: **the departure that deserts it** (`deserted`: nobody on it, whoever is still
+  deciding; or one player and no seat awaiting — ADR-0175 §2), `called_by` the leaver; and
+  **the hour** (ADR-0175 §3), `called_by=None` on both events, written by the
+  `unfilled-court` loop every minute over every court somebody ever left (`LeftCourtQuery`),
+  for those the fold says are `LINE_UP_INCOMPLETE` and the moment guard says are past their
+  hour — the plan's agreed point, or the horizon's end where no day was agreed — or already
+  history. **Correctness depends on that loop**: the challenge's fold cannot read a plan, so
+  a court past its hour reads *needs a player* until it runs. A ghosted court is called off
+  the same way and `CallOffGame` steps over that one end and no other. **The card's
+  dismissal is the reader's own act on `games`** (ADR-0172 §5): `POST /games/{id}/dismissal`
+  answers `204`, admitted on a `CALLED_OFF` game for somebody on its court and refused with
+  `game_is_not_called_off` on every other standing; `GameDismissed` is recorded once per
+  player (`games.dismissed`, a second press writes nothing), the aggregate folds the set,
+  and `ReadGames` subtracts its reader — as does `ReadChallenges`, through `GameOfCourtQuery`'s
+  `dismissed_of`, so the challenge row goes with the card (ADR-0173); and the row has a door of
+  its own, `POST /challenges/{id}/dismissal`, for everybody the court asked — the invitee still
+  deciding when it was called off has a row and never had a card — which hands the act to
+  `Game.dismiss_for_the_court` on the court's word (ADR-0175 §5). Nothing else reads the set,
+  and the room it might have reached is gone before a card can be dismissed. **Three ends
+  are folded from the record and the clock and the fourth is announced, and all four are
+  never stored** — there is no `ResultConfirmed`, no sweep and no job, because a derived
+  standing has exactly one place to be true, and `GameCalledOff` may announce its end
+  only because no arrangement of the record could reach it (ADR-0142 §3's exemption,
+  argued again for `games`); *silence confirms* is a clock passing, so the test for it
   advances a clock and there is deliberately no method called `confirm`. **One route
   resolves three acts** — `POST /games/{id}/result` is a proposal, a correction or a
   counter depending on what already stands, so a client cannot mislabel one, and there is
@@ -467,20 +732,263 @@ Rules to preserve:
   rating context walks confirmed counted results forward, oldest first, ordered on the derived
   moment each became final
   ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
-  It has **one inward port too**, and it is a single field wide:
-  `PlayerHandles` puts a **nickname** on a seat and nothing else about the person in it
-  ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A card is
+  It has **two inward ports**, and the first is a single field wide:
+  `PlayerNames` puts a **name** on a seat and nothing else about the person in it
+  ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md); the name and
+  never the nickname since
+  [ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md),
+  which is also why the port stopped being called `PlayerHandles` — a **handle** is now the
+  nickname's word, drawn as `@…` on a record and the You tab and said nowhere). A card is
   what a *searcher* reads to decide about a game that might happen, so a Level, an area or a run
-  of form on a record of an evening would be an as-of-now fact stapled to the past; the handle is
+  of form on a record of an evening would be an as-of-now fact stapled to the past; the name is
   what four people already knew about each other by the time they were on a court together, and
   without it the screens named **sides** — a result agreed with nobody, and three padel games in
   a week told apart by nothing but how long ago they were arranged. **The court is the whole of
   the permission and nothing is re-gated against the reader**: the four fail-closed gates decide
   who may be *introduced*, ADR-0095 §7 already settled that a block does not reach into a game
-  already agreed, and a handle that vanished from a row would be §8's trace. It is **one set read
-  per response** over the union of every court in the answer, and a handle `users` cannot answer
+  already agreed, and a name that vanished from a row would be §8's trace. It is **one set read
+  per response** over the union of every court in the answer, and a name `users` cannot answer
   for is `null` with the seat kept — the opposite of the shortlist, which drops a row it cannot
-  name.
+  name. A null there never means *unnamed*: sign-up creates an account with credentials only
+  and **the naming** (`PUT /api/v1/users/me/name`, one event carrying name and nickname,
+  repeatable) is onboarding's first step, so the entry gate holds an unnamed account there and
+  `GET /users/me` is the one read where `name` and `nickname` may be null.
+  **The second inward port is `CourtPairing`, and it is read *beside* the game and never on it**
+  ([ADR-0161](../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)).
+  `GET /games/{game_id}/pairing` answers the forecast, the split, what is at stake and each
+  seat's Level — **for the reader**, only for somebody on the court (`404 game_not_found`, one
+  code for two cases) and only while the game is `AWAITING_ENTRY` (`409 pairing_is_history`),
+  because a pairing means what a card means *because this game has not happened*. The port is
+  declared in `games`' own types and signed by `matchmaking/infrastructure/games_court_pairing.py`
+  on the matcher's side of the arrow, so `games` still does not import the matcher; the adapter
+  reads `PairWithACourt` — the challenge card's own use case — so **the card and the game come to
+  one number for one court**, and a test says so. Three things are decided in the adapter and
+  each is an absence rather than a number: a seat the index cannot describe leaves the forecast
+  **omitted, never provisional**, with **no reason beside the absence**; `at_stake` is omitted on
+  a friendly and on a game is priced **side against side** through `AtStakeQuery`'s court-shaped
+  read, because every seat is known and that is the pair `settle_results` will deliver — which
+  is why a four's figure here is not the card's head-to-head one, and why a side with one
+  unrated seat is priced over its rated members rather than omitted; and the seats' Levels come
+  from `rating`'s **published** read (`RatedPlayerQuery.published_for`), never from the index.
+  **Two providers stand behind the one port and fail on their own**: a process with no index
+  draws no forecast and still names every Level and prices the court. `GET /games` is
+  untouched: a seat there still carries a name and nothing else.
+- **A room is opened by the first acceptance, and it is told by contexts that do not know
+  it exists** ([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md),
+  [ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
+  [ADR-0148](../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)).
+  `app/modules/conversations/` is the eighth context, the platform's first messaging of any
+  kind, and it is deliberately narrow: purpose-bound, never between strangers, never
+  permanent. Five things about it are load-bearing and none is obvious from the code alone.
+  **It is the outbox's first *writing* subscriber**, and that is ADR-0110's second
+  guarantee: the candidate index went to the log because an outbox subscriber *"could never
+  name the `sequence_no`"*, and a room names no event's sequence — only its own. Two
+  consequences fell out of being first. `EventBatch` now takes a unit of work and **rolls
+  back a failed delivery before recording the attempt**, because `mark_failed` commits the
+  session the handlers ran in; and the teller is subscribed **per batch, over that batch's
+  session** (`EventRuntime._dispatcher_over`), so a system line commits with the outbox row
+  that caused it. Delivery is still at-least-once, so **every write here is idempotent** —
+  a room per challenge on a unique index, a line per **outbox row** on `source_event_id`,
+  a message per `client_message_id`. **The sequence is gapless and it is the aggregate's
+  own fact**: `last_seq + 1`, minted under the conversation row's lock inside the appending
+  transaction — not a Postgres sequence object, which is documented not to be gapless, and
+  not a timestamp, which ADR-0097 disqualified. It is **not** the stream version, and the
+  two part company at row one because the opening event writes no entry. The lock is the
+  one thing this suite cannot exercise: SQLite renders no `FOR UPDATE` and runs one
+  connection, so that path meets Postgres or nothing. **Membership is derived, never
+  stored** — the challenge's accepted seats until the line-up completes, the game's
+  **current** line-up after (ADR-0162: a seat can be left and re-seated, and the roster reads
+  the game live either way), one rule read against two records, and a stored roster would be
+  the copy that decides who may read the messages. **Two shapes ride one stream and no sentence is
+  ever stored**: a Message is content, a system line is a code and its values, and `values`
+  never repeats what membership already says, so a corrected name fixes the whole backlog —
+  and **the read resolves a face for everybody the page names, not only for the roster**
+  (ADR-0148 §4 as amended, #408): the person a `SEAT_LEFT` line is about was never a member
+  — a *no* is not an accepted seat — so each of the three reads carries `people`: the roster
+  and the entries' actors and authors on the room and the row, the page's own on a page,
+  one `MemberFaces` read each. `members` stays the roster and the gate.
+  **What is refused is a table rather than prose** — `application/telling.py` names every
+  event either half of the loop publishes and what this room does about it, including the
+  ones that write nothing and why, because a builder reading only the event list would write
+  a line for each. There is no *Game on* line. And **a refused line is not a refused
+  telling**: `GamePlanned` reaches the room, draws nothing, and is where the room learns its
+  game — as does `ChallengeWithdrawn`, whose whole effect is that the room stops existing.
+  **One row carries a code *and a condition*, and it is the only one**: a mutual is the
+  opening, and on a doubles court it is also half a game — both people on one side, a side
+  still to fill — so that room is born with `SIDE_FORMED` at `seq` 1, the first code that
+  names no actor, while a singles mutual's room gets no line (ADR-0169 §8). `Telling.only_when`
+  carries that condition as a **predicate and its sentence together**, and `line_drawn_by` is
+  how the handler asks — so the table stays the whole truth about what ships, and a row reworded
+  cannot ship the old line green. It is not a *Game on* line by the other door: it announces no
+  standing and is re-derived from nothing, an introduction written once at birth. The
+  doubles/singles fact is `challenges`' own `seats_per_side`, read off the event's sport in the
+  table and never respelled.
+  **A room is for the episode, and its end is derived**
+  ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
+  [ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+  §6). A room **with a game** ends on the earliest of `entry_closes_at(planned_at)` and
+  `GamePlayed` plus `CONVERSATION_GRACE` — both facts the room is **already told**, so it
+  costs no new event, no new field and no new telling, and the anchor is `Game.planned_at`
+  and never the plan's agreed point, which two people could walk forward by tapping a chip.
+  A room **without a game has ended exactly when its challenge is over** — `DECLINED`,
+  `LAPSED`, `WITHDRAWN` — read on every read through `ArrangingCourt.over_among`, the port
+  its membership already comes from: the adapter folds the standing with `challenges`' own
+  `ENDED` and a set of ids crosses the port, so the application layer never learns what a
+  standing is; a withdrawal destroys it in the same act. **There is no departure shelf.** ADR-0153 §3's *48 h after the last
+  membership line when it was a departure* read the order the answers arrived in — `B yes →
+  D yes → C no` closed a room under the three people still in it, `B yes → C no → D yes`
+  never did — and a fill after it opened a fresh room with no history; a fill now continues
+  the **same** room. There is no `ends_at` column: the instant moves as the room is told
+  things, so **past its end every route answers `conversation_not_found` whether or not the
+  sweep has run** — the sweep makes the destruction real, not the answer right — and
+  `application/lifetime.py` is the one seam that decides *over*, for the list, the sweep and
+  `ARoomOfYours` alike, asking the port about the rooms without a game and nothing about the
+  rest. `CONVERSATION_GRACE` is **48 h and belongs here, not to `games`**: there is no
+  interlock with `ENTRY_GRACE`, and its falsifier is written down with it.
+  Three things about the lifetime are worth holding separately from the rule.
+  **`conversations` imports `games`, and that arrow is the second one to run this way** —
+  `domain/lifetime.py` takes `entry_closes_at`, exactly as `plans` takes `PLAN_HORIZON`
+  (ADR-0148 §8); the reverse stays shut by `.importlinter`'s *No context knows the
+  Conversation exists*, and the import is why the derivation is a module rather than a method
+  on the aggregate, which is folded by a repository that knows nothing about entry windows.
+  **The destruction appends no event and that is not the ledgers' exemption** — it is the end
+  of an event-sourced aggregate rather than one that skips event sourcing, and a
+  `ConversationDestroyed` on the stream it deletes would be a record of the destruction
+  inside the thing destroyed. **And the coupling `domain/lifetime.py` used to state between
+  `ANSWER_WINDOW` and `CONVERSATION_GRACE` went with the shelf it existed for** — it kept a
+  departure from destroying a court somebody was still entitled to accept into, and a room
+  that lives as long as its challenge cannot be destroyed under an open seat by any number.
+  `lifetime.py` says so where the coupling was written down.
+- **A plan is the challenge's, and it is born by being used**
+  ([ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md),
+  [ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md),
+  [ADR-0148](../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md),
+  [ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)).
+  `app/modules/plans/` is the ninth context and the third event-sourced racket-sport one; it
+  adds **no table and no migration**, because the streams live in `event_store` beside
+  everybody else's. Eight things about it are load-bearing.
+  **Its aggregate id is the challenge's**, so *one plan per challenge for ever* is a fact
+  about the store rather than a rule a caller keeps — and it is the one context here whose
+  reads need no payload match: *this court's plan* is a stream read and *these courts'
+  plans* is an `IN`. One challenge has at most one room and at most one game and both carry
+  `challenge_id`, so the room draws the plan by its own id **from its opening** and the game
+  the challenge becomes inherits it; the four plan events carry `challenge_id` and are
+  registered at **version 2**, with version 1 — `game_id` — deliberately unreadable, because
+  no environment but `local` has ever run and its database is disposable.
+  **Nothing is written at birth**: there is no opening event, no subscriber to `SeatAccepted`
+  or `GamePlanned` and no outbox hop, so the first slot write is the birth — and `GET /plans`
+  still answers **one row for every court the reader holds an accepted seat on, written or
+  not**, three empty slots and the anchor for a court nobody has written on, because the row
+  is what carries the anchor and says there is a plan to draw. An invitee still deciding and
+  somebody who left get no row, and are refused as a stranger is: `plan_not_found`, **one
+  code for three cases** — and so is the organiser **before the first yes**: their seat is
+  accepted from birth and makes no court on its own, because the room the plan is drawn in
+  opens on that yes and a slot written earlier would be a line with no room to land in. The
+  fold asks for the room's precondition — somebody else's accepted seat, or a game — rather
+  than for the room. **Three slot events and no fourth slot** — a place, a day and an
+  hour recorded — because *setting a slot and moving one are the same event told with two
+  sentences*; there is no completion event (the third recording **is** the completion), no
+  clearing event and no cancel. **Beside them is a fourth event that is an act rather than a
+  slot** — `PlanLocked`, from
+  [ADR-0155](../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
+  which supersedes ADR-0144's *there is no lock* and nothing else in it. **The count and the
+  lock are two facts**: a complete plan is one everybody *could* agree, and `is_locked` is
+  `locked_at is not None` and deliberately not `slot_count == SLOTS`. It announces itself where
+  a completed plan may not — no arrangement of the three slots reaches *these people have
+  agreed*, which is ADR-0142 §3's test and the one `GamePlanned` fails — and its whole
+  destination is a **system line in the room**. It **freezes nothing** (a slot moved afterwards
+  keeps the lock and writes its own line) and there is **no unlock**, for the same reason there
+  is no clearing event. **And the lock waits for the court** (ADR-0164 §5): where, day and
+  hour are proposals anybody on the court may make and move, whole or not, and *we are
+  agreed* is refused with a code of its own — `the_court_is_not_whole`, beside
+  `the_plan_is_not_complete` and asked before it — until every seat is accepted; a lock
+  already taken survives a later departure. Whether the court is whole is a fact the
+  aggregate borrows, exactly as `record_day` borrows the anchor. **Nothing derived is
+  stored**: not the slot count, not the agreed point, and neither the anchor nor
+  `planned_at` is ever written — `planned_at` keeps meaning *when it became a game*, and the
+  plan writes to `games` at no point at all. **The horizon runs from an anchor that only
+  moves later** (ADR-0164 §4): the challenge's send until the game exists, then the game's
+  `planned_at`, so a day set by two of four stays valid when the court fills and the chips
+  widen rather than shrink; it rides on the plan row as `anchor`. **The court being over is
+  the only thing that freezes the slots** — the game leaving `AWAITING_ENTRY` once there is
+  one, the challenge ending before there is — read through *one port asking one question*,
+  `PlannableCourts`, which the Plan declares in its own words and contracts on
+  `plan_demands.py`: *which courts is this player arranging, and which are history*, every
+  challenge on which the reader holds an accepted, live seat, with the two refusals a write
+  can produce, the anchor, and whether the court is whole. It is answered by
+  `plans/infrastructure/plannable_courts.py`, which folds the challenge and, for a court that
+  has become a game, the game, through the two providers' own ports — `conversation_demands`'
+  *one rule read against two records* one context over — and its five answers (arranging,
+  on and awaiting entry, history, not on it, left it) are each pinned in
+  `tests/unit/test_plannable_courts_fold.py`. `games` no longer publishes `PlanningCourt`; the
+  one thing it still asks of the Plan, `AgreedMoment`, is keyed by the challenge the game was
+  opened from. And
+  **one platform zone**, `Europe/Warsaw`, recorded as a locale assumption in the shape
+  `availability.py`'s `_WEEKEND` already uses, with its falsifier named: the first shard
+  whose players are somewhere else. The conversion goes through the kernel's `slot_start`
+  and nowhere else — **a dead function comes alive**, since it was written for the booking
+  grid the 2026-08-25 reset deleted and had no caller in `app/` until now.
+  Three cross-module facts are deliberate and all run one way. `PLAN_HORIZON` **stays in
+  `games/domain/windows.py` and `plans` imports it**, because its interlock with
+  `ENTRY_GRACE` is the argument and two numbers whose relationship is the argument must not
+  be separated; **`plans` reads `challenges` as it reads `games`**, through their ports and
+  only in `infrastructure/` (ADR-0164 §3); and **`games` may not import the Plan**, which is
+  ADR-0145 §4's *"beside that context without being let into it"* made checkable —
+  `.importlinter` holds it, and `challenges` and `games` import neither the Plan nor each
+  other's aggregates.
+- **The live channel carries a nudge and a typing frame, and nothing else is on the wire**
+  ([ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
+  [ADR-0156](../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
+  `GET /conversations/{id}/stream` is the platform's **first real-time surface**, and it is
+  Server-Sent Events on FastAPI's own `EventSourceResponse` — **zero new dependencies**,
+  against a WebSocket path that starts with one and whose absence fails *silently*, since
+  `uvicorn` is pinned without `[standard]` and would refuse the upgrade rather than erroring.
+  Six things about it are load-bearing. **The frame is
+  `{v, conversation_id, last_seq}` and never content**: the client fetches from **its own**
+  high-water mark through the ordinary read path, so a lost frame is repaired by the next
+  one for free, and *whether the UI may render what it did not read from the authoritative
+  path* stops being a rule anybody keeps and becomes a thing the wire cannot express. **One
+  mechanism carries messages and system lines alike** — a send publishes after its commit,
+  and the room teller publishes after each line it writes, so there is no separate live-plan
+  feature to build and none to defer. **Fan-out is Redis pub/sub keyed on the
+  conversation**, on the subscriber's **own** client — the process's second, from
+  `create_redis_subscriber_client`, whose read has no deadline because on a subscription
+  waiting *is* the operation (#342). **Publisher soft, subscriber loud**: a publish happens
+  after the entry is durable so an outage costs a room its liveness and never a message,
+  while a dead subscriber **closes the stream**, because a chat that is not live has to look
+  not-live. `/health` stays about the **process** for the same reason — a probe that pinged
+  Redis would take sign-in down with the chat. **The stream closes at the access token's
+  `exp`**, which keeps revocation prompt and makes reconnect run every fifteen minutes in
+  production rather than only on deploys, so the hardest-to-test path cannot rot unnoticed;
+  the gate and the first frame run in a **dependency**, before the response starts, which is
+  also where the request's database session is closed so a fifteen-minute stream holds no
+  connection. And **the envelope is declared on the route and generated** — ADR-0006 gets no
+  exception — which needed `app/api/streaming.py`, a dated shim for a framework bug that
+  drops a stream's item type on every `include_router`. The hole that remains is named: the
+  checks cover the *declaration*, and nothing proves the emission.
+  **The second frame is presence, and a heartbeat is the only honest shape for it**
+  ([ADR-0156](../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
+  `POST /conversations/{id}/typing` is a `204` gated exactly like the send — membership, then the
+  hold, because an indicator is drawn on other people's screens — and there is deliberately no
+  *stopped*: every way a client can vanish is a way a *stopped* fails to arrive, and each of them
+  would leave a room saying somebody is typing for ever. **The TTL is the correctness mechanism and
+  the only one**: `TYPING_TTL` sits above `TYPING_CADENCE` in `conversations/domain/live.py` with
+  the ordering asserted at import, and the roster for a room is whatever has not expired. The store
+  is Redis and **never Postgres** — a durable row would be the one fact here that outlives the room
+  — with an index set beside the per-typist keys so a read is one keyed lookup and never a scan;
+  that index is a **hint**, since a member is reported only if their own key is alive. **The frame
+  moves no sequence**, which is the invariant: the heartbeat loads the room `to_read`, so the
+  `FOR UPDATE` that mints a gapless `seq` is not taken by the act of typing, and it carries
+  `player_ids` sorted by the sender with **the reader filtered out on the way out**. **The kind is
+  the SSE `event:` name** — `nudge` and `typing` — so an unknown frame is dropped by the transport
+  rather than by a branch, and `LIVE_CHANNEL_VERSION` **does not bump**. Naming an event costs the
+  declaration back and it is bought back: the framework reads any `ServerSentEvent` as *this route
+  builds its own frames*, so `app/api/streaming.py` reads the narrowed `data` off `LiveFrame`
+  instead — without it, adding this would have deleted `LiveNudgeSchema` from `components.schemas`.
+  And **this pair does *not* fail in opposite directions**: the roster read fails soft like the
+  heartbeat, because it is a courtesy read on the **command** client — the one with a two-second
+  deadline, asked once a second by every open stream — and failing it loud would let a merely slow
+  store close every healthy stream on the platform.
 - **A Player Score is what the platform watched, and two strands is what it can see**
   ([ADR-0140](../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
   `app/modules/player_score/` is the seventh context and the first that **keeps no record at
@@ -490,15 +998,209 @@ Rules to preserve:
   things about it are load-bearing. **Its port is `PublishedScoreQuery` and not
   `PlayerScoreQuery`** — the matcher's port of that name is the *demand* and this is the
   *publication*, and ADR-0137's rule applies: the cost of a shared word is paid by whoever
-  arrives second. **Two of five strands are live and three are absent, never nought** — *keeps
-  plans*, *settles up* and *sportsmanship* have no provider, and a player with no record at all
-  is absent from the answer, which is the one rule the demand suite is written around.
+  arrives second. **Three of six strands are live and three are absent, never nought** — *keeps
+  plans* and *settles up* have no provider, *sportsmanship* is published in its own right and
+  the matcher may not read it, and a player with no record at all is absent from the answer,
+  which is the one rule the demand suite is written around.
   **The published weights live in the context and never in a ruleset**, because a weight release
-  must not change what somebody's own profile says about them; they sum to 85 on purpose, since
-  the blend renormalises over the strands present. And **reliability stopped being absent
+  must not change what somebody's own profile says about them; they sum to a hundred by
+  arithmetic and not by rule — 85 for as long as a name was missing — since the blend
+  renormalises over the strands present. And **reliability stopped being absent
   platform-wide**: `NoPlayerScoresExist` retired, `build_absent_terms` answers empty and lost its
   argument, a stood-down reliability is now `NOTHING_FROM_THEM`, and the evidence gate counts
   eight live terms rather than seven — excluding nobody, at a margin of zero rather than one.
+- **A results strand counts answers, and never agreements**
+  ([ADR-0160](../docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md)).
+  `ReliabilityStrand.ANSWERS_RESULTS` is the third live strand, and the thing to hold in your
+  head is that **it is not the strand ADR-0137 struck**. *Confirms results* counted agreements,
+  and because silence already confirms a lone score it could only ever have counted
+  disagreements — every denominator tried on it docked somebody ADR-0049 protects. This one
+  counts **answers**: a counter scores exactly as an acceptance does, so disagreeing costs
+  nothing and only silence is priced. Four things are load-bearing. **There is at most one
+  opportunity per game and the opener has none** (`games/domain/answering.py`): the entry that
+  says *we played* carries a score, so one side asks and the other answers, and once both sides
+  have put a score up the argument is capped — filing the opener's silence would price
+  **surrender**, which is docking somebody for disagreeing by a later route. **It is the only
+  strand that forgets** — twelve months, a named exception to ADR-0140 §4, because turning up is
+  a commitment somebody made and answering a score is a habit of opening an app; the window is
+  `player_score`'s (`ANSWERED_RESULTS_WINDOW`) and crosses to `games` as an instant, it equals
+  the matcher's `horizon_days` by choice, and since a provider may not read the consumer's
+  ruleset the two spellings are held together by a **test** rather than by construction.
+  **`min_observations` is a bar per strand** — five here, three everywhere else, exhaustive and
+  refused if a key is missing — because raising the single number instead would take a newcomer
+  with three games and three turn-ups from a full score to no score at all; the bar is the
+  *matcher's* and the published figure still has none, which is deliberate: on the sheet the
+  honesty mechanism is printing the fraction, and inside a ranking nobody can see it. And it is
+  a **ruleset release**, `2026.09.08-a`, with the six-name vectors **restored rather than
+  retuned** — ADR-0140 §7's rescaling of five survivors is undone exactly, the two offline gates
+  move nothing but a version stamp because no corpus has a Player Score, and the whole claim is
+  the one the report cannot print: every player with a record is re-mixed on deploy.
+  `2026.08.26-a` is edited once more to say **nought** about a word it never knew.
+- **Sportsmanship stores, and it is the first aggregate here that is not event-sourced**
+  ([ADR-0158](../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+  `app/modules/sportsmanship/` is the eighth context, and it is the mirror image of the
+  seventh: `player_score` keeps no record at all, and this one is the first part of the
+  player record that keeps one — an aggregate, two tables and a migration. The exemption
+  from *state changes emit domain events* is **argued rather than inherited**, on the terms
+  that rule demands: a card is **born answered**, so a stream would be one event per card
+  and a replay a `SELECT` with extra steps; **nothing subscribes**, so an outbox row would
+  wait for nobody; and there is **no standing to derive**, which is the whole reason `games`
+  replays. Five things are load-bearing and none is obvious from the code. **The collapse is
+  the primary key** — `sportsmanship_rating` is keyed `(rater_id, subject_id)` and a later
+  card *replaces* the earlier answer, because a read-time collapse is a rule the first
+  reader to forget hands the farming problem back with a plausible number; the earlier
+  answer is not archived, and the cost of that is named in the record. **Two tables, because
+  the all-blank card has to close** — a blank is spelled by absence and nothing else, which
+  is what makes *not rating leaves no record of the omission* structural, so the closure
+  cannot live on the answers. **You rate everybody else on the court**, partner included, so
+  there is no *side* in this context and rating yourself is refused by the same rule that
+  refuses a stranger. **The matcher never reads it — the floor and the term** — and that is
+  held by an `.importlinter` contract rather than by a test, because a Match Fit term
+  reading a star average would look like every term beside it and nothing would go red;
+  it is also why the reliability pill stays the counted-only number. And **no individual
+  rating reaches anybody in any shape**: the write answers `204`, the use case returns
+  `None`, and `SportsmanshipLedger` has no method that answers *what did somebody say about
+  me* — only *which of these cards are closed*, which is a fact about an act. **What this
+  context publishes outward is a third port and never a method on that one**
+  ([ADR-0158](../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)
+  amendment, #382): `PublishedSportsmanshipQuery` answers the figure and how many different
+  people it rests on — **one method, for every reader, the subject included**
+  ([ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+  §5, #468). It used to answer a second question, a **coarse band** for the subject off a
+  method that could not say the figure; ADR-0179 §5 retired the band with its three
+  whole-star edges and accepted the subtraction ADR-0158 §2 refused, and its Consequences
+  are where that cost is written — cite them, do not restate them. What blunts the cost is
+  what this context keeps, and every fence has its test: the collapse costs that fold nothing, which is what
+  the key bought — one row already is one person, so *the fifty most recent raters* is a
+  `LIMIT` on a total order rather than a read-time collapse — nothing is trimmed at either
+  end, there is no zero on the scale, no individual rating crosses on any route, and the
+  matcher never reads it. The port and the record's demand are each pinned at one method,
+  so a second resolution cannot return quietly. The word `stars` reaches no wire — the
+  forbidden-fact sweep refuses that property name — so it crosses as `average` and
+  `raters`. There are two reads here and neither touched the silence:
+  `GET /api/v1/sportsmanship` lists the courts **waiting** for somebody's stars, as a game
+  id and the people on it, and an open card is by definition one nobody has answered.
+  It borrows one thing,
+  `SettledCourts` over `games`' directory, whose adapter lives in **this** context the way
+  `PlayerNames`' lives in `games`; *settled* there is narrowed to **played and over**,
+  because a ghost has nobody to rate and an unscored game very much does. **The card's two
+  clocks are domain and neither is configuration** (`domain/window.py`): it opens the day
+  after the game — an answer given ten minutes after losing badly is not the answer wanted —
+  and closes seven days later. Both edges run from `games`' `played_at`, which is *the moment
+  somebody said we played* and never the hour on court, because this platform records no such
+  hour; it is never earlier than the game, so the day-after rule holds conservatively. Anchoring
+  the close to a *settlement* instead would let an argument over the score restart somebody's
+  week, and the price is named rather than discovered: a game two sides argued over settles up
+  to a day into the week, so that one card is drawn for six days rather than seven. *Has it
+  settled* stays the port's separate gate. **Nothing sweeps an expired card** — the expiry
+  is a fold, because *not rating leaves no record of the omission* means there is no row for
+  a job to correct — and the window governs the **prompt** and not the permission: a card
+  that lapsed while somebody was typing is still answerable, which is the opposite of
+  refusing one of two identical taps.
+- **A record is read through a prior disclosure, and the refusal names nothing**
+  ([ADR-0159](../docs/adr/0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
+  `app/modules/player_record/` is the ninth context and the second that keeps **no record
+  at all** — no aggregate, no table, no migration, and a structural test that walks the
+  package for an ORM import and the migrations for a table named after it. What separates
+  it from `player_score` is that it also **enforces admission**, and that is the whole of
+  what it decides for itself. Five things are load-bearing. **A record opens on a prior
+  disclosure and never on a person**: you are the subject, a search of yours *returned*
+  them, or you share a live challenge or a game — otherwise a route taking a player id is
+  a player-enumeration endpoint, and a UUID being hard to guess is not an authorization
+  model. **Nothing expires**, because a search record is kept for ever (ADR-0104) and a
+  shorter window could only refuse a face the app is currently showing. **The four
+  fail-closed gates run live, in the partition of the disclosure** — never in the sport
+  the reader arrived from, since the gender gate reads a candidate index row and the index
+  is keyed by sport, so a subject rated only in squash has no padel row and *a gate that
+  cannot be evaluated excludes*; that is why `PriorDisclosure` answers in **sports** and
+  why the partitions are walked in the sport registry's own order rather than a set's
+  (ADR-0105). The reader's **own** hold refuses here too, because a hold points both ways
+  and would otherwise end at the one route that remembers what a search already showed —
+  while **your own record has no gates at all** and is a *second use case* rather than a
+  branch, so the screen that tells a player how they appear cannot be taken down by the
+  gate machinery. **The four refusals are one refusal, byte for byte** — never disclosed,
+  blocked either way, held and no such player are one `404` with one body, asserted as a
+  sameness rather than as four statuses. And **this context declares its own ports and its
+  own types**: it borrows nothing from another context's domain, held by an `.importlinter`
+  contract rather than a test, because an application layer importing `CardIdentity` would
+  read as sensible reuse in the diff and nothing would go red. The cost is a second
+  spelling of four words — `OnCourtVerdict` beside `PhotoReviewDecision`, `GameOutcome`
+  beside `games`' `Outcome` — and their agreement is asserted, the way `games` asserts its
+  two bounds against each other; the same rule reaches the **wire**, where
+  `RecordLikelyRangeSchema` is named for its surface because a second `LikelyRangeSchema`
+  would not shadow the card's, it would rename it.
+  **`?sport=` says what the sheet is about and never who may be seen** — it reaches the
+  assembler and never the admission, so naming a sport you were never shown somebody in
+  changes what is drawn and nothing about whether it is drawn. Resolving it is the one rule
+  this context owns (`domain/sport_choice.py`): the sport asked for where they hold a
+  rating in it, otherwise their **most counted** — never their highest Level, which would
+  make the header a boast, and never their most recent, which is activity recency wearing a
+  sport's name — ties broken by the sport registry's own order, and `None` for somebody
+  rated in nothing, whose sheet draws pills and no skill card. Registry order is
+  **structural**: both functions walk `Sport` and look the mapping up rather than iterating
+  a mapping and sorting after (ADR-0105). **`counted_games` on the skill card is not the
+  card's number under the same word** — it is `SkillRating`'s own applied-games count, per
+  sport, *what this certainty rests on*, so it comes off the same stream as the Level and
+  moves in step with it; the player card's is *how much have they played*, over every sport,
+  and counts an evening nobody agreed a score for. Two provider ports widened for it:
+  `rating`'s **read** port gained `ratings_of` (one player, every sport — never the
+  repository, which remembers stream versions), and `games` gained `recent_results_in` as a
+  **second method rather than a parameter**, because the set read is frozen into search
+  records kept for ever and because this one filters on the sport *before* it trims to five.
+  **Opponent variety is the third fact to arrive, and it is a *separate port* on `games`
+  rather than a sixth method on that one** (#380). The fold is deliberately **unbounded** —
+  that is what makes it a career statistic, and a window here would be a second horizon that
+  must not disagree with the matcher's — so an unbounded fold on the port a search already
+  holds is one somebody eventually calls inside the walk over five hundred candidates. It
+  answers about **one player and never a collection**, the fence is the signature, and both
+  sides of the seam assert their own. What crosses is the **raw pair and no percentage**: a
+  bare share would hide whether *70 %* is fourteen of twenty or seven of ten, which is the
+  argument the metered rows beside it print their fractions for, and the division is a
+  client's. Absence is the same absence everything else here spells — no counted game means
+  the row is **omitted**, never `0` and never `0 / 0` — and it is a *different* absence from
+  `skill`'s, so the assembler asks for it whatever sport resolved. Its denominator is
+  `counted_games_for`'s own predicate, written once in `games` and read by both, so the sheet
+  cannot print a pair that disagrees with the card beside it.
+  **The metered rows are the fourth fact, and they are `player_score`'s live strands put
+  on a wire for the first time** (#381, and a third of them with #383). Nothing new is
+  computed: the raw counts already existed in that domain and the caller stopped throwing
+  them away. Each row crosses as **its
+  pair and its figure** — and that third number is where a strand parts company with the
+  variety beside it: a strand's percentage is what the platform *acts* on, `StrandRatio.value`
+  is derived in one place so a card, a profile and the matcher's evidence cannot print three
+  roundings of one record, and a client dividing the pair would be the fourth. Variety prices
+  no promise, so its division stays the client's. **The weights stay off the wire** — the blend
+  arrives already taken, and a row carrying its weight would let a reader re-derive the pill and
+  draw one strand as worth more than another. A player with no publishable strand has the
+  **whole zone omitted**, a third absence asking a third question: not `skill`'s and not
+  `variety`'s, since a plan that dissolved and a seat that ran out are opportunities and
+  neither is a game anybody played. `SubjectReliability` is the eighth demand and the **first
+  here whose provider reads a set** — `PublishedScoreQuery` answers about five hundred
+  candidates for the matcher, and the narrowing to one person is the adapter's, which is the
+  mirror of variety's fence. And `ReliabilityStrand` is the one name this context imports
+  rather than respells: the engines are the pure layer every context reads and none owns —
+  the argument `player_score` already made beside its own import contract — and the codes are
+  on the player contract under that spelling already.
+  **What other players said is the fifth fact, and it no longer depends on who is
+  reading** (#382, then #468). It was the one zone that did — the figure and its count for
+  a reader, a **coarse band and neither** for the person it is about, split on the **port**
+  so the sheet about you asked a question with no figure in its answer, and `PlayerRecord`
+  refusing the pair beside `is_self`. Since
+  [ADR-0179](../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+  §5 the figure crosses to its subject exactly as `GET /players/{id}/record` serves it to
+  a reader — `sportsmanship.{average, raters}` on `GET /players/me/record`,
+  `sportsmanship_band` retired from the domain, the shape and the emitted document, `band_for`
+  gone from both ports, the invariant gone with the field it guarded, and `is_self` back to
+  deciding a title and nothing on the sheet. The cost — a rater becomes nameable by their
+  subject — is accepted by name in that record's Consequences and is not restated here.
+  It takes **neither a sport nor an instant**, the only demand here that
+  takes neither: nothing decays, because the window is fifty *people* and not fifty days.
+  Its absence is the **fourth**, asking a fourth question — rating is a favour, ignoring a
+  card costs nothing, and nothing records the omission, so a nought would publish a verdict
+  nobody gave. The matcher reads none of it, held by an `.importlinter` contract, and a
+  test walks the emitted contract to prove the words reach exactly one response type — and
+  that the band's field is on none — which
+  is where *it is not on search result cards* stopped being a promise.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -552,14 +1254,53 @@ tests.
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Four registers, and they are four on purpose — one per kind of claim.**
-  `app/bootstrap/matcher_demands.py` holds the ports the *matcher* declares of contexts it
-  does not write; `games_demands.py`, `rating_demands.py` and `player_score_demands.py`
-  each hold the ports one *provider* publishes outward. Each register's exhaustiveness
+  **Ten registers, and they are ten on purpose — one per kind of claim.**
+  `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
+  *consumer* declares of contexts it does not write; `games_demands.py`,
+  `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
+  the ports one *provider* publishes outward; `challenge_demands.py` holds
+  what `challenges` demands of the **matcher** — the arrow's other direction, which
+  arrived with the challenge detail read
+  ([ADR-0143](../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md))
+  — and `game_demands.py` holds the one thing `games` demands of it, the court's pairing
+  ([ADR-0161](../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)), on its own list
+  because `games_demands.py` is what that context *publishes* and a demand is the other kind
+  of claim;
+  `conversation_demands.py` holds what a **room** demands of the three contexts it is
+  told by and reads from; and `plan_demands.py` holds what a **plan** demands — the courts
+  a player may plan, folded over `challenges` and `games` (ADR-0164 §3), and one fact about
+  a *person*. There is deliberately no *conversations provider* and no *plans provider*
+  register, and there never will be: a conversation is told and tells nothing, and nothing
+  on this side of the wire reads a plan **through a port the Plan declares** — `games` may
+  not import it, and the card ladder that reads one is the client's `domain/`. The one fact
+  `games` does read off a plan, its agreed moment, is `games`' **own** demand
+  (`AgreedMoment`, on `game_demands.py`) that the Plan's adapter signs — the consumer
+  contracts its own demand, which is the rule below from the other side (ADR-0162 §4).
+  Neither has a consumer of a port it declares, so neither publishes one. **The Plan's court
+  read used to be on somebody else's register and no longer is**, and the move is the rule
+  rather than an exception to it: while a plan was the game's, *is this player on this
+  game's court, and is that game still open to planning* was `games`' question about
+  `games`' record, published there as `PlanningCourt` — a consumer contracting its own
+  provider's port is the consumer marking its own homework. A plan is the challenge's, the
+  question is about a court that may not have become a game yet, and no provider can answer
+  it alone; so it is a **demand**, contracted by the consumer that declares it, which is
+  `conversation_demands.py`'s shape exactly.
+  Each register's exhaustiveness
   assertion is about its own kind of claim and would stop meaning anything with another
-  kind in it — which is also the rule for the next one: **a new provider gets a new
-  register, not a row in somebody else's**, and the first person to add a row should not
-  have to guess which list it belongs in.
+  kind in it — which is also the rule for the next one: **a new provider or a new consumer
+  gets a new register, not a row in somebody else's**, and the first person to add a row
+  should not have to guess which list it belongs in. The sportsmanship register is that
+  rule being followed rather than restated: the sportsmanship figure could have been a row
+  on the record's consumer list, and a provider's publication on a consumer's register is
+  exactly what makes an exhaustiveness assertion a claim about something else. One port on
+  the record's list has **three** implementations, which is what the suite has to be
+  parameterised over: *where has this reader been shown this person* is a question three
+  contexts each answer about themselves.
+  **A row carries a builder, and not always over a bare session.** `challenge_demands.py`'s
+  takes the two seams the platform supplies from outside a request — the process's
+  candidate index and the exposure ledger behind Redis — because the pairing it contracts
+  is recomputed through the whole scoring pipeline, and **no test in this repository needs
+  Redis running**.
 - Async by default (`asyncio_mode = "auto"`) — no `@pytest.mark.asyncio`.
 
 ## Environment gotchas

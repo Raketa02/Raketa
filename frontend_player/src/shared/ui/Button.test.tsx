@@ -18,12 +18,17 @@
  * line takes 5.2's repaint rather than the label's own white. A gloss read out after the name
  * the caller gave would say the same thing twice, and a `tiny` at full white on `night` is the
  * repaint quietly not happening — neither shows up in a diff as anything but a style array.
+ *
+ * And the two things `settled` does that the other fills do not (6.1, amended 2026-09-18): it
+ * is drawn whole when it is shut, and its arrival fades the fill it came from — once, never on
+ * the way back, and not at all under reduced motion.
  */
 
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import { Pressable, StyleSheet, Text, type TextStyle, type ViewStyle } from 'react-native';
 
 import { Button } from './Button';
+import { ReducedMotionProvider } from './overlay';
 import { theme } from './theme';
 
 /** The button as React Native would draw it — see `Chip.test.tsx` for why the callback. */
@@ -50,6 +55,30 @@ describe('the volt button (6.1)', () => {
     expect(drawn(false).opacity).toBeUndefined();
     expect(drawn(true).opacity).toBe(0.7);
     expect(drawn(true).backgroundColor).toBe(theme.color.volt);
+  });
+});
+
+/**
+ * **`arranging` is volt's shape a second time**, and the same two rules are the ones a diff would
+ * not show: `ink` and never white on it (7,05:1 against 2,48:1), and a press that dims rather
+ * than a darker companion invented for it ([#429](https://github.com/Raketa02/Raketa/issues/429)
+ * F1: the Now card's *Fill the seat* is drawn in the stage dot's own colour).
+ */
+describe('the arranging button (6.1)', () => {
+  it('fills with the arranging colour and labels in ink, never in white', () => {
+    render(<Button label="Fill the seat" variant="arranging" onPress={jest.fn()} />);
+
+    expect(drawn(false).backgroundColor).toBe(theme.color.arranging);
+    expect(label().color).toBe(theme.color.ink);
+    expect(label().color).not.toBe(theme.color.surface);
+  });
+
+  it('dims under the finger rather than taking a second fill', () => {
+    render(<Button label="Fill the seat" variant="arranging" onPress={jest.fn()} />);
+
+    expect(drawn(false).opacity).toBeUndefined();
+    expect(drawn(true).opacity).toBe(0.7);
+    expect(drawn(true).backgroundColor).toBe(theme.color.arranging);
   });
 });
 
@@ -105,5 +134,121 @@ describe('the gloss', () => {
 
     render(<Button label="Competitive" variant="onDark" onPress={jest.fn()} />);
     expect(drawn(false).alignItems).toBe('center');
+  });
+});
+
+/**
+ * **The pill is the chip's alone, and this is the one exception** — the yes screen's two doors
+ * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §2, Part 16 2026-09-14). A shape option on the one primitive rather than a second one, so
+ * the pill differs from every other button by its corner and by nothing else.
+ */
+describe('the pill shape (6.1, amended)', () => {
+  it('is 4.2’s 10pt corner unless asked for, and the chip’s pill when it is', () => {
+    render(<Button label="Later" variant="onDark" onPress={jest.fn()} />);
+    expect(drawn(false).borderRadius).toBe(theme.radius.btn);
+
+    screen.unmount();
+
+    render(<Button label="Later" variant="onDark" shape="pill" onPress={jest.fn()} />);
+    expect(drawn(false).borderRadius).toBe(theme.radius.pill);
+  });
+
+  it('changes the corner and nothing else about the variant', () => {
+    render(<Button label="Open the chat" variant="volt" shape="pill" onPress={jest.fn()} />);
+
+    expect(drawn(false).backgroundColor).toBe(theme.color.volt);
+    expect(label().color).toBe(theme.color.ink);
+    expect(drawn(true).opacity).toBe(0.7);
+  });
+});
+
+/**
+ * **The settled button is drawn whole when it is shut, and its arrival is the one motion**
+ * (6.1, amended 2026-09-18). Both are claims a diff cannot show: the dim is one conditional
+ * away from applying to every variant again, and the fade is a layer that would still mount
+ * on first paint, or on the way back, or under reduced motion, without anybody noticing in
+ * the style table.
+ */
+describe('the settled button (6.1, amended)', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  /** The fill on its way out, or `undefined` once there is nothing fading. */
+  function arrival(): ViewStyle | undefined {
+    const layer = screen.queryByTestId('button-arrival');
+    return layer === null ? undefined : (StyleSheet.flatten(layer.props.style) as ViewStyle);
+  }
+
+  function draw(variant: 'primary' | 'settled', reduced = false) {
+    return (
+      <ReducedMotionProvider value={reduced}>
+        <Button label="Saved" variant={variant} disabled onPress={jest.fn()} />
+      </ReducedMotionProvider>
+    );
+  }
+
+  it('keeps its fill when shut, where every other variant dims to 40%', () => {
+    render(<Button label="Saved" variant="settled" disabled onPress={jest.fn()} />);
+
+    expect(drawn(false).backgroundColor).toBe(theme.color.mintInk);
+    expect(drawn(false).opacity).toBeUndefined();
+    expect(screen.getByLabelText('Saved').props.accessibilityState?.disabled).toBe(true);
+
+    screen.unmount();
+
+    render(<Button label="Saved" variant="primary" disabled onPress={jest.fn()} />);
+    expect(drawn(false).opacity).toBe(0.4);
+  });
+
+  it('fades the fill it arrived from over the mint, once, and then draws the mint alone', () => {
+    const view = render(draw('primary'));
+    expect(arrival()).toBeUndefined();
+
+    view.rerender(draw('settled'));
+
+    // The first frame of the new state: the mint underneath, the coral whole on top of it.
+    expect(drawn(false).backgroundColor).toBe(theme.color.mintInk);
+    expect(arrival()?.backgroundColor).toBe(theme.color.coralInk);
+    expect(arrival()?.opacity).toBe(1);
+
+    act(() => jest.advanceTimersByTime(theme.motion.fade / 2));
+    const half = arrival()?.opacity;
+    expect(half).toBeGreaterThan(0);
+    expect(half).toBeLessThan(1);
+
+    act(() => jest.advanceTimersByTime(theme.motion.fade));
+    expect(arrival()).toBeUndefined();
+    expect(drawn(false).backgroundColor).toBe(theme.color.mintInk);
+  });
+
+  it('simply is settled on first mount, and on the way back to an action', () => {
+    const view = render(draw('settled'));
+    expect(arrival()).toBeUndefined();
+
+    view.rerender(draw('primary'));
+    expect(arrival()).toBeUndefined();
+    expect(drawn(false).backgroundColor).toBe(theme.color.coralInk);
+  });
+
+  it('simply is settled under reduced motion', () => {
+    const view = render(draw('primary', true));
+    view.rerender(draw('settled', true));
+
+    expect(arrival()).toBeUndefined();
+    expect(drawn(false).backgroundColor).toBe(theme.color.mintInk);
+  });
+
+  it('drops the fade the moment the button goes back to an action', () => {
+    const view = render(draw('primary'));
+    view.rerender(draw('settled'));
+    expect(arrival()).toBeDefined();
+
+    view.rerender(draw('primary'));
+    expect(arrival()).toBeUndefined();
+
+    // And the next arrival starts whole again rather than from wherever the last one stopped.
+    view.rerender(draw('settled'));
+    expect(arrival()?.opacity).toBe(1);
   });
 });

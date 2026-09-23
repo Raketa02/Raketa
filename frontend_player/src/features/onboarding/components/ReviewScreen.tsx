@@ -51,6 +51,7 @@ import {
   theme,
 } from '@/shared/ui';
 
+import { useHardwareBack } from '@/shared/lib/platform';
 import type { Sport } from '@/shared/vocabulary/sport';
 import { positionOf } from '../domain/onboardingPass';
 import { answeredQuestions, type StandingQuestion } from '../domain/questionNavigation';
@@ -175,6 +176,22 @@ export function ReviewScreen({ assessmentId, sport }: ReviewScreenProps) {
       },
     });
   };
+
+  /**
+   * **The device's back is refused here, because this screen draws none.**
+   *
+   * Every screen in onboarding `replace`s, so the group holds one history entry and an
+   * unclaimed press pops through it to the screen the part began on — out of the run, past
+   * the confirm below, and past both of the answers that confirm exists to collect. That is
+   * the boundary [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)
+   * says back never crosses.
+   *
+   * **It does not open the confirm.** The way out is a deliberate control on the far side of
+   * the header; answering the cheapest gesture on the screen with a modal would make an
+   * interruption the easiest thing on it to trigger, and the header's own note already draws
+   * the line between the two — *no back control*, one way out, and they are not each other.
+   */
+  useHardwareBack(() => {});
 
   if (calculating) return <CalculatingScreen sport={sport} />;
 

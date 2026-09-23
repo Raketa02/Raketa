@@ -91,7 +91,9 @@ export function toRunSearchRequest(ask: SearchAsk): RunSearchRequest {
  * collapsing the two — and the collapse is silent, because it searches on a real week rather
  * than failing.
  *
- * The caller states which it is sending; nothing here infers it from an empty array.
+ * The caller states which it is sending; nothing here infers it from an empty array. **The deck
+ * no longer sends one at all**: it is reached from a tab of its own and deals on the profile's
+ * grid (ADR-0169 §1), so two callers remain and the rule is unchanged for both.
  */
 export function availabilityOverride(sentWeek: readonly WeekCell[] | undefined): {
   readonly availability_override?: AvailabilitySlotResource[];

@@ -23,10 +23,11 @@
  * ## The split is resumption, never the HTTP verb
  *
  * `networkMode: 'online'` **pauses** rather than fails, so nearly everything in this app
- * resumes on reconnect and can say so. One act overrides that and therefore cannot — the send,
- * for the reason written at its own site (`features/challenges/hooks/sendOptions.ts`), which is
- * where that argument lives rather than here. That is the whole distinction, and it is one
- * distinction — hence exactly two values.
+ * resumes on reconnect and can say so. `features/challenges/` overrides that and therefore
+ * cannot, for the reason written at its own site
+ * (`features/challenges/hooks/challengeMutationOptions.ts`), which is where that argument lives
+ * rather than here. That is the whole distinction, and it is one distinction — hence exactly
+ * two values.
  *
  * Mapping it onto GET-versus-POST gets it wrong: the line-up **forecast is a `POST` that
  * pauses**, and it takes the first sentence.

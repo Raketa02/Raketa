@@ -27,7 +27,8 @@
  *
  * ## The ring, and the one loop in the app
  *
- * `motion.ripple` is the only looping animation in this codebase and this is its only caller.
+ * `motion.ripple` is one of the two looping animations in this codebase — the typing indicator's
+ * pulse is the other, and the argued exception — and this is its only caller.
  * A ring expanding out of nothing says *something is being looked for*, where a spinner says
  * *something is loading* — and what is happening is a search. It is **decoration and is hidden
  * from the tree**: §20.1's merge rule, and a listener already has both sentences.

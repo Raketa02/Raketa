@@ -11,10 +11,17 @@ alternative to this file is not *a better test*, it is *no test of the adapters
 at all*.
 
 **A deliberate subset, and it stays one.** It implements exactly the commands
-the two adapters issue and nothing more, so a new command in an adapter is an
+the adapters issue and nothing more, so a new command in an adapter is an
 `AttributeError` here rather than a silent divergence. The semantics it does
-model are the two the adapters depend on: **expiry**, against a clock a test
-moves rather than the host's, and **`HINCRBY` creating the field it increments**.
+model are four: **expiry**, against a clock a test moves rather than the host's;
+**`HINCRBY` creating the field it increments**; **`SADD` creating the set it adds
+to**; and **pub/sub delivering only to whoever is subscribed at the moment of the
+publish**, which is at-most-once and is exactly what makes a dropped frame a
+thing a test can drive.
+
+Expiry is the one a presence test drives directly (`docs/adr/0156`): a typing
+heartbeat is cleared by nothing but its key running out, so *the app was killed*
+is spelled here as `advance` and asserted rather than waited for.
 
 What it deliberately does not model is everything else Redis does. It is not a
 proof the adapters work against a real server; `make up` is where that is
@@ -24,7 +31,8 @@ they claim to expire.
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+import asyncio
+from typing import Any, AsyncIterator, Iterable
 
 
 class FakeRedisError(RuntimeError):
@@ -38,6 +46,12 @@ class FakeRedis:
         self._values: dict[str, Any] = {}
         self._expires_at: dict[str, float] = {}
         self._now = now
+        #: Every live subscription, by channel. A list rather than a set because
+        #: two streams may follow one room, which is the ordinary case.
+        self._channels: dict[str, list["FakePubSub"]] = {}
+        #: What has been published, in order, for a test that wants to assert a
+        #: nudge went out without standing up a subscriber to catch it.
+        self.published: list[tuple[str, str]] = []
 
     # -- what a test drives ------------------------------------------------
 
@@ -81,6 +95,18 @@ class FakeRedis:
     async def hgetall(self, name: str) -> dict[str, str]:
         return {key: str(value) for key, value in self._read_hash(name).items()}
 
+    async def sadd(self, name: str, *values: Any) -> int:
+        members = self._set(name)
+        added = 0
+        for value in values:
+            if str(value) not in members:
+                members.add(str(value))
+                added += 1
+        return added
+
+    async def smembers(self, name: str) -> set[str]:
+        return set(self._values[name]) if self._live(name) else set()
+
     async def expire(self, name: str, seconds: int) -> bool:
         if not self._live(name):
             return False
@@ -100,6 +126,42 @@ class FakeRedis:
     async def mget(self, keys: Iterable[str]) -> list[str | None]:
         return [self._values.get(key) if self._live(key) else None for key in keys]
 
+    async def publish(self, channel: str, message: Any) -> int:
+        """Deliver to whoever is on the channel **right now**, and count them.
+
+        **Nothing is retained.** A publish to a channel nobody is on is delivered
+        to nobody and is gone, which is real Redis pub/sub and is the property
+        the live channel is designed around: a missed nudge costs latency, and
+        the next one repairs it.
+        """
+
+        self.published.append((channel, str(message)))
+        listeners = self._channels.get(channel, ())
+        for listener in listeners:
+            listener.deliver(channel, str(message))
+        return len(listeners)
+
+    def pubsub(self) -> "FakePubSub":
+        return FakePubSub(self)
+
+    # -- what the subscriptions do to this client --------------------------
+
+    def _subscribe(self, pubsub: "FakePubSub", channel: str) -> None:
+        self._channels.setdefault(channel, []).append(pubsub)
+
+    def _unsubscribe(self, pubsub: "FakePubSub") -> None:
+        for channel, listeners in list(self._channels.items()):
+            if pubsub in listeners:
+                listeners.remove(pubsub)
+            if not listeners:
+                del self._channels[channel]
+
+    def subscribers_on(self, channel: str) -> int:
+        """How many streams are following this channel. What a test asserts an
+        unsubscribe with, since a leaked subscription is otherwise invisible."""
+
+        return len(self._channels.get(channel, ()))
+
     def pipeline(self, transaction: bool = True) -> "FakePipeline":
         return FakePipeline(self)
 
@@ -116,6 +178,11 @@ class FakeRedis:
             return False
         return key in self._values
 
+    def _set(self, name: str) -> set[str]:
+        if not self._live(name):
+            self._values[name] = set()
+        return self._values[name]
+
     def _hash(self, name: str) -> dict[str, Any]:
         if not self._live(name):
             self._values[name] = {}
@@ -123,6 +190,38 @@ class FakeRedis:
 
     def _read_hash(self, name: str) -> dict[str, Any]:
         return self._values[name] if self._live(name) else {}
+
+
+class FakePubSub:
+    """One subscription, over an ``asyncio.Queue``.
+
+    Mirrors the one piece of `redis.asyncio`'s ``PubSub`` the adapter depends on:
+    ``listen()`` is an infinite async iterator that yields the subscribe
+    confirmation first and then every message, and blocks in between. A
+    subscriber that stopped iterating between two publishes would miss the
+    second in real Redis too — the queue is what a delivered-while-listening
+    message goes into, and nothing is retained for a channel nobody is on.
+    """
+
+    def __init__(self, client: FakeRedis) -> None:
+        self._client = client
+        self._inbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        self._closed = False
+
+    async def subscribe(self, channel: str) -> None:
+        self._client._subscribe(self, channel)
+        await self._inbox.put({"type": "subscribe", "channel": channel, "data": 1})
+
+    def deliver(self, channel: str, message: str) -> None:
+        self._inbox.put_nowait({"type": "message", "channel": channel, "data": message})
+
+    async def listen(self) -> AsyncIterator[dict[str, Any]]:
+        while not self._closed:
+            yield await self._inbox.get()
+
+    async def aclose(self) -> None:
+        self._closed = True
+        self._client._unsubscribe(self)
 
 
 class FakePipeline:
@@ -155,6 +254,14 @@ class FakePipeline:
         self._queued.append(("expire", (name, seconds), {}))
         return self
 
+    def sadd(self, name: str, *values: Any) -> "FakePipeline":
+        self._queued.append(("sadd", (name, *values), {}))
+        return self
+
+    def set(self, name: str, value: Any, ex: int | None = None) -> "FakePipeline":
+        self._queued.append(("set", (name, value), {"ex": ex}))
+        return self
+
     async def execute(self) -> list[Any]:
         results = []
         for command, args, kwargs in self._queued:
@@ -178,6 +285,16 @@ class BrokenRedis:
         return _raise
 
     def pipeline(self, transaction: bool = True) -> "BrokenRedis":
+        return self
+
+    def pubsub(self) -> "BrokenRedis":
+        """A ``PubSub`` whose every call raises. **The dead subscriber.**
+
+        Returned rather than raised here, because ``Redis.pubsub()`` does not
+        touch the socket in real redis-py either — the failure surfaces on
+        ``subscribe``, which is where a stream discovers the bus is gone.
+        """
+
         return self
 
     async def __aenter__(self) -> "BrokenRedis":

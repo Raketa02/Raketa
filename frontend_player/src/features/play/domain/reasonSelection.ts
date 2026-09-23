@@ -81,7 +81,7 @@ export interface ReasonInput {
    *
    * It is a parameter rather than a table here because *what a sentence can say* is
    * `reasonPresentation`'s and this file holds no words. The caller passes
-   * `(row) => reasonLine(row.evidence) !== undefined`.
+   * `(row) => reasonLine(row.evidence, pair) !== undefined`.
    */
   readonly saysSomething: (term: ScoredTerm) => boolean;
 }

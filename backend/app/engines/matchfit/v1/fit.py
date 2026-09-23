@@ -61,6 +61,8 @@ def score(
     candidate: ScorableCandidate,
     ruleset: Ruleset,
     seat: Seat = Seat.OPPONENT,
+    *,
+    stood_down: frozenset[Term] = frozenset(),
 ) -> Fit:
     """Score one already-gated, already-fenced candidate.
 
@@ -69,6 +71,13 @@ def score(
     forgiving reading, and the harsher partner rows apply only once the line-up
     is seating somebody.
 
+    ``stood_down`` names the terms **this search** declines to read, for every
+    pairing — the deck's intent term (``docs/adr/0169`` §2). Each stands down
+    by the mechanism a term already uses when it has nothing to read, so its
+    weight renormalises away and a declaration moves nobody. The default is
+    the empty set: a caller that stands nothing down gets exactly the Fit it
+    always got, which is what keeps every pinned pairing pinned.
+
     Raises ``InvariantViolated`` if every term stands down. That is not a low
     Fit — it is no Fit, and returning a number for it would be the invented zero
     this engine is built to refuse. It is unreachable on today's inputs: level
@@ -76,7 +85,7 @@ def score(
     """
 
     weights = ruleset.modes[searcher.mode].weights
-    outcomes = read_terms(searcher, candidate, ruleset, seat)
+    outcomes = read_terms(searcher, candidate, ruleset, seat, stood_down=stood_down)
     live: list[TermReading] = [
         outcome for outcome in outcomes if isinstance(outcome, TermReading)
     ]
@@ -197,5 +206,6 @@ class MatchFitV1:
         candidate: ScorableCandidate,
         ruleset: Ruleset,
         seat: Seat = Seat.OPPONENT,
+        stood_down: frozenset[Term] = frozenset(),
     ) -> Fit:
-        return score(searcher, candidate, ruleset, seat)
+        return score(searcher, candidate, ruleset, seat, stood_down=stood_down)

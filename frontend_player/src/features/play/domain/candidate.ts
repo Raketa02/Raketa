@@ -70,8 +70,8 @@ export interface LikelyRange {
  * depending on who was looking.
  */
 export interface PlayerCard {
-  /** The whole handle. Nothing derives a familiar form from it — ADR-0107, and §15. */
-  readonly nickname: string;
+  /** The whole name. Nothing derives a familiar form from it — ADR-0107 through ADR-0171, and §15. */
+  readonly name: string;
   /**
    * The short-lived signed link that draws their photograph, **omitted** with the id when
    * they have none — and the client draws the generated poster instead.
@@ -111,6 +111,18 @@ export interface PlayerCard {
   /** The band's **published name**. Its numeric edges are not on the card. */
   readonly band: string;
   readonly range: LikelyRange;
+  /**
+   * **Their intro** — one line they wrote about themselves, verbatim: at most a hundred
+   * characters, no line breaks, in whatever language they wrote it
+   * ([ADR-0170](../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+   *
+   * **Omitted where they wrote none**, and never an empty string: the intro is optional, and a
+   * player who skipped has no line rather than an empty one — so the deck card closes the gap
+   * rather than drawing an empty quotation. It is the one free-text field on a card, fenced at
+   * the write against a phone number, an email, a URL or an `@handle`; what arrives is a line
+   * about a player and never a way to reach one, and the card quotes it as theirs.
+   */
+  readonly intro?: string;
   /**
    * Their **Player Score** out of a hundred — reliability, as the platform watched it.
    *
@@ -188,9 +200,14 @@ export interface Candidate {
   /** Out of a hundred, and drawn as served. Nothing on this side rounds or rescales it. */
   readonly fit: number;
   /**
-   * Whole kilometres, **omitted** rather than zero when the distance term stood down.
+   * Kilometres **to one decimal**, **omitted** rather than zero when the distance term stood
+   * down.
    *
-   * The two spellings of absence (ADR-0106 §4), and it is what lets *Closest* sort a
+   * Measured between two **drawn spots** — one fixed point inside each player's coarse area —
+   * and served, never derived; it is the number every surface prints for this person, and it is
+   * **not** the distance evidence's `km`, which is what the engine scored: whole, cell to cell
+   * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §2). The two spellings of absence (ADR-0106 §4), and it is what lets *Closest* sort a
    * stood-down row last instead of first.
    */
   readonly distanceKm?: number;
@@ -448,4 +465,21 @@ export interface PoolDescription {
   readonly playersInRange: number;
   /** `null` where the served window is a code this build has never seen — §3's drop. */
   readonly window: Window | null;
+  /**
+   * **On a deal only** — how many people are eligible for the deck beyond this hand, after
+   * every deck exclusion and not counting the cards just dealt
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §5). It is what lets the counter say *N left* and be true of the whole pool rather than of
+   * ten; it drops by a hand as hands are dealt. **Omitted on every other surface**, where a count
+   * about a pool that has moved on would be a number about nothing.
+   */
+  readonly remaining?: number;
+  /**
+   * **On a deal only** — how many people have a live *Let's play* towards the viewer in this
+   * sport that would be dealt to them: every gate passed, not passed on within the pass window,
+   * not cooling off, not already mutual (ADR-0169 §4). **A count and never a list**: nothing on
+   * any route names who. `0` is a measured nought, so the chip drawn from it is drawn at one and
+   * above — and it is omitted, like `remaining`, everywhere but on a deal.
+   */
+  readonly wantToPlayYou?: number;
 }

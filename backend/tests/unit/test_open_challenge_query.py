@@ -23,6 +23,12 @@ else on the court once more.
 
 **The send refuses whole and names nobody.** One refusal for the press, with no
 player id anywhere in it.
+
+And a fifth about the port's **other** question, which is not that rule and is
+asserted against confusing it with one: *has a mutual between these two already
+minted a game in this sport* is the mint's idempotence key — mutual-born only,
+one sport, and about the two whose yeses met rather than about everybody who
+ended up on the court (``docs/adr/0152``).
 """
 
 from __future__ import annotations
@@ -51,6 +57,7 @@ from app.modules.challenges.domain.errors import (
 )
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seats import SeatPlan, Side
+from app.modules.challenges.domain.standing import Standing
 from app.modules.player_profile.domain.availability import Window
 from app.shared.ids import new_uuid
 from tests.unit.challenge_world import StubOrigins, a_safe_court
@@ -141,6 +148,47 @@ def a_tennis_challenge(*, organiser=ORGANISER, invitee=ALICE) -> Challenge:
     )
 
 
+def a_mutual_born_challenge(
+    *,
+    sport: Sport = Sport.TENNIS,
+    organiser=ORGANISER,
+    other=ALICE,
+    opened_at: Instant = SENT_AT,
+) -> Challenge:
+    """Two yeses that met. **``ON`` at birth in a singles sport, half a game in
+    a doubles one** — which is the difference these tests turn on.
+
+    Built by the aggregate rather than by the mint, because what is under test
+    here is the **read** — the use case's own guards are exercised where they
+    live.
+    """
+
+    return Challenge.opened_from_mutual_interest(
+        challenge_id=new_uuid(),
+        sport=sport,
+        mode=None,
+        organiser_id=organiser,
+        other_player_id=other,
+        occurred_at=opened_at,
+    )
+
+
+def a_side_invited_into(challenge: Challenge, *, at_hour: int = 1) -> Challenge:
+    """Fill a half-built padel court's open side, the way its organiser would."""
+
+    challenge.invite(
+        (
+            SeatPlan(side=Side.A, player_id=ORGANISER),
+            SeatPlan(side=Side.A, player_id=ALICE),
+            invited(BOB, Side.B, 1),
+            invited(CAROL, Side.B, 2),
+        ),
+        by=challenge.organiser_id,
+        occurred_at=at(at_hour),
+    )
+    return challenge
+
+
 def a_padel_choice(organiser, *invitees) -> tuple[SeatChoice, ...]:
     """The same court a client would post: sides and people, no origins."""
 
@@ -222,6 +270,78 @@ async def test_sharing_a_line_up_makes_a_pair_of_everybody_in_it(session_factory
         )
 
 
+async def test_one_named_challenge_may_be_stepped_over_and_only_one(
+    session_factory,
+):
+    """**The exception a fill names** (``docs/adr/0150`` §3).
+
+    A court being completed would otherwise be refused for the pairs it is made
+    of: the people on it are, by definition, people the filler is arranging with.
+    So the send that grows it names that challenge and the read steps over that
+    stream — and over no other, which is the half of this that could go wrong
+    invisibly. Alice and Bob share a second, unrelated court, and it still
+    refuses.
+    """
+
+    async with session_factory() as session:
+        completing = await _record(
+            session,
+            Challenge.sent(
+                challenge_id=new_uuid(),
+                sport=Sport.PADEL,
+                mode=SearchMode.FOR_FUN,
+                window=Window.WEEKEND,
+                organiser_id=ORGANISER,
+                arrangement=a_padel_court(ORGANISER, ALICE, BOB, CAROL),
+                occurred_at=SENT_AT,
+            ),
+        )
+        await _record(
+            session,
+            Challenge.sent(
+                challenge_id=new_uuid(),
+                sport=Sport.TENNIS,
+                mode=SearchMode.COMPETITIVE,
+                window=Window.WEEKEND,
+                organiser_id=ALICE,
+                arrangement=a_tennis_court(ALICE, BOB),
+                occurred_at=SENT_AT,
+            ),
+        )
+        reading = build_open_challenge_query(session)
+
+        every = await reading.open_pairs_among(
+            [ORGANISER, ALICE, BOB, CAROL], now=INSIDE
+        )
+        excepted = await reading.open_pairs_among(
+            [ORGANISER, ALICE, BOB, CAROL],
+            now=INSIDE,
+            except_challenge_id=completing.id,
+        )
+
+        assert frozenset({ORGANISER, ALICE}) in every
+        assert excepted == frozenset({frozenset({ALICE, BOB})}), (
+            "the court being completed is stepped over and the other one is not"
+        )
+
+
+async def test_a_challenge_nobody_named_is_still_read(session_factory):
+    """An id that matches no stream these people share changes nothing.
+
+    The exception is by **id** rather than by shape, so naming a stranger's
+    challenge cannot quietly excuse anybody's.
+    """
+
+    async with session_factory() as session:
+        await _record(session, a_tennis_challenge())
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE, except_challenge_id=new_uuid()
+        )
+
+        assert pairs == frozenset({frozenset({ORGANISER, ALICE})})
+
+
 async def test_a_declined_seat_releases_its_pairs(session_factory):
     async with session_factory() as session:
         challenge = a_tennis_challenge()
@@ -245,6 +365,410 @@ async def test_a_lapsed_pair_releases_with_no_sweep_having_run(session_factory):
 
         assert await query.open_pairs_among([ORGANISER, ALICE], now=INSIDE)
         assert not await query.open_pairs_among([ORGANISER, ALICE], now=OUTSIDE)
+
+
+async def test_a_completed_line_up_releases_the_pair(session_factory):
+    """*A game is never open in this sense* — read through the adapter that
+    decides it, and not only through the aggregate.
+
+    Every seat accepted derives ``ON``, which is not an ending and is not being
+    arranged either: the arranging is **finished**. So the pair is released, the
+    two of them may open a second challenge, and each is back in the other's
+    deck ([#343](https://github.com/Raketa02/Raketa/issues/343),
+    ``docs/adr/0142`` §1).
+    """
+
+    async with session_factory() as session:
+        challenge = a_tennis_challenge()
+        challenge.accept(ALICE, occurred_at=at(1))
+        await _record(session, challenge)
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE
+        )
+
+        assert pairs == frozenset()
+
+
+async def test_a_sent_challenge_is_not_something_a_mutual_minted(session_factory):
+    """The port's second question, and the first thing it must not confuse.
+
+    ``mutual_born_challenges_that_became_games`` is the mutual mint's
+    **idempotence** key — *has a mutual between these two already minted a game
+    in this sport* — and a challenge somebody **sent** is not one, however
+    complete it is. Answering
+    otherwise would be the pair rule wearing a second hat, which is the
+    conflation ``docs/adr/0152`` §1 exists to undo.
+    """
+
+    async with session_factory() as session:
+        challenge = a_tennis_challenge()
+        challenge.accept(ALICE, occurred_at=at(1))
+        await _record(session, challenge)
+
+        query = build_open_challenge_query(session)
+
+        assert await query.open_pairs_among([ORGANISER, ALICE], now=INSIDE) == (
+            frozenset()
+        )
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.TENNIS, now=INSIDE
+        ) == ()
+
+
+async def test_a_mutual_born_game_comes_back_keyed_by_its_challenge(
+    session_factory,
+):
+    """What the mint reads, in the currency ``games`` can be asked in.
+
+    A singles mutual is ``ON`` the instant it exists, so it has minted a game
+    from birth — and what comes back is the **challenge** id, because that is the
+    one name both contexts spell and the one ``SettledGameQuery`` is asked with.
+    """
+
+    async with session_factory() as session:
+        challenge = a_mutual_born_challenge()
+        await _record(session, challenge)
+
+        assert await build_open_challenge_query(
+            session
+        ).mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.TENNIS, now=INSIDE
+        ) == (challenge.id,)
+
+
+async def test_it_answers_about_the_sport_it_was_asked_about(session_factory):
+    """**Per sport, and this is the permanence the record removed.**
+
+    An ``Interest`` is keyed ``(from, to, sport)`` and expires: a padel yes is
+    not a tennis yes pressed twice. The one-open-challenge-per-pair rule stays
+    cross-sport on its own justification; this question never was.
+    """
+
+    async with session_factory() as session:
+        await _record(session, a_mutual_born_challenge())
+
+        query = build_open_challenge_query(session)
+
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=INSIDE
+        ) == ()
+
+
+async def test_a_half_built_mutual_born_court_has_minted_no_game(session_factory):
+    """A doubles mutual is half a game, and half a game is not a game.
+
+    Nothing has been handed to ``games``, so there is nothing to wait on
+    settling — those two are held by the pair rule beside it, and released the
+    moment that court stops being arranged.
+    """
+
+    async with session_factory() as session:
+        await _record(session, a_mutual_born_challenge(sport=Sport.PADEL))
+
+        query = build_open_challenge_query(session)
+
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=INSIDE
+        ) == ()
+        assert await query.open_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE
+        ) == frozenset({frozenset({ORGANISER, ALICE})})
+
+
+async def test_a_later_invitee_is_not_somebody_the_mutual_was_between(
+    session_factory,
+):
+    """The key is the **mutual**, not the court it grew into.
+
+    A doubles mutual seats its two and leaves a side to fill; whoever is invited
+    into it later shares a mutual-born court with them and shared no yes. Reading
+    the aggregate's membership instead of the opening event would hold a pair no
+    mutual was ever between, which is this guard reaching outside its own key.
+    """
+
+    async with session_factory() as session:
+        challenge = a_side_invited_into(a_mutual_born_challenge(sport=Sport.PADEL))
+        challenge.accept(BOB, occurred_at=at(2))
+        challenge.accept(CAROL, occurred_at=at(2))
+        await _record(session, challenge)
+
+        query = build_open_challenge_query(session)
+
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=at(3)
+        ) == (challenge.id,)
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, BOB, sport=Sport.PADEL, now=at(3)
+        ) == ()
+
+
+async def test_a_mutual_born_court_with_answers_owed_has_minted_nothing(
+    session_factory,
+):
+    """The bound on the second question, from the side that releases.
+
+    A mutual-born court that was invited into and is still waiting on those
+    answers has produced no game, so there is nothing for the mint to wait on
+    settling — those two are held by the pair rule and by nothing else. It is
+    what makes *a mutual-born challenge that ended without ever producing a game
+    holds nobody* fall out of the release rather than need a rule of its own:
+    when #325's withdraw ends this court, the pair rule lets go and there is
+    nothing behind it.
+    """
+
+    async with session_factory() as session:
+        await _record(
+            session, a_side_invited_into(a_mutual_born_challenge(sport=Sport.PADEL))
+        )
+
+        query = build_open_challenge_query(session)
+
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=at(3)
+        ) == ()
+
+
+async def test_it_holds_no_pair_a_year_on(session_factory):
+    """The fold-forward that #343 was, asked of the guard that replaced it.
+
+    A mutual-born challenge is ``ON`` for ever — every seat accepted at birth, no
+    lapse, no decline and no withdraw exit — so this read keeps answering *yes*
+    about it, and it is **meant** to: what releases the pair is the game
+    settling, one context over. The regression the shape guards against is the
+    read quietly widening back into *does a challenge still stand between these
+    two, in any sport*, which is what this asserts alongside it.
+    """
+
+    async with session_factory() as session:
+        challenge = a_mutual_born_challenge()
+        await _record(session, challenge)
+
+        a_year_on = at(24 * 365)
+        query = build_open_challenge_query(session)
+
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.TENNIS, now=a_year_on
+        ) == (challenge.id,)
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=a_year_on
+        ) == ()
+        assert await query.open_pairs_among(
+            [ORGANISER, ALICE], now=a_year_on
+        ) == frozenset()
+
+
+async def test_a_half_built_court_still_stands_between_its_pair(session_factory):
+    """The line the release runs along, asserted from the side that must not move.
+
+    One acceptance on a padel four is ``LINE_UP_INCOMPLETE``: the organiser can
+    still fill the open seat, so those two are still arranging a game and the
+    rule still holds them.
+    """
+
+    async with session_factory() as session:
+        challenge = Challenge.sent(
+            challenge_id=new_uuid(),
+            sport=Sport.PADEL,
+            mode=SearchMode.FOR_FUN,
+            window=Window.ANY,
+            organiser_id=ORGANISER,
+            arrangement=(
+                SeatPlan(side=Side.A, player_id=ORGANISER),
+                invited(ALICE, Side.A, 1),
+                SeatPlan(side=Side.B),
+                SeatPlan(side=Side.B),
+            ),
+            occurred_at=SENT_AT,
+        )
+        challenge.accept(ALICE, occurred_at=at(1))
+        await _record(session, challenge)
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE
+        )
+
+        assert pairs == frozenset({frozenset({ORGANISER, ALICE})})
+
+
+def a_padel_four_one_acceptance_on_it() -> Challenge:
+    """A padel four with one invitee in and two who never answered.
+
+    The acceptance is what makes it interesting: an accepted seat cannot leave, so
+    the court goes on standing as `LINE_UP_INCOMPLETE` however long the other two
+    take — which is the only way a **standing** court can hold a departed seat.
+    """
+
+    challenge = Challenge.sent(
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        mode=SearchMode.FOR_FUN,
+        window=Window.ANY,
+        organiser_id=ORGANISER,
+        arrangement=a_padel_court(ORGANISER, ALICE, BOB, CAROL),
+        occurred_at=SENT_AT,
+    )
+    challenge.accept(ALICE, occurred_at=at(1))
+    return challenge
+
+
+async def test_a_half_built_court_releases_the_pair_of_a_seat_that_left(
+    session_factory,
+):
+    """**The case no test reached**, and the one ADR-0150 §4 turned out to be wrong
+    about ([#393](https://github.com/Raketa02/Raketa/issues/393)).
+
+    Two tests sat either side of it. `test_a_declined_seat_releases_its_pairs` and
+    `test_a_lapsed_pair_releases_with_no_sweep_having_run` use **singles** courts,
+    which have *ended* by the time they assert — so they prove the release via the
+    challenge ending rather than via the seat leaving. The test immediately above
+    asserts the invitee who **accepted** on a court that still stands. Neither
+    reaches *a standing court with a departed seat on it*, which is exactly what §4
+    claimed held a pair *"in every sport until this challenge ends"*.
+
+    It does not. The court goes on standing because one invitee is in, and the one
+    whose day ran out is released the moment it did — **with no sweep having been
+    past**, which is the whole point of folding the clock. What still excludes them
+    is ``already_asked_at`` feeding ``NobodyIsAskedTwice``: this challenge's own
+    pool, per aggregate, and not the pair rule.
+    """
+
+    async with session_factory() as session:
+        # ALICE is in, so the court goes on standing without the other two, whose
+        # day runs out unanswered and unswept.
+        challenge = await _record(session, a_padel_four_one_acceptance_on_it())
+
+        assert challenge.standing_at(OUTSIDE) is Standing.LINE_UP_INCOMPLETE
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE, BOB, CAROL], now=OUTSIDE
+        )
+
+        # The accepted invitee, and nobody else. Not the two whose day ran out.
+        assert pairs == frozenset({frozenset({ORGANISER, ALICE})})
+        assert frozenset({ORGANISER, BOB}) not in pairs
+        assert frozenset({ORGANISER, CAROL}) not in pairs
+
+        # And this is what does hold them, one challenge wide.
+        assert {BOB, CAROL} <= challenge.already_asked_at(OUTSIDE)
+
+
+async def test_a_declining_seat_releases_its_pair_on_a_court_that_still_stands(
+    session_factory,
+):
+    """The same, for the other way a seat leaves. A decline and a lapse do the same
+    thing to the line-up and are different facts; the pair rule reads neither —
+    it reads ``is_live_at``, which both of them fail."""
+
+    async with session_factory() as session:
+        challenge = a_padel_four_one_acceptance_on_it()
+        challenge.decline(BOB, occurred_at=at(2))
+        challenge.decline(CAROL, occurred_at=at(2))
+        await _record(session, challenge)
+
+        # Read **after** its own last event. A decline is not folded against the
+        # clock, so an earlier instant would pass and would be asserting a court
+        # that had not happened yet.
+        answered = at(3)
+        assert challenge.standing_at(answered) is Standing.LINE_UP_INCOMPLETE
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE, BOB, CAROL], now=answered
+        )
+
+        assert pairs == frozenset({frozenset({ORGANISER, ALICE})})
+
+
+async def test_a_withdrawn_court_releases_the_pair_it_was_holding(session_factory):
+    """The other side of that line, and the early release the withdraw buys.
+
+    A send holds its pair for as long as an answer is owed — up to the whole
+    window, whether or not the invitee ever looks. Removing it
+    (``docs/adr/0165`` §4) is an ending, so the arranging stops on the instant
+    and both of them are strangers again.
+    """
+
+    async with session_factory() as session:
+        challenge = Challenge.sent(
+            challenge_id=new_uuid(),
+            sport=Sport.PADEL,
+            mode=SearchMode.FOR_FUN,
+            window=Window.ANY,
+            organiser_id=ORGANISER,
+            arrangement=(
+                SeatPlan(side=Side.A, player_id=ORGANISER),
+                invited(ALICE, Side.A, 1),
+                SeatPlan(side=Side.B),
+                SeatPlan(side=Side.B),
+            ),
+            occurred_at=SENT_AT,
+        )
+        challenge.withdraw(ORGANISER, occurred_at=at(1))
+        await _record(session, challenge)
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE
+        )
+
+        assert pairs == frozenset()
+
+
+async def test_the_same_people_may_be_asked_again_once_it_is_withdrawn(
+    session_factory,
+):
+    """**A new challenge, and that is what it is.** Fresh deadlines and its own
+    record of who has answered — the send is not a resurrection of the one that
+    was withdrawn, and nothing here reopens anything.
+
+    This is the re-ask ``docs/adr/0142`` §2 refused the pre-answer withdraw
+    over and ``docs/adr/0165`` §4 accepts as a named risk: remove, then ask the
+    same person again on a fresh clock. Nothing in this context can see it
+    across two aggregates, and the falsifier is the ADR's.
+    """
+
+    async with session_factory() as session:
+        challenge = Challenge.sent(
+            challenge_id=new_uuid(),
+            sport=Sport.PADEL,
+            mode=SearchMode.FOR_FUN,
+            window=Window.ANY,
+            organiser_id=ORGANISER,
+            arrangement=(
+                SeatPlan(side=Side.A, player_id=ORGANISER),
+                invited(ALICE, Side.A, 1),
+                SeatPlan(side=Side.B),
+                SeatPlan(side=Side.B),
+            ),
+            occurred_at=SENT_AT,
+        )
+        await _record(session, challenge)
+
+        with pytest.raises(AnOpenChallengeStandsWithThisPair):
+            await _send(session, now=INSIDE).execute(
+                SendChallengeCommand(
+                    organiser_id=ORGANISER,
+                    search_id=SEARCH,
+                    court=a_padel_choice(ORGANISER, ALICE, BOB, CAROL),
+                )
+            )
+
+        # One repository per unit of work, which is why the load and the save
+        # are the same one: a second would not know the version it read.
+        repository = _repository(session)
+        loaded = await repository.load(challenge.id)
+        loaded.withdraw(ORGANISER, occurred_at=at(1))
+        await repository.save(loaded)
+        await session.commit()
+
+        again = await _send(session, now=INSIDE).execute(
+            SendChallengeCommand(
+                organiser_id=ORGANISER,
+                search_id=SEARCH,
+                court=a_padel_choice(ORGANISER, ALICE, BOB, CAROL),
+            )
+        )
+
+        assert again != challenge.id
 
 
 async def test_a_challenge_reaching_outside_this_court_is_somebody_elses(
@@ -302,6 +826,7 @@ async def test_a_stream_whose_membership_changed_is_read_whole(session_factory):
                 invited(BOB, Side.B, 7),
                 invited(CAROL, Side.B, 8),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(2),
         )
         challenge.decline(BOB, occurred_at=at(3))
@@ -434,6 +959,36 @@ async def test_the_send_lands_when_nothing_stands_between_them(session_factory):
         )
 
 
+async def test_a_pair_whose_line_up_completed_may_arrange_a_second_game(
+    session_factory,
+):
+    """**And this is the consequence the release was taken with open eyes.**
+
+    Nothing replaces the block (``docs/adr/0142`` §1): the same two people may
+    open a second challenge before the first game has been played. Whether an
+    unplayed *game* should carry the block is a question about a ``games`` fact
+    and ``challenges`` has no port onto it, so it is filed rather than answered
+    here — and the send lands.
+    """
+
+    async with session_factory() as session:
+        first = a_tennis_challenge()
+        first.accept(ALICE, occurred_at=at(1))
+        await _record(session, first)
+
+        second = await _send(session, now=INSIDE, sport=Sport.TENNIS).execute(
+            SendChallengeCommand(
+                organiser_id=ORGANISER,
+                search_id=SEARCH,
+                court=a_tennis_choice(ORGANISER, ALICE),
+            )
+        )
+        await session.commit()
+
+        assert await _repository(session).load(second) is not None
+        assert second != first.id
+
+
 async def test_a_challenge_that_lapsed_no_longer_stands_in_the_way(session_factory):
     async with session_factory() as session:
         await _record(session, a_tennis_challenge())
@@ -448,3 +1003,30 @@ async def test_a_challenge_that_lapsed_no_longer_stands_in_the_way(session_facto
         await session.commit()
 
         assert await _repository(session).load(challenge_id) is not None
+
+
+async def test_two_mutual_born_games_come_back_newest_first(session_factory):
+    """**Ordered, because one of them is going to be named to a player.**
+
+    ``docs/adr/0154`` §4: the mint answers a repeat tap with the game the mutual
+    already has, so it has to pick one — and a ``frozenset`` has nothing to pick
+    *by*. A ``min()`` over uuids would be deterministic and meaningless, which is
+    the worst of the options.
+
+    0152's guard makes a second one impossible while the first is unfinished, so
+    this is a state the platform does not reach on its own. A restore, a clock
+    moving backwards or two taps racing does reach it, and the answer a player is
+    shown may not be **set iteration order**
+    (``docs/adr/0105``). So the order is part of the demand rather than a
+    property today's adapter happens to have.
+    """
+
+    async with session_factory() as session:
+        older = await _record(session, a_mutual_born_challenge(opened_at=at(0)))
+        newer = await _record(session, a_mutual_born_challenge(opened_at=at(5)))
+
+        assert await build_open_challenge_query(
+            session
+        ).mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.TENNIS, now=at(6)
+        ) == (newer.id, older.id)

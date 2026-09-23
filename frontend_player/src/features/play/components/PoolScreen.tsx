@@ -91,9 +91,13 @@
  * an **admission** rather than a bonus — so re-applying it here would score the wire's own
  * ranking a second time. `poolOrder` sorts on the printed number and nothing else.
  *
- * **The pin is not that.** `poolOrder`'s module note is where the difference is argued and this
- * is the pointer to it, because a reader arriving on the trail of #231 arrives here first
- * ([#310](https://github.com/Raketa02/Raketa/issues/310)).
+ * **Nor a pin.** For a while a liker was forced to the top of the served order
+ * ([#310](https://github.com/Raketa02/Raketa/issues/310)); ADR-0169 §8 removed it — *a yes
+ * informs; it never takes over* — and `poolOrder`'s module note is where both the bonus and the
+ * pin are argued against, because a reader arriving on the trail of #231 arrives here first.
+ * What a yes does on this screen is a **tag**, in either direction: *Wants to play you* off the
+ * row's admitting code, and *You said yes* off the reader's own outgoing list, which this screen
+ * reads from the same `GET /interest` the deck reads and asks one person at a time.
  *
  * **The cell a times rung adds — which is recorded here and drawn nowhere near here.** #223 §8
  * requires that the offered slot **visibly ticks**, marked as this-search-only, because
@@ -125,18 +129,20 @@ import { playerName } from '@/shared/formatting/playerName';
 import { Button, Chip, Note, behindOverlay, courtSeatCount, theme } from '@/shared/ui';
 
 import type { Candidate, RelaxedAsk, RungOffer } from '../domain/candidate';
-import { arrangementFor, seatOccupant, seatingToDraw } from '../domain/forecast';
+import { arrangementFor, seatOccupant, seatingToDraw, seatsFilled } from '../domain/forecast';
+import { carriedOnto } from '../domain/lineup';
 import { poolLadder } from '../domain/poolLadder';
+import { saidYesTo } from '../domain/outgoingInterest';
 import { bestMatchId, orderPool, pickable, poolSortRow } from '../domain/poolOrder';
 import { alreadyAsked } from '../domain/raisedPrompt';
 import type { SortOption } from '../domain/vocabulary';
 import { sentWeekForOrigin } from '../domain/workingWeek';
 import { useForecast, useSearchRecord } from '../hooks/useBuilder';
+import { useOutgoingInterest } from '../hooks/useInterest';
 import { useReadSearchBack, useTakeRung } from '../hooks/usePool';
 import { usePlaySession } from '../store/playSession.store';
 
 import { rungOfferLabel } from './accessibilityPresentation';
-import { builderEyebrow } from './builderPresentation';
 import { CandidateCard } from './candidate/CandidateCard';
 import { CandidateCardSocial } from './candidate/CandidateCardSocial';
 import { useHeldWait } from './heldWait';
@@ -149,6 +155,7 @@ import {
   POOL_TITLE,
   READING_AGAIN_LABEL,
   READ_AGAIN_LABEL,
+  leavingLine,
   poolLadderTitle,
   replacingLine,
   rungCount,
@@ -184,6 +191,7 @@ export interface PoolScreenProps {
 export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const lineup = usePlaySession((state) => state.lineup);
   const seatPlayer = usePlaySession((state) => state.seat);
+  const seatAll = usePlaySession((state) => state.seatAll);
   const unseat = usePlaySession((state) => state.unseat);
   const addForThisSearch = usePlaySession((state) => state.addForThisSearch);
   const clearAddedForThisSearch = usePlaySession((state) => state.clearAddedForThisSearch);
@@ -219,7 +227,23 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
 
   const record = useSearchRecord(searchId);
   const reread = useReadSearchBack();
+  /**
+   * The court's own record re-read beside the list's, when the two are different searches.
+   *
+   * A mark on a seat the gates no longer admit is derived against **the origin's** live rows
+   * (`withheldSeats`), and the read-back that refreshes them is this screen's act — so a pool
+   * that re-read only its list would leave a ⚡-built court unmarked. Its own instance, because
+   * the failure this screen surfaces and offers to retry is the list's: the court's re-read is
+   * for the mark, and a mark that does not appear is the same state as no read-back at all.
+   */
+  const rereadCourt = useReadSearchBack();
   const climb = useTakeRung();
+  /**
+   * The reader's own yeses, for the one tag this screen draws from them. The same read the
+   * deck holds, and nothing here waits for it: a row is drawn without the tag until the list
+   * lands, and gains it without moving (ADR-0169 §8).
+   */
+  const outgoing = useOutgoingInterest();
 
   const origin = record?.origin;
   const sport = origin?.sport;
@@ -259,28 +283,89 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
    */
   const replacing = seatOccupant(seated, pending);
 
+  /**
+   * **Nowhere left to put anybody** — and therefore the state every *Add to the court* on this
+   * screen is drawn dead in.
+   *
+   * The pool does not close on a full court and should not: the rows are still worth reading,
+   * the ladder is still worth taking, and the way back is the header's own control. What it
+   * must not do is offer an act it cannot carry out — an add against a court with four people
+   * on it either silently does nothing or quietly evicts somebody, and both are worse than a
+   * control that says no by being dim.
+   *
+   * **A visit against an occupied seat is exempt**, because there the add *is* the seat: it
+   * unseats whoever is in it and puts this person there, so a full court is the ordinary case
+   * rather than the blocked one (`add`, below).
+   */
+  const noSeatLeft = replacing === undefined && seatsFilled(seated) >= seats;
+
   // Two readings of the same rows, and the **served** order is the input to both: `orderPool`
-  // pins off it, and `bestMatchId`'s tie-break is *the row the server served first*, which is
-  // a statement about that order rather than about whichever array ends up drawn.
+  // hands it back untouched, and `bestMatchId`'s tie-break is *the row the server served
+  // first*, which is a statement about that order rather than about whichever array ends up
+  // drawn.
   const offered = pickable(record?.candidates ?? [], members);
   const drawn = orderPool(offered, sort);
   // Answered for every pool and drawn on the competitive one, because the coral tag lives in the
   // competitive card's identity row and the social card has no slot beside the handle for one
-  // (#309). A for-fun pool is pinned and explained and simply carries no *best match*.
+  // (#309). A for-fun pool carries its two interest tags and simply no *best match*.
   const bestMatch = bestMatchId(offered, sort);
+  // *You said yes* — the reader's own list, asked one person at a time, in the search's sport.
+  const saidYes = (candidate: Candidate) =>
+    sport !== undefined && saidYesTo(outgoing.data, sport, candidate.playerId);
+
+  /**
+   * **Whether the court is bound to some other search than the one this list is.**
+   *
+   * It is, in two cases: the line-up is ⚡'s, whose record returns exactly the people it seated
+   * and is therefore never the list a player picks from (`BuilderScreen`'s `listSearchId`); or a
+   * rung was taken and the list moved on while the court stayed on the strict search. Either
+   * way a pick has to move the court onto this list — `POST /forecasts` cites one search — and
+   * the new origin can vouch only for the rows it returned.
+   */
+  const elsewhere = lineup !== undefined && lineup.originSearchId !== searchId;
+  /** The court's own record, for the names and faces of people this list may not hold. */
+  const courtRecord = useSearchRecord(elsewhere ? lineup?.originSearchId : undefined);
 
   /**
    * The rows the header reads its names and faces off, and your own id for your own poster.
    *
+   * The court's own record is read **after** this list's, so a seated player it holds is drawn
+   * from it: with the court bound elsewhere, this list may never have shown them at all.
+   *
    * `self` is the account's, off `GET /users/me`: no route serves a searcher their own card, so
    * a seat that waited for an answer to name you would sit faceless until one landed.
    */
-  const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
+  const courtRows = [...(record?.candidates ?? []), ...(courtRecord?.candidates ?? [])];
+  const rows = new Map(courtRows.map((row) => [row.playerId, row]));
   const self = useCurrentUser().data?.id;
+
+  /**
+   * Who a pick keeps on the court, and who it takes off — **decided before the tap, and said.**
+   *
+   * `staying` is everybody the pick is not replacing. On a court bound to this list they all
+   * stay, trivially. On one bound elsewhere the list can vouch only for the rows it returned
+   * (`carriedOnto`), and the rest are named in a sentence above the rows rather than found
+   * missing from the court afterwards.
+   */
+  const staying = members.filter((seated) => seated !== replacing);
+  const carried = elsewhere
+    ? carriedOnto(
+        staying,
+        (record?.candidates ?? []).map((row) => row.playerId),
+      )
+    : staying;
+  const leaving = staying.filter((seated) => !carried.includes(seated));
 
   const ladder = poolLadder({
     rows: record?.candidates.length ?? 0,
-    offers: record?.envelope.rungOffers ?? null,
+    // **A pool over a challenge fill has no ladder**, and `null` is already this argument's
+    // value for *this answer carries no offers*. Taking a rung is `POST /searches` citing the
+    // offer, and that search does not complete a challenge — so the open-challenge gate would
+    // exclude the very people sitting on the court, and the first seat taken off the widened
+    // list would start a **new** line-up without them (`playSession.seat`'s own rule: a seat
+    // from a different search never mixes two). A widening that quietly drops the people who
+    // already said yes is not a remedy; on this court the remedies are ⚡ and another seat.
+    offers: origin?.completing === undefined ? (record?.envelope.rungOffers ?? null) : null,
   });
 
   const sportName = sport === undefined ? undefined : sportLabel(sport);
@@ -294,7 +379,8 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
    * from the list it widens would be the two disagreeing silently — and it is ⚡'s own
    * derivation, on the screen that takes the other branch.
    */
-  const sentWeek = origin === undefined ? undefined : sentWeekForOrigin(origin.week, profile?.week);
+  const sentWeek =
+    origin?.week === undefined ? undefined : sentWeekForOrigin(origin.week, profile?.week);
 
   /**
    * Re-read the arrival record, **once**.
@@ -308,6 +394,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const readAgain = useRef<() => void>(() => undefined);
   readAgain.current = () => {
     if (record !== undefined) reread.mutate(record);
+    if (courtRecord !== undefined) rereadCourt.mutate(courtRecord);
   };
 
   const readFor = useRef<string | undefined>(undefined);
@@ -368,8 +455,15 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
    * seat is never the person arriving in it, and there is no self-replacement to guard against.
    */
   function add(candidate: Candidate) {
-    if (replacing !== undefined) unseat(replacing);
-    seatPlayer(searchId, candidate.playerId);
+    if (elsewhere) {
+      // The court moves onto this list — one write, the way ⚡ rebinds — carrying the seats it
+      // can vouch for and the pick. `seat` would start a line-up of one instead, which is the
+      // origin guard's own silent destruction arriving from the pool.
+      seatAll(searchId, [...carried, candidate.playerId]);
+    } else {
+      if (replacing !== undefined) unseat(replacing);
+      seatPlayer(searchId, candidate.playerId);
+    }
     setPending(undefined);
   }
 
@@ -426,17 +520,18 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
           along with the screen. */}
       <View style={s.root} {...behindOverlay(latched || explaining !== undefined || asking)}>
         <ShellScreen
+          /* **What this screen is for**, and nothing above it. The pair was tried both ways
+             round: the facts promoted to the title with this name dropped, which put the court
+             and the pool under one heading; and the facts kept as 10.3's eyebrow over it,
+             which read as a caption saying what the header card below already draws — the
+             Sport under the court, the seats counted, and both of them in that card's own
+             spoken name. */
           title={POOL_TITLE}
           // The court is underneath — this screen **pops** back onto it, which is already how
           // the row's own *back to the court* control returns and why the pending replacement
           // needs no clearing rule. The chevron is that same `back`, one level up the screen
           // rather than inside a card.
           onBack={router.back}
-          eyebrow={
-            sportName === undefined || origin === undefined
-              ? undefined
-              : builderEyebrow({ sportName, seats, mode: origin.mode })
-          }
         >
           {record === undefined || sportName === undefined ? (
             <Note title={POOL_NO_RECORD_TITLE}>
@@ -485,8 +580,18 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                   one handle for another is a destruction found out about afterwards. */}
               {replacing === undefined ? null : (
                 <Text style={s.body}>
-                  {replacingLine(
-                    playerName(nameOf(record.candidates, replacing) ?? { kind: 'unknown' }),
+                  {replacingLine(playerName(nameOf(courtRows, replacing) ?? { kind: 'unknown' }))}
+                </Text>
+              )}
+
+              {/* And whom a pick off this list would take off the court, for the same reason:
+                  the court is bound to another search, and this one cannot vouch for them. */}
+              {leaving.length === 0 ? null : (
+                <Text style={s.body}>
+                  {leavingLine(
+                    leaving.map((seated) =>
+                      playerName(nameOf(courtRows, seated) ?? { kind: 'unknown' }),
+                    ),
                   )}
                 </Text>
               )}
@@ -548,8 +653,10 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                     /* Which row wears the coral tag is the ordering rule's answer and never a
                        card's: a component handed one candidate cannot know it is the highest. */
                     bestMatch={candidate.playerId === bestMatch}
+                    saidYes={saidYes(candidate)}
                     action="ADD_TO_COURT"
                     onAction={() => add(candidate)}
+                    actionDisabled={noSeatLeft}
                     onWhyFit={() => setExplaining(candidate)}
                   />
                 ) : (
@@ -557,8 +664,10 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                     key={candidate.playerId}
                     candidate={candidate}
                     envelope={record.envelope}
+                    saidYes={saidYes(candidate)}
                     action="ADD_TO_COURT"
                     onAction={() => add(candidate)}
+                    actionDisabled={noSeatLeft}
                     onWhyFit={() => setExplaining(candidate)}
                   />
                 ),
@@ -649,7 +758,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
           onClose={() => setExplaining(undefined)}
           candidate={explaining}
           envelope={record.envelope}
-          name={playerName({ kind: 'player', nickname: explaining.card.nickname })}
+          name={playerName({ kind: 'player', name: explaining.card.name })}
         />
       )}
 
@@ -693,9 +802,9 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
 function nameOf(
   rows: readonly Candidate[],
   playerId: string,
-): { readonly kind: 'player'; readonly nickname: string } | undefined {
-  const nickname = rows.find((row) => row.playerId === playerId)?.card.nickname;
-  return nickname === undefined ? undefined : { kind: 'player', nickname };
+): { readonly kind: 'player'; readonly name: string } | undefined {
+  const name = rows.find((row) => row.playerId === playerId)?.card.name;
+  return name === undefined ? undefined : { kind: 'player', name };
 }
 
 const s = StyleSheet.create({

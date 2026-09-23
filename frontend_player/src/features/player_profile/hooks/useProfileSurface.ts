@@ -1,6 +1,6 @@
 /**
- * The week, the radius and the declaration — the read Play's search screen is drawn from, and
- * the two writes that change it.
+ * The profile surface — the read Play's search screen and the You tab are drawn from — and
+ * the writes that change it.
  *
  * **Ordinary defaults, deliberately.** Nothing in Play background-refetches a *ranked list*,
  * because foregrounding would reorder the pool under the player's finger; this is not one, and
@@ -8,24 +8,48 @@
  * reads that should move. A radius widened in *You* on another device should be the radius the
  * next search runs at.
  *
- * **The two mutations write the response into the cache rather than invalidating it.** Each
+ * **The mutations write the response into the cache rather than invalidating it.** Each
  * route answers with the value **as the profile now holds it** — the radius after the range
- * and the step were re-checked — so a refetch would be a round trip for an answer already in
- * hand, and Part 7's *"don't immediately refetch what you were just handed"* is the rule. What
- * they must not do is write the number the client *sent*: a client that assumed its own value
- * landed would be re-deciding a bound the server owns.
+ * and the step were re-checked, the tags in the vocabulary's order — so a refetch would be a
+ * round trip for an answer already in hand, and Part 7's *"don't immediately refetch what you
+ * were just handed"* is the rule. What they must not do is write the number the client *sent*:
+ * a client that assumed its own value landed would be re-deciding a bound the server owns.
+ * The intro's route answers nothing by design, and its use case says why the line sent is the
+ * line held; the two gender writes answer nothing for the same reason and are held the same
+ * way. The opt-in's route answers with **the record it just made**, and that is what the cache
+ * holds — the answer, its moment and its surface, never the press.
+ *
+ * **The three social writes also invalidate the player's own record**
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2): the header card on the You tab draws the face, the intro and the tags off
+ * `GET /players/me/record`, which is another feature's read of the same facts — and a tab
+ * that read the old line under the name after *Save* would be the one screen the edit was
+ * made on saying it did not land. Invalidated, never patched: that read's shape is that
+ * feature's, and this one has no business composing it.
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { playerRecordKeys } from '@/features/player_record/types';
 import type { AppError } from '@/shared/errors';
 import type { PlayIntent } from '@/shared/vocabulary/playIntent';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { Sport } from '@/shared/vocabulary/sport';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
+import type { Gender, GenderPreference } from '../domain/gender';
 import type { PlayerProfileSurface } from '../domain/PlayerProfileSurface';
+import type { UploadedPhoto } from '../domain/photoCollection';
+import type { ProposalsOptIn } from '../domain/ProfileDraft';
+import type { RecordedProposalsOptIn } from '../domain/proposalsOptIn';
+import { answerProposalsOptIn } from '../use-cases/answerProposalsOptIn';
 import { changeAvailability } from '../use-cases/changeAvailability';
+import { changeGender } from '../use-cases/changeGender';
+import { changeGenderPreference } from '../use-cases/changeGenderPreference';
+import { changeIntro } from '../use-cases/changeIntro';
+import { changePhotos } from '../use-cases/changePhotos';
 import { changeSearchRadius } from '../use-cases/changeSearchRadius';
+import { changeSocialTags } from '../use-cases/changeSocialTags';
 import { declarePlayIntent, type PlayIntentDeclaration } from '../use-cases/declarePlayIntent';
 import { readProfileSurface } from '../use-cases/readProfileSurface';
 
@@ -111,6 +135,128 @@ export function useDeclarePlayIntent() {
               ...held,
               playIntents: { ...held.playIntents, [declared.sport]: declared.intent },
             },
+      );
+    },
+  });
+}
+
+/**
+ * Replace the profile's Social tags — the You tab's *Save* (ADR-0179 §2).
+ *
+ * The list written into the cache is the **route's**: the vocabulary's order, whatever order
+ * the picker pressed them in, so the picker draws the selection as the profile holds it.
+ */
+export function useChangeSocialTags() {
+  const client = useQueryClient();
+
+  return useMutation<readonly SocialTagId[], AppError, readonly SocialTagId[]>({
+    mutationFn: (socialTagIds) => changeSocialTags(socialTagIds),
+    onSuccess: (socialTagIds) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
+        held === undefined ? held : { ...held, socialTagIds },
+      );
+      void client.invalidateQueries({ queryKey: playerRecordKeys.all });
+    },
+  });
+}
+
+/**
+ * Replace the profile's photographs, in order — the You tab's write on **every change to the
+ * row** (ADR-0179 §2): a promotion, a removal, an upload that landed. Sent by `useOwnPhotos`,
+ * which is what decides that a change happened and that one write is in flight at a time.
+ *
+ * The pairs written into the cache are the route's ids in the route's order, each with the
+ * verdict the workbench held — the use case says why the verdicts ride along.
+ */
+export function useChangePhotos() {
+  const client = useQueryClient();
+
+  return useMutation<readonly UploadedPhoto[], AppError, readonly UploadedPhoto[]>({
+    mutationFn: (photos) => changePhotos(photos),
+    onSuccess: (photos) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
+        held === undefined ? held : { ...held, photos },
+      );
+      void client.invalidateQueries({ queryKey: playerRecordKeys.all });
+    },
+  });
+}
+
+/**
+ * Replace the profile's intro, or withdraw it — the You tab's *Save* and *Remove intro*
+ * (ADR-0179 §6). `undefined` withdraws.
+ *
+ * The line written into the cache is the one the use case answers with, and absent where
+ * withdrawn — never `''`, because the read never serves one.
+ */
+export function useChangeIntro() {
+  const client = useQueryClient();
+
+  return useMutation<string | undefined, AppError, string | undefined>({
+    mutationFn: (line) => changeIntro(line),
+    onSuccess: (intro) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) => {
+        if (held === undefined) return held;
+        const { intro: _withdrawn, ...rest } = held;
+        return intro === undefined ? rest : { ...rest, intro };
+      });
+      void client.invalidateQueries({ queryKey: playerRecordKeys.all });
+    },
+  });
+}
+
+/**
+ * Correct the profile's answer to the gender question — the You tab's *Save* under *About
+ * you* (ADR-0179 §2). The value written into the cache is the one the use case answers with,
+ * which is the value sent; nothing else reads it, so nothing else is invalidated.
+ */
+export function useChangeGender() {
+  const client = useQueryClient();
+
+  return useMutation<Gender, AppError, Gender>({
+    mutationFn: (gender) => changeGender(gender),
+    onSuccess: (gender) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
+        held === undefined ? held : { ...held, gender },
+      );
+    },
+  });
+}
+
+/**
+ * Change who the profile is matched with — the You tab's *Save* under *Who we should match
+ * you with* (ADR-0179 §2). The row's line follows the cache; the gate it changes is evaluated
+ * on the next search, on the far side, and nothing here has a cache of that to move.
+ */
+export function useChangeGenderPreference() {
+  const client = useQueryClient();
+
+  return useMutation<GenderPreference, AppError, GenderPreference>({
+    mutationFn: (preference) => changeGenderPreference(preference),
+    onSuccess: (genderPreference) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
+        held === undefined ? held : { ...held, genderPreference },
+      );
+    },
+  });
+}
+
+/**
+ * Answer the proposals question again, from the profile — the You tab's press on either
+ * answer (ADR-0179 §2). **Every press sends**, the same answer included; the use case says why.
+ *
+ * The record written into the cache is **the route's** — its moment and its surface are the
+ * server's to stamp, and a client that wrote its own clock and *this screen* into the cache
+ * would be asserting a consent it had only requested.
+ */
+export function useAnswerProposalsOptIn() {
+  const client = useQueryClient();
+
+  return useMutation<RecordedProposalsOptIn, AppError, ProposalsOptIn>({
+    mutationFn: (answer) => answerProposalsOptIn(answer),
+    onSuccess: (proposalsOptIn) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
+        held === undefined ? held : { ...held, proposalsOptIn },
       );
     },
   });

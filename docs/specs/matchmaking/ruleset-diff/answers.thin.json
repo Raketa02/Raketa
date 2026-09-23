@@ -1,5 +1,5 @@
 {
-  "ruleset_version": "2026.08.26-a",
+  "ruleset_version": "2026.09.15-a",
   "engine_version": "matchfit-v1",
   "density": "thin",
   "population_seed": 20260826,
@@ -481,10 +481,10 @@
       "combinations": 36
     },
     {
-      "key": "padel-E-0000 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "padel-E-0000 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "PADEL",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "padel-E-0000",
       "tail": false,
       "counts": {
@@ -506,60 +506,16 @@
         "n_returned": 10,
         "n_near_miss_recorded": 1
       },
-      "best_withheld_fit": 32.146499,
+      "best_withheld_fit": 38.505894,
       "returned": [
         {
-          "who": "padel-N-0019",
-          "fit": 85.494078,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
           "who": "padel-E-0017",
-          "fit": 71.320273,
+          "fit": 87.490146,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-S-0005",
-          "fit": 69.360703,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-S-0001",
-          "fit": 71.166397,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-E-0010",
-          "fit": 64.829521,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -570,8 +526,60 @@
         },
         {
           "who": "padel-W-0007",
-          "fit": 61.208647,
+          "fit": 82.434094,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-E-0010",
+          "fit": 83.448928,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-S-0005",
+          "fit": 80.66596,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-S-0001",
+          "fit": 79.751334,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -582,20 +590,12 @@
         },
         {
           "who": "padel-W-0010",
-          "fit": 55.623989,
+          "fit": 82.717355,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-S-0018",
-          "fit": 51.754862,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -606,8 +606,12 @@
         },
         {
           "who": "padel-E-0001",
-          "fit": 53.592796,
+          "fit": 71.349577,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -621,9 +625,45 @@
           "withheld": null
         },
         {
-          "who": "padel-N-0001",
-          "fit": 48.108673,
+          "who": "padel-N-0019",
+          "fit": 60.957635,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-N-0001",
+          "fit": 59.914486,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-S-0018",
+          "fit": 52.554563,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -636,8 +676,12 @@
       "near_miss": [
         {
           "who": "tail-near-twin",
-          "fit": 32.146499,
+          "fit": 38.505894,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -1568,8 +1612,12 @@
       "returned": [
         {
           "who": "padel-E-0017",
-          "fit": 83.966495,
+          "fit": 83.778585,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -1580,8 +1628,12 @@
         },
         {
           "who": "padel-E-0010",
-          "fit": 64.266765,
+          "fit": 60.497086,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -1592,8 +1644,12 @@
         },
         {
           "who": "padel-E-0001",
-          "fit": 59.829615,
+          "fit": 65.096503,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -3245,8 +3301,12 @@
       "returned": [
         {
           "who": "padel-E-0000",
-          "fit": 82.442133,
+          "fit": 91.067975,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -3257,8 +3317,12 @@
         },
         {
           "who": "padel-E-0017",
-          "fit": 75.764393,
+          "fit": 74.085192,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -3269,8 +3333,12 @@
         },
         {
           "who": "padel-E-0006",
-          "fit": 75.714528,
+          "fit": 71.298988,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -3281,8 +3349,12 @@
         },
         {
           "who": "padel-E-0018",
-          "fit": 62.183873,
+          "fit": 67.126396,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -3293,8 +3365,12 @@
         },
         {
           "who": "padel-E-0002",
-          "fit": 66.71556,
+          "fit": 63.391117,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -3305,8 +3381,12 @@
         },
         {
           "who": "padel-E-0005",
-          "fit": 60.603762,
+          "fit": 56.168082,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -3317,8 +3397,12 @@
         },
         {
           "who": "padel-E-0008",
-          "fit": 45.322626,
+          "fit": 47.199467,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -3329,8 +3413,12 @@
         },
         {
           "who": "padel-E-0001",
-          "fit": 47.306538,
+          "fit": 49.917016,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -5264,10 +5352,10 @@
       "combinations": 0
     },
     {
-      "key": "padel-N-0000 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "padel-N-0000 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "PADEL",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "padel-N-0000",
       "tail": false,
       "counts": {
@@ -5293,8 +5381,12 @@
       "returned": [
         {
           "who": "padel-N-0004",
-          "fit": 63.241016,
+          "fit": 72.571006,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -6294,32 +6386,20 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 7,
-        "n_cleared_floor": 4,
-        "n_returned": 4,
-        "n_near_miss_recorded": 3
+        "n_cleared_floor": 2,
+        "n_returned": 2,
+        "n_near_miss_recorded": 5
       },
-      "best_withheld_fit": 40.531868,
+      "best_withheld_fit": 41.701632,
       "returned": [
         {
-          "who": "padel-N-0007",
-          "fit": 51.903846,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            },
-            {
-              "term": "PLAYING_STYLE",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
           "who": "padel-N-0006",
-          "fit": 57.174641,
+          "fit": 49.388212,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -6330,20 +6410,12 @@
         },
         {
           "who": "tail-wide-week",
-          "fit": 53.718681,
+          "fit": 57.122078,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": null
-        },
-        {
-          "who": "tail-opposed",
-          "fit": 50.531868,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -6355,9 +6427,49 @@
       ],
       "near_miss": [
         {
-          "who": "tail-unseen",
-          "fit": 40.531868,
+          "who": "padel-N-0007",
+          "fit": 41.701632,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            },
+            {
+              "term": "PLAYING_STYLE",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "tail-unseen",
+          "fit": 41.537662,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "tail-opposed",
+          "fit": 41.537662,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -6368,8 +6480,12 @@
         },
         {
           "who": "tail-newcomer",
-          "fit": 40.531868,
+          "fit": 41.537662,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -6380,8 +6496,12 @@
         },
         {
           "who": "tail-twin",
-          "fit": 40.531868,
+          "fit": 41.537662,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -7384,10 +7504,10 @@
       "combinations": 0
     },
     {
-      "key": "padel-N-0010 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "padel-N-0010 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "PADEL",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "padel-N-0010",
       "tail": false,
       "counts": {
@@ -7405,26 +7525,30 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 1,
-        "n_cleared_floor": 1,
-        "n_returned": 1,
-        "n_near_miss_recorded": 0
+        "n_cleared_floor": 0,
+        "n_returned": 0,
+        "n_near_miss_recorded": 1
       },
-      "best_withheld_fit": null,
-      "returned": [
+      "best_withheld_fit": 41.000216,
+      "returned": [],
+      "near_miss": [
         {
           "who": "padel-N-0015",
-          "fit": 54.824122,
+          "fit": 41.000216,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
             }
           ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
         }
       ],
-      "near_miss": [],
       "excluded_by_suppression": 0
     },
     {
@@ -9352,28 +9476,20 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 42,
-        "n_cleared_floor": 41,
+        "n_cleared_floor": 38,
         "n_returned": 10,
-        "n_near_miss_recorded": 1
+        "n_near_miss_recorded": 4
       },
-      "best_withheld_fit": 37.649498,
+      "best_withheld_fit": 40.134164,
       "returned": [
         {
           "who": "padel-W-0000",
-          "fit": 83.486376,
+          "fit": 83.211172,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-W-0009",
-          "fit": 80.912866,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -9384,32 +9500,12 @@
         },
         {
           "who": "padel-S-0006",
-          "fit": 80.284399,
+          "fit": 88.517927,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-N-0017",
-          "fit": 80.238878,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-S-0015",
-          "fit": 80.100309,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -9420,8 +9516,12 @@
         },
         {
           "who": "padel-W-0010",
-          "fit": 77.836717,
+          "fit": 85.625211,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -9431,9 +9531,13 @@
           "withheld": null
         },
         {
-          "who": "padel-N-0001",
-          "fit": 73.970521,
+          "who": "padel-W-0009",
+          "fit": 77.442478,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -9443,9 +9547,29 @@
           "withheld": null
         },
         {
-          "who": "padel-E-0010",
-          "fit": 76.214944,
+          "who": "padel-S-0015",
+          "fit": 79.209456,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-N-0017",
+          "fit": 76.645947,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -9456,8 +9580,12 @@
         },
         {
           "who": "padel-W-0016",
-          "fit": 65.076926,
+          "fit": 70.545457,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -9468,8 +9596,44 @@
         },
         {
           "who": "padel-S-0014",
-          "fit": 60.706902,
+          "fit": 65.380884,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-N-0001",
+          "fit": 71.965161,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-N-0010",
+          "fit": 60.740476,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -9481,15 +9645,67 @@
       ],
       "near_miss": [
         {
-          "who": "padel-E-0013",
-          "fit": 37.649498,
+          "who": "padel-S-0019",
+          "fit": 40.134164,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-S-0012",
+          "fit": 39.912088,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-E-0013",
+          "fit": 38.211513,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
             },
             {
               "term": "PLAYING_STYLE",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-W-0019",
+          "fit": 36.149451,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
             }
           ],
@@ -10440,8 +10656,12 @@
       "returned": [
         {
           "who": "padel-S-0017",
-          "fit": 58.468026,
+          "fit": 62.73494,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -10452,8 +10672,12 @@
         },
         {
           "who": "padel-S-0013",
-          "fit": 64.469107,
+          "fit": 60.736218,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -11276,10 +11500,10 @@
       "combinations": 0
     },
     {
-      "key": "padel-S-0005 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "padel-S-0005 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "PADEL",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "padel-S-0005",
       "tail": false,
       "counts": {
@@ -12431,16 +12655,20 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 4,
-        "n_cleared_floor": 4,
-        "n_returned": 4,
-        "n_near_miss_recorded": 0
+        "n_cleared_floor": 3,
+        "n_returned": 3,
+        "n_near_miss_recorded": 1
       },
-      "best_withheld_fit": null,
+      "best_withheld_fit": 39.795849,
       "returned": [
         {
           "who": "padel-E-0010",
-          "fit": 64.454915,
+          "fit": 60.719445,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -12451,8 +12679,12 @@
         },
         {
           "who": "padel-E-0017",
-          "fit": 56.255403,
+          "fit": 51.029112,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -12463,8 +12695,12 @@
         },
         {
           "who": "padel-E-0001",
-          "fit": 46.399492,
+          "fit": 48.817566,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -12476,21 +12712,26 @@
           ],
           "reason": "NEWCOMER_WINDOW",
           "withheld": null
-        },
+        }
+      ],
+      "near_miss": [
         {
           "who": "padel-S-0001",
-          "fit": 46.750334,
+          "fit": 39.795849,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
             }
           ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
         }
       ],
-      "near_miss": [],
       "excluded_by_suppression": 0
     },
     {
@@ -14267,16 +14508,68 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 36,
-        "n_cleared_floor": 36,
+        "n_cleared_floor": 33,
         "n_returned": 10,
-        "n_near_miss_recorded": 0
+        "n_near_miss_recorded": 3
       },
-      "best_withheld_fit": null,
+      "best_withheld_fit": 43.901855,
       "returned": [
         {
-          "who": "padel-N-0007",
-          "fit": 66.649825,
+          "who": "padel-E-0009",
+          "fit": 65.110908,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-W-0004",
+          "fit": 62.674804,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-W-0002",
+          "fit": 72.621324,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-N-0007",
+          "fit": 59.575546,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -14290,45 +14583,13 @@
           "withheld": null
         },
         {
-          "who": "padel-E-0009",
-          "fit": 68.170768,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-W-0004",
-          "fit": 66.109449,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
           "who": "padel-E-0010",
-          "fit": 64.725033,
+          "fit": 61.038676,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-S-0016",
-          "fit": 60.770709,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -14339,8 +14600,60 @@
         },
         {
           "who": "padel-W-0000",
-          "fit": 60.607718,
+          "fit": 56.172758,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-E-0008",
+          "fit": 55.017443,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-S-0017",
+          "fit": 59.826226,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tail-newcomer",
+          "fit": 62.51041,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -14351,44 +14664,12 @@
         },
         {
           "who": "padel-E-0007",
-          "fit": 60.8033,
+          "fit": 56.4039,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-N-0015",
-          "fit": 63.293777,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-E-0017",
-          "fit": 59.944757,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-E-0019",
-          "fit": 65.771877,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -14398,7 +14679,60 @@
           "withheld": null
         }
       ],
-      "near_miss": [],
+      "near_miss": [
+        {
+          "who": "padel-N-0011",
+          "fit": 43.901855,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-N-0018",
+          "fit": 39.40367,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            },
+            {
+              "term": "PLAYING_STYLE",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-S-0007",
+          "fit": 37.477399,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        }
+      ],
       "excluded_by_suppression": 1
     },
     {
@@ -16899,9 +17233,13 @@
       "best_withheld_fit": null,
       "returned": [
         {
-          "who": "padel-W-0009",
-          "fit": 75.648566,
+          "who": "padel-W-0010",
+          "fit": 74.919496,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -16912,80 +17250,12 @@
         },
         {
           "who": "padel-S-0011",
-          "fit": 82.072966,
+          "fit": 81.540778,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-W-0007",
-          "fit": 70.35753,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-S-0004",
-          "fit": 69.791667,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-W-0010",
-          "fit": 68.778035,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-S-0015",
-          "fit": 70.654814,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-S-0000",
-          "fit": 70.422058,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-N-0015",
-          "fit": 67.85756,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -16996,8 +17266,108 @@
         },
         {
           "who": "padel-S-0006",
-          "fit": 69.19917,
+          "fit": 75.417201,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-W-0009",
+          "fit": 71.221033,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-W-0016",
+          "fit": 70.093336,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-S-0004",
+          "fit": 67.026516,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-S-0014",
+          "fit": 65.940192,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-S-0015",
+          "fit": 68.046599,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-W-0007",
+          "fit": 64.96799,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -17008,8 +17378,12 @@
         },
         {
           "who": "padel-N-0010",
-          "fit": 67.924732,
+          "fit": 73.911047,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -18550,10 +18924,10 @@
       "combinations": 0
     },
     {
-      "key": "padel-W-0005 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "padel-W-0005 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "PADEL",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "padel-W-0005",
       "tail": false,
       "counts": {
@@ -18571,16 +18945,20 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 3,
-        "n_cleared_floor": 2,
-        "n_returned": 2,
-        "n_near_miss_recorded": 1
+        "n_cleared_floor": 3,
+        "n_returned": 3,
+        "n_near_miss_recorded": 0
       },
-      "best_withheld_fit": 38.062696,
+      "best_withheld_fit": null,
       "returned": [
         {
           "who": "padel-W-0004",
-          "fit": 80.976836,
+          "fit": 64.074519,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -18591,8 +18969,28 @@
         },
         {
           "who": "padel-W-0018",
-          "fit": 71.415622,
+          "fit": 59.105389,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-W-0000",
+          "fit": 47.124875,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -18602,20 +19000,7 @@
           "withheld": null
         }
       ],
-      "near_miss": [
-        {
-          "who": "padel-W-0000",
-          "fit": 38.062696,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        }
-      ],
+      "near_miss": [],
       "excluded_by_suppression": 0
     },
     {
@@ -19631,10 +20016,10 @@
       "combinations": 10
     },
     {
-      "key": "padel-W-0010 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "padel-W-0010 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "PADEL",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "padel-W-0010",
       "tail": false,
       "counts": {
@@ -19652,28 +20037,20 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 9,
-        "n_cleared_floor": 6,
-        "n_returned": 6,
-        "n_near_miss_recorded": 3
+        "n_cleared_floor": 9,
+        "n_returned": 9,
+        "n_near_miss_recorded": 0
       },
-      "best_withheld_fit": 42.687506,
+      "best_withheld_fit": null,
       "returned": [
         {
-          "who": "padel-W-0000",
-          "fit": 63.66244,
+          "who": "padel-S-0016",
+          "fit": 77.050928,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-N-0015",
-          "fit": 64.294767,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -19684,8 +20061,12 @@
         },
         {
           "who": "padel-E-0000",
-          "fit": 54.762167,
+          "fit": 81.18983,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -19695,9 +20076,13 @@
           "withheld": null
         },
         {
-          "who": "padel-S-0016",
-          "fit": 54.065725,
+          "who": "padel-W-0000",
+          "fit": 63.045656,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -19707,9 +20092,45 @@
           "withheld": null
         },
         {
-          "who": "padel-W-0002",
-          "fit": 50.348475,
+          "who": "padel-N-0015",
+          "fit": 65.835476,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-E-0019",
+          "fit": 62.574955,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-S-0017",
+          "fit": 50.654831,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -19720,8 +20141,44 @@
         },
         {
           "who": "padel-S-0013",
-          "fit": 53.275912,
+          "fit": 74.337282,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-W-0002",
+          "fit": 65.587053,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-W-0018",
+          "fit": 69.401494,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -19731,44 +20188,7 @@
           "withheld": null
         }
       ],
-      "near_miss": [
-        {
-          "who": "padel-E-0019",
-          "fit": 42.687506,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
-          "who": "padel-W-0018",
-          "fit": 41.281545,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
-          "who": "padel-S-0017",
-          "fit": 33.418719,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        }
-      ],
+      "near_miss": [],
       "excluded_by_suppression": 0
     },
     {
@@ -21281,8 +21701,12 @@
       "returned": [
         {
           "who": "padel-S-0015",
-          "fit": 73.930347,
+          "fit": 71.917682,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -21293,8 +21717,12 @@
         },
         {
           "who": "tail-newcomer",
-          "fit": 50.891867,
+          "fit": 53.781297,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -21305,8 +21733,12 @@
         },
         {
           "who": "tail-wide-week",
-          "fit": 68.474284,
+          "fit": 74.560518,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -21317,8 +21749,12 @@
         },
         {
           "who": "tail-unseen",
-          "fit": 50.891867,
+          "fit": 53.781297,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -21328,9 +21764,13 @@
           "withheld": null
         },
         {
-          "who": "tail-twin",
-          "fit": 50.891867,
+          "who": "tail-near-twin",
+          "fit": 56.211326,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -21340,9 +21780,13 @@
           "withheld": null
         },
         {
-          "who": "tail-near-twin",
-          "fit": 52.948045,
+          "who": "tail-twin",
+          "fit": 53.781297,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -21353,8 +21797,12 @@
         },
         {
           "who": "tail-opposed",
-          "fit": 60.891867,
+          "fit": 53.781297,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -22691,10 +23139,10 @@
       "combinations": 0
     },
     {
-      "key": "tail-far \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "tail-far \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "PADEL",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "tail-far",
       "tail": true,
       "counts": {
@@ -26660,10 +27108,10 @@
       "combinations": 136
     },
     {
-      "key": "tail-unseen \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "tail-unseen \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "PADEL",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "tail-unseen",
       "tail": true,
       "counts": {
@@ -26681,40 +27129,20 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 28,
-        "n_cleared_floor": 18,
+        "n_cleared_floor": 20,
         "n_returned": 10,
-        "n_near_miss_recorded": 10
+        "n_near_miss_recorded": 8
       },
-      "best_withheld_fit": 39.726212,
+      "best_withheld_fit": 43.269264,
       "returned": [
         {
           "who": "tail-newcomer",
-          "fit": 94.159394,
+          "fit": 82.431172,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-N-0015",
-          "fit": 75.526662,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "padel-W-0000",
-          "fit": 69.330963,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -26725,8 +27153,12 @@
         },
         {
           "who": "padel-N-0007",
-          "fit": 63.062277,
+          "fit": 61.610701,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -26741,8 +27173,12 @@
         },
         {
           "who": "padel-E-0007",
-          "fit": 58.416964,
+          "fit": 50.91166,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -26752,9 +27188,13 @@
           "withheld": null
         },
         {
-          "who": "padel-E-0002",
-          "fit": 67.335779,
+          "who": "padel-N-0015",
+          "fit": 54.810563,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -26764,9 +27204,13 @@
           "withheld": null
         },
         {
-          "who": "padel-N-0011",
-          "fit": 69.309621,
+          "who": "padel-W-0004",
+          "fit": 44.658337,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -26776,9 +27220,49 @@
           "withheld": null
         },
         {
-          "who": "padel-E-0008",
-          "fit": 56.281225,
+          "who": "padel-W-0000",
+          "fit": 45.163339,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-N-0018",
+          "fit": 50.072366,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            },
+            {
+              "term": "PLAYING_STYLE",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "padel-N-0006",
+          "fit": 48.980317,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -26789,8 +27273,12 @@
         },
         {
           "who": "padel-W-0002",
-          "fit": 62.681443,
+          "fit": 50.611582,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -26800,9 +27288,13 @@
           "withheld": null
         },
         {
-          "who": "padel-N-0006",
-          "fit": 55.84602,
+          "who": "padel-E-0010",
+          "fit": 44.449479,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -26814,113 +27306,13 @@
       ],
       "near_miss": [
         {
-          "who": "padel-E-0019",
-          "fit": 39.726212,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
-          "who": "padel-E-0013",
-          "fit": 39.108947,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            },
-            {
-              "term": "PLAYING_STYLE",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
-          "who": "padel-E-0010",
-          "fit": 38.923632,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
-          "who": "padel-E-0017",
-          "fit": 38.883367,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
-          "who": "padel-W-0004",
-          "fit": 37.796638,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
           "who": "padel-N-0005",
-          "fit": 37.689168,
+          "fit": 43.269264,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
-          "who": "padel-E-0005",
-          "fit": 36.842267,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
-          "who": "padel-N-0018",
-          "fit": 36.375255,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
             },
-            {
-              "term": "PLAYING_STYLE",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
-        {
-          "who": "padel-W-0012",
-          "fit": 32.740421,
-          "degraded": [
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -26931,8 +27323,112 @@
         },
         {
           "who": "padel-E-0006",
-          "fit": 24.720218,
+          "fit": 42.791271,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-N-0011",
+          "fit": 42.739624,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-W-0012",
+          "fit": 41.171424,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-E-0005",
+          "fit": 39.050611,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-E-0008",
+          "fit": 32.355135,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-E-0013",
+          "fit": 29.026461,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            },
+            {
+              "term": "PLAYING_STYLE",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "padel-E-0019",
+          "fit": 28.141971,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -28129,20 +28625,12 @@
       "returned": [
         {
           "who": "tennis-E-0015",
-          "fit": 76.107298,
+          "fit": 71.763171,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-E-0016",
-          "fit": 52.725275,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -28153,8 +28641,28 @@
         },
         {
           "who": "tennis-E-0000",
-          "fit": 52.420964,
+          "fit": 55.588412,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-E-0016",
+          "fit": 46.857143,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -28165,8 +28673,12 @@
         },
         {
           "who": "tennis-S-0003",
-          "fit": 83.656641,
+          "fit": 83.412394,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -28926,16 +29438,20 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 7,
-        "n_cleared_floor": 7,
-        "n_returned": 7,
-        "n_near_miss_recorded": 0
+        "n_cleared_floor": 6,
+        "n_returned": 6,
+        "n_near_miss_recorded": 1
       },
-      "best_withheld_fit": null,
+      "best_withheld_fit": 43.776706,
       "returned": [
         {
-          "who": "tennis-S-0003",
-          "fit": 81.650961,
+          "who": "tennis-N-0005",
+          "fit": 75.274467,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -28946,8 +29462,12 @@
         },
         {
           "who": "tennis-E-0015",
-          "fit": 69.840709,
+          "fit": 64.357202,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -28958,8 +29478,12 @@
         },
         {
           "who": "tennis-E-0009",
-          "fit": 67.217764,
+          "fit": 61.257358,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -28970,32 +29494,12 @@
         },
         {
           "who": "tennis-N-0011",
-          "fit": 72.451698,
+          "fit": 67.442916,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-N-0005",
-          "fit": 69.078395,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-E-0016",
-          "fit": 50.118752,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -29006,8 +29510,28 @@
         },
         {
           "who": "tennis-S-0007",
-          "fit": 44.619901,
+          "fit": 46.368974,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-S-0003",
+          "fit": 81.042045,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -29017,7 +29541,24 @@
           "withheld": null
         }
       ],
-      "near_miss": [],
+      "near_miss": [
+        {
+          "who": "tennis-E-0016",
+          "fit": 43.776706,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        }
+      ],
       "excluded_by_suppression": 0
     },
     {
@@ -29925,8 +30466,12 @@
       "returned": [
         {
           "who": "tennis-E-0015",
-          "fit": 76.10791,
+          "fit": 71.763893,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -29937,8 +30482,12 @@
         },
         {
           "who": "tennis-E-0000",
-          "fit": 49.874054,
+          "fit": 52.578427,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -29949,8 +30498,12 @@
         },
         {
           "who": "tennis-E-0011",
-          "fit": 53.403641,
+          "fit": 56.749757,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -31465,10 +32018,10 @@
       "combinations": 0
     },
     {
-      "key": "tennis-E-0018 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "tennis-E-0018 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "TENNIS",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "tennis-E-0018",
       "tail": false,
       "counts": {
@@ -31486,16 +32039,36 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 2,
-        "n_cleared_floor": 1,
-        "n_returned": 1,
-        "n_near_miss_recorded": 1
+        "n_cleared_floor": 2,
+        "n_returned": 2,
+        "n_near_miss_recorded": 0
       },
-      "best_withheld_fit": 32.313487,
+      "best_withheld_fit": null,
       "returned": [
         {
           "who": "tennis-N-0007",
-          "fit": 46.681625,
+          "fit": 45.462819,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-E-0012",
+          "fit": 52.964083,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -31505,20 +32078,7 @@
           "withheld": null
         }
       ],
-      "near_miss": [
-        {
-          "who": "tennis-E-0012",
-          "fit": 32.313487,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        }
-      ],
+      "near_miss": [],
       "excluded_by_suppression": 0
     },
     {
@@ -32727,8 +33287,12 @@
       "returned": [
         {
           "who": "tennis-N-0002",
-          "fit": 70.26578,
+          "fit": 64.859559,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -33960,16 +34524,20 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 7,
-        "n_cleared_floor": 7,
-        "n_returned": 7,
-        "n_near_miss_recorded": 0
+        "n_cleared_floor": 6,
+        "n_returned": 6,
+        "n_near_miss_recorded": 1
       },
-      "best_withheld_fit": null,
+      "best_withheld_fit": 40.719376,
       "returned": [
         {
           "who": "tennis-W-0009",
-          "fit": 74.055384,
+          "fit": 71.733799,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -33984,8 +34552,12 @@
         },
         {
           "who": "tennis-E-0004",
-          "fit": 67.72464,
+          "fit": 64.583665,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -33996,8 +34568,12 @@
         },
         {
           "who": "tennis-E-0012",
-          "fit": 70.774108,
+          "fit": 68.187583,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -34008,8 +34584,12 @@
         },
         {
           "who": "tennis-W-0014",
-          "fit": 70.051475,
+          "fit": 64.606289,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -34020,20 +34600,12 @@
         },
         {
           "who": "tennis-E-0002",
-          "fit": 59.672181,
+          "fit": 64.158032,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-W-0001",
-          "fit": 47.531779,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -34044,8 +34616,12 @@
         },
         {
           "who": "tennis-W-0005",
-          "fit": 45.23626,
+          "fit": 47.097398,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -34055,7 +34631,24 @@
           "withheld": null
         }
       ],
-      "near_miss": [],
+      "near_miss": [
+        {
+          "who": "tennis-W-0001",
+          "fit": 40.719376,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        }
+      ],
       "excluded_by_suppression": 0
     },
     {
@@ -35377,8 +35970,12 @@
       "returned": [
         {
           "who": "tennis-W-0004",
-          "fit": 72.801352,
+          "fit": 67.856144,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -35389,8 +35986,12 @@
         },
         {
           "who": "tennis-N-0011",
-          "fit": 71.313609,
+          "fit": 66.097902,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -35401,32 +36002,12 @@
         },
         {
           "who": "tennis-E-0015",
-          "fit": 67.988617,
+          "fit": 62.168366,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-E-0009",
-          "fit": 60.086507,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-E-0010",
-          "fit": 65.92257,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -35437,8 +36018,28 @@
         },
         {
           "who": "tennis-S-0007",
-          "fit": 54.419611,
+          "fit": 57.95045,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-E-0010",
+          "fit": 62.453946,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -35449,8 +36050,28 @@
         },
         {
           "who": "tennis-N-0005",
-          "fit": 55.28731,
+          "fit": 58.975912,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-E-0009",
+          "fit": 52.829508,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -35461,8 +36082,12 @@
         },
         {
           "who": "tennis-E-0016",
-          "fit": 51.425331,
+          "fit": 45.320846,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -35473,8 +36098,12 @@
         },
         {
           "who": "tennis-W-0011",
-          "fit": 55.005371,
+          "fit": 49.551802,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -35485,8 +36114,12 @@
         },
         {
           "who": "tennis-S-0003",
-          "fit": 66.510181,
+          "fit": 63.148396,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -36422,36 +37055,16 @@
         "n_returned": 7,
         "n_near_miss_recorded": 1
       },
-      "best_withheld_fit": 39.465577,
+      "best_withheld_fit": 40.2775,
       "returned": [
         {
           "who": "tennis-S-0002",
-          "fit": 81.636384,
+          "fit": 81.024818,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-S-0008",
-          "fit": 76.327807,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-S-0000",
-          "fit": 68.978461,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -36462,8 +37075,44 @@
         },
         {
           "who": "tennis-S-0005",
-          "fit": 69.242045,
+          "fit": 75.467871,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-S-0008",
+          "fit": 72.023772,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-S-0000",
+          "fit": 66.065454,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -36474,8 +37123,12 @@
         },
         {
           "who": "tennis-S-0015",
-          "fit": 66.023991,
+          "fit": 59.846535,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -36486,8 +37139,12 @@
         },
         {
           "who": "tennis-S-0010",
-          "fit": 61.289452,
+          "fit": 54.251171,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -36498,8 +37155,12 @@
         },
         {
           "who": "tennis-S-0009",
-          "fit": 55.74637,
+          "fit": 50.427528,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -36512,8 +37173,12 @@
       "near_miss": [
         {
           "who": "tennis-S-0007",
-          "fit": 39.465577,
+          "fit": 40.2775,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -38306,28 +38971,20 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 10,
-        "n_cleared_floor": 9,
-        "n_returned": 9,
-        "n_near_miss_recorded": 1
+        "n_cleared_floor": 8,
+        "n_returned": 8,
+        "n_near_miss_recorded": 2
       },
-      "best_withheld_fit": 32.349958,
+      "best_withheld_fit": 40.883048,
       "returned": [
         {
-          "who": "tennis-E-0015",
-          "fit": 77.933369,
+          "who": "tennis-W-0004",
+          "fit": 54.285835,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-W-0004",
-          "fit": 61.318783,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -38338,8 +38995,12 @@
         },
         {
           "who": "tennis-W-0011",
-          "fit": 64.923007,
+          "fit": 61.272645,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -38350,32 +39011,12 @@
         },
         {
           "who": "tennis-E-0009",
-          "fit": 60.094184,
+          "fit": 52.838581,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-E-0016",
-          "fit": 47.670271,
-          "degraded": [
-            {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-E-0010",
-          "fit": 55.531549,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -38386,20 +39027,12 @@
         },
         {
           "who": "tennis-S-0003",
-          "fit": 89.648931,
+          "fit": 90.494191,
           "degraded": [
             {
-              "term": "RELIABILITY",
-              "reason": "NOTHING_FROM_THEM"
-            }
-          ],
-          "reason": "NEWCOMER_WINDOW",
-          "withheld": null
-        },
-        {
-          "who": "tennis-N-0011",
-          "fit": 75.981425,
-          "degraded": [
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -38410,8 +39043,60 @@
         },
         {
           "who": "tennis-N-0005",
-          "fit": 75.530876,
+          "fit": 82.900126,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-E-0015",
+          "fit": 73.921255,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-N-0011",
+          "fit": 71.614411,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        },
+        {
+          "who": "tennis-E-0010",
+          "fit": 50.173649,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -38423,9 +39108,29 @@
       ],
       "near_miss": [
         {
-          "who": "tennis-S-0007",
-          "fit": 32.349958,
+          "who": "tennis-E-0016",
+          "fit": 40.883048,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
+            {
+              "term": "RELIABILITY",
+              "reason": "NOTHING_FROM_THEM"
+            }
+          ],
+          "reason": null,
+          "withheld": "BELOW_FLOOR"
+        },
+        {
+          "who": "tennis-S-0007",
+          "fit": 31.868132,
+          "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -39222,10 +39927,10 @@
       "combinations": 0
     },
     {
-      "key": "tennis-S-0013 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "tennis-S-0013 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "TENNIS",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "tennis-S-0013",
       "tail": false,
       "counts": {
@@ -39247,12 +39952,16 @@
         "n_returned": 2,
         "n_near_miss_recorded": 1
       },
-      "best_withheld_fit": 26.696661,
+      "best_withheld_fit": 34.729251,
       "returned": [
         {
           "who": "tennis-E-0000",
-          "fit": 65.63573,
+          "fit": 65.690102,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -39262,9 +39971,13 @@
           "withheld": null
         },
         {
-          "who": "tennis-E-0011",
-          "fit": 47.334209,
+          "who": "tennis-E-0015",
+          "fit": 48.782315,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -39276,9 +39989,13 @@
       ],
       "near_miss": [
         {
-          "who": "tennis-E-0015",
-          "fit": 26.696661,
+          "who": "tennis-E-0011",
+          "fit": 34.729251,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -39928,10 +40645,10 @@
       "combinations": 0
     },
     {
-      "key": "tennis-S-0018 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "tennis-S-0018 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "TENNIS",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "tennis-S-0018",
       "tail": false,
       "counts": {
@@ -40988,8 +41705,12 @@
       "returned": [
         {
           "who": "tennis-N-0002",
-          "fit": 73.844259,
+          "fit": 69.088669,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -41000,8 +41721,12 @@
         },
         {
           "who": "tennis-S-0012",
-          "fit": 66.254587,
+          "fit": 60.119057,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -41012,8 +41737,12 @@
         },
         {
           "who": "tennis-S-0001",
-          "fit": 44.20501,
+          "fit": 45.878649,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -41728,10 +42457,10 @@
       "combinations": 0
     },
     {
-      "key": "tennis-W-0008 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "tennis-W-0008 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "TENNIS",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "tennis-W-0008",
       "tail": false,
       "counts": {
@@ -41749,26 +42478,30 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 1,
-        "n_cleared_floor": 0,
-        "n_returned": 0,
-        "n_near_miss_recorded": 1
+        "n_cleared_floor": 1,
+        "n_returned": 1,
+        "n_near_miss_recorded": 0
       },
-      "best_withheld_fit": 25.713568,
-      "returned": [],
-      "near_miss": [
+      "best_withheld_fit": null,
+      "returned": [
         {
           "who": "tennis-N-0002",
-          "fit": 25.713568,
+          "fit": 49.62456,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
             }
           ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
         }
       ],
+      "near_miss": [],
       "excluded_by_suppression": 0
     },
     {
@@ -43250,12 +43983,16 @@
         "n_returned": 1,
         "n_near_miss_recorded": 1
       },
-      "best_withheld_fit": 35.658316,
+      "best_withheld_fit": 35.778009,
       "returned": [
         {
           "who": "tennis-W-0010",
-          "fit": 49.443706,
+          "fit": 52.069835,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -43268,8 +44005,12 @@
       "near_miss": [
         {
           "who": "tennis-S-0007",
-          "fit": 35.658316,
+          "fit": 35.778009,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -43950,10 +44691,10 @@
       "combinations": 0
     },
     {
-      "key": "tennis-W-0018 \u00b7 DECK \u00b7 COMPETITIVE",
+      "key": "tennis-W-0018 \u00b7 DECK \u00b7 FOR_FUN",
       "surface": "DECK",
       "sport": "TENNIS",
-      "mode": "COMPETITIVE",
+      "mode": "FOR_FUN",
       "searcher": "tennis-W-0018",
       "tail": false,
       "counts": {
@@ -43971,29 +44712,38 @@
           "PROPOSALS_OPT_OUT": 0
         },
         "n_scored": 3,
-        "n_cleared_floor": 0,
-        "n_returned": 0,
-        "n_near_miss_recorded": 3
+        "n_cleared_floor": 1,
+        "n_returned": 1,
+        "n_near_miss_recorded": 2
       },
-      "best_withheld_fit": 34.597795,
-      "returned": [],
-      "near_miss": [
+      "best_withheld_fit": 41.484895,
+      "returned": [
         {
-          "who": "tennis-W-0010",
-          "fit": 34.597795,
+          "who": "tennis-W-0014",
+          "fit": 70.353646,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
             }
           ],
-          "reason": null,
-          "withheld": "BELOW_FLOOR"
-        },
+          "reason": "NEWCOMER_WINDOW",
+          "withheld": null
+        }
+      ],
+      "near_miss": [
         {
-          "who": "tennis-W-0014",
-          "fit": 30.210031,
+          "who": "tennis-W-0010",
+          "fit": 41.484895,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"
@@ -44004,8 +44754,12 @@
         },
         {
           "who": "tennis-W-0001",
-          "fit": 28.996865,
+          "fit": 32.747253,
           "degraded": [
+            {
+              "term": "INTENT_ALIGNMENT",
+              "reason": "NOT_READ_ON_THIS_SURFACE"
+            },
             {
               "term": "RELIABILITY",
               "reason": "NOTHING_FROM_THEM"

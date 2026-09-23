@@ -2,7 +2,7 @@
  * Welcome — what is about to happen, before it happens.
  *
  * **The title names the whole walk, not the half of it this screen opens.** Onboarding is
- * two parts: a questionnaire that produces a Skill rating per sport, and six social steps
+ * two parts: a questionnaire that produces a Skill rating per sport, and eight social steps
  * that produce a Player profile. *Let's find your level* named the first and promised
  * nothing about the second, so a player who answered the questions arrived at the tags step
  * having been told they were done. *Let's set you up* is true of both, and it is the reason

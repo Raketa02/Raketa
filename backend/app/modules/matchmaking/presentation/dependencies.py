@@ -49,7 +49,9 @@ from app.bootstrap.composition import (
     build_account_status_query,
     build_at_stake_query,
     build_card_photo_links,
+    build_deck_reset_ledger,
     build_exposure_ledger,
+    build_half_built_court_query,
     build_interest_ledger,
     build_match_fit_engine,
     build_match_history_query,
@@ -60,27 +62,33 @@ from app.bootstrap.composition import (
     build_player_score_query,
     build_ruleset,
     build_search_store,
+    build_shared_court_query,
     build_prompt_decline_ledger,
     build_prompt_ledger,
     build_suppression_ledger,
 )
 from app.infrastructure.redis_client import get_redis
 from app.modules.blocks.presentation.dependencies import BlockQueryDep
+from app.modules.matchmaking.application.deck_exclusions import DeckExclusionReads
 from app.modules.matchmaking.application.express_interest import ExpressInterest
+from app.modules.matchmaking.application.fail_closed_gates import FailClosedGates
 from app.modules.matchmaking.application.forecast_lineup import ForecastLineup
 from app.modules.matchmaking.application.record_pass import RecordPass
+from app.modules.matchmaking.application.reset_deck import ResetDeck
 from app.modules.matchmaking.application.record_prompt_decline import (
     RecordPromptDecline,
 )
 from app.modules.matchmaking.application.read_back_search import ReadBackSearch
 from app.modules.matchmaking.application.read_interest import ReadInterest
 from app.modules.matchmaking.application.run_deck_deal import RunDeckDeal
+from app.modules.matchmaking.application.run_radar_reading import RunRadarReading
 from app.modules.matchmaking.application.run_lineup_search import RunLineupSearch
 from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
 from app.modules.matchmaking.application.search_workbench import SearchWorkbench
 from app.modules.matchmaking.domain.cards import CardPhotoLinks
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.domain.declines import PromptDeclineLedger
+from app.modules.matchmaking.domain.deck_reset import DeckResetLedger
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.interest import InterestLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
@@ -352,19 +360,65 @@ def get_pass_ledger(db: DbSession) -> PassLedger:
 PassLedgerDep = Annotated[PassLedger, Depends(get_pass_ledger)]
 
 
-def get_run_deck_deal(
+def get_deck_reset_ledger(db: DbSession) -> DeckResetLedger:
+    """The durable record of every *Show them again*. **Per request, over the
+    session.**
+
+    Declared beside the pass ledger and built like it: a table and not a cache,
+    because what it holds is the one moment three courtesies read to know they
+    have been cleared, and a reset that could be lost would re-hide the people
+    a player just asked to see.
+    """
+
+    return build_deck_reset_ledger(db)
+
+
+DeckResetLedgerDep = Annotated[DeckResetLedger, Depends(get_deck_reset_ledger)]
+
+
+def get_deck_exclusion_reads(
     db: DbSession,
-    workbench: SearchWorkbenchDep,
     suppression: SuppressionLedgerDep,
     interest: InterestLedgerDep,
     passes: PassLedgerDep,
-) -> RunDeckDeal:
-    """The deck, assembled per request. **Three ledgers the shortlist has not.**
+    resets: DeckResetLedgerDep,
+) -> DeckExclusionReads:
+    """The deck's four reads, assembled per request. **Four ledgers and one port
+    the shortlist has not.**
 
-    The suppression cache and the pass record are the deck's alone — a pass
-    reaches no other surface — and the interest ledger is here for the deck's own
-    *already asked* exclusion, which is a read of the player's **own outgoing**
-    rows rather than the lift's read of incoming ones the workbench makes.
+    The suppression cache, the pass record and the reset record are the deck's
+    alone — a pass reaches no other surface, and *Show them again* is a button
+    on a deck — and the interest ledger is here for the deck's own *already
+    asked* exclusion, which is a read of the player's **own outgoing** rows
+    rather than the lift's read of incoming ones the workbench makes. The court
+    port is the cool-off's (``docs/adr/0169`` §6), built from the composition
+    root like every outward port so the seed's deal and a request's read the
+    same courts.
+
+    **Two surfaces hold this, for two different reasons.** The deal holds people
+    out with it; the radar asks it for the chip alone (``docs/adr/0174`` §5) —
+    the deck's number, by the deck's rule, over the same stores, so the chip on
+    either pane of Players cannot disagree with the one beside it.
+    """
+
+    return DeckExclusionReads(
+        ruleset=build_ruleset(),
+        searches=build_search_store(db),
+        suppression=suppression,
+        interest=interest,
+        passes=passes,
+        courts=build_shared_court_query(db),
+        resets=resets,
+    )
+
+
+DeckExclusionReadsDep = Annotated[DeckExclusionReads, Depends(get_deck_exclusion_reads)]
+
+
+def get_run_deck_deal(
+    workbench: SearchWorkbenchDep, held_out: DeckExclusionReadsDep
+) -> RunDeckDeal:
+    """The deck, assembled per request.
 
     There is no prompt ledger: a deal raises no question, because the two a
     search can raise are about a grid it improvised and a widening it keeps
@@ -375,14 +429,58 @@ def get_run_deck_deal(
         workbench=workbench,
         ruleset=build_ruleset(),
         engine=build_match_fit_engine(),
-        searches=build_search_store(db),
-        suppression=suppression,
-        interest=interest,
-        passes=passes,
+        held_out=held_out,
     )
 
 
 RunDeckDealDep = Annotated[RunDeckDeal, Depends(get_run_deck_deal)]
+
+
+def get_run_radar_reading(
+    workbench: SearchWorkbenchDep, held_out: DeckExclusionReadsDep
+) -> RunRadarReading:
+    """The radar, assembled per request — **over the deck's own reads**, for
+    the chip and for nothing that decides who is drawn."""
+
+    return RunRadarReading(
+        workbench=workbench,
+        ruleset=build_ruleset(),
+        engine=build_match_fit_engine(),
+        held_out=held_out,
+    )
+
+
+RunRadarReadingDep = Annotated[RunRadarReading, Depends(get_run_radar_reading)]
+
+
+def get_reset_deck(
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    ratings: SkillRatingRepositoryDep,
+    holds: AccountHoldQueryDep,
+    resets: DeckResetLedgerDep,
+) -> ResetDeck:
+    """*Show them again*, assembled per request. **One store, and two refusals.**
+
+    It holds no ruleset, no engine, no search store and no cache: nothing here
+    scores anybody, there is no product number to read, there is no origin to
+    prove, and the Redis suppression is deliberately not reached — the row it
+    writes is what the deal subtracts from the cache. The rating repository and
+    the hold query are here because the reset refuses exactly what the deal
+    refuses about *you*, and it should not need the candidate index the deal
+    binds to say so.
+    """
+
+    return ResetDeck(
+        clock=clock,
+        ratings=ratings,
+        holds=holds,
+        resets=resets,
+        unit_of_work=uow,
+    )
+
+
+ResetDeckDep = Annotated[ResetDeck, Depends(get_reset_deck)]
 
 
 def get_record_pass(
@@ -439,20 +537,20 @@ RecordPromptDeclineDep = Annotated[
 ]
 
 
-def get_read_back_search(
-    db: DbSession,
+def get_fail_closed_gates(
     candidates: CandidateSourceDep,
     profiles: PlayerProfileRepositoryDep,
     blocks: BlockQueryDep,
     holds: AccountHoldQueryDep,
     account_status: AccountStatusQueryDep,
-) -> ReadBackSearch:
-    """The read-back, assembled per request. **Six collaborators, no engine.**
+) -> FailClosedGates:
+    """The four gates that fail closed, assembled per request.
 
-    It reads a record and re-evaluates four gates; it never scores, so there is
-    no ruleset here and no ``MatchFit``. The absence is the point — a use case
-    holding a scorer is a use case that can quietly start re-ranking a stored
-    answer, which is the one thing an immutable record may not do.
+    Declared here rather than inside the one use case that reads them, on the
+    same argument the ledgers above are: **every surface that shows one player to
+    another runs these four** (``docs/adr/0095``), and a surface deciding for
+    itself where a gate comes from is how one of them ends up wired to a
+    different answer.
 
     The candidate source is the process's, exactly as it is for a search: the
     mutual gender gate reads the other side's preference off the index row, so a
@@ -460,13 +558,40 @@ def get_read_back_search(
     503 rather than withholding everybody.
     """
 
-    return ReadBackSearch(
-        searches=build_search_store(db),
+    return FailClosedGates(
         profiles=profiles,
         candidates=candidates,
         blocks=blocks,
         holds=holds,
         account_status=account_status,
+    )
+
+
+FailClosedGatesDep = Annotated[FailClosedGates, Depends(get_fail_closed_gates)]
+
+
+def get_read_back_search(
+    db: DbSession,
+    holds: AccountHoldQueryDep,
+    gates: FailClosedGatesDep,
+) -> ReadBackSearch:
+    """The read-back, assembled per request. **Three collaborators, no engine.**
+
+    It reads a record and delegates four gates; it never scores, so there is no
+    ruleset here and no ``MatchFit``. The absence is the point — a use case
+    holding a scorer is a use case that can quietly start re-ranking a stored
+    answer, which is the one thing an immutable record may not do.
+
+    The hold query arrives twice over — once here and once inside the gates —
+    and that is not a wiring slip. What this one answers is *may the person
+    asking read anything at all*, which is a refusal about the reader and points
+    the other way down the same port.
+    """
+
+    return ReadBackSearch(
+        searches=build_search_store(db),
+        holds=holds,
+        gates=gates,
     )
 
 
@@ -529,15 +654,24 @@ ReadInterestDep = Annotated[ReadInterest, Depends(get_read_interest)]
 
 
 def get_run_lineup_search(
+    db: DbSession,
     workbench: SearchWorkbenchDep,
     blocks: BlockQueryDep,
 ) -> RunLineupSearch:
-    """The line-up use case: the workbench, plus the gate a shortlist never asked.
+    """The line-up use case: the workbench, plus the two reads a shortlist never
+    makes.
 
-    One collaborator beyond the shared ones, and it is the whole of what
-    ``docs/adr/0116`` added: a four contains six pairs and the searcher is in
-    three of them, so the line-up makes **one bulk block query over the ``K``
-    candidate ids** that no other surface has any use for.
+    The first is the whole of what ``docs/adr/0116`` added: a four contains six
+    pairs and the searcher is in three of them, so the line-up makes **one bulk
+    block query over the ``K`` candidate ids** that no other surface has any use
+    for.
+
+    The second is ``docs/adr/0150``'s: a fill names the challenge it completes,
+    and the sport, the mode and the locked seats are read off that challenge.
+    It is declared here rather than on the workbench because **this is the only
+    surface that can name one** — a shortlist, a deal and an ordinary ⚡ never
+    reach it, and a collaborator every surface held would be a read every surface
+    could start making.
 
     There is no prompt ledger and no search store of its own: the ladder does not
     run here — ``MIN_SHORTLIST`` counts rows in a list somebody reads and a
@@ -550,6 +684,7 @@ def get_run_lineup_search(
         ruleset=build_ruleset(),
         engine=build_match_fit_engine(),
         blocks=blocks,
+        courts=build_half_built_court_query(db),
     )
 
 

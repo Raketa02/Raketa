@@ -17,7 +17,7 @@
  *
  * ## A seat carries a handle, and nothing else about the person in it
  *
- * `SeatingSchema` is a side, a player id and a nickname — no Level, no band, no area, no run of
+ * `SeatingSchema` is a side, a player id and a name — no Level, no band, no area, no run of
  * form ([ADR-0141](../../../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)).
  * A card is what a *searcher* reads to decide about a game that might happen; this is the record
  * of one that did, and every value on a card would be an as-of-now fact stapled to an evening in
@@ -30,7 +30,7 @@
  * forbids deriving a familiar form from one, and `@/shared/formatting/playerName` is the single
  * formatter that turns a seat into words.
  *
- * `nickname` is **absent** where `users` no longer has that account, which is a `?` on screen and
+ * `name` is **absent** where `users` no longer has that account, which is a `?` on screen and
  * never a dropped seat — the same fall-back a Play court draws for a seat whose row the record
  * can no longer describe.
  *
@@ -62,15 +62,56 @@ export interface Score {
   readonly sets: readonly SetScore[];
 }
 
-/** One person, on one side. The court is frozen at the plan. */
+/**
+ * One position on one side: a person, or a seat somebody has left.
+ *
+ * **A seat is never dropped, and since
+ * [ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)
+ * it can be open.** `playerId` is absent on a seat whose occupant left the game and nobody has
+ * filled yet: the seat keeps its place and its side, the court keeps its size, and every screen
+ * that draws the court draws it empty. The line-up is frozen at the plan **until somebody leaves
+ * it** — and the next completed line-up re-seats the same game.
+ */
 export interface GameSeat {
   readonly side: GameSide;
-  readonly playerId: string;
+  /** Who holds this seat. **Absent on an open seat** — somebody left, and nobody has filled it. */
+  readonly playerId?: string;
   /**
-   * What they are called — **the whole handle, and nothing may shorten it into a sentence.**
-   * Absent where `users` no longer has the account, which draws the unknown player's `?`.
+   * What they are called — **the whole name, and nothing may shorten it into a sentence.**
+   * Absent where `users` no longer has the account, which draws the unknown player's `?` — and
+   * on an open seat, which draws nobody.
    */
-  readonly nickname?: string;
+  readonly name?: string;
+}
+
+/**
+ * **The seats nobody is in** — the fact *Needs a player* is folded from, and the one a result is
+ * refused on while it is true.
+ *
+ * Nothing on the wire names the rung: an open seat is `player_id: null`, the standing stays
+ * `AWAITING_ENTRY`, and it is the client's card that says a player is needed. One function, so
+ * the screen's acts, the players card and the card's spoken label read one definition of *open*.
+ * The ladder in `features/plans` spells the same field itself — a runtime import of this
+ * feature's `types.ts` would pull the screen into a `domain/` module — and says so where it does.
+ */
+export function openSeats(seats: readonly GameSeat[]): readonly GameSeat[] {
+  return seats.filter((seat) => seat.playerId === undefined);
+}
+
+/**
+ * **Everybody in a seat but the reader**, by id and in the court's order — what the fill is told
+ * about the court it completes ([#419](https://github.com/Raketa02/Raketa/issues/419)).
+ *
+ * The seats a fill may never take out, on `acceptedPlayers`' shape one feature over: *in seat
+ * order and without the reader*, because the reader's own seat is what the court is composed
+ * around and the builder puts it back at the send. Read off the game rather than the challenge
+ * because the game's seats are the court as it stands **now** — the challenge's are the
+ * arrangement as it was sent, and a re-seat has moved on from it.
+ */
+export function seatedOthers(seats: readonly GameSeat[], reader: string): readonly string[] {
+  return seats.flatMap((seat) =>
+    seat.playerId === undefined || seat.playerId === reader ? [] : [seat.playerId],
+  );
 }
 
 /**
@@ -127,6 +168,13 @@ export interface Acceptance {
   readonly settlesAt: string;
 }
 
+/** The player whose act called the game off. See {@link Game.calledOffBy}. */
+export interface CalledOffBy {
+  readonly playerId: string;
+  /** The whole name. Absent where `users` no longer has the account. */
+  readonly name?: string;
+}
+
 export interface Game {
   readonly gameId: string;
   readonly challengeId: string;
@@ -148,8 +196,28 @@ export interface Game {
   readonly plannedAt: string;
   /** When somebody said it happened. Absent while nobody has. */
   readonly playedAt?: string;
-  /** When *we played* stops being sayable. Absent once somebody has said it happened. */
+  /**
+   * When *we played* stops being sayable. Absent once somebody has said it happened — and on a
+   * game that was called off, where the window no longer matters.
+   */
   readonly entryClosesAt?: string;
+  /**
+   * When somebody called it off, while a seat was open
+   * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). Present
+   * exactly on `CALLED_OFF`: the act's own instant, which is what the ending card is shelved from.
+   * Who is {@link calledOffBy}.
+   */
+  readonly calledOffAt?: string;
+  /**
+   * **Who called it off, and what they are called** — present exactly on `CALLED_OFF`
+   * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §4), the field ADR-0163 §4 kept for the day a design wanted the name. The last leaver, whose
+   * seat is drawn open — or whoever pressed *Call it off*, who still holds one; **which of the two
+   * is read off the seats**, and the game screen's heading is keyed on it. The name is carried
+   * because the leaver's seat is vacated and the court cannot supply it; absent where `users` no
+   * longer has the account, which draws `?` as a seat's does.
+   */
+  readonly calledOffBy?: CalledOffBy;
   /** The agreed score. Absent until something settles on one. */
   readonly score?: Score;
   /** Win or loss **for you**, and absent for every standing but a confirmed one. */

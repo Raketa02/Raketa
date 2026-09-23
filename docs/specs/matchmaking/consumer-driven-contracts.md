@@ -27,7 +27,7 @@ term is wired up. **An unwritten demand is satisfiable by accident.**
 
 ---
 
-## The five ports
+## The six ports
 
 One provider signs one contract. The split is by who supplies the fact, never by how fresh it
 has to be.
@@ -41,13 +41,25 @@ half, and two bounded reads merged by a caller is not a bounded read.
 
 | Port | Provider | Supplies |
 | --- | --- | --- |
-| `PlayerScoreQuery` | `player_score` | The five strands with their evidence, and the published score |
+| `PlayerScoreQuery` | `player_score` | The six strands with their evidence, and the published score |
 | `MatchHistoryQuery` | `challenges` **and** `matches` | The searcher's pairwise history, the per-player open-challenge count, and the origin key. `challenges` answers all of it except `PLAYED`, `PLANNED_NEVER_PLAYED` and the late-change threshold |
 | `AccountHoldQuery` | `cases` | One live boolean per player. Already standing from [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) |
 | `AtStakeQuery` | `rating` | What a counted win and a counted loss against one opponent would do to the searcher's Level |
 | `AccountStatusQuery` | `users` | The set of accounts that may not be shown. Gate 8, from [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |
+| `HalfBuiltCourtQuery` | `challenges` | The one court a fill names: its sport, its mode, who is live on it besides the filler, and everybody it has already asked and does not still hold. From [ADR-0150](../../adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) |
 
-**The last two are different, and the difference is stated rather than left to be noticed.**
+**The sixth is the one demand that is not a fact *about people*, and it arrived last**
+([#355](https://github.com/Raketa02/Raketa/issues/355), ADR-0150). Every port above answers
+about a **population** — these players' history, these accounts' state, this pair's Level — and
+this one answers about a single **challenge**, because a fill *names* the court it completes and
+reads the sport, the mode and the locked seats off it. It is a second port rather than a method
+on `MatchHistoryQuery` for one reason, and it is the reason this file exists to record: **the
+posture differs.** History fails soft, and a fill that could not read its own court would
+silently become an ordinary ⚡ over a pool that still excludes the very people it was meant to
+seat around.
+
+**The last two of the first five are different, and the difference is stated rather than left to
+be noticed.**
 `cases` **does not exist**; `player_score`, `challenges` and `games` do — the first over the
 other two (ADR-0140) — and between them the latter
 answer the whole of `MatchHistoryQuery` ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)).
@@ -75,12 +87,15 @@ Delivery of the indexed half is the backend's existing transactional outbox
 
 ## `PlayerScoreQuery`
 
-### The five strands, and what each one counts
+### The six strands, and what each one counts
 
-> **Two of them are live** (ADR-0140): *shows up*, out of plans that settled either way, and
-> *answers challenges*, out of invitations whose day is over. The other three have no provider
-> and are **absent from a reading** rather than published at nought. *Confirms results* is not
-> in the table below at all: it was **withdrawn**, and a withdrawn demand leaves no row.
+> **Three of them are live** (ADR-0140, ADR-0160): *shows up*, out of plans that settled either
+> way, *answers challenges*, out of invitations whose day is over, and *answers about results*,
+> out of the scores put in front of somebody. The other three have no reading the matcher may
+> use and are **absent from a reading** rather than published at nought. *Confirms results* is
+> not in the table below at all: it was **withdrawn**, and a withdrawn demand leaves no row —
+> *answers about results* is a different measurement over the same events and not its
+> reinstatement ([ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md)).
 
 Every strand crosses as **the published value, its numerator and denominator, and the moment of
 the most recent observation**. The matcher reads the value the player is shown and never
@@ -91,6 +106,7 @@ is worse than a card that says nothing.
 | --- | --- | --- |
 | **Shows up** | Plans that settled: a game somebody said had happened, or a **ghost** whose entry window closed on silence | The ones that were played. **A ghost is charged to every seat**, because nobody proposed and nobody countered |
 | **Answers challenges** | **Invitations** whose day is over — a seat somebody was actually *asked* to take, which is a seat with a deadline | Answered inside the day. **A decline counts**: what this prices is silence, not judgement |
+| **Answers about results** | **Scores put in front of them** whose window has closed — the side that entered the score was asked nothing, and once both sides have put one up nobody is asked again | Answered inside the window. **A counter counts exactly as an acceptance does**, so disagreeing costs nothing. The only strand with a **window**: twelve months |
 | **Keeps plans** | Plans agreed | Plans that reached their scheduled moment without a **late** change by this player |
 | **Settles up** | Court shares that fell due | Shares settled **without a case being opened** |
 | **Sportsmanship** | Ratings received | *(a mean of 1–5, not a ratio — crosses as mean plus rating count)* |
@@ -109,15 +125,16 @@ is worse than a card that says nothing.
 Two more are worth stating because they will surprise a reader:
 
 - ***Settles up* depends on court money, which this map rules out of scope.** It stands down,
-  and so do *keeps plans* and *sportsmanship* — two of the five are live (ADR-0140). Expected,
-  not a defect.
+  and so does *keeps plans*; *sportsmanship* has a surface now and the matcher is forbidden to
+  read it ([ADR-0158](../../adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)),
+  so three of the six are live (ADR-0140, ADR-0160). Expected, not a defect.
 - **The player-facing weights are not the matcher's weights.** The Player Score screen blends
-  the strands at **35/20/12/10/8** (`:3374-3380`, less the struck strand's 15); the ruleset
-  weighs them per mode at **33/33, 29/23, 18/15, 13/12, 7/17**. Both are right. This is
-  precisely why the matcher must read strands and not the blend. **The two vectors total
-  differently on purpose**: a ruleset weight map is validated as summing to a hundred so each
-  number reads as a share of a term's budget, where the published blend's basis is the strands a
-  player actually has.
+  the strands at **35/20/15/12/10/8** (`:3374-3380`); the ruleset weighs them per mode at
+  **25/32, 22/22, 24/4, 14/14, 10/12, 5/16**. Both are right. This is precisely why the matcher
+  must read strands and not the blend. **The two vectors total the same today by accident and
+  not by rule**: a ruleset weight map is validated as summing to a hundred so each number reads
+  as a share of a term's budget, where the published blend's basis is the strands a player
+  actually has — it summed to 85 for as long as a name was missing.
 
 ### Opponent variety — **withdrawn**
 
@@ -137,7 +154,7 @@ for it — which also means it arrives with a consumer who can say what shape it
 ### The published score, demanded once and read by one consumer
 
 Beside the strands, and **not instead of them**: the **published Player Score** the player sees
-on their own profile, the 35/20/12/10/8 blend renormalised over whatever is there, out of a
+on their own profile, the 35/20/15/12/10/8 blend renormalised over whatever is there, out of a
 hundred.
 
 It has exactly one consumer **in the matcher** — the **reliability floor**, whose
@@ -169,7 +186,7 @@ a second decay here would double-count.
 
 | Constant | Start | What it does | Falsified by |
 | --- | --- | ---: | --- |
-| `RELIABILITY_MIN_OBSERVATIONS` | 3 | A strand below it is `NoEvidence` **on its own**; the surviving strands renormalise *inside* the reliability term | Ghost rate and answer rate regressed on strand value, split by observation count. If one-observation strands predict as well as five, the bar is too high |
+| `RELIABILITY_MIN_OBSERVATIONS` | 3, **per strand**, and 5 for *answers about results* | A strand below **its own** bar is `NoEvidence` **on its own**; the surviving strands renormalise *inside* the reliability term. It was one number for every strand until [ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md): raising the single number to five instead would take a newcomer with three games and three turn-ups from a full score to no score at all | Ghost rate and answer rate regressed on strand value, split by observation count. If one-observation strands predict as well as five, the bar is too high |
 | `RELIABILITY_HORIZON_DAYS` | 365 | If the most recent observation **across all strands** is older, the whole term stands down | Return rate of matches made on evidence older than a year |
 
 Both are **ruleset configuration** under [ADR-0093](../../adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)'s
@@ -226,6 +243,7 @@ tell them apart.
 | Open challenge between the pair | **Fails soft** | §7.5's *the matcher proposes, the backend disposes* re-verifies on the shortlist. It is embarrassment with a backstop, not a safety failure |
 | The strands (`PlayerScoreQuery`) | **Fails soft** — the reliability term stands down | Which is what it does for anybody with no record anyway, so a failure costs a term and never the search |
 | At stake (`AtStakeQuery`) | **Fails soft** — the block is not drawn | Derived rather than quoted: it is what the card already does for a pair with no Level between them |
+| The court a fill names (`HalfBuiltCourtQuery`, ADR-0150) | **The search refuses** | Not a gate, and closed anyway: the court *is* what the search is about, so standing down would run an ordinary ⚡ over a pool still excluding the people on it and hand the player a four of strangers |
 
 These are separate reads carried in one context object. Bundling them into one read would make
 the strictest fact's failure mode everybody's.

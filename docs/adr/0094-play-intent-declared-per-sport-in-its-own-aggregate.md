@@ -1,6 +1,9 @@
 # ADR-0094 — Play intent is declared per sport, in its own aggregate, and edited where the player searches
 
-- **Status:** Accepted
+- **Status:** Accepted — **the Amendment's *it reads the declaration and is refused with
+  `play_intent_not_declared`* superseded 2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §2: the deck reads no
+  declaration and deals under one ruler. `DECK` stays in the closed five for the events that
+  carry it.
 - **Date:** 2026-08-26
 
 > **Overrules two recommendations in the matchmaking input document**

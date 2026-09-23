@@ -1,70 +1,47 @@
 /**
- * One screen per tab — **four of them**, each as thin as the tab behind it is empty.
+ * The screens the shell composes under a tab's own words — **one of them here now**, and none
+ * of them a placeholder.
  *
- * Four named components rather than one taking a `tab` prop: a route file's whole job is to
- * say which screen a path is, and `<AroundScreen />` says it where `<TabScreen tab="around"
- * />` makes the route file hold the answer as data. One of the four is not a placeholder in
- * the same way, and that is the other reason — You still carries the account panel.
+ * Named components rather than one taking a `tab` prop: a route file's whole job is to say
+ * which screen a path is, and `<NowScreen />` says it where `<TabScreen tab="now" />` makes
+ * the route file hold the answer as data.
  *
- * **Play is not here at all any more.** Its stub was a fifth entry until
- * [#268](https://github.com/Raketa02/Raketa/issues/268) built the screen; the route now names
- * `features/play`'s own, which is what the file tree should say about a tab that exists.
+ * **Every tab has left the placeholder table.** Play's stub was an entry until
+ * [#268](https://github.com/Raketa02/Raketa/issues/268) built the screen, Chats' until
+ * [#360](https://github.com/Raketa02/Raketa/issues/360) built the inbox, Now's until
+ * [#367](https://github.com/Raketa02/Raketa/issues/367) built the rail, and You's until
+ * [ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * built the tab — the last of them, and the table went with it. Three are still the shell's,
+ * because each is a composition of other features' surfaces under the tab's own words: Now
+ * below, and Chats and You in files of their own because neither is thin. **Around's entry
+ * retired with the tab**: the deck moved in as Players
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1), and that screen is `features/play`'s own, named by its route file exactly as Find a game
+ * is — the tab has no words of its own for the shell to compose anything under.
  */
 
-import { AccountPanel } from '@/features/auth/types';
-import { GamesSection } from '@/features/games/types';
-import { PlayIntentsSection } from '@/features/player_profile/types';
+import { GamesRail } from '@/features/plans/types';
 
-import { PlaceholderScreen } from './PlaceholderScreen';
-import { PLACEHOLDER_COPY } from './shellCopy';
+import { ShellScreen } from './ShellScreen';
+import { NOW_COPY } from './shellCopy';
 
 /**
- * The landing, after onboarding and after a send. Never says nothing is happening.
+ * **The landing, after onboarding and after a send — and it stopped being a placeholder here**
+ * ([#367](https://github.com/Raketa02/Raketa/issues/367)).
  *
- * **The games list is the first thing built on it** ([#314](https://github.com/Raketa02/Raketa/issues/314)),
- * composed under the tab's own line the way `PlayIntentsSection` is on You: a game is *what is
- * happening today and next*, and the result conversation had no door without one. The line above
- * it stays exactly as it is — what Now becomes is still mostly owed — and the section draws
- * nothing at all when there are no games, because asserting emptiness is the one thing this tab
- * has refused to do since it was built.
+ * The games list arrived under a citation first ([#314](https://github.com/Raketa02/Raketa/issues/314));
+ * what replaces both is `GamesRail`, which is *what is happening today and next* drawn rather than
+ * described. The tab keeps the shape it has always had — it owns its own words and nothing that is
+ * drawn under them — so the empty sentences are handed down and the heading over the rail is the
+ * rail's.
+ *
+ * **It still never says nothing is happening.** The line says what the tab **is** and the one under
+ * it names the act, which is true whether or not a game is on screen.
  */
 export function NowScreen() {
   return (
-    <PlaceholderScreen copy={PLACEHOLDER_COPY.now}>
-      <GamesSection />
-    </PlaceholderScreen>
-  );
-}
-
-export function AroundScreen() {
-  return <PlaceholderScreen copy={PLACEHOLDER_COPY.around} />;
-}
-
-export function ChatsScreen() {
-  return <PlaceholderScreen copy={PLACEHOLDER_COPY.chats} />;
-}
-
-/**
- * The one tab that is not only a placeholder.
- *
- * Signing out is the account's own surface and has existed since the walking skeleton; the
- * shell arriving is what gives it a home rather than a reason to disappear.
- *
- * **The per-sport declaration is the first of the three citations to arrive**
- * ([#296](https://github.com/Raketa02/Raketa/issues/296)): `PlayIntentsSection` lists what a
- * player has declared in each sport they are rated in, and writes on the `PROFILE_SCREEN`
- * surface the contract has been holding open for it. The radius and the week are still
- * unbuilt, so the line above stays exactly as it is — it names what this tab becomes, and two
- * thirds of that is still owed.
- *
- * Both children are other features' sections composed by the shell, which is what this tab has
- * always been: it owns the citation and nothing that is drawn under it.
- */
-export function YouScreen() {
-  return (
-    <PlaceholderScreen copy={PLACEHOLDER_COPY.you}>
-      <PlayIntentsSection />
-      <AccountPanel />
-    </PlaceholderScreen>
+    <ShellScreen title={NOW_COPY.title}>
+      <GamesRail empty={NOW_COPY.empty} />
+    </ShellScreen>
   );
 }

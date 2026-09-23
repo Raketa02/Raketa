@@ -8,7 +8,7 @@ paths:
 # Design system — locked
 
 The visual language was designed and audited before the app existed. Full rules:
-[`docs/design-system.md`](../../docs/design-system.md) (1145 lines). The decision and its
+[`docs/design-system.md`](../../docs/design-system.md) (3300+ lines). The decision and its
 corrections: [ADR-0012](../../../docs/adr/0012-player-app-design-system.md).
 
 Three artefacts that **change together, in the same commit**:
@@ -39,7 +39,9 @@ component that ignores the theme fails `pnpm lint` rather than review.
 The audit describes an HTML file, and **its phone frame, dark stage, scenario rail, time bar
 and 900px breakpoint are harness — they do not ship.** The app _is_ the phone. Never build a
 frame, a stage or a scenario switcher, and never use the four stage colours (`#08222B`
-`#071C24` `#0B2B36` `#24505E`) — they are not in the theme.
+`#071C24` `#0B2B36` `#24505E`) — they are not in the theme. **The one dark screen is the yes
+screen**, on two colours of its own (`yesGroundCentre`, `yesGroundEdge`) that ADR-0167 fences
+as that screen's alone; it is not a dark mode and not a licence for a second dark surface.
 
 ## The four React Native traps
 
@@ -55,10 +57,20 @@ frame, a stage or a scenario switcher, and never use the four stage colours (`#0
 
 - **`line` bounds a thing; `line2` is a fold inside one thing.**
 - **9 between stacked cards · 15 at the gutter.** Everything else from the 3pt grid.
-- **Content width is screen width − 30**, and the rail card is `0.74 × content width` —
-  never a fixed 362 or 268. Those are the prototype's phone picture.
+- **Content width is screen width − 30**, and a **peeking** rail card is
+  `0.74 × content width` — never a fixed 362 or 268. Those are the prototype's phone picture.
+  A **paging** rail takes the content width whole and draws 7.18's dots, because a card with
+  no peek has no affordance until something else carries it.
 - **Colour is picked by meaning:** coral = the one accent · mint = settled · amber =
   reversible, not yet wrong · red = ended badly · info = explanation, not status.
+- **§1.2's coral list is closed at six** — primary button, active tab, level mark, onboarding
+  progress fill, hot tag, Chats badge. A sixth-and-a-half is not a taste call: pick the meaning
+  and you will land on `amber` or on `ink`, which is where the row stripe and the rail's
+  current dot both landed.
+- **A `Tag`'s dot is the sport's and only the sport's — except on the Now card, where it is the
+  stage's** and the sport is the word beside it (`STAGE_DOT`, 6.4 as amended by #413). Under
+  both: a dot is always accompanied by its name in text, and one surface gives the token one
+  meaning. Urgency elsewhere is the tag's `warn` / `ok` variant, carried by the whole pill.
 - **Rule C — white text never sits on `coral` or `mint`** (3.89:1 and 4.07:1). Use
   `coralInk` / `mintInk`. `ink` is the only dark that may sit on coral (4.50:1).
 - **`volt` is a fill anywhere and a stroke only on dark.** `ink` on a volt fill is
@@ -73,7 +85,15 @@ frame, a stage or a scenario switcher, and never use the four stage colours (`#0
   always comes from the model's `bandLo`/`bandHi`, never the bar's drawing values.
 - **Every state carries a word or a shape**, never colour alone.
 - **`eyebrow` labels a region you are reading; `flab` labels a control you are about to
-  operate.** They are not interchangeable.
+  operate.** They are not interchangeable — and **`eyebrow` is the section heading**, in
+  `muted`, uppercase. `h2` titles a card and never a section; five shipped surfaces got this
+  wrong before the rule was written down.
+- **There is no sans role above `h1` to reach for.** `display` (26/700) existed for the Now
+  card's weekday figure and retired with it (#413, Part 16); `yesWord` (32/800) exists for the
+  yes screen's one word and nothing else (ADR-0167, Part 16). A word that wants to be that
+  large is a Part 16 decision, not a `fontSize` and not a second use of `yesWord`.
+- **The pill is the chip's**, and the yes screen's two buttons through `Button`'s `shape` —
+  the one exception, fenced. Everywhere else a button is 10pt.
 
 This design system covers `frontend_player/` **only.** The club app has its own; the palettes
 converge because it is one brand, but the values are never shared.

@@ -48,7 +48,7 @@ const BY_CODE: Readonly<Record<string, string>> = {
    * had to be vague about which.
    *
    * What makes it sayable is not a field but the **control's own absence**. An agreement on the
-   * response takes the correction away (`domain/conversation.ts`), so the only way to reach this
+   * response takes the correction away (`domain/resultArgument.ts`), so the only way to reach this
    * refusal is an answer that arrived after the list this screen is drawn from was read. The
    * acceptance's own `agreed_at` cannot be quoted here and never could be — at the moment of the
    * refusal there is no acceptance on this side to read it off.

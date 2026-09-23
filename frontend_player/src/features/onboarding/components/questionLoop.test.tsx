@@ -22,6 +22,11 @@ import {
   stubGate as stubGateWith,
 } from '@/test-support/onboardingRouter';
 import {
+  pressHardwareBack,
+  stopWatchingHardwareBack,
+  watchHardwareBack,
+} from '@/test-support/hardwareBack';
+import {
   errorResponse,
   installTransport,
   json,
@@ -1029,5 +1034,44 @@ describe('finishing', () => {
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname(`/result/${ASSESSMENT_ID}`));
+  });
+});
+
+/**
+ * **The device's back button is *Previous question*, and never the way out of a run.**
+ *
+ * The header says so already — *"Back through the run, never out of it — the way out is the
+ * close control on the other side of the header, and the two must not be confused for each
+ * other"* — and until 2026-09-10 the device's own gesture was the confusion. Every screen in
+ * onboarding `replace`s, so the group holds one history entry and Android's back popped
+ * straight through it to the screen the part began on, past both controls.
+ * [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md): *"Back and
+ * forward move freely inside each part and never cross between them."*
+ *
+ * `pressHardwareBack` replays the press through what the app subscribed and answers whether
+ * anything claimed it; the pop that follows an unclaimed press is the activity's, and no test
+ * can perform it. So *claimed* is what these assert.
+ */
+describe("the device's own back button", () => {
+  beforeEach(watchHardwareBack);
+  afterEach(stopWatchingHardwareBack);
+
+  it('moves back through the run, exactly as the control in the header does', async () => {
+    await resumeFiveQuestionsIn();
+
+    expect(pressHardwareBack()).toBe(true);
+
+    expect(await screen.findByText('Question 4')).toBeTruthy();
+  });
+
+  it('is claimed and refused on the first question, which draws no back at all', async () => {
+    await resumeAtTheOpeningQuestion();
+
+    expect(pressHardwareBack()).toBe(true);
+
+    // Still on the run. The floor `questionNavigation` clamps at position 1 is what the
+    // missing control says, and the press says the same thing rather than something louder.
+    expect(await screen.findByText('Question 1')).toBeTruthy();
+    expect(screen.queryByLabelText('Previous question')).toBeNull();
   });
 });

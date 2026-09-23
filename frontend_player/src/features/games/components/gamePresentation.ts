@@ -2,8 +2,10 @@
  * **Every sentence these screens say.** Nothing the games contract sends is prose.
  *
  * A `GameStanding`, a `GameKind` and an `Outcome` are codes and the words for them are the
- * client's ([ADR-0022](../../../../../docs/adr/0022-wire-codes-never-sentences.md)), so this
- * file is the feature's copy deck and the components are assembled from it — the same shape
+ * client's
+ * ([ADR-0022](../../../../../docs/adr/0022-kernel-negative-space-and-constant-homes.md)), so
+ * this file is the feature's copy deck and the components are assembled from it — the same
+ * shape
  * `features/play/components/*Presentation.ts` takes, and for the same reason:
  * *code → message, never message → message*, and **a sentence is never a template inlined in a
  * component**.
@@ -60,29 +62,37 @@
  * which is the same fact in the register a listener gets.
  */
 
+import { YOU_MARK } from '@/features/player_record/types';
+import { levelRow } from '@/features/play/types';
 import { counted } from '@/shared/formatting/counted';
-import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import { handleStem, playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import { formatPercent } from '@/shared/formatting/ratingFormat';
+import { sentenceList } from '@/shared/formatting/sentenceList';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { othersOn, type ResultConversation } from '../domain/conversation';
-import type { Game } from '../domain/game';
+import type { Game, GameSeat } from '../domain/game';
+import type { PairingSeat } from '../domain/pairing';
+import { sidesForReader } from '../domain/pairing';
+import {
+  othersOn,
+  resultArgument,
+  type CalledOffEnding,
+  type ResultArgument,
+} from '../domain/resultArgument';
 import type { ScoreKey, ScoreProblem } from '../domain/score';
 import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
 
 import type { ScoreView } from './gameAccessibility';
 
-import { durationLeft, durationSince } from './durations';
+import { durationLeft, durationSince } from '@/shared/formatting/durations';
 
 // ---------------------------------------------------------------------------
-// The list
+// The head of the screen
 // ---------------------------------------------------------------------------
-
-/** The heading over the games on the Now tab. */
-export const GAMES_HEADING = 'Your games';
 
 /**
- * The eyebrow on a row and at the head of the screen: the sport, **who you played**, and how
+ * The eyebrow at the head of the screen: the sport, **who you played**, and how
  * long ago it was arranged.
  *
  * **A duration and never a date**, because this platform has no calendar to print one against —
@@ -104,19 +114,52 @@ export function gameEyebrow(sportName: string, game: Game, playerId: string): st
   return `${sportName}${played} · arranged ${durationSince(game.plannedAt, game.readAt)} ago`;
 }
 
+/** The two shapes of court, read off the seats the game actually has. */
+const SINGLES = 'Singles';
+const DOUBLES = 'Doubles';
+
+/** How many seats a singles court has. Two, and the boundary between the two words above. */
+const SINGLES_SEATS = 2;
+
+/**
+ * The kind, as the eyebrow says it — **`Counted`, never `Competitive`**: that is a search's word
+ * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.4 #8), and
+ * the design's own forecast sentence says *a counted game*.
+ */
+const KIND_WORD: Readonly<Record<GameKind, string>> = { COUNTED: 'Counted', FRIENDLY: 'Friendly' };
+
+/**
+ * `Doubles · Counted` — **the eyebrow on the plan lead, and the whole head of that screen**
+ * ([#414](https://github.com/Raketa02/Raketa/issues/414)).
+ *
+ * The format and the kind, and nothing else: the card under it names the people and the plan
+ * names the day, so the handles and *arranged n ago* that `gameEyebrow` carries would be the same
+ * facts twice on one screen. The format is read off the seats — the rule the Now card's retired
+ * eyebrow used, living here now — and the kind off the game; **a kind this build cannot read
+ * drops its clause and the format stands**, so a game whose kind is absent is still headed as a
+ * game. There is no title under it: the design draws none, and 10.3 is amended to say so.
+ *
+ * **Not uppercased here.** The header's style does that, and a second copy in the string would
+ * reach a screen reader as letters.
+ */
+export function formatEyebrow(game: Game): string {
+  const format = game.seats.length <= SINGLES_SEATS ? SINGLES : DOUBLES;
+
+  return game.kind === undefined ? format : `${format} · ${KIND_WORD[game.kind]}`;
+}
+
 /**
  * *with kasia_w, tomek.p and marekb* — **and the empty string for a court with nobody else on
  * it**, which is the stale-link case rather than a game.
  *
  * `counted()` is not reached for: nothing here is counted, and the join is a list of names in
- * the court's own order. The last comma is an *and* because this is prose and not a legend.
+ * the court's own order. The last comma is an *and* because this is prose and not a legend — and
+ * that join is `sentenceList`'s, which is the platform's one spelling of it (§22.6).
  */
 function withWhom(others: readonly NamedPlayer[]): string {
   const names = others.map(playerName);
-  if (names.length === 0) return '';
-  const last = names[names.length - 1] ?? '';
-  const rest = names.slice(0, -1);
-  return rest.length === 0 ? ` · with ${last}` : ` · with ${rest.join(', ')} and ${last}`;
+
+  return names.length === 0 ? '' : ` · with ${sentenceList(names)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,25 +176,48 @@ function withWhom(others: readonly NamedPlayer[]): string {
  */
 export const NOT_YOURS_LINE = 'No game of yours has this address.';
 
-export function standingLine(conversation: ResultConversation, readAt: string): string {
-  switch (conversation.kind) {
+/**
+ * **The same sentence, for a surface that holds a game and not an argument** — the one thing
+ * this deck says outside its own feature.
+ *
+ * Now's card is `features/plans`' ([#367](https://github.com/Raketa02/Raketa/issues/367)) and the
+ * gloss it draws under an ended or argued game is this line: what the card adds for the four
+ * `AWAITING_ENTRY` rungs is written there, and for everything else the sentence already exists,
+ * has a test, and is the one the screen behind the card says. So what crosses the seam is the
+ * **sentence** rather than the fold and the deck — a surface that reached for `resultArgument`
+ * would be reading a `GameStanding` outside the one file allowed to
+ * ([`resultArgument.ts`](../domain/resultArgument.ts)).
+ *
+ * It takes the game rather than the pair because the instant is the game's: `readAt` travels on
+ * every row precisely so a screen holding one game does not have to be handed the list's fold.
+ */
+export function gameStandingLine(game: Game, playerId: string): string {
+  return standingLine(resultArgument(game, playerId), game.readAt);
+}
+
+export function standingLine(argument: ResultArgument, readAt: string): string {
+  switch (argument.kind) {
     case 'not-yours':
       return NOT_YOURS_LINE;
     case 'unreadable':
       return OUT_OF_DATE_GAP;
     case 'awaiting-entry':
-      return conversation.entryClosesAt === undefined
+      return argument.entryClosesAt === undefined
         ? 'Nobody has said this one happened yet.'
-        : `Nobody has said this one happened yet — ${durationLeft(conversation.entryClosesAt, readAt)} left to say you played.`;
+        : `Nobody has said this one happened yet — ${durationLeft(argument.entryClosesAt, readAt)} left to say you played.`;
     case 'never-played':
       return 'Nobody said this one happened before the window closed, so nothing was recorded.';
+    case 'called-off':
+      // The gloss on the card's tag and the standing line alike — one word for this ending
+      // everywhere (ADR-0172 §8). Who and how are the heading's and the body's, not this line's.
+      return 'Called off';
     case 'ours-stands':
-      return `Your side's score is on the table. If nobody answers within ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
+      return `Your side's score is on the table. If nobody answers within ${durationLeft(argument.proposal.answerBy, readAt)}, it stands.`;
     case 'theirs-stands':
       // **The one sentence on these screens that was addressed to nobody.** *That's right*
       // settles a score against a person, and until a seat carried a handle the screen could
       // not say which (#319).
-      return `${playerName(conversation.by)} put a score up. If you say nothing for ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
+      return `${playerName(argument.by)} put a score up. If you say nothing for ${durationLeft(argument.proposal.answerBy, readAt)}, it stands.`;
     case 'both-stand':
       return "Both sides wrote a score down and they don't match.";
     case 'agreed': {
@@ -161,12 +227,12 @@ export function standingLine(conversation: ResultConversation, readAt: string): 
       // *You* on your own tap, and your partner by name on theirs — the second is the whole
       // reason the accepter travels: in a doubles game *your side agreed* is news about somebody
       // the reader did not watch do it.
-      const agreed = playerName(conversation.agreement.by);
+      const agreed = playerName(argument.agreement.by);
       const who =
-        conversation.agreement.with === 'ours'
+        argument.agreement.with === 'ours'
           ? `${agreed} agreed with your score.`
           : `${agreed} agreed with their score.`;
-      return `${who} It becomes the result in ${durationLeft(conversation.agreement.settlesAt, readAt)}.`;
+      return `${who} It becomes the result in ${durationLeft(argument.agreement.settlesAt, readAt)}.`;
     }
     case 'confirmed':
       return 'Agreed.';
@@ -176,11 +242,54 @@ export function standingLine(conversation: ResultConversation, readAt: string): 
 }
 
 /**
+ * **The ghost's body** — nothing anybody is measured on moves (ADR-0163 §3) — said of a game that
+ * never happened.
+ */
+const NOBODY_IS_MARKED_FOR_THAT = 'Nobody is marked for that. Not you, not any of the others.';
+
+/**
+ * **The ending block's one heading** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §8, [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
+ * §3): both ways a game is called off are a shortage — a departure emptied the court, or the
+ * hour found it still short of a player — and the heading says so without a name; the body says
+ * which. *{name} called the game off* went with the press. Exported for the suite that walks the
+ * ended court one feature over.
+ */
+export const CALLED_OFF_FOR_LACK_OF_PLAYERS = 'The game was called off for lack of players';
+
+/**
+ * **The trash's spoken name** — the one control on a called-off card besides *What happened?*,
+ * a glyph with its word spoken ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+ * §8). *This card* and not *this game*: the act removes a card and nothing else, and the name
+ * says exactly that much.
+ */
+export const REMOVE_THIS_CARD = 'Remove this card';
+
+/**
+ * The ending's body: a departure names who left and says the shape of the game it ended; the
+ * hour says nobody filled the seat and the same shape. Both end with the ghost's own fact about
+ * the strands — the same fact about the same people (ADR-0163 §3), because a call-off is neither
+ * an evening nor a game that never happened.
+ */
+function calledOffBody(ending: CalledOffEnding): string {
+  if (ending.how === 'the-hour') {
+    return ending.format === 'singles'
+      ? 'Nobody filled the seat in time, so the singles game is called off. Nobody is marked for it — not you, not them.'
+      : 'Nobody filled the seat in time, so the doubles game is called off. Nobody is marked for it — not you, not any of them.';
+  }
+
+  const name = playerName(ending.by);
+  return ending.format === 'singles'
+    ? `${name} left, so the singles game is called off. Nobody is marked for it — not you, not them.`
+    : `${name} was the last to leave, so the doubles game is called off. Nobody is marked for it — not you, not any of them.`;
+}
+
+/**
  * The screen's own title — **variant C's, unchanged**, plus the three states the prototype's
  * five screens did not have to name.
  */
-export function resultTitle(conversation: ResultConversation): string {
-  switch (conversation.kind) {
+export function resultTitle(argument: ResultArgument): string {
+  switch (argument.kind) {
     case 'not-yours':
       return 'Not your game';
     case 'unreadable':
@@ -189,6 +298,8 @@ export function resultTitle(conversation: ResultConversation): string {
       return 'The score';
     case 'never-played':
       return 'It never happened';
+    case 'called-off':
+      return CALLED_OFF_FOR_LACK_OF_PLAYERS;
     case 'ours-stands':
       return 'Sent — waiting';
     case 'theirs-stands':
@@ -220,35 +331,32 @@ export function resultTitle(conversation: ResultConversation): string {
  * in this product and no date picker in this app, so an absolute time would be the first one and
  * it would be this screen inventing it.
  */
-export function clockLine(
-  conversation: ResultConversation,
-  readAt: string,
-): ClockBlock | undefined {
+export function clockLine(argument: ResultArgument, readAt: string): ClockBlock | undefined {
   // An agreement moves the clock off the answer window and onto the grace, which is a shorter
   // span measured from a different moment — the **score**, never anybody's tap. Silence has
   // stopped being the question, so the sentence under the figure stops naming it.
-  if (conversation.kind === 'agreed') {
+  if (argument.kind === 'agreed') {
     return {
-      figure: durationLeft(conversation.agreement.settlesAt, readAt),
+      figure: durationLeft(argument.agreement.settlesAt, readAt),
       line: 'until this becomes the result. Nothing more is needed from anybody.',
     };
   }
 
-  if (conversation.kind === 'ours-stands') {
+  if (argument.kind === 'ours-stands') {
     return {
-      figure: durationLeft(conversation.proposal.answerBy, readAt),
+      figure: durationLeft(argument.proposal.answerBy, readAt),
       line: 'left for the other side to answer. If they say nothing, this becomes the result.',
     };
   }
-  if (conversation.kind === 'theirs-stands') {
+  if (argument.kind === 'theirs-stands') {
     return {
-      figure: durationLeft(conversation.proposal.answerBy, readAt),
+      figure: durationLeft(argument.proposal.answerBy, readAt),
       line: 'until this becomes the result. Nobody has to do anything — silence confirms it.',
     };
   }
-  if (conversation.kind === 'awaiting-entry' && conversation.entryClosesAt !== undefined) {
+  if (argument.kind === 'awaiting-entry' && argument.entryClosesAt !== undefined) {
     return {
-      figure: durationLeft(conversation.entryClosesAt, readAt),
+      figure: durationLeft(argument.entryClosesAt, readAt),
       line: 'left to say this game happened. After that it is recorded as one that never did.',
     };
   }
@@ -283,14 +391,19 @@ export const UNSCORED_FACTS: readonly string[] = [
  * `undefined` where the standing line has already said the whole of it: a second sentence
  * restating the first is what teaches somebody to stop reading the first.
  */
-export function resultBody(conversation: ResultConversation): string | undefined {
-  switch (conversation.kind) {
+export function resultBody(argument: ResultArgument): string | undefined {
+  switch (argument.kind) {
     case 'awaiting-entry':
       // ADR-0137 §2 for a player: there is no booking behind any of this, so the entry is not
       // paperwork about a game the platform already knows about — it *is* the record.
       return 'Putting a score in is what records that this game happened. There is nothing else behind it — no booking, no calendar.';
     case 'never-played':
-      return 'Nobody is marked for that. Not you, not any of the others.';
+      return NOBODY_IS_MARKED_FOR_THAT;
+    // The fourth end is drawn as the ghost is (#419 §3): neither an evening nor a game that never
+    // happened, so nothing anybody is measured on moves (ADR-0163) — and the body says the
+    // ghost's own fact, naming the person where a departure ended it (ADR-0172 §8).
+    case 'called-off':
+      return calledOffBody(argument.ending);
     case 'ours-stands':
       return 'You can change what you entered until they answer, and it does not use your side’s one turn up. If they put something else up instead, only an acceptance settles it.';
     case 'theirs-stands':
@@ -308,7 +421,7 @@ export function resultBody(conversation: ResultConversation): string | undefined
       // `your_side_has_already_answered` — the same failure the old `both-stand` copy was
       // written to avoid, one state along. Which side could make one is the screen's business
       // and not this sentence's: what differs here is only whether anybody can.
-      return conversation.ours !== undefined && conversation.theirs !== undefined
+      return argument.ours !== undefined && argument.theirs !== undefined
         ? 'Both scores stay up until then, and neither side can put another one there — each side gets one, and both have been used. Nobody is marked either way.'
         : 'Until then, anybody who played can still put a different score up. That window is what stops somebody quick to their phone from closing the door on a player who has not read the score yet. Nobody is marked either way.';
     case 'unscored':
@@ -360,7 +473,7 @@ export function outcomeLine(outcome: Outcome | undefined): string | undefined {
  * sentence's job is the other half: how many were out there, and who was against whom.
  */
 export function courtLine(ours: number, theirs: number): string {
-  return ours + theirs > 2
+  return ours + theirs > SINGLES_SEATS
     ? 'Doubles — you and your partner against two others.'
     : 'Singles — you against one other player.';
 }
@@ -549,3 +662,162 @@ export const SENDING_LABEL = 'Sending…';
  * is a box on somebody's phone.
  */
 export const RUB_OUT_LABEL = 'Rub out';
+
+// ---------------------------------------------------------------------------
+// The court's pairing — the forecast block and the players card (the-words.md §25)
+// ---------------------------------------------------------------------------
+
+/**
+ * The forecast block's eyebrow. **Stored as words and drawn uppercase** by the eyebrow style,
+ * for `formatEyebrow`'s reason: a second copy in the string would reach a screen reader as
+ * letters.
+ */
+export const BALANCE_FORECAST = 'Balance forecast';
+
+/**
+ * The word between the two side strengths, and the whole of what the middle column says.
+ *
+ * Lower case, because it is a unit rather than a heading: the two figures either side of it are
+ * the sentence. The builder's forecast card says the same word in the same place, and it is
+ * spelled here rather than borrowed because it is a word this screen says and §25 lists.
+ */
+export const GAP_WORD = 'gap';
+
+/**
+ * **What a confirmed score does**, under the percentage — the counted game moves everybody, the
+ * friendly moves nobody. `undefined` for a kind this build cannot read: the sentence is dropped
+ * and the figure above it still stands, which is §3's split applied to a clause that keys no
+ * total. It is `worthLine`'s fact in the forecast's register — *movement*, beside the number that
+ * says how even — and not that sentence again, because the two sit on one screen four cards
+ * apart and a reader who has read one should not be told it twice in the same words.
+ */
+export function forecastSentence(kind: GameKind | undefined): string | undefined {
+  if (kind === undefined) return undefined;
+  return kind === 'COUNTED'
+    ? 'A counted game — a confirmed score moves everybody’s level.'
+    : 'A friendly — nothing moves.';
+}
+
+/** The two stake tiles' names. *If*, because on a game the result has not happened. */
+export const WIN_TILE = 'If you win';
+export const LOSE_TILE = 'If you lose';
+
+/**
+ * The bar's two labels — **stems**, yours then theirs.
+ *
+ * A segment half a card wide cannot hold sixty-four characters, and `handleStem` is the one cut
+ * ADR-0107 permits: a prefix of what somebody typed, drawn where a box draws and never where a
+ * sentence names. *You* leads your side because a player reading their own handle on a bar about
+ * them is the one place the whole handle is the wrong word; a seat `users` cannot answer for is
+ * the unknown player's `?`. Singles is the same rule with one name a side.
+ */
+export function barLabels(seats: readonly GameSeat[], playerId: string): readonly [string, string] {
+  const [yours, theirs] = halves(seats, playerId);
+  // The cut is made on the name and never on *You* or on `?`: neither is a name, and
+  // `handleStem` is licensed for a prefix of what somebody typed.
+  const stem = (seat: GameSeat): string => {
+    const who = named(seat, playerId);
+    return who.kind === 'player' ? handleStem(who.name) : playerName(who);
+  };
+
+  return [yours.map(stem).join(SIDE_JOIN), theirs.map(stem).join(SIDE_JOIN)];
+}
+
+/** How two stems on one side are joined on the bar. The builder's own join, for the same box. */
+const SIDE_JOIN = ' + ';
+
+/**
+ * The same two sides **as a sentence names them** — every name whole, over *and* — for the
+ * split row's spoken name. `barLabels` is the drawing and this is the register a listener gets;
+ * the two are computed off one split of the court so they cannot disagree about who is where.
+ */
+export function sideNames(seats: readonly GameSeat[], playerId: string): readonly [string, string] {
+  const [yours, theirs] = halves(seats, playerId);
+  const name = (seat: GameSeat): string => playerName(named(seat, playerId));
+
+  return [sentenceList(yours.map(name)), sentenceList(theirs.map(name))];
+}
+
+/** Who a seat holds, in the reader's own terms — `whoIs`'s rule, read off the seat in hand. */
+function named(seat: GameSeat, playerId: string): NamedPlayer {
+  if (seat.playerId === playerId) return { kind: 'you' };
+  return seat.name === undefined ? { kind: 'unknown' } : { kind: 'player', name: seat.name };
+}
+
+/**
+ * The court split into your side and theirs — the domain's one split, and an empty pair for a
+ * reader holding no seat, which the plan lead never draws for.
+ */
+function halves(
+  seats: readonly GameSeat[],
+  playerId: string,
+): readonly [readonly GameSeat[], readonly GameSeat[]] {
+  const sides = sidesForReader(seats, playerId);
+  return sides === undefined ? [[], []] : [sides.yours, sides.theirs];
+}
+
+/**
+ * One seat's Level, in the row under the handle — `the-words.md` §6.4's level row with the
+ * confidence as a fourth clause: `2,71 · Established · likely 2,55 – 2,87 · 74% sure`.
+ *
+ * The first three clauses are Play's `levelRow`, cited rather than re-spelled, so the band's name,
+ * the range's dash and the two-decimal comma cannot drift between a card and this row. The fourth
+ * is the engine's own whole percentage through the one formatter, and the word *sure* is this
+ * screen's — the challenge card says `{n}% sure` the same way.
+ */
+export function seatLevelLine(seat: PairingSeat): string {
+  return `${levelRow(seat)} · ${formatPercent(seat.confidence)} sure`;
+}
+
+/**
+ * The players card's footer — the promise the record sheet keeps, and the gesture that opens it.
+ *
+ * **Tap, not hold**: the design's *press and hold* is refused on #285's argument — a hold has no
+ * affordance, no announcement and no equivalent in the accessibility API — and the sentence says
+ * the gesture that is actually there. The second sentence is the record's own authorship promise,
+ * said where the reader is about to open one.
+ */
+export const PLAYERS_FOOTER =
+  'Tap anyone for their record — level, form and how they behave. Counted by the system; nobody writes text about people here.';
+
+/** The players card's eyebrow. Stored as words, drawn uppercase — `BALANCE_FORECAST`'s rule. */
+export const PLAYERS = 'Players';
+
+/**
+ * **The row for a seat somebody left** (ADR-0162, #411 rule 6) — the words where a handle would
+ * be, an empty face beside them, no level row, and nothing to press: there is no record to open
+ * for nobody. The seat is drawn rather than dropped, because a players card that listed three
+ * people on a doubles court would be describing a different game.
+ */
+export const OPEN_SEAT = 'Open seat';
+
+/**
+ * Who a row is about: the name where the account still has one, and whether it is yours.
+ *
+ * Not `NamedPlayer`, because that formatter's *you* is a sentence's word for its reader and this
+ * row draws the name **whole** with the mark after it — `recordHandle`'s shape on the record
+ * sheet, for the same reason: a panel with your face on it and a stranger's name under it.
+ */
+export interface PlayerRowPerson {
+  /** Absent where `users` no longer has the account, which draws the unknown player's `?`. */
+  readonly name?: string;
+  readonly yours: boolean;
+}
+
+/** The whole name, with the one mark that says it is yours. */
+export function playerRowName(person: PlayerRowPerson): string {
+  const name =
+    person.name === undefined
+      ? playerName({ kind: 'unknown' })
+      : playerName({ kind: 'player', name: person.name });
+  return person.yours ? `${name} ${YOU_MARK}` : name;
+}
+
+/**
+ * What the row's tap is called — **the record it opens, by whose it is.** *Your record* for your
+ * own, because a control named *me_'s record* on a screen addressed to *me_* has read the reader
+ * their own handle; the sheet it opens is retitled the same way.
+ */
+export function recordLabel(person: PlayerRowPerson): string {
+  return person.yours ? 'Your record' : `${playerRowName(person)}’s record`;
+}

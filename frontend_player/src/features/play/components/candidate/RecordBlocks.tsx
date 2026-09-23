@@ -25,40 +25,27 @@
  * draws nothing at all rather than a row of empty boxes, and a card that has one block draws
  * one block filling the width.
  *
- * ## The gap is the statement, so the run is never padded
+ * ## *Last 5* is a drawn object this component only places
  *
- * *Last 5* is one square per counted-and-agreed result, oldest to newest. **Fewer than five is
- * a real answer**: three squares means three results, and the space where the other two would
- * be is drawn as a gap because padding it would claim two games nobody played. The row is
- * left-aligned in its box for exactly that reason — the missing squares are missing at the
- * end, where the newest results are not yet.
+ * The run of squares is `shared/ui`'s `RunOfForm` — its gap rule, its two fills and the three
+ * contrast ratios behind them are that component's and its pinned test's, because the record
+ * sheet draws the same run ([#373](https://github.com/Raketa02/Raketa/issues/373)) and a
+ * second copy would be a second thing to keep in step with a pinned geometry test. What is
+ * decided *here* is which of the three blocks are drawn at all.
  *
- * ## Fill, and what a listener gets instead of it
- *
- * A win is `ink` and a loss is `muted`: 3,24:1 between them and 14,57 / 4,49 against the
- * block's ground, all three clearing
- * [1.4.11](../../../../../docs/design-system.md#25-contrast--computed)'s 3:1 for a graphical
- * object, and the difference is **lightness** rather than hue — so the run survives being read
- * in one colour. It does not survive being read aloud, which is the half
- * [Part 13](../../../../../docs/design-system.md#part-13--accessibility) is about: the squares
- * carry no words, so the whole row reaches the listener as one clause counting them —
+ * The run carries no words, so it reaches a listener as one clause counting the squares —
  * *3 of the last 5 won* — rather than as five elements read like a table. That clause is
  * `lastFiveReading`'s and is composed into the card's spoken name beside the other two blocks.
  */
 
-import { StyleSheet, View } from 'react-native';
+import { RunOfForm, StatBox, StatFigure, StatRow } from '@/shared/ui';
 
-import { theme } from '@/shared/ui';
-
-import type { GameResult } from '../../domain/vocabulary';
 import {
   COUNTED_BLOCK,
   LAST_FIVE_BLOCK,
   PLAYER_SCORE_BLOCK,
   type RecordBlockFacts,
 } from '../playerCardPresentation';
-
-import { StatBox, StatFigure, StatRow } from './StatBox';
 
 export interface RecordBlocksProps {
   /**
@@ -92,11 +79,7 @@ export function RecordBlocks({ record }: RecordBlocksProps) {
 
       {lastFive === undefined ? null : (
         <StatBox label={LAST_FIVE_BLOCK}>
-          <View style={s.run}>
-            {lastFive.map((result, at) => (
-              <View key={`result-${at}`} style={[s.square, squareOf(result)]} />
-            ))}
-          </View>
+          <RunOfForm results={lastFive} />
         </StatBox>
       )}
 
@@ -110,25 +93,3 @@ export function RecordBlocks({ record }: RecordBlocksProps) {
     </StatRow>
   );
 }
-
-/** Won or lost, as a fill. The two are a lightness step apart — see the module note. */
-function squareOf(result: GameResult) {
-  return result === 'WIN' ? s.won : s.lost;
-}
-
-const s = StyleSheet.create({
-  run: {
-    flexDirection: 'row',
-    gap: theme.space.xxs,
-    alignItems: 'center',
-    // The figure's own line, so a box of squares stands exactly as tall as a box of digits.
-    height: theme.num.s.lineHeight,
-  },
-  square: {
-    width: theme.size.recordSquare,
-    height: theme.size.recordSquare,
-    borderRadius: theme.radius.recordSquare,
-  },
-  won: { backgroundColor: theme.color.ink },
-  lost: { backgroundColor: theme.color.muted },
-});

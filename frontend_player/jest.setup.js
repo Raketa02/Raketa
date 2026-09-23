@@ -126,6 +126,17 @@ jest.mock('expo-font', () => ({
 require('react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo').default.announceForAccessibilityWithOptions ??=
   jest.fn();
 
+// --- the gesture system and the UI-thread animations ----------------------------
+// The radar's field moves on `react-native-gesture-handler` and `react-native-reanimated`
+// (ADR-0176 §2), and both are native modules with an official jest shape rather than a
+// port: the gesture library's own setup registers the handlers a `GestureDetector` mounts,
+// and reanimated's runs every worklet — a gesture's callbacks, an animated style, a reaction
+// — on the JavaScript thread, with `withTiming` driven by the harness's fake clock. Nothing
+// above them is replaced: `radar.test.tsx` fires the field's gestures through the library's
+// own `fireGestureHandler` and reads the field it drew.
+require('react-native-gesture-handler/jestSetup');
+require('react-native-reanimated').setUpTests();
+
 // --- public runtime config --------------------------------------------------
 // The variables themselves are set in jest.config.js — see the note there; Babel inlines
 // them at transform time, so setting them from here would be too late.

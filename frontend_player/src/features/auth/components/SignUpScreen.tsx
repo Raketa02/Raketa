@@ -1,5 +1,12 @@
 /**
- * Create an account.
+ * Create an account — **credentials, and nothing about who you are.**
+ *
+ * Email, a password twice and the adult attestation. The nickname left this form with
+ * [ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §2: choosing credentials and saying who you are are two different moments, and the second
+ * is onboarding's first screen — *How should people see you?* — which the entry gate sends
+ * this new session straight into. A sign-up refused for a taken handle was a sign-up refused
+ * for a reason that had nothing to do with the account.
  *
  * **It asks one question that is not about the account**: whether the player is an adult.
  * The platform is adults only and that is a precondition of holding an account rather than
@@ -15,10 +22,9 @@
  * takes the answer. The same sentence renders when the server refuses the same thing by
  * code, because a body this form would not have sent can still arrive from an older build.
  *
- * A server-side conflict — the email is taken, the nickname is taken — carries the field
- * it belongs to, so it is rendered under that box rather than in the banner. A player
- * told "that nickname is taken" above a four-field form still has to work out which box
- * to change.
+ * A server-side conflict — the email is taken — carries the field it belongs to, so it is
+ * rendered under that box rather than in the banner. A player told "that email already has
+ * an account" above a three-field form still has to work out which box to change.
  *
  * **Both password boxes can be read back.** This is the one form in the app that asks for
  * the same secret twice and refuses on a mismatch, so a typo nobody can see costs the
@@ -29,28 +35,20 @@
 
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, TickBox, theme } from '@/shared/ui';
+import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
+import { Button, TextField, TickBox, theme } from '@/shared/ui';
 
 import { useSignUp } from '../hooks/useAuthActions';
 import { ADULT_LABEL, signUpSchema, validate, type FieldErrors } from '../schemas/authForms';
 
-import { AuthField, AuthNotice } from './AuthControls';
-import { authErrorField, authErrorMessage } from './authErrorMessage';
+import { AuthNotice } from './AuthNotice';
+import { bannerMessage, errorUnderField } from './authErrorMessage';
 
 export function SignUpScreen() {
   const [email, setEmail] = useState('');
-  const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   /**
@@ -66,7 +64,6 @@ export function SignUpScreen() {
   const submit = () => {
     const result = validate(signUpSchema, {
       email,
-      nickname,
       password,
       confirmPassword,
       adultAttested,
@@ -80,7 +77,6 @@ export function SignUpScreen() {
     setFieldErrors({});
     signUp.mutate({
       email: result.values.email,
-      nickname: result.values.nickname,
       password: result.values.password,
       adultAttested: result.values.adultAttested,
     });
@@ -88,14 +84,12 @@ export function SignUpScreen() {
 
   // A conflict the server raised against one field belongs under that field. Anything
   // else stays in the banner.
-  const serverField = signUp.error === null ? undefined : authErrorField(signUp.error);
-  const errorFor = (field: string) =>
-    fieldErrors[field] ??
-    (serverField === field && signUp.error !== null ? authErrorMessage(signUp.error) : undefined);
+  const errorFor = (field: string) => errorUnderField(field, fieldErrors, signUp.error);
+  const banner = bannerMessage(signUp.error);
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={s.flex} behavior={KEYBOARD_AVOIDANCE}>
         <ScrollView
           contentContainerStyle={s.content}
           keyboardShouldPersistTaps="handled"
@@ -106,12 +100,10 @@ export function SignUpScreen() {
             <Text style={s.title}>Create an account</Text>
           </View>
 
-          {signUp.error !== null && serverField === undefined ? (
-            <AuthNotice message={authErrorMessage(signUp.error)} />
-          ) : null}
+          {banner === undefined ? null : <AuthNotice message={banner} />}
 
           <View style={s.form}>
-            <AuthField
+            <TextField
               label="Email"
               value={email}
               onChangeText={setEmail}
@@ -123,17 +115,7 @@ export function SignUpScreen() {
               textContentType="emailAddress"
               editable={!signUp.isPending}
             />
-            <AuthField
-              label="Nickname"
-              value={nickname}
-              onChangeText={setNickname}
-              error={errorFor('nickname')}
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="nickname"
-              editable={!signUp.isPending}
-            />
-            <AuthField
+            <TextField
               label="Password"
               value={password}
               onChangeText={setPassword}
@@ -145,7 +127,7 @@ export function SignUpScreen() {
               textContentType="newPassword"
               editable={!signUp.isPending}
             />
-            <AuthField
+            <TextField
               label="Repeat password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -160,7 +142,7 @@ export function SignUpScreen() {
               editable={!signUp.isPending}
             />
 
-            {/* Below the four boxes and above the button, because it is the last thing a
+            {/* Below the three boxes and above the button, because it is the last thing a
                 player agrees to rather than another detail about the account, and because
                 a refusal has to be visible from the control that provoked it. */}
             <TickBox

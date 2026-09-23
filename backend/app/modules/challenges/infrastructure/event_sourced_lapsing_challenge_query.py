@@ -6,14 +6,23 @@ one answers with ids alone, because the loop behind it is going to load every
 one of them through the aggregate repository anyway and a second replay here
 would be the same stream read twice.
 
-**The whole narrowing is one column comparison, and it is exact rather than
-heuristic.** A seat's ``answer_by`` is the seating event that created it plus
-``ANSWER_WINDOW`` — ``answer_window.py`` is the only place that arithmetic
-happens — so a challenge holds a seat whose window has passed at ``now`` only if
-one of its events occurred at or before ``now`` minus that window. A stream's
-earliest event is its opening, so *any* row inside the cutoff names a challenge
-old enough to have one, and every challenge younger than the cutoff is excluded
-with certainty.
+**The whole narrowing is one column comparison, and the window it compares
+against is deliberately not the current one.** A seat's ``answer_by`` is the
+seating event that created it plus the window that stood *when it was invited* —
+``answer_window.py`` is the only place that arithmetic happens — so a challenge
+holds a seat whose window has passed at ``now`` only if one of its events
+occurred at or before ``now`` minus **the shortest window this log has ever
+stamped**. A stream's earliest event is its opening, so *any* row inside the
+cutoff names a challenge old enough to have one, and every challenge younger than
+the cutoff is excluded with certainty.
+
+**Narrowing on ``ANSWER_WINDOW`` instead would be right only while that number
+never moves.** It applies today's promise to yesterday's seats: after the day
+became two days, a seat still running on the old day lapsed twenty-four hours
+before a cutoff written from the new one went looking for it, and the
+``SeatLapsed`` it owes *answers challenges* would have been written a day late
+for every seat in flight across the change. ``SHORTEST_WINDOW_EVER_STAMPED``
+carries the ledger that makes the cutoff right in either direction.
 
 **What it does not narrow on is the seat itself**, and that is the decision
 rather than a limitation. Whether a particular seat is still awaiting lives in a
@@ -21,8 +30,10 @@ seat code inside a JSON array; a column that answered it would be the derived
 standing, stored — which is the thing ``standing.py`` refuses, and it would be
 wrong for exactly the gap this loop exists to close. So this over-names: a
 challenge everybody answered, one already swept and a mutual-born one with no
-deadline anywhere on it are all candidates once they are a day old, and each
-costs a stream read and an aggregate that appends nothing.
+deadline anywhere on it are all candidates once they are past the cutoff, and
+each costs a stream read and an aggregate that appends nothing. **Over-naming is
+free and under-naming is not**, which is the same asymmetry that chooses the
+shortest window above.
 
 **Cost.** Grows with challenges ever recorded rather than with the backlog, and
 ``occurred_at`` carries no index — the same position ``challenge_streams.py``
@@ -44,7 +55,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Instant
-from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
+from app.modules.challenges.domain.answer_window import (
+    SHORTEST_WINDOW_EVER_STAMPED,
+)
 from app.modules.challenges.infrastructure.event_sourced_challenge_repository import (
     CHALLENGE_AGGREGATE,
 )
@@ -58,7 +71,7 @@ class EventSourcedLapsingChallengeQuery:
         self._session = session
 
     async def may_have_lapsed(self, *, now: Instant) -> tuple[UUID, ...]:
-        """Every challenge stream that opened at or before one window ago.
+        """Every challenge stream that opened at or before the shortest window ago.
 
         Ordered by the position its first event took in the log, which is
         oldest-first and is a **total** order — ``sequence_no`` is the only
@@ -74,7 +87,7 @@ class EventSourcedLapsingChallengeQuery:
             )
             .where(
                 EventStoreORM.aggregate_type == CHALLENGE_AGGREGATE,
-                EventStoreORM.occurred_at <= now - ANSWER_WINDOW,
+                EventStoreORM.occurred_at <= now - SHORTEST_WINDOW_EVER_STAMPED,
             )
             .group_by(EventStoreORM.aggregate_id)
             .order_by("opened")

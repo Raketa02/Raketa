@@ -138,7 +138,7 @@ whole reason there is one engine rather than three.
   4  MODIFY        three modifiers, ±10 stack, each prints                   §6
   5  QUALITY FLOOR below it, not shown at all. minimum evidence beside it    §7
   6  LIVENESS      reorders. never enters Fit. never crosses as a number     §8
-  7  TERMINAL      shortlist │ line-up → group objective → arrange │ deck    §10
+  7  TERMINAL      shortlist │ line-up → group objective → arrange │ deck │ reading  §10
   8  EXPLAIN       evidence codes, ranked by contribution                    §5.4
 ```
 
@@ -316,10 +316,11 @@ than level — because that is what *for fun* means.
               Play intent. Six cells, ADR-0094. NO_PREFERENCE reads 0.85 in both modes;
               a directly opposite declaration reads 0.00 and takes no further modifier.
 
-4  reliability  five strands read SEPARATELY, weighted per mode (ranking-weights §6), each
-              strand standing down below RELIABILITY_MIN_OBSERVATIONS = 3, the whole term
-              standing down past RELIABILITY_HORIZON_DAYS = 365. Two of the five have a
-              provider (ADR-0140); the other three stand down for everybody and the
+4  reliability  six strands read SEPARATELY, weighted per mode (ranking-weights §6), each
+              strand standing down below ITS OWN min_observations — 5 for answers about
+              results, 3 for the rest (ADR-0160) — the whole term standing down past
+              RELIABILITY_HORIZON_DAYS = 365. Three of the six have a provider
+              (ADR-0140, ADR-0160); the other three stand down for everybody and the
               survivors renormalise inside the term.
 
 5  availability  |shared| / |mine|        ← the glossary verbatim. NO CONSTANTS AT ALL.
@@ -352,7 +353,7 @@ Every term's evidence crosses keyed by `kind`, and the union is enumerated in
 | Level fit | `{level_fit, their_mu, my_mu, delta, direction}` |
 | Predicted balance | `{predicted_balance, pct, my_sigma, their_sigma, confidence}` |
 | Intent alignment | `{intent_alignment, their_intent, my_mode, aligned}` |
-| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **five named** strands, closed (*confirms results* struck by ADR-0137, removed by ADR-0140) |
+| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **six named** strands, closed (*confirms results* struck by ADR-0137 and removed by ADR-0140; *answers about results*, which counts answers and not agreements, added by ADR-0160) |
 | Availability overlap | `{availability_overlap, shared_count, next_slot: {day, part}}` — `grid_stale` gone with staleness; `days_away` is **stored and never crossed** |
 | Playing style | `{playing_style, matched, complementary, clashing}` |
 | Social vibe | same shape, `{social_vibe, …}` |
@@ -699,16 +700,19 @@ exceeding it** — cubic enumeration makes `K = 32` cost the whole line-up budge
 **One deal, one `search_id`, an ordered batch of cards.** One-at-a-time is how the deck is
 *shown*, not how it is computed: §9.11's ordering policy is a property of a whole deal.
 
-**The deck has no `mode`** — a check constraint, not a convention — and reads the viewer's
-declared Play intent instead: `COMPETITIVE → comp`, `FOR_FUN → fun`, **`NO_PREFERENCE → fun`**,
-never a third vector. The mapping is resolved backend-side and no mode crosses the wire; `search`
-records `intent_read` — **the declaration as it stood**, not the vector it mapped to, so a later
-change to the mapping does not rewrite history.
+**The deck has no `mode`** — a check constraint, not a convention — **and reads no declaration
+either** ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §2, superseding the mapping this paragraph carried): every deal scores under
+`fun`'s vector, `INTENT_ALIGNMENT` stands down for every pairing on this surface, and
+`play_intent_not_declared` is never raised by it. `search` still records `intent_read` — the
+declaration as it stood — so what a viewer had declared when dealt is not lost, and a later
+change to this rule does not rewrite history.
 
 **The relaxation ladder does not reach the deck.** Its own exclusions — passed within
-`PASS_SUPPRESS`, already asked, already has an open game with you — are gates, and their numbers
-are set ([#194](https://github.com/Raketa02/Raketa/issues/194)): **`PASS_SUPPRESS = 30 days`,
-`INTEREST_TTL = 21 days`, `OUTSTANDING_INTEREST_CAP = 20` per sport.**
+`PASS_SUPPRESS`, already asked, already has an open game with you, and **in the deck's cool-off**
+— are gates, and their numbers are set ([#194](https://github.com/Raketa02/Raketa/issues/194),
+[ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §6): **`PASS_SUPPRESS = 30 days`, `INTEREST_TTL = 21 days`, `OUTSTANDING_INTEREST_CAP = 20`
+per sport, `DECK_COOL_OFF = 30 days`** — the last a deck-only window after a shared challenge or
+game is behind the pair, deliberately equal to the pass window and cleared with it.
 
 **`PASS_SUPPRESS` is deck-only, one-directional, and never escalates**
 ([ADR-0128](../../adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)). It reaches no
@@ -737,16 +741,62 @@ already dealt. Exhausting a *deal* is not exhausting the *pool*, and the two wer
 until this was asked: the honest empty state belongs to a fresh deal that came back with nothing,
 never to a player who has seen ten of forty.
 
-**The deck's ordering is its own and its variety is that order** — people who already said yes,
-then high liveness, then the rest — plus `PASS_SUPPRESS`. §9.11's raised λ is struck with the
+**The deck's ordering is its own and its variety is that order** — **two bands** since [ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4:
+the lifted (where the person who already said yes to you sits by rank key, unmarked, on their
+`+14`), then the rest — plus `PASS_SUPPRESS`. §9.11's raised λ is struck with the
 stage it belonged to (§9): a card at a time makes order the whole experience, which is the
 stronger case for a spread and still not strong enough to buy a move nobody can be given a reason
 for.
 
-**A pass is write-only**, carries the Origin key, and **no route ever returns one**. There is no
-*Show them again*: it voids a 30-day suppression on one tap, makes the constant unmeasurable, and
-solves a problem a real pool does not have. **The exhausted deck is the honest empty state** plus
-the count of the player's own outgoing yeses.
+**A pass is write-only**, carries the Origin key, and **no route ever returns one**. **There is a
+*Show them again*** ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §5): `POST /deck/reset` clears a sport's suppression, dealt memory and
+cool-off in one act, `204`, and the durable record stays — the constant's falsifier now excludes
+resets from its sample, which is the cost #231 named and the author accepted. **The exhausted
+deck is still the honest empty state**, and it now says how many are left before it is reached:
+`pool.remaining` on the envelope, and `pool.want_to_play_you` for the chip.
+
+### 10.4 The reading
+
+**The radar's surface, `RADAR`, and the fifth**
+([ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §1, §3, §5;
+[`the-radar.md`](the-radar.md) §2–§3). `POST /api/v1/radar` with a sport, and nothing else: the
+reach is the viewer's own search radius applied as the same box and exact circle the deck uses,
+there is no city, and there is no mode — the reading scores under the deck's ruler for everybody,
+`INTENT_ALIGNMENT` stood down, `mode` null and `intent_read` recorded as it stood, under the same
+constraint the deck writes under, widened to the two surfaces that score under one ruler.
+
+**Five gates asked, and the other four are not asked** — never relaxed, which §11 forbids:
+`BLOCKED`, `HELD_ACCOUNT`, `ACCOUNT_INACTIVE`, `GENDER_PREFERENCE` and `NOT_RATED` hold, with
+`OUTSIDE_RADIUS` as the reach itself; `OPEN_CHALLENGE`, `LEVEL`, `PHOTO` and `PROPOSALS_OPT_OUT`
+have no question on this surface to gate. The histogram keeps ten keys and a reading records a
+**zero** under each of the four, which
+[`search-telemetry.md`](search-telemetry.md) reads as *not asked* on a `RADAR` row.
+
+**No judgement after the gates.** Everyone admitted is scored and everyone scored is drawn: no
+quality floor (computed, not applied — the near-miss band is empty and `best_withheld_fit` is
+null), no cool-off, no pass memory, no dealt memory, no *already asked*. **The order is the
+printed distance and then the player id** — no rank key, no bands — so a position exists for
+the Origin key to name. Stage 6 still runs for every row, because the row crosses with its
+liveness reasons and the sheet reads `INTEREST_LIFT` off it; it moves nobody.
+
+**Two fields are the reading's alone**, on the row and never in the card: `bearing_deg` from the
+viewer's drawn spot to the player's, and `ratings[]` — every sport the player is rated in with
+the Level held there, read across the index's partitions. Both are recorded, because a read-back
+never recomputes.
+
+**A reading is not a deal** (ADR-0174 §4, bounding
+[ADR-0131](../../adr/0131-a-deal-remembers-for-a-day-so-a-spent-deal-deals-again.md)). It enters
+no dealt memory — `dealt_since` reads `surface = DECK` and nothing else — and it notes no
+exposure, because the ledger prices who has been *offered* and a map is not an offer. What
+reaches the deck is an answer: `POST /interest` and `POST /passes` take a reading's `search_id`
+as an Origin key through the same resolver a deal's answers use.
+
+**The chip is the deck's number** (ADR-0174 §5). `pool.want_to_play_you` on a reading is
+computed by the deck's own function over a generation run under the deck's ten gates and the
+deck's exclusions — the reads shared in `application/deck_exclusions.py` — so the chip on either
+pane of Players is one number; omitted at zero. The named edge: a liker whose Level is too far
+for the deck is drawn, carries `INTEREST_LIFT`, and is not counted. There is no `remaining`: a
+reading draws everybody.
 
 ---
 
@@ -812,6 +862,7 @@ searcher how many people a mutual gate hid from them.
 | Exposure | Redis, TTL | losing a week of *who was shown to whom* costs nobody a fact | **soft** |
 | Prompt | Redis, TTL | a standing question, left by a loop for the next search to pick up. Losing one costs a prompt nobody sees this week, and the loop raises it again on its next tick | **soft** |
 | **Prompt decline** | **durable**, in the module | the two constants in `prompts.py` are falsified by *take-up rate on the prompt* and *acceptance rate on the offer*, and a decline is the only one of a prompt's three outcomes that nothing else records — the raise conditions are recomputable from the search store forever, and an accept writes a value. A suppression that lapses leaves no trace the player was ever asked. The record is telemetry; the **live suppression is derived from it** at the one place every prompt converges | — |
+| **Deck reset** | **durable**, in the module | *Show them again* ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §5 and its amendment) is **one moment** per press, per player, per sport, and the next deal reads it three ways — against the pass record, the search record and the courts — so the route touches none of the stores it clears. Durable because two of the three are rows that do not fail soft, and a reset lost to a cache outage would re-hide the people a player just asked to see; append-only because `PASS_SUPPRESS`'s falsifier now excludes the re-shows a reset caused, and only the moments can say which | — |
 | ~~Search results~~ | — | **deleted** — §8.3's `search:{id}` at a 30-minute TTL held the same Fit as §19.2's table, free to disagree, in the one place §8.3 calls disagreement fatal | — |
 | ~~Standing searches~~ | — | out of scope; still fog on the map | — |
 
@@ -824,7 +875,10 @@ story: it is a small fact with an expiry date. The same is true of a pass, with 
 **an interest expires, a pass record does not.** The 30-day *suppression* lapses; the row saying
 the pass happened is kept, because [#194](https://github.com/Raketa02/Raketa/issues/194) found
 that its constant's falsifier needs exactly the fact a TTL destroys. Suppression still fails
-soft, and the split is why: the **gate** is the cache, the **evidence** is the row.
+soft, and the split is why: the **gate** is the cache, the **evidence** is the row. **And the
+gate can now be cleared without being touched**: a deck reset is a moment on a row, and the deal
+subtracts from the cache what the pass record, read against that moment, says was cleared — the
+keys lapse on their own.
 
 **The split has a second instance, and it is the same argument about a question rather than a
 person.** A prompt is a courtesy and its ledger is a cache; a **decline** is a player's answer,
@@ -866,7 +920,7 @@ permanent — because identity is assigned at `INSERT`, not at `COMMIT`, so a re
 
 ```
 Ruleset
-  version            "2026.08.26-a"      immutable once released; a new set is a new name
+  version            "2026.09.08-a"      immutable once released; a new set is a new name
   modes
     competitive      { weights{8}, strand_weights{6}, level_tol, ... }
     for_fun          { weights{8}, strand_weights{6}, level_tol, fun_free_band, ... }
@@ -874,7 +928,7 @@ Ruleset
   tags               { phi, complement_strength, clash_severities, clash_cap,
                        relationship_matrix[37], familiarity_reading_map }
   balance            { coefficients(145, 32), pct_min, pct_max }
-  reliability        { min_observations, horizon_days, published_score_bar }
+  reliability        { min_observations{6}, horizon_days, published_score_bar }
   modifiers          { budget, calibration, familiarity, welcoming,
                        newcomer_absorption_cap }
   liveness           { signal bounds, move_notice, asym_tolerance }
@@ -921,13 +975,14 @@ release kind — **weight-only** or **shape-class** — is **derived, never decl
 
 ## 14. The contracts
 
-Nine routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
+Ten routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
 
 | Route | Creates a search | Notes |
 | --- | --- | --- |
 | `POST /api/v1/searches` | ✓ | **deliberately not idempotent** — two taps are two searches, and §19's denominator is *searches run* |
 | `POST /api/v1/lineups` | ✓ | `LINEUP` / `FILL_SEATS`, differing only by `locked_seats` |
 | `POST /api/v1/deck` | ✓ | `sport`, and the week this one deal runs on — no mode, no rung |
+| `POST /api/v1/radar` | ✓ | `RADAR` — `sport` only; **never a deal** (§10.4): no dealt memory, no exposure, five gates asked |
 | `GET /api/v1/searches/{id}` | — | the **same schema** the `POST` returned |
 | `POST /api/v1/interest` | — | idempotent per `(from, to, sport)`; `search_id` required |
 | `POST /api/v1/forecasts` | **no — deliberately** | re-`POST`ing a line-up per swap would enter a six-edit builder session into the denominator as six searches |

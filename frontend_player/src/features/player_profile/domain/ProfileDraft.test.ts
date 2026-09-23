@@ -13,7 +13,9 @@ describe('a draft that has been started', () => {
 
     // A blank week and no photos are legitimate *answers* — an empty grid means no
     // preference and never "leave me out" — so those two start as empty lists rather than
-    // as absences. The four that must actually be answered start absent.
+    // as absences, and the intro starts as nothing written for the same reason: a player
+    // who skips has no line, not a missing one. The four that must actually be answered
+    // start absent.
     //
     // `genderPreference` is neither: it starts at a **value**, because unconstrained is
     // what having narrowed nothing already means. It is the one field here that a step
@@ -21,6 +23,7 @@ describe('a draft that has been started', () => {
     // fifth outstanding answer nobody is short of.
     expect(draft).toEqual({
       socialTagIds: [],
+      intro: '',
       photoIds: [],
       availability: [],
       location: undefined,

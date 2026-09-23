@@ -8,7 +8,7 @@
 
 import { TAB_BAR_TABS } from '@/shared/ui';
 
-import { PLAY_STACK, SHELL_TAB_ROOT, tabForPathname } from './shellTabs';
+import { PLAY_STACK, SHELL_TAB_ROOT, barStandsDown, tabForPathname } from './shellTabs';
 
 describe('the five routes', () => {
   it('names one for every tab the bar draws, and no others', () => {
@@ -30,11 +30,22 @@ describe('which tab a route is inside', () => {
   });
 
   it('keeps Play lit on every screen inside Play', () => {
-    // None of these exist yet; they are the deck, the builder and the pool, and the day
-    // they land is the day a whole-path comparison would go dark on arrival.
-    expect(tabForPathname('/play/deck')).toBe('play');
-    expect(tabForPathname('/play/four')).toBe('play');
-    expect(tabForPathname('/play/pickpool')).toBe('play');
+    // The builder and the pool, and any depth Play grows next: a whole-path comparison would
+    // go dark on the second screen.
+    expect(tabForPathname('/play/builder')).toBe('play');
+    expect(tabForPathname('/play/pool')).toBe('play');
+    expect(tabForPathname('/play/anything-next')).toBe('play');
+  });
+
+  /**
+   * The deck left Play for a tab of its own
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §1): `/players` is Players' root, and nothing under `/play/…` is the deck any more.
+   */
+  it('reads Players off its root, and never off a route under Play', () => {
+    expect(tabForPathname('/players')).toBe('players');
+    expect(SHELL_TAB_ROOT.players).toBe('/players');
+    expect(Object.values(SHELL_TAB_ROOT)).not.toContain('/around');
   });
 
   /**
@@ -51,5 +62,52 @@ describe('which tab a route is inside', () => {
     // Nothing outside `(tabs)` draws a bar at all, so this is the answer to a question
     // that is never asked rather than a claim that /sign-in is the Now tab.
     expect(tabForPathname('/sign-in')).toBe('now');
+  });
+});
+
+/**
+ * **Two routes stand the bar down, and each is named in full.** The conversation is the screen
+ * whose composer replaces the bar ([#400](https://github.com/Raketa02/Raketa/issues/400)), and
+ * the yes screen under a challenge is the one the bar would be a way out of that the record
+ * says it does not have ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §2). The inbox they are pushed over, the challenge screen, the builder under it and the game
+ * screen behind the room's own *Details* door all keep theirs — so a `/chats/*` match would be
+ * four screens too wide, and a prefix match would take the bar off the game screen at
+ * `…/details` and the builder at `…/fill`.
+ */
+describe('where the bar stands down', () => {
+  const ROOM = '/chats/conversation/eeeeeeee-0000-4000-8000-000000000005';
+  const YES = '/chats/challenge/aaaaaaaa-0000-4000-8000-000000000001/yes';
+
+  it('is inside a conversation, and its column stays lit while it does', () => {
+    expect(barStandsDown(ROOM)).toBe(true);
+    expect(tabForPathname(ROOM)).toBe('chats');
+  });
+
+  it('is on the yes screen under a challenge, and its column stays lit there too', () => {
+    expect(barStandsDown(YES)).toBe(true);
+    expect(tabForPathname(YES)).toBe('chats');
+  });
+
+  it.each([
+    ['the Chats inbox the room is pushed over', '/chats'],
+    ['the challenge screen', '/chats/challenge/aaaaaaaa-0000-4000-8000-000000000001'],
+    ['the builder under a challenge', '/chats/challenge/aaaaaaaa-0000-4000-8000-000000000001/fill'],
+    ['the game screen behind the room’s own Details door', `${ROOM}/details`],
+    ['a game over Now', '/games/8f14e45f-ceea-467a-9dd1-4bd9c39d4a58'],
+    ['the shell root', '/'],
+    ['a path the shell does not own', '/sign-in'],
+  ])('is not %s', (_, pathname) => {
+    expect(barStandsDown(pathname)).toBe(false);
+  });
+
+  it('is not a conversation with no id, which is not a route at all', () => {
+    expect(barStandsDown('/chats/conversation')).toBe(false);
+    expect(barStandsDown('/chats/challenge//yes')).toBe(false);
+  });
+
+  it('is not anything else hung under a challenge, nor anything under the yes screen', () => {
+    expect(barStandsDown('/chats/challenge/aaaaaaaa-0000-4000-8000-000000000001/no')).toBe(false);
+    expect(barStandsDown(`${YES}/more`)).toBe(false);
   });
 });

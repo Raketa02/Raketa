@@ -57,11 +57,14 @@ backend after `matchfit` returns — the same seam `at_stake` already rides
 ```
 candidate:   { player_id, fit, distance_km, player_card, ... }
 player_card: { nickname, photo_id?, photo_url?, review?, area_code,
-               social_tags[], level, band, range,
+               social_tags[], intro?, level, band, range,
                player_score?, counted_games?, last_five? }
 ```
 
-Closed list. `photo_id` and `photo_url` are **omitted together** (not null) when the player has
+Closed list — `intro?` is the one field it has gained since, the line a player writes about
+themselves, omitted where they wrote none
+([ADR-0170](../../adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+`photo_id` and `photo_url` are **omitted together** (not null) when the player has
 no photo, and the client draws the generated court poster. **The id is what is stored and the
 URL is what is drawn** — minted per response and recorded nowhere, because the client cannot
 sign one for another player's photo and `GET /photos/{id}` refuses to
@@ -99,9 +102,17 @@ at all**: it is not a photograph and has nothing to have passed.
 > what the player themselves put there. Putting it on the card would make it the single field
 > whose value changes depending on who is looking.
 >
-> It is an **integer**, and it is **omitted** rather than `0` when the distance term stood down —
-> the two spellings of absence ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)
-> §4), which is what lets *Closest* sort a stood-down row last instead of first.
+> It is **one decimal, measured between two drawn spots** since 2026-09-16
+> ([ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2,
+> [`the-radar.md`](the-radar.md) §4) — one fixed point inside each player's cell, derived from a
+> stable digest of who they are, so *1,9 km* where the card said *2 km* and *0,6 km* for somebody
+> in the searcher's own cell, never below *0,1*. The Fit does not read it: the distance term and
+> the radius gate keep measuring cell to cell, which is why a player at the very edge may print
+> *10,3 km* inside a 10 km reach. It is **omitted** rather than `0` when the distance term stood
+> down — the two spellings of absence
+> ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §4),
+> which is what lets *Closest* sort a stood-down row last instead of first. *Closest* reads the
+> print, so it can now tell two people in one cell apart — by the same fiction the card prints.
 
 > **`range` is on the card for the same reason `distance_km` is not.** It is the **likely
 > range** — μ ± σ as `rating` published it — and it is a fact about that person alone, which
@@ -230,7 +241,10 @@ never the designed path.
 ## 3. ⚡ Let the engine fill the seats
 
 `POST /lineups`. The response carries the seated line-up, all three arrangements with a
-forecast each, and `optimised_for` in the envelope.
+forecast each, and `optimised_for` in the envelope — and, since
+[#407](https://github.com/Raketa02/Raketa/issues/407), **the pool the four were drawn from** in
+`candidates[]`, in Fit order with the seated among them, so that *Pick players myself* over a
+court that arrived with no shortlist of its own (§9) has people to offer.
 
 **The animation is presentation over a completed answer, and the client may take its time.**
 Animating a finished response is ordinary interface craft; the product's promise is that the
@@ -275,46 +289,56 @@ absent and sorts last — which is `distance_km`'s rule, for `distance_km`'s rea
 **The card says what the candidate would leave on court** — `would_be_forecast`, labelled
 provisional while seats remain open.
 
-### 4.1 The pin, and the tag that marks the best row
+### 4.1 The two interest tags, and the tag that marks the best row
 
-Three rules over the same list, all of them client-side over facts already on the wire
-([#310](https://github.com/Raketa02/Raketa/issues/310)).
+Three tags over the same list, all of them client-side over facts already on the wire
+([#310](https://github.com/Raketa02/Raketa/issues/310),
+[ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8).
 
-**A live yes towards the searcher is pinned to the top of the served order, and the pin releases
-on any re-sort.** `inclusion_reason == INTEREST_LIFT` is the fact; the row sits first whatever it
-scored, in *"the default (as-served) order **only**"*, and a pinned row *"moves under **every**
-re-sort"* — its tag and its border travelling down with it.
+**A yes informs; it never takes over.** *The deck collects people and the builder spends them*,
+and the deck feeds this list in both directions, by label, and by a nudge on one side only:
 
-**Every** includes *Best fit*, and that is worth stating because it has a cost. Where the engine
-withheld `BEST_FIT` — which it does precisely when the returned order already is fit order — the
-client adds the chip back as **the way back** from *Closest*, and tapping it now returns fit
-order without the pin, which is not quite the list the player left. The alternative is a pin that
-survives a sort, and surviving a sort is the property that makes a bonus a bonus; the way back is
-a way back to an **ordering**, never to a decoration on top of one.
+- **An incoming yes is a tag and a nudge, never a pin.** `inclusion_reason == INTEREST_LIFT` is
+  the fact, *Wants to play you* is the volt tag bound to it, and the row sits **where the engine
+  placed it** — the `+14` on the liker's rank key puts them earlier than their Fit alone would,
+  never above a genuinely better pairing. The client's pin over the served order is gone: for a
+  while a liker at 51 was forced above thirty people at 80 in the as-served order and released on
+  any re-sort, which touched no figure and was still a 51 at the top of a list about who fits.
+  The served order is the order, and the tag and its green border travel with the card wherever
+  the server — or a chip — puts it. Admission under the quality floor stays, for this human list
+  only; ⚡ is unchanged.
+- **An outgoing yes is a tag only.** *You said yes* on somebody in the reader's own `GET
+  /interest` outgoing list for the sport on screen — client-side, off the read the deck already
+  holds, no code and **no nudge**, because the reader's yes says nothing about the other person's
+  willingness. It is a plain tag rather than a volt one: volt is *they want you*, and the border
+  goes with that word alone.
+- **Both true is a mutual, and a mutual is not on the list**; should one ever be, *Wants to play
+  you* wins — the other person's decision is the one the reader did not already know.
 
-**A pin is not the `+12` that was struck.** §C5 asked for *the fit score plus 12 for anyone who
-said yes to you*, and [#231](https://github.com/Raketa02/Raketa/issues/231) removed it: the
-engine has already lifted those people, as an **admission** rather than a bonus, so adding twelve
-client-side would score the wire's own ranking a second time. That refusal is untouched, and the
-distinction is the falsifier — a bonus is arithmetic on a **published figure**, changes what
-*best* means silently, and survives every re-sort; a pin changes a **position**, prints the
-number the wire served, names itself on the card it moved, and releases. A pinned 41 above an 88
-prints 41 and says *Wants to play you*.
+**A pin was not the `+12` that was struck, and neither is drawn now.** §C5 asked for *the fit
+score plus 12 for anyone who said yes to you*, and
+[#231](https://github.com/Raketa02/Raketa/issues/231) removed it: the engine has already lifted
+those people, as an **admission** rather than a bonus, so adding twelve client-side would score
+the wire's own ranking a second time. That refusal is untouched. The pin that replaced it changed
+a position rather than a number and released on any sort, which is what made it not a bonus —
+and ADR-0169 §8 removed it all the same, because the falsifier it passed was never the question:
+a 51 printed as 51 above an 88 is honest about the figure and wrong about the list.
 
-**The tag is bound to the ordering in force, never to a tapped chip, and it is the competitive
-card's alone.** The coral *best match* tag goes on the row with the highest `fit` on screen —
-**one card or none**, the server-first row on a tie — and it exists under the **default** order
-and under `BEST_FIT`, and under no other. Keying it to a tap would hide it on most searches,
-because `BEST_FIT` is withheld from `sorts_available` *precisely when the returned order already
-is fit order*. Where the same card
-would carry both tags it carries only the volt one, *because it's the stronger fact* — and the
-coral tag is **not** handed down to the runner-up, which would be the card claiming *best match*
-about a row that is not one.
+**The coral tag is bound to the ordering in force, never to a tapped chip, and it is the
+competitive card's alone.** *Best match* goes on the row with the highest `fit` on screen — **one
+card or none**, the server-first row on a tie — and it exists under the **default** order and
+under `BEST_FIT`, and under no other. Keying it to a tap would hide it on most searches, because
+`BEST_FIT` is withheld from `sorts_available` *precisely when the returned order already is fit
+order*. Where the same card would carry the coral tag and either interest tag it carries only the
+interest one, *because it's the stronger fact* — a fact about a person outranks a fact about a
+list — and the coral tag is **not** handed down to the runner-up, which would be the card
+claiming *best match* about a row that is not one.
 
 A **for-fun** pool draws no *best match*: the tag sits in the competitive card's identity row and
 the social card has no slot beside the handle for one, which is
-[#309](https://github.com/Raketa02/Raketa/issues/309)'s scope rather than this rule's. Those rows
-are still pinned, and the interest sentence under the name still says why.
+[#309](https://github.com/Raketa02/Raketa/issues/309)'s scope rather than this rule's. The two
+interest tags are drawn on it all the same, as tags, where its *They already said yes to you*
+sentence used to be.
 
 **`BEST_FIT` is a sort and never a filter.** It hides nobody below any number; it puts the
 highest first and leaves every lower row on the list, in order. Written down because a screen
@@ -450,12 +474,36 @@ last seat and the provisional figure and the arranged figure are the same number
 
 ---
 
-## 7. Match me — the deck
+## 7. The deck — on Players
+
+> **Rewritten 2026-09-14 by [ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md).** The deck left Play for a tab of its own, **Players**, and
+> the sentences this section carried about the declaration, the two buttons, *Show them again*
+> and the empty state are superseded there by name. What stands below is marked; what moved is
+> stated in one line each and argued in the record.
 
 `POST /deck`, sport only. One deal, one `search_id`, an ordered batch of at most
-**`DECK_DEAL_MAX` = 10** cards. The weight vector is resolved backend-side from the viewer's
-declared intent, `NO_PREFERENCE → fun`, and no `mode` crosses
-([`the-two-contracts.md`](the-two-contracts.md) §6).
+**`DECK_DEAL_MAX` = 10** cards; the client asks for the next hand when two remain, so the stack
+never visibly runs dry while people remain. **The weight vector is `FOR_FUN` for every viewer**
+— the deck is discovery, reads no declaration, raises no `play_intent_not_declared`, and stands
+`INTENT_ALIGNMENT` down for every pairing — and no `mode` crosses
+([`the-two-contracts.md`](the-two-contracts.md) §6, ADR-0169 §2). The envelope carries two
+numbers the screen prints: **`pool.remaining`** (eligible after every deck exclusion, not in this
+hand — *N left*) and **`pool.want_to_play_you`** (live yeses towards the viewer in this sport
+that would be dealt — the volt chip, not drawn at zero; ADR-0169 §4).
+
+**Two bands, not three.** The person who said yes to you is no longer dealt first and is no
+longer named on the card: they sort among the lifted by rank key, where their `+14` already sits,
+so they tend to land early and never in a fixed slot; their admission under the quality floor
+stands (ADR-0169 §4).
+
+**A swipe is an answer.** Right is *Let's play*, left is *Not today*, stamped at 95 px; ✕, i and
+🎾 do the same two things and open the player record; the buttons are the accessible path and are
+never removed (ADR-0169 §3). At the cap a right swipe on somebody who has not said yes settles
+and says so; on somebody who has, it matches — **the cap exempts a yes that closes a mutual**.
+
+**A deck-only cool-off.** Somebody you have a live challenge or game with, and for
+`deck_cool_off_days = 30` after it is behind you, is not dealt (ADR-0169 §6). The shortlist keeps
+ADR-0142 §1's release.
 
 **A spent deal deals again**, as a new request with a new `search_id`. The screen runs out of
 cards long before the pool does, and only a fresh deal that comes back empty is the empty state.
@@ -494,10 +542,17 @@ passed — so the Origin key alone does not pay for it after all. The row is kep
 suppression stays the Redis TTL, derived from it (`the-engine.md` §12). The gate is the cache,
 the evidence is the row.
 
-**There is still no *Show them again*.** The prototype offers a button clearing every pass at once.
-It makes `PASS_SUPPRESS` unmeasurable and makes the suppression a suggestion, and it solves a
-problem a real pool does not have. The **exhausted pool** is the honest empty state: the pool
-description, and the count of the player's **own outgoing** yeses still waiting.
+**There is a *Show them again*, and it is one route.** `POST /deck/reset` with the sport clears
+that sport's pass suppression, the day's dealt memory and the cool-off at once, `204`; the
+durable pass record stays, so a re-shown card is still a re-show (ADR-0169 §5). #231's
+objection is accepted as the cost: `PASS_SUPPRESS`'s falsifier now excludes resets from its
+sample. **Two endings**: *You have seen everybody* (people in range, all excluded) draws the
+mock with the reset and *Try the radar*; *Nobody in range* keeps its own sentence and
+*widen it in You*, without the reset. *Try the radar* opens the Radar pane, which is built —
+[`the-radar.md`](the-radar.md), [ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md).
+**`distance_km` is one decimal on every candidate since 2026-09-16** (ADR-0174 §2), measured
+between two drawn spots; the deck card and the record print it as served. The sentence's number — *your yeses stay live for 21
+days* — is read from `ttl_days` on `GET /interest`'s rows, never held by the client.
 
 **A mutual yes is told to both, and arranging the game is theirs.** The challenge belongs to
 `matches`, which is out of scope — so the product says *both of you said yes* and stops,
@@ -505,9 +560,12 @@ recorded as a demand against `matches` in
 [ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md)'s shape. Sitting on a
 mutual yes would be the product declining to do the one thing it just got permission for.
 
-**`GET /interest` returns outgoing and mutuals. Incoming-and-not-mutual never crosses**
-([ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md)). A one-sided yes reaches
-its recipient only as an interest lift, in a search they chose to run.
+**`GET /interest` returns outgoing and mutuals — with `ttl_days` beside `cap`. Incoming-and-
+not-mutual crosses as one count and in no other shape**
+([ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md) §2 as narrowed by ADR-0169
+§4): `pool.want_to_play_you` on the deal envelope names nobody; the list and the badge stay
+refused. A one-sided yes reaches its recipient otherwise only as an interest lift, in a search
+they chose to run — where it is a tag and a nudge and never a pin (ADR-0169 §8).
 
 **There is no notification.** Nothing in this repository can push anything, so two people who
 both said yes find out by opening the app. Said out loud rather than designed around; the push
@@ -566,9 +624,37 @@ the photo URL is re-minted per response by design
 - **In scope, and exercised today:** `locked_seats`, the `FILL_SEATS` surface,
   `optimised_for: GROUP` and the screen saying so, and *change sides, never seats*. Hand-seating
   somebody in the builder and pressing ⚡ is the same shape and needs no other context.
-- **Out of scope:** *opening the builder from an accepted challenge*. It needs a challenge with
+- ~~**Out of scope:** *opening the builder from an accepted challenge*. It needs a challenge with
   partial acceptances — `matches`. Past the destination rather than unsharp, so it is a scope
-  boundary and not fog.
+  boundary and not fog.~~
+
+> **Amended 2026-09-07 by [Re-entering the builder from an incomplete line-up](https://github.com/Raketa02/Raketa/issues/337)
+> ([ADR-0150](../../adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)),
+> and the map that ruled it out is not the map that ruled it in.** [#217](https://github.com/Raketa02/Raketa/issues/217)'s
+> destination stopped short of a challenge with partial acceptances;
+> [#321](https://github.com/Raketa02/Raketa/issues/321) redrew it, and the entry point is decided.
+>
+> **The split above is right and its labels are wrong.** The mechanism is live **from *Find a
+> game***, where a hand-seated player is a stranger. From a challenge it has never been reachable
+> and could not have worked: `_locked` resolves a locked seat *"from this search's own pool or not
+> at all"*, `gate_of` excludes everybody in `open_challenge_ids`, and
+> [ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
+> holds that pair for the whole of `LINE_UP_INCOMPLETE` — so **everybody who accepted your
+> half-built court is, by construction, absent from the pool of the search meant to complete it**,
+> and ⚡ with them locked is `locked_seat_not_available` every time. The sentence claiming the
+> mechanism worked from a challenge was never tested, because nothing could reach it.
+>
+> **What replaces it:** the fill **names the challenge it completes** — one optional
+> `completing_challenge_id` on `POST /lineups`, with `sport`, `mode` and `locked_seats` refused
+> beside it — **the gate steps aside for that one challenge and nothing else**, and everybody who
+> has already answered it is excluded from its own pool. The four fail-closed gates are untouched,
+> so `locked_seat_not_available` stops being unreachable on this path and **starts meaning
+> something**: somebody in your line-up has been blocked, held or deactivated since they accepted.
+> Followed by §11 item 9's re-read, never by a payload.
+>
+> The entry point is **⚡ Fill the seats on the challenge screen**, which is *Find a game*'s own
+> shape one tab over, and it is specced in
+> [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §2.5.
 
 ---
 
@@ -641,13 +727,27 @@ Each item is a standing obligation and none of them expires on being satisfied o
    already has** — Find a game's *Search*, the court's ⚡ fill, and the pool's re-read — and
    **only the forecast gains one**, because a player who has stopped changing seats would
    otherwise sit with no number and no way to ask again.
-8. **The send fails when offline; the deck's two pause.** Both are correct, and the test
-   that separates them is *does this act carry a deadline the player chose*. A challenge's
-   answer window is derived **at send** (§G1's answer), so a send deferred to the next
-   reconnect carries a deadline nobody picked — the tap and the send must be one moment. A
-   pass is an append-only row and a mutual-born challenge has no window at all, so a queue
-   of them draining on reconnect is the behaviour you want. Two `networkMode` values in one
-   tab is deliberate; left unwritten, the next reader unifies them.
+8. **The send fails when offline; the deck's two pause.** Both are correct, and a pass is an
+   append-only row and a mutual-born challenge has no window at all, so a queue of them
+   draining on reconnect is the behaviour you want. Two `networkMode` values in one tab is
+   deliberate; left unwritten, the next reader unifies them.
+
+   **Narrowed 2026-09-07 to what Play itself does, and the test that separates them moved.**
+   This item said the test was *does this act carry a deadline the player chose*, and
+   [Does an accept pause offline, or fail?](https://github.com/Raketa02/Raketa/issues/327)
+   found that mis-states it: an accept does not **carry** a deadline, it is **judged against**
+   one, so the test as written files the accept on the pausing side — where a queued accept
+   either lands past `answer_by` with no screen left to refuse it on, or fills the last seat
+   and arranges a game at a moment nobody was present for. The test is restated as **is this
+   act's meaning fixed by the moment it is tapped**, and the old one survives as a special
+   case, so nothing already decided moves.
+   
+   The restated rule is **feature-wide and not Play's**: *nothing in `challenges` is sent for
+   you later* — the send, the accept, the decline, the withdraw and the seat fill — and the
+   three new acts happen in **Chats**, on screens this file does not describe. So the
+   statement lives where all of them import from rather than here, and this item keeps only
+   the two postures Play itself has. See
+   [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §2.4.
 9. **A refused send is followed by a re-read, never by a payload.** The refusal names the
    class of problem and nobody in it (§5.1). `line_up_no_longer_sendable` is followed by
    reading the origin search back and marking the seats its withheld rows identify;
@@ -662,6 +762,10 @@ Each item is a standing obligation and none of them expires on being satisfied o
 
 ## 12. What this file does not decide
 
+- **The Radar** — the second pane of Players, its reading, its reach and the location refresh
+  that keeps it honest: [`the-radar.md`](the-radar.md), decided by
+  [ADR-0174](../../adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md).
+
 - ~~**The `unfilled_reason` vocabulary and the doubles objective**~~ — settled by
   [#180](https://github.com/Raketa02/Raketa/issues/180) in
   [`the-group-objective.md`](the-group-objective.md).
@@ -671,9 +775,19 @@ Each item is a standing obligation and none of them expires on being satisfied o
   `outstanding` / `cap` pair.
 - **The staleness threshold behind `index_stale`** — [#173](https://github.com/Raketa02/Raketa/issues/173).
 - **The tag relationship matrix** — [#179](https://github.com/Raketa02/Raketa/issues/179).
-- **The Play screens' interface** — out of scope on *this* map, and taken up by the next one
-  ([#217](https://github.com/Raketa02/Raketa/issues/217)):
+- ~~**The Play screens' interface**~~ — was out of scope on *this* map and **taken up by the
+  next one** ([#217](https://github.com/Raketa02/Raketa/issues/217)), which built it:
   [`the-words.md`](the-words.md) owns every sentence and every accessible name, and
   [`the-play-components.md`](the-play-components.md) owns where one component stops and the
   next begins.
-- **A notification mechanism** — no context in this repository can push anything; in the map's fog.
+- **Every surface outside Play** — the Chats tab, the challenge screen, the conversation and its
+  plan card, Now, and the one state-detail surface both tabs open. They are
+  [#321](https://github.com/Raketa02/Raketa/issues/321)'s, and their counterparts of these two
+  files are [`the-loop-screens.md`](../the-loop/the-loop-screens.md) and
+  [`the-loop-components.md`](../the-loop/the-loop-components.md). **Their sentences are still
+  [`the-words.md`](the-words.md)'s**, at §22–§24: that file is the app's one copy deck and it did
+  not move.
+- ~~**A notification mechanism**~~ — no context in this repository can push anything. **Ruled out
+  of scope** on [#326](https://github.com/Raketa02/Raketa/issues/326) rather than left in fog:
+  push is a bounded context, not a layer, and the loop closes without it because every step after
+  the first acceptance is between people who opted in by answering.

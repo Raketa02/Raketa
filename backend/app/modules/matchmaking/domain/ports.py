@@ -27,6 +27,8 @@ would make a reader check two places to be sure they had them all.
 | ``AccountHoldQuery`` | ``cases`` | ``NoHoldsExist`` |
 | ``AtStakeQuery`` | ``rating``'s update rule | a **real adapter** — the rule ships |
 | ``AccountStatusQuery`` | ``users`` | a **real adapter** — the provider ships |
+| ``HalfBuiltCourtQuery`` | ``challenges`` | a **real adapter** — the fill's court |
+| ``SharedCourtQuery`` | ``games`` | a **real adapter** — the deck's cool-off |
 
 **The rule that decides every shape below:** *a gate may be honestly empty; a
 term may never be honestly neutral*, and the test is whether a zero would be
@@ -49,7 +51,7 @@ from enum import Enum
 from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.engines.matchfit.core import ReliabilityStrand
+from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Instant, Minutes, Sport, invariant
 
 
@@ -131,8 +133,8 @@ class SportsmanshipStrand:
         )
 
 
-#: What a strand crosses as. Two shapes, because four of the five are ratios and
-#: the fifth is a mean, and one shape covering both would be a shape that
+#: What a strand crosses as. Two shapes, because five of the six are ratios and
+#: the sixth is a mean, and one shape covering both would be a shape that
 #: describes neither.
 StrandObservation = RatioStrand | SportsmanshipStrand
 
@@ -142,20 +144,21 @@ StrandObservation = RatioStrand | SportsmanshipStrand
 class PlayerScoreReading:
     """One player's Player Score, **as strands and never as one number.**
 
-    The ruleset weighs the strands **per mode** — 33/33, 29/23, 18/15, 13/12,
-    7/17 — and the two vectors order people oppositely: *keeps plans* is worth
-    two and a half times sportsmanship for a counted game and less than it for a
-    friendly. One blended number cannot express that. The Player Score is
-    nonetheless *one number in the UI*, so the obvious thing to ship is that
-    number — which is exactly the failure ``docs/adr/0098`` is written against,
-    and why there is **nowhere here to put a blend of the five**.
+    The ruleset weighs the strands **per mode** — 25/32, 22/22, 24/4, 14/14,
+    10/12, 5/16 — and the two vectors order people oppositely: *answers about
+    results* is worth nearly five times sportsmanship for a counted game and a
+    quarter of it for a friendly. One blended number cannot express that. The
+    Player Score is nonetheless *one number in the UI*, so the obvious thing to
+    ship is that number — which is exactly the failure ``docs/adr/0098`` is
+    written against, and why there is **nowhere here to put a blend of the
+    six**.
 
     ``published_score`` is not that blend and is the one deliberate exception,
     recorded so it does not later read as an oversight. It is the figure on the
-    player's own profile at the player-facing weights (35/20/12/10/8, renormalised
-    over the strands present), computed by ``player_score`` and read here rather
-    than derived. Its consumer **in the matcher** is the reliability floor, whose
-    ``published_score_bar`` lives in the ruleset beside it; the player card is a
+    player's own profile at the player-facing weights (35/20/15/12/10/8,
+    renormalised over the strands present), computed by ``player_score`` and read
+    here rather than derived. Its consumer **in the matcher** is the reliability
+    floor, whose ``published_score_bar`` lives in the ruleset beside it; the card is a
     second reader one layer out and prints the same figure (``docs/adr/0140``). A
     penalty justified by a figure that exists nowhere a human can look is
     unexplainable, and a player working their visible score back up must be able
@@ -207,25 +210,34 @@ class PlayerScoreReading:
 
 @runtime_checkable
 class PlayerScoreQuery(Protocol):
-    """The five reliability strands, each with the evidence behind it.
+    """The six reliability strands, each with the evidence behind it.
 
-    **Two of them have a provider** — *shows up*, out of plans that settled either
-    way, and *answers challenges*, out of invitations whose day is over. The other
-    three are absent from every reading rather than published at nought, and the
-    term renormalises over what arrives (``docs/adr/0140``).
+    **Three of them have a provider** — *shows up*, out of plans that settled
+    either way, *answers challenges*, out of invitations whose day is over, and
+    *answers about results*, out of the scores put in front of somebody
+    (``docs/adr/0160``). The other three are absent from every reading rather than
+    published at nought, and the term renormalises over what arrives
+    (``docs/adr/0140``).
 
     **The matcher applies no decay of its own.** The score is a memory and fades
     with new evidence on the provider's side; a second decay here would
     double-count. Its entire policy over these facts is the power to stand a
-    strand down — below ``min_observations`` a strand alone, past
-    ``horizon_days`` the whole term — and both numbers are ruleset configuration
-    under ``docs/adr/0093``, never code and never environment-selected.
+    strand down — below **its own** ``min_observations`` a strand alone, past
+    ``horizon_days`` the whole term — and both are ruleset configuration under
+    ``docs/adr/0093``, never code and never environment-selected. The first is a
+    bar per strand rather than one number over all six (``docs/adr/0160``), so a
+    strand that needs more evidence than the rest can ask for it without changing
+    what the platform demands of a newcomer.
 
     **Opponent variety is not here, and was withdrawn rather than deferred.** It
     was demanded on behalf of two consumers and both were struck (#164, #175). *A
     consumer-driven contract with no consumer is withdrawn, not carried* — a
     demand nobody reads is a demand nobody notices going wrong, and a contract
-    suite is exactly where an unread row goes quietly stale.
+    suite is exactly where an unread row goes quietly stale. It has since come
+    back on **somebody else's** register — the player record demands it of
+    ``games``, which owns both its inputs (``docs/adr/0098`` as amended, #380) —
+    and that changes nothing here: the matcher does not read it, it is not a
+    strand, and its fold is unbounded in a way no read on this port may be.
 
     ***Settles up* will stand down long after the other four are live.** It
     depends on court money, which is out of scope. Expected, not a defect — and
@@ -395,6 +407,18 @@ class OpenChallenge:
     counterpart_id: UUID
     origin: ChallengeOrigin
     opened_at: Instant
+    #: Which challenge stands between the two of them. **The one field here
+    #: that is not about the pair**, and the only place *which challenge* could
+    #: come from: a counterpart, an origin and an instant cannot name an
+    #: aggregate (``docs/adr/0150`` §3, and the published port's growth is the
+    #: honest price of it).
+    #:
+    #: It has exactly one reader and one use — a fill names the challenge it
+    #: completes, and the open-challenge gate steps aside for **that one and
+    #: nothing else**. It is not an id to fetch anything with: nothing here
+    #: reads a challenge by it, and the exemption is a smaller
+    #: ``open_challenge_ids`` rather than a gate that fired and was ignored.
+    challenge_id: UUID
 
 
 @runtime_checkable
@@ -449,6 +473,12 @@ class MatchHistoryQuery(Protocol):
         declined or lapsed is out of it immediately: their seat is open again, so
         they return to the deck rather than losing a candidate they never turned
         down.
+
+        **Open means *being arranged*, and a completed line-up is not.** The
+        moment every seat is accepted the two of them have finished arranging a
+        game, so they leave this answer and return to each other's deck — free to
+        arrange a second one, because nothing here asks whether the first was
+        ever played (``docs/adr/0142`` §1).
 
         Each row carries **that seat's own** origin, so one doubles send from one
         search at three positions comes back as three rows with three positions —
@@ -630,6 +660,38 @@ class AtStakeQuery(Protocol):
         """
         ...
 
+    async def counted_game_deltas_on_court(
+        self,
+        *,
+        player_id: UUID,
+        own_side: Collection[UUID],
+        opposing_side: Collection[UUID],
+        sport: Sport,
+    ) -> AtStake | None:
+        """What a **counted** game on this court would be worth to this player.
+
+        **The rule's own reading, for a line-up that is frozen**
+        (``docs/adr/0161``). The pair read above prices *you against this
+        person* because a card is drawn before the other seats are known; a game
+        knows all four, and the result will be priced **side against side** —
+        every player on a side moves by the same amount, on ``one_side``'s rule
+        that a partner is not somebody you are rated *against*. A game screen
+        printing the pair reading in a four would promise a figure the update
+        then contradicts, which is the one thing *at stake* exists not to do.
+
+        ``player_id`` is on ``own_side``, and the pair is theirs: the Level move
+        is the side's, so it is the same pair for everybody on it, and the
+        certainty it buys is the player's own and does not cross here.
+
+        ``None`` when this player holds no rating in this sport — there is
+        nothing to move — and when a whole side holds none, which is *nothing
+        to price against*. An unrated seat beside a rated one is **not** an
+        absence: the update folds a side over the people on it who hold a
+        rating, and so does this, because a figure that omitted the case the
+        rule prices would be a preview and not the rule.
+        """
+        ...
+
 
 # ---------------------------------------------------------------------------
 # AccountStatusQuery — ``users``
@@ -677,6 +739,180 @@ class AccountStatusQuery(Protocol):
         candidate row. Answers only about ids it was asked about, and invents
         nobody: an id ``users`` has never heard of is not withheld, because a
         typo must not read as a disabled account.
+        """
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class HalfBuiltCourt:
+    """The challenge a fill names, as the search completing it reads it.
+
+    **Everything a fill may not be told and must know** (``docs/adr/0150`` §2).
+    The sport, the kind of evening and who is already sitting down are facts the
+    challenge holds, and a request offering any of them would be a second place
+    for one of them to be true — which is the failure the request's own boundary
+    refuses.
+
+    ``mode`` is ``None`` exactly where the challenge has none: a deck-born send,
+    and every mutual-born court. The filler's own declared Play intent resolves
+    one then, on the deck's own rule, and **no mode picker appears anywhere**.
+    **There is no window on this row and there will not be one** — a window is
+    stamped by the send and by nothing else, so a mutual-born challenge stays
+    window-less for its whole life and a newly-invited player answers against a
+    label somebody else's grid produced (§5).
+
+    ``seated_ids`` is everybody live on that court besides the filler, in the
+    court's own order: **the locked seats**, resolved out of this search's own
+    pool like any other hand-seated player. They are not a way past the pool —
+    a seated player with no scored row is a player the group objective cannot
+    optimise around, and ``optimised_for: GROUP`` *is* that optimisation. **It
+    may be empty** on a court that has been a game and lost everybody but the
+    filler (``docs/adr/0162`` §6).
+
+    ``answered_and_gone`` is everybody who answered this challenge and left it.
+    They are back in the deck the moment they declined or lapsed, so without this
+    they would be candidates for the very fill they turned down — and the send
+    would refuse with ``NobodyIsAskedTwice`` *after* the player chose them (§4).
+    """
+
+    challenge_id: UUID
+    sport: Sport
+    mode: SearchMode | None
+    seated_ids: tuple[UUID, ...]
+    answered_and_gone: frozenset[UUID]
+
+    def __post_init__(self) -> None:
+        """The two claims this shape makes, checked at the crossing.
+
+        **Stated here as well as on the provider's own row, and deliberately.**
+        The demand suite parameterises over *every* registered implementation of
+        this port, so a second one — or a translation that dropped a filter —
+        would otherwise hand the fill a court it could not seat and the failure
+        would arrive as ``locked_seat_not_available`` about nobody.
+        """
+
+        invariant(
+            not (set(self.seated_ids) & self.answered_and_gone),
+            f"somebody both seated on {self.challenge_id} and gone from it: "
+            f"{sorted(set(self.seated_ids) & self.answered_and_gone)}",
+        )
+        # **Empty is a court the filler is alone on** (``docs/adr/0162`` §6):
+        # a singles opponent who left, or a four three people left. Such a fill
+        # locks nobody and is still a fill — it names the challenge, exempts
+        # its pair and excludes the departed.
+
+
+@runtime_checkable
+class HalfBuiltCourtQuery(Protocol):
+    """*Which court is this, who is on it, and who has already answered it?*
+
+    **A sixth demand rather than a method on ``MatchHistoryQuery``, and the
+    posture is the reason.** That port is history and every read on it fails
+    **soft**: losing a game because we could not remember who you played in March
+    is worse than a duller list. This one fails **closed**, because a fill that
+    cannot read the court it is completing has nothing to complete — it would
+    silently become an ordinary ⚡ over a pool that still excludes the very people
+    it was meant to seat around. One port, one posture, and the table below is
+    where that is said.
+
+    **It is asked once per fill and on no other surface.** A shortlist, a deal
+    and an ordinary line-up name no challenge and never reach it.
+    """
+
+    async def half_built_court(
+        self, *, challenge_id: UUID, member_id: UUID
+    ) -> HalfBuiltCourt | None:
+        """That challenge, if this member is on its court and it is still being
+        arranged.
+
+        **``None`` covers three cases on purpose**: no such challenge, the member
+        holds no live seat on it, and a court nobody is arranging any more.
+        Telling them apart would answer *is this challenge id real* about a
+        stranger's evening, one probe at a time — which is the posture
+        ``court_origin`` already takes about a search.
+
+        **Any live member, never only the organiser.** Growing a court and ending
+        one are different acts and get different permissions (§1): the withdraw
+        is the organiser's, and a mutual-born doubles court has an "organiser"
+        who is only whoever's yes arrived second.
+
+        **It takes no clock**, exactly as ``open_challenges`` takes none: whether
+        a court is still being arranged is a fact about this instant, and a caller
+        that could supply the instant could supply a stale one.
+        """
+        ...
+
+
+# ---------------------------------------------------------------------------
+# SharedCourtQuery — ``games``
+# ---------------------------------------------------------------------------
+
+
+@final
+@dataclass(frozen=True)
+class SharedCourt:
+    """One person the searcher has a game with, and whether it is behind them yet.
+
+    **The deck's cool-off reads this and nothing else reads it**
+    (``docs/adr/0169`` §6). *Somebody you are already with is not in your deck,
+    and stays out for thirty days after* — so what the matcher needs about a
+    court is two facts and never the game: who the other person is, and the
+    instant the court went behind them, or that it has not.
+
+    ``behind_since`` is the moment ``docs/adr/0168`` lets a member leave the
+    chat, read off the game: the entry that said *we played*, the call-off, or
+    the entry window closing on silence. It is ``None`` while the court is still
+    ahead — planned, on, awaiting its entry — and an ahead court is the answer
+    whatever else stands between the two, because a second game arranged before
+    the first is settled is a court they are *with* each other on.
+
+    It is not :class:`PairwiseCounterpart`, deliberately. That row dates a ghost
+    from its plan and files a call-off nowhere (``docs/adr/0163`` §3), both by
+    decisions of their own about what *happened between you*; the cool-off asks
+    a different question — *when did this court stop being ahead of you* — and
+    a row answering the first cannot be bent to the second without one of the
+    two decisions quietly reversing.
+    """
+
+    counterpart_id: UUID
+    behind_since: Instant | None
+
+    @property
+    def ahead(self) -> bool:
+        return self.behind_since is None
+
+
+@runtime_checkable
+class SharedCourtQuery(Protocol):
+    """Every game between the searcher and anybody, as *ahead* or *behind since*.
+
+    **One row per person, newest first, at most ``PAIRWISE_COUNTERPART_BOUND``**
+    — the same bound and the same order the pairwise history keeps, over the
+    same people, so a counterpart cut off by it is one with five hundred more
+    recent courts ahead of them and outside any window the deck could ask about.
+    A person the searcher has more than one game with is one row: an ahead court
+    if any is ahead, otherwise the latest ``behind_since``.
+
+    **Read for the deck's exclusions and for nothing else.** Find a game keeps
+    ``docs/adr/0142`` §1's release — a search is a question about the city, and
+    somebody you played on Saturday is a fine partner for next week's four. The
+    deck is for meeting people, and a rematch is arranged in the chat the two
+    already have. The radar reads it too, and only for the deck's number on
+    its envelope (``docs/adr/0174`` §5): who the radar draws is untouched by
+    it, and Karol from Saturday is on the map.
+
+    **It fails soft**, like the history beside it: an outage repeats a card of
+    somebody the viewer already knows, which is embarrassment and never danger,
+    and standing down is the posture a courtesy takes (``FAIL_POSTURE``).
+    """
+
+    async def shared_courts(self, searcher_id: UUID) -> tuple[SharedCourt, ...]:
+        """Who this searcher has a game with, and where each stands — bounded.
+
+        The provider reads its own clock for *ahead*: whether a court is behind
+        somebody is a fact about this instant, and a caller that could supply
+        the instant could supply a stale one — ``open_challenges``' rule.
         """
         ...
 
@@ -747,9 +983,23 @@ FAIL_POSTURE: Mapping[type, FailPosture] = {
     AtStakeQuery: FailPosture.SOFT,
     AccountHoldQuery: FailPosture.CLOSED,
     AccountStatusQuery: FailPosture.CLOSED,
+    # **Closed, and it is not a gate** — which is the one row here that shows
+    # the table classifies *what a failure costs* rather than *what kind of
+    # fact this is*. A fill that cannot read the court it names has nothing to
+    # complete: standing down would run an ordinary ⚡ over a pool still
+    # excluding the people it was meant to seat around, and hand the player a
+    # court with strangers where their own line-up should have been.
+    HalfBuiltCourtQuery: FailPosture.CLOSED,
+    # **Soft, and it is not a term either.** The cool-off is a courtesy about
+    # the viewer's own deck, and *a gate that cannot be evaluated excludes*
+    # applied to it would empty a deal in a city that has people in it — the
+    # suppression ledger's argument, one read over. The backstop is the same
+    # one the open-challenge gate leans on: a card repeated is a card, never a
+    # court somebody is seated on behind their back.
+    SharedCourtQuery: FailPosture.SOFT,
 }
 
-#: The five outward ports, as the suite in ``tests/demands/`` walks them.
+#: The seven outward ports, as the suite in ``tests/demands/`` walks them.
 #:
 #: Declared as data rather than left to a reader to collect, so that *a port with
 #: no registered implementation* is a question something can ask. A demand nobody
@@ -767,4 +1017,6 @@ MATCHER_DEMANDS: tuple[type, ...] = (
     AtStakeQuery,
     AccountHoldQuery,
     AccountStatusQuery,
+    HalfBuiltCourtQuery,
+    SharedCourtQuery,
 )

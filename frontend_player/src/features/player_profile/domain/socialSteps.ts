@@ -1,9 +1,9 @@
 /**
- * The seven steps of onboarding's **second part**, and the two boundaries around them.
+ * The eight steps of onboarding's **second part**, and the two boundaries around them.
  *
  * The part is one sequence and nothing else: no queue the player chose, no branch, no
  * length that depends on an answer. So the whole of "where does this step lead" is a
- * lookup in one ordered list, and it lives here rather than in seven screens for the reason
+ * lookup in one ordered list, and it lives here rather than in eight screens for the reason
  * `onboardingPass` gives about part one — a rule spread over the screens that obey it is a
  * rule the next screen is added without.
  *
@@ -16,8 +16,8 @@
  * at two boundaries, both hard, both for reasons the player never has to be told.
  *
  * **Nothing is in front of the last step.** What follows it is the profile commit, and a
- * commit is not a screen — so this list ends at the last question rather than growing an
- * eighth entry to hold the thing that ends the part
+ * commit is not a screen — so this list ends at the last question rather than growing a
+ * ninth entry to hold the thing that ends the part
  * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
  *
  * Moving between two steps costs nothing and writes nothing: every answer is held in the
@@ -31,14 +31,21 @@ import type { ProfileDraft } from './ProfileDraft';
  * One step of the part, named for the decision it asks for.
  *
  * These names are the route segments as well, which is deliberate: `/radius` is the screen
- * that asks for a Search radius, and a second spelling of the same seven things is how a
+ * that asks for a Search radius, and a second spelling of the same eight things is how a
  * route and a rule come to disagree about which screen is which.
  */
 export type SocialStep =
-  'tags' | 'photos' | 'availability' | 'location' | 'radius' | 'gender' | 'opt-in';
+  'tags' | 'intro' | 'photos' | 'availability' | 'location' | 'radius' | 'gender' | 'opt-in';
 
 /**
  * The order, and the only one.
+ *
+ * **The intro straight after the tags** — *you've picked your tags; now say it in your own
+ * words*
+ * ([ADR-0170](../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
+ * §5). The tags say what kind of player somebody is in the platform's words and the line is
+ * the same question in theirs, so it follows them; and it comes before the photos, which is
+ * the one step that reaches the device.
  *
  * **Location before radius** is the one ordering decision that is not arbitrary: *how far
  * out do you want to look* means nothing until the player has said where they are looking
@@ -57,6 +64,7 @@ export type SocialStep =
  */
 export const SOCIAL_STEPS: readonly SocialStep[] = [
   'tags',
+  'intro',
   'photos',
   'availability',
   'location',
@@ -102,8 +110,8 @@ export type StepAdmission =
  * Whether a player may be dropped straight onto this step.
  *
  * **The part has one door, and it is the first step.** The draft is client-held and starts
- * empty, so a link naming step six would let a player commit a Player profile built from
- * five screens they never saw — with the tag selection, the week and the consent all
+ * empty, so a link naming step seven would let a player commit a Player profile built from
+ * six screens they never saw — with the tag selection, the week and the consent all
  * missing, and nothing having asked them for any of it. So a step in the middle admits only
  * a player who is already inside the part.
  *

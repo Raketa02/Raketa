@@ -45,14 +45,16 @@ from app.kernel import Clock, Instant, instant
 from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
 )
+from app.modules.player_profile.application.owned_photos import (
+    check_photos_are_the_callers,
+)
 from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.errors import (
-    PhotoNotFound,
     PlayerProfileAlreadyExists,
     ProposalsOptInNotAnswered,
 )
+from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
-from app.modules.player_profile.domain.photos import PhotoRef
 from app.modules.player_profile.domain.ports import (
     PhotoStorage,
     PlayerProfileRepository,
@@ -113,21 +115,21 @@ class CommitPlayerProfile:
         radius = SearchRadius.chosen(command.search_radius_km)
         area = LocationArea.around(command.latitude, command.longitude)
         grid = AvailabilityGrid.of_cells(command.availability)
+        # The one free-text answer, and the fence is here with the other pure
+        # refusals: a line carrying contact is refused before anything is
+        # stored and before the object store is asked anything
+        # (``docs/adr/0170`` §2). `None` is *skipped*, and so is whitespace.
+        intro = Intro.written(command.intro)
         # Ordered and counted here as well as inside ``create``, so that the
         # ids checked against storage below are exactly the ids that will be
         # recorded — a duplicate refused after three existence checks would have
         # been three checks nobody needed.
         photo_ids = photo_order(command.photo_ids)
 
-        for photo_id in photo_ids:
-            # Through the same port and the same ``PhotoRef`` the upload used, so
-            # ownership is the port's contract rather than a check written twice.
-            # Another player's photo id answers exactly as an imaginary one does.
-            found = await self._photos.exists(
-                PhotoRef(owner_id=command.player_id, photo_id=photo_id)
-            )
-            if not found:
-                raise PhotoNotFound()
+        # Through the same port and the same ``PhotoRef`` the upload used, and
+        # the same function the You tab's photos write runs, so ownership is
+        # the port's contract rather than a check written twice.
+        await check_photos_are_the_callers(self._photos, command.player_id, photo_ids)
 
         now = self._now()
         profile = PlayerProfile.create(
@@ -144,10 +146,12 @@ class CommitPlayerProfile:
             consent_surface=command.consent_surface,
             idempotency_key=command.idempotency_key,
             occurred_at=now,
+            intro=intro,
         )
 
-        # One clock read, two events, one transaction. The creation and the
-        # consent answer are the same moment because they *are* the same act.
+        # One clock read, two events — three where a line was written — and
+        # one transaction. The creation, the consent answer and the line are
+        # the same moment because they *are* the same act.
         await self._profiles.save(profile)
         await self._uow.commit()
 

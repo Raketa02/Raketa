@@ -17,7 +17,7 @@ the real adapters genuinely need one, and a suite that could only construct the
 implementations needing no I/O would be a suite that quietly excused the only
 implementations with a database behind it.
 
-**Four of the five rows named a null object once and one still does.**
+**Four of the seven rows named a null object once and one still does.**
 ``NoHoldsExist`` remains, because nothing on this platform can open a case;
 ``NoMatchHistoryExists``, ``NoResultUpdateRuleExists`` and ``NoPlayerScoresExist``
 are gone, each on the day the fact its own name asserted stopped being true
@@ -54,16 +54,20 @@ from app.bootstrap.composition import (
     build_account_hold_query,
     build_account_status_query,
     build_at_stake_query,
+    build_half_built_court_query,
     build_match_history_query,
     build_player_score_query,
+    build_shared_court_query,
 )
 from app.modules.matchmaking.domain.ports import (
     MATCHER_DEMANDS,
     AccountHoldQuery,
     AccountStatusQuery,
     AtStakeQuery,
+    HalfBuiltCourtQuery,
     MatchHistoryQuery,
     PlayerScoreQuery,
+    SharedCourtQuery,
 )
 
 P = TypeVar("P")
@@ -109,6 +113,16 @@ REGISTERED_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=AccountStatusQuery,
         name="UsersAccountStatus",
         build=build_account_status_query,
+    ),
+    RegisteredImplementation(
+        port=HalfBuiltCourtQuery,
+        name="ChallengesHalfBuiltCourts",
+        build=build_half_built_court_query,
+    ),
+    RegisteredImplementation(
+        port=SharedCourtQuery,
+        name="GamesSharedCourts",
+        build=build_shared_court_query,
     ),
 )
 

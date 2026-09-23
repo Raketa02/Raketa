@@ -55,6 +55,7 @@ const STANDINGS: Readonly<Record<GameStanding, true>> = {
   AWAITING_ANSWER: true,
   CONFIRMED: true,
   UNSCORED: true,
+  CALLED_OFF: true,
 };
 
 const KINDS: Readonly<Record<GameKind, true>> = { COUNTED: true, FRIENDLY: true };
@@ -84,13 +85,22 @@ function toScore(wire: ScoreSchema): Score {
  * **A missing handle is not a missing seat.** `null` here is an account `users` no longer has,
  * and the seat keeps its place: dropping it would draw a three-person doubles game. It collapses
  * to absent like every other optional in this file, and the screen draws the unknown player.
+ *
+ * **And a missing player is not a missing seat either** (ADR-0162): `player_id: null` is a seat
+ * somebody has left and nobody has filled, and it keeps its place and its side. It collapses to
+ * absent the same way, and the screens draw it open.
  */
 function toSeat(wire: SeatingSchema): GameSeat | undefined {
   const side = member(SIDES, wire.side);
   if (side === undefined) return undefined;
 
-  const nickname = wire.nickname ?? undefined;
-  return { side, playerId: wire.player_id, ...(nickname === undefined ? {} : { nickname }) };
+  const playerId = wire.player_id ?? undefined;
+  const name = wire.name ?? undefined;
+  return {
+    side,
+    ...(playerId === undefined ? {} : { playerId }),
+    ...(name === undefined ? {} : { name }),
+  };
 }
 
 function toStandingProposal(wire: StandingProposalSchema): StandingProposal | undefined {
@@ -148,6 +158,18 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
     plannedAt: wire.planned_at,
     playedAt: wire.played_at ?? undefined,
     entryClosesAt: wire.entry_closes_at ?? undefined,
+    calledOffAt: wire.called_off_at ?? undefined,
+    // Present exactly where the wire named somebody (ADR-0172 §4): the name rides with the id
+    // because the leaver's seat is vacated and the court cannot supply it, and a lost name is
+    // absent rather than `null` for the reason every seat's is.
+    ...(wire.called_off_by == null
+      ? {}
+      : {
+          calledOffBy: {
+            playerId: wire.called_off_by.player_id,
+            ...(wire.called_off_by.name == null ? {} : { name: wire.called_off_by.name }),
+          },
+        }),
     score: wire.score == null ? undefined : toScore(wire.score),
     outcome: wire.outcome == null ? undefined : member(OUTCOMES, wire.outcome),
     proposals: proposals.filter((one): one is StandingProposal => one !== undefined),

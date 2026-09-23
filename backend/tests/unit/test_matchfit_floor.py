@@ -123,6 +123,10 @@ def test_the_floor_takes_no_mode_no_sport_and_no_rung() -> None:
         "absent",
         "newcomer",
         "interest_received",
+        # The one parameter added since, with the argument for it: a term the
+        # search itself declined to read is nobody's gap (``docs/adr/0169``
+        # §2). It narrows the basis the gate counts against and never the bar.
+        "stood_down",
     }
     assert not taken & {"mode", "sport", "rung", "searcher"}
     assert isinstance(FLOORS.quality_floor, int)
@@ -517,3 +521,47 @@ def test_a_platform_with_every_provider_built_changes_nothing() -> None:
 
     fit = score(searcher(), candidate(), LIVE_RULESET)
     assert attributed(fit, frozenset()) == fit
+
+
+# ---------------------------------------------------------------------------
+# A term the search stands down leaves the live set for that search
+# ---------------------------------------------------------------------------
+
+
+def test_a_term_the_search_stands_down_is_nobodys_gap_at_the_gate() -> None:
+    """The third kind of stand-down, and the gate reads it like the platform's.
+
+    The deck stands intent down for every pairing (``docs/adr/0169`` §2). That
+    is neither a fact the platform lacks about everybody nor a fact this person
+    failed to produce — it is the surface declining to ask — so the gate takes
+    it out of the basis it counts against, exactly as it does a term with no
+    provider. Three of seven is under half; the term that was never asked is
+    not a fourth miss.
+    """
+
+    thin = scored_but_for(
+        Term.INTENT_ALIGNMENT,
+        Term.AVAILABILITY_OVERLAP,
+        Term.PLAYING_STYLE,
+        Term.SOCIAL_VIBE,
+    )
+    outcome = admits(
+        modified(thin),
+        LIVE_RULESET,
+        frozenset(),
+        stood_down=frozenset({Term.INTENT_ALIGNMENT}),
+    )
+    assert Term.INTENT_ALIGNMENT not in outcome.live
+    assert len(outcome.live) == 7
+    assert outcome.evidence_fraction == pytest.approx(3 / 7)
+    assert outcome.refusal is Refusal.TOO_LITTLE_EVIDENCE
+
+
+def test_a_search_standing_nothing_down_counts_every_live_term() -> None:
+    """The default is the empty set, and the basis is the platform's eight."""
+
+    full = modified(score(searcher(), candidate(), LIVE_RULESET))
+    assert admits(full, LIVE_RULESET, frozenset()).live == tuple(Term)
+    assert admits(full, LIVE_RULESET, frozenset(), stood_down=frozenset()).live == (
+        tuple(Term)
+    )

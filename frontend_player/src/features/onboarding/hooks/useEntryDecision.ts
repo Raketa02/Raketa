@@ -14,7 +14,9 @@
  * `has_player_profile` is served on `GET /users/me`, which the app already asks for, already
  * keys, and already seeds from bootstrap when a stored session was validated. So on a warm
  * launch the profile branch costs nothing at all, and on a cold one it costs a request the
- * app was going to make anyway.
+ * app was going to make anyway. **The name rides on the same read** — the gate's first
+ * destination ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §3) costs nothing more than the fourth did.
  *
  * **All three must answer before the gate does.** A launch that can read ratings but not the
  * player has no safe default — routing into the app is exactly the outcome the fourth branch
@@ -23,7 +25,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { useSessionStatus } from '@/shared/lib/auth';
@@ -96,6 +98,17 @@ export function useEntryDecision(): EntryDecision {
     enabled,
   });
 
+  // **Which reads this mount set out to replace: the ones that were stale when it began.**
+  // Taken once, on the first render, because *stale at mount* is a fact about the mount and
+  // not about the render — it is read below, where it bounds what counts as pending. A
+  // read that was fresh when the gate mounted was not sent for by the gate, and no later
+  // refetch of it is this mount's business.
+  const staleAtMount = useRef({
+    ratings: ratings.isStale,
+    run: run.isStale,
+    user: user.isStale,
+  }).current;
+
   const refetchRatings = ratings.refetch;
   const refetchRun = run.refetch;
   const refetchUser = user.refetch;
@@ -144,21 +157,30 @@ export function useEntryDecision(): EntryDecision {
   // `expo-router/testing-library` installs fake timers and Query's five-minute `gcTime`
   // therefore expires the entry between the two mounts. The test below seeds it instead.
   //
-  // The bound is `isFetchedAfterMount`, and it is what keeps this from being the opposite
-  // bug. Waiting on *any* fetch would blank the authenticated tree every time a foreground
-  // refetch ran; waiting only until each read has answered **once since this gate mounted**
-  // costs the round trip the gate was already making and nothing after it.
+  // The bound is **stale when this gate mounted, and not yet answered since** — both halves,
+  // and each is what keeps this from being the opposite bug. Waiting on *any* fetch would
+  // blank the authenticated tree every time a foreground refetch ran. Waiting on
+  // `isFetchedAfterMount` alone was the first cut, and it blanked the tree once per launch on
+  // a device while every suite stayed green: bootstrap **seeds** the player into the cache,
+  // so this gate's own read of them was fresh at mount and never fetched — the flag stayed
+  // false — and thirty seconds later the first screen to mount `useCurrentUser()` refetched
+  // the stale seed, which this gate took for its own replacement and answered `pending`,
+  // unmounting the shell for the length of the round trip and remounting it on a fresh
+  // stack, which opened on whatever that stack's first route was. Waiting only on the reads
+  // this mount actually sent for costs the round trip the gate was already making and
+  // nothing after it.
   //
   // A paused query is deliberately not covered: it is not fetching, so a launch with a
   // cached answer and no connection still routes from what it holds rather than rendering
   // nothing until the connection returns.
   const beingReplaced =
-    (ratings.isFetching && !ratings.isFetchedAfterMount) ||
-    (run.isFetching && !run.isFetchedAfterMount) ||
-    (user.isFetching && !user.isFetchedAfterMount);
+    (staleAtMount.ratings && ratings.isFetching && !ratings.isFetchedAfterMount) ||
+    (staleAtMount.run && run.isFetching && !run.isFetchedAfterMount) ||
+    (staleAtMount.user && user.isFetching && !user.isFetchedAfterMount);
   if (beingReplaced) return { kind: 'pending' };
 
   return entryDestination({
+    hasName: user.data.name !== undefined,
     ratings: ratings.data,
     runInProgress: run.data ?? undefined,
     deferredRunIds,

@@ -159,16 +159,16 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', nickname: 'me_' },
-            { side: 'B', player_id: 'them', nickname: 'tomek.p' },
+            { side: 'A', player_id: 'me', name: 'me_' },
+            { side: 'B', player_id: 'them', name: 'tomek.p' },
           ],
         }),
       ],
     });
 
     expect(game?.seats).toEqual([
-      { side: 'A', playerId: 'me', nickname: 'me_' },
-      { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+      { side: 'A', playerId: 'me', name: 'me_' },
+      { side: 'B', playerId: 'them', name: 'tomek.p' },
     ]);
   });
 
@@ -184,17 +184,90 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', nickname: 'me_' },
-            { side: 'B', player_id: 'them', nickname: null },
+            { side: 'A', player_id: 'me', name: 'me_' },
+            { side: 'B', player_id: 'them', name: null },
           ],
         }),
       ],
     });
 
     expect(game?.seats).toEqual([
-      { side: 'A', playerId: 'me', nickname: 'me_' },
+      { side: 'A', playerId: 'me', name: 'me_' },
       { side: 'B', playerId: 'them' },
     ]);
+  });
+
+  /**
+   * **An open seat is a seat** (ADR-0162): somebody left the game and nobody has filled it, so
+   * `player_id` is `null` and the seat keeps its place and its side. Dropping it would publish a
+   * three-person doubles game; dropping the game would take a live court off the rail.
+   */
+  it('keeps a seat somebody has left, with nobody in it', () => {
+    const [game] = toGames({
+      read_at: READ_AT,
+      games: [
+        wireGame({
+          seats: [
+            { side: 'A', player_id: 'me', name: 'me_' },
+            { side: 'B', player_id: null, name: null },
+          ],
+        }),
+      ],
+    });
+
+    expect(game?.seats).toEqual([{ side: 'A', playerId: 'me', name: 'me_' }, { side: 'B' }]);
+  });
+
+  /**
+   * **The fourth end is dated by the act** (ADR-0163): `called_off_at` is the instant somebody
+   * called it off, and it is what the ending card is shelved from — `entry_closes_at` is `null`
+   * on it, so a card that read the window would stay eight days.
+   */
+  it('reads when a game was called off, and leaves it absent on every other standing', () => {
+    const calledOff = toGame(
+      wireGame({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+      }),
+      READ_AT,
+    );
+
+    expect(calledOff).toMatchObject({
+      standing: 'CALLED_OFF',
+      calledOffAt: '2026-09-04T20:00:00Z',
+    });
+    expect(toGame(wireGame({ called_off_at: null }), READ_AT)?.calledOffAt).toBeUndefined();
+  });
+
+  /**
+   * **And who called it off, with their name** ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+   * §4): the leaver's seat is vacated on the game, so the court cannot supply the name and the
+   * field carries it — `null` where `users` no longer has the account, which draws `?`.
+   */
+  it('reads who called it off and their name, and leaves a lost name absent', () => {
+    const named = toGame(
+      wireGame({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+        called_off_by: { player_id: 'tomek', name: 'tomek.p' },
+      }),
+      READ_AT,
+    );
+    const nameless = toGame(
+      wireGame({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+        called_off_by: { player_id: 'tomek', name: null },
+      }),
+      READ_AT,
+    );
+
+    expect(named?.calledOffBy).toEqual({ playerId: 'tomek', name: 'tomek.p' });
+    expect(nameless?.calledOffBy).toEqual({ playerId: 'tomek' });
+    expect(toGame(wireGame({ called_off_by: null }), READ_AT)).not.toHaveProperty('calledOffBy');
   });
 
   it('drops a game whose court it cannot place somebody on', () => {

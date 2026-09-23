@@ -4,12 +4,30 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Four modules may be imported from exactly one place, or from nowhere at all:
+# Six modules may be imported from exactly one place, or from nowhere at all:
 #
 #   expo-secure-store                            → src/shared/lib/auth
 #   @react-native-async-storage/async-storage    → nowhere; it is unencrypted
-#   expo-location                                → src/shared/lib/platform
-#   expo-image-picker                            → src/shared/lib/platform
+#   expo-location                                → platform/location.ts
+#   expo-image-picker                            → platform/imagePicking.ts
+#   react-native-sse                             → platform/liveStream.ts
+#   expo-haptics                                 → platform/haptics.ts
+#
+# And one is banned everywhere *except* a feature's api/ and mappers/ layers, plus the
+# one file above that is an api/ layer without a feature to live in:
+#
+#   @/generated/**                               → api/, mappers/, platform/liveStream.ts
+#
+# One more is banned in **one feature only**, and it is the one rule here that is about
+# two features rather than about a module:
+#
+#   @/features/plans                             → never from features/games
+#
+# ADR-0149 §1: `features/plans` may import `features/games` and never the reverse, which
+# keeps ADR-0145 §4's clause — *"`games` importing the Plan"* — checkable on this side of
+# the wire. That record says so in as many words: *"a grep, not a judgement"*. This is
+# where the grep is proved still to fire, in both directions, because a one-way edge that
+# has quietly become a wall is as wrong as one that has become a door.
 #
 # Each ban was added to a tree that already satisfied it, so not one of them has
 # ever been seen to fail — and a rule that has never fired is indistinguishable
@@ -109,7 +127,22 @@ OBSERVABILITY='src/shared/lib/observability/placeholder.ts'
 # banned here as it is in a feature.
 LOCATION_PORT='src/shared/lib/platform/location.ts'
 PICKING_PORT='src/shared/lib/platform/imagePicking.ts'
+LIVE_PORT='src/shared/lib/platform/liveStream.ts'
+HAPTICS_PORT='src/shared/lib/platform/haptics.ts'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
+
+# Where a generated wire type is legitimately read: the two layers of a feature, and the
+# one file outside a feature that is an api/ layer — the live channel, whose frame ADR-0147
+# §7 requires to be the generated type.
+WIRE_LAYER='src/features/onboarding/api/placeholder.ts'
+
+# The one-way edge's four sides: the three layers of `features/games` the ban has to reach,
+# and the feature on the permitted side of it.
+GAMES_SCREEN='src/features/games/components/Placeholder.tsx'
+GAMES_WIRE='src/features/games/mappers/placeholder.ts'
+GAMES_DOMAIN='src/features/games/domain/placeholder.ts'
+PLANS_SCREEN='src/features/plans/components/Placeholder.tsx'
+CHALLENGES_SCREEN='src/features/challenges/components/Placeholder.tsx'
 
 echo "the keychain — expo-secure-store belongs to src/shared/lib/auth"
 expect_blocked expo-secure-store "$FEATURE" 'src/shared/lib/auth'
@@ -150,7 +183,75 @@ expect_blocked expo-image-picker "$AUTH" 'src/shared/lib/platform'
 expect_blocked expo-image-picker "$OBSERVABILITY" 'src/shared/lib/platform'
 expect_blocked expo-image-picker "$OTHER_PLATFORM_FILE" 'src/shared/lib/platform'
 expect_blocked expo-image-picker "$LOCATION_PORT" 'src/shared/lib/platform'
+expect_blocked expo-image-picker "$LIVE_PORT" 'src/shared/lib/platform'
 expect_allowed expo-image-picker "$PICKING_PORT"
+
+echo
+echo "the live channel — react-native-sse belongs to platform/liveStream.ts"
+expect_blocked react-native-sse "$FEATURE" 'liveStream.ts'
+expect_blocked react-native-sse "$SCREEN" 'liveStream.ts'
+expect_blocked react-native-sse "$TEST" 'liveStream.ts'
+expect_blocked react-native-sse "$SUPPORT" 'liveStream.ts'
+expect_blocked react-native-sse "$AUTH" 'liveStream.ts'
+# One file wide, again: the two native ports beside it may not open a socket either.
+expect_blocked react-native-sse "$LOCATION_PORT" 'liveStream.ts'
+expect_blocked react-native-sse "$OTHER_PLATFORM_FILE" 'liveStream.ts'
+expect_allowed react-native-sse "$LIVE_PORT"
+
+echo
+echo "the motor — expo-haptics belongs to platform/haptics.ts"
+expect_blocked expo-haptics "$FEATURE" 'haptics.ts'
+expect_blocked expo-haptics "$SCREEN" 'haptics.ts'
+expect_blocked expo-haptics "$TEST" 'haptics.ts'
+expect_blocked expo-haptics "$AUTH" 'haptics.ts'
+# One file wide, as the others are: the three ports beside it may not buzz.
+expect_blocked expo-haptics "$LOCATION_PORT" 'haptics.ts'
+expect_blocked expo-haptics "$LIVE_PORT" 'haptics.ts'
+expect_blocked expo-haptics "$OTHER_PLATFORM_FILE" 'haptics.ts'
+expect_allowed expo-haptics "$HAPTICS_PORT"
+# And the port itself is still under every other ban.
+expect_blocked expo-location "$HAPTICS_PORT" 'src/shared/lib/platform'
+
+echo
+echo "generated wire types — api/ and mappers/, plus the live channel's frame"
+expect_blocked @/generated/schema "$FEATURE" "api/ or mappers/"
+expect_blocked @/generated/schema "$SCREEN" "api/ or mappers/"
+expect_blocked @/generated/schema "$LOCATION_PORT" "api/ or mappers/"
+expect_blocked @/generated/schema "$OTHER_PLATFORM_FILE" "api/ or mappers/"
+expect_allowed @/generated/schema "$WIRE_LAYER"
+# The one file outside a feature that reads one, and it is exempt from a second ban as well —
+# which is exactly the shape the `sharedPatternsExcept` subtraction exists to keep honest.
+expect_allowed @/generated/schema "$LIVE_PORT"
+
+echo
+echo "the one-way edge — features/games may never import features/plans"
+# Every layer of the feature, because the ban is three blocks: flat config replaces a rule
+# rather than adding to it, so the wire layer and the pure layers each restate the baseline
+# block they shadow. A ban that reached only `components/` would be a ban a mapper walks past.
+expect_blocked @/features/plans "$GAMES_SCREEN" 'ADR-0149'
+expect_blocked @/features/plans "$GAMES_WIRE" 'ADR-0149'
+expect_blocked @/features/plans "$GAMES_DOMAIN" 'ADR-0149'
+# The other direction is the sanctioned one, and it is asserted so that a later hand at this
+# file cannot "tidy" the ban into a symmetric wall — which would delete the composition
+# ADR-0149 chose over a second read.
+expect_allowed @/features/games/types "$PLANS_SCREEN"
+# And the two exemptions the games blocks shadow are still exemptions: a re-listed block
+# that dropped either would be silent, and this is the only place it would show.
+expect_allowed @/generated/schema "$GAMES_WIRE"
+expect_blocked @/generated/schema "$GAMES_SCREEN" "api/ or mappers/"
+expect_blocked react-native "$GAMES_DOMAIN" 'pure TypeScript'
+# The two declared edges the other way out of `games` (#415): the forecast block cites Play's
+# balance words through its public surface, and the players card opens `player_record`'s
+# sheet. Asserted so a later hand widening the one-way ban into "games imports no feature"
+# goes red here rather than at the first `pnpm lint` after it.
+expect_allowed @/features/play/types "$GAMES_SCREEN"
+expect_allowed @/features/player_record/types "$GAMES_SCREEN"
+# And the deep path is still what it always was: a feature never reaches past another's types.ts.
+expect_blocked @/features/play/components/balancePresentation "$GAMES_SCREEN" 'types.ts'
+# The yes screen's one new edge (ADR-0167 §3): `challenges` reads the reader's own face through
+# `player_record`'s public surface, and nothing deeper.
+expect_allowed @/features/player_record/types "$CHALLENGES_SCREEN"
+expect_blocked @/features/player_record/hooks/useOwnFace "$CHALLENGES_SCREEN" 'types.ts'
 
 echo
 printf '%s passed, %s failed\n' "$pass" "$fail"

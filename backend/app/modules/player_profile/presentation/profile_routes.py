@@ -11,12 +11,15 @@ which are facts about somebody acting in the player app, not about an account.
 The identity behind both is the same ``UserId`` (``../../../../CONTEXT.md`` —
 *Player*), and the noun is the one the domain uses for what is being described.
 
-**The gender answer rides on this same commit** and does not get an endpoint of
-its own (``docs/adr/0096``): it is required at profile creation, and profile
-creation is one request. Which *screen* asks it, and where that screen sits in
-onboarding's second part, is ADR-0096's to design and is not decided here — what
-is decided here is only that the answer arrives with the others or the profile is
-not created.
+**The intro rides on this same commit too**, and is edited afterwards with the
+tags and the photos — ``docs/adr/0170`` §5 held the three back until they could
+be edited together, and ``docs/adr/0179`` §6 is that day, on the profile
+surface next door. **The gender answer rides on this same commit** and its
+correction is the surface's too (``docs/adr/0096``): it is required at profile
+creation, and profile creation is one request. Which *screen* asks it, and where
+that screen sits in onboarding's second part, is ADR-0096's to design and is
+not decided here — what is decided here is only that the answer arrives with
+the others or the profile is not created.
 
 The `Idempotency-Key` header is required rather than optional, deliberately.
 This is the request a player makes once, at the end of six steps, on whatever
@@ -101,7 +104,14 @@ IdempotencyKeyDep = Annotated[
                 "`proposals_opt_in_not_answered` — the answer was `null`. Ask "
                 "the question; do not send `false` on the player's behalf.\n\n"
                 "`too_many_photos` / `duplicate_photo` — the photo list is not "
-                "one a profile may hold."
+                "one a profile may hold.\n\n"
+                "`intro_not_admitted` — the line is not one the platform "
+                "admits, with one coarse `details.reason`: `too_long` (over "
+                "a hundred characters after trimming), `multiline` (a line "
+                "break), or `contains_contact` (a phone number, an email, a "
+                "URL or bare domain, or an `@handle`). Refused before anything "
+                "is stored; the client says what to change and the server "
+                "never says what it matched."
             ),
         },
         status.HTTP_404_NOT_FOUND: {
@@ -148,7 +158,13 @@ IdempotencyKeyDep = Annotated[
         "is a 422 rather than a coded refusal. The second defaults to `ANY`, "
         "is durable, and gates **both directions**: narrowing it also hides "
         "this player from the side it excludes. Neither value ever comes back "
-        "out of this API."
+        "out of this API.\n\n"
+        "**`intro` is optional and fenced at the write.** One line about "
+        "yourself, at most a hundred characters, any language; a player who "
+        "skips sends nothing and has no intro rather than an empty one. A "
+        "line carrying a phone number, an email, a URL or an `@handle` is "
+        "refused with `intro_not_admitted` before anything is stored. It "
+        "crosses on the player card and on the record, and is not echoed here."
     ),
 )
 async def commit_player_profile(
@@ -177,6 +193,7 @@ async def commit_player_profile(
             # that could name a different surface would be a body that could lie
             # about where a consent was gathered.
             consent_surface=ConsentSurface.ONBOARDING,
+            intro=payload.intro,
         )
     )
     if not committed.created:

@@ -164,22 +164,32 @@ class Lapsed:
 @final
 @dataclass(frozen=True, slots=True)
 class OutstandingCount:
-    """One sport's live count, and the cap it is counted against.
+    """One sport's live count, the cap it is counted against, and how long each
+    yes lives.
 
     The pair travels together and is never split: a count with no cap is a
     number, and a cap with no count is a rule. What a player is owed is *how
     close am I*, which is the two of them side by side — and it is one type
     rather than two loose fields so that the tap's answer and the screen's list
     cannot come to disagree about what they are showing (``docs/adr/0127`` §4).
+
+    ``ttl_days`` rides beside them (``docs/adr/0169`` §5): the deck's ending
+    prints *your yeses stay live for N days*, and ``docs/adr/0127`` §6's rule
+    that the client never holds the number is kept by making it cross. It is
+    read off the released ruleset at response time and stored on no row — a
+    yes carries its own ``expires_at``, dated at birth, and this is the rule
+    that dated it rather than a second copy of any one date.
     """
 
     sport: Sport
     outstanding: int
     cap: int
+    ttl_days: int
 
     def __post_init__(self) -> None:
         invariant(self.outstanding >= 0, f"a negative count: {self.outstanding}")
         invariant(self.cap >= 1, f"an interest cap of {self.cap}")
+        invariant(self.ttl_days >= 1, f"an interest TTL of {self.ttl_days} days")
 
     @property
     def reached(self) -> bool:

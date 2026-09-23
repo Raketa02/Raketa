@@ -19,9 +19,9 @@ constructor argument rather than a call — which is what lets one run assemble
 these more than once, at more than one instant.
 
 **An edge is written at the run's own now and a played game is not**, and the two
-halves of that are one rule rather than an exception to it: a seat's
-twenty-four hours have to start when the run starts or the court is over before
-it is read, and a *result* is confirmed by silence when its window closes — so a
+halves of that are one rule rather than an exception to it: a seat's own answer
+window has to start when the run starts or the court is over before it is read,
+and a *result* is confirmed by silence when its window closes — so a
 game seeded an hour ago is a game still awaiting an answer, which is a different
 card from the one the fixture is for. A relationship is a thing happening now; a
 played game is a thing that happened. ``app/seeds/games.py`` builds one of these
@@ -49,31 +49,39 @@ from app.bootstrap.composition import (
     build_challenge_directory,
     build_challenge_repository,
     build_court_safety,
+    build_deck_reset_ledger,
     build_domain_event_store,
     build_event_publisher,
     build_exposure_ledger,
     build_game_directory,
     build_game_history_query,
     build_game_repository,
+    build_half_built_court_query,
     build_interest_ledger,
     build_match_fit_engine,
     build_match_history_query,
     build_mutual_challenge_minting,
+    build_game_of_court_query,
     build_open_challenge_query,
     build_origin_search_query,
-    build_planned_game_opening,
+    build_planned_game_handover,
+    build_seatable_game_query,
     build_pass_ledger,
     build_play_intent_declaration_repository,
     build_photo_storage,
     build_player_card_source,
-    build_player_handles,
+    build_challenge_names,
+    build_court_pairing_query_over,
+    build_player_names,
     build_player_record_source,
     build_player_profile_repository,
     build_player_score_query,
     build_prompt_decline_ledger,
     build_prompt_ledger,
+    build_read_plans,
     build_ruleset,
     build_search_store,
+    build_shared_court_query,
     build_skill_rating_repository,
     build_suppression_ledger,
     build_unit_of_work,
@@ -91,21 +99,31 @@ from app.modules.challenges.application.commands import (
     SeatChoice,
     SendChallengeCommand,
 )
+from app.modules.challenges.application.fill_seats import FillSeats
+from app.modules.challenges.application.leave_game import LeaveGame
+from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
+from app.modules.challenges.application.withdraw_challenge import WithdrawChallenge
 from app.modules.challenges.domain.seats import court_sides
 from app.modules.games.application.answer_result import AcceptResult, StateResult
 from app.modules.games.application.read_games import ReadGames
 from app.modules.games.domain.ports import GameHistoryQuery
 from app.modules.matchmaking.application.commands import (
     RunDeckDealCommand,
+    RunRadarReadingCommand,
     RunShortlistSearchCommand,
 )
+from app.modules.matchmaking.application.deck_exclusions import DeckExclusionReads
 from app.modules.matchmaking.application.express_interest import ExpressInterest
 from app.modules.matchmaking.application.read_interest import ReadInterest
 from app.modules.matchmaking.application.record_pass import RecordPass
 from app.modules.matchmaking.application.run_deck_deal import DeckAnswer, RunDeckDeal
 from app.modules.matchmaking.application.run_lineup_search import RunLineupSearch
+from app.modules.matchmaking.application.run_radar_reading import (
+    RadarAnswer,
+    RunRadarReading,
+)
 from app.modules.matchmaking.application.run_shortlist_search import (
     RunShortlistSearch,
 )
@@ -116,6 +134,7 @@ from app.modules.matchmaking.domain.passes import PassLedger
 from app.modules.matchmaking.domain.ports import MatchHistoryQuery
 from app.modules.matchmaking.domain.relaxation import Rung
 from app.modules.matchmaking.domain.searches import SearchRecord
+from app.modules.plans.application.read_plans import ReadPlans
 from app.modules.player_profile.domain.ports import PhotoStorage
 from app.seeds.catalog import PROTAGONISTS
 from app.seeds.clock import FixedClock
@@ -151,16 +170,20 @@ class SeedPathMissing(RuntimeError):
 class ReadPaths:
     """Every surface a seed run reads or writes through, and what reads it back.
 
-    The searches, the deck and the line-up are the three surfaces; the yes, the
-    pass, the block, the send and the two answers are the five gestures. They sit
-    in one value because the edges and the claims are two halves of one run and a
-    second assembly is a second opinion.
+    The searches, the deck, the line-up and the radar are the four surfaces;
+    the yes, the pass, the block, the send and the two answers are the five
+    gestures. They sit in one value because the edges and the claims are two
+    halves of one run and a second assembly is a second opinion.
     """
 
     workbench: SearchWorkbench
     shortlist: RunShortlistSearch
     deck: RunDeckDeal
     lineup: RunLineupSearch
+    #: The reading (``docs/adr/0174``) — the one surface that draws everybody
+    #: in the reach, which is what makes it the surface a fixture can prove
+    #: its whole population on: a court, a pass and a mutual hide nobody here.
+    radar: RunRadarReading
     interest: ExpressInterest
     read_interest: ReadInterest
     passes: RecordPass
@@ -170,7 +193,31 @@ class ReadPaths:
     send: SendChallenge
     accept: AcceptSeat
     decline: DeclineSeat
+    #: The organiser's exit from a line-up nobody will finish, and the only act
+    #: in this fixture that **ends** a challenge on purpose. It is here for the
+    #: same reason the two answers are: a state a screen has to draw is reached
+    #: through the use case a request runs, never written into the log.
+    withdraw: WithdrawChallenge
+    #: *Leave the game* — the one act that takes a yes back (``docs/adr/0165``),
+    #: and since ``docs/adr/0172`` §1 the one that ends a court that has been a
+    #: game: the departure that leaves one player on it records ``CALLED_OFF``
+    #: and calls the game off in the same act. Here because that ending — the
+    #: seventh standing, and the *Called off* card it draws — is reached by no
+    #: other act, and a state a screen has to draw is reached through the use
+    #: case a request runs.
+    leave: LeaveGame
+    #: *Fill the seats* — the send's shape minus the mint (``docs/adr/0150``).
+    #: Here because a court that has been **grown** is a state no other act
+    #: reaches: the room learns ``SEATS_INVITED`` from a fill and from nothing
+    #: else, and half of this mechanism was written and unreachable until #362.
+    fill: FillSeats
     read_challenges: ReadChallenges
+    #: The detail read, and **the only surface in this fixture that costs the
+    #: matcher a whole scoring pass** (``docs/adr/0143``). It is here so the run
+    #: can assert the card block a challenge screen draws rather than only the
+    #: arrangement behind it — which is the one half of that screen no other
+    #: read in this file exercises.
+    read_challenge: ReadChallenge
     #: The three acts a played game costs after the seats are answered, and the
     #: screen that reads one back. ``games`` opens the game itself — inline, in
     #: the transaction of the accept that filled the last seat — so there is no
@@ -179,6 +226,11 @@ class ReadPaths:
     state_result: StateResult
     accept_result: AcceptResult
     read_games: ReadGames
+    #: *Every plan for the games you are on the court of.* Beside the games read
+    #: because a card is folded from the two of them and from one instant: the
+    #: standing is ``GET /games``' and the slots are this one's, and ``GET /plans``
+    #: carries no instant at all so that a rail has one clock by construction.
+    read_plans: ReadPlans
     history: MatchHistoryQuery
     #: What ``games`` publishes outward — the pairwise history familiarity reads,
     #: the counted-game count and the run of form. Held beside ``history``
@@ -299,7 +351,12 @@ async def read_paths(
     games = build_game_repository(
         session=session, event_store=event_store, events=events
     )
-    handles = build_player_handles(session)
+    names = build_player_names(session)
+    # ``challenges`` declares its own names port and may not sign ``games``'
+    # (``docs/adr/0143`` §7), so the seed holds both adapters exactly as a
+    # request does.
+    court_names = build_challenge_names(session)
+    court_games = build_game_of_court_query(session)
     history = build_match_history_query(session)
     ruleset = build_ruleset()
     engine = build_match_fit_engine()
@@ -332,6 +389,17 @@ async def read_paths(
         absent_terms=build_absent_terms(),
         meter=None,
     )
+    # Built once and shared by the deal and the reading, as a request shares
+    # it: one object over the deck's four stores, so the two chips are one.
+    held_out = DeckExclusionReads(
+        ruleset=ruleset,
+        searches=searches,
+        suppression=suppression,
+        interest=interest,
+        passes=passes,
+        courts=build_shared_court_query(session),
+        resets=build_deck_reset_ledger(session),
+    )
     return ReadPaths(
         workbench=workbench,
         shortlist=RunShortlistSearch(
@@ -346,16 +414,26 @@ async def read_paths(
             workbench=workbench,
             ruleset=ruleset,
             engine=engine,
-            searches=searches,
-            suppression=suppression,
-            interest=interest,
-            passes=passes,
+            held_out=held_out,
+        ),
+        # Over the deck's own reads, as a request assembles it: the chip on a
+        # reading is the deck's number, and a reading assembled over different
+        # stores would be a chip that could disagree with the deal's.
+        radar=RunRadarReading(
+            workbench=workbench,
+            ruleset=ruleset,
+            engine=engine,
+            held_out=held_out,
         ),
         lineup=RunLineupSearch(
             workbench=workbench,
             ruleset=ruleset,
             engine=engine,
             blocks=blocks,
+            # Real rather than stubbed, for the reason the mutual mint above is:
+            # the seed completes a half-built court through this use case, and a
+            # use case assembled with a hole in it is not the one a request runs.
+            courts=build_half_built_court_query(session),
         ),
         interest=ExpressInterest(
             clock=clock,
@@ -400,28 +478,92 @@ async def read_paths(
         ),
         accept=AcceptSeat(
             challenges=challenges,
+            names=court_names,
+            court_games=court_games,
             uow=uow,
             clock=clock,
-            planned_games=build_planned_game_opening(session),
+            planned_games=build_planned_game_handover(session),
+            games=build_seatable_game_query(session),
         ),
-        decline=DeclineSeat(challenges=challenges, uow=uow, clock=clock),
-        state_result=StateResult(games=games, handles=handles, uow=uow, clock=clock),
-        accept_result=AcceptResult(games=games, handles=handles, uow=uow, clock=clock),
+        decline=DeclineSeat(
+            challenges=challenges,
+            names=court_names,
+            court_games=court_games,
+            uow=uow,
+            clock=clock,
+        ),
+        # **The send's three extra reads, built the same way here as there**, so
+        # a fill and a send cannot come to two answers about who may share a
+        # court — which is the whole of what a fill re-verifies.
+        fill=FillSeats(
+            challenges=challenges,
+            names=court_names,
+            court_games=court_games,
+            open_challenges=build_open_challenge_query(session),
+            origins=build_origin_search_query(session),
+            safety=build_court_safety(session),
+            games=build_seatable_game_query(session),
+            uow=uow,
+            clock=clock,
+        ),
+        withdraw=WithdrawChallenge(
+            challenges=challenges,
+            names=court_names,
+            court_games=court_games,
+            uow=uow,
+            clock=clock,
+        ),
+        # **The accept's hand-over and the accept's moment guard**, built the
+        # same way, because a departure is the accept's mirror — a seat moving
+        # on a court that has been a game, told to the game in the same
+        # transaction — and the court's safety gates, because a departure
+        # writes a line into a room other people are in.
+        leave=LeaveGame(
+            challenges=challenges,
+            names=court_names,
+            court_games=court_games,
+            safety=build_court_safety(session),
+            games=build_seatable_game_query(session),
+            uow=uow,
+            clock=clock,
+            planned_games=build_planned_game_handover(session),
+        ),
+        state_result=StateResult(games=games, names=names, uow=uow, clock=clock),
+        accept_result=AcceptResult(games=games, names=names, uow=uow, clock=clock),
         read_games=ReadGames(
-            games=build_game_directory(session), handles=handles, clock=clock
+            games=build_game_directory(session), names=names, clock=clock
         ),
+        read_plans=build_read_plans(session, clock=clock),
         read_challenges=ReadChallenges(
-            directory=build_challenge_directory(session), clock=clock
+            directory=build_challenge_directory(session),
+            names=court_names,
+            court_games=court_games,
+            clock=clock,
+        ),
+        read_challenge=ReadChallenge(
+            challenges=challenges,
+            names=court_names,
+            # **The run's own workbench**, not a second one over the same
+            # session — which is what the stores above say about themselves and
+            # is truer of this one, since it holds four of them. It also carries
+            # the run's own index and ledger for the reason every other seam here
+            # takes the caller's: the run ticks the index in process before it
+            # reads, and a pairing computed against a different one would be a
+            # card about a city this run never built.
+            pairings=build_court_pairing_query_over(
+                workbench=workbench, settings=settings
+            ),
+            clock=clock,
         ),
         history=history,
         games=build_game_history_query(session),
         engine=engine,
         ruleset=ruleset,
-        players=players or await _players(session, cohort),
+        players=players or await player_ids(session, cohort),
     )
 
 
-async def _players(session: AsyncSession, cohort: Cohort) -> Mapping[str, UUID]:
+async def player_ids(session: AsyncSession, cohort: Cohort) -> Mapping[str, UUID]:
     """Every seeded address a read here names, as the id the write path minted.
 
     Looked up by address rather than derived, because ``RegisterUser`` mints the
@@ -531,6 +673,22 @@ async def deal_a_deck(paths: ReadPaths, email: str, sport: Sport) -> DeckAnswer:
             sport=sport,
             availability_override=None,
             trace_id=TRACE_ID,
+        )
+    )
+
+
+async def read_a_radar(paths: ReadPaths, email: str, sport: Sport) -> RadarAnswer:
+    """One reading, through the use case a request runs.
+
+    **A reading costs nothing the next surface pays for**: it enters no dealt
+    memory and notes no exposure (``docs/adr/0174`` §4), so it can be read as
+    often as a run likes — the one thing it leaves behind is its own search
+    record, which never expires.
+    """
+
+    return await paths.radar.execute(
+        RunRadarReadingCommand(
+            searcher_id=paths.player(email), sport=sport, trace_id=TRACE_ID
         )
     )
 

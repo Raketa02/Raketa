@@ -200,11 +200,183 @@ class NobodyIsAskedTwice(ConflictError):
         super().__init__("Somebody in this line-up has already answered.")
 
 
+class TheWithdrawIsTheOrganisers(ForbiddenError):
+    """Somebody holding a seat asked to end the whole challenge, and the act is
+    not theirs.
+
+    Forbidden rather than not-found, for ``NotYourSeat``'s reason: the challenge
+    exists and the caller can see it, and what is being refused is an act on
+    everybody else's arrangement.
+
+    **One act again, and the code keeps its name** (``docs/adr/0165`` §4;
+    ``docs/adr/0175`` §1 retired the second). The act is *Remove the
+    challenge* and it is the organiser's alone — an invitee, whether they
+    joined or are still deciding, is told so before anything about the court
+    is read, and so is an organiser who has left their own seat. The code
+    carried *Call it off* for a season and did not move when that act went,
+    because a shipped client already switches on it.
+
+    **The invitee is not offered a smaller version of it either.** Somebody who
+    joined leaves the court instead (``docs/adr/0165`` §1), and that is not a
+    withdraw: a withdraw is whole-challenge, and a per-seat one would be the
+    organiser removing an accepted player, which
+    ``AnAcceptedPlayerMayNotBeRemoved`` exists to say no to.
+    """
+
+    code = "withdraw_is_the_organisers"
+
+    def __init__(self) -> None:
+        super().__init__("Only the organiser may remove a challenge.")
+
+
+class TheFillIsTheLiveMembers(ForbiddenError):
+    """Somebody holding a seat they have left tried to grow the court.
+
+    **The mirror of the withdraw's refusal, one act over** (``docs/adr/0150``
+    §1). Growing a court and ending one are different acts with different
+    permissions: the withdraw is the organiser's while nobody has joined and
+    nobody's once somebody has (``docs/adr/0165`` §4), and the fill is every
+    **live** member's — accepted, or still deciding.
+
+    A declined or lapsed invitee still holds their seat and still sees the
+    challenge on their own list, which is why this is a `403` and not a `404`:
+    pretending it is not there while their own seat is drawn on it would be the
+    wrong lie. They have left the game, and filling somebody else's court is not
+    a thing leaving entitles you to.
+    """
+
+    code = "fill_is_the_live_members"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Only somebody still on this court may fill its open seats."
+        )
+
+
+class SomebodyHasJoinedTheCourt(ConflictError):
+    """The organiser asked to remove a challenge somebody else has joined.
+
+    **A court somebody has joined is nobody's to end for the others**
+    (``docs/adr/0165`` §4). The withdraw is admitted exactly while nobody
+    besides the organiser holds an accepted seat — before anybody has answered,
+    and again once everybody who joined has left — and refused the moment one
+    person is in, whatever the other seats still owe. From here the organiser
+    leaves like anybody else (``docs/adr/0165`` §1), and the court is over by
+    itself when at most one player is on it and nobody is still deciding
+    (``docs/adr/0165`` §3).
+
+    **It reads the seats and never the standing.** ``AWAITING_ANSWERS`` with
+    one yes on it and ``LINE_UP_INCOMPLETE`` are refused alike, because what
+    matters is that a person agreed, not what the others owe — and a court that
+    was never a game cannot be half built without somebody having joined it, so
+    on such a court this is the whole of what the old *not a half-built
+    line-up* refusal has become.
+
+    **Not on a court that has been a game.** There the act is *Call it off*,
+    admitted for any player while a seat is open (``docs/adr/0165`` §5), and
+    the people on it are exactly who may end it.
+    """
+
+    code = "somebody_has_joined"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Somebody has joined this challenge, so it is no longer yours to "
+            "remove — leave it instead."
+        )
+
+
+class TheCourtHasBeenAGame(ConflictError):
+    """A removal asked of a court that has been a game.
+
+    **Such a court has no exit anybody presses** (``docs/adr/0175`` §1). It
+    ends by its seats — the departure that leaves at most one player on it —
+    or by its hour, when it is still short of a player as its moment passes;
+    never by one person's decision over the others. *Remove the challenge* is
+    the organiser's while nobody has joined, and a court that became a game is
+    one everybody joined, whatever its seats hold since. Asked before
+    ``SomebodyHasJoinedTheCourt``, because an organiser alone again on a
+    reopened court would otherwise be told nobody has joined a court that has
+    been played for.
+
+    Its own code rather than ``somebody_has_joined``, so a client that ever
+    offered the act by mistake reads which rule it met. An ended court is
+    refused with ``TheChallengeIsOver`` first, as every act is.
+    """
+
+    code = "court_has_been_a_game"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This court became a game; it ends only by its players leaving or "
+            "by its hour passing."
+        )
+
+
+class TheGameIsHistory(ConflictError):
+    """A seat asked to change on a court whose game has happened, or never will.
+
+    The departure, the fill and the acceptance all meet it, on a court that had
+    become a game: after *we played*, after the entry window closed on silence,
+    and after the game was called off — by a withdrawal, or by the departure
+    that left one player on it (``docs/adr/0165`` §3) — the line-up is the
+    record of an evening and nothing on it moves.
+    **Not ``challenge_is_over``**, deliberately: the challenge is still ``ON``
+    and the person is looking at a game, so the refusal names the game.
+    """
+
+    code = "game_is_history"
+
+    def __init__(self) -> None:
+        super().__init__("This game has happened, or never will.")
+
+
+class TheGameMomentHasPassed(ConflictError):
+    """A seat asked to change after the moment the plan agreed.
+
+    Once the agreed moment has passed the game is *Needs result* and leaving
+    means nothing — so it is refused, and a no-show cannot vacate a seat to
+    block the result. The same instant closes the court to a fill and to an
+    acceptance: a newcomer accepting into *Sunday* on Monday joins a game whose
+    moment is gone (``docs/adr/0162`` §4).
+
+    The moment is the **plan's**, read through ``games`` at the guard and
+    stored nowhere on this side.
+    """
+
+    code = "game_moment_has_passed"
+
+    def __init__(self) -> None:
+        super().__init__("The moment this game was agreed for has passed.")
+
+
+class TheCourtIsNotCalledOff(ConflictError):
+    """*Remove this row* asked of a court that is not called off.
+
+    The dismissal is admitted on ``CALLED_OFF`` and on no other standing
+    (``docs/adr/0172`` §5, ``docs/adr/0175`` §5): a live court's row is the
+    court, and the other endings' rows are the record for the day they stay.
+    The game's own trash refuses the same case as ``game_is_not_called_off``;
+    this is the row's word for it, one code on each list.
+    """
+
+    code = "court_is_not_called_off"
+
+    def __init__(self) -> None:
+        super().__init__("Only a called-off court's row can be removed.")
+
+
 class TheChallengeIsOver(ConflictError):
     """Something was asked of a challenge nobody is left in.
 
-    Its seats are open and its standing is settled; filling one would be a
-    proposal to a different set of people, which is a **new** challenge.
+    Its standing is settled: filling a seat would be a proposal to a different
+    set of people, which is a **new** challenge; leaving it or withdrawing it
+    would end what has ended; and answering a seat on a challenge its organiser
+    removed while the seat's day was still running (``docs/adr/0165`` §4) would
+    say yes to a court that is over. **One code for the four endings**,
+    whichever act met them — an answer to a fill's invitation after the court
+    it was for was called off meets it too (``docs/adr/0172`` §2,
+    ``docs/adr/0175`` §2).
     """
 
     code = "challenge_is_over"

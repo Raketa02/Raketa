@@ -189,6 +189,10 @@ class RunShortlistSearch:
                 surface=SearchSurface.SHORTLIST,
                 initiation=SearchInitiation.HUMAN,
                 for_a_newcomer=for_a_newcomer,
+                # **No challenge to except**: this surface names none, and the
+                # open-challenge gate excludes everybody the searcher is
+                # arranging with, exactly as it always has.
+                completing_challenge_id=None,
             )
 
         with self._work.scoring(stages):

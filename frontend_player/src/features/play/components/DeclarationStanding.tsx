@@ -63,11 +63,18 @@
  * confusion this whole run is taking apart. `DECK` therefore stays the interstitial's surface,
  * which is the caller that actually declares on that screen and the one `deck.test.tsx` asserts.
  *
+ * **The deck's line is gone with the deck's declaration**
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §2): a deal runs under one ruler for everybody and reads no declaration, so there is nothing
+ * on the Players tab for this line to state, and `mode` is never `undefined` from a caller that
+ * exists today. The section above is kept as the record of the one state the line had there.
+ *
  * The failure stays where every other one on this screen is drawn — a coral note above the
  * thing that failed, because the line itself is `muted` on a recessed ground and has no room
  * to carry a refusal in wording alone.
  */
 
+import { usePathname } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { sportColour } from '@/features/onboarding/types';
@@ -120,6 +127,7 @@ export function DeclarationStanding({
   declaredOn,
 }: DeclarationStandingProps) {
   const declare = useDeclarePlayIntent();
+  const here = usePathname();
   const standing = declarationLine({ intent, mode, sportName });
 
   return (
@@ -169,7 +177,10 @@ export function DeclarationStanding({
               declare.mutate({ sport, intent: standing.updatesTo, surface: declaredOn });
               return;
             }
-            openTab('you');
+            // Where the player is, because the shell declines a press that would land on
+            // the screen already on — and this row is only ever drawn inside Play, so the
+            // answer is always *somewhere else* and the press is always a move.
+            openTab('you', here);
           }}
         />
       </View>

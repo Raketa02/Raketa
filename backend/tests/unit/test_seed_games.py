@@ -16,11 +16,11 @@ from app.kernel import Sport
 from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.results import Outcome
 from app.seeds.cohort import COHORT, PLAYED_GAMES
-from app.seeds.games import SCORES, GameRefused, _mode_of
+from app.seeds.games import SCORES, GameRefused, mode_of
 
 
 class _JustTheRuleset:
-    """The one thing `_mode_of` reads off the run's paths.
+    """The one thing `mode_of` reads off the run's paths.
 
     A hand-written stub rather than the whole wiring, which is what this suite
     does everywhere a use case takes a port: the function under test asks for a
@@ -74,7 +74,7 @@ def test_an_organiser_searches_under_their_own_declaration():
     for game in PLAYED_GAMES:
         organiser = COHORT.by_handle(game.organiser)
 
-        mode = _mode_of(_JustTheRuleset(), organiser, Sport(game.sport))
+        mode = mode_of(_JustTheRuleset(), organiser, Sport(game.sport))
 
         assert mode is not SearchMode.FOR_FUN, (
             f"'{organiser.handle}' organises a {game.sport} game under a for-fun "
@@ -95,4 +95,4 @@ def test_a_sport_the_organiser_never_declared_is_refused_by_name():
     )
 
     with pytest.raises(GameRefused, match=padel_only.handle):
-        _mode_of(_JustTheRuleset(), padel_only, Sport.TENNIS)
+        mode_of(_JustTheRuleset(), padel_only, Sport.TENNIS)

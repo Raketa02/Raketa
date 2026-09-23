@@ -76,7 +76,7 @@ APP_ROOT = Path(dataset_module.__file__).parents[4]
 
 def test_the_live_ruleset_is_named_dated_and_registered_under_its_own_name() -> None:
     assert LIVE_RULESET.version == LIVE_RULESET_VERSION
-    assert LIVE_RULESET.released_on == "2026-08-26"
+    assert LIVE_RULESET.released_on == "2026-09-15"
     assert RULESETS[LIVE_RULESET_VERSION] is LIVE_RULESET
 
 
@@ -85,7 +85,7 @@ def test_a_released_ruleset_cannot_be_edited() -> None:
 
     Held by frozen dataclasses and read-only mappings rather than by discipline,
     because the thing it protects is a search recorded a year ago: if the numbers
-    behind ``2026.08.26-a`` can move, then every stamp naming it is a lie about
+    behind ``2026.09.08-a`` can move, then every stamp naming it is a lie about
     what ran.
     """
 
@@ -253,6 +253,49 @@ def test_a_term_missing_from_a_weight_vector_refuses_to_load() -> None:
     short[Term.LEVEL_FIT] += competitive.weights[Term.SOCIAL_VIBE]
     with pytest.raises(InvariantViolated, match="term weights"):
         validate_ruleset(_with_mode(dataclasses.replace(competitive, weights=short)))
+
+
+def test_a_strand_with_no_observation_bar_refuses_to_load() -> None:
+    """**A bar per strand, and the mapping is exhaustive** (``docs/adr/0160``).
+
+    A strand nobody set a bar for would enter a reading on its first observation
+    — a *we have seen one thing about you* published as a verdict — and nothing
+    else in the pipeline would notice. So the field was a single ``int`` and is
+    now a mapping, and the mapping is checked rather than defaulted.
+    """
+
+    reliability = LIVE_RULESET.reliability
+    short = {
+        strand: bar
+        for strand, bar in reliability.min_observations.items()
+        if strand is not ReliabilityStrand.ANSWERS_RESULTS
+    }
+    with pytest.raises(InvariantViolated, match="must name every strand"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                reliability=dataclasses.replace(
+                    reliability, min_observations=short
+                ),
+            )
+        )
+
+
+def test_an_observation_bar_below_one_refuses_to_load() -> None:
+    """A bar of nought is a strand with no bar at all, spelled as a number."""
+
+    reliability = LIVE_RULESET.reliability
+    zeroed = dict(reliability.min_observations)
+    zeroed[ReliabilityStrand.SHOWS_UP] = 0
+    with pytest.raises(InvariantViolated, match="SHOWS_UP"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                reliability=dataclasses.replace(
+                    reliability, min_observations=zeroed
+                ),
+            )
+        )
 
 
 def test_the_for_fun_free_band_must_sit_inside_its_own_tolerance() -> None:
@@ -735,12 +778,36 @@ def test_a_radius_rung_that_reaches_no_further_than_the_last_refuses_to_load() -
         )
 
 
-def test_the_three_interest_numbers_and_the_near_miss_depth() -> None:
+def test_the_four_interest_numbers_and_the_near_miss_depth() -> None:
     interest = LIVE_RULESET.interest
     assert interest.ttl_days == 21
     assert interest.outstanding_cap_per_sport == 20
     assert interest.pass_suppress_days == 30
+    assert interest.deck_cool_off_days == 30
     assert LIVE_RULESET.telemetry.near_miss_recorded == 10
+
+
+def test_the_cool_off_is_a_row_the_older_releases_never_knew_and_say_nought_about() -> (
+    None
+):
+    """``2026.09.15-a`` is the one release that moves it (``docs/adr/0169``
+    §6). The two before it were edited to say nought — *no window after a
+    court*, which is what their decks did — on the precedent the sixth strand
+    set: a shape change is not a number moving, and a released dataset says
+    the honest thing about a row that did not exist when it shipped."""
+
+    assert RULESETS["2026.08.26-a"].interest.deck_cool_off_days == 0
+    assert RULESETS["2026.09.08-a"].interest.deck_cool_off_days == 0
+    assert RULESETS["2026.09.15-a"].interest.deck_cool_off_days == 30
+    with pytest.raises(InvariantViolated, match="cool-off"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                interest=dataclasses.replace(
+                    LIVE_RULESET.interest, deck_cool_off_days=-1
+                ),
+            )
+        )
 
 
 # ---------------------------------------------------------------------------

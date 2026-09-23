@@ -115,6 +115,33 @@ class SearchStore(Protocol):
         """
         ...
 
+    async def sports_shown_in(
+        self, *, searcher_id: UUID, player_id: UUID
+    ) -> frozenset[Sport]:
+        """Every sport in whose partition this searcher has been **shown** them.
+
+        **The disclosure the player record is read through**
+        (``docs/adr/0159``), answered from the one place *was this reader shown
+        this person* is already written down: the ``RETURNED`` rows of their own
+        searches. It is a question about a **pair**, so both ids are in the
+        signature and neither is optional — a method that took a searcher alone
+        would answer *everybody you have ever been shown*, which is a list this
+        platform has no route for and no reason to assemble.
+
+        **There is no ``since`` and there never will be.** A search record is
+        kept for ever (``docs/adr/0104``), so any window shorter than that could
+        only refuse a face the app is currently showing — the reader can still
+        open the shortlist the person is on.
+
+        **Sports rather than search ids**, because the caller's question is which
+        *partition* to evaluate a gate in, and a search id would be an identifier
+        for a record this reader is entitled to but that this answer is not
+        about. The near-miss band is not readable here any more than anywhere
+        else on this port: a player withheld from a search was shown to nobody
+        and was disclosed by nothing.
+        """
+        ...
+
     async def dealt_since(
         self, *, searcher_id: UUID, sport: Sport, since: datetime
     ) -> frozenset[UUID]:

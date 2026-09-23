@@ -4,9 +4,8 @@
  * `Court.test.tsx` already holds the geometry — two children, two positions, per Sport. What
  * is asserted here is what the geometry cannot see: that the seat label truncates while the
  * sentence and the spoken name stay whole, that the swap truth table reaches the callbacks it
- * says it does, that the badge a player may not use is never drawn, that the hold reaches
- * `SH.whyfit` from the three seats that have one and from no other, and that the read-only
- * court draws faces and nothing else.
+ * says it does, that the badge a player may not use is never drawn, that the deleted hold does
+ * nothing at all, and that the read-only court draws faces and nothing else.
  */
 
 import { fireEvent, render, screen } from '@testing-library/react-native';
@@ -19,7 +18,8 @@ import { seatPlaces } from '../../domain/lineup';
 
 import { CourtBuild } from './CourtBuild';
 import { CourtMini } from './CourtMini';
-import { CourtSeat, seatCaptionName, SEAT_NAME_LETTERS, type CourtSeatOccupant } from './CourtSeat';
+import { CourtSeat, type CourtSeatOccupant } from './CourtSeat';
+import { seatCaptionName, SEAT_NAME_LETTERS } from './seatFace';
 
 /** 2 to 64 characters, and the seat is 46pt. The arithmetic §5 ran, as a fixture. */
 const LONG_HANDLE = 'marekwiśniewski-plays-every-tuesday-and-most-saturdays-in-warsaw';
@@ -28,14 +28,14 @@ const YOU: CourtSeatOccupant = { kind: 'you', playerId: 'me' };
 const PARTNER: CourtSeatOccupant = {
   kind: 'player',
   playerId: 'player-a',
-  nickname: LONG_HANDLE,
+  name: LONG_HANDLE,
   level: 2.92,
   accepted: false,
 };
 const OPPONENT: CourtSeatOccupant = {
   kind: 'player',
   playerId: 'player-b',
-  nickname: 'ana',
+  name: 'ana',
   level: 3.1,
   accepted: false,
 };
@@ -48,7 +48,7 @@ const SUMMARY = 'Padel, 3 of 4 seats filled.';
 
 const flatten = (style: unknown) => StyleSheet.flatten(style as TextStyle);
 
-function build(seats: readonly CourtSeatOccupant[], swapping = false) {
+function build(seats: readonly CourtSeatOccupant[]) {
   const acts = { openPool: jest.fn(), swap: jest.fn(), clear: jest.fn() };
 
   const view = render(
@@ -57,7 +57,6 @@ function build(seats: readonly CourtSeatOccupant[], swapping = false) {
       width={196}
       summary={SUMMARY}
       seats={seats}
-      swapping={swapping}
       onOpenPool={acts.openPool}
       onSwap={acts.swap}
       onClear={acts.clear}
@@ -237,38 +236,8 @@ describe('a tap on a seat', () => {
     expect(openPool).toHaveBeenCalledWith(3);
   });
 
-  it('offers a replacement for somebody you may replace', () => {
-    const { openPool } = build([YOU, PARTNER, OPPONENT, EMPTY]);
-
-    fireEvent.press(screen.getByLabelText('Their side, ana, level 3,10'));
-
-    expect(openPool).toHaveBeenCalledWith(2);
-  });
-
-  it('refuses your own seat with the toast that names the way out', () => {
-    const { openPool } = build([YOU, PARTNER, OPPONENT, EMPTY]);
-
-    fireEvent.press(screen.getByLabelText('Your side, you'));
-
-    expect(openPool).not.toHaveBeenCalled();
-    expect(useToastQueue.getState().queue[0]?.message).toBe(
-      'That seat is yours — turn on Swap players to change sides',
-    );
-  });
-
-  it('refuses somebody who already accepted, and names them', () => {
-    const { openPool } = build([YOU, PARTNER, ACCEPTED, EMPTY]);
-
-    fireEvent.press(screen.getByLabelText('Their side, ana, level 3,10'));
-
-    expect(openPool).not.toHaveBeenCalled();
-    expect(useToastQueue.getState().queue[0]?.message).toBe(
-      'ana already accepted — they keep their place',
-    );
-  });
-
-  it('selects and then trades once the toggle is on', () => {
-    const { swap } = build([YOU, PARTNER, OPPONENT, EMPTY], true);
+  it('selects an occupied seat and then trades it — no mode, and no refusal', () => {
+    const { swap, openPool } = build([YOU, PARTNER, OPPONENT, EMPTY]);
 
     fireEvent.press(screen.getByLabelText('Your side, you'));
     expect(screen.getByLabelText('Your side, you').props.accessibilityState).toEqual(
@@ -278,10 +247,26 @@ describe('a tap on a seat', () => {
     fireEvent.press(screen.getByLabelText('Their side, ana, level 3,10'));
 
     expect(swap).toHaveBeenCalledWith(0, 2);
+    // The two rows the toggle's removal deleted: a tap on somebody no longer offers to replace
+    // them, and neither locked seat has anything left to say no to.
+    expect(openPool).not.toHaveBeenCalled();
+    expect(useToastQueue.getState().queue).toHaveLength(0);
   });
 
-  it('moves a locked seat across the net, which is what the toggle is for', () => {
-    const { swap } = build([YOU, PARTNER, ACCEPTED, EMPTY], true);
+  it('deselects the seat it is already holding, so a ring can always be cancelled', () => {
+    const { swap } = build([YOU, PARTNER, OPPONENT, EMPTY]);
+
+    fireEvent.press(screen.getByLabelText('Your side, you'));
+    fireEvent.press(screen.getByLabelText('Your side, you'));
+
+    expect(screen.getByLabelText('Your side, you').props.accessibilityState).toEqual(
+      expect.objectContaining({ selected: false }),
+    );
+    expect(swap).not.toHaveBeenCalled();
+  });
+
+  it('moves a locked seat across the net, which is what a swap is for', () => {
+    const { swap } = build([YOU, PARTNER, ACCEPTED, EMPTY]);
 
     fireEvent.press(screen.getByLabelText('Their side, ana, level 3,10'));
     fireEvent.press(screen.getByLabelText('Your side, you'));
@@ -290,24 +275,14 @@ describe('a tap on a seat', () => {
     expect(useToastQueue.getState().queue).toHaveLength(0);
   });
 
-  it('forgets a selection when the toggle goes off, so no ring outlives the mode', () => {
-    const { view } = build([YOU, PARTNER, OPPONENT, EMPTY], true);
+  it('opens the pool on a hole and drops the selection, rather than trading into it', () => {
+    const { openPool, swap } = build([YOU, PARTNER, OPPONENT, EMPTY]);
 
     fireEvent.press(screen.getByLabelText('Your side, you'));
+    fireEvent.press(screen.getByLabelText('Their side, empty'));
 
-    view.rerender(
-      <CourtBuild
-        sport="padel"
-        width={196}
-        summary={SUMMARY}
-        seats={[YOU, PARTNER, OPPONENT, EMPTY]}
-        swapping={false}
-        onOpenPool={noop}
-        onSwap={noop}
-        onClear={noop}
-      />,
-    );
-
+    expect(openPool).toHaveBeenCalledWith(3);
+    expect(swap).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Your side, you').props.accessibilityState).toEqual(
       expect.objectContaining({ selected: false }),
     );
@@ -345,7 +320,7 @@ describe('a hold on a seat', () => {
 
 describe('the side a seat is on', () => {
   it('follows you across the net rather than staying with the index', () => {
-    build([OPPONENT, PARTNER, YOU, ACCEPTED], false);
+    build([OPPONENT, PARTNER, YOU, ACCEPTED]);
 
     expect(screen.getByLabelText('Your side, you')).toBeTruthy();
     expect(screen.getByLabelText(`Their side, ${LONG_HANDLE}, level 2,92`)).toBeTruthy();
@@ -416,7 +391,7 @@ describe('the read-only court', () => {
   it('spends volt on you where the interactive court spends it on a selection', () => {
     // One meaning per surface. The read-only court has no selection to confuse it with, and
     // the interactive one marks nobody — which is what keeps 1.2's single accent honest.
-    build([YOU, PARTNER, OPPONENT, EMPTY], true);
+    build([YOU, PARTNER, OPPONENT, EMPTY]);
 
     expect(ringColours()).not.toContain(theme.color.volt);
   });

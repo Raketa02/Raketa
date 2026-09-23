@@ -19,7 +19,6 @@ from app.modules.users.domain.value_objects import (
     AdultAttestation,
     Email,
     HashedPassword,
-    Nickname,
 )
 from app.shared.ids import new_uuid
 
@@ -52,7 +51,6 @@ def test_registering_records_the_attestation_on_the_first_event():
     user = User.register(
         user_id=new_uuid(),
         email=Email("ada@example.com"),
-        nickname=Nickname("ada"),
         password_hash=HashedPassword("hash"),
         attestation=AdultAttestation(True),
         occurred_at=now,
@@ -82,7 +80,6 @@ def test_a_stream_written_before_the_question_existed_still_replays():
     registered = UserRegistered(
         user_id=new_uuid(),
         email="ada@example.com",
-        nickname="ada",
         password_hash="hash",
         authority="USER",
         is_admin=False,
@@ -91,4 +88,4 @@ def test_a_stream_written_before_the_question_existed_still_replays():
     )
 
     assert registered.adult_attested is None
-    assert User.from_history([registered]).nickname.value == "ada"
+    assert User.from_history([registered]).email.value == "ada@example.com"

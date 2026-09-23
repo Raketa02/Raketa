@@ -76,6 +76,7 @@ from app.modules.matchmaking.presentation.evidence import Evidence
 # stale, and one client grid editor should be able to post to either route.
 from app.modules.player_profile.presentation.schemas import AvailabilitySlotResource
 from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.intro import INTRO_MAX_CHARACTERS
 from app.modules.player_profile.domain.photos import PhotoReviewDecision
 
 
@@ -262,6 +263,22 @@ class DealDeckRequest(BaseModel):
     )
 
 
+class ReadRadarRequest(BaseModel):
+    """What a reading is asked for. **The sport, and that is the whole
+    contract** (``the-radar.md`` §2).
+
+    **There is no `mode`**, because there is none: the radar scores every
+    pairing under the deck's ruler, and a mode on this body would be the field
+    the telemetry constraint refuses. **There is no radius**, because the reach
+    is your own Search radius and there is no city; the slider on Find a game
+    is where it moves. **There is no position**, because the server holds your
+    area and puts it on a cold start. And **there is no week**: a reading ranks
+    nobody, so there is nothing for a grid to rank on.
+    """
+
+    sport: Sport = Field(..., description="Which sport this reading is for")
+
+
 class RecordPassRequest(BaseModel):
     """One *not today*, and where the card came from. **Write-only.**
 
@@ -291,6 +308,22 @@ class RecordPassRequest(BaseModel):
             "with no origin is refused rather than recorded with a null link."
         ),
     )
+
+
+class ResetDeckRequest(BaseModel):
+    """One *Show them again*, for one sport. **Write-only.**
+
+    Nothing is returned by this route and no route anywhere returns a reset.
+
+    **The sport is the whole ask.** The button is on a deck and a deck is one
+    sport, so a padel reset says nothing about tennis. There is no field for
+    *what* to clear: the three things a reset lifts — every pass suppression,
+    the day's dealt memory and the cool-off — lift together, and a client that
+    could pick would be a client that could clear the cool-off and keep its
+    passes, which is not a thing the product offers.
+    """
+
+    sport: Sport = Field(..., description="Which sport's deck to deal whole again")
 
 
 class RecordPromptDeclineRequest(BaseModel):
@@ -364,6 +397,38 @@ class PoolSchema(BaseModel):
     post_gate: bool = Field(
         True,
         description="Always true. It travels so the count cannot be misread.",
+    )
+    remaining: int = Field(
+        OMITTED,
+        ge=0,
+        description=(
+            "**On a deal only.** How many people are eligible for your deck "
+            "beyond this hand — after every deck exclusion, and not in the "
+            "cards you were just dealt. It is what lets a counter say *N left* "
+            "and be true of the whole pool rather than of ten; it drops by a "
+            "hand as hands are dealt. Omitted on every other surface and on a "
+            "read-back, where a count about a pool that has moved on would be "
+            "a number about nothing."
+        ),
+    )
+    want_to_play_you: int = Field(
+        OMITTED,
+        ge=0,
+        description=(
+            "**On a deal, and on a reading.** How many people have a live "
+            "*Let's play* towards you in this sport that **the deck would "
+            "deal** to you: every one of the deck's gates passed, not passed "
+            "on by you within the pass window, not cooling off after a court "
+            "you shared, and not already mutual. Somebody dealt this morning "
+            "and unanswered still counts — the dealt memory is not applied. "
+            "**On a reading it is the deck's number, computed by the deck's "
+            "rule**, so the chip on either pane of Players is one number — "
+            "and somebody the radar draws whom the deck would never deal is "
+            "not in it, though their card says they said yes. **A count and "
+            "never a list**: nothing on any route names who. On a deal `0` is "
+            "a measured nought; on a reading it is omitted at zero, so a chip "
+            "is drawn at one and above either way."
+        ),
     )
 
 
@@ -481,7 +546,10 @@ class SearchEnvelope(BaseModel):
     surface: SearchSurface
     mode: SearchMode | None = Field(
         ...,
-        description="Null exactly on the deck, which has no mode.",
+        description=(
+            "Null exactly on the deck and the radar, which have no mode and "
+            "score every pairing under one ruler."
+        ),
     )
     my_area_code: str = Field(
         OMITTED,
@@ -575,11 +643,15 @@ class LikelyRangeSchema(BaseModel):
 
 
 class PlayerCardSchema(BaseModel):
-    """Who this person is, on a card. **A closed list with two permanent gaps.**
+    """Who this person is, on a card. **A closed list with one permanent gap.**
 
-    No bio and no free text of any kind, ever; and **no activity recency at any
-    granularity** — not a timestamp, not *active today*, not a green dot.
-    Liveness reaches a screen the one way it is sanctioned to: as a reason code.
+    **No activity recency at any granularity** — not a timestamp, not *active
+    today*, not a green dot. Liveness reaches a screen the one way it is
+    sanctioned to: as a reason code. The other gap the list was closed with —
+    *no bio, and no free-text field of any kind* — was opened by exactly one
+    field, `intro`, on the terms that refusal set: its own decision with a
+    moderation story attached (``docs/adr/0170``). Still no bio, no paragraph,
+    no second field, and no free text that is scored.
 
     **The last three fields are the record block, and every one of them is
     omitted rather than nought.** They are what the platform has watched this
@@ -591,12 +663,13 @@ class PlayerCardSchema(BaseModel):
     here.
     """
 
-    nickname: str = Field(
+    name: str = Field(
         ...,
         description=(
-            "The whole handle. There is no name in this platform and **nothing "
-            "may derive a familiar form from it** — every sentence naming "
-            "somebody uses the whole handle or names nobody."
+            "The whole name, and **nothing may derive a familiar form from it** "
+            "— every sentence naming somebody uses the whole name or names "
+            "nobody (``docs/adr/0171``). Never the nickname: a handle is drawn "
+            "on a record and their own You tab, and said nowhere."
         ),
     )
     photo_id: UUID = Field(
@@ -649,6 +722,36 @@ class PlayerCardSchema(BaseModel):
     )
     area_code: str = Field(..., description="Their coarse area, as a machine code")
     social_tags: list[str] = Field(..., description="The Social tag ids they hold")
+    intro: str = Field(
+        default=OMITTED,
+        # **No `max_length` here, deliberately.** The cap binds the write and
+        # not the read: a line already on a search record was admitted when it
+        # was written, and a response schema that refused it after the cap
+        # moved would take a deal down for a fact the platform recorded.
+        description=(
+            "One line this player wrote about themselves — their **intro** — "
+            f"verbatim: at most {INTRO_MAX_CHARACTERS} characters, no line "
+            "breaks, in whatever language they wrote it. **Omitted where they wrote "
+            "none**, and never an empty string: the intro is optional and a "
+            "player who skipped has no line, so the card closes up rather than "
+            "drawing a blank quotation.\n\n"
+            "**A fact about the person, assembled by `player_profile`** — the "
+            "one field this closed list has gained, under its own admission "
+            "rule: it is what its subject published, it does not change with "
+            "who is looking, and it is projected to the candidate index like "
+            "the tags. It is **never scored**: no term reads it and the "
+            "scorer's fence refuses the word.\n\n"
+            "**Fenced at the write, not here.** A line carrying a phone "
+            "number, an email, a URL or an `@handle` was refused before it "
+            "was stored, so what arrives is a line about a player and not a "
+            "way to reach one. What it says is theirs; a line you object to "
+            "is what a block is for.\n\n"
+            "**Drawn on the deck card and the record sheet, and not on Find a "
+            "game's cards** — those are about the game, and the line is about "
+            "the person. Never spoken as the player's name and never "
+            "truncated: the cap is what makes an ellipsis unnecessary."
+        ),
+    )
     level: float = Field(..., description="Their Level, as RacketSkill published it")
     band: str = Field(..., description="The Level band's published name")
     range: LikelyRangeSchema = Field(
@@ -761,9 +864,12 @@ class DegradedTermSchema(BaseModel):
         description=(
             "Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term "
             "has no provider on this platform at all), yours "
-            "(`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last "
-            "deliberately covers every reason a record could not be read, "
-            "because separating them would publish activity recency."
+            "(`NOTHING_FROM_YOU`), theirs (`NOTHING_FROM_THEM`), or the "
+            "surface's (`NOT_READ_ON_THIS_SURFACE` — the deck reads no intent "
+            "for anybody, so the term stood down for every card and says "
+            "nothing about either of you). `NOTHING_FROM_THEM` deliberately "
+            "covers every reason a record could not be read, because "
+            "separating them would publish activity recency."
         ),
     )
 
@@ -834,13 +940,23 @@ class ForecastSchema(BaseModel):
     )
 
 
+class RatedSportSchema(BaseModel):
+    """One sport somebody is rated in, and the Level they hold there — a card's
+    sport chip (``docs/adr/0174`` §2). The Level and nothing else: the record
+    is where a band, a range and a certainty are drawn."""
+
+    sport: Sport
+    level: float = Field(..., description="Their Level in that sport, as published")
+
+
 class CandidateSchema(BaseModel):
     """One row of the shortlist: the pairing, and the person.
 
     Three field families have a **different author** from the rest and are
     attached by the backend after the scorer returns — the card, the at-stake
     block and the distance. None of them is a fact the scorer may see, and none
-    may be computed by the client.
+    may be computed by the client. **On a reading two more join them**, the
+    bearing and the sport chips, on the same argument.
 
     On a read-back this row means *the live gates still admit this person*, and
     it says so: ``withheld`` is ``false``, positively, rather than absent. A row
@@ -867,14 +983,42 @@ class CandidateSchema(BaseModel):
             "asked to trust. It contains no Liveness."
         ),
     )
-    distance_km: int = Field(
+    distance_km: float = Field(
         default=OMITTED,
         description=(
-            "Whole kilometres between the two coarse areas. **Promoted out of "
-            "the distance evidence** so the *Closest* sort reads a field rather "
-            "than reaching into a variant, and **omitted** rather than sent as "
-            "zero when the distance term stood down — which is what lets a "
-            "stood-down row sort last instead of first."
+            "Kilometres to one decimal, measured between the two **drawn "
+            "spots** — one fixed point inside each player's coarse area, the "
+            "same for every viewer — and never below `0.1`. The Fit does not "
+            "read it: the distance term and the radius gate measure cell to "
+            "cell, so a player at the very edge may print `10.3` inside a "
+            "10 km reach. **Promoted out of the distance evidence** so the "
+            "*Closest* sort reads a field rather than reaching into a variant, "
+            "and **omitted** rather than sent as zero when the distance term "
+            "stood down — which is what lets a stood-down row sort last "
+            "instead of first."
+        ),
+    )
+    bearing_deg: int = Field(
+        default=OMITTED,
+        ge=0,
+        le=359,
+        description=(
+            "**On a reading only.** The compass bearing from your drawn spot to "
+            "theirs — north `0`, east `90`, clockwise, a whole degree — "
+            "measured spot to spot beside `distance_km`, so the two place one "
+            "point on the radar. **Served, never derived**: the client "
+            "computes no geometry beyond scaling. On the row and never inside "
+            "`player_card`, because its value depends on who is looking. "
+            "Omitted on every other surface."
+        ),
+    )
+    ratings: list[RatedSportSchema] = Field(
+        default=OMITTED,
+        description=(
+            "**On a reading only.** Every sport this player is rated in, with "
+            "the Level held there, in the sport registry's order — the card's "
+            "sport chips. `player_card.level` is the same number for the "
+            "reading's own sport. Omitted on every other surface."
         ),
     )
     player_card: PlayerCardSchema
@@ -1004,16 +1148,35 @@ class RunLineupRequest(BaseModel):
     There is **no seat count** here and there never will be: how many people sit
     down is the sport's own fact. There is no radius either, for the reason the
     shortlist has none.
+
+    **A fill names the challenge it completes and says nothing else about the
+    court** (`ADR-0150`). Send `completing_challenge_id` and `sport`, `mode` and
+    `locked_seats` are **refused** beside it rather than made optional: all three
+    are facts that challenge already holds, and a caller supplying one is
+    offering a second place for a fact to be true — which is how somebody who is
+    not in the challenge gets locked, or somebody who is gets forgotten.
     """
 
-    sport: Sport = Field(..., description="Which sport this line-up is for")
+    sport: Sport = Field(
+        OMITTED,
+        description=(
+            "Which sport this line-up is for. **Required, except beside "
+            "`completing_challenge_id`** — a challenge already knows what game "
+            "is being arranged, and sending both is refused."
+        ),
+    )
     mode: SearchMode = Field(
-        ...,
+        OMITTED,
         description=(
             "Competitive or for fun — the weight vector for this one search. "
             "It selects the **group** vector too, which inverts against the "
             "shortlist's: for fun puts more weight on how the four get on than "
-            "on how even the sides are."
+            "on how even the sides are.\n\n"
+            "**Required, except beside `completing_challenge_id`**, and refused "
+            "there. A challenge sent with a mode keeps it — a competitive court "
+            "must not have its last seat filled by a for-fun search — and one "
+            "sent without a mode takes yours, resolved from your declared Play "
+            "intent. **There is no mode picker anywhere.**"
         ),
     )
     locked_seats: list[UUID] = Field(
@@ -1028,21 +1191,78 @@ class RunLineupRequest(BaseModel):
             "binds all six pairs. Either refusal is "
             "`locked_seat_not_available`, naming nobody, rather than a quiet "
             "replacement.\n\n"
-            "Nobody twice, and never more than the sport seats."
+            "Nobody twice, and never more than the sport seats.\n\n"
+            "**Refused beside `completing_challenge_id`.** The people already "
+            "on that court are its locked seats, read off the challenge."
+        ),
+    )
+    completing_challenge_id: UUID = Field(
+        OMITTED,
+        description=(
+            "The half-built challenge this fill completes. **Send it and send "
+            "nothing else about the court**: the sport, the kind of evening and "
+            "the locked seats are all read off it.\n\n"
+            "**Any live member may fill; ending a court is a different act** — "
+            "removing one that was never a game is the organiser's while nobody "
+            "has joined and nobody's once somebody has, and calling off the game "
+            "a court became is any player's on it. A "
+            "challenge born of two mutual yeses has an organiser who is only "
+            "whoever said yes second, and leaving the other one unable to finish "
+            "the four would be an arbitrary tiebreak deciding whose game it "
+            "is.\n\n"
+            "The people who accepted come back as **ordinary candidate rows**, "
+            "so the builder can draw them; the open-challenge gate steps aside "
+            "for this one challenge and for nothing else, and the four "
+            "fail-closed gates are untouched — so somebody blocked, held or "
+            "deactivated since they accepted is still "
+            "`locked_seat_not_available`.\n\n"
+            "Everybody who has already **answered** this challenge is out of its "
+            "own pool, including the people who declined it.\n\n"
+            "**The window is never re-stamped**, and a challenge born of a "
+            "mutual yes has none at all: a newly-invited player answers against "
+            "the label the original send derived, and the plan is the authority "
+            "on when anybody actually plays."
         ),
     )
 
     @model_validator(mode="after")
     def _is_a_court_that_could_exist(self) -> "RunLineupRequest":
-        """The same two refusals the forecast makes, at the same boundary.
+        """The same two refusals the forecast makes, plus the one this route owns.
 
         A court with the same person on it twice and a court with more people
         than it has seats are malformed **asks**, and both are refused here
         rather than inside — where the second would surface as a `503` about the
         engine, which is a sentence about the platform for a mistake in the
         request.
+
+        **The third is the fill's own** (`ADR-0150` §2): `completing_challenge_id`
+        and the three facts that challenge already holds are mutually exclusive,
+        and this is the boundary that says so. Refusing here rather than making
+        the three optional is what stops a caller locking somebody who is not in
+        the challenge, or forgetting somebody who is.
         """
 
+        if self.completing_challenge_id is not None:
+            named = [
+                field
+                for field, sent in (
+                    ("sport", self.sport is not None),
+                    ("mode", self.mode is not None),
+                    ("locked_seats", bool(self.locked_seats)),
+                )
+                if sent
+            ]
+            if named:
+                raise ValueError(
+                    "a fill names the challenge it completes and nothing else "
+                    f"about the court: remove {', '.join(named)}"
+                )
+            return self
+        if self.sport is None or self.mode is None:
+            raise ValueError(
+                "a line-up that completes no challenge has to name its sport "
+                "and its mode"
+            )
         return _a_court_that_could_exist(self, self.sport, self.locked_seats)
     availability_override: list[AvailabilitySlotResource] = Field(
         OMITTED,
@@ -1364,11 +1584,14 @@ class LineupSchema(BaseModel):
 
 
 class LineupResponse(ShortlistResponse):
-    """The shortlist's envelope, its rows, and the court they were seated on.
+    """The shortlist's envelope, the pool, and the court seated out of it.
 
     One envelope and one row shape across every surface, so the read-back has one
     renderer to reproduce: what a line-up adds is the seating, not a second way
-    of describing a person.
+    of describing a person. `candidates` is the **pool** ⚡ seated from — in Fit
+    order, up to the ruleset's own candidate cap, the seated among them — and
+    not the seated alone, so *Pick players myself* on this answer has the rest
+    of the ranking to offer ([#407](https://github.com/Raketa02/Raketa/issues/407)).
     """
 
     lineup: LineupSchema

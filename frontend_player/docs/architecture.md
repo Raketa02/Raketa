@@ -240,6 +240,14 @@ above Query so a session change can reach the cache. **Do not add a global provi
 feature** — that is a hidden dependency and a root rerender. Feature dependencies are
 plain modules, hooks, or route-scoped providers.
 
+One view sits outside this order and is not a provider: `GestureHandlerRootView`, the
+outermost element of the root layout since
+[ADR-0176](../../docs/adr/0176-the-radar-moves-on-the-ui-thread-and-draws-one-card.md).
+It is `react-native-gesture-handler`'s root — the touch system every `GestureDetector` in
+the tree delivers through, and on Android one that is missing is one that silently never
+fires — added for the radar's field, which is the one surface on the library; the swipe
+row, the deck's drag and the radius slider stay on React Native's own responder.
+
 ---
 
 ## Part 4 — The HTTP client
@@ -793,16 +801,19 @@ sessions.
   `preview/internal` → `production`. Expo Go is for quick experiments and cannot contain
   this app's native dependencies.
 - **Native code hides behind a narrow TS interface** in `src/shared/lib/platform/`, never
-  imported raw across the UI. Two exist: `LocationPort` over `expo-location` and
-  `ImagePickingPort` over `expo-image-picker`, each the only importer of its module and
-  each with a hand-written fake in `src/test-support/platform.ts`. A native module has no
-  JS implementation underneath it, so a feature that imports one is a feature no test can
-  drive — which is the argument, more than tidiness. The linter enforces both bans and
+  imported raw across the UI. Three ports exist: `LocationPort` over `expo-location`,
+  `ImagePickingPort` over `expo-image-picker`, and `LiveStreamPort` over `react-native-sse`
+  — each the only importer of its module, each with a hand-written fake in
+  `src/test-support/platform.ts`. A native module has no JS implementation underneath it,
+  so a feature that imports one is a feature no test can drive — which is the argument,
+  more than tidiness, and it is the argument the third one is here on too even though its
+  far side is a socket. The linter enforces all three bans and
   `scripts/test-import-boundaries.sh` proves it still does.
-- **A screen reaches a port through its context** — `useLocation()` / `useImagePicking()`,
-  each defaulting to the real device, so nothing in the app wires anything up and a test
-  wraps the tree in the device it wants. A screen that imported `deviceLocation` directly
-  would be a screen no test can put in front of a refused permission.
+- **A screen reaches a port through its context** — `useLocation()` /
+  `useImagePicking()` / `useLiveStream()`, each defaulting to the real device, so nothing
+  in the app wires anything up and a test wraps the tree in the device it wants. A screen
+  that imported `deviceLocation` directly would be a screen no test can put in front of a
+  refused permission.
 - **A `blocked` permission has exactly one remedy, and it is not a prompt.**
   `openAppSettings()` opens the app's own page in Settings; the OS resolves a blocked
   permission itself, instantly and negatively, so a control that asked again would be a
@@ -827,6 +838,82 @@ sessions.
 - **App lifecycle is centralized** in `shared/lib/platform/appState.ts` — Query focus,
   session freshness, privacy screens, observability, reconnect. Not dozens of `AppState`
   listeners across unrelated screens.
+- **No overlay touches `Modal`; it draws on `ModalStage`, which is the native window on iOS
+  and a layer in the tree on Android** ([ADR-0178](../../docs/adr/0178-an-overlay-on-android-is-a-layer-in-the-tree-not-a-native-window.md)).
+  Under the New Architecture a modal's content on Android is laid out at 0 × 0 first and again
+  at the window's size when the dialog reports it as native state — and Reanimated 3.16 loses
+  that second pass whenever any animated style is mounted anywhere in the tree (measured
+  2026-09-17: a 1 × 1 `useAnimatedStyle` view on the deck pane collapsed the deck's own sheet).
+  Sized by hand the sheet drew and could not be pressed: a 0 × 0 view makes Android
+  re-dispatch every touch's start and the modal's host wins the second negotiation. So on
+  Android `shared/ui/overlay`'s `OverlayHost`, wrapped around the route tree in the root
+  layout, renders every stage as a layer beside the toast host, ordered by `theme.layer`, the
+  app hidden beneath it from a screen reader, the back gesture answered by the stage. A
+  layer's children keep the root's contexts and lose a screen's — every provider is at the
+  root, and no sheet's content reads the navigation; keep it so. The first overlay to hold a
+  text input takes on `KeyboardAvoidingView` in its stage, on both platforms.
+- **Nothing on the UI thread scales a layer to move it.** The radar's tiles are placed by
+  translating a one-point anchor per tile from three shared values; the earlier one scaled
+  transform with counter-scaled tiles was a blur on iOS at the floor, because a 4 700-point
+  layer is rasterised at its unscaled resolution (ADR-0176 §2 as amended). And a pinch on
+  Android does not end when one finger lifts — the recogniser stays active on the one that
+  remains and reports it as the focal point — so a pinch is over on the event's pointer
+  count, never on the recogniser's end (ADR-0177 §1 as amended).
+
+### The live surface
+
+**The app has exactly one, and it is a conversation's**
+([ADR-0147](../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
+built by [#365](https://github.com/Raketa02/Raketa/issues/365)). This is the section that
+record left to the first client build, and it is short because the record spent its design
+budget making it short.
+
+- **What crosses is a nudge — `{ v, conversation_id, last_seq }` — and nothing else.** No
+  message, no system line, no plan slot. On receiving one the client re-reads through the
+  ordinary authenticated path from **its own** high-water mark, so a dropped frame is
+  repaired by the next one for free. _Whether the UI may render what it did not read from
+  the authoritative path_ is not a rule anybody keeps here; it is a thing the wire cannot
+  express.
+- **Above the port the number does not exist.** `liveStream.ts` parses `last_seq` to know a
+  frame is a nudge and drops it, so `LiveNudge` carries the room and nothing else. A number
+  handed up is a number somebody eventually pages from.
+- **The nudge invalidates. The Query cache stays the single copy.** There is no second store
+  for a conversation, no client-side append and no sequence arithmetic — the posture Part 7
+  already takes for mutations. _Nothing in Play background-refetches_ is a **scope
+  clarification, not an exception**: that rule is about a ranked list reordering under a
+  finger, and a conversation is append-ordered.
+- **A nudge re-reads what the room draws, and nothing it does not.** The room's query,
+  `planKeys.list()` and `gameKeys.list()` — the plan card is `(game, plan)`, read off `GET /plans`
+  and `GET /games`, two lists beside the room, and a slot another member set reaches this phone
+  as a line on the same frame ([#405](https://github.com/Raketa02/Raketa/issues/405)); a court
+  that completes while the room is open, and a standing that moves on a _we played_ line, reach
+  it through the games list ([#406](https://github.com/Raketa02/Raketa/issues/406)). On every
+  nudge, never on sighting a plan line, because a trigger keyed on the line vocabulary goes stale
+  on exactly the build too old to read a new code. The Chats list is not re-read: the room draws
+  nothing from it. And because a plan write is written in rather than refetched, every plan write
+  first **cancels** the plan list's in-flight read — not optimism, a read that can only be older
+  than the reply; the games list needs none, because a result write invalidates rather than
+  writes in.
+- **One stream per open conversation, and never one for a list.** The port opens while a room
+  is on screen and closes when it leaves. ADR-0147's _never build_ list says the rest.
+- **The port owns the route as well as the transport.** A port taking an arbitrary path
+  would be a generic SSE client, and the one thing that buys is the second stream the record
+  forbids.
+- **The stream closes at the access token's `exp` — roughly every fifteen minutes — so
+  reconnecting is the ordinary path.** Every attempt mints a fresh credential through
+  `streamAttempt`, and a `401` goes through the app's own single-flight rotation, once per
+  channel. A channel that captured its headers would reconnect for ever with the token that
+  had just expired.
+- **Foreground only.** The channel is closed on the way to the background and re-opened on
+  the way back, through the same `focusManager` every other lifecycle answer comes from —
+  and a deliberate close is a status of its own, because it is not news about the room.
+- **It composes with `networkState`** rather than adding a rule: no attempt while
+  `onlineManager` says there is nothing to attempt over, reported as _lost_ rather than as a
+  handshake in progress.
+- **A severed stream, a dead subscriber, a Redis outage and a phone with no signal all
+  produce the same thing**, and the read path works throughout. What a screen draws about it
+  is a fold in `domain/`, never a socket read in a component — see
+  `features/conversations/domain/liveState.ts`.
 
 ---
 
@@ -1075,10 +1162,17 @@ encodes:
 - no imports from `../backend/` or any sibling app
 - `@react-native-async-storage/async-storage` is banned outright
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
-- `expo-location` and `expo-image-picker` are importable only by the port that owns each —
-  `platform/location.ts` and `platform/imagePicking.ts`, one file each rather than the
-  platform directory, so a module of ports cannot become the device bucket. The ban holds
-  in tests too, which could not drive a native module anyway
+- `expo-location`, `expo-image-picker` and `react-native-sse` are importable only by the
+  port that owns each — `platform/location.ts`, `platform/imagePicking.ts` and
+  `platform/liveStream.ts`, one file each rather than the platform directory, so a module of
+  ports cannot become the device bucket. The ban holds in tests too, which could not drive a
+  native module anyway
+- `platform/liveStream.ts` is the one file outside a feature's `api/` and `mappers/` that
+  may read `src/generated/`, and it is exempt from **two** bans rather than one: ADR-0147 §7
+  requires the live envelope to be the generated type, and a stream body is not a response
+  model, so the operation's own `200` generates as `unknown` and the frame is parsed against
+  `LiveNudgeSchema` by name. It is that route's `api/` layer with nowhere else to live,
+  because a feature's `api/` may not import a transport
 - **every exemption is a subtraction from the full ban list, never a re-listing.** An
   exception block that enumerates its patterns by hand loses each ban added after it, and
   loses it in silence — which is how `expo-location` was briefly importable from
@@ -1201,7 +1295,11 @@ when the code that needs them is written — not preemptively:
 > steps were specified, and not one screen earlier. So has
 > `react-native-svg`, with the confidence ring — the one drawn object that needs vector
 > arcs ([design system 7.8](design-system.md#78-the-confidence-ring)); the level bar beside
-> it is still built from Views, and nothing else in the app needs drawing yet. Both are
+> it is still built from Views, and nothing else in the app needs drawing yet. And so has
+> `react-native-sse`, with the app's first live surface — pure JS over `XMLHttpRequest`, no
+> native module, and therefore nothing for an SDK bump to break
+> ([ADR-0147](../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
+> §4, [the live surface](#the-live-surface)). All of them are
 > listed as present rather than pending — this list is what is _missing_, and an entry that
 > outlives its own arrival makes the list untrustworthy.
 

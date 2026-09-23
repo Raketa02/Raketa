@@ -3,8 +3,12 @@
 **Everything here folds the aggregate**, and that is the difference from
 ``challenges``' history read. There, an answer is a thing that happened *to the
 court as it stood then*, so the walk carries the arrangement along with it; here
-a game's line-up is **frozen at the plan** and cannot move, so today's court is
-the court that played and the fold is the whole answer.
+a game's line-up moves in exactly two told ways and the fold carries both
+(``docs/adr/0162``), so today's court is the court as it stands and the fold is
+the whole answer. **Every read answers about the people on the court now**: the
+streams read finds everybody a court has ever seated, and the folded line-up is
+what says who is still on it — a leaver is nobody's counterpart, nobody's
+attendee, and their list no longer holds the game.
 
 **Nothing is projected.** Every fact these reads publish — played or a ghost,
 counted, confirmed, won or lost — is folded from the record against the caller's
@@ -12,7 +16,7 @@ clock, so a game past a deadline has moved in this answer whether or not anythin
 swept it. A projection storing the standing would be right until a deadline
 passed, wrong until something rebuilt it, and believed throughout.
 
-**One clock per read, taken from the caller.** All four reads take ``now``
+**One clock per read, taken from the caller.** Every read here takes ``now``
 rather than reading one, because a search that asked about counted games and
 about familiarity in one request must get one instant's answer to both.
 
@@ -30,7 +34,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports.events import EventCodec
-from app.kernel import Instant, Minutes
+from app.kernel import Instant, Minutes, Sport
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind
 from app.modules.games.domain.ports import (
@@ -39,22 +43,26 @@ from app.modules.games.domain.ports import (
     Attendance,
     CountedResult,
     GameCounterpart,
+    OpponentVariety,
     PlayedOutcome,
     PlayedTally,
+    ResultAnswering,
 )
 from app.modules.games.domain.standing import GameStanding
-from app.modules.games.domain.windows import entry_closes_at
 from app.modules.games.infrastructure.game_streams import streams_seating
 
 
 @final
 class EventSourcedGameHistory:
-    """``GameHistoryQuery`` and ``GameDirectory`` over ``event_store``.
+    """``GameHistoryQuery``, ``GameDirectory`` and ``OpponentVarietyQuery`` over
+    ``event_store``.
 
-    **One class for two ports, because both are one read of the log folded
+    **One class for three ports, because all three are one read of the log folded
     differently** and splitting them would run the same substring match twice for
-    a screen that wants both. The ports stay separate: a caller that wants the
-    counts has no business holding the aggregates.
+    a screen that wants both. The ports stay separate, and each split is a rule
+    rather than a filing decision: a caller that wants the counts has no business
+    holding the aggregates, and a caller that walks twenty rows has no business
+    holding an unbounded career fold.
     """
 
     def __init__(self, session: AsyncSession, codec: EventCodec) -> None:
@@ -130,7 +138,7 @@ class EventSourcedGameHistory:
             return counts
 
         for game in await self._games_among(wanted):
-            if game.kind is not GameKind.COUNTED or not game.was_played_at(now):
+            if not _counted_and_played(game, now):
                 continue
             for player_id in game.line_up.players & wanted:
                 counts[player_id] += 1
@@ -151,6 +159,41 @@ class EventSourcedGameHistory:
         if not wanted:
             return {}
 
+        found = await self._counted_results(wanted, now=now)
+        return {
+            player_id: tuple(rows[-RECENT_RESULTS:])
+            for player_id, rows in found.items()
+        }
+
+    async def recent_results_in(
+        self, player_id: UUID, *, sport: Sport, now: Instant
+    ) -> tuple[CountedResult, ...]:
+        """This player's last few counted results in one sport, oldest to newest.
+
+        **Filtered before it is trimmed**, and that order is the whole reason
+        this cannot be built out of the read above: that one answers at most five
+        across every sport, so a caller filtering afterwards would show three
+        results to somebody who has played thirty in the sport asked about.
+        """
+
+        found = await self._counted_results({player_id}, now=now)
+        rows = [one for one in found.get(player_id, []) if one.sport is sport]
+        return tuple(rows[-RECENT_RESULTS:])
+
+    async def _counted_results(
+        self, wanted: set[UUID], *, now: Instant
+    ) -> dict[UUID, list[CountedResult]]:
+        """Every confirmed counted result for these people, **oldest first.**
+
+        The fold both reads above are trims of, written once so the two cannot
+        come to two answers about what a counted result is. Untrimmed, because
+        the two trim differently and one of them narrows first — a shared helper
+        that had already cut to five would be the bug it exists to prevent.
+
+        A player with none is **absent**, which is what lets the mapping read
+        above keep one spelling for *nothing to show*.
+        """
+
         found: dict[UUID, list[CountedResult]] = defaultdict(list)
         for game in await self._games_among(wanted):
             if game.kind is not GameKind.COUNTED:
@@ -169,12 +212,11 @@ class EventSourcedGameHistory:
                         played_at=game.played_at or game.planned_at,
                     )
                 )
-
-        results: dict[UUID, tuple[CountedResult, ...]] = {}
-        for player_id, rows in found.items():
+        for rows in found.values():
+            # Sorted here rather than at each caller, so *oldest to newest* is
+            # the fold's promise and not two of them.
             rows.sort(key=lambda one: (one.played_at, one.game_id))
-            results[player_id] = tuple(rows[-RECENT_RESULTS:])
-        return results
+        return found
 
     async def attendance_for(
         self, player_ids: Collection[UUID], *, now: Instant
@@ -220,25 +262,140 @@ class EventSourcedGameHistory:
             for player_id, at in latest.items()
         }
 
-    async def late_change_threshold(self) -> Minutes | None:
-        """``None``, and the reason is this context's own.
+    async def result_answering_for(
+        self, player_ids: Collection[UUID], *, since: Instant, now: Instant
+    ) -> Mapping[UUID, ResultAnswering]:
+        """What became of the scores put in front of each of these people.
 
-        A plan here is a line-up with a window and no time in it: an accepted seat
-        cannot be withdrawn and there is nothing to move, so *late* has no
-        referent and there is no number to publish. Absent rather than defaulted,
-        because a number nobody measured is a number somebody picked.
+        **One opportunity per game at most, charged to the side that was asked**,
+        so a doubles pair each carry the score their side never answered and the
+        side that entered it carries nothing. That is the same per-person shape
+        ``attendance_for`` takes and for a different reason: there, everybody on
+        the court was in the arrangement; here, only one side was asked.
+
+        **The window is the caller's** (``docs/adr/0160``). An opportunity that
+        closed before ``since`` is not in either half — it is not a good outcome
+        the player keeps for ever and not a miss they can never work off.
+
+        **Absent rather than a measured zero**, like ``attendance_for``: nobody
+        has ignored a score who was never sent one.
+        """
+
+        wanted = set(player_ids)
+        if not wanted:
+            return {}
+
+        answered: dict[UUID, int] = defaultdict(int)
+        ignored: dict[UUID, int] = defaultdict(int)
+        latest: dict[UUID, Instant] = {}
+        for game in await self._games_among(wanted):
+            asked = game.score_put_to_a_side_at(now)
+            if asked is None or asked.closed_at < since:
+                continue
+            for player_id in game.line_up.players_on(asked.side) & wanted:
+                if asked.answered:
+                    answered[player_id] += 1
+                else:
+                    ignored[player_id] += 1
+                latest[player_id] = max(
+                    asked.closed_at, latest.get(player_id, asked.closed_at)
+                )
+
+        return {
+            player_id: ResultAnswering(
+                answered=answered[player_id],
+                ignored=ignored[player_id],
+                last_at=at,
+            )
+            for player_id, at in latest.items()
+        }
+
+    async def late_change_threshold(self) -> Minutes | None:
+        """``None`` — **recorded, not yet scored** (``docs/adr/0162`` §8).
+
+        A seat can be left and the game has a moment, so *late* has a referent
+        now; what a departure an hour before it should cost is a judgement no
+        record has made, and until one does there is no number to publish.
+        Absent rather than defaulted, because a number nobody measured is a
+        number somebody picked.
         """
 
         return None
 
+    # -- OpponentVarietyQuery ---------------------------------------------
+
+    async def variety_of(
+        self, player_id: UUID, *, now: Instant
+    ) -> OpponentVariety | None:
+        """How many different people, over how many times on a court. **One pass.**
+
+        **The denominator counts seats opposite rather than games**, and the two
+        are only the same number in singles. A doubles evening puts three people
+        on the court, so a game-denominated pair reported ``3 of 1``: a fraction
+        whose numerator can exceed its denominator, which is not a share of
+        anything. Counting the counterparts each game contributed makes both
+        halves the same kind of thing, and the division honest at every court
+        size.
+
+        **Which games count is still ``_counted_and_played``'s**, written once
+        below: a friendly and a ghost put nobody in either half, so a face can
+        never enter the count without an evening under it.
+
+        **Nothing is trimmed and nothing is windowed.** The whole record is the
+        statistic; the sort-then-bound the pairwise read applies exists because a
+        matcher asked for the *recent* few, and this caller asked for a career.
+        """
+
+        faces: set[UUID] = set()
+        met = 0
+        for game in await self._games_of(player_id):
+            if not _counted_and_played(game, now):
+                continue
+            counterparts = game.line_up.counterparts_of(player_id)
+            met += len(counterparts)
+            faces |= counterparts
+        if met == 0:
+            return None
+        return OpponentVariety(
+            distinct_counterparts=len(faces), times_on_court=met
+        )
+
     # -- internals --------------------------------------------------------
 
     async def _games_of(self, player_id: UUID) -> list[Game]:
-        return await self._games_among({player_id})
+        """Every game this player is on the court of **now**.
+
+        The streams read answers wider than that — it finds every court that has
+        ever seated them, a seat they have since left included — and the folded
+        line-up narrows it. The set reads need no such narrowing because each of
+        them intersects ``line_up.players`` with the people it was asked about.
+        """
+
+        return [
+            game
+            for game in await self._games_among({player_id})
+            if player_id in game.line_up.players
+        ]
 
     async def _games_among(self, player_ids: Collection[UUID]) -> list[Game]:
         streams = await streams_seating(self._session, self._codec, player_ids)
         return [Game.from_history(events) for events in streams.values()]
+
+
+def _counted_and_played(game: Game, now: Instant) -> bool:
+    """Whether this game is one *how much have they played* counts.
+
+    **Counted rather than a friendly**, because the people who arranged a
+    friendly said it was not evidence; **played rather than merely arranged**,
+    because a plan nobody claimed is not an evening. An unscored game passes
+    both: it is an evening and it is not evidence, and those are two questions.
+
+    Written once and read by both the count and the variety fold, so the two
+    numbers a record prints beside each other cannot come from two ideas of what
+    a counted game is.
+    """
+
+    return game.kind is GameKind.COUNTED and game.was_played_at(now)
 
 
 def _pairwise_outcome(game: Game, now: Instant) -> PlayedOutcome | None:
@@ -246,6 +403,14 @@ def _pairwise_outcome(game: Game, now: Instant) -> PlayedOutcome | None:
 
     Three answers and not two: a game whose entry window is still open says
     **nothing yet** about the pair, and is left out rather than filed as either.
+
+    **And a called-off game says nothing at all, for good** (``docs/adr/0163``
+    §3). It is not an evening — nobody played — and it is not a ghost, because a
+    ghost is a window closing on silence and this was an act somebody took while
+    a seat was open. Filing it as a ghost would charge the people who stayed for
+    somebody else's departure, which #411 rule 7 refuses. So it is ``None`` here,
+    and every read built on this — the pair, the attendance, the counts, the
+    variety — leaves it out by the same line.
     """
 
     standing = game.standing_at(now)
@@ -275,13 +440,10 @@ def _settled_arrangement(
     outcome = _pairwise_outcome(game, now)
     if outcome is None:
         return None
-    if outcome is PlayedOutcome.PLAYED:
-        # ``played_at`` is set for every standing in ``PLAYED`` — the entry that
-        # records *we played* is the only thing that can set it — so the fallback
-        # is unreachable and is stated rather than asserted, because a read is a
-        # bad place to raise about a stream somebody else wrote.
-        return outcome, game.played_at or game.planned_at
-    return outcome, entry_closes_at(game.planned_at)
+    # The moment is the aggregate's own fold — one date for one game, wherever
+    # it is read — and it is set for both outcomes the line above admits, so
+    # the narrowing is stated rather than asserted.
+    return outcome, game.became_history_at(now) or game.planned_at
 
 
 __all__ = ["EventSourcedGameHistory"]

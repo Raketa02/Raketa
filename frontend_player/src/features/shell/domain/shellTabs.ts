@@ -22,7 +22,12 @@ import type { TabBarKey } from '@/shared/ui';
  */
 export const SHELL_TAB_ROOT = {
   now: '/',
-  around: '/around',
+  /**
+   * The deck's own tab ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §1). It was Around, a placeholder; the rename is whole — key, label, glyph and route —
+   * because a half-rename is the thing a later session trips over.
+   */
+  players: '/players',
   play: '/play',
   chats: '/chats',
   you: '/you',
@@ -37,9 +42,11 @@ export type ShellRoute = (typeof SHELL_TAB_ROOT)[TabBarKey];
  * Two entries rather than one, and that is the whole of *back leaves Play entirely* — a
  * player who presses back from Find a game is on Now because Now is what is behind it, not
  * because a screen refused to be the last one. It is also why the depth is stated here
- * rather than pushed at a call site: the second caller of the reset is the *Find a game*
- * segment ([#268](https://github.com/Raketa02/Raketa/issues/268)), which re-enters the
- * tab from inside it, and re-entering has to mean the same arrangement as arriving.
+ * rather than pushed at a call site: for as long as the deck lived under Play, the *Find a
+ * game* segment re-entered the tab from inside it
+ * ([#268](https://github.com/Raketa02/Raketa/issues/268)), and re-entering had to mean the
+ * same arrangement as arriving. The segment is gone with the deck's move to Players
+ * (ADR-0169 §1); the arrangement is still stated once.
  */
 export const PLAY_STACK = [SHELL_TAB_ROOT.now, SHELL_TAB_ROOT.play] as const;
 
@@ -74,15 +81,58 @@ const TAB_FOR_SEGMENT: Readonly<Partial<Record<string, TabBarKey>>> = {
  * Which tab a pathname belongs to — **by its first segment**, so Play stays lit for every
  * screen inside Play.
  *
- * That is not a convenience: the builder, the pool and the deck are `/play/…` and a player
- * is inside the tab for the length of a whole flow, which is exactly what the ring is for.
- * Matching the whole path would go dark on the second screen.
+ * That is not a convenience: the builder and the pool are `/play/…` and a player is inside
+ * the tab for the length of a whole flow, which is exactly what the ring is for. Matching the
+ * whole path would go dark on the second screen.
  *
  * A path the shell does not own answers `now`, because the shell's own root is the only
  * honest answer to a question it should never be asked: everything outside `(tabs)` —
- * sign-in, the questionnaire, the seven profile steps — draws no bar at all.
+ * sign-in, the questionnaire, the eight profile steps — draws no bar at all.
  */
 export function tabForPathname(pathname: string): TabBarKey {
   const [, segment = ''] = pathname.split('/');
   return TAB_FOR_SEGMENT[segment] ?? 'now';
 }
+
+/**
+ * Whether the bar **stands down** on a pathname — drawn nowhere, rather than drawn and hidden.
+ *
+ * Two routes do this, and each is named in full. The first is the conversation, where the
+ * composer replaces the bar so the keyboard and the stream get the whole screen
+ * ([#400](https://github.com/Raketa02/Raketa/issues/400),
+ * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §3). The
+ * second is the **yes screen** under a challenge, where nothing replaces the bar and that is the
+ * point: the screen is the whole phone — the faces, one word, two doors — and a bar under it
+ * would be a way out the record says it does not have
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §2). It is a fact about **which screen the player is on** and so belongs beside
+ * `tabForPathname`, which is the other thing the shell reads off a route — and it is pure for
+ * the same reason that one is: stated here it can be read back without a renderer, and the
+ * shell that draws the bar learns nothing about what a conversation or a yes is.
+ *
+ * **The match is the whole shape and not a prefix.** Everything under `/chats/…` shares the
+ * inbox's column, and three of those screens keep their bar: the inbox itself, the challenge
+ * screen and the game screen behind the room's own *Details* door at `…/details` — a `/chats/*`
+ * match would take the bar off all of them, and a prefix match would take it off the last. What
+ * stands it down is exactly the room — `chats`, `conversation`, the room's id, and nothing
+ * after — and exactly the yes screen: `chats`, `challenge`, the challenge's id, `yes`, and
+ * nothing after. The builder at `…/fill` beside it keeps its bar.
+ *
+ * **The column stays lit while the bar is down.** `tabForPathname` still answers `chats` for
+ * both, and that is deliberate: standing the bar down is a fact about the chrome, not about
+ * where the player is, and the two answers are read by two different callers.
+ */
+export function barStandsDown(pathname: string): boolean {
+  // The first segment is read through the rule that already reads it, so *inside the Chats tab*
+  // is one answer and not a second spelling of `SHELL_TAB_ROOT.chats`. What follows it is §0.2's
+  // vocabulary: the static **kind** above the id, then the id, then nothing — or, for the yes
+  // screen, the one static segment the challenge's screens hang under its id.
+  const [, , kind, id, ...rest] = pathname.split('/');
+  if (tabForPathname(pathname) !== 'chats' || id === undefined || id === '') return false;
+  if (kind === 'conversation') return rest.length === 0;
+  if (kind === 'challenge') return rest.length === 1 && rest[0] === YES_SCREEN_SEGMENT;
+  return false;
+}
+
+/** The yes screen's own segment under a challenge — `/chats/challenge/{id}/yes`. */
+const YES_SCREEN_SEGMENT = 'yes';

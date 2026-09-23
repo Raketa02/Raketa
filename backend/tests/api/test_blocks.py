@@ -15,7 +15,7 @@ import pytest
 
 
 async def _player(client, name: str) -> tuple[str, str]:
-    """Register and sign in one player. Returns their id and a bearer token."""
+    """Register, sign in and name one player. Returns their id and a bearer token."""
 
     signup = await client.post(
         "/api/v1/users",
@@ -23,7 +23,6 @@ async def _player(client, name: str) -> tuple[str, str]:
             "email": f"{name}@example.com",
             "password1": "hunter22!",
             "password2": "hunter22!",
-            "nickname": name,
             "adult_attested": True,
         },
     )
@@ -32,7 +31,14 @@ async def _player(client, name: str) -> tuple[str, str]:
         "/api/v1/auth/login",
         json={"email": f"{name}@example.com", "password": "hunter22!"},
     )
-    return signup.json()["id"], login.json()["access_token"]
+    token = login.json()["access_token"]
+    named = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": name, "nickname": name},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert named.status_code == 200, named.text
+    return signup.json()["id"], token
 
 
 def _auth(token: str) -> dict[str, str]:

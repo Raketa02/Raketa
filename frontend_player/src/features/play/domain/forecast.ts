@@ -398,7 +398,15 @@ export interface SeatedSeat {
 export interface SeatedCourt {
   readonly seats: readonly SeatedSeat[];
   readonly arrangements: readonly Arrangement[];
-  /** Why this four beat the runner-up. `null` where there was no runner-up to beat. */
+  /**
+   * Why this four beat the runner-up. `null` where there was no runner-up to beat.
+   *
+   * **Nothing draws it.** It had a sentence in a row of its own under the forecast card's
+   * names and the row was removed; the code is still parsed, still validated against the wire
+   * vocabulary and still here, because it is a fact the response states and a client that
+   * dropped it would have to re-learn it to say anything about it again. What is gone is the
+   * copy — see `components/courtPresentation.ts`.
+   */
   readonly groupReason: GroupReason | null;
   /**
    * `NO_SHARED_SLOTS` when the four of you have no hour in common — **a dock, never a

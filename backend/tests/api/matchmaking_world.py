@@ -30,7 +30,28 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from app.api.dependencies import (
+    ClockDep,
+    DbSession,
+    DomainEventStoreDep,
+    EventPublisherDep,
+    SettingsDep,
+    UnitOfWorkDep,
+)
+from app.bootstrap.composition import (
+    build_clock,
+    build_court_pairing_query_over,
+    build_court_pairing_workbench,
+    build_nudge_publisher,
+)
+from app.bootstrap.events import build_event_runtime
 from app.kernel import Sport
+from app.modules.challenges.presentation.dependencies import (
+    get_court_pairing_query,
+)
+from app.modules.conversations.infrastructure.absent_providers import (
+    NobodyIsFollowing,
+)
 from app.modules.matchmaking.infrastructure.pass_model import PassORM
 from app.modules.matchmaking.infrastructure.prompt_decline_model import (
     PromptDeclineORM,
@@ -40,6 +61,7 @@ from app.modules.matchmaking.infrastructure.search_model import (
     SearchORM,
 )
 from app.modules.player_profile.domain.events import (
+    IntroWritten,
     PlayerProfileCreated,
     PlayIntentDeclared,
     ProposalsOptInAnswered,
@@ -75,7 +97,14 @@ SHARED_SLOTS = ("2:EVENING", "6:MORNING")
 
 
 async def register(client, name: str) -> tuple[UUID, str]:
-    """Sign one player up and in. Returns their id and a bearer token."""
+    """Sign one player up, in, and name them. Returns their id and a bearer token.
+
+    The naming is the player's own act after sign-up (``docs/adr/0171`` §2),
+    and every surface a search reaches names a player by it — so a fixture that
+    stopped here would be a population the gate never lets onto a court. The
+    one word is used for the name and the nickname alike, so an assertion
+    reading a seat's ``name`` finds what the test registered.
+    """
 
     signup = await client.post(
         "/api/v1/users",
@@ -83,7 +112,6 @@ async def register(client, name: str) -> tuple[UUID, str]:
             "email": f"{name}@example.com",
             "password1": "hunter22!",
             "password2": "hunter22!",
-            "nickname": name,
             "adult_attested": True,
         },
     )
@@ -93,7 +121,14 @@ async def register(client, name: str) -> tuple[UUID, str]:
         json={"email": f"{name}@example.com", "password": "hunter22!"},
     )
     assert login.status_code == 200, login.text
-    return UUID(signup.json()["id"]), login.json()["access_token"]
+    token = login.json()["access_token"]
+    named = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": name, "nickname": name},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert named.status_code == 200, named.text
+    return UUID(signup.json()["id"]), token
 
 
 def auth(token: str) -> dict[str, str]:
@@ -171,6 +206,10 @@ async def a_searcher(
     name: str = "searcher",
     *,
     intent: str = "COMPETITIVE",
+    sport: Sport = SPORT,
+    location: tuple[float, float] = CENTRE,
+    gender: str = "WOMAN",
+    intro: str | None = None,
 ) -> dict:
     """One player, ready to search: profile, rating and declaration.
 
@@ -182,12 +221,29 @@ async def a_searcher(
     of a mode, so *no preference* is a case it wants at birth. Declaring again
     afterwards would work — the route is unkeyed and re-declaring is an edit —
     but it would put a second event on a stream no test meant to give a history.
+
+    ``location`` is where the profile is committed, for the one kind of test
+    that needs two searchers in two cities: a location that *moves*
+    (``docs/adr/0174`` §6) is asserted through the neighbours it gains and
+    loses, and each of those is a searcher of their own. ``gender`` and
+    ``intro`` are the same kind of parameter for the You tab's edits
+    (``docs/adr/0179`` §8): a preference that *narrows* is asserted through the
+    searchers it stops finding and the ones that stop finding it, and a line
+    that changes through the card the other searcher is dealt. A photograph is
+    not: it must be held in the store under an id this function has not yet
+    registered, so a searcher with a face is built from the parts.
     """
 
     player_id, token = await register(client, name)
-    await commit_profile(client, token)
-    mu = await rate(client, token)
-    await declare_intent(client, token, intent=intent)
+    profile: dict = {
+        "location": {"latitude": location[0], "longitude": location[1]},
+        "gender": gender,
+    }
+    if intro is not None:
+        profile["intro"] = intro
+    await commit_profile(client, token, **profile)
+    mu = await rate(client, token, sport)
+    await declare_intent(client, token, intent=intent, sport=sport)
     return {"id": player_id, "token": token, "mu": mu}
 
 
@@ -214,6 +270,7 @@ async def a_signed_in_candidate(
     gender_preference: str = "ANY",
     intent: str | None = "COMPETITIVE",
     at: datetime = LONG_AGO,
+    intro: str | None = None,
 ) -> tuple[UUID, str]:
     """The same person, **and a bearer token for them.**
 
@@ -252,6 +309,19 @@ async def a_signed_in_candidate(
         session_factory,
         ProposalsOptInAnswered(player_id, True, "v1", "ONBOARDING", at),
     )
+    if intro is not None:
+        # Only where a line was written — and on the profile's own stream, at
+        # the version after the creating event, because the record reads the
+        # line off the *fold* while the card reads it off the index
+        # (`docs/adr/0170` §3). The opt-in above is filed under a random id:
+        # nothing here folds it, and the index reads it by sequence either way.
+        await append(
+            session_factory,
+            IntroWritten(player_id, intro, at),
+            aggregate_type=PLAYER_PROFILE_AGGREGATE,
+            aggregate_id=player_id,
+            version=2,
+        )
     await append(
         session_factory,
         _rating(player_id, mu=mu, at=at),
@@ -282,7 +352,26 @@ async def block_between(client, token: str, player_id: UUID):
     )
 
 
-def _rating(player_id: UUID, *, mu: float, at: datetime) -> RatingInitialised:
+async def rate_in(session_factory, player_id: UUID, sport: Sport, *, mu: float) -> None:
+    """A second sport's Level for a candidate already in the city.
+
+    Filed on its own stream, keyed by ``(player, sport)`` exactly as the first
+    one was, so the index folds it into that sport's partition on the next
+    ``fold_the_log``. What it buys a test is a second deck to deal — the deck is
+    one sport, and a promise about *another sport's* deck needs one to exist.
+    """
+
+    await append(
+        session_factory,
+        _rating(player_id, mu=mu, at=LONG_AGO, sport=sport),
+        aggregate_type=RATING_AGGREGATE,
+        aggregate_id=skill_rating_id(player_id, sport),
+    )
+
+
+def _rating(
+    player_id: UUID, *, mu: float, at: datetime, sport: Sport = SPORT
+) -> RatingInitialised:
     """One candidate's Level, filed where the rating context files one.
 
     The two ids were ``hash()`` of a tuple, which is **seeded per interpreter**
@@ -292,9 +381,9 @@ def _rating(player_id: UUID, *, mu: float, at: datetime) -> RatingInitialised:
     """
 
     return RatingInitialised(
-        rating_id=skill_rating_id(player_id, SPORT),
+        rating_id=skill_rating_id(player_id, sport),
         player_id=player_id,
-        sport=SPORT.value,
+        sport=sport.value,
         mu=mu,
         sigma=0.34,
         confidence=62,
@@ -421,6 +510,14 @@ async def deck(
     return await client.post("/api/v1/deck", json=body, headers=auth(token))
 
 
+async def show_them_again(client, token: str, sport: Sport = SPORT):
+    """One *Show them again*: the reset, for one sport, answering nothing."""
+
+    return await client.post(
+        "/api/v1/deck/reset", json={"sport": sport.value}, headers=auth(token)
+    )
+
+
 async def pass_on(
     client,
     token: str,
@@ -527,6 +624,84 @@ def override(client, dependency, factory) -> None:
     client._transport.app.dependency_overrides[dependency] = factory  # noqa: SLF001
 
 
+def draw_real_cards(client, candidate_source, exposure_ledger) -> None:
+    """Wire the **real** pairing query over this test's own index and ledger.
+
+    The production declaration reaches for the process's candidate index and for
+    the Redis pool, and neither exists under ``ASGITransport``. That default is
+    the right one for this suite — it is what makes *the pairing could not be
+    read* the production path rather than a simulation — and the wrong one for
+    any test about a card actually being drawn.
+
+    What is wired instead is the **same assembly the route builds**, declared
+    with its own dependencies so the session is still the request's, over the two
+    seams ``app/bootstrap/challenge_demands.py`` names: the process's index and
+    an exposure ledger that needs no server.
+
+    **Here rather than in one test module**, because two files now want a
+    challenge screen with a pairing on it — the file that asserts the card block
+    and the one that walks the whole loop — and a second copy of this wiring is a
+    second opinion about which seams a challenge screen is built over.
+    """
+
+    def _pairings(
+        db: DbSession,
+        clock: ClockDep,
+        uow: UnitOfWorkDep,
+        event_store: DomainEventStoreDep,
+        events: EventPublisherDep,
+        settings: SettingsDep,
+    ):
+        return build_court_pairing_query_over(
+            workbench=a_real_workbench(
+                db,
+                clock,
+                uow,
+                event_store,
+                events,
+                settings,
+                exposure_ledger=exposure_ledger,
+                candidate_source=candidate_source,
+            ),
+            settings=settings,
+        )
+
+    override(client, get_court_pairing_query, _pairings)
+
+
+def a_real_workbench(
+    db,
+    clock,
+    uow,
+    event_store,
+    events,
+    settings,
+    *,
+    exposure_ledger,
+    candidate_source,
+):
+    """The **same assembly the routes build**, over this test's own two seams.
+
+    One place for the wiring, because two surfaces now price a court for
+    somebody already on it — the challenge detail and the game's pairing — and a
+    second copy of it would be a second opinion about which seams a court is
+    priced over. The six positional arguments are a request's own, handed on by
+    a dependency declared with them; the two keyword ones are what the suite
+    supplies for itself.
+    """
+
+    return build_court_pairing_workbench(
+        session=db,
+        clock=clock,
+        unit_of_work=uow,
+        event_store=event_store,
+        events=events,
+        settings=settings,
+        exposure=exposure_ledger,
+        candidates=candidate_source,
+    )
+
+
 def rewind_the_index(source, by: timedelta) -> None:
     """Move the index's *caught up at* backwards, without moving the clock.
 
@@ -587,6 +762,19 @@ def hold_everybody(client) -> None:
     )
 
     override(client, get_account_hold_query, HoldingEverybody)
+
+
+def hold_everybody_planning(client) -> None:
+    """The same hold, on the **plans** context's own declaration of the port.
+
+    Each context declares when its adapter is built, so a hold driven through
+    ``matchmaking``'s dependency reaches no plan route at all. One helper per
+    declaration is the honest shape: the stand-in is shared, the seam is not.
+    """
+
+    from app.modules.plans.presentation.dependencies import get_plan_hold_query
+
+    override(client, get_plan_hold_query, HoldingEverybody)
 
 
 def hold_only(client, *player_ids) -> None:
@@ -668,15 +856,25 @@ async def lineup(
     *,
     locked_seats: list[UUID] | None = None,
     availability_override: list[dict] | None = None,
+    completing_challenge_id: str | UUID | None = None,
 ):
     """One ⚡. **`locked_seats` is the whole difference** between the two surfaces.
 
     Omitted rather than sent empty when a test is not hand-seating anybody, for
     the same reason the search's three optional asks are: a client says *fill
     every seat* by not naming one.
+
+    **Naming a challenge drops the sport and the mode**, because that is the only
+    shape the route accepts: all three are facts the challenge holds, and sending
+    one beside it is refused at the boundary. A test asserting *that* refusal
+    posts its own body rather than asking this for a shape it will not build.
     """
 
-    body: dict = {"sport": sport.value, "mode": mode}
+    body: dict = {}
+    if completing_challenge_id is None:
+        body = {"sport": sport.value, "mode": mode}
+    else:
+        body["completing_challenge_id"] = str(completing_challenge_id)
     if locked_seats is not None:
         body["locked_seats"] = [str(one) for one in locked_seats]
     if availability_override is not None:
@@ -705,3 +903,54 @@ async def forecast(
         },
         headers=auth(token),
     )
+
+
+async def deliver_the_outbox(
+    session_factory, *, rounds: int = 6, live_channel=None
+) -> int:
+    """Run the transactional outbox to exhaustion, the way the worker does.
+
+    **Nothing in this suite runs the delivery loop**, because until the
+    Conversation context arrived every subscriber was a logger and no response
+    depended on one having run. A room, though, is *told* through the outbox by
+    contexts that do not know it exists (``docs/adr/0146`` §5), so a test that
+    wants one has to let the poll happen.
+
+    It builds the batch through ``EventRuntime.create_event_batch_for`` rather
+    than assembling handlers itself, which is what makes the delivery this drives
+    the delivery that ships — including the session-bound subscriber the batch
+    adds for itself.
+
+    **Rounds, because delivery cascades.** A room opened by an acceptance
+    publishes its own events, and those are outbox rows too. Draining until a
+    round publishes nothing is the honest stopping condition.
+
+    **``live_channel`` is what makes this delivery live**, and it is the same
+    fake the ``client`` fixture publishes and follows over. Pass it whenever a
+    test cares that a system line nudged an open stream; leave it out and the
+    drain is the one a seed run does, with nobody following
+    (``docs/adr/0147`` §3). The parameter is required in the application and
+    optional here for exactly that reason: *nobody is following* is the honest
+    answer for most of this file.
+    """
+
+    runtime = build_event_runtime()
+    nudges = (
+        NobodyIsFollowing()
+        if live_channel is None
+        else build_nudge_publisher(live_channel)
+    )
+    published = 0
+    for _ in range(rounds):
+        async with session_factory() as session:
+            batch = runtime.create_event_batch_for(
+                session=session,
+                clock=build_clock(),
+                batch_size=100,
+                nudges=nudges,
+            )
+            delivered = await batch.execute(worker_id="tests")
+        published += delivered
+        if not delivered:
+            break
+    return published

@@ -7,14 +7,12 @@ async def test_me_returns_distinct_user_per_token(client):
         "email": "alice@example.com",
         "password1": "hunter22!",
         "password2": "hunter22!",
-        "nickname": "alice",
         "adult_attested": True,
     }
     bob = {
         "email": "bob@example.com",
         "password1": "hunter22!",
         "password2": "hunter22!",
-        "nickname": "bob",
         "adult_attested": True,
     }
 

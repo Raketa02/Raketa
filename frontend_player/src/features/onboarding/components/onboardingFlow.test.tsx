@@ -124,6 +124,19 @@ describe('where a launch lands', () => {
     expect(screen.getByText("Let's set you up")).toBeTruthy();
   });
 
+  it('sends a player with no name yet to the naming step, before welcome', async () => {
+    // The gate's first destination (ADR-0171 §3): sign-up creates the account unnamed, and
+    // every destination after this one says the player's name. What the step does is its own
+    // suite's, `theNaming.test.tsx`; this is the routing.
+    stubGate({ name: null });
+
+    await launchSignedIn();
+
+    await waitFor(() => expect(screen).toHavePathname('/name'));
+    expect(screen.getByText('How should people see you?')).toBeTruthy();
+    expect(screen.queryByText("Let's set you up")).toBeNull();
+  });
+
   it('sends a player with a rating and a Player profile into the app', async () => {
     stubGate({ ratings: [RATING], hasPlayerProfile: true });
 
@@ -138,7 +151,7 @@ describe('where a launch lands', () => {
     // Which player the gate let through. The landing is the Now tab now that the shell
     // ships, and the account it let through is one tab along.
     fireEvent.press(screen.getByLabelText('You'));
-    expect(await screen.findByText('ada · ada@example.com')).toBeTruthy();
+    expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
     // Not through onboarding, and not through the questionnaire it would have started.
     expect(transport.requestsTo('POST', '/api/v1/assessments')).toEqual([]);
   });
@@ -168,7 +181,7 @@ describe('where a launch lands', () => {
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname('/tags'));
-    expect(screen.getByText('Setting up · Step 1 of 7')).toBeTruthy();
+    expect(screen.getByText('Setting up · Step 1 of 8')).toBeTruthy();
     // The first step, never the one they were on. The draft is client-held and died with
     // the process, so there is no middle of the part to be resumed to.
     expect(screen.queryByText(NOW_TAB_LINE)).toBeNull();
@@ -634,15 +647,15 @@ describe('walking into the questionnaire', () => {
 const STRANGE_LINK_ID = 'e5f6a7b8-9c0d-4e1f-8a2b-3c4d5e6f7a8b';
 
 describe('a link into the middle of onboarding', () => {
-  // Onboarding happens once, at the beginning, and there is no re-take from inside the
-  // app. So surviving param validation is not the same as belonging here: a well-formed
+  // A pass has two doors — the picker and the passport's *Add a sport* — and a link is
+  // neither. So surviving param validation is not the same as belonging here: a well-formed
   // link naming a sport this player never chose is not a shortcut into a flow already
   // under way, and drawing it a questionnaire meant drawing progress with no denominator.
   it('sends a question link for a sport this player never chose back to the beginning', async () => {
     stubGate();
     // A pass is running over padel — the player is mid-onboarding — and the link names
     // squash.
-    useOnboardingPass.getState().begin(['padel']);
+    useOnboardingPass.getState().begin(['padel'], 'welcome');
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 
@@ -656,7 +669,7 @@ describe('a link into the middle of onboarding', () => {
     // A result is a screen inside onboarding, so it carries the same rule for the same
     // reason — it belongs at the beginning, not at somebody's rating.
     stubGate();
-    useOnboardingPass.getState().begin(['padel']);
+    useOnboardingPass.getState().begin(['padel'], 'welcome');
 
     await launchSignedIn(`/result/${STRANGE_LINK_ID}?sport=squash`);
 
@@ -670,7 +683,7 @@ describe('a link into the middle of onboarding', () => {
     // that turned them away. Welcome is a screen, and the picker hands the run back
     // anyway — starting a sport with an unfinished run returns that run.
     stubGate({ runs: [runInProgress('SQUASH', STRANGE_LINK_ID)] });
-    useOnboardingPass.getState().begin(['padel']);
+    useOnboardingPass.getState().begin(['padel'], 'welcome');
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 

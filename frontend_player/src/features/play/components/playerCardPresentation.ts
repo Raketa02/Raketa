@@ -20,7 +20,8 @@
  * So the range carries a word of its own and the band keeps its name. *Fact · mechanism*,
  * §F1 rule 4's shape — the level and its plain-language meaning, then the caveat.
  *
- * ## The meta line — **`{km} km`, or `In your area · {km} km`**, and nothing else.
+ * ## The meta line — **`{km} km`, or `In your area · {km} km`**, and nothing else — the
+ * kilometres to one decimal, through the one formatter.
  *
  * §B11 draws it as `"{area} · {km} · active {x}"`, and **two of those three slots have
  * nothing behind them**
@@ -44,18 +45,19 @@
 
 import { counted } from '@/shared/formatting/counted';
 import {
+  formatDistanceKm,
   formatLevel,
   formatPercent,
   formatRange,
   formatSignedLevel,
 } from '@/shared/formatting/ratingFormat';
 import { slotName } from '@/shared/vocabulary/availabilityPresentation';
-import { socialTagLabel, socialTagName } from '@/shared/vocabulary/socialTagPresentation';
+import { NO_TAGS_IN_COMMON, socialTagName } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { AtStake } from '../domain/candidate';
-import type { SharedTag, SocialTagOverlap } from '../domain/socialTagOverlap';
+import type { SocialTagOverlap } from '../domain/socialTagOverlap';
 import type { GameResult, InclusionReason } from '../domain/vocabulary';
 
 import type { CandidateAction } from './accessibilityPresentation';
@@ -80,8 +82,16 @@ export function levelRow(facts: LevelRowFacts): string {
   return `${formatLevel(facts.level)} · ${facts.band} · likely ${formatRange(facts.range)}`;
 }
 
-/** Whole kilometres, as the contract sends them — the client rounds nothing. */
+/** What the meta line states — a distance, and the one comparison it may draw beside it. */
 export interface MetaLineFacts {
+  /**
+   * Kilometres **to one decimal**, as the contract sends them — the client rounds nothing.
+   *
+   * Measured between two **drawn spots**, one fixed point inside each player's coarse area,
+   * and the same number the record's identity line and the why-fit sentence print for the
+   * same person ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
+   * §2). Nothing prints a whole kilometre any more.
+   */
   readonly km: number;
   /** Their coarse area, as a machine code. **Never printed.** */
   readonly theirAreaCode: string;
@@ -98,7 +108,7 @@ export interface MetaLineFacts {
 }
 
 export function metaLine(facts: MetaLineFacts): string {
-  const distance = `${facts.km} km`;
+  const distance = formatDistanceKm(facts.km);
   // `undefined === undefined` would be true, so the absence is tested rather than compared:
   // a card with no area of its own must not tell twenty strangers they are in it.
   if (facts.myAreaCode === undefined) return distance;
@@ -201,115 +211,22 @@ export const CANDIDATE_ACTION_WORD: Readonly<Record<CandidateAction, string>> = 
 };
 
 /**
- * The deck's two, and the 🎾 that is drawn and never spoken.
+ * The deck's two answers, as words.
  *
- * The glyph is in the visible word alone — `deckAnswerLabels` composes the spoken pair
- * without it, per §E6: *"otherwise it announces as 'tennis ball let's play'"*. It is the same
- * split the fit pill's ✦ takes, and it is a split rather than a rule about glyphs.
+ * They are the **stamps'** words now rather than two buttons' labels: the deck's buttons draw
+ * marks — Feather's ✕, the drawn tennis ball (`DeckBall`, never spoken) — and the words appear
+ * on the card under the thumb as the drag reveals them (ADR-0169 §3). `deckAnswerLabels`
+ * composes the spoken names from the same two, so a stamp and the name a listener hears cannot
+ * drift apart.
  */
-export const DECK_ANSWER_WORDS = { pass: 'Not today', accept: "🎾 Let's play" } as const;
-
-/**
- * What the generated poster says it is, on a card.
- *
- * [6.9](../../../../docs/design-system.md#69-the-photo-tile-and-picker) requires the sentence
- * of every poster it draws — *"nobody should have to see a poster to know they are not
- * looking at the player"* — and the profile step's own wording is second-person and about a
- * photo the reader could go and add, which is not this. Third-person, and it names no one:
- * the card body's label already says whose face this is standing in for.
- *
- * It is **unspoken on every surface that draws it today**, because §20.1 merges an actionless
- * element into the nearest action above it and the card body is that action. The sentence is
- * carried anyway rather than left blank, so a poster drawn somewhere with no such ancestor
- * cannot arrive silently claiming to be a photograph.
- */
-export const CANDIDATE_POSTER_LABEL = 'A generated court poster, not a photograph';
-
-/**
- * **The photo panel's one mark** — what the on-court check concluded, in two words
- * ([#313](https://github.com/Raketa02/Raketa/issues/313)).
- *
- * Sentence case here and capitalised by the panel, exactly as the Sport beneath it is: the
- * capitals are a treatment the two labels share, and a string that arrived pre-shouted would
- * be the one place in this deck where a style decision is spelled into the copy.
- *
- * **It is the whole of what the card says about the check.** There is no sentence explaining
- * what was looked for, no *verified*, and above all **no number**: every verdict is computed
- * from a confidence the platform keeps, and ADR-0133's clause that it never crosses on any
- * route is untouched by ADR-0138. *We are 38% sure this is a court* is a figure a player can
- * do nothing with, and there is nothing here to derive one from in any case — the code is all
- * that arrives.
- */
-export const ON_COURT_MARK = 'On court';
-
-/**
- * `Photo checked: on court` — the mark, for a listener, and **it leads with the photograph**.
- *
- * The drawing can rely on where it sits: two words over somebody's picture, above their Level,
- * are plainly about the picture. A clause in a run of sentences cannot, and *on court* alone
- * arriving between a Level and a forecast is one comma away from **activity recency** — the
- * one thing `PlayerCardSchema` refuses at every granularity, *"not a timestamp, not active
- * today, not a green dot"*. So the noun comes first and the verdict second, and the sentence
- * says what was checked rather than what anybody is doing.
- *
- * *Checked* is the register the drawing spends its colour on, which is [Part 13](../../../../docs/design-system.md#part-13--accessibility)
- * read in the one place the mint is worth nothing: a listener gets the word the tint stands
- * for, and gets it as a fact rather than as praise.
- */
-export const ON_COURT_CLAUSE = 'Photo checked: on court';
-
-/**
- * **The Social tag row's words** — the chip, its *you too* marker, and the amber sentence.
- *
- * The row is `domain/socialTagOverlap`'s four answers; these are the four things they say
- * ([#311](https://github.com/Raketa02/Raketa/issues/311)). Nothing here decides which tags are
- * shared, and nothing here re-words a tag: `socialTagLabel` and `socialTagName` are the
- * promoted table's, and a second spelling of nineteen labels is what the promotion existed to
- * prevent ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1).
- *
- * ## The chip is drawn with a glyph and a marker, and spoken as neither
- *
- * `socialTagLabel` carries the emoji because a wall of same-length chips is found by shape;
- * `socialTagName` is what a listener gets, because *"beer mug, stays for a drink"* is the app
- * reading its own layout aloud. The **marker** goes the other way and is the more interesting
- * half: `· you too` is drawn on the chip because the tint alone would be colour as the only
- * cue ([Part 13](../../../../docs/design-system.md#part-13--accessibility)), and it is *not*
- * repeated per tag in the spoken name — the label groups the shared ones under one clause
- * instead, because a listener hearing *you too* six times is being read a table.
- *
- * **A shared chip can truncate its marker at the largest text sizes.** `Tag` is
- * `numberOfLines={1}` by design ([6.4](../../../../docs/design-system.md#64-tag--the-status-pill)
- * — *a long state tag truncates rather than breaking the row*), and the longest label plus the
- * marker exceeds the card at roughly double the system size. The tint survives it and the
- * spoken name always carries the whole clause, so the fact is never lost; what is lost is the
- * second cue, for the reader who has asked for the largest type. Recorded rather than papered
- * over — fixing it means a wrapping tag, which is a change to the primitive and to 6.4.
- *
- * What a chip in the row is **drawn** with: the tag, and the marker where it is shared.
- */
-export function socialTagChip(tag: SharedTag): string {
-  const label = socialTagLabel(tag.id);
-  return tag.shared ? `${label} · ${YOU_TOO_MARKER}` : label;
-}
-
-/** The two words, once. Re-worded here and nowhere else — the clause has its own phrasing. */
-const YOU_TOO_MARKER = 'you too';
-
-/**
- * The amber sentence, which **stands in the row's place** rather than beside it.
- *
- * The one claim this row makes, and the only state in which the candidate's own tags are not
- * drawn: six untinted chips under a line saying none of them matched would be the card
- * answering a question nobody asked twice over, and the ticket puts the sentence *in the row's
- * place* in as many words. The tags are still a fact about them alone — they are read in full
- * on the surface that draws tags as tags, and the card's job here is the comparison.
- */
-export const NO_TAGS_IN_COMMON = 'No tags in common';
+export const DECK_ANSWER_WORDS = { pass: 'Not today', accept: "Let's play" } as const;
 
 /**
  * What the row contributes to the card's **spoken** name — nought, one or two clauses.
  *
- * Grouped rather than marked per tag, for the reason above, and worded so each clause says
+ * Grouped rather than marked per tag — `shared/vocabulary/socialTagPresentation`'s
+ * `socialTagChip` is where that is argued — and
+ * worded so each clause says
  * whose fact it is: *tags you share* is about the pair, *their other tags* and *their tags* are
  * about the candidate alone. That distinction is the whole of the row, so it is the one thing
  * the wording must not blur.
@@ -466,47 +383,80 @@ export function stakeClauses(stake: AtStake): readonly string[] {
  * ([#309](https://github.com/Raketa02/Raketa/issues/309)). That decision turned the volt tag
  * into a sentence under the name because *"a full sentence does not go where a two-word tag
  * went"* — which was the right reading of the sentence it had been given, and the wrong
- * conclusion: the two-word form was always available, and it is `INTEREST_RECEIVED`'s.
+ * conclusion: the two-word form was always available, and it is `INTEREST_RECEIVED`'s. The
+ * social card drew that sentence under its own head until
+ * [ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8 put the same two-word tag in its place — **both tags on both card styles**.
  *
- * ## Two facts, two colours, and only one of them is drawn
+ * ## Three facts, three colours, and only one of them is drawn
  *
+ * - **Wants to play you** — volt, on somebody the engine admitted because they had already
+ *   said yes. It is a statement about **a decision somebody else made**.
+ * - **You said yes** — `base`, the plain status pill, on somebody in the reader's own outgoing
+ *   list for the sport on screen. It is a statement about **a decision the reader made**, and
+ *   it is deliberately not volt: volt is *they want you*
+ *   ([6.4](../../../../docs/design-system.md#64-tag)), the green border travels with that word
+ *   alone, and two facts in one colour would be a reader looking for the difference.
  * - **Best match** — coral, the app's one accent, on the row with the highest Fit. It is a
  *   statement about **where somebody sits in the list this player is reading**.
- * - **Wants to play you** — volt, on somebody the engine admitted because they had already
- *   said yes. It is a statement about **a decision somebody else made**, and that is why it
- *   **replaces** the coral one where both would fall on the same card rather than sitting
- *   beside it: the designs' *"because it's the stronger fact"*, and two tags on one handle is
- *   a row whose width depends on how lucky the reader got.
  *
- * **Neither is a new field.** The volt one is `inclusionReason === 'INTEREST_LIFT'` — the
- * admitting code, per [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md)
+ * **A fact about a person outranks a fact about a list**, which is why either interest tag
+ * **replaces** the coral one where both would fall on the same card rather than sitting beside
+ * it: the designs' *"because it's the stronger fact"*, and two tags on one handle is a row
+ * whose width depends on how lucky the reader got. **Both interest facts true is a mutual**,
+ * and a mutual is not on the list; should one ever be, *Wants to play you* wins — the other
+ * person's decision is the one the reader did not already know.
+ *
+ * **None of the three is a new field.** The volt one is `inclusionReason === 'INTEREST_LIFT'`
+ * — the admitting code, per [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md)
  * §10's *"the tag is bound to the admitting code"* — and its **words are its liveness twin's**,
  * reached through `livenessLine` rather than re-typed, because §10's claim is that the two
- * codes are *two facts with one tag*. The coral one is `bestMatch`, which this file does not
- * decide: **which row wears it is the ordering rule's**
- * ([#310](https://github.com/Raketa02/Raketa/issues/310)), and a card that worked it out for
- * itself would be a component reading a list it cannot see.
+ * codes are *two facts with one tag*. The plain one is `saidYesTo` over the reader's own
+ * `GET /interest` outgoing list (`domain/outgoingInterest`), no code and no nudge. The coral
+ * one is `bestMatch`, which this file does not decide: **which row wears it is the ordering
+ * rule's** ([#310](https://github.com/Raketa02/Raketa/issues/310)), and a card that worked it
+ * out for itself would be a component reading a list it cannot see.
  *
- * **There is no third tag and no default.** Most people on a list are neither, and a tag
- * drawn for them would be a word meaning *nothing in particular* — which is
+ * **There is no fourth tag and no default.** Most people on a list are none of the three, and
+ * a tag drawn for them would be a word meaning *nothing in particular* — which is
  * [1.2](../../../../docs/design-system.md#12-one-accent-used-sparingly) read on the one row
  * that repeats twenty times.
  */
+/**
+ * Which fact a tag is — so a caller binds a consequence to the **fact** and never to the colour.
+ * The green border is `wants-to-play-you`'s, and a card reading `variant === 'volt'` would draw
+ * it on whatever else was ever made volt.
+ */
+export type CandidateTagKind = 'wants-to-play-you' | 'you-said-yes' | 'best-match';
+
 export interface CandidateTag {
+  readonly kind: CandidateTagKind;
   readonly label: string;
-  /** `hot` is the coral tag and `volt` is the fill — 6.4's own variant names. */
-  readonly variant: 'hot' | 'volt';
+  /** `hot` is the coral tag, `volt` the fill, `base` the plain pill — 6.4's own variant names. */
+  readonly variant: 'hot' | 'volt' | 'base';
 }
 
 export function candidateTag(facts: {
   /** A union of one, and it **admits**. Omitted where nothing lifted them. */
   readonly inclusionReason?: InclusionReason;
+  /** The reader's own list's answer — `saidYesTo` — never this card's. */
+  readonly saidYes: boolean;
   /** The ordering rule's answer, never this card's. */
   readonly bestMatch: boolean;
 }): CandidateTag | undefined {
-  const admitted = facts.inclusionReason;
-  if (admitted !== undefined) return { label: INCLUSION_TAG_WORD[admitted], variant: 'volt' };
-  return facts.bestMatch ? { label: BEST_MATCH_WORD, variant: 'hot' } : undefined;
+  const kind = tagKind(facts);
+  return kind === undefined ? undefined : { kind, ...CANDIDATE_TAG[kind] };
+}
+
+/** The precedence, and nothing else: the strong fact wins — see the note above. */
+function tagKind(facts: {
+  readonly inclusionReason?: InclusionReason;
+  readonly saidYes: boolean;
+  readonly bestMatch: boolean;
+}): CandidateTagKind | undefined {
+  if (facts.inclusionReason !== undefined) return 'wants-to-play-you';
+  if (facts.saidYes) return 'you-said-yes';
+  return facts.bestMatch ? 'best-match' : undefined;
 }
 
 /**
@@ -528,6 +478,16 @@ const INCLUSION_TAG_WORD: Readonly<Record<InclusionReason, string>> = {
 };
 
 /**
+ * The plain tag's three words — **the reader's own act, on the other person's card.**
+ *
+ * *You said yes* and not *You want to play them*: the deck's answer is *Let's play*, a yes, and
+ * the tag names the act the reader remembers making. Exported for the suites that assert what
+ * a row says, so a reworded tag is one red build rather than a string hunted through five
+ * files.
+ */
+export const YOU_SAID_YES_WORD = 'You said yes';
+
+/**
  * The coral tag's two words.
  *
  * *Best match* and not *Best fit*: [#310](https://github.com/Raketa02/Raketa/issues/310) makes
@@ -536,3 +496,13 @@ const INCLUSION_TAG_WORD: Readonly<Record<InclusionReason, string>> = {
  * number in the pill; this is the row that has the most of it.
  */
 const BEST_MATCH_WORD = 'Best match';
+
+/**
+ * Each tag's words and colour, **keyed by the kind** — so a fourth kind does not compile
+ * without both, and the colour is a function of the fact rather than a literal at a call site.
+ */
+const CANDIDATE_TAG: Readonly<Record<CandidateTagKind, Omit<CandidateTag, 'kind'>>> = {
+  'wants-to-play-you': { label: INCLUSION_TAG_WORD.INTEREST_LIFT, variant: 'volt' },
+  'you-said-yes': { label: YOU_SAID_YES_WORD, variant: 'base' },
+  'best-match': { label: BEST_MATCH_WORD, variant: 'hot' },
+};

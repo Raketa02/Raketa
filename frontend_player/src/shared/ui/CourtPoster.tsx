@@ -33,9 +33,10 @@
  * are ONE hue — sRGB-HSL measures up to 3,3° between them, which is the two colour spaces
  * disagreeing and not a shift anybody drew.
  *
- * **The choice is the feature's, not the theme's.** The design system's contract is that one
- * player id always produces one poster; *which* hue and pose an id maps to belongs to the
- * feature, exactly as the confidence ring's 30% ceiling belongs to the engine.
+ * **The choice is `courtPosterFraming`'s, not the theme's.** The design system's contract is
+ * that one player id always produces one poster; *which* hue and pose an id maps to is decided
+ * by the hash in the file next door, which every surface that draws a poster reaches — the
+ * component itself is handed the pair and asks nothing about who it is for.
  */
 
 import { useId } from 'react';
@@ -58,10 +59,11 @@ export type CourtPosterPose = (typeof COURT_POSTER_POSES)[number];
 /**
  * Everything a player id decides about a poster, and the whole of it.
  *
- * One type rather than two loose props, because the pair travels together everywhere: the
- * feature derives it, `PhotoTile` passes it on, and this component draws it. It lives here
- * for the reason the retired `CourtPosterFraming` did — the design system owns the
- * vocabulary, and the feature owns which member of it a given id gets.
+ * One type rather than two loose props, because the pair travels together everywhere:
+ * `courtPosterFraming` derives it, `PhotoTile` passes it on, and this component draws it. The
+ * vocabulary is this file's and the theme's; which member of it a given id gets is the hash's,
+ * and the two stay separate files for the reason the retired `CourtPosterFraming` component
+ * did — a drawing and a choice are not one thing.
  */
 export interface CourtPosterLook {
   /**

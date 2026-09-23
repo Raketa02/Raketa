@@ -21,7 +21,14 @@
 import { render, screen } from '@testing-library/react-native';
 import { StyleSheet, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 
-import { contrast, hueAngle, hueDistance, parse } from '@/test-support/contrast';
+import {
+  composite,
+  contrast,
+  hueAngle,
+  hueDistance,
+  parse,
+  type Rgb,
+} from '@/test-support/contrast';
 
 import { Tag } from './Tag';
 import { theme } from './theme';
@@ -123,5 +130,56 @@ describe('voltStroke as a stroke on paper', () => {
     // alone* is satisfied by the tag, and this is the second copy of a cue that is already one.
     expect(ratio(theme.color.surface, theme.color.voltStroke)).toBeLessThan(AA);
     expect(ratio(theme.color.ink, theme.color.voltStroke)).toBeLessThan(AA);
+  });
+});
+
+/**
+ * `arranging` — the dot on the Now card's tag while the game is still in the players' hands
+ * ([#413](https://github.com/Raketa02/Raketa/issues/413)), and the figures `theme.ts` publishes
+ * for it.
+ *
+ * **The mock's dot was measured and found to be `amber`.** `#87641A` is a degree off amber's hue
+ * and a step off its lightness, and it sits at 1,61 against the tag it is drawn in — the value the
+ * ticket itself calls invisible on `night`. So the hue and the saturation are the mock's and only
+ * the lightness is raised, to the step past the first that clears 1.4.11 on the tag's own ground.
+ * Both halves are computed here: the value that was refused, and the one drawn instead.
+ */
+describe('the arranging dot on night', () => {
+  /** What a dot inside an on-dark tag is actually adjacent to: the tag's white, over `night`. */
+  const onNight = (translucent: string) => {
+    const { rgb, alpha } = parse(translucent);
+    return composite(rgb, alpha, parse(theme.color.night).rgb);
+  };
+  const tagGround = onNight(theme.color.onDarkTag);
+  const fillGround = onNight(theme.color.onDarkFill);
+
+  it('clears 1.4.11 on the night card, on the tag it sits in, and on the icon door beside it', () => {
+    expect(ratio(theme.color.arranging, theme.color.night)).toBe(5.35);
+    expect(contrast(parse(theme.color.arranging).rgb, tagGround)).toBe(3.49);
+    expect(contrast(parse(theme.color.arranging).rgb, fillGround)).toBe(3.17);
+
+    expect(contrast(parse(theme.color.arranging).rgb, tagGround)).toBeGreaterThanOrEqual(GRAPHICAL);
+    expect(contrast(parse(theme.color.arranging).rgb, fillGround)).toBeGreaterThanOrEqual(
+      GRAPHICAL,
+    );
+  });
+
+  it('is the value the mock drew, lifted — and the mock’s own value would not have been seen', () => {
+    // Measured off `planning/1_planning_game_card1.png` at 1×, as the pixels read: #87641A.
+    const MOCK: Rgb = [135, 100, 26];
+    const hue = (value: string) => hueAngle(parse(value).rgb);
+
+    expect(contrast(MOCK, tagGround)).toBeLessThan(GRAPHICAL);
+    expect(contrast(MOCK, parse(theme.color.night).rgb)).toBeLessThan(GRAPHICAL);
+    // The same hue, so it is the mock's dot and not a colour chosen in its place.
+    expect(hueDistance(hue(theme.color.arranging), hueAngle(MOCK))).toBeLessThan(2);
+  });
+
+  it('is nobody else’s family: not coral’s, not volt’s, and not a fifth sport’s', () => {
+    const hue = (value: string) => hueAngle(parse(value).rgb);
+
+    expect(hueDistance(hue(theme.color.arranging), hue(theme.color.coral))).toBeGreaterThan(25);
+    expect(hueDistance(hue(theme.color.arranging), hue(theme.color.volt))).toBeGreaterThan(25);
+    expect(hueDistance(hue(theme.color.arranging), hue(theme.color.mint))).toBeGreaterThan(25);
   });
 });

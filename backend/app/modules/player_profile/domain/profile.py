@@ -7,12 +7,15 @@ the pull toward a sport dimension here is deliberate, and ADR-0090 depends on th
 cardinality: *does a Player profile exist* is a per-player question with a
 per-player answer, and it is what onboarding's second part is checkpointed on.
 
-**Creation is two events, not one.** ``PlayerProfileCreated`` carries the seven
-preferences; ``ProposalsOptInAnswered`` carries the consent. They are appended
-together, in one transaction, and a profile cannot be created without both —
-``create`` takes the opt-in as a required argument and there is no way to reach
-the created state with it absent. The split is what makes the consent history one
-sequence with no special first case.
+**Creation is two events, not one — and a third where the player wrote a
+line.** ``PlayerProfileCreated`` carries the seven preferences;
+``ProposalsOptInAnswered`` carries the consent. They are appended together, in
+one transaction, and a profile cannot be created without both — ``create`` takes
+the opt-in as a required argument and there is no way to reach the created state
+with it absent. The split is what makes the consent history one sequence with no
+special first case. ``IntroWritten`` follows them **only when there is a line**
+(``docs/adr/0170``): the intro is optional, a blank leaves nothing behind, and
+the creating event does not grow a field for it.
 
 **A preference transition that changes nothing records nothing.** Setting the
 radius to the value it already holds leaves the stream alone, which is what keeps
@@ -59,6 +62,8 @@ from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
+    IntroChanged,
+    IntroWritten,
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
@@ -71,6 +76,7 @@ from app.modules.player_profile.domain.gender import (
     Gender,
     GenderPreference,
 )
+from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
@@ -132,6 +138,11 @@ class PlayerProfile:
     #: requires one — but the field is optional because ``_empty`` exists before
     #: any event has been applied.
     proposals_opt_in: ProposalsOptIn | None
+    #: The line the player wrote about themselves, or ``None`` where they wrote
+    #: none (``docs/adr/0170``). **An absence and never an empty intro**: a
+    #: player who skipped has no line, and a stream with no ``IntroWritten``
+    #: folds to exactly that.
+    intro: Intro | None
     #: What the creating commit was made under. Read by the use case to tell a
     #: retry of that commit from a second, different one.
     idempotency_key: str
@@ -163,6 +174,7 @@ class PlayerProfile:
         profile = cls.__new__(cls)
         profile.version = 0
         profile.proposals_opt_in = None
+        profile.intro = None
         profile._events = EventRecorder()
         return profile
 
@@ -183,6 +195,7 @@ class PlayerProfile:
         consent_surface: ConsentSurface,
         idempotency_key: str,
         occurred_at: Instant,
+        intro: Intro | None = None,
     ) -> "PlayerProfile":
         """The one commit that ends onboarding's second part.
 
@@ -204,6 +217,11 @@ class PlayerProfile:
         ``ANY``, which is what *no constraint* already means. Requiring it is
         enforced by the type: there is no value of ``Gender`` that means
         *unanswered*, so there is no branch here to forget.
+
+        **``intro`` is optional and its absence records nothing.** It arrives
+        already fenced — ``Intro.written`` refused contact and the shape before
+        the commit reached here — and it is appended *after* the consent, so
+        the consent history keeps no special first case (``docs/adr/0170``).
         """
 
         ordered_photos = photo_order(photo_ids)
@@ -235,10 +253,21 @@ class PlayerProfile:
                 occurred_at=occurred_at,
             )
         )
+        if intro is not None:
+            # Only when there is a line. A blank leaves nothing behind, so a
+            # stream with no `IntroWritten` is the ordinary shape and not a
+            # profile with a gap in it.
+            profile._record_that(
+                IntroWritten(
+                    player_id=player_id, intro=intro.text, occurred_at=occurred_at
+                )
+            )
         return profile
 
     # ------------------------------------------------------------------
-    # Later changes, from the profile screen
+    # Later changes, from the profile screen — one unkeyed PUT per transition
+    # below: the You tab's (docs/adr/0179 §8), the Play screens' for the week
+    # and the radius, and the cold start's for the location (docs/adr/0174 §6)
     # ------------------------------------------------------------------
 
     def change_social_tags(
@@ -300,6 +329,30 @@ class PlayerProfile:
             SearchRadiusChanged(
                 player_id=self.player_id,
                 search_radius_km=radius.kilometres,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def change_intro(self, intro: Intro | None, *, occurred_at: Instant) -> None:
+        """Replace the line the player wrote — or withdraw it.
+
+        ``docs/adr/0179`` §6: the edit ADR-0170 §5 deferred to the day the
+        intro, the tags and the photos are edited together. The line arrives
+        already fenced — ``Intro.written`` refused contact and the shape before
+        it got here, exactly as it does for the commit — and ``None`` is the
+        withdrawal: recorded, and the profile folds to none.
+
+        A preference and not a consent, so the no-op rule holds on both sides
+        of the absence: the line already held records nothing, and withdrawing
+        a line that was never written records nothing either.
+        """
+
+        if intro == self.intro:
+            return
+        self._record_that(
+            IntroChanged(
+                player_id=self.player_id,
+                intro=None if intro is None else intro.text,
                 occurred_at=occurred_at,
             )
         )
@@ -431,6 +484,17 @@ class PlayerProfile:
             return
         if isinstance(event, GenderPreferenceChanged):
             self.gender_preference = GenderPreference(event.gender_preference)
+            self._touch(event.occurred_at)
+            return
+        if isinstance(event, IntroWritten):
+            # Recorded, never re-checked: the cap and the fence bound the write.
+            self.intro = Intro.recorded(event.intro)
+            self._touch(event.occurred_at)
+            return
+        if isinstance(event, IntroChanged):
+            # The latest of either event is the line; `None` is the withdrawal
+            # and folds to the absence a skipped step leaves.
+            self.intro = None if event.intro is None else Intro.recorded(event.intro)
             self._touch(event.occurred_at)
             return
         if isinstance(event, ProposalsOptInAnswered):

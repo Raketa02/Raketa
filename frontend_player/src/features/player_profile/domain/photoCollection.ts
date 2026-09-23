@@ -3,8 +3,8 @@
  *
  * **Photos are optional and the ceiling is three** — an empty collection is a complete
  * answer, and a player who adds none gets a generated court poster rather than an empty
- * box (`courtPosterFraming`). Both facts are the product's, not the layout's, which is why
- * they are here rather than in the screen that happens to draw three tiles.
+ * box (`shared/ui`'s `courtPosterFraming`). Both facts are the product's, not the layout's,
+ * which is why they are here rather than in the screen that happens to draw three tiles.
  *
  * ## The first photo is the profile photo, and that is the whole of it
  *
@@ -28,8 +28,9 @@
  * where they were and gives the player one thing to retry. That is the reason uploads are
  * one request per photo rather than one request carrying three.
  *
- * No renderer, no store, no wire type: the profile editor will hold the same three photos
- * under the same rules from a screen that looks nothing like the step that collects them.
+ * No renderer, no store, no wire type: the You tab's *Photos* holds the same three photos
+ * under the same rules from a screen with different chrome, seeded from the profile
+ * (`heldPhotos`) and writing on every change where the step derives a draft (ADR-0179 §2).
  */
 
 import type { AppError } from '@/shared/errors';
@@ -40,13 +41,16 @@ import type { AppError } from '@/shared/errors';
  * **It warns; it never refuses.** A `flagged` photo is stored, keeps its id and is
  * committed to the profile exactly like an `allowed` one — the ceiling, the order and
  * `uploadedPhotoIds` do not read this, and nothing here removes a photo because of it. The
- * only thing it changes is what the step says.
+ * only thing it changes is what a screen says.
  *
- * Two values because the wire has two, and the client is deliberately not given a third for
- * *the check did not run*: the backend answers `allowed` when its reviewer was unreachable,
- * because an outage of ours is not a fact about the player's photograph. So there is no
- * state here that means *we do not know*, and no sentence a screen would have to write for
- * one.
+ * Two values because the wire has two, and **three answers**
+ * ([ADR-0138](../../../../../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)):
+ * checked and passed, checked and flagged, and *nobody looked* — a photo that arrived while
+ * the reviewer could not be reached, or before the check existed. The third is spelled as
+ * the **absence** of one of these on `UploadedPhoto`, never as a value, because it is not a
+ * conclusion about the photograph; and it is not `allowed`, because the You tab's row says
+ * *profile photo on court* only of a photo the check passed, and a tick drawn on an absence
+ * would claim a check happened.
  */
 export type PhotoReview = 'allowed' | 'flagged';
 
@@ -79,16 +83,17 @@ export const PROFILE_PHOTO_ASPECT: readonly [number, number] = [3, 4];
 export const PHOTO_CEILING = 3;
 
 /**
- * What one finished upload came back with.
+ * What one finished upload came back with — and what the profile read serves per photo.
  *
  * A named shape rather than two fields spelled out in the arm below, because the wire
- * boundary builds exactly this and the workbench stores exactly this — and two spellings
- * of the same pair is the kind that drifts by one field.
+ * boundary builds exactly this from both routes and the workbench stores exactly this — and
+ * two spellings of the same pair is the kind that drifts by one field.
  */
 export interface UploadedPhoto {
-  /** The permanent id the commit carries. The signed URL beside it is not kept. */
+  /** The permanent id the commit and the photos write carry. The signed URL beside it is not kept. */
   readonly photoId: string;
-  readonly review: PhotoReview;
+  /** What the check concluded, or **absent** where nobody looked — see `PhotoReview`. */
+  readonly review?: PhotoReview;
 }
 
 /** Where one photo has got to on its way into the profile. */
@@ -107,26 +112,44 @@ export type PhotoUpload =
   | ({ readonly kind: 'uploaded' } & UploadedPhoto);
 
 /**
- * One photo, from the moment it is picked until the part ends.
+ * One photo, from the moment it is picked — or restored from the profile — until the
+ * workbench ends.
  *
  * `uri` is both what the tile draws and the photo's identity here. **The device's copy is
- * what is shown throughout**, including after the upload succeeds: the server hands back a
- * short-lived signed URL, and fetching one to redraw a picture already on the phone would
- * be a round trip to see something the player is looking at.
+ * what is shown throughout** for a picked picture, including after the upload succeeds: the
+ * server hands back a short-lived signed URL, and fetching one to redraw a picture already
+ * on the phone would be a round trip to see something the player is looking at. A photo the
+ * profile already held has no device copy, so its `uri` is that signed address (`heldPhotos`).
  */
 export interface ProfilePhoto {
   /**
-   * The local `file://` URI the picker gave.
+   * The local `file://` URI the picker gave, or the signed address of a photo restored from
+   * the profile.
    *
    * It is the key as well as the source. A picker copies the chosen picture into the app's
    * own storage, so two picks produce two URIs even for one photograph — and in the case
    * where a picker does hand back the same URI twice, the second copy of one picture is
-   * dropped, which is the outcome that screen wanted anyway.
+   * dropped, which is the outcome that screen wanted anyway. A signed address never equals a
+   * `file://` URI, so a restored photo and a fresh one cannot collide either.
    */
   readonly uri: string;
   /** What the platform said the bytes are, or `null` where it said nothing. */
   readonly mimeType: string | null;
   readonly upload: PhotoUpload;
+  /**
+   * The arrived photo this one took the place of, **until this one has arrived**.
+   *
+   * A replacement is a new picture in an old slot, and on the You tab the profile still holds
+   * the old picture there. A write sent while the new one is on its way — or after it failed
+   * — has to keep holding it in that slot rather than drop it: the player asked for a swap,
+   * not a removal, and the write ADR-0179 §2 names is on *an upload that landed*. So
+   * `replacePhoto` records what the slot stood for, `standingPhotos` reads it in place of the
+   * id the replacement does not have yet, and `recordUpload` forgets it the moment the
+   * replacement has an id of its own. Absent on a picked photo and on one restored from the
+   * profile; absent too where the replaced photo had itself not arrived, because there was
+   * nothing standing there.
+   */
+  readonly replacing?: UploadedPhoto;
 }
 
 /**
@@ -246,8 +269,15 @@ export function replacePhoto(
   arrival: PhotoArrival,
 ): readonly ProfilePhoto[] {
   const at = photos.findIndex((photo) => photo.uri === uri);
-  if (at === -1) return photos;
+  const replaced = photos[at];
+  if (replaced === undefined) return photos;
   if (photos.some((photo) => photo.uri === arrival.uri)) return photos;
+
+  // What the slot goes on standing for: the photo replaced if it had arrived, else whatever
+  // *it* was standing for — a second swap before the first landed still stands for the
+  // photo the profile holds there.
+  const standing =
+    replaced.upload.kind === 'uploaded' ? arrived(replaced.upload) : replaced.replacing;
 
   return photos.map((photo, index) =>
     index === at
@@ -255,6 +285,7 @@ export function replacePhoto(
           uri: arrival.uri,
           mimeType: arrival.mimeType,
           upload: { kind: 'uploading', progress: 0 } as const,
+          ...(standing === undefined ? {} : { replacing: standing }),
         }
       : photo,
   );
@@ -270,27 +301,103 @@ export function removePhoto(photos: readonly ProfilePhoto[], uri: string): reado
   return photos.filter((photo) => photo.uri !== uri);
 }
 
-/** Record where one photo's upload has got to, leaving the others alone. */
+/**
+ * Record where one photo's upload has got to, leaving the others alone.
+ *
+ * A photo that has arrived stands for itself: whatever its slot stood for meanwhile is
+ * forgotten with the id that makes it unnecessary.
+ */
 export function recordUpload(
   photos: readonly ProfilePhoto[],
   uri: string,
   upload: PhotoUpload,
 ): readonly ProfilePhoto[] {
-  return photos.map((photo) => (photo.uri === uri ? { ...photo, upload } : photo));
+  return photos.map((photo) => {
+    if (photo.uri !== uri) return photo;
+    if (upload.kind !== 'uploaded') return { ...photo, upload };
+    const { replacing: _stoodFor, ...own } = photo;
+    return { ...own, upload };
+  });
 }
 
 /**
- * The ids the profile commit would carry, in the player's order.
+ * The photos that arrived, as the pairs the server answered with, in the player's order.
  *
  * **Only the photos that arrived.** One still uploading has no id and one that failed has
- * nothing to name, so neither is in the draft — and a player who continues while a photo
- * is in flight commits the photos that made it rather than a placeholder that cannot be
- * resolved.
+ * nothing to name, so neither is here — and a player who continues while a photo is in
+ * flight commits the photos that made it rather than a placeholder that cannot be resolved.
+ *
+ * The pair rather than the id alone, for the You tab's write: `PUT /players/me/photos`
+ * answers with ids only, and the cache it is written into keeps a verdict beside each — so
+ * the write carries what the workbench holds and reads the ids off it.
  */
-export function uploadedPhotoIds(photos: readonly ProfilePhoto[]): readonly string[] {
+export function uploadedPhotos(photos: readonly ProfilePhoto[]): readonly UploadedPhoto[] {
   return photos.flatMap((photo) =>
-    photo.upload.kind === 'uploaded' ? [photo.upload.photoId] : [],
+    photo.upload.kind === 'uploaded' ? [arrived(photo.upload)] : [],
   );
+}
+
+/** The pair alone, out of the arm that carries it. */
+function arrived({ photoId, review }: UploadedPhoto): UploadedPhoto {
+  return { photoId, ...(review === undefined ? {} : { review }) };
+}
+
+/** The ids of a list of pairs, in its order — what every write of them carries. */
+export function photoIds(photos: readonly UploadedPhoto[]): readonly string[] {
+  return photos.map((photo) => photo.photoId);
+}
+
+/** The ids the profile commit would carry, in the player's order — `uploadedPhotos`, ids only. */
+export function uploadedPhotoIds(photos: readonly ProfilePhoto[]): readonly string[] {
+  return photoIds(uploadedPhotos(photos));
+}
+
+/**
+ * The photos the profile **should hold now**, in the player's order — what the You tab's
+ * write carries (ADR-0179 §2).
+ *
+ * `uploadedPhotos` with one difference, and it is the whole of `replacing`: a slot whose
+ * replacement has not arrived — on its way, or failed — still stands for the photo the
+ * profile holds there, so a write sent meanwhile keeps it in place rather than dropping it.
+ * A picked photo still on its way stands for nothing, exactly as it does in the commit.
+ */
+export function standingPhotos(photos: readonly ProfilePhoto[]): readonly UploadedPhoto[] {
+  return photos.flatMap((photo) => {
+    if (photo.upload.kind === 'uploaded') return [arrived(photo.upload)];
+    return photo.replacing === undefined ? [] : [photo.replacing];
+  });
+}
+
+/**
+ * Whether two lists of ids are the same answer — **by position**, because the order is the
+ * answer: the first is the profile photo, and a promotion that changed nothing else is a
+ * change. What the You tab compares before sending a write.
+ */
+export function samePhotoIds(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id, at) => id === b[at]);
+}
+
+/**
+ * The workbench, seeded from the photos a profile already holds
+ * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
+ * §2) — the workbench's second caller.
+ *
+ * Each arrives as `uploaded`, with the id and the verdict the read served, exactly as an
+ * upload's answer would have left it: so every rule in this file reads a restored tile and a
+ * fresh one alike, and the You tab's row is the step's row. The `uri` is the **signed
+ * address** `GET /photos/{id}` answered — it is what the tile draws and, as for a picked
+ * picture, its identity here; it is short-lived, and nothing stores it past the screen. No
+ * media type, because a held photo is never sent again.
+ */
+export function heldPhotos(
+  held: readonly UploadedPhoto[],
+  addressOf: (photoId: string) => string,
+): readonly ProfilePhoto[] {
+  return held.map((photo) => ({
+    uri: addressOf(photo.photoId),
+    mimeType: null,
+    upload: { kind: 'uploaded', ...photo },
+  }));
 }
 
 /**

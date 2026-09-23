@@ -1,6 +1,10 @@
 /**
  * The note, per design-system 5.4 — a card with a 3pt left bar carrying the semantic.
  *
+ * The 3 is `size.semanticBar` rather than a literal, because 5.4 as amended draws that bar a
+ * second way: the challenge row wears it full height beside its content without becoming a
+ * note. Two drawings of one number is what a token is for.
+ *
  * Notes carry the reasoning, and they are the one place in this app a paragraph is
  * acceptable.
  *
@@ -52,7 +56,7 @@ export function Note({ children, variant = 'base', title, accessibilityRole }: N
 const s = StyleSheet.create({
   note: {
     borderWidth: 1,
-    borderLeftWidth: 3,
+    borderLeftWidth: theme.size.semanticBar,
     borderRadius: theme.radius.note,
     padding: theme.space.md,
     gap: theme.space.xxs,

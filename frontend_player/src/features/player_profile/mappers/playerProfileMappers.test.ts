@@ -12,6 +12,7 @@ import type { ProfileCommit } from '../domain/profileCommit';
 
 import {
   toCommitRequest,
+  toPhotoAddress,
   toPlayerProfileSurface,
   toProfileOptions,
   toUploadedPhoto,
@@ -120,7 +121,7 @@ describe('the served radius bounds', () => {
 describe('the body that ends the part', () => {
   /**
    * A whole part's worth of answers: two tags, two photos, two cells, an area, an answer
-   * about the player and a yes.
+   * about the player and a yes — and no intro, which is what most parts will carry.
    */
   const COMMIT: ProfileCommit = {
     socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
@@ -136,7 +137,7 @@ describe('the body that ends the part', () => {
     genderPreference: 'any',
   };
 
-  it('carries every answer the seven steps collected, in one body', () => {
+  it('carries every answer the eight steps collected, in one body', () => {
     expect(toCommitRequest(COMMIT)).toEqual({
       social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
       photo_ids: ['photo-a', 'photo-b'],
@@ -150,6 +151,15 @@ describe('the body that ends the part', () => {
       gender: 'WOMAN',
       gender_preference: 'ANY',
     });
+  });
+
+  it('carries the intro where there is one, and leaves the field out where there is none', () => {
+    // Out, not empty: the wire reads `null`, whitespace and an absence as the same answer,
+    // and the body sends the one that cannot be read as a line somebody wrote.
+    const written = toCommitRequest({ ...COMMIT, intro: 'Will travel for a hard game.' });
+
+    expect(written.intro).toBe('Will travel for a hard game.');
+    expect(toCommitRequest(COMMIT)).not.toHaveProperty('intro');
   });
 
   it('keeps the photo order the player arranged, because the first one leads', () => {
@@ -242,16 +252,17 @@ describe('what an upload answered', () => {
     expect(toUploadedPhoto(answered('allowed')).review).toBe('allowed');
   });
 
-  it('warns about nothing when the response carried no verdict at all', () => {
-    // `GET /photos/{id}` carries none, and so does any backend older than the one that
-    // added the field. `null` is explicitly not `allowed` on the wire so that this
-    // decision is made here — and *nobody said anything* is not a reason to tell a player
-    // their photograph looks wrong.
-    expect(toUploadedPhoto(answered(null)).review).toBe('allowed');
-    expect(toUploadedPhoto(answered(undefined)).review).toBe('allowed');
+  it('carries no verdict at all when the response carried none — nobody looked', () => {
+    // The reviewer could not be asked, or a backend older than the one that added the
+    // field. `null` is explicitly not `allowed` on the wire so that this decision is made
+    // here: *nobody said anything* is not a reason to tell a player their photograph looks
+    // wrong, and it is not a reason to say it passed either (ADR-0138) — the You tab's row
+    // says *on court* only of a photo the check passed. So the pair is the id alone.
+    expect(toUploadedPhoto(answered(null))).toEqual({ photoId: 'photo-1' });
+    expect(toUploadedPhoto(answered(undefined))).toEqual({ photoId: 'photo-1' });
   });
 
-  it('warns about nothing on a verdict this build has no sentence for', () => {
+  it('carries no verdict on one this build has no sentence for', () => {
     // The phone that has not been updated in eight months, meeting a decision minted
     // after it shipped. A warning the app cannot phrase is one it must not invent — the
     // same answer a tag with no label gets, arrived at the same way.
@@ -263,7 +274,24 @@ describe('what an upload answered', () => {
       review: 'quarantined',
     } as unknown as Wire['PhotoResponse'];
 
-    expect(toUploadedPhoto(fromTheFuture).review).toBe('allowed');
+    expect(toUploadedPhoto(fromTheFuture)).toEqual({ photoId: 'photo-1' });
+  });
+});
+
+describe('where a held photo is read from', () => {
+  it('is the signed address, and nothing else out of the answer', () => {
+    // `GET /photos/{id}` answers the same shape as the upload; what the You tab wants of it
+    // is the one thing the upload's mapping refuses to carry — the address a tile draws —
+    // because a restored photo has no device copy. The expiry stays behind: nothing stores
+    // the address past the screen.
+    expect(
+      toPhotoAddress({
+        photo_id: 'photo-1',
+        url: 'https://store.test/photo-1?signature=whatever',
+        expires_at: '2026-08-25T12:00:00Z',
+        review: null,
+      }),
+    ).toBe('https://store.test/photo-1?signature=whatever');
   });
 });
 
@@ -295,19 +323,103 @@ describe('the week, in the two spellings that exist', () => {
   });
 });
 
-describe('the profile surface Play reads', () => {
+describe('the profile surface Play and You read', () => {
   const SERVED_SURFACE: Wire['PlayerProfileReadResponse'] = {
     availability: [{ day: 2, part: 'EVENING' }],
     search_radius_km: 12,
     play_intents: { PADEL: 'FOR_FUN', TENNIS: 'NO_PREFERENCE' },
+    social_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
+    photos: [{ photo_id: 'photo-1', review: 'allowed' }, { photo_id: 'photo-2' }],
+    intro: 'Will travel for a hard game.',
+    proposals_opt_in: {
+      accepted: true,
+      copy_version: 'proposals-opt-in.v3',
+      surface: 'ONBOARDING',
+      answered_at: '2026-08-12T10:00:00Z',
+    },
+    gender: 'MAN',
+    gender_preference: 'ANY',
   };
 
-  it('carries the three facts and nothing else', () => {
+  it('carries every fact the tab draws — the three Play reads, the three social ones, and the three that gate the matcher', () => {
     expect(toPlayerProfileSurface(SERVED_SURFACE)).toEqual({
       week: [{ day: 2, part: 'evening' }],
       searchRadiusKm: 12,
       playIntents: { padel: 'FOR_FUN', tennis: 'NO_PREFERENCE' },
+      socialTagIds: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
+      photos: [{ photoId: 'photo-1', review: 'allowed' }, { photoId: 'photo-2' }],
+      intro: 'Will travel for a hard game.',
+      proposalsOptIn: {
+        accepted: true,
+        copyVersion: 'proposals-opt-in.v3',
+        surface: 'onboarding',
+        answeredAt: '2026-08-12T10:00:00Z',
+      },
+      gender: 'man',
+      genderPreference: 'any',
     });
+  });
+
+  it('reads the owner’s own gender and preference in the app’s spellings — the one shape that carries them', () => {
+    // ADR-0179 §4: the owner reads their own answer on the route scoped to `me`, so the screen
+    // that asks *who should we match you with* can open on the answer already given.
+    const narrowed = toPlayerProfileSurface({
+      ...SERVED_SURFACE,
+      gender: 'PREFER_NOT_TO_SAY',
+      gender_preference: 'WOMEN_ONLY',
+    });
+
+    expect(narrowed.gender).toBe('prefer-not-to-say');
+    expect(narrowed.genderPreference).toBe('women-only');
+  });
+
+  it('leaves the gender absent on a profile committed before the question existed — never prefer not to say', () => {
+    const { gender: _served, ...neverAsked } = SERVED_SURFACE;
+
+    expect(toPlayerProfileSurface(neverAsked)).not.toHaveProperty('gender');
+  });
+
+  it('reads the standing answer with where it was given, in the app’s spelling of the surface', () => {
+    const fromTheProfile = toPlayerProfileSurface({
+      ...SERVED_SURFACE,
+      proposals_opt_in: {
+        accepted: false,
+        copy_version: 'proposals-opt-in.v3',
+        surface: 'PROFILE',
+        answered_at: '2026-09-18T08:30:00Z',
+      },
+    });
+
+    expect(fromTheProfile.proposalsOptIn).toEqual({
+      accepted: false,
+      copyVersion: 'proposals-opt-in.v3',
+      surface: 'profile',
+      answeredAt: '2026-09-18T08:30:00Z',
+    });
+  });
+
+  it('leaves the intro absent where none was written, never an empty string', () => {
+    const { intro: _served, ...noIntro } = SERVED_SURFACE;
+
+    expect(toPlayerProfileSurface(noIntro)).not.toHaveProperty('intro');
+  });
+
+  it('reads no photos as a real answer — the poster stands in', () => {
+    expect(toPlayerProfileSurface({ ...SERVED_SURFACE, photos: [] }).photos).toEqual([]);
+  });
+
+  it('drops a tag this build has no words for, keeping the rest in the served order', () => {
+    // The same answer the options mapping gives: a chip with no words on it is dropped
+    // rather than drawn, and the picker on You still opens on the tags it can name.
+    const fromTheFuture = {
+      ...SERVED_SURFACE,
+      social_tags: ['STAYS_FOR_A_DRINK', 'BRINGS_THE_BALLS', 'PLAYS_TO_WIN'],
+    } as unknown as Wire['PlayerProfileReadResponse'];
+
+    expect(toPlayerProfileSurface(fromTheFuture).socialTagIds).toEqual([
+      'STAYS_FOR_A_DRINK',
+      'PLAYS_TO_WIN',
+    ]);
   });
 
   it('reads a cleared week as an answer rather than as a missing one', () => {

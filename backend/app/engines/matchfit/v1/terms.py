@@ -30,7 +30,7 @@ value is not in the process: ``ScorableCandidate`` has no field to read.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import final
+from typing import Callable, final
 
 from app.engines.matchfit.core import (
     DegradedReason,
@@ -274,16 +274,19 @@ def reliability(
     """What the record says about turning up — six strands, read separately.
 
     **The six are never blended into one number before they get here.** The two
-    mode vectors order people oppositely — a candidate strong on *confirms
+    mode vectors order people oppositely — a candidate strong on *answers about
     results* and weak on *sportsmanship* wins a counted game and loses a
     friendly — and a single blended score cannot express that. The decomposition
     is justified for exactly as long as such a pair exists.
 
     **Two standing-down powers, and they bind at different scopes.** A strand
-    below the observation bar stands down **alone** and the survivors renormalise
-    inside the term, because one no-show out of one game is not thirty-five out
-    of thirty-eight. If the most recent observation across the whole record is
-    past the horizon, the **term** stands down: the strands share one cause —
+    below **its own** observation bar stands down **alone** and the survivors
+    renormalise inside the term, because one no-show out of one game is not
+    thirty-five out of thirty-eight — and the bar is per strand rather than one
+    number over all of them, so a strand that needs more evidence than the rest
+    can ask for it without moving what the platform demands of a newcomer
+    (``docs/adr/0160``). If the most recent observation across the whole record
+    is past the horizon, the **term** stands down: the strands share one cause —
     *this player stopped playing* — so an old record is old all the way through.
 
     **The matcher applies no decay of its own.** The score is a memory and fades
@@ -304,7 +307,9 @@ def reliability(
     # evidence reads the same way whatever order a provider filled it in.
     for strand in ReliabilityStrand:
         observation = record.strands.get(strand)
-        if observation is None or observation.observations < rules.min_observations:
+        if observation is None:
+            continue
+        if observation.observations < rules.min_observations[strand]:
             continue
         value = _strand_value(observation)
         readings.append(StrandReading(strand=strand, value=value))
@@ -445,6 +450,8 @@ def read_terms(
     candidate: ScorableCandidate,
     ruleset: Ruleset,
     seat: Seat,
+    *,
+    stood_down: frozenset[Term] = frozenset(),
 ) -> tuple[TermOutcome, ...]:
     """Every term's outcome, **in ``Term``'s own order**.
 
@@ -459,18 +466,45 @@ def read_terms(
     it replaced could not be asked: a term that stood down names itself, so the
     one outcome that used to pass this unexamined is the one the degraded list is
     read positionally against.
+
+    ``stood_down`` is the terms **the search** declines to read, for every
+    pairing. Each is not read at all — not read and discarded, which would let a
+    term's own invariant fire about a fact nobody asked for — and stands down
+    under a code that is neither side's gap, because on this pairing neither
+    side's answer was the reason (``docs/adr/0169`` §2). The default is the empty
+    set, so every pinned pairing is scored exactly as before.
     """
 
     mode = ruleset.modes[searcher.mode]
-    readings: tuple[TermOutcome, ...] = (
-        level_fit(searcher, candidate, mode),
-        predicted_balance(searcher, candidate, ruleset.balance),
-        intent_alignment(searcher, candidate, ruleset.intent),
-        reliability(candidate, mode, ruleset.reliability),
-        availability_overlap(searcher, candidate),
-        playing_style(searcher, candidate, seat, ruleset.tags),
-        distance(searcher, candidate, ruleset.distance),
-        social_vibe(searcher, candidate, seat, ruleset.tags),
+    # Each term behind a thunk, so a term the search stands down is **never
+    # called**: its own invariants are about a question nobody asked here.
+    reads: tuple[tuple[Term, Callable[[], TermOutcome]], ...] = (
+        (Term.LEVEL_FIT, lambda: level_fit(searcher, candidate, mode)),
+        (
+            Term.PREDICTED_BALANCE,
+            lambda: predicted_balance(searcher, candidate, ruleset.balance),
+        ),
+        (
+            Term.INTENT_ALIGNMENT,
+            lambda: intent_alignment(searcher, candidate, ruleset.intent),
+        ),
+        (Term.RELIABILITY, lambda: reliability(candidate, mode, ruleset.reliability)),
+        (Term.AVAILABILITY_OVERLAP, lambda: availability_overlap(searcher, candidate)),
+        (
+            Term.PLAYING_STYLE,
+            lambda: playing_style(searcher, candidate, seat, ruleset.tags),
+        ),
+        (Term.DISTANCE, lambda: distance(searcher, candidate, ruleset.distance)),
+        (
+            Term.SOCIAL_VIBE,
+            lambda: social_vibe(searcher, candidate, seat, ruleset.tags),
+        ),
+    )
+    readings: tuple[TermOutcome, ...] = tuple(
+        StoodDown(term=term, reason=DegradedReason.NOT_READ_ON_THIS_SURFACE)
+        if term in stood_down
+        else read()
+        for term, read in reads
     )
     invariant(
         len(readings) == len(Term),
