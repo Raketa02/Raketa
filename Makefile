@@ -8,7 +8,7 @@
         test-hooks test-drift contract-freshness test-contract-freshness \
         gen-judged-pairings judged-pairings \
         test-judged-pairings gen-ruleset-diff ruleset-diff test-ruleset-diff \
-        poetry-pin test-poetry-pin taskdef test-taskdef \
+        poetry-pin test-poetry-pin taskdef test-taskdef ci-ok test-ci-ok \
         afk-install afk-build afk
 
 help:              ## list targets
@@ -129,6 +129,17 @@ taskdef:           ## verify backend/deploy/ecs/taskdef.json agrees with the app
 
 test-taskdef:      ## verify both of the task-definition check's rules still fire
 	bash .github/scripts/test-taskdef.sh
+
+# CI is a dozen parallel jobs behind one summary, `ci-ok` (docs/adr/0181 §4), and
+# the summary is only worth reading if nothing under it can fail unseen. Its
+# verdict needs a real run's `needs` context, so what runs here is the half a
+# workflow edit can break: every job reaches ci-ok, and ci-ok runs `if: always()`.
+# Cross-app because the workflow gates both apps.
+ci-ok:             ## verify ci-ok needs every job in ci.yml and runs whatever they did
+	bash .github/scripts/check-ci-ok.sh wiring
+
+test-ci-ok:        ## verify ci-ok's verdict and wiring checks still fire
+	bash .github/scripts/test-ci-ok.sh
 
 # ----------------------------------------------------------------------------
 # AFK agent loop (sandbuket). See tools/afk/README.md.

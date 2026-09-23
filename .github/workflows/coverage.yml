@@ -1,0 +1,57 @@
+name: Coverage
+
+# **Coverage is measured here, and on no pull request** (ADR-0181 §3). It makes
+# the suite 2.4× slower, and nothing gates on it, so it runs nightly, on every
+# push to main, and by hand — and keeps the XML report as an artifact. A drop is
+# visible here and not in the pull request that caused it; that is the price.
+#
+# Not part of ci.yml, so ci-ok never waits on it: it is a measurement, not a
+# gate. Adding a threshold is a separate decision, and whoever makes it should
+# know that a threshold checked on every push brings the 2.4× back onto every push.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Backend — coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # The same database the tests job gets, because the suite is the same suite.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: raketa
+          POSTGRES_USER: raketa_user
+          POSTGRES_PASSWORD: raketa_pwd
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U raketa_user -d raketa"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
+      - name: Coverage
+        env:
+          WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
+          EVENT_TEST_DATABASE_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
+          DB_SSL_MODE: disable
+          JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
+        run: make coverage
+      # Kept even when a test failed: the report of a red run is still a report.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-xml
+          path: backend/coverage.xml
+          if-no-files-found: error

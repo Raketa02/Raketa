@@ -3,6 +3,29 @@ name: CI
 # Each app is gated independently and only when it changed — a Next.js edit
 # should not re-run the backend's Postgres suite. The guardrail hooks are
 # checked on every run because they protect the whole repo.
+#
+# **Tiers, in parallel, behind one summary** (ADR-0181 §4). Inside each app the
+# static checks, the tests, the generated-artifact checks and the "still fires"
+# suites all start the moment `changes` answers, so a typo answers in a minute
+# or two and never waits on the tests, and the tests never wait on it:
+#
+#   backend   static · tests · generated artifacts · meta (two jobs)
+#   player    static · tests (three shards) · the deck · meta
+#   always    the guardrail hooks · the ruleset release-report block
+#
+# `ci-ok` needs every one of them, and is the one status to read: red when any
+# job failed or was cancelled, green when each succeeded or was skipped because
+# its app did not change. A job added here and not to ci-ok's `needs` turns
+# ci-ok red on the pull request that adds it (`make ci-ok`).
+#
+# Every test runs on every push that reaches an app (ADR-0181 §1): the filters
+# below decide whether an app changed, never which of its tests matter. Coverage
+# is not measured here — coverage.yml measures it nightly and on main (§3).
+#
+# **The runner is 2 vCPU / 8 GB** — a private repository's standard
+# `ubuntu-latest` (§7), not the 16 GB a public one gets. Worker counts and heap
+# limits below are sized from that, and the player's test jobs record the peak
+# they reached (.github/scripts/memory-peak.sh) on the run's summary page.
 on:
   pull_request:
   push:
@@ -17,6 +40,15 @@ permissions:
   # behind it, which reads as a green run that tested nothing. It went unnoticed
   # until the first pull request, because pushes never take the API path.
   pull-requests: read
+
+# A newer push to a pull request makes the run testing the older one worthless,
+# so it is cancelled. Anything else — a push to main or release, a manual run —
+# is never cancelled and never queued behind another run: its group is its own
+# run id, which nothing else shares. (A shared group with cancel-in-progress off
+# would still let GitHub drop a *pending* run for a newer one.)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
@@ -46,6 +78,9 @@ jobs:
               - 'backend/**'
               - '.github/scripts/**'
               - '.github/workflows/ci.yml'
+              # Every backend job starts from this action, so a change to it is
+              # a change to how the backend is built.
+              - '.github/actions/setup-backend/**'
               # The judged-pairings tables live in the specs and are generated
               # from the backend's engine. Without these the drift check is
               # dormant in precisely the pull request that hand-edits one.
@@ -69,6 +104,7 @@ jobs:
               - 'backend/openapi.player.json'
               - '.github/scripts/**'
               - '.github/workflows/ci.yml'
+              - '.github/actions/setup-player/**'
 
       # The frontend ships as architecture + config and may not have been
       # installed yet, so there may be no lockfile to build from. Gate its job on
@@ -120,8 +156,46 @@ jobs:
       - name: Verify ownership + bash guards still match
         run: bash .claude/hooks/test-hooks.sh
 
-  backend:
-    name: Backend — lint & test
+  # ==========================================================================
+  # Backend — four tiers, five jobs, all started together. Each one checks out,
+  # restores the virtualenv from a cache keyed on poetry.lock, and runs one tier.
+  # ==========================================================================
+
+  backend-static:
+    name: Backend — static (ruff, import boundaries, mypy, Poetry pin)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      # Before the pin is used, not after: the point is to be told the pinned
+      # Poetry cannot read the lock instead of watching it warn and carry on.
+      # Runs from the workspace root because the pins it compares live outside
+      # backend/ too — this job's working-directory is backend/.
+      - name: Poetry pin drift
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/check-poetry-pin-drift.sh
+      - uses: ./.github/actions/setup-backend
+      - name: Lint
+        run: make lint
+      - name: Import boundaries
+        run: make lint-imports
+      # `make check` has run mypy since long before CI did, and CI did not — so
+      # the typecheck was a local courtesy, and the strict override
+      # pyproject.toml scopes to the kernel and the engines would have been
+      # enforced nowhere. A gate the pipeline does not run is not a gate.
+      - name: Typecheck
+        run: make typecheck
+
+  # The whole suite, in parallel on the runner's two cores (`make test` is
+  # `-n auto --dist worksteal`), and without coverage (ADR-0181 §3). Postgres
+  # runs here and only here, because one test uses it. Splitting the suite across
+  # runners is #489; until then this is the job the run waits on.
+  backend-tests:
+    name: Backend — tests
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
@@ -142,39 +216,26 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      # Before the pin is used, not after: the point is to be told the pinned
-      # Poetry cannot read the lock instead of watching it warn and carry on.
-      # Runs from the workspace root because the pins it compares live outside
-      # backend/ too — this job's working-directory is backend/.
-      - name: Poetry pin drift
-        working-directory: ${{ github.workspace }}
-        run: bash .github/scripts/check-poetry-pin-drift.sh
-      - name: Install poetry
-        run: pip install poetry==2.1.3
-      - name: Install deps
-        run: |
-          poetry config virtualenvs.create false
-          poetry install --no-interaction --no-root
-      - name: Lint
-        run: poetry run ruff check .
-      - name: Import boundaries
-        run: poetry run lint-imports
-      # `make check` has run mypy since long before this step existed, and CI did
-      # not — so the typecheck was a local courtesy, and the strict override
-      # pyproject.toml scopes to the kernel and the engines would have been
-      # enforced nowhere. A gate the pipeline does not run is not a gate.
-      - name: Typecheck
-        run: poetry run mypy app scripts
+      - uses: ./.github/actions/setup-backend
       - name: Test
         env:
           WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           EVENT_TEST_DATABASE_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
-        run: poetry run pytest tests --cov=app --cov-report=xml -q
+        run: bash ../.github/scripts/memory-peak.sh "backend tests" make test
+
+  # Every committed artifact the backend generates, regenerated and compared.
+  # They read the tree and write nothing that outlives their own step, so they
+  # need no database and share one job.
+  backend-artifacts:
+    name: Backend — generated artifacts (contract, judged pairings, ruleset diff, taskdef)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
       # Every emitted OpenAPI document, re-emitted and diffed. The dev console's
       # contract has no client and no codegen, so `check-contract-drift.sh` has
       # no purchase on it and **freshness** is the analogue (#256): regenerate
@@ -183,14 +244,11 @@ jobs:
       # invisible to the drift check, which regenerates the client's types from
       # it and finds them in perfect agreement.
       - name: Contract freshness
-        working-directory: ${{ github.workspace }}
         run: bash .github/scripts/check-contract-freshness.sh
       # The six judged pairings, re-derived against the live ruleset: the tables
       # in the specs must reproduce, and QUALITY_FLOOR must still sit inside
-      # max(Fit | not shown) < floor <= min(Fit | shown). After the tests,
-      # because it regenerates files and a failing suite is the cheaper signal.
+      # max(Fit | not shown) < floor <= min(Fit | shown).
       - name: Judged pairings
-        working-directory: ${{ github.workspace }}
         run: bash .github/scripts/check-judged-pairings.sh
       # The ruleset diff: the synthetic corpus, regenerated under two different
       # PYTHONHASHSEEDs and compared against the committed answers. **Shipping a
@@ -199,7 +257,6 @@ jobs:
       # step prints is the diff the pull request has to argue for. It doubles as
       # a whole-pipeline determinism assertion, which is why the seed varies.
       - name: Ruleset diff
-        working-directory: ${{ github.workspace }}
         run: bash .github/scripts/check-ruleset-diff.sh
       # The deployment artifact, exercised against the application rather than
       # described. Only `local` runs, so nothing else in this pipeline ever
@@ -210,36 +267,58 @@ jobs:
       # presence and deadlines, never the values behind the secret ARNs, reads
       # nothing from AWS, and needs no credentials.
       - name: Task definition agrees with the app
-        working-directory: ${{ github.workspace }}
         run: bash .github/scripts/check-taskdef.sh
-      # Last, and for the reason test-hooks.sh and test-contract-drift.sh exist:
-      # the three purity gates above were all added to a tree that already
-      # satisfied them, so none of them has ever been seen to fail. This drives
-      # each one against a deliberately impure tree and asserts it goes red.
-      - name: Purity gates still fire
-        run: bash scripts/test-purity-gates.sh
+
+  # **The "still fires" suites, over two jobs.** Each drives a gate above against
+  # a deliberately broken tree and asserts it goes red — the reason
+  # test-hooks.sh and test-contract-drift.sh exist: a gate added to a tree that
+  # already satisfied it has never been seen to fail. Every one of them edits the
+  # checkout and restores it on exit, so inside a job they run one after another.
+  #
+  # The split is by measured time, not by meaning: 84 s and 93 s of steps in the
+  # last serial run (35829988150), against three minutes for the six in a row.
+  backend-meta-1:
+    name: Backend — still fires (Poetry pin, contract freshness, purity gates)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
       - name: Poetry pin drift check still fires
-        working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-poetry-pin-drift.sh
       # It hand-edits each emitted document and then moves a route's summary
       # without regenerating, and asserts the check goes red for each. Both
       # documents are driven: a suite that only broke the player one would leave
       # the document the check was added for unexercised.
       - name: Contract-freshness check still fires
-        working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-contract-freshness.sh
+      # The three purity gates — the import contracts, the kernel walk and strict
+      # mypy — each driven against probe modules it writes into backend/app/ and
+      # deletes on exit. **Last in its job**: nothing after it may read a tree a
+      # probe could still be sitting in.
+      - name: Purity gates still fire
+        working-directory: backend
+        run: bash scripts/test-purity-gates.sh
+
+  backend-meta-2:
+    name: Backend — still fires (judged pairings, ruleset diff, taskdef)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
       # It perturbs the fixture and the two documents in the workspace and
       # restores them. Both halves are driven: a table nobody regenerated, and a
       # floor that has left its judged bound from either side.
       - name: Judged-pairings check still fires
-        working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-judged-pairings.sh
       # It perturbs an artifact, then the live ruleset's quality floor, and
       # asserts the check goes red for each — including that a floor change is
       # classified weight-only, which is what keeps its owner off shadow
       # scoring for a change the recorded corpus can answer exactly.
       - name: Ruleset-diff check still fires
-        working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-ruleset-diff.sh
       # It drops each variable from the task definition in turn, moves the kill
       # deadline, and then — the two cases the design rests on — perturbs the
@@ -247,11 +326,17 @@ jobs:
       # raised past the deadline. A check that had copied out its own list or its
       # own number would stay green through either.
       - name: Task-definition check still fires
-        working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-taskdef.sh
 
-  player:
-    name: Player app — lint, typecheck, test
+  # ==========================================================================
+  # Player app — four tiers, six jobs. Each is behind the bootstrap gate, and
+  # each restores the pnpm store from a cache keyed on pnpm-lock.yaml.
+  # ==========================================================================
+
+  # Every static check `pnpm check` runs locally — CI skipped `format:check` and
+  # `test:labels` until #488 — plus contract drift, which `pnpm check` does not run.
+  player-static:
+    name: Player — static (eslint, prettier, tsc, contract drift, label rule)
     needs: changes
     if: needs.changes.outputs.player == 'true' && needs.changes.outputs.player_ready == 'true'
     runs-on: ubuntu-latest
@@ -260,16 +345,7 @@ jobs:
         working-directory: frontend_player
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: frontend_player/pnpm-lock.yaml
-      - name: Install deps
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-player
       # Runs on a backend-only pull request too — the `player` filter above
       # watches backend/openapi.player.json. Regenerating with the app's own
       # pinned openapi-typescript, before typecheck, because the generated types
@@ -279,46 +355,121 @@ jobs:
         run: bash .github/scripts/check-contract-drift.sh frontend_player
       - name: Lint
         run: pnpm lint
+      - name: Format
+        run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
-      # **The suite runs in two steps, because one file out of 294 needs ten times
-      # the memory of any other and nothing else should pay for it.** Measured
-      # with `--logHeapUsage` over the whole run: `deck.test.tsx` peaks at
-      # 5389 MB and the next heaviest suite at 541 MB. It mounts the entire
-      # router tree 78 times in one process, through the radar's
-      # gesture-and-animation pane.
-      #
-      # A `ubuntu-latest` runner has 16 GB but Node sizes its old space from that
-      # at roughly 4 GB, so sharing a run with the deck killed the job twice, in
-      # two different ways, and **neither read as a test failure**:
-      #
-      #   · heap raised, nothing else — the deck's worker aborted with SIGABRT
-      #     (exit 134) with every assertion in it passing;
-      #   · heap raised for two capped workers — a jest worker is reused across
-      #     suites and gives nothing back, so one crawled upward through ~147 of
-      #     them while the other held the deck, and together they starved the
-      #     runner agent: 56 minutes, then "lost communication with the server";
-      #   · heap raised with a recycle rule — bounded, but the 8 GB heap's major
-      #     GCs and the worker restarts stalled the event loop, and seven
-      #     timing-sensitive router suites blew their 5000 ms test budgets.
-      #
-      # So the deck is taken out of the shared run instead of the shared run
-      # being bent around it. **Everything else keeps the runner's own
-      # parallelism and Node's own heap** — 293 suites that have never needed
-      # either lifted (4184 tests, 1m40s) — and **the deck gets one process to
-      # itself**, where `--runInBand` means no worker to restart and no second
-      # peak to meet (80 tests, 31s). `testMatch` is confined to `src/`, so
-      # naming `/node_modules/` alongside the deck only restores the default
-      # this flag would otherwise replace.
-      #
-      # The deck's appetite is the thing to fix. This is what stops it failing a
-      # build while it is still there.
+      # Every Pressable under Play carries an accessibilityLabel or hides itself,
+      # driven through the real linter at code that breaks the rule, and the
+      # baseline colour and fontWeight bans the same block re-declares.
+      - name: The Play label rule still fires
+        run: pnpm test:labels
+
+  # **Every suite but the deck, in three shards of two workers each.** Jest runs
+  # one fewer worker than the machine has cores, so on this runner it ran one,
+  # and 293 suites took six minutes. Two workers per shard is a claim about 8 GB,
+  # which is why the run records its peak: if it ever starves the runner, the
+  # answer is one worker and a fourth shard — never a re-run.
+  #
+  # The shard is derived from the matrix, never typed beside it: `job-index` and
+  # `job-total` always name 1/N … N/N of the same N, so adding a shard is adding
+  # an entry to the list, and no suite can fall between two numbers that
+  # disagree. Jest partitions the suites that survive the ignore pattern, so the
+  # deck is in no shard.
+  player-tests:
+    name: Player — tests ${{ matrix.shard }}/${{ strategy.job-total }}
+    needs: changes
+    if: needs.changes.outputs.player == 'true' && needs.changes.outputs.player_ready == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      # Every shard runs to the end, so one red shard shows every failure, not
+      # the first one's.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: frontend_player
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-player
+        id: setup
+        with:
+          jest-cache: shard-${{ matrix.shard }}-of-${{ strategy.job-total }}
       - name: Test
-        run: pnpm test -- --testPathIgnorePatterns "/node_modules/" "src/features/play/components/deck\.test\.tsx"
+        env:
+          SHARD: ${{ strategy.job-index }}
+          SHARDS: ${{ strategy.job-total }}
+          JEST_CACHE: ${{ steps.setup.outputs.jest-cache-dir }}
+        run: >-
+          bash ../.github/scripts/memory-peak.sh "Jest shard $((SHARD + 1))/$SHARDS"
+          pnpm test -- --shard="$((SHARD + 1))/$SHARDS" --maxWorkers=2 --cacheDirectory "$JEST_CACHE"
+          --testPathIgnorePatterns "/node_modules/" "src/features/play/components/deck\.test\.tsx"
+
+  # **The deck runs in a job and a process of its own, because one file out of
+  # 298 needs ten times the memory of any other and nothing else should pay for
+  # it.** Measured with `--logHeapUsage` over the whole run: `deck.test.tsx`
+  # peaks at 5389 MB and the next heaviest suite at 541 MB. It mounts the entire
+  # router tree 78 times in one process, through the radar's
+  # gesture-and-animation pane.
+  #
+  # Node sizes its default heap from the machine — 8 GB here; this comment once
+  # said 16 — so sharing a run with the deck killed the job twice, in two
+  # different ways, and **neither read as a test failure**:
+  #
+  #   · heap raised, nothing else — the deck's worker aborted with SIGABRT
+  #     (exit 134) with every assertion in it passing;
+  #   · heap raised for two capped workers — a jest worker is reused across
+  #     suites and gives nothing back, so one crawled upward through ~147 of
+  #     them while the other held the deck, and together they starved the
+  #     runner agent: 56 minutes, then "lost communication with the server";
+  #   · heap raised with a recycle rule — bounded, but the 8 GB heap's major
+  #     GCs and the worker restarts stalled the event loop, and seven
+  #     timing-sensitive router suites blew their 5000 ms test budgets.
+  #
+  # So the deck is taken out of the shared run instead of the shared run being
+  # bent around it. **Every other suite keeps Node's own heap**, and **the deck
+  # gets one process to itself**, where `--runInBand` means no worker to restart
+  # and no second peak to meet. `testMatch` is confined to `src/`, so naming
+  # `/node_modules/` beside the deck in the shards' ignore pattern only restores
+  # the default that flag would otherwise replace.
+  #
+  # The deck's appetite is the thing to fix. This is what stops it failing a
+  # build while it is still there.
+  player-deck:
+    name: Player — the deck, in a process of its own
+    needs: changes
+    if: needs.changes.outputs.player == 'true' && needs.changes.outputs.player_ready == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend_player
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-player
+        id: setup
+        with:
+          jest-cache: deck
       - name: Test — the deck, in a process of its own
-        run: pnpm test -- --runTestsByPath src/features/play/components/deck.test.tsx --runInBand
         env:
           NODE_OPTIONS: --max-old-space-size=8192
+          JEST_CACHE: ${{ steps.setup.outputs.jest-cache-dir }}
+        run: >-
+          bash ../.github/scripts/memory-peak.sh "the deck"
+          pnpm test -- --runTestsByPath src/features/play/components/deck.test.tsx --runInBand
+          --cacheDirectory "$JEST_CACHE"
+
+  player-meta:
+    name: Player — still fires (import boundaries, contract drift)
+    needs: changes
+    if: needs.changes.outputs.player == 'true' && needs.changes.outputs.player_ready == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend_player
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-player
       # A native module may be imported from exactly one port, and the keychain
       # from exactly one module. Every one of those bans was added to a tree that
       # already satisfied it, so none has ever been seen to fail — which is
@@ -327,12 +478,56 @@ jobs:
       # disk: the violations arrive on stdin.
       - name: Verify the import boundaries still fire
         run: pnpm test:boundaries
-      # Last, and after the check it tests: it perturbs the contract in the
-      # workspace and restores it. A drift check nothing exercises is one that
-      # can stop matching without anybody noticing — the argument test-hooks.sh
-      # already makes for the guardrail hooks.
+      # It perturbs the contract in the workspace and restores it. A drift check
+      # nothing exercises is one that can stop matching without anybody
+      # noticing — the argument test-hooks.sh already makes for the guardrail
+      # hooks.
       - name: Verify the drift check itself fires
         working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-contract-drift.sh
       # No `build` step: a release build is `eas build`, which is a deliberate
       # human-triggered action, not part of PR CI. See docs/adr/0008.
+
+  # ==========================================================================
+  # ci-ok — the one status to read (ADR-0181 §4, .github/scripts/check-ci-ok.sh).
+  # ==========================================================================
+  #
+  # It needs every job above, one per line, and `make ci-ok` fails the day one
+  # is missing. `always()` on the job and on every step, because anything less
+  # skips it when a need failed or the run was cancelled — and a skipped check
+  # reads as passing. It proves its verdict goes red before it renders one.
+  #
+  # **Nothing enforces it yet.** A private repository on this plan has no
+  # branch protection (ADR-0180), so ci-ok is what a human reads before merging,
+  # not a check GitHub requires.
+  ci-ok:
+    name: ci-ok
+    needs:
+      - changes
+      - release-report
+      - guardrails
+      - backend-static
+      - backend-tests
+      - backend-artifacts
+      - backend-meta-1
+      - backend-meta-2
+      - player-static
+      - player-tests
+      - player-deck
+      - player-meta
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        if: always()
+      - name: ci-ok still fires
+        if: always()
+        run: bash .github/scripts/test-ci-ok.sh
+      - name: ci-ok needs every job in this workflow
+        if: always()
+        run: bash .github/scripts/check-ci-ok.sh wiring
+      - name: Every needed job succeeded or was skipped
+        if: always()
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: bash .github/scripts/check-ci-ok.sh verdict
