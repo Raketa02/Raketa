@@ -38,14 +38,15 @@ asserting it renders correctly.
 
 ## Environment
 
-- **Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL` and
-  `EXPO_PUBLIC_ENV` are both required, validated once at launch by `src/shared/config/env.ts`.
+- **Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL`,
+  `EXPO_PUBLIC_FEATURES_URL` (the feature-flag datafiles' host, ADR-0180) and
+  `EXPO_PUBLIC_ENV` are all required, validated once at launch by `src/shared/config/env.ts`.
   A missing or malformed value stops the app on a startup screen naming it — that is the
   guardrail working, not a bug.
 - `EXPO_PUBLIC_ENV` is `local | development | staging | production`, the backend's four names,
   and **only `local` runs today.** The environment fixes the URL scheme — `https://` for the
-  three deployed ones — so a laptop URL under a deployed name fails at launch naming both
-  variables.
+  three deployed ones, for both URLs — so a laptop URL under a deployed name fails at launch
+  naming both variables.
 - `app.config.ts` is a function of that environment (it replaced `app.json`) and holds no
   logic: `src/shared/config/appIdentity.ts` is the table it calls. Expo evaluates it in
   **Node**, before Metro, so it registers sucrase's TS require hook first — delete that line and
@@ -122,7 +123,9 @@ src/
   (keychain), `shared/lib/http` (`fetch`, the 401 → refresh → retry rotation, timeouts as named
   classes), and three platform ports in `shared/lib/platform/` — `location.ts`,
   `imagePicking.ts`, `liveStream.ts`. Features depend on the port and drive the fakes in
-  `src/test-support/platform.ts`. _(lint)_
+  `src/test-support/platform.ts`. The flag seam adds two, one file each in
+  `features/feature_flags/api/`: `featurevisor.ts` (the SDK) and `datafileCache.ts`
+  (AsyncStorage — a public datafile, never a credential; ADR-0180). _(lint)_
 - **`shared/` never imports a feature; a feature never deep-imports another** — go through its
   `types.ts`. `features/plans` may import `features/games`, never the reverse. _(lint)_ But do
   not move code to `shared/` because two files use it; keep it local until cross-feature

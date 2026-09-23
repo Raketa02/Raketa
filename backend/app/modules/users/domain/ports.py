@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from typing import Collection, Mapping, Optional, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.modules.users.domain.events import UserNamed, UserRegistered
+from app.modules.users.domain.events import (
+    UserMarkedAsTester,
+    UserNamed,
+    UserRegistered,
+    UserUnmarkedAsTester,
+)
 from app.modules.users.domain.user import User
 
 
@@ -46,6 +51,19 @@ class UserRepository(Protocol):
         The read model is written beside the event and never behind it
         (``docs/adr/0002``'s CQRS-lite), which is what lets the uniqueness read
         above see a nickname the instant it is taken.
+        """
+        ...
+
+    async def project_tester_mark(
+        self, event: UserMarkedAsTester | UserUnmarkedAsTester
+    ) -> None:
+        """Write the tester mark onto the projection row, in the act's own
+        transaction (``docs/adr/0180`` §9).
+
+        On the row because every ``User`` a route is handed is read from the
+        row: a mark folded on the stream and absent from the projection would
+        answer ``is_tester: false`` about a Tester — the reason
+        ``adult_attested`` is kept off the aggregate altogether.
         """
         ...
 

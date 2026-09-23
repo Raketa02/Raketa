@@ -151,9 +151,11 @@ from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRep
 from app.modules.users.application.commands import (
     NameUserCommand,
     RegisterUserCommand,
+    SetTesterMarkCommand,
 )
 from app.modules.users.application.name_user import NameUser
 from app.modules.users.application.register_user import RegisterUser
+from app.modules.users.application.set_tester_mark import SetTesterMark
 from app.modules.users.domain.ports import UserRepository
 from app.seeds.catalog import (
     ACCOUNTS,
@@ -162,6 +164,7 @@ from app.seeds.catalog import (
     SEED_CENTRE_VARIABLE,
     SEED_CONSENT_COPY_VERSION,
     SEED_PASSWORD,
+    TESTERS,
     AbandonedRun,
     AnswerPolicy,
     OpenRun,
@@ -255,12 +258,19 @@ class SeededAccount:
     #: profile to commit and where one was already there, which is the same
     #: distinction the flags beside it draw.
     committed_profile: bool = False
+    #: Whether the account carries the **tester mark** once the run is over —
+    #: about the account, unlike the flags above, and read off it rather than
+    #: off the catalog, so a mark set by hand shows too (``docs/adr/0180`` §9).
+    tester: bool = False
+    #: Whether *this run* set that mark, which is the flags' own distinction.
+    marked_tester: bool = False
 
     @property
     def already_present(self) -> bool:
         return (
             not self.registered
             and not self.committed_profile
+            and not self.marked_tester
             and not any(entry.created for entry in self.scenarios)
         )
 
@@ -292,6 +302,7 @@ class _UseCases:
     declarations: PlayIntentDeclarationRepository
     register: RegisterUser
     name: NameUser
+    set_tester_mark: SetTesterMark
     create: CreateAssessment
     submit: SubmitAnswer
     complete: CompleteAssessment
@@ -343,6 +354,9 @@ def _build(
             events=events,
         ),
         name=NameUser(
+            users=users, event_store=event_store, uow=uow, clock=clock, events=events
+        ),
+        set_tester_mark=SetTesterMark(
             users=users, event_store=event_store, uow=uow, clock=clock, events=events
         ),
         create=CreateAssessment(
@@ -441,6 +455,7 @@ async def _seed_account(
     player_id, registered = await _ensure_registered(
         use_cases, email=account.email, name=account.name, nickname=account.nickname
     )
+    tester, marked_tester = await _ensure_tester(use_cases, player_id, account)
     scenarios = tuple(
         [
             await _ensure_scenario(use_cases, player_id, account, scenario)
@@ -455,7 +470,34 @@ async def _seed_account(
         registered=registered,
         scenarios=scenarios,
         committed_profile=committed,
+        tester=tester,
+        marked_tester=marked_tester,
     )
+
+
+async def _ensure_tester(
+    use_cases: _UseCases, player_id: UUID, account: SeedAccount
+) -> tuple[bool, bool]:
+    """Set the tester mark on an account the catalog names a Tester: whether the
+    account carries the mark now, and whether this run set it
+    (``docs/adr/0180`` §9).
+
+    **Marks and never clears.** Every other account is left as it is found, so
+    a developer who ran ``make tester`` on a seeded account keeps that mark
+    across a re-seed, and the report says so because the first half of the
+    answer is read off the account rather than off the catalog; a fresh
+    database is where the catalog's set is exact. Through ``SetTesterMark``,
+    the use case the command runs — named by address, as the command is — whose
+    idempotence is what makes a re-run write nothing.
+    """
+
+    if account not in TESTERS:
+        found = await use_cases.users.get_by_id(player_id)
+        return (found is not None and found.is_tester), False
+    mark = await use_cases.set_tester_mark.execute(
+        SetTesterMarkCommand(player=account.email, tester=True)
+    )
+    return mark.is_tester, mark.changed
 
 
 def _clock_for(account: SeedAccount, now: Instant) -> Clock:
@@ -1352,6 +1394,10 @@ def report(run_report: SeedReport) -> list[str]:
         lines.append(f"  {entry.account.email}  [{state}]")
         lines.append(f"      {entry.account.description}")
         lines.append(f"      player {entry.player_id}")
+        if entry.tester:
+            lines.append(
+                "      tester — sent to flag evaluation as isTester (docs/adr/0180)"
+            )
         if entry.account.profile is not None:
             days = entry.account.profile.committed_days_ago
             standing = "newcomer" if days < NEWCOMER_WINDOW_DAYS else "settled"

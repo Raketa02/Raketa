@@ -25,6 +25,12 @@ export interface RecordedRequest {
   readonly method: string;
   /** Path only — the base URL is stripped, so tests name routes the way the API does. */
   readonly path: string;
+  /**
+   * The whole URL, host included — for the one question `path` cannot answer: **which host**.
+   * The app talks to two, the API and the feature-flag datafiles' (ADR-0180 §4), and a request
+   * that reached the right path on the wrong one is the bug a stripped path would hide.
+   */
+  readonly url: string;
   readonly headers: Readonly<Record<string, string>>;
   /** The parsed JSON body, or `undefined` when there was none. */
   readonly body: unknown;
@@ -160,6 +166,7 @@ export function installTransport(): Transport {
     const recorded: RecordedRequest = {
       method,
       path,
+      url,
       headers,
       body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
     };

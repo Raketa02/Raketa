@@ -25,6 +25,7 @@ describe('toAuthenticatedUser', () => {
       authority: 'player',
       is_admin: true,
       is_active: true,
+      is_tester: false,
       has_player_profile: false,
       created_at: '2026-08-13T10:00:00Z',
     });
@@ -35,6 +36,7 @@ describe('toAuthenticatedUser', () => {
       name: 'Ada Lovelace',
       nickname: 'ada',
       hasPlayerProfile: false,
+      isTester: false,
     });
     // A client that renders differently for an admin has invented an authorization
     // decision it cannot enforce. Backend authorization is the only authorization.
@@ -56,6 +58,7 @@ describe('toAuthenticatedUser', () => {
       authority: 'player',
       is_admin: false,
       is_active: true,
+      is_tester: false,
       has_player_profile: false,
     });
 
@@ -76,11 +79,36 @@ describe('toAuthenticatedUser', () => {
       authority: 'player',
       is_admin: false,
       is_active: true,
+      is_tester: false,
       has_player_profile: true,
       created_at: '2026-08-13T10:00:00Z',
     });
 
     expect(user.hasPlayerProfile).toBe(true);
+  });
+
+  /**
+   * **The tester mark is carried, and it is not a role**
+   * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+   * §9). Kept where `is_admin` is dropped because the app has one use for it — flag evaluation's
+   * `isTester` — and that use decides which build of a screen a player is shown, never what they
+   * are allowed to do.
+   */
+  it('carries whether the account carries the tester mark', () => {
+    const user = toAuthenticatedUser({
+      id: 'e2b1c0d4-0000-4000-8000-000000000001',
+      email: 'ada@example.com',
+      name: 'Ada Lovelace',
+      nickname: 'ada',
+      authority: 'player',
+      is_admin: false,
+      is_active: true,
+      is_tester: true,
+      has_player_profile: true,
+      created_at: '2026-08-13T10:00:00Z',
+    });
+
+    expect(user.isTester).toBe(true);
   });
 });
 

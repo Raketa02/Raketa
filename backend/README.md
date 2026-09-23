@@ -444,6 +444,22 @@ breaks on it.
 The password for every seeded account is `raketa-seed1`, and it is public by
 construction — it is written in `app/seeds/catalog.py`.
 
+Two of the protagonists are **Testers** — `the-populated-player`, the account a phone is
+signed in as, and `the-newcomer` — so a feature the flags repo gives only to its `testers`
+segment can be seen without marking anybody by hand
+([ADR-0180](../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+§9). The other two are not, so a gated screen can be read from either side of the mark. The
+seed marks and never clears: a mark set with `make tester` survives a re-seed.
+
+```bash
+make tester PLAYER=the-one-sport-player@raketa.example MARK=on   # or an account id; MARK=off clears
+make tester-host PLAYER=… MARK=…                                  # the same from the host — needs .env
+```
+
+It runs the same use case the tests drive, appends the mark to the player's own stream and
+never edits a row, and there is deliberately no route for it. The player app reads the answer
+as `is_tester` on `GET /api/v1/users/me` at its next launch or return to the foreground.
+
 Behind those eleven state-named addresses is the **cohort**: a population of `cohort-<ring>-<nn>`
 members, generated from a seed and committed as `app/seeds/cohort.json`. It exists because
 one search over eleven accounts finds them all in one ring, and every Play screen would be

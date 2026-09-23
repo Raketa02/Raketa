@@ -1177,3 +1177,21 @@ gains `stacked` and the hint its third sentence. `radar.test.tsx` walks a cast w
 card, the fold on deselect, the dissolve at 3 km; and the open — both faces back, two legs, the
 marker `expanded` — the flight to a fanned face, the fold on a second tap and on empty field.
 **Not seen on a device.**
+
+**Find a game is behind the `find_a_game` flag, and the gate is Play's three route files**
+([#479](https://github.com/Raketa02/Raketa/issues/479), [ADR-0180](../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §7). `play/index.tsx` reads the
+flag once when it mounts — `useFeatureOnMount` from `features/feature_flags` — and draws
+`FindAGameScreen` when it is on and `features/find_a_game_next`'s empty screen when it is off; the
+shell lays the root down again on every entry to the tab, which is when a toggle that arrived
+meanwhile shows. **`play/builder.tsx` and `play/pool.tsx` close to a bare link while it is off,
+and never to a search under way**: each redirects to `/play` only when the search it was opened on
+has no record — `useSearchWasRun`, the record being written by the act that minted the search,
+before anything is pushed onto it. **Ruled by the user on 2026-09-23**, over the ticket's literal
+_the builder and pool routes redirect_: a toggle that lands by foreground while a player is on Find
+a game would otherwise bounce their next step to the empty screen, which is what story 21 and
+ADR-0180 §7's _nobody has a screen pulled out from under them mid-task_ refuse. The same rule is
+what keeps fill-the-seat open (story 25) — its builder pushes the same `/play/pool`, on a search the
+fill minted — so the special case for a challenge it replaced is gone. `pool.test.tsx` walks the
+toggle arriving mid-search; `theFindAGameGate.test.tsx` walks the bare links. `findAGame.test.tsx`
+and the other Play suites are untouched: `stubGate` serves no datafile, which is every flag at its
+code default.

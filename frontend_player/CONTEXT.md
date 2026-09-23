@@ -52,8 +52,9 @@ schemas/ components/ hooks/ types.ts`). _Avoid_: module, screen-folder.
   now refuses, and a test run happens on a laptop or a CI runner, both of which are
   `local`. _Avoid also_: calling a laptop `development`, which is the name that means a
   shared remote deployment.
-- **Scheme rule** — the environment fixes the API URL's scheme: `https://` in the three
-  deployed environments, either in `local`. Validated across both variables at launch, so
+- **Scheme rule** — the environment fixes the scheme of both URLs, the API's and the
+  feature-flag datafiles' (`EXPO_PUBLIC_FEATURES_URL`): `https://` in the three deployed
+  environments, either in `local`. Validated across each URL and the environment at launch, so
   a laptop URL under a deployed name is a refusal naming both rather than a build pointing
   at nothing. This is the **public-network** form of the platform's rule — the URL is
   reached from a phone over the internet — and `local` is unconstrained because every
@@ -123,6 +124,15 @@ review comment and a test description all use the same word.
   per-player question with a per-player answer, which is the distinction
   [ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md) draws and the shared
   glossary now carries.
+- **Datafile** — the JSON a **Feature flag** is decided from: one per environment, built by the
+  flags repo and fetched from `EXPO_PUBLIC_FEATURES_URL`. **Fresh** is this session's, **saved**
+  is the last readable one kept in AsyncStorage, and the **code default** is what a feature says
+  with neither — declared once in `features/feature_flags/domain/`. A datafile whose
+  `schemaVersion` this build does not read is **refused**, and the one in use stays
+  ([ADR-0180](../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)).
+- **Gate** — a screen or route that reads a **Feature flag** through `useFeatureOnMount`: once,
+  when it mounts, and never again while it is up. _Avoid_: calling the entry gate or the guard a
+  gate in this sense — those are routing on who the player is, not on a flag.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
 - **The shell** — the five tabs a signed-in player is inside, and the **one stack** under

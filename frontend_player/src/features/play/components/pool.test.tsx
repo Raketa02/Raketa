@@ -24,6 +24,7 @@
  *   row leave the list.
  */
 
+import { focusManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { router } from 'expo-router';
 import { StyleSheet, type TextStyle } from 'react-native';
@@ -35,7 +36,10 @@ import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
   PROFILE_SURFACE_SERVED,
+  datafileFor,
+  datafileSettled,
   launchSignedIn,
+  stubDatafile,
   stubGate,
   stubInterest,
   stubOutgoingYeses,
@@ -261,6 +265,46 @@ async function openThePool() {
   // facts the search ran under now, which is the same string the court underneath still draws.
   await screen.findByLabelText(POOL_COURT_LABEL);
 }
+
+/**
+ * **A search started while Find a game was on is finished, whatever the flag says afterwards**
+ * ([#479](https://github.com/Raketa02/Raketa/issues/479), ADR-0180 §7, PRD #476 story 21).
+ *
+ * The toggle arrives the way it does on a device — the app comes back to the front with Find a
+ * game on screen and fetches the datafile again — and the player then does what they were about
+ * to do. The builder and the pool read the flag when they mount and find it off; what lets them
+ * through is that the search they are opened on is one this player already ran. A link with no
+ * search behind it still lands on Play (`feature_flags/components/theFindAGameGate.test.tsx`).
+ */
+describe('Find a game switched off in the middle of a search', () => {
+  it('still takes the search to the builder and on to the pool', async () => {
+    stubDatafile(transport, datafileFor({ find_a_game: 'on' }));
+    await launchSignedIn();
+    await datafileSettled(transport);
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await screen.findByLabelText('Tuesday evening');
+
+    stubDatafile(transport, datafileFor({ find_a_game: 'off' }));
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await datafileSettled(transport, 2);
+
+    fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
+    await screen.findByText(
+      poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline,
+    );
+    act(() => jest.advanceTimersByTime(2000));
+
+    const pickPlayers = await screen.findByLabelText(PICK_PLAYERS_LABEL);
+    expect(screen).toHavePathname('/play/builder');
+
+    fireEvent.press(pickPlayers);
+    await screen.findByLabelText(POOL_COURT_LABEL);
+    expect(screen).toHavePathname('/play/pool');
+  });
+});
 
 /**
  * The same walk on a Sport with **two** seats — the one shape the singles copy is read on.

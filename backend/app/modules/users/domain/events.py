@@ -70,3 +70,28 @@ class UserDisabled:
 class UserPromotedToAdmin:
     user_id: UUID
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class UserMarkedAsTester:
+    """The account now carries the **tester mark** (``docs/adr/0180`` §9).
+
+    A mark and not a role: ``Authority`` does not move, because being shown a
+    feature early grants no power over anyone. Set by an admin command and never
+    by the player, and read by the player app as ``is_tester`` on its own
+    account — which it hands to flag evaluation, so that no datafile ever has
+    to name a tester.
+    """
+
+    user_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class UserUnmarkedAsTester:
+    """The tester mark cleared. Its own event rather than the mark carrying a
+    boolean, so the stream says *who was a tester, and when* in the words it
+    was done in (``docs/adr/0180`` §9)."""
+
+    user_id: UUID
+    occurred_at: datetime

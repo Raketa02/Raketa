@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09
+- **Its enforcement is narrowed by [ADR-0180](0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)**, not its decision: `AsyncStorage` still never holds a credential, and one module (the feature flags' datafile cache) may now import it.
 
 > **Note — the 2026-08-25 reset.** It cites **ADR-0007** (the club console's cookie session), removed in the 2026-08-25 reset. This ADR's own decision, for the player app, is untouched. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
 

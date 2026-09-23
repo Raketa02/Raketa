@@ -4,14 +4,20 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Six modules may be imported from exactly one place, or from nowhere at all:
+# Seven modules may be imported from exactly one place:
 #
 #   expo-secure-store                            → src/shared/lib/auth
-#   @react-native-async-storage/async-storage    → nowhere; it is unencrypted
+#   @react-native-async-storage/async-storage    → feature_flags/api/datafileCache.ts
 #   expo-location                                → platform/location.ts
 #   expo-image-picker                            → platform/imagePicking.ts
 #   react-native-sse                             → platform/liveStream.ts
 #   expo-haptics                                 → platform/haptics.ts
+#   @featurevisor/sdk                            → feature_flags/api/featurevisor.ts
+#
+# AsyncStorage was banned everywhere until ADR-0180 let the feature flags' saved datafile
+# use it — a public file, never a credential. The ban is still asserted everywhere else,
+# the owning module's own directory included, because an allow-list of one is only one
+# while something checks it.
 #
 # And one is banned everywhere *except* a feature's api/ and mappers/ layers, plus the
 # one file above that is an api/ layer without a feature to live in:
@@ -131,6 +137,15 @@ LIVE_PORT='src/shared/lib/platform/liveStream.ts'
 HAPTICS_PORT='src/shared/lib/platform/haptics.ts'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 
+# The flag seam's three edges, each an api/ file of one feature: the fetch, the saved
+# datafile (the one AsyncStorage importer), and the SDK wrapper (the one Featurevisor
+# importer). Each exemption is one file wide, so the two exempt files are each probed with
+# the other's module, and the fetch beside them with both.
+FLAGS_FETCH='src/features/feature_flags/api/datafileApi.ts'
+FLAGS_CACHE='src/features/feature_flags/api/datafileCache.ts'
+FLAGS_SDK='src/features/feature_flags/api/featurevisor.ts'
+FLAGS_HOOK='src/features/feature_flags/hooks/useFeatureOnMount.ts'
+
 # Where a generated wire type is legitimately read: the two layers of a feature, and the
 # one file outside a feature that is an api/ layer — the live channel, whose frame ADR-0147
 # §7 requires to be the generated type.
@@ -153,12 +168,21 @@ expect_blocked expo-secure-store "$OBSERVABILITY" 'src/shared/lib/auth'
 expect_allowed expo-secure-store "$AUTH"
 
 echo
-echo "unencrypted storage — @react-native-async-storage/async-storage belongs nowhere"
-expect_blocked @react-native-async-storage/async-storage "$FEATURE" 'AsyncStorage'
-expect_blocked @react-native-async-storage/async-storage "$TEST" 'AsyncStorage'
+echo "unencrypted storage — @react-native-async-storage/async-storage belongs to the saved datafile"
+expect_blocked @react-native-async-storage/async-storage "$FEATURE" 'datafileCache.ts'
+expect_blocked @react-native-async-storage/async-storage "$SCREEN" 'datafileCache.ts'
+expect_blocked @react-native-async-storage/async-storage "$TEST" 'datafileCache.ts'
+expect_blocked @react-native-async-storage/async-storage "$SUPPORT" 'datafileCache.ts'
 # Not even the module that owns credentials, which is the only place anyone
-# would argue for it.
-expect_blocked @react-native-async-storage/async-storage "$AUTH" 'AsyncStorage'
+# would argue for it — and the message still says why.
+expect_blocked @react-native-async-storage/async-storage "$AUTH" 'credentials'
+# Another feature's wire layer, which shares the owning file's baseline block.
+expect_blocked @react-native-async-storage/async-storage "$WIRE_LAYER" 'datafileCache.ts'
+# One file wide: the flag seam's own fetch, its SDK wrapper and its hooks may not.
+expect_blocked @react-native-async-storage/async-storage "$FLAGS_FETCH" 'datafileCache.ts'
+expect_blocked @react-native-async-storage/async-storage "$FLAGS_SDK" 'datafileCache.ts'
+expect_blocked @react-native-async-storage/async-storage "$FLAGS_HOOK" 'datafileCache.ts'
+expect_allowed @react-native-async-storage/async-storage "$FLAGS_CACHE"
 
 echo
 echo "the device's position — expo-location belongs to src/shared/lib/platform"
@@ -211,6 +235,21 @@ expect_blocked expo-haptics "$OTHER_PLATFORM_FILE" 'haptics.ts'
 expect_allowed expo-haptics "$HAPTICS_PORT"
 # And the port itself is still under every other ban.
 expect_blocked expo-location "$HAPTICS_PORT" 'src/shared/lib/platform'
+
+echo
+echo "flag evaluation — @featurevisor/sdk belongs to feature_flags/api/featurevisor.ts"
+expect_blocked @featurevisor/sdk "$FEATURE" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$SCREEN" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$TEST" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$WIRE_LAYER" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$OTHER_PLATFORM_FILE" 'featurevisor.ts'
+# One file wide: the cache beside it, the fetch and the gate itself go through it.
+expect_blocked @featurevisor/sdk "$FLAGS_CACHE" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$FLAGS_FETCH" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$FLAGS_HOOK" 'featurevisor.ts'
+expect_allowed @featurevisor/sdk "$FLAGS_SDK"
+# And the SDK wrapper is still under every other ban.
+expect_blocked expo-location "$FLAGS_SDK" 'src/shared/lib/platform'
 
 echo
 echo "generated wire types — api/ and mappers/, plus the live channel's frame"
