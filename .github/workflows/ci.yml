@@ -281,8 +281,21 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
+      # **Two workers and an 8 GB heap, because one suite needs more than the
+      # runner hands Node by default.** `deck.test.tsx` peaks around 5.5 GB on
+      # its own: it drives a full router tree through a gesture-and-animation
+      # pane, and a JS-driven `Animated` frame fires on every fake millisecond.
+      # A `ubuntu-latest` runner has 16 GB, but Node sizes its old space from
+      # that at roughly 4 GB, so the worker running the deck aborted with
+      # SIGABRT (exit 134) while every assertion in it passed. The ceiling is a
+      # ceiling and not a reservation — the other 293 suites are unchanged by
+      # it — and the worker count is what keeps two peaks from meeting inside
+      # the same 16 GB. The suite's appetite is the thing to fix; this is what
+      # stops it failing a build in the meantime.
       - name: Test
-        run: pnpm test
+        run: pnpm test -- --maxWorkers=2
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
       # A native module may be imported from exactly one port, and the keychain
       # from exactly one module. Every one of those bans was added to a tree that
       # already satisfied it, so none has ever been seen to fail — which is
