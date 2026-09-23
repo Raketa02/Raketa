@@ -154,6 +154,27 @@ if perturb "ci-ok with no condition" '/^  ci-ok:/,/^  [a-z]/{/^    if: always()$
   expect 1 "ci-ok with no condition is red" "always()" wiring "$TMP/ci.yml"
 fi
 
+# The list is read one job per line — the form a diff shows one job at a time, and
+# the only form this check parses. A flow list is refused by name rather than read
+# as one job called "[changes, …]", which would bury the reason under twelve.
+cp "$CI_YML" "$TMP/ci.yml"
+python3 - "$TMP/ci.yml" <<'PY'
+import re, sys
+path = sys.argv[1]
+text = open(path).read()
+text, n = re.subn(r"(\n  ci-ok:\n(?:    .*\n)*?)    needs:\n((?:      - .*\n)+)",
+                  lambda m: m.group(1) + "    needs: [" + ", ".join(
+                      l.strip()[2:] for l in m.group(2).splitlines()) + "]\n",
+                  text)
+open(path, "w").write(text)
+sys.exit(0 if n == 1 else 1)
+PY
+if [ $? -eq 0 ]; then
+  expect 1 "ci-ok's needs as a flow list is refused by name" "one job per line" wiring "$TMP/ci.yml"
+else
+  bad "ci-ok's needs as a flow list" "the perturbation matched nothing in ci.yml — the case tests nothing"
+fi
+
 if perturb "no ci-ok job" 's/^  ci-ok:$/  summary:/'; then
   expect 1 "a workflow with no ci-ok job is red" "no ci-ok job" wiring "$TMP/ci.yml"
 fi

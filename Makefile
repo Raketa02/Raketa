@@ -8,7 +8,7 @@
         test-hooks test-drift contract-freshness test-contract-freshness \
         gen-judged-pairings judged-pairings \
         test-judged-pairings gen-ruleset-diff ruleset-diff test-ruleset-diff \
-        poetry-pin test-poetry-pin taskdef test-taskdef ci-ok test-ci-ok \
+        poetry-pin test-poetry-pin taskdef test-taskdef ci-ok test-ci-ok test-memory-peak \
         afk-install afk-build afk
 
 help:              ## list targets
@@ -140,6 +140,9 @@ ci-ok:             ## verify ci-ok needs every job in ci.yml and runs whatever t
 
 test-ci-ok:        ## verify ci-ok's verdict and wiring checks still fire
 	bash .github/scripts/test-ci-ok.sh
+
+test-memory-peak:  ## verify CI's memory recorder passes every exit status through
+	bash .github/scripts/test-memory-peak.sh
 
 # ----------------------------------------------------------------------------
 # AFK agent loop (sandbuket). See tools/afk/README.md.

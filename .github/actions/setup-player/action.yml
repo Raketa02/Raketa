@@ -42,10 +42,15 @@ runs:
     #
     # One cache per job rather than one shared: each shard transforms only what its
     # own suites import, and a shard's suites are the same from run to run, so each
-    # restores exactly what it will need. The key is what can change a transform —
-    # the lockfile, babel.config.js and jest.config.js — and never the branch. A
-    # source file that changed since the cache was saved misses and is transformed
-    # afresh; Jest keys every entry by the content it transformed.
+    # restores exactly what it will need. The prefix is what can change a
+    # transform — the lockfile, babel.config.js and jest.config.js — and never the
+    # branch; Jest keys every entry inside by the content it transformed.
+    #
+    # The commit ends the key so the cache moves with the source. A cache hit is
+    # never saved again, so a key of the prefix alone would freeze at its first
+    # save, and every file changed since would miss until the lockfile moved.
+    # Instead each commit restores the newest cache under its prefix and saves its
+    # own — a few megabytes a job, compressed.
     - id: jest
       if: inputs.jest-cache != ''
       shell: bash
@@ -56,4 +61,6 @@ runs:
       uses: actions/cache@v4
       with:
         path: ${{ steps.jest.outputs.dir }}
-        key: jest-${{ runner.os }}-${{ inputs.jest-cache }}-${{ hashFiles('frontend_player/pnpm-lock.yaml', 'frontend_player/babel.config.js', 'frontend_player/jest.config.js') }}
+        key: jest-${{ runner.os }}-${{ inputs.jest-cache }}-${{ hashFiles('frontend_player/pnpm-lock.yaml', 'frontend_player/babel.config.js', 'frontend_player/jest.config.js') }}-${{ github.sha }}
+        restore-keys: |
+          jest-${{ runner.os }}-${{ inputs.jest-cache }}-${{ hashFiles('frontend_player/pnpm-lock.yaml', 'frontend_player/babel.config.js', 'frontend_player/jest.config.js') }}-

@@ -29,7 +29,8 @@
 # The workflow is read by a small parser rather than a YAML library, because the
 # runner's system Python guarantees neither PyYAML nor anything else, and ci-ok
 # runs before (and without) either app's setup. It reads what ci.yml's own style
-# writes: two-space indentation, and `needs` as a list.
+# writes: two-space indentation, and ci-ok's `needs` one job per line — any other
+# form is refused by name rather than misread.
 #
 # Tested by .github/scripts/test-ci-ok.sh (`make test-ci-ok`), which ci-ok runs
 # before it renders a verdict. A summary check that has never once failed is
@@ -49,6 +50,8 @@ case "$mode" in
     exit 2
     ;;
 esac
+
+command -v python3 >/dev/null || { echo "check-ci-ok.sh needs python3, and there is none." >&2; exit 2; }
 
 python3 - "$mode" "${workflow:-}" <<'PY'
 import json
@@ -181,14 +184,12 @@ def wiring():
     problems = []
 
     needs = property_of(jobs["ci-ok"], "needs")
-    if needs is None:
-        named = set()
-    else:
-        inline, items = needs
-        if inline.startswith("["):
-            named = {v.strip().strip("'\"") for v in inline.strip("[]").split(",") if v.strip()}
-        else:
-            named = set(items) | ({inline} if inline else set())
+    inline, items = needs if needs is not None else ("", [])
+    if inline:
+        print(f"ci-ok's needs reads `{inline}`: write it one job per line, the only form this check reads.", file=sys.stderr)
+        error("ci-ok's needs must be written one job per line")
+        return 1
+    named = set(items)
     others = [job for job in jobs if job != "ci-ok"]
     for job in others:
         if job not in named:
@@ -216,5 +217,9 @@ def wiring():
     return 1
 
 
-sys.exit(verdict() if mode == "verdict" else wiring())
+try:
+    sys.exit(verdict() if mode == "verdict" else wiring())
+except Exception as exc:  # a crash is a check that could not run, never a verdict
+    print(f"check-ci-ok.sh could not run: {exc!r}", file=sys.stderr)
+    sys.exit(2)
 PY

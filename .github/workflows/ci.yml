@@ -11,7 +11,8 @@ name: CI
 #
 #   backend   static · tests · generated artifacts · meta (two jobs)
 #   player    static · tests (three shards) · the deck · meta
-#   always    the guardrail hooks · the ruleset release-report block
+#   always    the guardrail hooks
+#   release   the recorded-corpus report block, on a ruleset pull request only
 #
 # `ci-ok` needs every one of them, and is the one status to read: red when any
 # job failed or was cancelled, green when each succeeded or was skipped because
@@ -24,8 +25,8 @@ name: CI
 #
 # **The runner is 2 vCPU / 8 GB** — a private repository's standard
 # `ubuntu-latest` (§7), not the 16 GB a public one gets. Worker counts and heap
-# limits below are sized from that, and the player's test jobs record the peak
-# they reached (.github/scripts/memory-peak.sh) on the run's summary page.
+# limits below are sized from that, and every test job records the peak it
+# reached (.github/scripts/memory-peak.sh) on the run's summary page.
 on:
   pull_request:
   push:
@@ -371,11 +372,12 @@ jobs:
   # which is why the run records its peak: if it ever starves the runner, the
   # answer is one worker and a fourth shard — never a re-run.
   #
-  # The shard is derived from the matrix, never typed beside it: `job-index` and
-  # `job-total` always name 1/N … N/N of the same N, so adding a shard is adding
-  # an entry to the list, and no suite can fall between two numbers that
-  # disagree. Jest partitions the suites that survive the ignore pattern, so the
-  # deck is in no shard.
+  # The shard Jest runs is derived from the matrix, never typed beside it:
+  # `job-index` and `job-total` always name 1/N … N/N of the same N, so adding a
+  # shard is adding an entry to the list, and no suite can fall between two
+  # numbers that disagree. The list's own values only label the jobs. Jest
+  # partitions the suites that survive the ignore pattern, so the deck is in no
+  # shard.
   player-tests:
     name: Player — tests ${{ matrix.shard }}/${{ strategy.job-total }}
     needs: changes
@@ -395,15 +397,15 @@ jobs:
       - uses: ./.github/actions/setup-player
         id: setup
         with:
-          jest-cache: shard-${{ matrix.shard }}-of-${{ strategy.job-total }}
+          jest-cache: shard-${{ strategy.job-index }}-of-${{ strategy.job-total }}
       - name: Test
         env:
-          SHARD: ${{ strategy.job-index }}
+          SHARD_INDEX: ${{ strategy.job-index }}
           SHARDS: ${{ strategy.job-total }}
           JEST_CACHE: ${{ steps.setup.outputs.jest-cache-dir }}
         run: >-
-          bash ../.github/scripts/memory-peak.sh "Jest shard $((SHARD + 1))/$SHARDS"
-          pnpm test -- --shard="$((SHARD + 1))/$SHARDS" --maxWorkers=2 --cacheDirectory "$JEST_CACHE"
+          bash ../.github/scripts/memory-peak.sh "Jest shard $((SHARD_INDEX + 1))/$SHARDS"
+          pnpm test -- --shard="$((SHARD_INDEX + 1))/$SHARDS" --maxWorkers=2 --cacheDirectory "$JEST_CACHE"
           --testPathIgnorePatterns "/node_modules/" "src/features/play/components/deck\.test\.tsx"
 
   # **The deck runs in a job and a process of its own, because one file out of
@@ -413,9 +415,8 @@ jobs:
   # router tree 78 times in one process, through the radar's
   # gesture-and-animation pane.
   #
-  # Node sizes its default heap from the machine — 8 GB here; this comment once
-  # said 16 — so sharing a run with the deck killed the job twice, in two
-  # different ways, and **neither read as a test failure**:
+  # Sharing a run with the deck killed the job twice, in two different ways, and
+  # **neither read as a test failure**:
   #
   #   · heap raised, nothing else — the deck's worker aborted with SIGABRT
   #     (exit 134) with every assertion in it passing;
@@ -433,6 +434,16 @@ jobs:
   # and no second peak to meet. `testMatch` is confined to `src/`, so naming
   # `/node_modules/` beside the deck in the shards' ignore pattern only restores
   # the default that flag would otherwise replace.
+  #
+  # **Its heap is capped at 6144 MB: the machine's 8 GB less 2 GB for everything
+  # that is not the deck's heap** — the runner agent, the OS, pnpm and Node's own
+  # off-heap memory. This job used to raise it to 8192, the whole machine, which
+  # caps nothing: V8 has no reason to collect before the runner runs out, so a
+  # deck that outgrew the machine would starve the runner — the 56-minute failure
+  # above — rather than stop. Under 6144 it stops, in about a minute, with a heap
+  # error. On a laptop the deck passes at this cap 85 % full (5227 MB), and about
+  # 45 % slower than uncapped for the extra collection; the run's memory record
+  # for this job is the number to watch.
   #
   # The deck's appetite is the thing to fix. This is what stops it failing a
   # build while it is still there.
@@ -452,7 +463,7 @@ jobs:
           jest-cache: deck
       - name: Test — the deck, in a process of its own
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=6144
           JEST_CACHE: ${{ steps.setup.outputs.jest-cache-dir }}
         run: >-
           bash ../.github/scripts/memory-peak.sh "the deck"
@@ -495,7 +506,8 @@ jobs:
   # It needs every job above, one per line, and `make ci-ok` fails the day one
   # is missing. `always()` on the job and on every step, because anything less
   # skips it when a need failed or the run was cancelled — and a skipped check
-  # reads as passing. It proves its verdict goes red before it renders one.
+  # reads as passing. It proves its verdict goes red before it renders one, and
+  # that no test job's wrapper can turn a failure into a success.
   #
   # **Nothing enforces it yet.** A private repository on this plan has no
   # branch protection (ADR-0180), so ci-ok is what a human reads before merging,
@@ -523,6 +535,11 @@ jobs:
       - name: ci-ok still fires
         if: always()
         run: bash .github/scripts/test-ci-ok.sh
+      # Every test job's command runs through memory-peak.sh, so a verdict summed
+      # from job results is only as honest as that wrapper's exit status.
+      - name: memory-peak passes every exit status through
+        if: always()
+        run: bash .github/scripts/test-memory-peak.sh
       - name: ci-ok needs every job in this workflow
         if: always()
         run: bash .github/scripts/check-ci-ok.sh wiring
