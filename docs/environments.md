@@ -75,8 +75,8 @@ a migration or a seed run — not only for a process serving HTTP.
 | backend | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway, so it cannot be mistaken for working configuration. |
 | backend | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
 | backend | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
-| player | `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
-| player | a deployed `EXPO_PUBLIC_API_URL` that is not `https://` | The scheme rule, below. |
+| player | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
+| player | a deployed `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_FEATURES_URL` that is not `https://` | The scheme rule, below. |
 
 **Two constraints on every refusal message, in all three apps.** It **names the offending
 variable and the reason**; it **never contains the offending value**. A URL carries
@@ -127,7 +127,16 @@ question no application can answer for its operator.
 | App | Variable | Reached by | Rule |
 | --- | --- | --- | --- |
 | player | `EXPO_PUBLIC_API_URL` | a phone, over the internet | `https://` when deployed |
+| player | `EXPO_PUBLIC_FEATURES_URL` | a phone, over the internet | `https://` when deployed |
 | backend | `ALLOW_ORIGINS` entries | a browser (they *are* browser origins) | `https://` when deployed; the `*` wildcard is not an origin and is exempt |
+
+**Why the datafile host is on the list though it serves nothing secret.** The feature-flag
+datafile is public-read by design
+([ADR-0180](adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §9),
+so the rule is not protecting its contents from being read. It is protecting them from being
+*rewritten*: a datafile fetched in the clear is a file anybody on the same café Wi-Fi can
+replace, turning a screen on or off. The rule is for integrity here, not confidentiality, and the
+client enforces both URLs in one loop so neither can be forgotten.
 
 **Why `local` is unconstrained.** The rule used to require `http://` there. That refused an
 `https://` tunnel — and `expo start --tunnel`, `cloudflared` and `tailscale funnel` all hand
@@ -218,6 +227,21 @@ environment it was built for. That is where a flag's per-environment default liv
 flags repo's YAML, never in a branch in either app. The rule above was recorded before any flag
 system existed so that the first one would not arrive as an environment branch, and it holds
 for this one unchanged.
+
+**Where the app finds its datafile.** `EXPO_PUBLIC_FEATURES_URL` is the base, and the path under
+it is the environment's name: the app fetches
+`$EXPO_PUBLIC_FEATURES_URL/<environment>/featurevisor-player.json`, for the environment it was
+built for. In `local` the base is the Mac itself: `npm run serve` in the flags repo serves the
+built datafiles on port 3040, on all interfaces, so a physical phone is given the Mac's LAN IP,
+never `localhost`, just as for the API. Later it is the bucket the flags repo's publish run
+uploads to, and moving there changes this value and no code.
+
+The variable is required and validated at launch like any other, but **the datafile is never
+waited on.** It is fetched once at launch and again on each return to the foreground, and when it
+cannot be had the app answers from the last good datafile it saved, or failing that from each
+feature's code default (ADR-0180 §6). So a host that is down or wrong shows up as flags holding
+their old or default values, never as a startup failure. That is the reason step 4 of the
+checklist below says to publish the datafile before a build points at it.
 
 ## Testing
 
@@ -322,8 +346,11 @@ The day a domain is registered, this is a configuration task rather than a redes
    there; that check, and not this paragraph, is what CI enforces. The paragraph is
    here because a checklist a human follows should say what is coming — it went eleven days
    out of date once, and the check is what makes that recoverable rather than invisible.
-4. **Set the player app's variables**: `EXPO_PUBLIC_ENV` and `EXPO_PUBLIC_API_URL`
-   (`https://`). At this point the per-environment bundle-identifier question deferred by
+4. **Set the player app's variables**: `EXPO_PUBLIC_ENV`, `EXPO_PUBLIC_API_URL` (`https://`)
+   and `EXPO_PUBLIC_FEATURES_URL` (`https://`, the flags host). Before a build points at the
+   flags host, the flags repo's publish run must have uploaded that environment's datafile
+   there: until it does, every feature silently takes its code default, and nothing refuses.
+   At this point the per-environment bundle-identifier question deferred by
    [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md) becomes live for the
    first time, because there is finally a second backend to point a second variant at.
 5. **Point every external service at its sandbox credentials**, per rule 9. Live keys go to
