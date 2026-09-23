@@ -120,7 +120,8 @@ major_version_zero = true
 use_shortcuts = true
 
 [tool.pytest.ini_options]
-addopts = "--tb=short --disable-warnings --cov=app --cov-report=term-missing"
+# No coverage by default (ADR-0181); `make coverage` measures it on demand.
+addopts = "--tb=short --disable-warnings"
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"

@@ -943,6 +943,12 @@ poetry install
 poetry run pytest
 ```
 
+A run measures no coverage, because that makes it 2.4× slower and nothing gates on
+it. `make coverage` runs the whole suite with coverage over `app/`, prints the
+term-missing report and writes `coverage.xml`. The suite also logs at `INFO`, a
+default `tests/conftest.py` sets: `local` derives `DEBUG`, and at `DEBUG` the SQLite
+driver writes two lines per operation into every test's capture.
+
 Run linting:
 
 ```bash

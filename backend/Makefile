@@ -15,7 +15,7 @@ ECR_URI          ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_
 ECS_CLUSTER      ?= raketa-cluster
 ECS_SERVICE      ?= raketa-service
 
-.PHONY: help install test lint lint-imports format typecheck check test-gates openapi \
+.PHONY: help install test coverage lint lint-imports format typecheck check test-gates openapi \
         gen-walkthroughs gen-cohort \
         build-dev up down down-v logs ps shell migrate seed seed-host sim-location \
         rebuild-candidate-index rebuild-candidate-index-host \
@@ -29,8 +29,14 @@ help:
 install:           ## install poetry deps
 	poetry install
 
-test:              ## run pytest
+test:              ## run pytest (no coverage — `make coverage` measures it)
 	poetry run pytest tests -q
+
+# Coverage is off by default: it makes a run 2.4x slower and nothing gates on it
+# (ADR-0181). This measures it on demand — the whole suite, the term-missing
+# report on screen, and coverage.xml, which CI can keep as an artifact.
+coverage:          ## run pytest with coverage over app/ (term-missing + coverage.xml)
+	poetry run pytest tests -q --cov=app --cov-report=term-missing --cov-report=xml
 
 lint:              ## ruff check
 	poetry run ruff check .

@@ -12,7 +12,8 @@ sourcing, and a transactional outbox. Python 3.11, Poetry.
 Run via the Makefile from `backend/`:
 
 ```bash
-make test        # poetry run pytest tests -q
+make test        # poetry run pytest tests -q — measures no coverage
+make coverage    # the same run measuring coverage over app/: term-missing + coverage.xml
 make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
@@ -1318,9 +1319,12 @@ tests.
   dangerous configurations in the README's refusal table. It also supplies the defaults
   for `DEBUG`, `LOG_LEVEL` and `LOG_JSON`, each still overridable. **The environment may
   select configuration; it may never select behaviour a domain test could observe.**
-- Tests set their own env in `conftest.py` (SQLite, test JWT secret, `APP_ENV=local`) —
-  no `.env` needed. There is no `test` environment: a test run happens on somebody's
-  laptop or a CI runner, and both are `local`.
+- Tests set their own env in `conftest.py` (SQLite, test JWT secret, `APP_ENV=local`,
+  bcrypt's minimum work factor, `LOG_LEVEL=INFO`) — no `.env` needed. There is no `test`
+  environment: a test run happens on somebody's laptop or a CI runner, and both are
+  `local`. `local`'s DEBUG is overridden because the SQLite driver logs two lines per
+  operation into every test's capture; `caplog` stays, and a test asserting on records
+  sets its own level through it — never `-p no:logging`, which removes the fixture.
 - The embedded event-delivery worker polls the outbox on startup; toggle with
   `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
   `PHOTO_SWEEP_ENABLED`, `PHOTO_REVIEW_BACKFILL_ENABLED`, `CANDIDATE_INDEX_ENABLED`,
