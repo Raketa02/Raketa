@@ -9,9 +9,11 @@ from uuid import UUID
 from app.modules.users.domain.errors import InactiveUserCannotBePromoted
 from app.modules.users.domain.events import (
     UserDisabled,
+    UserMarkedAsTester,
     UserNamed,
     UserPromotedToAdmin,
     UserRegistered,
+    UserUnmarkedAsTester,
 )
 from app.modules.users.domain.value_objects import (
     AdultAttestation,
@@ -47,6 +49,9 @@ class User:
     authority: Authority = Authority.USER
     is_admin: bool = False
     is_active: bool = True
+    #: The **tester mark** (``docs/adr/0180`` §9): a Tester may be given a
+    #: feature before anyone else. Beside ``authority`` and never inside it.
+    is_tester: bool = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     version: int = 0
@@ -121,6 +126,7 @@ class User:
             self.authority = Authority(event.authority)
             self.is_admin = event.is_admin
             self.is_active = event.is_active
+            self.is_tester = False
             # ``adult_attested`` is deliberately not folded into state. It is a
             # precondition of the account existing, answered once and never
             # asked again — no later command reads it, and no rule anywhere
@@ -145,6 +151,14 @@ class User:
         if isinstance(event, UserPromotedToAdmin):
             self.is_admin = True
             self.authority = Authority.ADMIN
+            self.version += 1
+            return
+        if isinstance(event, UserMarkedAsTester):
+            self.is_tester = True
+            self.version += 1
+            return
+        if isinstance(event, UserUnmarkedAsTester):
+            self.is_tester = False
             self.version += 1
             return
         raise TypeError(f"Unsupported user event {event!r}")
@@ -195,4 +209,28 @@ class User:
                 user_id=self.id,
                 occurred_at=occurred_at,
             )
+        )
+
+    def mark_as_tester(self, *, occurred_at: datetime) -> None:
+        """Give this account the tester mark (``docs/adr/0180`` §9).
+
+        Idempotent, as ``disable`` is: marking a Tester again records nothing,
+        because the stream records acts and this one changes nothing. A disabled
+        account is not refused — the mark grants nothing, and it cannot sign in
+        to be shown anything by it.
+        """
+
+        self._ensure_registered()
+        if self.is_tester:
+            return
+        self._record_that(UserMarkedAsTester(user_id=self.id, occurred_at=occurred_at))
+
+    def unmark_as_tester(self, *, occurred_at: datetime) -> None:
+        """Clear the tester mark. Idempotent, like :meth:`mark_as_tester`."""
+
+        self._ensure_registered()
+        if not self.is_tester:
+            return
+        self._record_that(
+            UserUnmarkedAsTester(user_id=self.id, occurred_at=occurred_at)
         )

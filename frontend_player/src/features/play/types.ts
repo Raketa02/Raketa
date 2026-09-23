@@ -402,6 +402,13 @@ export {
 export { PoolScreen, type PoolScreenProps } from './components/PoolScreen';
 
 /**
+ * Whether the player already ran the search a builder or pool was opened on — for those two
+ * routes, which stay open to a journey under way while `find_a_game` is off and close to a bare
+ * link (ADR-0180 §7).
+ */
+export { useSearchWasRun } from './hooks/useBuilder';
+
+/**
  * The forecast, as the builder holds it — **every way round, each with its own number**, and
  * the rule that turns a swap into a selection rather than a request.
  *

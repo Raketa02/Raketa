@@ -6,7 +6,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.domain.events import UserNamed, UserRegistered
+from app.modules.users.domain.events import (
+    UserMarkedAsTester,
+    UserNamed,
+    UserRegistered,
+    UserUnmarkedAsTester,
+)
 from app.modules.users.domain.ports import Naming
 from app.modules.users.domain.user import User
 from app.modules.users.domain.value_objects import (
@@ -29,6 +34,7 @@ def _to_domain(row: UserORM) -> User:
         authority=Authority(row.authority),
         is_admin=row.is_admin,
         is_active=row.is_active,
+        is_tester=row.is_tester,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -44,6 +50,7 @@ def _to_orm(user: User) -> UserORM:
         authority=user.authority.value,
         is_admin=user.is_admin,
         is_active=user.is_active,
+        is_tester=user.is_tester,
     )
 
 
@@ -143,3 +150,14 @@ class SqlAlchemyUserRepository:
         await self._session.flush()
         await self._session.refresh(row)
         return _to_domain(row)
+
+    async def project_tester_mark(
+        self, event: UserMarkedAsTester | UserUnmarkedAsTester
+    ) -> None:
+        row = await self._session.get(UserORM, event.user_id)
+        if row is None:
+            raise RuntimeError(
+                f"the tester mark of {event.user_id} has no projection row to land on"
+            )
+        row.is_tester = isinstance(event, UserMarkedAsTester)
+        await self._session.flush()

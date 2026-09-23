@@ -80,3 +80,11 @@ was typed, and _Save_ is shut again as a green `settled` `Saved`, arriving on th
 fade. `onSaved` is optional: the naming step still passes `router.replace('/')`, the Name screen
 passes nothing, and the way back is the header's. `nameFromYou.test.tsx` walks it. **Not seen
 on a device**: the boxes re-drawn from the re-read under a green button.
+
+**The signed-in player carries the tester mark, and nothing in the app branches on it**
+([#479](https://github.com/Raketa02/Raketa/issues/479), [ADR-0180](../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §9). `/users/me` gained a
+required `is_tester` (#478), and `AuthenticatedUser.isTester` carries it where `is_admin` is still
+dropped — for the opposite reason: it grants nothing. Its one reader is flag evaluation, which
+sends it as the `isTester` attribute so the flags repo's `testers` segment can reach a player
+without the public datafile ever naming one. A screen that drew differently for a tester would be
+the second, unreviewed flag system the ADR exists to prevent.

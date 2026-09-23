@@ -19,7 +19,8 @@
  * differently for an admin has invented an authorization decision it cannot enforce.
  *
  * `hasPlayerProfile` and `name` are the two fields kept for the opposite reason — the client
- * is *required* to branch on them, at launch, before any route tree exists.
+ * is *required* to branch on them, at launch, before any route tree exists. `isTester` is kept
+ * for a third: it is not a decision the client makes at all, but an input it hands to one.
  */
 export interface AuthenticatedUser {
   readonly id: string;
@@ -54,6 +55,18 @@ export interface AuthenticatedUser {
    * exists for this sport?* — answers no.
    */
   readonly hasPlayerProfile: boolean;
+  /**
+   * Whether the account carries the **tester mark** — a real player who may be given a feature
+   * before anyone else
+   * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+   * §9).
+   *
+   * **Not a role, and nothing here branches on it.** It is carried for one reader, flag
+   * evaluation, which passes it on as the `isTester` attribute so the flags repo can target a
+   * `testers` segment without the public datafile ever naming a player. Being shown a screen
+   * early grants no power over anyone, which is why `is_admin` beside it is still dropped.
+   */
+  readonly isTester: boolean;
 }
 
 /** What a player types to sign in. Never logged, never persisted. */

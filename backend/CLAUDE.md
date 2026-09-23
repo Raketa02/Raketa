@@ -35,6 +35,8 @@ make rebuild-candidate-index  # fold the log back into the index (…-host on th
 make photo-flag-rate  # the on-court flag rate at each candidate threshold, read off the
                  # similarity vectors already stored beside the photographs — no image
                  # re-scored, nothing written (…-host on the host)
+make tester PLAYER=<id|email> MARK=on|off  # set or clear the tester mark through
+                 # SetTesterMark — no route does (ADR-0180 §9; …-host on the host)
 ```
 
 One test: `poetry run pytest tests/unit/test_user_domain.py::test_name`.

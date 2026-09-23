@@ -29,7 +29,8 @@ is what a pop is, and which neither `AppState` nor a mount reports.
 a fix is **coarsened to about a kilometre the moment it is read**, so the precise reading
 never reaches a store, a screen or a crash report.
 
-`shared/lib/http` has **two verbs**: `httpRequest` for JSON and `httpUpload` for one file.
+`shared/lib/http` has **three verbs**: `httpRequest` for JSON, `httpUpload` for one file, and
+`httpGetFromFeaturesHost` for the feature-flag datafile (below).
 They share the correlation id, the `Authorization` header, the timeout policy, the error
 mapping and the single-flight 401 rotation — a second copy of any of those is the second
 networking path the module exists to prevent. `httpUpload` also reads the local `file://`
@@ -198,3 +199,16 @@ two screens that draw one — the record and the reader's own You tab — and on
 sentence, sheet, toast, seat label or spoken name. It sits in the formatter's file because the
 fence is a fact about how a person is named, and nothing else in that file takes a nickname, which
 is how every other surface keeps it: by never being handed one.
+
+**The third verb reads the one document that is not the API's, and never carries a token**
+([#479](https://github.com/Raketa02/Raketa/issues/479), [ADR-0180](../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §4, §6). The feature-flag
+datafile is served from `EXPO_PUBLIC_FEATURES_URL` — the Mac on the LAN today, a bucket later — and
+`httpGetFromFeaturesHost` fetches it through the same `sendOnce` every request uses, so the
+timeout, the correlation id, cancellation and the error model are the module's as always. It is a
+verb and not a `host` field on `httpRequest` because of the one thing it must not do: it is built
+unauthenticated, so no caller can send a bearer token to a host that has no use for it. It takes
+the `background` class. The env gained the variable with the **scheme rule applied to both URLs by
+one loop**, so the guard that stops a malformed URL being blamed on the environment cannot be
+written for one and forgotten for the other. `platform/appBuild.ts` is the platform module's one
+plain _reading_ — `platform` (`ios` / `android`) and the app's own version — the two device facts
+a flag's rules may target; each is absent rather than guessed when the build cannot say.

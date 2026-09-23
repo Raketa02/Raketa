@@ -37,6 +37,11 @@ class UserORM(Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
+    # The tester mark (``docs/adr/0180`` §9). A column beside ``authority`` and
+    # never a value of it: a Tester is shown features early and holds no power.
+    is_tester: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

@@ -9,16 +9,29 @@
  * `ForecastRequest.search_id` and a Query key, so it is validated before anything reads it — a
  * link that does not survive that has no origin at all, which is not a builder but Play's own
  * start.
+ *
+ * **Closed to a bare link while `find_a_game` is off, never to a search under way**
+ * ([ADR-0180](../../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+ * §7). With the flag off Play's root is not Find a game, so nothing there can start a search — and
+ * a link to this route with no search behind it lands on Play's root rather than on an empty court.
+ * A search the player already ran is let through: the toggle reached them mid-journey, and a
+ * gated screen is never pulled out from under anybody (PRD #476 story 21). The flag is read once,
+ * when the route mounts, like every gate. Fill-the-seat's builder is not this route; it is
+ * `chats/challenge/[challengeId]/fill`, and nothing there reads the flag.
  */
 
 import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { BuilderScreen, parseBuilderRouteParams } from '@/features/play/types';
+import { useFeatureOnMount } from '@/features/feature_flags/types';
+import { BuilderScreen, parseBuilderRouteParams, useSearchWasRun } from '@/features/play/types';
 
 export default function BuilderRoute() {
   const params = parseBuilderRouteParams(useLocalSearchParams());
+  const findAGame = useFeatureOnMount('find_a_game');
+  const searchWasRun = useSearchWasRun(params?.search);
 
   if (params === undefined) return <Redirect href="/play" />;
+  if (!findAGame && !searchWasRun) return <Redirect href="/play" />;
 
   return <BuilderScreen arrivalSearchId={params.search} />;
 }

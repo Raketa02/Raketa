@@ -53,17 +53,24 @@ pnpm check        # lint + format check + typecheck + test — the local gate
 
 ## Environment
 
-Copy `.env.example` → `.env.local`. `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_ENV` are both
-**required**: `src/shared/config/env.ts` validates them once at launch and the app stops
-on a startup screen naming whichever is missing or malformed, rather than failing later
-inside a feature. On a **physical device**, `EXPO_PUBLIC_API_URL` must be a LAN IP or
-tunnel — `localhost` on a phone means the phone.
+Copy `.env.example` → `.env.local`. `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` and
+`EXPO_PUBLIC_ENV` are all **required**: `src/shared/config/env.ts` validates them once at
+launch and the app stops on a startup screen naming whichever is missing or malformed,
+rather than failing later inside a feature. On a **physical device**, both URLs must be a
+LAN IP or tunnel — `localhost` on a phone means the phone.
+
+`EXPO_PUBLIC_FEATURES_URL` is where the feature-flag datafiles are served
+([ADR-0180](../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)):
+locally, `npm run serve` in the flags repo (`Raketa02/raketa-features`) serves them on port
+3040, so on a phone it is `http://<the Mac's LAN IP>:3040`. The app fetches
+`<it>/<EXPO_PUBLIC_ENV>/featurevisor-player.json` at launch and on every return to the
+foreground and never waits for it; a gated screen reads its flag the next time it mounts.
 
 `EXPO_PUBLIC_ENV` is one of `local`, `development`, `staging`, `production` — the same
 four names the backend uses. **Only `local` runs today**; the other three
 are validated but not provisioned. The environment decides the URL scheme, and that is
-validated too: the three deployed ones must be `https://`, because this URL is reached
-from a phone over the internet. `local` takes either — a tunnel is how a physical device
+validated too: the three deployed ones must be `https://` for both URLs, because each is
+reached from a phone over the internet. `local` takes either — a tunnel is how a physical device
 reaches a laptop, and every tunnel hands back `https://`. A laptop URL under a deployed
 name is a startup failure naming both variables. See [`../docs/environments.md`](../docs/environments.md).
 

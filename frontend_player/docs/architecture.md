@@ -308,6 +308,16 @@ transport with its own headers, timeout and rotation. So an upload reports the t
 it genuinely passes through — the bytes are read, then they are sent — and a screen drawing
 that never claims a percentage nobody measured.
 
+### The features host
+
+`httpGetFromFeaturesHost` is the module's third verb, and the only request the app makes to a
+host that is not the API: the feature-flag datafile, served from `EXPO_PUBLIC_FEATURES_URL`
+([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §4). It goes
+through the same `sendOnce` — timeout, correlation id, cancellation, error model — and is a verb
+rather than a flag on `httpRequest` because of what it must never send: the call is built
+unauthenticated, so no bearer token can reach a laptop on the LAN or a public bucket. It takes
+the `background` timeout class; nobody is waiting on it.
+
 ### Retry
 
 Centralized in `src/shared/lib/http` and `query-client`, never per call site.
@@ -924,9 +934,17 @@ budget making it short.
 ```ts
 const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
+  EXPO_PUBLIC_FEATURES_URL: z.string().url(),
   EXPO_PUBLIC_ENV: z.enum(['local', 'development', 'staging', 'production']),
 });
 ```
+
+`EXPO_PUBLIC_FEATURES_URL` is the base the feature-flag datafile is fetched from —
+`<base>/<environment>/featurevisor-player.json` — the Mac's LAN address today, a bucket later
+([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+§4). It obeys the scheme rule below exactly as the API URL does, for the same reason: it is
+reached from a phone, and a datafile read in the clear is one somebody on the network can
+rewrite.
 
 The four names are the platform's, shared verbatim with the backend.
 `local` is a developer's own machine and is the only one that runs today; `development`
@@ -935,8 +953,8 @@ deployment. Naming a laptop `development` — which is what this app did before 
 names existed — makes a laptop and a shared remote deployment indistinguishable in a log
 line.
 
-**The URL scheme is part of the contract.** `EXPO_PUBLIC_API_URL` is reached from a phone
-over the internet, so it takes the **public-network** form of the platform's scheme rule:
+**The URL scheme is part of the contract.** Both URLs are reached from a phone over the
+internet, so each takes the **public-network** form of the platform's scheme rule:
 `development`, `staging` and `production` must be `https://`. `local` takes either —
 `expo start --tunnel`, cloudflared and tailscale funnel all hand back `https://`, and a
 tunnel is precisely what a physical device that cannot reach the laptop's LAN IP needs.
@@ -1145,6 +1163,14 @@ adapter, a cache version with migrations, a maximum age, exclusion of sensitive 
 user-scoped clearing on logout, and schema-change handling. **Never store a query cache in
 SecureStore** — it is for small secrets.
 
+**The one thing persisted outside the keychain is the feature-flag datafile**
+([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §6): the last one the app
+could read, kept raw in AsyncStorage by `features/feature_flags/api/datafileCache.ts` and read
+back at launch, so a player offline keeps the flags they last saw. It is not a query-cache
+persistence and none of the rules above are waived for it: it is public-read by design, names no
+player, is checked on the way out as it was on the way in, and a read that fails is simply no
+cache. AsyncStorage stays banned everywhere else ([Part 19](#part-19--what-the-linter-enforces)).
+
 **Introduce SQLite** only for true offline workflows, large structured local datasets,
 durable operation queues, complex local queries, conflict resolution, or persistence
 genuinely beyond the query cache. Not because "production apps have one". And never
@@ -1160,7 +1186,11 @@ encodes:
 - generated wire types are importable only in `api/` and `mappers/`
 - `domain/` and `use-cases/` import no React, React Native, Expo or wire types
 - no imports from `../backend/` or any sibling app
-- `@react-native-async-storage/async-storage` is banned outright
+- `@react-native-async-storage/async-storage` is importable only by
+  `features/feature_flags/api/datafileCache.ts`, which keeps the public flag datafile — never a
+  credential (ADR-0008, ADR-0180 §6)
+- `@featurevisor/sdk` is importable only by `features/feature_flags/api/featurevisor.ts`, the
+  one module that holds the instance (ADR-0180 §5)
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
 - `expo-location`, `expo-image-picker` and `react-native-sse` are importable only by the
   port that owns each — `platform/location.ts`, `platform/imagePicking.ts` and
@@ -1299,7 +1329,14 @@ when the code that needs them is written — not preemptively:
 > `react-native-sse`, with the app's first live surface — pure JS over `XMLHttpRequest`, no
 > native module, and therefore nothing for an SDK bump to break
 > ([ADR-0147](../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
-> §4, [the live surface](#the-live-surface)). All of them are
+> §4, [the live surface](#the-live-surface)). And so has a feature-flag service —
+> Featurevisor, pinned exactly, with AsyncStorage for its saved datafile — with the first gate,
+> `find_a_game` ([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)). The rule it
+> carried here still stands, whole: build-time config and runtime product flags stay separate,
+> no `if (env === 'production')` is a rollout mechanism, and every flag has an owner, purpose,
+> default, rollout strategy and a removal condition — the first three and the last beside its key
+> in `features/feature_flags/domain/featureFlags.ts`, the rollout in the flags repo — and is
+> deleted after rollout. All of them are
 > listed as present rather than pending — this list is what is _missing_, and an entry that
 > outlives its own arrival makes the list untrustworthy.
 
@@ -1309,10 +1346,6 @@ when the code that needs them is written — not preemptively:
   wrapper starts growing ([Part 4](#part-4--the-http-client)).
 - React Hook Form + `@hookform/resolvers` — once a form outgrows local state
   ([Part 9](#part-9--zod-and-validation-boundaries)).
-- A feature-flag service — when staged rollout becomes necessary. Separate **build-time
-  config** from **runtime product flags**; never `if (env === 'production')` as a rollout
-  mechanism. Every flag has an owner, purpose, default, rollout strategy and a removal
-  condition, and is deleted after rollout.
 - Analytics SDK — behind the internal interface, never called directly from a feature.
 - Persistent storage / SQLite — only under [Part 18](#part-18--offline-and-persistence).
 

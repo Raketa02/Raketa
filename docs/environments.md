@@ -210,8 +210,14 @@ Concretely:
 - A feature that is not ready is off everywhere, including production, and is turned on by
   flipping the flag — not by promoting it through environments.
 
-There is no flag system today, and none is in scope. The rule is recorded so that the first
-one built does not arrive as an environment branch.
+The flag system is Featurevisor, adopted by
+[ADR-0180](adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md). Its
+definitions live in a separate repository, `Raketa02/raketa-features`, whose environments are
+these four names; each builds its own datafile, and the player app reads the one for the
+environment it was built for. That is where a flag's per-environment default lives — in the
+flags repo's YAML, never in a branch in either app. The rule above was recorded before any flag
+system existed so that the first one would not arrive as an environment branch, and it holds
+for this one unchanged.
 
 ## Testing
 

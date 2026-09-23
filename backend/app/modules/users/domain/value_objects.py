@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+from uuid import UUID
 
 from app.modules.users.domain.errors import AdultAttestationRequired
 
@@ -25,6 +26,37 @@ class Email:
         if len(v) > 320 or not _EMAIL_RE.match(v):
             raise ValueError(f"invalid email: {self.value!r}")
         object.__setattr__(self, "value", v)
+
+
+@dataclass(frozen=True)
+class AccountReference:
+    """An account as an operator names one: **by its id, or by its email**.
+
+    What the admin command that sets the tester mark takes (``docs/adr/0180``
+    §9), read here rather than in the use case so the rule has one home. The
+    typed string is trimmed first — it arrives from a command line, and from a
+    paste — then read as an id if it is one and as an :class:`Email` otherwise,
+    so an address is normalised exactly as registration normalised it.
+    ``names`` is the one it turned out to be; a string that is neither is
+    refused, and whether anybody holds the id or the address is the caller's
+    question.
+    """
+
+    typed: str
+    names: UUID | Email = field(init=False)
+
+    def __post_init__(self) -> None:
+        v = self.typed.strip()
+        try:
+            names: UUID | Email = UUID(v)
+        except ValueError:
+            try:
+                names = Email(v)
+            except ValueError:
+                raise ValueError(
+                    f"neither an account id nor an email: {self.typed!r}"
+                ) from None
+        object.__setattr__(self, "names", names)
 
 
 @dataclass(frozen=True)

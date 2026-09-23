@@ -37,6 +37,7 @@ from app.seeds.catalog import (
     RATING_BARELY_ESTABLISHED,
     RATING_WELL_ESTABLISHED,
     SEED_PASSWORD,
+    TESTERS,
     SeedAccount,
 )
 from app.seeds.runner import seed
@@ -75,8 +76,13 @@ async def test_every_seeded_address_signs_in_and_is_who_it_says(client, seeded):
 
     ``First Last`` and a lowercase handle without a dot (``docs/adr/0171`` §5):
     a seeded court reads *Diego Fabregat left* and never *Diego.Fabregat left*.
+
+    **And a Tester exactly when the catalog says so** (``docs/adr/0180`` §9):
+    ``/me`` is where the player app reads the mark it hands to flag evaluation,
+    so a seeded tester is one the app would really treat as one.
     """
 
+    testers_seen = 0
     for entry in seeded.values():
         headers = await _sign_in(client, entry.account)
 
@@ -89,6 +95,10 @@ async def test_every_seeded_address_signs_in_and_is_who_it_says(client, seeded):
         assert " " in entry.account.name and "." not in entry.account.name
         assert entry.account.nickname == entry.account.nickname.lower()
         assert "." not in entry.account.nickname
+        assert me.json()["is_tester"] is (entry.account in TESTERS), entry.account.slug
+        testers_seen += entry.account in TESTERS
+
+    assert testers_seen == len(TESTERS)
 
 
 async def test_the_brand_new_player_has_every_empty_state_at_once(client, seeded):
