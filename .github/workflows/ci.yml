@@ -281,19 +281,31 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
-      # **Two workers and an 8 GB heap, because one suite needs more than the
-      # runner hands Node by default.** `deck.test.tsx` peaks around 5.5 GB on
-      # its own: it drives a full router tree through a gesture-and-animation
-      # pane, and a JS-driven `Animated` frame fires on every fake millisecond.
-      # A `ubuntu-latest` runner has 16 GB, but Node sizes its old space from
-      # that at roughly 4 GB, so the worker running the deck aborted with
-      # SIGABRT (exit 134) while every assertion in it passed. The ceiling is a
-      # ceiling and not a reservation — the other 293 suites are unchanged by
-      # it — and the worker count is what keeps two peaks from meeting inside
-      # the same 16 GB. The suite's appetite is the thing to fix; this is what
-      # stops it failing a build in the meantime.
+      # **One suite needs ten times what the next one does, so the run is given a
+      # ceiling, a worker count and a recycle rule** — measured, not guessed:
+      # `--logHeapUsage` over the whole suite puts `deck.test.tsx` at 5389 MB and
+      # the next heaviest at 541 MB. It mounts the entire router tree 78 times in
+      # one process, through the radar's gesture-and-animation pane.
+      #
+      # A `ubuntu-latest` runner has 16 GB but Node sizes its old space from that
+      # at roughly 4 GB, so the deck's worker aborted with SIGABRT (exit 134)
+      # while every assertion in it passed. `--max-old-space-size` lifts that; it
+      # is a ceiling and not a reservation, so the other 293 suites are unchanged.
+      #
+      # **`--workerIdleMemoryLimit` is the half that actually matters**, and
+      # leaving it out is what killed the runner itself the first time this was
+      # fixed: a worker is reused across suites and gives nothing back, so one
+      # crawled upward through ~147 of them while the other held the deck at
+      # 5.4 GB, and between them they starved the runner agent — 56 minutes of
+      # thrashing and then "lost communication with the server", which is not a
+      # test failure and does not read as one. Recycling any worker over 1500 MB
+      # between suites bounds the pair at roughly 5.9 GB, which is what the
+      # measured run shows: 294 suites, 4264 tests, 2m11s.
+      #
+      # The deck's appetite is the thing to fix. This is what stops it failing a
+      # build while it is still there.
       - name: Test
-        run: pnpm test -- --maxWorkers=2
+        run: pnpm test -- --maxWorkers=2 --workerIdleMemoryLimit=1500MB
         env:
           NODE_OPTIONS: --max-old-space-size=8192
       # A native module may be imported from exactly one port, and the keychain
