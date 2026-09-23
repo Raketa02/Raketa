@@ -98,6 +98,15 @@ const hapticsImport = {
     'src/test-support/platform.ts in a test. See docs/adr/0167 §2.',
 };
 
+const featurevisorImport = {
+  group: ['@featurevisor/*'],
+  message:
+    'Only src/features/feature_flags/api/featurevisor.ts may import the Featurevisor SDK. A gate ' +
+    'asks useFeatureOnMount from @/features/feature_flags/types; one module holding the SDK is ' +
+    'what keeps its instance, its major and what a silent datafile means in one place — and ' +
+    'the flags repo pins its CLI major to this one. See docs/adr/0180 §5, §10.',
+};
+
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -141,10 +150,11 @@ const planImportFromGames = {
 };
 
 const asyncStoragePath = {
-  // Tokens belong in the OS keychain, not in JS-readable storage.
+  // Tokens belong in the OS keychain, not in JS-readable storage. The one exemption is a file,
+  // not a directory, and it holds a public datafile — see its block below.
   name: '@react-native-async-storage/async-storage',
   message:
-    'Never store credentials in AsyncStorage — it is unencrypted. Use expo-secure-store through src/shared/lib/auth. See docs/adr/0008.',
+    'AsyncStorage is unencrypted: never store credentials in it — use expo-secure-store through src/shared/lib/auth (docs/adr/0008). Its only importer is src/features/feature_flags/api/datafileCache.ts, which keeps the public feature-flag datafile and nothing else (docs/adr/0180 §6); a second need joins that allow-list by decision, not by import.',
 };
 
 /** Applies everywhere under src/, including api/ and mappers/. */
@@ -156,6 +166,7 @@ const CORE_PATTERNS = [
   imagePickerImport,
   liveStreamImport,
   hapticsImport,
+  featurevisorImport,
   observabilityVendorImports,
 ];
 
@@ -277,6 +288,10 @@ const SHARED_PATTERNS = [...CORE_PATTERNS, generatedImports, featureImportsFromS
 const sharedPatternsExcept = (...exemptions) =>
   SHARED_PATTERNS.filter((pattern) => !exemptions.includes(pattern));
 
+/** The same subtraction over a feature's wire layer, whose baseline is `CORE_PATTERNS`. */
+const corePatternsExcept = (...exemptions) =>
+  CORE_PATTERNS.filter((pattern) => !exemptions.includes(pattern));
+
 export default [
   ...expoConfig,
   {
@@ -324,7 +339,7 @@ export default [
     rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS) },
   },
 
-  // --- the five sanctioned exceptions -----------------------------------------
+  // --- the sanctioned exceptions ----------------------------------------------
   {
     // The single chokepoint for credentials (ADR-0008).
     files: ['src/shared/lib/auth/**'],
@@ -365,6 +380,19 @@ export default [
     // above it.
     files: ['src/shared/lib/platform/haptics.ts'],
     rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(hapticsImport)) },
+  },
+  {
+    // The feature flags' saved datafile — the one module in the app that may import AsyncStorage
+    // (ADR-0180 §6). The path ban is subtracted and nothing else: this file is a feature's api/
+    // layer, so its baseline is `CORE_PATTERNS`, and every one of those still applies.
+    files: ['src/features/feature_flags/api/datafileCache.ts'],
+    rules: { 'no-restricted-imports': restrict(CORE_PATTERNS, []) },
+  },
+  {
+    // The one module that wraps the Featurevisor SDK (ADR-0180 §5) — one file wide, like the
+    // native ports: the cache beside it may not evaluate a flag, and this may not read storage.
+    files: ['src/features/feature_flags/api/featurevisor.ts'],
+    rules: { 'no-restricted-imports': restrict(corePatternsExcept(featurevisorImport)) },
   },
   {
     // The single place fetch is configured.
@@ -460,8 +488,11 @@ export default [
     // test-file block above is keyed on `*.test.*` — which a setup file deliberately is
     // not, because `testMatch` would then try to run it as a suite. The second file is
     // the configuration's too: what `jest.config.js` maps reanimated's mock to.
+    //
+    // `afterEach` for the one hook the setup file registers for every suite: emptying the
+    // device storage a flag suite saved a datafile into (ADR-0180 §6).
     files: ['jest.setup.js', 'src/test-support/reanimatedActual.js'],
-    languageOptions: { globals: { jest: 'readonly' } },
+    languageOptions: { globals: { jest: 'readonly', afterEach: 'readonly' } },
   },
 
   // --- Play and games: nothing tappable ships without a name ------------------

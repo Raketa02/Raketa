@@ -7258,6 +7258,11 @@ export interface components {
             is_admin: boolean;
             /** Is Active */
             is_active: boolean;
+            /**
+             * Is Tester
+             * @description Whether this account carries the **tester mark**: a real player who may be given a feature before anyone else. Set and cleared by an admin command, never by the player, and `false` for every account until then. **Not a role** — `authority` does not move with it. The player app passes it to flag evaluation as `isTester`, so no published datafile ever has to name a tester.
+             */
+            is_tester: boolean;
             /** Created At */
             created_at?: string | null;
             /**

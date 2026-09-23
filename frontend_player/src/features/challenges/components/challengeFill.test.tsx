@@ -31,16 +31,19 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { offlineMessage } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
-import { endPlaySession, optimisedForLine } from '@/features/play/types';
+import { PICK_PLAYERS_LABEL, endPlaySession, optimisedForLine } from '@/features/play/types';
 import { PROPOSE_SHEET_TITLE, SEND_CHALLENGE_LABEL } from '../types';
 import {
   CHALLENGES_PATH,
   GATE_USER,
+  datafileFor,
+  datafileSettled,
   launchSignedIn,
   stubChallenges,
   stubConversations,
   stubGames,
   stubGate,
+  stubDatafile,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
@@ -496,6 +499,40 @@ describe('⚡ fill the seats', () => {
     await fillTheSeats();
 
     expect(transport.requestsTo('POST', SEATS_PATH)).toEqual([]);
+  });
+});
+
+/**
+ * **Fill-the-seat is not behind `find_a_game`**
+ * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+ * §7, [#479](https://github.com/Raketa02/Raketa/issues/479)). The flag closes Find a game and
+ * the builder and pool under Play with it; a challenge already sent still has to be fillable, and
+ * this journey reaches the builder at its own route and the pool at Play's — which the gate lets
+ * through because the search it was opened against is finishing this challenge.
+ */
+describe('with Find a game switched off', () => {
+  beforeEach(() => stubDatafile(transport, datafileFor({ find_a_game: 'off' })));
+
+  it('still pushes the builder under the challenge', async () => {
+    await openTheChallenge();
+    await datafileSettled(transport);
+
+    await fillTheSeats();
+
+    expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}/fill`);
+  });
+
+  it('still opens the pool against a seat the fill took', async () => {
+    await openTheChallenge();
+    await datafileSettled(transport);
+    await fillTheSeats();
+
+    // Take the fill's pick back out of the seat, then fill the hole from the pool — the one way
+    // to it from a full court, since a tap on somebody seated trades places.
+    fireEvent.press(screen.getByLabelText(/^Remove cyryl from/));
+    fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
+
+    await waitFor(() => expect(screen).toHavePathname('/play/pool'));
   });
 });
 

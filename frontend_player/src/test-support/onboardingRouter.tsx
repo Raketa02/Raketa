@@ -13,7 +13,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Slot } from 'expo-router';
-import { renderRouter } from 'expo-router/testing-library';
+import { renderRouter, waitFor } from 'expo-router/testing-library';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ReducedMotionProvider } from '@/shared/ui';
@@ -65,6 +65,7 @@ import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
+import { featureFlagKeys } from '@/features/feature_flags/types';
 import { NOW_COPY } from '@/features/shell/types';
 import { beginSession } from '@/shared/lib/auth';
 import {
@@ -715,6 +716,80 @@ export function stubSportsmanship(
   );
 }
 
+/**
+ * Where the feature-flag datafile is fetched from, as the fake socket sees it: the features host
+ * is stripped from the URL exactly as the API's is, and `development` is the environment
+ * `jest.config.js` sets (ADR-0180 §3, §4).
+ */
+export const DATAFILE_PATH = '/development/featurevisor-player.json';
+
+/**
+ * **The datafile the flags host serves — or none.**
+ *
+ * Not a wire type: the file is the flags repo's, not the API's, and the app checks its envelope
+ * rather than generating one. So it is described as the object it is, and a suite about a flag
+ * builds the one it needs.
+ *
+ * `'none'` is a 404 — what the flags repo's serve script answers for a file it has not built, and
+ * a failure the app does not retry, so a suite that says nothing about flags is not left with a
+ * read going round underneath it.
+ */
+export function stubDatafile(
+  transport: Transport,
+  served: Readonly<Record<string, unknown>> | 'none' = 'none',
+) {
+  transport.on('GET', DATAFILE_PATH, () =>
+    served === 'none' ? new Response('Not Found', { status: 404 }) : json(served),
+  );
+}
+
+/**
+ * **A datafile as the flags repo builds one** — each named feature on or off for everybody, which
+ * is `percentage: 100` or `0` on one `everyone` rule in the repo's YAML. Enough for every walk
+ * about a gate; a walk about *who* a rule reaches spells its own traffic.
+ *
+ * The rest is what CLI 3.11.0 emits today. `schemaVersion` is the one fact the app refuses a
+ * datafile on, so a walk about that refusal overrides it.
+ */
+export function datafileFor(
+  features: Readonly<Record<string, 'on' | 'off'>>,
+  overrides: Readonly<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    schemaVersion: '2',
+    featurevisorVersion: '3.11.0',
+    revision: '1',
+    segments: {},
+    features: Object.fromEntries(
+      Object.entries(features).map(([key, state]) => [
+        key,
+        {
+          bucketBy: 'playerId',
+          traffic: [{ key: 'everyone', segments: '*', percentage: state === 'on' ? 100000 : 0 }],
+        },
+      ]),
+    ),
+    variables: {},
+    ...overrides,
+  };
+}
+
+/**
+ * **The datafile has been answered, and the answer is in hand** — the moment a toggle has
+ * *reached the app* (ADR-0180 §6).
+ *
+ * Nothing on screen says so, by design: a gate reads its flag once, when it mounts, so a datafile
+ * landing under a mounted screen changes nothing a player could see. A walk about a gate therefore
+ * waits on the read itself — `count` requests made, and no flag read still running — before it
+ * mounts the screen it is asking about.
+ */
+export async function datafileSettled(transport: Transport, count = 1) {
+  await waitFor(() =>
+    expect(transport.requestsTo('GET', DATAFILE_PATH).length).toBeGreaterThanOrEqual(count),
+  );
+  await waitFor(() => expect(queryClient.isFetching({ queryKey: featureFlagKeys.all })).toBe(0));
+}
+
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
@@ -810,6 +885,11 @@ export interface GateStub {
    * depends on it, and a suite about the You tab reads it off `GATE_USER`.
    */
   readonly name?: string | null;
+  /**
+   * Whether the account carries the **tester mark** (ADR-0180 §9) — the one thing on this read the
+   * flag seam sends on. Defaults to **false**, which is every account until an admin marks it.
+   */
+  readonly isTester?: boolean;
 }
 
 /**
@@ -825,6 +905,7 @@ export const GATE_USER: Wire['UserResponse'] = {
   authority: 'player',
   is_admin: false,
   is_active: true,
+  is_tester: false,
   has_player_profile: false,
   created_at: '2026-08-13T10:00:00Z',
 };
@@ -846,6 +927,11 @@ export const GATE_USER: Wire['UserResponse'] = {
  * All three are defaulted to nothing, and a suite with any of them calls the stub again afterwards
  * to replace it.
  *
+ * **So is the feature-flag datafile**, and for the same reason: the signed-in app fetches it the
+ * moment it opens, whatever the suite is about (ADR-0180 §6). It is defaulted to **none**, which
+ * is every flag at its code default — the app as it ships. A suite about a flag calls
+ * `stubDatafile` again afterwards to serve one.
+ *
  * **The cards read is not made on that tab at all**, and it is still stubbed here. The card
  * asking how the other players were is drawn at the end of the **game screen**, one push in,
  * so landing in the app never asks for the list — but a suite that opens a game does, and
@@ -860,6 +946,7 @@ export function stubGate(
     hasPlayerProfile = false,
     id = GATE_USER.id,
     name = GATE_USER.name ?? null,
+    isTester = false,
   }: GateStub = {},
 ) {
   transport.on('GET', '/api/v1/ratings', () =>
@@ -874,6 +961,7 @@ export function stubGate(
       // The two are one act: an account with no name has no handle either.
       nickname: name === null ? null : GATE_USER.nickname,
       has_player_profile: hasPlayerProfile,
+      is_tester: isTester,
     }),
   );
 
@@ -883,6 +971,7 @@ export function stubGate(
   stubChallenges(transport);
   stubConversations(transport);
   stubSportsmanship(transport);
+  stubDatafile(transport);
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

@@ -402,6 +402,12 @@ export {
 export { PoolScreen, type PoolScreenProps } from './components/PoolScreen';
 
 /**
+ * Whether the search a pool was opened against is finishing a challenge — for the pool's route,
+ * which keeps fill-the-seat's pool open while `find_a_game` closes Find a game's (ADR-0180 §7).
+ */
+export { useSearchCompletesAChallenge } from './hooks/useBuilder';
+
+/**
  * The forecast, as the builder holds it — **every way round, each with its own number**, and
  * the rule that turns a swap into a selection rather than a request.
  *

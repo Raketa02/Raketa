@@ -43,6 +43,7 @@ const USER: Wire['UserResponse'] = {
   authority: 'player',
   is_admin: false,
   is_active: true,
+  is_tester: false,
   has_player_profile: false,
 };
 
@@ -82,6 +83,7 @@ describe('relaunching', () => {
       name: USER.name,
       nickname: USER.nickname,
       hasPlayerProfile: USER.has_player_profile,
+      isTester: USER.is_tester,
     });
   });
 
@@ -256,6 +258,7 @@ describe('the launch sequence', () => {
         name: USER.name,
         nickname: USER.nickname,
         hasPlayerProfile: USER.has_player_profile,
+        isTester: USER.is_tester,
       }),
     );
     expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(1);

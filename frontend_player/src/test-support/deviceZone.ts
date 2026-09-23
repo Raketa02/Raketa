@@ -2,7 +2,7 @@
  * Move the device's zone under a test, and put it back.
  *
  * `process.env` is declared **read-only** for the app (`shared/config/process-env.d.ts`), on
- * purpose: the app reads two `EXPO_PUBLIC_*` values off it at launch and writes nothing, and a
+ * purpose: the app reads three `EXPO_PUBLIC_*` values off it at launch and writes nothing, and a
  * narrow declaration is what keeps `@types/node`'s `fs` and `Buffer` from looking available in a
  * runtime that has neither. The suites about the platform's day are the one place a write is
  * wanted — they move the device's zone to prove the conversions never consult it — and this is

@@ -29,6 +29,10 @@
  * native module with nothing under it in a test, and *exactly one, and none under reduced
  * motion* is a rule a fake can count where a mock could only record.
  *
+ * `appBuild` is the one plain *reading*: which platform and which version of the app this is,
+ * the two device facts a feature flag's rules may target (ADR-0180 §8). Nothing to decide and
+ * nothing a test would drive, so no port.
+ *
  * `permissionStateOf` is deliberately *not* re-exported. Reading a native response is the
  * ports' own work, and a caller with a use for it is a caller that got hold of a native
  * response — which is the thing the boundary exists to prevent.
@@ -38,6 +42,7 @@ export { useOnForeground, wireFocusManager } from './appState';
 export { useHardwareBack } from './hardwareBack';
 export { useOnReturn } from './screenReturn';
 export { openAppSettings } from './appSettings';
+export { appBuild } from './appBuild';
 export { KEYBOARD_AVOIDANCE } from './keyboard';
 export { useIsOnline, wireOnlineManager } from './networkState';
 

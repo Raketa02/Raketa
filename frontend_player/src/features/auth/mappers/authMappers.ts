@@ -44,6 +44,10 @@ export function toAuthenticatedUser(wire: UserResponse): AuthenticatedUser {
     // false on the wire for responses that are not about the authenticated player — such
     // as the one registration returns — and a brand-new account has no profile anyway.
     hasPlayerProfile: wire.has_player_profile,
+    // Kept where `is_admin` is dropped for the opposite reason to theirs: it grants nothing.
+    // Its one reader is flag evaluation, which decides which build of a screen is drawn and
+    // never what anybody may do (ADR-0180 §9).
+    isTester: wire.is_tester,
   };
 }
 

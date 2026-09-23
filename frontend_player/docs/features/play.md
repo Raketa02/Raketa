@@ -1177,3 +1177,19 @@ gains `stacked` and the hint its third sentence. `radar.test.tsx` walks a cast w
 card, the fold on deselect, the dissolve at 3 km; and the open — both faces back, two legs, the
 marker `expanded` — the flight to a fanned face, the fold on a second tap and on empty field.
 **Not seen on a device.**
+
+**Find a game is behind the `find_a_game` flag, and the gate is Play's three route files**
+([#479](https://github.com/Raketa02/Raketa/issues/479), [ADR-0180](../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §7). `play/index.tsx` reads the
+flag once when it mounts — `useFeatureOnMount` from `features/feature_flags` — and draws
+`FindAGameScreen` when it is on and `features/find_a_game_next`'s empty screen when it is off; the
+shell lays the root down again on every entry to the tab, which is when a toggle that arrived
+meanwhile shows. `play/builder.tsx` redirects to `/play` while it is off. **`play/pool.tsx` does
+too, unless the search it was opened against is finishing a challenge**: the builder under a
+challenge's fill-the-seat pushes the same `/play/pool` Find a game's does, and fill-the-seat is not
+behind the flag (story 25), so the route asks `useSearchCompletesAChallenge` — `origin.completing`
+on the record, the fact ADR-0150 §2 already made the thing a fill _is_. That exemption is a
+reading of the ticket rather than a line of it: the ticket names the builder under a challenge as
+unaffected and the pool route as gated, and the two meet at this one route. A toggle arriving
+between Find a game and the builder in one visit (a foreground in between) sends that builder back
+to Play; nobody stays on a flow the flag has closed. `findAGame.test.tsx` and the other Play suites
+are untouched: `stubGate` serves no datafile, which is every flag at its code default.

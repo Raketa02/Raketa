@@ -40,7 +40,13 @@ export type {
 export const NAMING_STEP = '/name';
 
 export { authKeys } from './hooks/authKeys';
-export { useCurrentUser } from './hooks/useCurrentUser';
+/**
+ * The signed-in player's read — its key and its fetch as one thing — for the one reader that must
+ * look it up without observing it: a feature-flag gate, which reads the player once when its
+ * screen mounts (ADR-0180 §7). Its key carries the mapped type, so that lookup needs no cast and
+ * cannot disagree with this feature about what the entry holds.
+ */
+export { currentUserQuery, useCurrentUser } from './hooks/useCurrentUser';
 /**
  * The one write another feature may make to the authenticated player.
  *

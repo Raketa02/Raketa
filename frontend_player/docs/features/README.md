@@ -20,20 +20,22 @@ ones above it: the bold lead states the decision, the body gives the reason, and
 ADR are linked. A paragraph that touches two features goes in the one whose code changed most and
 is referenced from the other by a sentence, not copied.
 
-| File                                     | Records                                                                  |
-| ---------------------------------------- | ------------------------------------------------------------------------ |
-| [`_shared.md`](_shared.md)               | The three platform ports, the HTTP client's two verbs, the UI primitives |
-| [`auth.md`](auth.md)                     | Sign-up's adult attestation, the naming step, the You tab's identity     |
-| [`challenges.md`](challenges.md)         | The send, the challenge screen, the two answers, the fill, the withdraw  |
-| [`conversations.md`](conversations.md)   | The Chats tab, the room, the optimistic send, the live layer, typing     |
-| [`games.md`](games.md)                   | The result argument's eight states, the score pad, the game screen       |
-| [`onboarding.md`](onboarding.md)         | The two parts, the hardware back button, the ratings summary, the gate   |
-| [`plans.md`](plans.md)                   | The plan card, the ladder, the Now rail and its nine card states         |
-| [`play.md`](play.md)                     | The copy deck, the three cards, the court, the four screens, `SH.whyfit` |
-| [`player_profile.md`](player_profile.md) | The flagged photo, the gender step, the consent copy, the commit         |
-| [`player_record.md`](player_record.md)   | The record sheet a face opens, the metered rows, what opponents said     |
-| [`shell.md`](shell.md)                   | Five tabs over one stack, the reset, the bar standing down               |
-| [`sportsmanship.md`](sportsmanship.md)   | The star card at the foot of the game screen                             |
+| File                                         | Records                                                                  |
+| -------------------------------------------- | ------------------------------------------------------------------------ |
+| [`_shared.md`](_shared.md)                   | The platform ports, the HTTP client's three verbs, the UI primitives     |
+| [`auth.md`](auth.md)                         | Sign-up's adult attestation, the naming step, the You tab's identity     |
+| [`challenges.md`](challenges.md)             | The send, the challenge screen, the two answers, the fill, the withdraw  |
+| [`conversations.md`](conversations.md)       | The Chats tab, the room, the optimistic send, the live layer, typing     |
+| [`feature_flags.md`](feature_flags.md)       | The datafile, the fallback order, the SDK and cache fences, the gate     |
+| [`find_a_game_next.md`](find_a_game_next.md) | The empty screen the Play tab shows while `find_a_game` is off           |
+| [`games.md`](games.md)                       | The result argument's eight states, the score pad, the game screen       |
+| [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate   |
+| [`plans.md`](plans.md)                       | The plan card, the ladder, the Now rail and its nine card states         |
+| [`play.md`](play.md)                         | The copy deck, the three cards, the court, the four screens, `SH.whyfit` |
+| [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step, the consent copy, the commit         |
+| [`player_record.md`](player_record.md)       | The record sheet a face opens, the metered rows, what opponents said     |
+| [`shell.md`](shell.md)                       | Five tabs over one stack, the reset, the bar standing down               |
+| [`sportsmanship.md`](sportsmanship.md)       | The star card at the foot of the game screen                             |
 
 ## The map
 
