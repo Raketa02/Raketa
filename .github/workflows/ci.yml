@@ -1,6 +1,6 @@
 name: CI
 
-# A probe for #498 — never merged: a second push cancels this run.
+# A probe for #498 — never merged: this push cancels the one before it.
 
 # Each app is gated independently and only when it changed — a Next.js edit
 # should not re-run the backend's Postgres suite. The guardrail hooks are
