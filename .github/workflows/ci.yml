@@ -216,11 +216,14 @@ jobs:
   # pole, and stop before a group's share is as short as its longest single test
   # (the seed command's, about 50 s in the durations file) plus a runner's
   # minute of setup: past that a shard costs a runner and buys nothing. At N=1
-  # this job took 10 m 49 s (run 35964688806).
+  # this job took 10 m 49 s (run 35964688806); at N=2, 6 m 08 s and 5 m 02 s,
+  # each group peaking at about 3.1 of 7.9 GB (run 35971844688).
   #
-  # **Refresh the durations when the groups drift apart** — when one group's Test
-  # step runs markedly longer than the others', beyond what pytest-split's
-  # "estimated duration" line printed for it. From backend/, on a green tree:
+  # **Refresh the durations when the groups drift apart** — when one group's
+  # pytest line ("N passed … in X s") runs well past the others'. Read it off
+  # the Test steps: pytest-split's own "estimated duration" line is printed by
+  # the xdist workers and never reaches this log. The first N=2 run put them at
+  # 318 s and 253 s, from a file recorded on a laptop. From backend/, on a green tree:
   # `make test-durations`, then commit backend/.test_durations. A stale file only
   # unbalances the groups and never drops a test: a test it does not know is
   # given the average, and `make split-partition` shows the groups still add up.
