@@ -34,6 +34,8 @@ FIXTURE="$SPECS/judged-pairings.json"
 JUDGED="$SPECS/the-judged-pairings.md"
 WEIGHTS="$SPECS/ranking-weights.md"
 
+source "$ROOT/.github/scripts/paths-filter.sh"
+
 pass=0
 fail=0
 
@@ -202,13 +204,46 @@ else
   bad "ci.yml runs the check" "no step invokes check-judged-pairings.sh"
 fi
 
-# The backend filter has to watch the specs the tables live in, or the check is
-# dormant in precisely the pull request that hand-edits one.
-if grep -q "'docs/specs/matchmaking/\*\*'" "$CI_YML"; then
-  ok "the backend filter watches the matchmaking specs"
-else
-  bad "the backend filter watches the matchmaking specs"
-fi
+# The backend filter has to list the three files the tables are derived from and
+# written into, or the check is dormant in precisely the pull request that
+# hand-edits one. It names them one by one, on purpose, so the assertion asks
+# for each by name — of the filter's entries, never of the file's text: the
+# comment explaining why the filter is not 'docs/specs/matchmaking/**' contains
+# that string, and grepping for it kept this green with every line deleted (#496).
+TABLES=(
+  docs/specs/matchmaking/judged-pairings.json
+  docs/specs/matchmaking/the-judged-pairings.md
+  docs/specs/matchmaking/ranking-weights.md
+)
+
+unwatched_tables() { # <workflow> — prints each table its backend filter does not list
+  local table
+  for table in "${TABLES[@]}"; do
+    filter_has "$1" backend "$table" || printf '%s\n' "$table"
+  done
+}
+
+missing=$(unwatched_tables "$CI_YML")
+[ -z "$missing" ] \
+  && ok "the backend filter lists all three judged-pairings files" \
+  || bad "the backend filter lists all three judged-pairings files" "not listed: $missing"
+
+# Proven red against a copy of ci.yml with one entry deleted at a time, and the
+# comment left where it is — so a comment is seen not to satisfy it.
+for table in "${TABLES[@]}"; do
+  sed "\\#^ *- '$table'\$#d" "$CI_YML" >"$TMP/ci.yml"
+  if [ "$(diff "$CI_YML" "$TMP/ci.yml" | grep -c '^<')" != 1 ] \
+     || ! grep -qF "'docs/specs/matchmaking/**'" "$TMP/ci.yml"; then
+    bad "a filter without $(basename "$table") goes red" \
+        "the copy must lose exactly that entry and keep the comment, or the case proves nothing"
+    continue
+  fi
+  missing=$(unwatched_tables "$TMP/ci.yml")
+  [ "$missing" = "$table" ] \
+    && ok "a filter without $(basename "$table") goes red, the comment notwithstanding" \
+    || bad "a filter without $(basename "$table") goes red, the comment notwithstanding" \
+           "reported: ${missing:-nothing}"
+done
 
 # ---------------------------------------------------------------------------
 echo

@@ -75,6 +75,7 @@ a migration or a seed run — not only for a process serving HTTP.
 | backend | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway, so it cannot be mistaken for working configuration. |
 | backend | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
 | backend | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
+| backend | a deployed environment with `BCRYPT_ROUNDS` below production's 12 | Nothing fails at a weak cost — every login still works — so the stored passwords would just be cheaper to crack, and nobody would notice. The default is 12 everywhere, and only a laptop may lower it; the test suite uses bcrypt's minimum, 4. |
 | player | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
 | player | a deployed `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_FEATURES_URL` that is not `https://` | The scheme rule, below. |
 
@@ -257,6 +258,19 @@ Which tier runs against which environment, and the one line that is not crossed.
 | Contract | `backend/openapi.player.json`. | CI regenerates the client's types and diffs. |
 | End-to-end (Playwright) | `local` today. `development` or `staging` once either is provisioned. | Each test owns its data. |
 | Manual exploratory | `local`; `development` or `staging` once provisioned. | |
+
+**How the suite runs.** The merge gate runs every test of every app a push changes, never a
+subset. It runs them in parallel, across tiered jobs per app and split into shards, behind
+one `ci-ok` check. The full suite at the end of a ticket runs in parallel too, across the
+laptop's cores. Coverage is never measured on a pull request: it runs nightly, on every push
+to `main`, and on demand with `make coverage`, and nothing gates on it. Running only the tests
+a change can affect (`make test-affected`, `pnpm test:affected`) is for iterating on a ticket.
+It is never what lets a change merge, because the selector cannot see the tests that read the
+source tree as text. Decided by
+[ADR-0181](adr/0181-the-merge-gate-runs-every-test-and-choosing-tests-is-the-inner-loops-job.md).
+The backend's suite runs as balanced groups, one per runner and each in parallel across that
+runner's two cores, and the run fails when the groups' reports do not add up to the suite —
+a test that no group ran, or that two did (#489).
 
 **Production is never where a destructive automated test runs.** No test suite, load
 generator, fixture teardown, database reset or seed run targets production — not gated behind a

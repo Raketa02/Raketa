@@ -81,6 +81,7 @@ from app.seeds.runner import (
     report,
     seed,
 )
+from tests.unit.bcrypt_cost import BCRYPT_MINIMUM_ROUNDS
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -1031,6 +1032,8 @@ async def test_the_command_seeds_a_real_database_and_is_idempotent(tmp_path):
         await conn.run_sync(Base.metadata.create_all)
     await engine.dispose()
 
+    # Built from nothing, so the subprocess inherits none of `conftest.py`'s
+    # environment and every value is spelled here.
     env = {
         "PATH": os.environ.get("PATH", ""),
         "HOME": os.environ.get("HOME", ""),
@@ -1039,6 +1042,9 @@ async def test_the_command_seeds_a_real_database_and_is_idempotent(tmp_path):
         "JWT_SECRET_KEY": "test-secret-do-not-use-in-prod",
         "WRITER_DB_URL": url,
         "DB_SSL_MODE": "disable",
+        # The suite's work factor. A first run registers sixty-three accounts,
+        # which is twelve seconds of hashing at production's strength.
+        "BCRYPT_ROUNDS": str(BCRYPT_MINIMUM_ROUNDS),
     }
 
     def run_command() -> subprocess.CompletedProcess:

@@ -1,0 +1,4 @@
+# pytest-testmon's dependency data for `make test-affected` — a local cache of
+# which test ran which code, rebuilt by the first run on any machine.
+.testmondata
+.testmondata-*

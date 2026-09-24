@@ -53,11 +53,11 @@ the hooks themselves, `make gen-api`.
   ([`.github/scripts/check-contract-freshness.sh`](.github/scripts/check-contract-freshness.sh),
   `make contract-freshness`, proven still to fire by `make test-contract-freshness`).
 - **One Poetry writes `backend/poetry.lock` and every pin reads it.** The version is
-  pinned in five places across `backend/` and `.github/`, and each must be at least the
-  version stamped in the lock's header. Poetry only *warns* when a pin is too old and
-  still exits 0, so this drifted two majors unnoticed (#153); the next `lock-version`
-  bump would have failed all five at once. Regenerating the lock and bumping the pins is
-  one commit, checked by
+  pinned in four places across `backend/`, `.github/` and `.sandbuket/`, and each must be
+  at least the version stamped in the lock's header. Poetry only *warns* when a pin is too
+  old and still exits 0, so this drifted two majors unnoticed (#153); the next
+  `lock-version` bump would have failed every pin at once. Regenerating the lock and
+  bumping the pins is one commit, checked by
   [`.github/scripts/check-poetry-pin-drift.sh`](.github/scripts/check-poetry-pin-drift.sh)
   (`make poetry-pin`, proven still to fire by `make test-poetry-pin`). Poetry 2.x
   unbundled `poetry export`, so a site that exports also installs `poetry-plugin-export`.
@@ -154,8 +154,10 @@ guardrail doing its job.
 After changing either hook, run `make test-hooks` (69 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it. The same
 argument is why `make test-drift`, `make test-poetry-pin`, `make test-judged-pairings`,
-`make test-ruleset-diff` and `make test-taskdef` exist: each drives its check against a
-deliberately broken tree and asserts it goes red.
+`make test-ruleset-diff`, `make test-taskdef`, `make test-shards-add-up` and
+`make test-ci-ok` exist: each drives its check against a deliberately broken tree and
+asserts it goes red. After adding a CI job, run `make ci-ok` — the job must also be in
+`ci-ok`'s `needs`, or it can fail unseen.
 
 ## Agent skills
 

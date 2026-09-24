@@ -8,7 +8,8 @@
         test-hooks test-drift contract-freshness test-contract-freshness \
         gen-judged-pairings judged-pairings \
         test-judged-pairings gen-ruleset-diff ruleset-diff test-ruleset-diff \
-        poetry-pin test-poetry-pin taskdef test-taskdef \
+        poetry-pin test-poetry-pin taskdef test-taskdef ci-ok test-ci-ok test-memory-peak \
+        shards-add-up test-shards-add-up \
         afk-install afk-build afk
 
 help:              ## list targets
@@ -108,8 +109,8 @@ test-drift:        ## verify the contract drift check still fires
 	bash .github/scripts/test-contract-drift.sh
 
 # The Poetry that writes backend/poetry.lock and the Poetry every build pins to
-# read it are two different numbers in five files, and nothing compared them
-# until #153. Cross-app because the pins are in backend/ and .github/ both.
+# read it are two different numbers in four files, and nothing compared them
+# until #153. Cross-app because the pins are in backend/, .github/ and .sandbuket/.
 poetry-pin:        ## verify every pinned Poetry can read backend/poetry.lock
 	bash .github/scripts/check-poetry-pin-drift.sh
 
@@ -129,6 +130,35 @@ taskdef:           ## verify backend/deploy/ecs/taskdef.json agrees with the app
 
 test-taskdef:      ## verify both of the task-definition check's rules still fire
 	bash .github/scripts/test-taskdef.sh
+
+# CI is a dozen parallel jobs behind one summary, `ci-ok` (docs/adr/0181 §4), and
+# the summary is only worth reading if nothing under it can fail unseen. Its
+# verdict needs a real run's `needs` context, so what runs here is the half a
+# workflow edit can break: every job reaches ci-ok, and ci-ok runs `if: always()`.
+# Cross-app because the workflow gates both apps.
+ci-ok:             ## verify ci-ok needs every job in ci.yml and runs whatever they did
+	bash .github/scripts/check-ci-ok.sh wiring
+
+test-ci-ok:        ## verify ci-ok's verdict and wiring checks still fire
+	bash .github/scripts/test-ci-ok.sh
+
+test-memory-peak:  ## verify CI's memory recorder passes every exit status through
+	bash .github/scripts/test-memory-peak.sh
+
+# The backend's tests run as a matrix of groups, one per runner (docs/adr/0181
+# §5), and splitting is the one change to the gate that could make a green run
+# test less. Each group writes a JUnit report of what it ran; this holds their
+# union against the suite, collected once — every test in exactly one group. It
+# reads a run's reports, so REPORTS is a directory of them: CI's add-up job has
+# one, and a laptop can make one with `make -C backend test-group … PYTEST_ARGS=
+# --junitxml=<dir>/group-<k>-of-<N>.xml`, as test-shards-add-up.sh does.
+# Cross-app because the reading is the backend's and the gate is CI's.
+shards-add-up:     ## verify the group reports in REPORTS=<dir> add up to the backend suite
+	@[ -n "$(REPORTS)" ] || { echo "usage: make shards-add-up REPORTS=<directory of group reports>" >&2; exit 2; }
+	bash .github/scripts/check-shards-add-up.sh "$(REPORTS)"
+
+test-shards-add-up: ## verify the shards-add-up check still fires
+	bash .github/scripts/test-shards-add-up.sh
 
 # ----------------------------------------------------------------------------
 # AFK agent loop (sandbuket). See tools/afk/README.md.

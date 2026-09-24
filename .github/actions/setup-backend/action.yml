@@ -1,0 +1,39 @@
+name: Set up the backend
+description: >-
+  Python 3.11, the pinned Poetry, and backend/.venv restored from a cache keyed on
+  backend/poetry.lock — every backend job in ci.yml and coverage.yml starts here.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      id: python
+      with:
+        python-version: "3.11"
+
+    # A literal pin, never a variable or an input: check-poetry-pin-drift.sh finds
+    # every Poetry the repository installs by `git grep 'poetry==<version>'`, and a
+    # pin it cannot see is one it cannot compare against the lock (#153).
+    - name: Install Poetry
+      shell: bash
+      run: pip install poetry==2.1.3
+
+    # The environment is a directory inside the app (backend/.venv, which git
+    # ignores), so there is exactly one thing to cache. The key is the lock's hash
+    # and never the branch, and it carries the interpreter's full version too: a
+    # virtualenv points at its Python by absolute path, and one restored onto a
+    # runner that has since moved to another patch release is broken.
+    - name: Restore the virtualenv
+      uses: actions/cache@v4
+      with:
+        path: backend/.venv
+        key: backend-venv-${{ runner.os }}-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+
+    # On a restored environment this finds nothing to do, and says so in seconds.
+    # It still runs, so a cache that lies about its contents is repaired, not trusted.
+    - name: Install dependencies
+      shell: bash
+      working-directory: backend
+      run: |
+        poetry config virtualenvs.in-project true
+        poetry install --no-interaction --no-root

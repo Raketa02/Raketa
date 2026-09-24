@@ -12,7 +12,16 @@ sourcing, and a transactional outbox. Python 3.11, Poetry.
 Run via the Makefile from `backend/`:
 
 ```bash
-make test        # poetry run pytest tests -q
+make test        # the suite in parallel — one xdist worker per core, work-stealing;
+                 # measures no coverage. make test WORKERS=0 is a serial run, in
+                 # collection order: the command for an order-dependent failure
+make test-affected  # while iterating: only the tests the change since its last run can
+                 # affect (pytest-testmon) — the inner loop, never the gate; see Testing
+make test-group GROUP=1 SPLITS=2  # one of N balanced groups, xdist inside — a CI shard
+make test-durations  # re-record .test_durations from a whole run, and commit it
+make split-partition # the groups for 2 and 3 add up to the suite, stale file too
+make coverage    # the whole suite, serially, measuring coverage over app/:
+                 # term-missing + coverage.xml
 make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
@@ -1247,6 +1256,37 @@ Write the failing test, make it pass, refactor. Every domain or use-case change 
 tests.
 
 - Tests live in `tests/`, not beside source. Files are `test_*.py`.
+- **The suite runs in parallel by default** — `make test`, and so `make check`, is
+  pytest-xdist with one worker per core
+  ([ADR-0181](../docs/adr/0181-the-merge-gate-runs-every-test-and-choosing-tests-is-the-inner-loops-job.md)).
+  Parallel-safety is a property every test must keep: a test that shares state across
+  processes — a fixed file path, a port, a global — fails some of the time, and nothing
+  retries it. Write under `tmp_path`; give a background job beside a request its own
+  connection per session (#482). **Serial, for chasing an order-dependent failure:**
+  `make test WORKERS=0`.
+- **While iterating, `make test-affected`; at the end of every ticket, `make test`.** The
+  first is pytest-testmon: only the tests whose recorded dependencies changed since its
+  last run, plus the ones that failed — seconds for a leaf change, quickest with
+  `WORKERS=0`, which starts no workers. Its first run records every test into
+  `.testmondata`, which git ignores. It is the inner loop and **never the
+  gate** (ADR-0181 §2), because it cannot see:
+  - tests that read the source tree as text — the kernel purity walk,
+    `test_only_a_composition_root_imports_the_wall_clock`,
+    `test_no_second_copy_of_a_tag_id_exists_anywhere_in_the_app`. A domain module that
+    imports the wall clock passes `make test-affected` green;
+  - JSON specs and fixture files;
+  - code run in a subprocess — the seed command, the runs under two hash seeds, mypy.
+
+  So the full suite, `make test` in parallel, still runs at the end of every ticket and in
+  CI. A change on a hot path such as sign-up selects most of the API suite, and
+  testmon's tracing makes that slower than `make test` itself.
+- **The suite splits into balanced groups for CI's shards** — `make test-group`, one
+  per runner — by the committed `.test_durations`. A test the file does not know gets the average, so a stale file
+  unbalances the shards and never drops a test (`make split-partition` shows it), and CI
+  fails when the groups' JUnit reports do not add up to the suite
+  (`scripts/shards_add_up.py`, run by the root's `make shards-add-up`). When
+  the groups' times drift apart, refresh with `make test-durations` on a green tree and
+  commit the file.
 - `tests/unit/` — pure domain/application/adapter logic; mock ports with hand-written stub
   classes implementing the `Protocol` (see `tests/unit/test_resolve_current_user.py`).
 - `tests/api/` — full HTTP flows via the `client` fixture (HTTPX ASGI + in-memory SQLite).
@@ -1314,13 +1354,16 @@ tests.
   read by nothing. Required: `WRITER_DB_URL`, `JWT_SECRET_KEY`, `DB_SSL_MODE`.
 - **`APP_ENV` is a strict enum** over `local | development | staging | production`, the
   same four names the client uses. Only `local` runs; selecting `development` or
-  `staging` without `APP_HOST` and `WRITER_DB_URL` refuses to start, and so do five other
-  dangerous configurations (see the README's refusal table). It also supplies the defaults
+  `staging` without `APP_HOST` and `WRITER_DB_URL` refuses to start, and so do the other
+  dangerous configurations in the README's refusal table. It also supplies the defaults
   for `DEBUG`, `LOG_LEVEL` and `LOG_JSON`, each still overridable. **The environment may
   select configuration; it may never select behaviour a domain test could observe.**
-- Tests set their own env in `conftest.py` (SQLite, test JWT secret, `APP_ENV=local`) —
-  no `.env` needed. There is no `test` environment: a test run happens on somebody's
-  laptop or a CI runner, and both are `local`.
+- Tests set their own env in `conftest.py` (SQLite, test JWT secret, `APP_ENV=local`,
+  bcrypt's minimum work factor, `LOG_LEVEL=INFO`) — no `.env` needed. There is no `test`
+  environment: a test run happens on somebody's laptop or a CI runner, and both are
+  `local`. `local`'s DEBUG is overridden because the SQLite driver logs two lines per
+  operation into every test's capture; `caplog` stays, and a test asserting on records
+  sets its own level through it — never `-p no:logging`, which removes the fixture.
 - The embedded event-delivery worker polls the outbox on startup; toggle with
   `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
   `PHOTO_SWEEP_ENABLED`, `PHOTO_REVIEW_BACKFILL_ENABLED`, `CANDIDATE_INDEX_ENABLED`,

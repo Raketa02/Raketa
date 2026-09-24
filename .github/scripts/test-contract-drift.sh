@@ -32,6 +32,8 @@ DOC="$ROOT/backend/openapi.player.json"
 GEN="$ROOT/frontend_player/src/generated/schema.d.ts"
 NEIGHBOUR="$ROOT/frontend_player/src/generated/README.md"
 
+source "$ROOT/.github/scripts/paths-filter.sh"
+
 pass=0
 fail=0
 
@@ -201,41 +203,12 @@ restore
 echo
 echo "ci.yml — the change that must trigger it"
 
-filter_has() { # <filter> <pattern>
-  python3 - "$CI_YML" "$1" "$2" <<'PY'
-import re, sys
-yml, want_filter, want_pattern = sys.argv[1], sys.argv[2], sys.argv[3]
-lines = open(yml).read().splitlines()
-start = next((i for i, l in enumerate(lines) if l.strip() == "filters: |"), None)
-if start is None:
-    sys.exit(1)
-indent = len(lines[start]) - len(lines[start].lstrip())
-block = []
-for line in lines[start + 1:]:
-    if line.strip() and (len(line) - len(line.lstrip())) <= indent:
-        break
-    block.append(line)
-body = [l for l in block if l.strip()]
-base = min(len(l) - len(l.lstrip()) for l in body) if body else 0
-filters, current = {}, None
-for line in body:
-    text = line[base:]
-    key = re.fullmatch(r"(\w+):", text.strip())
-    if key and not text.lstrip().startswith("-"):
-        current = key.group(1)
-        filters[current] = []
-    elif text.lstrip().startswith("-") and current:
-        filters[current].append(text.lstrip()[1:].strip().strip("'\""))
-sys.exit(0 if want_pattern in filters.get(want_filter, []) else 1)
-PY
-}
-
-filter_has player 'backend/openapi.player.json' \
+filter_has "$CI_YML" player 'backend/openapi.player.json' \
   && ok "the player filter watches the player contract document" \
   || bad "the player filter watches the player contract document" \
          "a backend-only pull request would not run the player job"
 
-filter_has player 'frontend_player/**' \
+filter_has "$CI_YML" player 'frontend_player/**' \
   && ok "the player filter still watches the player app" \
   || bad "the player filter still watches the player app"
 

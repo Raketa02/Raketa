@@ -25,6 +25,7 @@ pnpm ios / android
 pnpm lint         # ESLint — also enforces the import boundaries below
 pnpm typecheck    # tsc --noEmit (strict)
 pnpm test         # Jest (jest-expo)
+pnpm test:affected     # while iterating: only the suites the branch's changes reach — never the gate
 pnpm test:boundaries   # drive ESLint at code breaking each module ban; it must go red
 pnpm test:labels       # drive ESLint at an unnamed Pressable in Play; it must go red
 pnpm format       # Prettier --write   pnpm format:check → --check
@@ -32,6 +33,26 @@ pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.player.jso
 pnpm doctor       # npx expo-doctor — checks dependency/SDK agreement
 pnpm check        # lint + format + typecheck + test + boundaries + labels — the local gate
 ```
+
+**While iterating, `pnpm test:affected`; at the end of every ticket, `pnpm test`.** The first is
+Jest's related-test selection, `--changedSince` the merge base with `main` or `origin/main`,
+whichever is newer (with no base, `--onlyChanged`): every suite that imports, through any chain, a
+file changed on the branch or in the working tree. It is the inner loop and **never the gate**
+([ADR-0181](../docs/adr/0181-the-merge-gate-runs-every-test-and-choosing-tests-is-the-inner-loops-job.md)
+§2):
+
+- **The saving is partial, and smaller in time than in count.** The router-harness suites import
+  the whole route tree, and every feature's `types.ts` re-exports its components, so a change to
+  any file the app imports — a component, a domain rule, a formatting helper — selects nearly
+  every router suite, the deck among them: about a quarter of the suites or more. The router
+  suites are where the time goes, so that quarter is well over half the time. It pays for an edit
+  to a test file alone — that suite, in seconds.
+- **It cannot see a change that reaches a suite without an import.** `jest.config.js`,
+  `jest.setup.js`, `babel.config.js`, `package.json` and the lockfile, the reanimated file
+  `moduleNameMapper` points at, and `src/generated/` (imported for types only — `pnpm typecheck`
+  is its check) each select nothing.
+
+So `pnpm test` still runs every suite at the end of every ticket, and CI runs them all.
 
 **You cannot see the screen.** If a change is visual, say so and ask for a look rather than
 asserting it renders correctly.

@@ -493,8 +493,8 @@ def build_event_publisher(
 # --------------------------------------------------------------------------
 
 
-def build_password_hasher() -> PasswordHasher:
-    return BcryptPasswordHasher()
+def build_password_hasher(settings: Settings) -> PasswordHasher:
+    return BcryptPasswordHasher(rounds=settings.BCRYPT_ROUNDS)
 
 
 def build_token_service(settings: Settings) -> TokenService:

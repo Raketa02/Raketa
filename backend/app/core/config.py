@@ -117,6 +117,12 @@ DEFAULT_PHOTO_STORAGE_SECRET_KEY = "raketa_photos_pwd"
 #: than fall back on, exactly as the writer database's default is.
 DEFAULT_REDIS_URL = "redis://redis:6379/0"
 
+#: The work factor every stored password and refresh token is hashed at in production,
+#: and the floor for everything deployed. bcrypt's own default, so a deployed
+#: environment that says nothing about it hashes exactly as it did before the setting
+#: existed.
+PRODUCTION_BCRYPT_ROUNDS = 12
+
 #: The environments that run somewhere other than a developer's machine. `local` is not
 #: one of them, which is what makes `http://localhost:3000` a legal allowed origin and
 #: `redis://redis:6379/0` a working address.
@@ -176,6 +182,18 @@ class Settings(BaseSettings):
     JWT_ISSUER: str = "raketa"
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 900
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 86400
+
+    # --- password hashing
+    #
+    # bcrypt's cost, in bcrypt's own word for it: each step doubles the time one hash
+    # takes. Production's in every environment unless somebody lowers it, and only a
+    # laptop may — the test suite sets bcrypt's minimum, because at production's
+    # strength every sign-up, login and refresh it makes costs a fifth of a second.
+    #
+    # It selects nothing a domain test could observe. bcrypt writes the cost into
+    # the hash and `checkpw` reads it back from there, so a hash stored at one
+    # setting verifies at every other.
+    BCRYPT_ROUNDS: int = PRODUCTION_BCRYPT_ROUNDS
 
     # --- CORS
     ALLOW_ORIGINS: Annotated[List[str], NoDecode] = ["*"]
@@ -637,6 +655,26 @@ class Settings(BaseSettings):
                     f"https://, and APP_ENV selects '{env}', which is deployed. A "
                     f"browser origin reached over a public network must be https:// "
                     f"there — an http:// one transmits the session cookie in the clear."
+                )
+
+        if env in DEPLOYED:
+            # A third question of the same set, and the one about what is stored
+            # rather than what is reached.
+            #
+            # Stated over every deployed environment rather than production alone,
+            # because a staging database holds real people's passwords as soon as
+            # anybody signs up to rehearse against it. Nothing fails at a weak cost —
+            # every login still works — so the only thing that would ever notice is
+            # somebody cracking the table.
+            #
+            # The message names no number, not even the floor: a refusal never
+            # contains the offending value, and "12" contains a 1 and a 2.
+            if self.BCRYPT_ROUNDS < PRODUCTION_BCRYPT_ROUNDS:
+                raise ConfigurationError(
+                    f"BCRYPT_ROUNDS is below production's work factor, and APP_ENV "
+                    f"selects '{env}', which is deployed. A weaker hash is for a test "
+                    f"run on a laptop — unset BCRYPT_ROUNDS to hash at production's "
+                    f"strength."
                 )
 
         if env is not Environment.PRODUCTION:

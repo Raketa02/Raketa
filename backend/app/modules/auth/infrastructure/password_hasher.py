@@ -7,15 +7,26 @@ _SHA256_PREFIX = "sha256$"
 
 
 class BcryptPasswordHasher:
-    """`PasswordHasher` port implementation — bcrypt with random salt."""
+    """`PasswordHasher` port implementation — bcrypt with random salt.
+
+    `rounds` is the work factor new hashes are made at, and only that. `verify`
+    never reads it: bcrypt stores the cost inside every hash, so a hash made at
+    one setting keeps verifying after the setting changes.
+    """
+
+    def __init__(self, *, rounds: int) -> None:
+        self._rounds = rounds
 
     def hash(self, password: str) -> str:
         password_bytes = password.encode("utf-8")
         if len(password_bytes) > _BCRYPT_LIMIT:
             digest = hashlib.sha256(password_bytes).hexdigest().encode("ascii")
-            hashed = bcrypt.hashpw(digest, bcrypt.gensalt()).decode("utf-8")
+            hashed = bcrypt.hashpw(digest, self._salt()).decode("utf-8")
             return f"{_SHA256_PREFIX}{hashed}"
-        return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
+        return bcrypt.hashpw(password_bytes, self._salt()).decode("utf-8")
+
+    def _salt(self) -> bytes:
+        return bcrypt.gensalt(rounds=self._rounds)
 
     def verify(self, password: str, password_hash: str) -> bool:
         password_bytes = password.encode("utf-8")

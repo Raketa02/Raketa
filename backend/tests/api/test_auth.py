@@ -1,4 +1,12 @@
 import pytest
+from sqlalchemy import select
+
+from app.core.config import get_settings
+from app.modules.auth.infrastructure.sqlalchemy_refresh_token_model import (
+    RefreshTokenORM,
+)
+from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
+from tests.unit.bcrypt_cost import BCRYPT_MINIMUM_ROUNDS, cost_of
 
 
 async def _signup_and_login(client, payload):
@@ -116,3 +124,34 @@ async def test_refresh_token_rejected_at_me(client, valid_signup_payload):
         headers={"Authorization": f"Bearer {tokens['refresh_token']}"},
     )
     assert resp.status_code == 401
+
+
+async def test_every_stored_hash_is_made_at_the_configured_work_factor(
+    client, session_factory, valid_signup_payload
+):
+    """A password and every refresh token go through one port, so one setting
+    decides the cost of both — read off the stored hashes rather than trusted from
+    the wiring.
+
+    Under test that setting is bcrypt's minimum, which `conftest.py` supplies. Were
+    the wiring to drop it, nothing would fail: every sign-up, login and refresh in
+    the suite would quietly go back to production's cost.
+    """
+
+    tokens = await _signup_and_login(client, valid_signup_payload)
+    rotated = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
+    )
+    assert rotated.status_code == 200, rotated.text
+
+    async with session_factory() as session:
+        passwords = (await session.scalars(select(UserORM.password_hash))).all()
+        refresh_tokens = (
+            await session.scalars(select(RefreshTokenORM.token_hash))
+        ).all()
+
+    assert len(passwords) == 1
+    assert len(refresh_tokens) == 2
+    assert get_settings().BCRYPT_ROUNDS == BCRYPT_MINIMUM_ROUNDS
+    costs = {cost_of(h) for h in [*passwords, *refresh_tokens]}
+    assert costs == {BCRYPT_MINIMUM_ROUNDS}

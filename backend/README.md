@@ -273,6 +273,7 @@ aggregator.
 | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway. |
 | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
 | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
+| a deployed environment with `BCRYPT_ROUNDS` below production's 12 | Nothing fails at a weak cost, so the stored passwords would just be cheaper to crack, and nobody would notice. |
 
 The origin refusal is the backend's instance of the platform's **public-network scheme
 rule**, added by #99 so that all three apps carry it (`docs/environments.md`). The backend
@@ -296,6 +297,7 @@ serving HTTP.
 | `JWT_SECRET_KEY` | Signing secret for access and refresh JWTs. |
 | `ACCESS_TOKEN_EXPIRE_SECONDS` | Access-token TTL. |
 | `REFRESH_TOKEN_EXPIRE_SECONDS` | Refresh-token TTL. |
+| `BCRYPT_ROUNDS` | bcrypt's work factor for passwords and refresh tokens. 12, production's, unless lowered — and only `local` may lower it; the test suite sets 4. A stored hash carries its own cost, so changing it strands nothing. |
 | `EVENT_DELIVERY_WORKER_ENABLED` | Enables the embedded outbox worker. |
 | `EVENT_DELIVERY_POLL_INTERVAL_SECONDS` | Outbox worker poll interval. |
 | `EVENT_DELIVERY_BATCH_SIZE` | Max outbox rows processed per poll. |
@@ -938,8 +940,28 @@ Run tests:
 
 ```bash
 poetry install
-poetry run pytest
+make test              # in parallel: one pytest-xdist worker per core
+make test WORKERS=0    # serially, in collection order — for an order-dependent failure
 ```
+
+The suite runs in parallel by default, with work-stealing because durations are
+uneven: a handful of tests take 10–60 s and most take milliseconds. For CI's shards
+it also splits into groups (`make test-group GROUP=<k> SPLITS=<N>`), balanced by the
+durations committed in `.test_durations` and refreshed with `make test-durations`;
+`make split-partition` shows every test landing in exactly one group, stale file or
+not.
+
+While iterating, `make test-affected` runs only the tests pytest-testmon says the change
+since its last run can affect (its data, `.testmondata`, is ignored by git). It is for
+the inner loop and never the gate: it cannot see a test that reads the source tree as
+text, a JSON spec or fixture file, or code run in a subprocess, so `make test` still
+runs at the end of every ticket and in CI.
+
+A run measures no coverage, because that makes it 2.4× slower and nothing gates on
+it. `make coverage` runs the whole suite with coverage over `app/`, prints the
+term-missing report and writes `coverage.xml`. The suite also logs at `INFO`, a
+default `tests/conftest.py` sets: `local` derives `DEBUG`, and at `DEBUG` the SQLite
+driver writes two lines per operation into every test's capture.
 
 Run linting:
 
@@ -947,8 +969,8 @@ Run linting:
 poetry run ruff check .
 ```
 
-The configured tooling includes Black, isort, Ruff, mypy, pytest-cov, and
-pytest-env.
+The configured tooling includes Black, isort, Ruff, mypy, pytest-cov,
+pytest-env, pytest-xdist, pytest-split and pytest-testmon.
 
 ## Security Practices
 
