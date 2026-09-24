@@ -5,7 +5,7 @@
 #   bash .github/scripts/test-memory-peak.sh     # or: make test-memory-peak
 #
 # memory-peak.sh is not a gate, but it stands between every test job's command
-# and that job's result: the Jest shards, the deck and the backend suite all run
+# and that job's result: the Jest shards and the backend groups all run
 # through it. A wrapper there that lost an exit status would turn a red test
 # into a green job, and ci-ok would sum the green jobs into a green run. So its
 # one promise — the command's exit status is its exit status — is driven here,

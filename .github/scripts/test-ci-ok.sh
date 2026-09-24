@@ -85,8 +85,8 @@ verdict '{"changes":{"result":"success","outputs":{}},"backend-tests":{"result":
 # `failure`, which is the case above. Cancelled is the one that reads like
 # nobody's fault: a superseded run, a timeout, a runner that went away. None of
 # them tested the change, so none of them is green.
-verdict '{"changes":{"result":"success","outputs":{}},"player-deck":{"result":"cancelled","outputs":{}}}' \
-  1 "a cancelled job fails ci-ok" "player-deck"
+verdict '{"changes":{"result":"success","outputs":{}},"player-tests":{"result":"cancelled","outputs":{}}}' \
+  1 "a cancelled job fails ci-ok" "player-tests"
 
 verdict '{"a":{"result":"failure","outputs":{}},"b":{"result":"cancelled","outputs":{}},"c":{"result":"success","outputs":{}}}' \
   1 "every job that went wrong is named, not just the first" "b: cancelled"

@@ -7,7 +7,7 @@ description: >-
 inputs:
   jest-cache:
     description: >-
-      The name of this job's Jest cache, such as `shard-1` or `deck`. Empty for a
+      The name of this job's Jest cache, such as `shard-0-of-4`. Empty for a
       job that runs no Jest suite.
     required: false
     default: ""

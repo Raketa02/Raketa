@@ -11,7 +11,7 @@ name: CI
 #
 #   backend   static · tests (a group per runner) · generated artifacts · meta (two jobs),
 #             and the add-up check, which waits for the groups
-#   player    static · tests (four shards) · the deck · meta
+#   player    static · tests (four shards) · meta
 #   always    the guardrail hooks
 #   release   the recorded-corpus report block, on a ruleset pull request only
 #
@@ -26,8 +26,7 @@ name: CI
 #
 # **The runner is 2 vCPU / 8 GB** — a private repository's standard
 # `ubuntu-latest` (§7), not the 16 GB a public one gets. Worker counts below are
-# sized from that — the deck's heap is the one exception, measured and explained
-# where it is set — and every test job records the peak it reached
+# sized from that, and every test job records the peak it reached
 # (.github/scripts/memory-peak.sh) on the run's summary page.
 on:
   pull_request:
@@ -422,8 +421,9 @@ jobs:
         run: bash .github/scripts/test-taskdef.sh
 
   # ==========================================================================
-  # Player app — four tiers, six jobs. Each is behind the bootstrap gate, and
-  # each restores the pnpm store from a cache keyed on pnpm-lock.yaml.
+  # Player app — three tiers, three jobs, the tests a matrix of shards. Each is
+  # behind the bootstrap gate, and each restores the pnpm store from a cache
+  # keyed on pnpm-lock.yaml.
   # ==========================================================================
 
   # Every static check `pnpm check` runs locally — CI skipped `format:check` and
@@ -458,7 +458,7 @@ jobs:
       - name: The Play label rule still fires
         run: pnpm test:labels
 
-  # **Every suite but the deck, in four shards of one worker each.** Jest runs
+  # **Every suite, in four shards of one worker each.** Jest runs
   # one fewer worker than the machine has cores — one, on this runner, in its
   # own process — and that is how all of it ran green here before it was split,
   # in six minutes.
@@ -475,9 +475,13 @@ jobs:
   # The shard Jest runs is derived from the matrix, never typed beside it:
   # `job-index` and `job-total` always name 1/N … N/N of the same N, so adding a
   # shard is adding an entry to the list, and no suite can fall between two
-  # numbers that disagree. The list's own values only label the jobs. Jest
-  # partitions the suites that survive the ignore pattern, so the deck is in no
-  # shard.
+  # numbers that disagree. The list's own values only label the jobs.
+  #
+  # **The deck is one of them.** `deck.test.tsx` ran in a job of its own with an
+  # 8 GB heap while it needed 5.4 GB — React's scheduler keeping every call on
+  # React Native's `performance.now` mock, which the harness's scheduler clock
+  # ended (#494, frontend_player/src/test-support/schedulerClock.ts). It peaks
+  # near 0.6 GB now, on Node's own heap, like any other router suite.
   player-tests:
     name: Player — tests ${{ matrix.shard }}/${{ strategy.job-total }}
     needs: changes
@@ -506,68 +510,6 @@ jobs:
         run: >-
           bash ../.github/scripts/memory-peak.sh "Jest shard $((SHARD_INDEX + 1))/$SHARDS"
           pnpm test -- --shard="$((SHARD_INDEX + 1))/$SHARDS" --maxWorkers=1 --cacheDirectory "$JEST_CACHE"
-          --testPathIgnorePatterns "/node_modules/" "src/features/play/components/deck\.test\.tsx"
-
-  # **The deck runs in a job and a process of its own, because one file out of
-  # 298 needs ten times the memory of any other and nothing else should pay for
-  # it.** Measured with `--logHeapUsage` over the whole run: `deck.test.tsx`
-  # peaks at 5389 MB and the next heaviest suite at 541 MB. It mounts the entire
-  # router tree 78 times in one process, through the radar's
-  # gesture-and-animation pane.
-  #
-  # Sharing a run with the deck killed the job twice, in two different ways, and
-  # **neither read as a test failure**:
-  #
-  #   · heap raised, nothing else — the deck's worker aborted with SIGABRT
-  #     (exit 134) with every assertion in it passing;
-  #   · heap raised for two capped workers — a jest worker is reused across
-  #     suites and gives nothing back, so one crawled upward through ~147 of
-  #     them while the other held the deck, and together they starved the
-  #     runner agent: 56 minutes, then "lost communication with the server";
-  #   · heap raised with a recycle rule — bounded, but the 8 GB heap's major
-  #     GCs and the worker restarts stalled the event loop, and seven
-  #     timing-sensitive router suites blew their 5000 ms test budgets.
-  #
-  # So the deck is taken out of the shared run instead of the shared run being
-  # bent around it. **Every other suite keeps Node's own heap**, and **the deck
-  # gets one process to itself**, where `--runInBand` means no worker to restart
-  # and no second peak to meet. `testMatch` is confined to `src/`, so naming
-  # `/node_modules/` beside the deck in the shards' ignore pattern only restores
-  # the default that flag would otherwise replace.
-  #
-  # **Its heap is lifted to 8192 MB, and on this runner that is the whole
-  # machine** — it lifts Node's default rather than capping anything. A cap
-  # sized to the runner was tried and measured (run 35918522162): at 6144 MB,
-  # V8's collection near the cap stalled one of the deck's tests past its
-  # 5000 ms budget (5987 ms), and the runner still peaked at 7695 of 7938 MB. The
-  # deck needs the whole runner either way, so the lifted heap stays, and this
-  # job's memory record is the number to watch: swap there is the deck
-  # outgrowing the standard runner, before it shows as a lost one.
-  #
-  # The deck's appetite is the thing to fix. This is what stops it failing a
-  # build while it is still there.
-  player-deck:
-    name: Player — the deck, in a process of its own
-    needs: changes
-    if: needs.changes.outputs.player == 'true' && needs.changes.outputs.player_ready == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend_player
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-player
-        id: setup
-        with:
-          jest-cache: deck
-      - name: Test — the deck, in a process of its own
-        env:
-          NODE_OPTIONS: --max-old-space-size=8192
-          JEST_CACHE: ${{ steps.setup.outputs.jest-cache-dir }}
-        run: >-
-          bash ../.github/scripts/memory-peak.sh "the deck"
-          pnpm test -- --runTestsByPath src/features/play/components/deck.test.tsx --runInBand
-          --cacheDirectory "$JEST_CACHE"
 
   player-meta:
     name: Player — still fires (import boundaries, contract drift)
@@ -625,7 +567,6 @@ jobs:
       - backend-meta-2
       - player-static
       - player-tests
-      - player-deck
       - player-meta
     if: always()
     runs-on: ubuntu-latest
