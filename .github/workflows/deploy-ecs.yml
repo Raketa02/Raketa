@@ -39,10 +39,10 @@ permissions:
   id-token: write   # required for OIDC -> AWS
 
 jobs:
-  # The backend through the merge gate's own commands: ci.yml's static tier, then
-  # the whole suite through `make test` — parallel and without coverage (ADR-0181
-  # §3), where this job used to run it serially with coverage, 48–60 minutes on
-  # this runner. The Postgres service and the environment are ci.yml's
+  # The backend through the merge gate's own commands: ruff, the import
+  # boundaries and mypy, as ci.yml's static job runs them, then the whole suite
+  # through `make test` — parallel and without coverage (ADR-0181 §3), where this
+  # job used to run it serially with coverage, 48–60 minutes on this runner. The Postgres service and the environment are ci.yml's
   # backend-tests', so the one test that needs Postgres runs here too. One job,
   # static first: nothing here is waiting to be told about a typo, and it should
   # stop a deploy before the tests start rather than beside them.

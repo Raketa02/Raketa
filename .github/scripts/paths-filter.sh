@@ -9,9 +9,9 @@
 # REACHED: the filter that decides whether its job runs has to list the files the
 # gate reads. Grepping the workflow's text for a path answers a different
 # question — whether the path appears anywhere, a comment or another filter's
-# entry included — and for months "the backend filter watches the matchmaking
-# specs" was green because of the comment explaining why the filter does not use
-# that glob (#496).
+# entry included — and for four weeks "the backend filter watches the
+# matchmaking specs" was green because of the comment explaining why the filter
+# does not use that glob (#496).
 #
 # filter_has <workflow> <filter> <pattern>
 #   exit 0  <pattern> is one of <filter>'s entries in the `filters: |` block

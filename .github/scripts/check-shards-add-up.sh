@@ -13,9 +13,10 @@
 # So the union of the reports is held against the suite, collected once:
 #
 #   exit 0  every collected test ran, in exactly one group
-#   exit 1  one did not — each test missing, run twice or never collected is named
-#   exit 2  the check could not run: no reports, an unreadable one, or no
-#           collection — never a pass
+#   exit 1  one did not — the tests missing, run twice or never collected are
+#           counted, and the first of each kind named
+#   exit 2  the check could not run: no reports, an unreadable one, no
+#           collection, or no backend to collect with — never a pass
 #
 # The reading and the arithmetic are backend/scripts/shards_add_up.py, which
 # collects through `make test` and splits nothing itself: the ids are compared
@@ -52,4 +53,14 @@ if [ ${#reports[@]} -eq 0 ]; then
 fi
 
 cd "$ROOT/backend" || exit 2
+
+# Loaded before it is run, because Python exits 1 on the way in — no poetry, no
+# environment, a pytest that moved the private report functions the reading
+# borrows — and 1 is this check's word for "does not add up".
+if ! poetry run python -c 'import scripts.shards_add_up' >/dev/null 2>&1; then
+  echo "Could not load the shards-add-up check." >&2
+  echo "It needs the backend installed — 'poetry install' in backend/." >&2
+  exit 2
+fi
+
 poetry run python -m scripts.shards_add_up "${reports[@]}"

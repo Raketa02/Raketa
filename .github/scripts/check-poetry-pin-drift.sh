@@ -27,7 +27,7 @@
 # not be compatible with the current version of Poetry", and exits 0 with a
 # correct export — which is how five pins sat two majors behind the lock without
 # anyone noticing (#153). The warning goes into build logs nobody reads. The next
-# lock-version bump turns it into a hard failure in five places at once.
+# lock-version bump turns it into a hard failure at every pin at once.
 #
 # Tested by .github/scripts/test-poetry-pin-drift.sh (`make test-poetry-pin`).
 # A check that has never once failed is indistinguishable from one that cannot.

@@ -139,6 +139,16 @@ def collect(target: str, **make_vars: str) -> list[str]:
     return ids
 
 
+def collect_suite() -> list[str]:
+    """The suite as one run collects it, through ``make test`` — refused when it
+    repeats an id, since no set of groups could then add up to it."""
+
+    suite = collect("test")
+    if len(suite) != len(set(suite)):
+        raise CollectionFailed("the suite's own collection repeats an id")
+    return suite
+
+
 def _layouts_add_up(suite: Sequence[str], durations: Path) -> bool:
     known = set(json.loads(durations.read_text())) if durations.exists() else set()
     unknown = sum(1 for nodeid in suite if nodeid not in known)
@@ -194,9 +204,7 @@ def main(argv: Sequence[str]) -> int:
         return 2
     durations = BACKEND / argv[0]
     try:
-        suite = collect("test")
-        if len(suite) != len(set(suite)):
-            raise CollectionFailed("the suite's own collection repeats an id")
+        suite = collect_suite()
         print(f"The suite: {len(suite)} tests, collected through `make test`.")
 
         print(f"Durations as committed ({argv[0]}):")

@@ -15,7 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from scripts.shards_add_up import UnreadableReport, ids_in_report
+from scripts.shards_add_up import UnreadableReport, ids_in_report, report_names
+from scripts.split_partition import CollectionFailed
 
 SAMPLE = """
 import pytest
@@ -90,7 +91,7 @@ def report(tmp_path_factory) -> Path:
 
 
 def test_a_report_reads_back_as_the_ids_of_the_tests_it_ran(report):
-    assert sorted(ids_in_report(report, SUITE)) == sorted(SUITE)
+    assert sorted(ids_in_report(report, report_names(SUITE))) == sorted(SUITE)
 
 
 def test_a_test_the_report_writes_twice_ran_once(report):
@@ -101,29 +102,29 @@ def test_a_test_the_report_writes_twice_ran_once(report):
     names = [case.get("name") for case in ET.parse(report).getroot().iter("testcase")]
 
     assert names.count(twice.rpartition("::")[2]) == 2
-    assert ids_in_report(report, SUITE).count(twice) == 1
+    assert ids_in_report(report, report_names(SUITE)).count(twice) == 1
 
 
 def test_a_test_the_suite_never_collected_comes_back_by_its_report_name(report):
     suite_without_one = [nodeid for nodeid in SUITE if not nodeid.endswith("_plain")]
 
-    ran = ids_in_report(report, suite_without_one)
+    ran = ids_in_report(report, report_names(suite_without_one))
 
     assert "tests.test_sample.test_plain" in ran
     assert set(suite_without_one) <= set(ran)
 
 
-def test_a_suite_two_of_whose_ids_read_alike_in_a_report_is_refused(report):
+def test_a_suite_two_of_whose_ids_read_alike_in_a_report_is_refused():
     """A report cannot say which of the two ran, so the check says it cannot
-    tell rather than guessing."""
+    tell rather than guessing — and says it of the suite, not of a report."""
 
     alike = [
         "tests/test_sample.py::TestAGroup::test_in_a_class",
         "tests/test_sample/TestAGroup.py::test_in_a_class",
     ]
 
-    with pytest.raises(UnreadableReport, match="TestAGroup"):
-        ids_in_report(report, alike)
+    with pytest.raises(CollectionFailed, match="TestAGroup"):
+        report_names(alike)
 
 
 def test_a_report_that_is_not_xml_is_refused(tmp_path):
@@ -131,4 +132,4 @@ def test_a_report_that_is_not_xml_is_refused(tmp_path):
     broken.write_text("<testsuites><testsuite>")
 
     with pytest.raises(UnreadableReport, match="group-1-of-2.xml"):
-        ids_in_report(broken, SUITE)
+        ids_in_report(broken, report_names(SUITE))

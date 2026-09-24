@@ -12,8 +12,10 @@ suite, so this holds the reports' union against it:
   3. every collected test in exactly one group — ``partition_of``'s arithmetic.
 
   exit 0  every collected test ran, in exactly one group
-  exit 1  one did not — the output names each test missing, run twice or foreign
-  exit 2  it could not run — a report is unreadable, or the collection failed
+  exit 1  one did not — the output counts the tests missing, run twice or never
+          collected, and names the first of each
+  exit 2  it could not run — a report is unreadable, the collection failed, or
+          the check itself crashed: never a verdict
 
 ``make split-partition`` is the collection half, runnable on a laptop; this is
 the half that reads what actually ran, so it needs a run's reports.
@@ -21,7 +23,10 @@ the half that reads what actually ran, so it needs a run's reports.
 **A report does not carry a test's id.** pytest's JUnit writer mangles each id
 into a ``classname`` and a ``name``, so an id is recovered by mangling the
 suite's ids the same way — with pytest's own functions, never a copy of them —
-and matching. And one test can own two ``<testcase>`` elements: a failure in the
+and matching. They are private (``_pytest``), which is the price of reading the
+writer's own rule; a pytest that moved them fails this at import, and
+check-shards-add-up.sh reports that as a check that could not run. And one
+test can own two ``<testcase>`` elements: a failure in the
 call and an error in the teardown are written separately. A report records one
 pytest session, which runs a test once, so its ids are read as a set; a test
 that ran twice is a test in two groups.
@@ -32,14 +37,14 @@ from __future__ import annotations
 import os
 import sys
 import xml.etree.ElementTree as ET
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from _pytest.junitxml import bin_xml_escape, mangle_test_address
 
 from scripts.split_partition import (
     CollectionFailed,
-    collect,
+    collect_suite,
     partition_of,
     print_disagreement,
 )
@@ -49,33 +54,39 @@ class UnreadableReport(Exception):
     pass
 
 
-def _address(nodeid: str) -> tuple[str, str]:
-    """The ``classname`` and ``name`` pytest's JUnit writer gives a test id."""
-
-    names = mangle_test_address(nodeid)
-    return ".".join(names[:-1]), str(bin_xml_escape(names[-1]))
+#: A test as a JUnit report names it — its ``classname`` and its ``name``.
+Address = tuple[str, str]
 
 
-def ids_in_report(report: Path, suite: Sequence[str]) -> list[str]:
+def report_names(suite: Sequence[str]) -> dict[Address, str]:
+    """Each collected id under the address a JUnit report gives it. Two ids that
+    read alike are refused: no report could say which of them ran, and that is
+    the suite's doing, not a report's."""
+
+    names: dict[Address, str] = {}
+    for nodeid in suite:
+        parts = mangle_test_address(nodeid)
+        address = ".".join(parts[:-1]), str(bin_xml_escape(parts[-1]))
+        if names.setdefault(address, nodeid) != nodeid:
+            raise CollectionFailed(
+                f"{names[address]} and {nodeid} read alike in a JUnit report,"
+                " so no report can say which of them ran"
+            )
+    return names
+
+
+def ids_in_report(report: Path, names: Mapping[Address, str]) -> list[str]:
     """The ids of the tests *report* says ran, each once, as the suite names
     them. A test the suite never collected comes back by its report name,
     ``classname.name``."""
 
-    ids: dict[tuple[str, str], str] = {}
-    for nodeid in suite:
-        address = _address(nodeid)
-        if ids.setdefault(address, nodeid) != nodeid:
-            raise UnreadableReport(
-                f"{ids[address]} and {nodeid} read alike in a JUnit report,"
-                " so no report can say which of them ran"
-            )
     try:
         cases = ET.parse(report).getroot().iter("testcase")
         ran = {(case.get("classname", ""), case.get("name", "")) for case in cases}
     except (OSError, ET.ParseError) as exc:
         unreadable = f"{report.name} is not a readable report ({exc})"
         raise UnreadableReport(unreadable) from exc
-    return sorted(ids.get(each) or ".".join(filter(None, each)) for each in ran)
+    return sorted(names.get(each) or ".".join(filter(None, each)) for each in ran)
 
 
 def main(argv: Sequence[str]) -> int:
@@ -84,10 +95,9 @@ def main(argv: Sequence[str]) -> int:
         return 2
     reports = [Path(arg) for arg in argv]
     try:
-        suite = collect("test")
-        if len(suite) != len(set(suite)):
-            raise CollectionFailed("the suite's own collection repeats an id")
-        groups = {report.name: ids_in_report(report, suite) for report in reports}
+        suite = collect_suite()
+        names = report_names(suite)
+        groups = {report.name: ids_in_report(report, names) for report in reports}
     except (CollectionFailed, UnreadableReport) as failure:
         print(f"Could not add the groups up — {failure}", file=sys.stderr)
         return 2
@@ -123,4 +133,8 @@ def main(argv: Sequence[str]) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except Exception as exc:  # a crash is a check that could not run, never a verdict
+        print(f"shards_add_up could not run: {exc!r}", file=sys.stderr)
+        sys.exit(2)

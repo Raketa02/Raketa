@@ -9,7 +9,7 @@ name: CI
 # suites all start the moment `changes` answers, so a typo answers in a minute
 # or two and never waits on the tests, and the tests never wait on it:
 #
-#   backend   static · tests (two groups) · generated artifacts · meta (two jobs),
+#   backend   static · tests (a group per runner) · generated artifacts · meta (two jobs),
 #             and the add-up check, which waits for the groups
 #   player    static · tests (four shards) · the deck · meta
 #   always    the guardrail hooks
@@ -208,9 +208,11 @@ jobs:
   # a JUnit report of the tests it ran and keeps it as an artifact, and
   # `backend-tests-add-up` below holds the reports' union against the suite.
   #
-  # **Raising N is one edit: append the next number to `group`.** Nothing else
-  # names N — the groups re-deal themselves from the durations, and the add-up
-  # job reads every report that arrives. Raise it when a group is the run's long
+  # **Raising N is one edit: append the next number to `group`.** Nothing else in
+  # this workflow names N — the groups re-deal themselves from the durations, and
+  # the add-up job reads every report that arrives, whatever N ran. (On a laptop,
+  # `make split-partition` checks the layouts at 2 and 3 before any run exists;
+  # past 3, add the new N to its SPLITS.) Raise it when a group is the run's long
   # pole, and stop before a group's share is as short as its longest single test
   # (the seed command's, about 50 s in the durations file) plus a runner's
   # minute of setup: past that a shard costs a runner and buys nothing. At N=1
@@ -352,8 +354,9 @@ jobs:
   # **The "still fires" suites, over two jobs.** Each drives a gate above against
   # a deliberately broken tree and asserts it goes red — the reason
   # test-hooks.sh and test-contract-drift.sh exist: a gate added to a tree that
-  # already satisfied it has never been seen to fail. Every one of them edits the
-  # checkout and restores it on exit, so inside a job they run one after another.
+  # already satisfied it has never been seen to fail. All but the shards-add-up
+  # proof edit the checkout and restore it on exit, so inside a job they run one
+  # after another.
   #
   # The split is by measured time, not by meaning: 84 s and 93 s of steps in the
   # last serial run (35829988150), against three minutes for the six in a row.

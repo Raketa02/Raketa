@@ -148,7 +148,7 @@ said "$name" "the failure names the test"
 said "in more than one group" "and says it ran in more than one"
 
 # A runner that died before its artifact was uploaded is a group of tests that
-# did not run — all of them, named.
+# did not run — every one of them counted, the first few named.
 dir=$(fresh lost)
 rm "$dir/$G2"
 run_check "$dir"
@@ -188,21 +188,50 @@ had_exit 2 "a directory that does not exist is a usage error, not a pass"
 echo
 echo "ci.yml — the groups, their reports and the check"
 
-grep -q 'make test-group' "$CI_YML" \
-  && ok "the backend tests job runs one group per runner" \
-  || bad "the backend tests job runs one group per runner"
+# Asked of the workflow's steps and never of its comments, which name every one
+# of these to explain them: a grep over the file's text is how
+# test-judged-pairings.sh's filter assertion stayed green on a comment (#496).
+# One awk rather than `grep -v … | grep -q`: under `set -o pipefail` the first
+# grep can die of SIGPIPE when the second quits on its match, and the pipeline
+# then reads as a miss — a red that depends on the pipe buffer.
+lines_naming() { # <comments|steps> <workflow> <fixed string>
+  awk -v want="$1" -v needle="$3" '
+    { comment = $0 ~ /^[[:space:]]*#/ }
+    index($0, needle) && comment == (want == "comments") { found = 1 }
+    END { exit !found }' "$2"
+}
 
-grep -q -- '--junitxml' "$CI_YML" \
-  && ok "each group writes a report of the tests it ran" \
-  || bad "each group writes a report of the tests it ran"
+in_steps() { # <workflow> <fixed string> — on a line that is not a comment
+  lines_naming steps "$1" "$2"
+}
 
-grep -q 'check-shards-add-up.sh' "$CI_YML" \
-  && ok "a job adds the reports up against the suite" \
-  || bad "a job adds the reports up against the suite"
+WIRING=(
+  "make test-group|the backend tests job runs one group per runner"
+  "--junitxml|each group writes a report of the tests it ran"
+  "check-shards-add-up.sh|a job adds the reports up against the suite"
+  "test-shards-add-up.sh|and this suite drives it against broken reports"
+)
 
-grep -q 'test-shards-add-up.sh' "$CI_YML" \
-  && ok "and this suite drives it against broken reports" \
-  || bad "and this suite drives it against broken reports"
+for wired in "${WIRING[@]}"; do
+  needle=${wired%%|*}
+  in_steps "$CI_YML" "$needle" && ok "${wired#*|}" || bad "${wired#*|}" "no step in ci.yml runs '$needle'"
+done
+
+# Proven red against a copy with each step's line deleted and every comment
+# left where it is.
+for wired in "${WIRING[@]}"; do
+  needle=${wired%%|*}
+  awk -v needle="$needle" '/^[[:space:]]*#/ || index($0, needle) == 0' "$CI_YML" >"$TMP/ci.yml"
+  still=""
+  lines_naming comments "$TMP/ci.yml" "$needle" && still=", though a comment still names it"
+  if cmp -s "$CI_YML" "$TMP/ci.yml"; then
+    bad "a ci.yml that never runs '$needle' goes red" "the copy lost no line, so the case proves nothing"
+  elif in_steps "$TMP/ci.yml" "$needle"; then
+    bad "a ci.yml that never runs '$needle' goes red$still"
+  else
+    ok "a ci.yml that never runs '$needle' goes red$still"
+  fi
+done
 
 # ---------------------------------------------------------------------------
 echo
