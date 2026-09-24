@@ -1,5 +1,7 @@
 name: CI
 
+# A probe for #498 — never merged: a second push cancels this run.
+
 # Each app is gated independently and only when it changed — a Next.js edit
 # should not re-run the backend's Postgres suite. The guardrail hooks are
 # checked on every run because they protect the whole repo.
