@@ -37,8 +37,7 @@ pnpm check        # lint + format + typecheck + test + boundaries + labels — t
 **While iterating, `pnpm test:affected`; at the end of every ticket, `pnpm test`.** The first is
 Jest's related-test selection, `--changedSince` the merge base with `main` or `origin/main`,
 whichever is newer (with no base, `--onlyChanged`): every suite that imports, through any chain, a
-file changed on the branch or in the working tree, with `deck.test.tsx` in a process of its own as
-CI runs it. It is the inner loop and **never the gate**
+file changed on the branch or in the working tree. It is the inner loop and **never the gate**
 ([ADR-0181](../docs/adr/0181-the-merge-gate-runs-every-test-and-choosing-tests-is-the-inner-loops-job.md)
 §2):
 

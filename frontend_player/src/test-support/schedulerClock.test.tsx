@@ -50,6 +50,12 @@ function Chain({ onSettled }: { readonly onSettled: () => void }) {
 /** React's switch for whether an update outside `act` is a mistake. `waitFor` turns it off. */
 const reactGlobals = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
 
+/**
+ * React Native's jest setup installs `performance` as `{ now: jest.fn(Date.now) }`, taken here
+ * before any test can fake it — and a mock keeps a record of every call it is given (#494).
+ */
+const reactNativeNow = globalThis.performance.now as jest.Mock;
+
 describe('the clock React schedules effects on', () => {
   let actEnvironment: boolean | undefined;
 
@@ -77,5 +83,19 @@ describe('the clock React schedules effects on', () => {
     await nextHostTurn();
 
     expect(settled).toHaveBeenCalledTimes(1);
+  });
+
+  // `scheduler` asks its clock the time on every unit of work. Asked of React Native's mock, the
+  // deck's 80 tests left 36 million calls on its record, and the record was the deck's 5.4 GB.
+  it("never asks React Native's recorded performance mock the time", async () => {
+    expect(jest.isMockFunction(reactNativeNow)).toBe(true);
+    const asked = reactNativeNow.mock.calls.length;
+
+    render(<Chain onSettled={jest.fn()} />);
+    reactGlobals.IS_REACT_ACT_ENVIRONMENT = false;
+    jest.advanceTimersByTime(10);
+    await nextHostTurn();
+
+    expect(reactNativeNow.mock.calls.length - asked).toBe(0);
   });
 });

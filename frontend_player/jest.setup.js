@@ -150,7 +150,9 @@ require('react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo')
 // on (#493): nothing here is testing React. `scheduler` read the real clock under suites whose
 // every other clock is fake, so how many of a commit's effects ran before a test's next step was
 // a fact about the runner — and on a starved one a press landed on a control whose `Pressable`
-// had not yet heard it was enabled. The reasoning, and what was measured, is in the module.
+// had not yet heard it was enabled. It is also what bounds the deck suite's memory (#494): the
+// clock `scheduler` captured was React Native's `jest.fn` `performance.now`, which kept every
+// call on record. The reasoning, and what was measured, is in the module.
 //
 // First, because the next section renders, and a render loads the scheduler.
 require('./src/test-support/schedulerClock').runSchedulerOnTheSuiteClock();
@@ -159,7 +161,7 @@ require('./src/test-support/schedulerClock').runSchedulerOnTheSuiteClock();
 // The fourth gap of the same kind, and the other half of #493: nothing here is testing the
 // renderer. A failing matcher walked a node's whole fiber to print it — on every poll of a
 // `waitFor` that had not passed yet — which spent a test's budget formatting on a starved runner
-// and was where the deck suite's 5.4 GB went. The reasoning is in the module.
+// and half the deck suite's time. The reasoning is in the module.
 require('./src/test-support/nodePrinting').printNodesAsElements();
 
 // --- the gesture system and the UI-thread animations ----------------------------

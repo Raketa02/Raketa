@@ -13,7 +13,8 @@
  * Inside a `waitFor` that is paid on every poll that has not passed yet. A test that waits out a
  * row with `waitFor(() => expect(queryBy…(…)).toBeNull())` spent about a second formatting, and
  * on a starved runner more than five — the whole of a test's budget, with every assertion in it
- * passing. The same walk is where `deck.test.tsx`'s 5.4 GB heap went: 553 MB without it.
+ * passing. `deck.test.tsx` spends half its time there: 51 s without this, 25 s with it. Its
+ * memory is another matter, and not this module's — see `schedulerClock.ts` (#494).
  *
  * ## What a node prints as now
  *

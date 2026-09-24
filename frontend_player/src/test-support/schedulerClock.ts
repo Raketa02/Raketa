@@ -30,12 +30,33 @@
  * nothing changes. That makes the order of effects and test steps a fact about the code rather
  * than about the runner, which a longer wait never would.
  *
+ * ## What it bounds besides: the deck's memory
+ *
+ * The `performance` `scheduler` captured is not the platform's. React Native's jest setup installs
+ * `performance` as `{ now: jest.fn(Date.now) }`, and a mock keeps every call it is given — its
+ * arguments, its `this`, its result — for as long as the test file runs. `scheduler` asks its
+ * clock the time on every unit of work, so on that mock `deck.test.tsx`'s 78 mounts of the route
+ * tree left 36 million calls on record: about 70 MB a test that no collection could free, 5.4 GB
+ * by the last, and the reason the deck once needed a job and an 8 GB heap of its own (#494).
+ *
+ * Measured with a forced collection after each of the deck's 80 tests (`--expose-gc`):
+ *
+ * | scheduler's clock | calls on the mock's record | heap after test 1 → test 80 |
+ * | --- | --- | --- |
+ * | the one it captured | 36,330,521 | 207 → 5,444 MB |
+ * | the one it captured, record cleared after each test | cleared | 185 → 220 MB |
+ * | the suite's (this module) | 27 | 185 → 222 MB |
+ *
+ * Nothing else in the heap moved: a snapshot after test 8 held the same three React roots and
+ * 1,088 fibers either way. The suite's clock is a fake one under the router harness, and a fake clock keeps no
+ * record; `schedulerClock.test.tsx` pins that the mock is never asked.
+ *
  * ## Why the renderer's own copy
  *
  * `react-test-renderer` carries `scheduler` 0.23 and React Native a 0.24 canary, and the bare
  * name resolves to React Native's. The renderer's is resolved from the renderer, and it reads its
  * clock through `exports.unstable_now` everywhere, so replacing that export is the whole change.
- * `schedulerClock.test.tsx` holds it to its effect.
+ * `schedulerClock.test.tsx` holds it to both effects.
  *
  * Not app code — nothing under `src/` imports this.
  */

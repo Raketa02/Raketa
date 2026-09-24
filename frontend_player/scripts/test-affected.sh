@@ -15,19 +15,11 @@
 # whichever has seen more of this branch's history decides it: a stale local main
 # never widens the run by what has since landed upstream.
 #
-# **The deck runs in a process of its own**, as CI runs it (ci.yml, "Test — the
-# deck, in a process of its own", which has the measurements). It peaks near
-# 5.4 GB, over Node's default heap, so in a shared run its worker dies with every
-# assertion passing — and it is a router suite, so nearly every change under a
-# screen selects it. The selection is listed first; everything else runs as
-# `pnpm test` would, and the deck after it, only when it was selected. Extra
-# arguments reach the listing and both runs, and are meant as Jest flags: given
-# a path pattern, Jest drops the selection and runs every suite the pattern
-# matches, as `pnpm test <pattern>` would. Not a watch mode — a `--watch` run
-# never ends, so the deck's would never start.
-#
-# A deck that moved fails here loudly: its pattern would match nothing, and the
-# deck would join the shared run and bring back the crash.
+# Extra arguments reach the run, and are meant as Jest flags: given a path
+# pattern, Jest drops the selection and runs every suite the pattern matches, as
+# `pnpm test <pattern>` would. The deck is a suite like any other: it ran apart
+# while it needed 5.4 GB, which was React's scheduler keeping every call on React
+# Native's `performance.now` mock (#494, src/test-support/schedulerClock.ts).
 #
 # It is never the gate. `pnpm test` runs every suite at the end of every ticket
 # and in CI. The saving is partial — the router-harness suites import the whole
@@ -39,11 +31,8 @@ set -uo pipefail
 
 APP=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 JEST="$APP/node_modules/.bin/jest"
-DECK=src/features/play/components/deck.test.tsx
-DECK_PATTERN="/$(printf '%s' "$DECK" | sed 's/\./\\./g')\$"
 
 [ -e "$JEST" ] || { echo "missing: $JEST — run pnpm install first" >&2; exit 2; }
-[ -e "$APP/$DECK" ] || { echo "missing: $DECK — the deck moved; follow it here and in ci.yml" >&2; exit 2; }
 
 cd "$APP" || exit 2
 
@@ -67,17 +56,4 @@ else
   echo "test:affected — no merge base with main; suites reached by uncommitted changes only" >&2
 fi
 
-listed=$("$JEST" "$selection" --listTests "$@") || exit $?
-
-shared_status=0
-"$JEST" "$selection" "$@" --testPathIgnorePatterns '/node_modules/' "$DECK_PATTERN" || shared_status=$?
-
-deck_status=0
-if printf '%s\n' "$listed" | grep -q -- "$DECK_PATTERN"; then
-  echo "test:affected — the deck, in a process of its own" >&2
-  NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=8192" \
-    "$JEST" --runTestsByPath "$DECK" --runInBand "$@" || deck_status=$?
-fi
-
-[ "$shared_status" -ne 0 ] && exit "$shared_status"
-exit "$deck_status"
+exec "$JEST" "$selection" "$@"
