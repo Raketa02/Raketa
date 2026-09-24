@@ -9,7 +9,8 @@ name: CI
 # suites all start the moment `changes` answers, so a typo answers in a minute
 # or two and never waits on the tests, and the tests never wait on it:
 #
-#   backend   static · tests · generated artifacts · meta (two jobs)
+#   backend   static · tests (two groups) · generated artifacts · meta (two jobs),
+#             and the add-up check, which waits for the groups
 #   player    static · tests (four shards) · the deck · meta
 #   always    the guardrail hooks
 #   release   the recorded-corpus report block, on a ruleset pull request only
@@ -159,8 +160,9 @@ jobs:
         run: bash .claude/hooks/test-hooks.sh
 
   # ==========================================================================
-  # Backend — four tiers, five jobs, all started together. Each one checks out,
-  # restores the virtualenv from a cache keyed on poetry.lock, and runs one tier.
+  # Backend — four tiers, all started together, and one check that waits for
+  # the tests. Each job checks out, restores the virtualenv from a cache keyed
+  # on poetry.lock, and runs one tier.
   # ==========================================================================
 
   backend-static:
@@ -192,15 +194,45 @@ jobs:
       - name: Typecheck
         run: make typecheck
 
-  # The whole suite, in parallel on the runner's two cores (`make test` is
-  # `-n auto --dist worksteal`), and without coverage (ADR-0181 §3). Postgres
-  # runs here and only here, because one test uses it. Splitting the suite across
-  # runners is #489; until then this is the job the run waits on.
+  # **The suite, split into groups across runners** (ADR-0181 §5), each group in
+  # parallel on its runner's two cores — `make test-group` is `make test`'s
+  # `-n auto --dist worksteal` over one pytest-split group, dealt from the
+  # committed backend/.test_durations — and without coverage (§3). Postgres runs
+  # in every group because the one test that uses it lands in whichever group
+  # the durations deal it to.
+  #
+  # The group a runner runs is derived from the matrix, never typed beside it:
+  # `job-index` and `job-total` always name 1/N … N/N of the same N, exactly as
+  # the player shards derive theirs, so no test can fall between two numbers
+  # that disagree. The list's own values only label the jobs. Each group writes
+  # a JUnit report of the tests it ran and keeps it as an artifact, and
+  # `backend-tests-add-up` below holds the reports' union against the suite.
+  #
+  # **Raising N is one edit: append the next number to `group`.** Nothing else
+  # names N — the groups re-deal themselves from the durations, and the add-up
+  # job reads every report that arrives. Raise it when a group is the run's long
+  # pole, and stop before a group's share is as short as its longest single test
+  # (the seed command's, about 50 s in the durations file) plus a runner's
+  # minute of setup: past that a shard costs a runner and buys nothing. At N=1
+  # this job took 10 m 49 s (run 35964688806).
+  #
+  # **Refresh the durations when the groups drift apart** — when one group's Test
+  # step runs markedly longer than the others', beyond what pytest-split's
+  # "estimated duration" line printed for it. From backend/, on a green tree:
+  # `make test-durations`, then commit backend/.test_durations. A stale file only
+  # unbalances the groups and never drops a test: a test it does not know is
+  # given the average, and `make split-partition` shows the groups still add up.
   backend-tests:
-    name: Backend — tests
+    name: Backend — tests ${{ matrix.group }}/${{ strategy.job-total }}
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      # Every group runs to the end, so one red group shows every failure, not
+      # the first one's — and every group's report reaches the add-up job.
+      fail-fast: false
+      matrix:
+        group: [1, 2]
     defaults:
       run:
         working-directory: backend
@@ -219,13 +251,59 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-backend
+      - name: The group this runner runs
+        env:
+          INDEX: ${{ strategy.job-index }}
+          TOTAL: ${{ strategy.job-total }}
+        run: |
+          echo "GROUP=$((INDEX + 1))" >> "$GITHUB_ENV"
+          echo "SPLITS=$TOTAL" >> "$GITHUB_ENV"
       - name: Test
         env:
           WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           EVENT_TEST_DATABASE_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
-        run: bash ../.github/scripts/memory-peak.sh "backend tests" make test
+        run: >-
+          bash ../.github/scripts/memory-peak.sh "backend group $GROUP/$SPLITS"
+          make test-group GROUP="$GROUP" SPLITS="$SPLITS"
+          PYTEST_ARGS="--junitxml=$RUNNER_TEMP/shards/group-$GROUP-of-$SPLITS.xml"
+      # Kept when a test failed, because a red group's report still says which
+      # tests it ran. A week is long enough to read a run and short enough that
+      # two reports a push do not fill the private repository's artifact storage.
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: backend-tests-group-${{ env.GROUP }}-of-${{ env.SPLITS }}
+          path: ${{ runner.temp }}/shards/group-${{ env.GROUP }}-of-${{ env.SPLITS }}.xml
+          if-no-files-found: error
+          retention-days: 7
+
+  # **The groups add up to the suite** (ADR-0181 §5). Splitting is the one change
+  # to the gate that could make a green run test less: a layout that drops a
+  # test, or deals one to two groups, is green for the tests it did run. This
+  # collects the suite once, through `make test`, and requires every collected
+  # test to appear in exactly one group's report
+  # (.github/scripts/check-shards-add-up.sh, proven red by
+  # test-shards-add-up.sh). It waits for the groups — it reads what they ran —
+  # and runs when one of them failed too, so a red group's run still says
+  # whether the groups added up; a report that never arrived leaves its group's
+  # tests missing here.
+  backend-tests-add-up:
+    name: Backend — the groups add up to the suite
+    needs: [changes, backend-tests]
+    if: ${{ !cancelled() && needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: backend-tests-group-*
+          path: ${{ runner.temp }}/shards
+          merge-multiple: true
+      - name: Every collected test ran, in exactly one group
+        run: bash .github/scripts/check-shards-add-up.sh "$RUNNER_TEMP/shards"
 
   # Every committed artifact the backend generates, regenerated and compared.
   # They read the tree and write nothing that outlives their own step, so they
@@ -279,8 +357,9 @@ jobs:
   #
   # The split is by measured time, not by meaning: 84 s and 93 s of steps in the
   # last serial run (35829988150), against three minutes for the six in a row.
+  # The shards-add-up proof joined the first, which was the shorter.
   backend-meta-1:
-    name: Backend — still fires (Poetry pin, contract freshness, purity gates)
+    name: Backend — still fires (Poetry pin, contract freshness, shards add up, purity gates)
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
@@ -295,6 +374,12 @@ jobs:
       # the document the check was added for unexercised.
       - name: Contract-freshness check still fires
         run: bash .github/scripts/test-contract-freshness.sh
+      # It builds each group's report through the real `make test-group`, with
+      # `--setup-plan` so no test body runs, then drops a test from one, deals
+      # one to both and loses a whole report, and asserts the check goes red
+      # for each — and refuses, rather than passing, reports it cannot read.
+      - name: Shards-add-up check still fires
+        run: bash .github/scripts/test-shards-add-up.sh
       # The three purity gates — the import contracts, the kernel walk and strict
       # mypy — each driven against probe modules it writes into backend/app/ and
       # deletes on exit. **Last in its job**: nothing after it may read a tree a
@@ -528,6 +613,7 @@ jobs:
       - guardrails
       - backend-static
       - backend-tests
+      - backend-tests-add-up
       - backend-artifacts
       - backend-meta-1
       - backend-meta-2

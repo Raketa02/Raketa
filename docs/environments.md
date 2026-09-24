@@ -268,8 +268,9 @@ a change can affect (`make test-affected`, `pnpm test:affected`) is for iteratin
 It is never what lets a change merge, because the selector cannot see the tests that read the
 source tree as text. Decided by
 [ADR-0181](adr/0181-the-merge-gate-runs-every-test-and-choosing-tests-is-the-inner-loops-job.md).
-**The backend's shards are not built yet** (#489). Until they are, its whole suite runs in one
-job, in parallel across that runner's two cores.
+The backend's suite runs as balanced groups, one per runner and each in parallel across that
+runner's two cores, and the run fails when the groups' reports do not add up to the suite —
+a test that no group ran, or that two did (#489).
 
 **Production is never where a destructive automated test runs.** No test suite, load
 generator, fixture teardown, database reset or seed run targets production — not gated behind a

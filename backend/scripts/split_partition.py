@@ -39,8 +39,12 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypeVar
 
 BACKEND = Path(__file__).resolve().parents[1]
+
+#: A group's name — its number here, its report's file name in shards_add_up.
+Group = TypeVar("Group")
 
 #: The layouts checked. Two is CI's first; three is the next one it would add.
 SPLITS = (2, 3)
@@ -63,7 +67,7 @@ class Partition:
 
 
 def partition_of(
-    collected: Sequence[str], groups: Mapping[int, Sequence[str]]
+    collected: Sequence[str], groups: Mapping[Group, Sequence[str]]
 ) -> Partition:
     """A test in no group is *missing*, one in two is *duplicated*, and one a
     group holds that the suite never collected is *foreign* — which only a
@@ -76,6 +80,23 @@ def partition_of(
         duplicated=tuple(sorted(n for n, c in counts.items() if c > 1)),
         foreign=tuple(sorted(counts.keys() - suite)),
     )
+
+
+def print_disagreement(partition: Partition, *, indent: str = "") -> None:
+    """Each id the partition names, under what is wrong with it — the first
+    SHOWN of each kind, and how many more."""
+
+    for kind, ids in (
+        ("in no group", partition.missing),
+        ("in more than one group", partition.duplicated),
+        ("in a group but never collected", partition.foreign),
+    ):
+        if ids:
+            print(f"{indent}{len(ids)} {kind}:")
+            for nodeid in ids[:SHOWN]:
+                print(f"{indent}  {nodeid}")
+            if len(ids) > SHOWN:
+                print(f"{indent}  … and {len(ids) - SHOWN} more")
 
 
 def nodeids_in(output: str) -> list[str]:
@@ -93,7 +114,9 @@ class CollectionFailed(Exception):
     pass
 
 
-def _collect(target: str, **make_vars: str) -> list[str]:
+def collect(target: str, **make_vars: str) -> list[str]:
+    """The ids ``make <target>`` collects — the target's own flags, never a copy."""
+
     assignments = [f"{name}={value}" for name, value in make_vars.items()]
     completed = subprocess.run(
         ["make", "-s", target, *assignments, "PYTEST_ARGS=--collect-only"],
@@ -124,7 +147,7 @@ def _layouts_add_up(suite: Sequence[str], durations: Path) -> bool:
     every_layout_adds_up = True
     for splits in SPLITS:
         groups = {
-            group: _collect(
+            group: collect(
                 "test-group",
                 GROUP=str(group),
                 SPLITS=str(splits),
@@ -143,17 +166,7 @@ def _layouts_add_up(suite: Sequence[str], durations: Path) -> bool:
             continue
         every_layout_adds_up = False
         print(f"  SPLITS={splits}: {sizes} = {total} — DOES NOT ADD UP")
-        for kind, ids in (
-            ("in no group", partition.missing),
-            ("in more than one group", partition.duplicated),
-            ("in a group but never collected", partition.foreign),
-        ):
-            if ids:
-                print(f"    {len(ids)} {kind}:")
-                for nodeid in ids[:SHOWN]:
-                    print(f"      {nodeid}")
-                if len(ids) > SHOWN:
-                    print(f"      … and {len(ids) - SHOWN} more")
+        print_disagreement(partition, indent="    ")
     return every_layout_adds_up
 
 
@@ -181,7 +194,7 @@ def main(argv: Sequence[str]) -> int:
         return 2
     durations = BACKEND / argv[0]
     try:
-        suite = _collect("test")
+        suite = collect("test")
         if len(suite) != len(set(suite)):
             raise CollectionFailed("the suite's own collection repeats an id")
         print(f"The suite: {len(suite)} tests, collected through `make test`.")

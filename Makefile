@@ -9,6 +9,7 @@
         gen-judged-pairings judged-pairings \
         test-judged-pairings gen-ruleset-diff ruleset-diff test-ruleset-diff \
         poetry-pin test-poetry-pin taskdef test-taskdef ci-ok test-ci-ok test-memory-peak \
+        shards-add-up test-shards-add-up \
         afk-install afk-build afk
 
 help:              ## list targets
@@ -143,6 +144,21 @@ test-ci-ok:        ## verify ci-ok's verdict and wiring checks still fire
 
 test-memory-peak:  ## verify CI's memory recorder passes every exit status through
 	bash .github/scripts/test-memory-peak.sh
+
+# The backend's tests run as a matrix of groups, one per runner (docs/adr/0181
+# §5), and splitting is the one change to the gate that could make a green run
+# test less. Each group writes a JUnit report of what it ran; this holds their
+# union against the suite, collected once — every test in exactly one group. It
+# reads a run's reports, so REPORTS is a directory of them: CI's add-up job has
+# one, and a laptop can make one with `make -C backend test-group … PYTEST_ARGS=
+# --junitxml=<dir>/group-<k>-of-<N>.xml`, as test-shards-add-up.sh does.
+# Cross-app because the reading is the backend's and the gate is CI's.
+shards-add-up:     ## verify the group reports in REPORTS=<dir> add up to the backend suite
+	@[ -n "$(REPORTS)" ] || { echo "usage: make shards-add-up REPORTS=<directory of group reports>" >&2; exit 2; }
+	bash .github/scripts/check-shards-add-up.sh "$(REPORTS)"
+
+test-shards-add-up: ## verify the shards-add-up check still fires
+	bash .github/scripts/test-shards-add-up.sh
 
 # ----------------------------------------------------------------------------
 # AFK agent loop (sandbuket). See tools/afk/README.md.

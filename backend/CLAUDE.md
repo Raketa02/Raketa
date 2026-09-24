@@ -1281,8 +1281,10 @@ tests.
   CI. A change on a hot path such as sign-up selects most of the API suite, and
   testmon's tracing makes that slower than `make test` itself.
 - **The suite splits into balanced groups for CI's shards** — `make test-group`, one
-  per runner once #489 lands — by the committed `.test_durations`. A test the file does not know gets the average, so a stale file
-  unbalances the shards and never drops a test (`make split-partition` shows it). When
+  per runner — by the committed `.test_durations`. A test the file does not know gets the average, so a stale file
+  unbalances the shards and never drops a test (`make split-partition` shows it), and CI
+  fails when the groups' JUnit reports do not add up to the suite
+  (`scripts/shards_add_up.py`, run by the root's `make shards-add-up`). When
   the groups' times drift apart, refresh with `make test-durations` on a green tree and
   commit the file.
 - `tests/unit/` — pure domain/application/adapter logic; mock ports with hand-written stub
