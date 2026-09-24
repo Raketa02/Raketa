@@ -38,12 +38,16 @@ permissions:
   contents: read
   id-token: write   # required for OIDC -> AWS
 
-env:
-  PYTHON_VERSION: "3.11"
-
 jobs:
+  # The backend through the merge gate's own commands: ci.yml's static tier, then
+  # the whole suite through `make test` — parallel and without coverage (ADR-0181
+  # §3), where this job used to run it serially with coverage, 48–60 minutes on
+  # this runner. The Postgres service and the environment are ci.yml's
+  # backend-tests', so the one test that needs Postgres runs here too. One job,
+  # static first: nothing here is waiting to be told about a typo, and it should
+  # stop a deploy before the tests start rather than beside them.
   test:
-    name: Lint & test
+    name: Backend — static checks and tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,24 +66,23 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install poetry
-        run: pip install poetry==2.1.3
-      - name: Install deps
-        run: |
-          poetry config virtualenvs.create false
-          poetry install --no-interaction --no-root
+      # Python, the one pinned Poetry and the cached virtualenv — the same setup
+      # every backend job in ci.yml starts from, and the reason this file no
+      # longer carries a Poetry pin of its own.
+      - uses: ./.github/actions/setup-backend
       - name: Lint
-        run: poetry run ruff check .
+        run: make lint
+      - name: Import boundaries
+        run: make lint-imports
+      - name: Typecheck
+        run: make typecheck
       - name: Test
         env:
           WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           EVENT_TEST_DATABASE_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
-        run: poetry run pytest tests --cov=app --cov-report=xml -q
+        run: make test
 
   build-and-deploy:
     name: Build, push to ECR, deploy to ECS

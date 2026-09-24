@@ -53,11 +53,11 @@ the hooks themselves, `make gen-api`.
   ([`.github/scripts/check-contract-freshness.sh`](.github/scripts/check-contract-freshness.sh),
   `make contract-freshness`, proven still to fire by `make test-contract-freshness`).
 - **One Poetry writes `backend/poetry.lock` and every pin reads it.** The version is
-  pinned in five places across `backend/` and `.github/`, and each must be at least the
-  version stamped in the lock's header. Poetry only *warns* when a pin is too old and
-  still exits 0, so this drifted two majors unnoticed (#153); the next `lock-version`
-  bump would have failed all five at once. Regenerating the lock and bumping the pins is
-  one commit, checked by
+  pinned in four places across `backend/`, `.github/` and `.sandbuket/`, and each must be
+  at least the version stamped in the lock's header. Poetry only *warns* when a pin is too
+  old and still exits 0, so this drifted two majors unnoticed (#153); the next
+  `lock-version` bump would have failed every pin at once. Regenerating the lock and
+  bumping the pins is one commit, checked by
   [`.github/scripts/check-poetry-pin-drift.sh`](.github/scripts/check-poetry-pin-drift.sh)
   (`make poetry-pin`, proven still to fire by `make test-poetry-pin`). Poetry 2.x
   unbundled `poetry export`, so a site that exports also installs `poetry-plugin-export`.

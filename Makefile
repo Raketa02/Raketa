@@ -108,7 +108,7 @@ test-drift:        ## verify the contract drift check still fires
 	bash .github/scripts/test-contract-drift.sh
 
 # The Poetry that writes backend/poetry.lock and the Poetry every build pins to
-# read it are two different numbers in five files, and nothing compared them
+# read it are two different numbers in four files, and nothing compared them
 # until #153. Cross-app because the pins are in backend/ and .github/ both.
 poetry-pin:        ## verify every pinned Poetry can read backend/poetry.lock
 	bash .github/scripts/check-poetry-pin-drift.sh
