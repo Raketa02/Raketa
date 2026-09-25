@@ -43,6 +43,12 @@ class ClubRepository(Protocol):
 
 @runtime_checkable
 class ClubAccountRepository(Protocol):
+    async def load(self, account_id: UUID) -> Optional[ClubAccount]:
+        """The account as its stream tells it, or ``None``. Its version is what
+        the next ``save`` expects — the read an act that changes an existing
+        account makes, where ``get_by_id`` is the row every request reads."""
+        ...
+
     async def get_by_id(self, account_id: UUID) -> Optional[ClubAccount]:
         """The account, **read from its row**, which is the read every club
         request pays (``docs/adr/0185`` §7). The row carries no stream version,

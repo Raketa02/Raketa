@@ -68,6 +68,12 @@ services:
       # container down the API starts, serves, and loses a search's spread and a
       # deck's memory. Nothing here must ever be the evidence for anything.
       REDIS_URL: redis://redis:6379/0
+      # Email — keep in step with the `mailpit` service below. Every email the
+      # API sends lands in its inbox at http://localhost:8025 and none leaves
+      # this machine (../docs/adr/0186 §1).
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_SECURITY: none
       PYTHONPYCACHEPREFIX: /tmp/pycache
       WATCHFILES_FORCE_POLLING: "true"
     ports:
@@ -84,6 +90,11 @@ services:
       # soft, so an API that comes up first degrades for a second instead of
       # failing to boot.
       redis:
+        condition: service_started
+      # Started with the API rather than waited on: a send that finds nobody
+      # listening is retried by the mail worker, so an API that comes up first
+      # sends a few seconds late instead of failing to boot.
+      mailpit:
         condition: service_started
     volumes:
       # Hot-reload the source while developing.
@@ -187,6 +198,21 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+    networks:
+      - backend
+
+  # The mail catcher (../docs/adr/0186 §1): every email the backend sends lands
+  # in its web inbox and nothing leaves the machine — invitations, resets and
+  # their codes, read the way a person reads them, with no real mailbox.
+  mailpit:
+    image: axllent/mailpit:v1.31.2
+    restart: unless-stopped
+    ports:
+      # 1025 is SMTP, published for the host-run path (`cp .env.example .env`,
+      # uvicorn on the host); the stack itself talks over the compose network.
+      # 8025 is the web inbox.
+      - "1025:1025"
+      - "8025:8025"
     networks:
       - backend
 

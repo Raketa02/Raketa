@@ -70,3 +70,18 @@ class ClubAccountOpened:
     email: str
     password_hash: str
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ClubAccountPasswordChanged:
+    """The desk set a new password, which **signs the club out everywhere**
+    (``docs/adr/0185`` §7).
+
+    Carries the new hash on the account's own stream, as ``ClubAccountOpened``
+    carries the first. ``occurred_at`` is the credentials-changed instant: an
+    access token the club surface issued before it is refused.
+    """
+
+    account_id: UUID
+    password_hash: str
+    occurred_at: datetime

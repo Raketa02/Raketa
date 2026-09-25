@@ -15,10 +15,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Iterable
+from typing import Iterable, Optional
 from uuid import UUID
 
-from app.modules.clubs.domain.events import ClubAccountOpened
+from app.modules.clubs.domain.events import (
+    ClubAccountOpened,
+    ClubAccountPasswordChanged,
+)
 from app.modules.users.domain.value_objects import Email, HashedPassword
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
@@ -32,6 +35,10 @@ class ClubAccount:
     club_id: UUID
     email: Email
     password_hash: HashedPassword
+    #: When the password last changed (``docs/adr/0185`` §7), or ``None`` for
+    #: the one it signed up with. A club access token issued before it is
+    #: refused.
+    credentials_changed_at: Optional[datetime] = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -51,6 +58,7 @@ class ClubAccount:
     def _empty(cls) -> "ClubAccount":
         account = cls.__new__(cls)
         account.version = 0
+        account.credentials_changed_at = None
         account._events = EventRecorder()
         return account
 
@@ -83,6 +91,19 @@ class ClubAccount:
         )
         return account
 
+    def change_password(
+        self, *, password_hash: HashedPassword, occurred_at: datetime
+    ) -> None:
+        """A new password, and every older club session with it ended."""
+
+        self._record_that(
+            ClubAccountPasswordChanged(
+                account_id=self.id,
+                password_hash=password_hash.value,
+                occurred_at=occurred_at,
+            )
+        )
+
     def _record_that(self, event: DomainEvent) -> None:
         self._apply(event)
         self._events.record(event)
@@ -93,6 +114,11 @@ class ClubAccount:
             self.club_id = event.club_id
             self.email = Email(event.email)
             self.password_hash = HashedPassword(event.password_hash)
+            self.version += 1
+            return
+        if isinstance(event, ClubAccountPasswordChanged):
+            self.password_hash = HashedPassword(event.password_hash)
+            self.credentials_changed_at = event.occurred_at
             self.version += 1
             return
         raise TypeError(f"Unsupported club account event {event!r}")

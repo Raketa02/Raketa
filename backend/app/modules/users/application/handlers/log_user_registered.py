@@ -4,6 +4,7 @@ import logging
 
 from app.application.events import DeliveryContext
 from app.modules.users.domain.events import (
+    PasswordChanged,
     UserDisabled,
     UserMarkedAsTester,
     UserNamed,
@@ -64,6 +65,24 @@ class LogUserDisabled:
     async def __call__(self, event: UserDisabled, context: DeliveryContext) -> None:
         logger.info(
             "user.disabled",
+            extra={
+                "user_id": str(event.user_id),
+                "occurred_at": event.occurred_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogPasswordChanged:
+    """Audit-trail handler for a password change — **never the hash**. The line
+    says which account signed out everywhere, and when."""
+
+    async def __call__(
+        self, event: PasswordChanged, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "user.password_changed",
             extra={
                 "user_id": str(event.user_id),
                 "occurred_at": event.occurred_at.isoformat(),

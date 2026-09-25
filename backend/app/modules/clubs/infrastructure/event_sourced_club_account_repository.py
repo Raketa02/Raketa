@@ -15,8 +15,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
+from app.infrastructure.database.stored_time import stored_instant_or_none
 from app.modules.clubs.domain.club_account import ClubAccount
-from app.modules.clubs.domain.events import ClubAccountOpened
+from app.modules.clubs.domain.events import (
+    ClubAccountOpened,
+    ClubAccountPasswordChanged,
+)
 from app.modules.clubs.infrastructure.club_model import ClubAccountORM
 from app.modules.users.domain.value_objects import Email, HashedPassword
 from app.shared.domain import DomainEvent
@@ -30,6 +34,7 @@ def _to_domain(row: ClubAccountORM) -> ClubAccount:
         club_id=row.club_id,
         email=Email(row.email),
         password_hash=HashedPassword(row.password_hash),
+        credentials_changed_at=stored_instant_or_none(row.credentials_changed_at),
     )
 
 
@@ -51,6 +56,16 @@ class EventSourcedClubAccountRepository:
         # it is appended at version zero: a second write to a stream that
         # already exists is refused as concurrent rather than written over it.
         self._versions: dict[UUID, int] = {}
+
+    async def load(self, account_id: UUID) -> Optional[ClubAccount]:
+        stored = await self._event_store.load_stream(
+            aggregate_type=CLUB_ACCOUNT_AGGREGATE, aggregate_id=account_id
+        )
+        if not stored:
+            return None
+        account = ClubAccount.from_history(record.event for record in stored)
+        self._versions[account.id] = account.version
+        return account
 
     async def get_by_id(self, account_id: UUID) -> Optional[ClubAccount]:
         row = await self._session.get(ClubAccountORM, account_id)
@@ -75,11 +90,11 @@ class EventSourcedClubAccountRepository:
         )
         await self._events.publish_many(pending)
         for event in pending:
-            self._project(event)
+            await self._project(event)
         await self._session.flush()
         self._versions[account.id] = account.version
 
-    def _project(self, event: DomainEvent) -> None:
+    async def _project(self, event: DomainEvent) -> None:
         if isinstance(event, ClubAccountOpened):
             self._session.add(
                 ClubAccountORM(
@@ -89,5 +104,16 @@ class EventSourcedClubAccountRepository:
                     password_hash=event.password_hash,
                 )
             )
+            return
+        if isinstance(event, ClubAccountPasswordChanged):
+            row = await self._session.get(ClubAccountORM, event.account_id)
+            if row is None:
+                raise RuntimeError(
+                    f"the password of club account {event.account_id} has no "
+                    f"row to land on"
+                )
+            # The hash sign-in reads, and the instant every club request reads.
+            row.password_hash = event.password_hash
+            row.credentials_changed_at = event.occurred_at
             return
         raise TypeError(f"Unsupported club account event {event!r}")

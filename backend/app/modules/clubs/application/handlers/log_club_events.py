@@ -13,6 +13,7 @@ import logging
 from app.application.events import DeliveryContext
 from app.modules.clubs.domain.events import (
     ClubAccountOpened,
+    ClubAccountPasswordChanged,
     ClubDetailsChanged,
     ClubRegistered,
 )
@@ -55,6 +56,21 @@ class LogClubAccountOpened:
             extra={
                 "account_id": str(event.account_id),
                 "club_id": str(event.club_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogClubAccountPasswordChanged:
+    async def __call__(
+        self, event: ClubAccountPasswordChanged, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "clubs.club_account.password_changed",
+            extra={
+                "account_id": str(event.account_id),
+                "occurred_at": event.occurred_at.isoformat(),
                 "event_id": str(context.event_id),
                 "attempt": context.attempt,
             },

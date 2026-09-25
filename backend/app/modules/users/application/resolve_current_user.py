@@ -63,7 +63,6 @@ class ResolveCurrentUserFromAccessToken:
         claims = read_access_token(
             self._token_service, raw_token, audience=Audience.PLAYER_APP
         )
-        return AuthenticatedSession(
-            user=await self._get_current_user.execute(claims.account_id),
-            expires_at=claims.expires_at,
-        )
+        user = await self._get_current_user.execute(claims.account_id)
+        claims.refuse_if_signed_out(user.credentials_changed_at)
+        return AuthenticatedSession(user=user, expires_at=claims.expires_at)

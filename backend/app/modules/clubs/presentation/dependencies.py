@@ -9,22 +9,33 @@ from app.api.dependencies import (
     DbSession,
     DomainEventStoreDep,
     EventPublisherDep,
+    MailQueueDep,
+    OneTimeCredentialsDep,
     PasswordHasherDep,
     RefreshTokenRepositoryDep,
+    SettingsDep,
+    SignOutEverywhereDep,
     TokenRotatorDep,
     TokenServiceDep,
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
+    build_club_account_passwords,
     build_club_account_repository,
     build_club_account_session_holders,
     build_club_repository,
 )
 from app.core.security import BearerCredentialsDep
+from app.modules.auth.application.forgot_password import (
+    ClaimPasswordReset,
+    RequestPasswordReset,
+    SetNewPassword,
+)
 from app.modules.auth.application.logout import Logout
 from app.modules.auth.application.refresh_token import RefreshAuthTokens
 from app.modules.auth.domain.audience import Audience
-from app.modules.auth.domain.ports import SessionHolders
+from app.modules.auth.domain.password_reset import ResetPage
+from app.modules.auth.domain.ports import PasswordAccounts, SessionHolders
 from app.modules.clubs.application.club_details import (
     ChangeClubDetails,
     ReadClubDetails,
@@ -152,6 +163,81 @@ def get_sign_out_club(
 
 
 SignOutClubDep = Annotated[Logout, Depends(get_sign_out_club)]
+
+
+# --- Forgot password?, for the club website (docs/adr/0184 §5) ----------------
+
+
+def get_club_password_accounts(
+    accounts: ClubAccountRepositoryDep,
+) -> PasswordAccounts:
+    return build_club_account_passwords(accounts)
+
+
+ClubPasswordAccountsDep = Annotated[
+    PasswordAccounts, Depends(get_club_password_accounts)
+]
+
+
+def get_request_club_password_reset(
+    accounts: ClubPasswordAccountsDep,
+    credentials: OneTimeCredentialsDep,
+    mail: MailQueueDep,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> RequestPasswordReset:
+    return RequestPasswordReset(
+        audience=Audience.CLUB,
+        accounts=accounts,
+        credentials=credentials,
+        mail=mail,
+        # The club website's own *Set a new password* page, because clubs
+        # already use that site (#522's correction to #500).
+        reset_page=ResetPage(settings.CLUB_WEBSITE_URL),
+        uow=uow,
+        clock=clock,
+    )
+
+
+RequestClubPasswordResetDep = Annotated[
+    RequestPasswordReset, Depends(get_request_club_password_reset)
+]
+
+
+def get_claim_club_password_reset(
+    credentials: OneTimeCredentialsDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> ClaimPasswordReset:
+    return ClaimPasswordReset(
+        audience=Audience.CLUB, credentials=credentials, uow=uow, clock=clock
+    )
+
+
+ClaimClubPasswordResetDep = Annotated[
+    ClaimPasswordReset, Depends(get_claim_club_password_reset)
+]
+
+
+def get_set_new_club_password(
+    accounts: ClubPasswordAccountsDep,
+    credentials: OneTimeCredentialsDep,
+    sign_out_everywhere: SignOutEverywhereDep,
+    hasher: PasswordHasherDep,
+    rotator: TokenRotatorDep,
+    clock: ClockDep,
+) -> SetNewPassword:
+    return SetNewPassword(
+        audience=Audience.CLUB,
+        accounts=accounts,
+        credentials=credentials,
+        sign_out_everywhere=sign_out_everywhere,
+        hasher=hasher,
+        rotator=rotator,
+        clock=clock,
+    )
+
+
+SetNewClubPasswordDep = Annotated[SetNewPassword, Depends(get_set_new_club_password)]
 
 
 def get_resolve_club_account(

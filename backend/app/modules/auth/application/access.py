@@ -12,8 +12,8 @@ alone; what each does with the account id afterwards is its own.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import final
+from datetime import datetime, timedelta, timezone
+from typing import Optional, final
 from uuid import UUID
 
 import jwt
@@ -24,18 +24,39 @@ from app.modules.auth.domain.errors import (
     AccessTokenExpired,
     AccessTokenInvalid,
     AccessTokenMissing,
+    AccessTokenRevoked,
     AccessTokenSubjectMalformed,
 )
-from app.modules.auth.domain.ports import TokenService
+from app.modules.auth.domain.ports import ISSUED_AT_CLAIM, TokenService
+
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class AccessClaims:
-    """Whose token it is, and when it stops being accepted."""
+    """Whose token it is, when it was issued, and when it stops being accepted."""
 
     account_id: UUID
     expires_at: Instant
+    issued_at: Instant
+
+    def refuse_if_signed_out(self, credentials_changed_at: Optional[datetime]) -> None:
+        """Refuse a token issued before its account's credentials changed.
+
+        **Signing out everywhere** (``docs/adr/0185`` §7), asked by each surface
+        of the account it has just read — the row every request reads, so it
+        costs no read of its own. **Strictly before**: the session a reset opens
+        is issued after the instant it recorded, on the same clock, and a token
+        issued at that very instant is taken to be the reset's own. An account
+        whose credentials never changed refuses nothing.
+        """
+
+        if (
+            credentials_changed_at is not None
+            and self.issued_at < credentials_changed_at
+        ):
+            raise AccessTokenRevoked()
 
 
 def read_access_token(
@@ -77,4 +98,25 @@ def read_access_token(
         # where the port is consumed rather than trusted to every adapter.
         raise AccessTokenInvalid() from exc
 
-    return AccessClaims(account_id=account_id, expires_at=expires_at)
+    return AccessClaims(
+        account_id=account_id,
+        expires_at=expires_at,
+        issued_at=_issued_at(payload),
+    )
+
+
+def _issued_at(payload: dict) -> Instant:
+    """The token's issue instant: its microsecond claim, or — for a token issued
+    before that claim existed — its whole-second ``iat``, which can only read
+    earlier than the truth and so never lets an old token past a change."""
+
+    try:
+        micros = payload.get(ISSUED_AT_CLAIM)
+        if micros is not None:
+            return instant(_EPOCH + timedelta(microseconds=int(micros)))
+        return instant(datetime.fromtimestamp(int(payload["iat"]), tz=timezone.utc))
+    except (KeyError, TypeError, ValueError, OverflowError, OSError) as exc:
+        # ``JwtTokenService`` requires ``iat`` on decode; a token whose issue
+        # instant cannot be read cannot be compared with anything, and is
+        # refused as the expiry's absence is.
+        raise AccessTokenInvalid() from exc

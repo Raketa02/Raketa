@@ -86,3 +86,14 @@ class SqlAlchemyRefreshTokenRepository:
         row.is_valid = False
         row.revoked_at = now
         await self._session.flush()
+
+    async def valid_tokens_of(
+        self, account_id: UUID, *, audience: Audience
+    ) -> list[RefreshToken]:
+        holder = getattr(RefreshTokenORM, _HOLDER_COLUMN[audience])
+        result = await self._session.execute(
+            select(RefreshTokenORM)
+            .where(holder == account_id, RefreshTokenORM.is_valid.is_(True))
+            .order_by(RefreshTokenORM.created_at, RefreshTokenORM.id)
+        )
+        return [_to_domain(row) for row in result.scalars().all()]

@@ -9,6 +9,7 @@ request read.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import (
@@ -82,6 +83,11 @@ class ClubAccountORM(Base):
     )
     email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # When the password last changed (``docs/adr/0185`` §7), read on every club
+    # request beside the account itself.
+    credentials_changed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

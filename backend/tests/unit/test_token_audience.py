@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 import pytest
 
-from app.bootstrap.composition import build_token_service
+from app.bootstrap.composition import build_clock, build_token_service
 from app.core.config import get_settings
 from app.modules.auth.domain.audience import Audience
 
@@ -40,7 +40,7 @@ def minted_before_audiences(token_type: str) -> str:
 
 @pytest.mark.parametrize("token_type", ["access", "refresh"])
 def test_a_token_with_no_audience_is_read_as_the_player_app_s(token_type):
-    tokens = build_token_service(get_settings())
+    tokens = build_token_service(get_settings(), clock=build_clock())
     decode = getattr(tokens, f"decode_{token_type}")
     old = minted_before_audiences(token_type)
 
@@ -54,7 +54,7 @@ def test_a_token_with_no_audience_is_read_as_the_player_app_s(token_type):
 def test_a_token_is_read_only_under_the_audience_it_was_issued_for(
     token_type, audience
 ):
-    tokens = build_token_service(get_settings())
+    tokens = build_token_service(get_settings(), clock=build_clock())
     issued = getattr(tokens, f"issue_{token_type}")(
         str(uuid.uuid4()), audience=audience
     ).token

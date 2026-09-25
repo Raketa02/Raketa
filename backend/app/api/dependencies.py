@@ -19,11 +19,19 @@ from fastapi import Depends
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
+from app.application.ports import (
+    DomainEventPublisher,
+    DomainEventStore,
+    MailQueue,
+    UnitOfWork,
+)
 from app.bootstrap.composition import (
     build_clock,
+    build_credential_secrets,
     build_domain_event_store,
     build_event_publisher,
+    build_mail_queue,
+    build_one_time_credential_store,
     build_password_hasher,
     build_refresh_token_repository,
     build_token_service,
@@ -35,6 +43,8 @@ from app.core.config import Settings, get_settings
 from app.infrastructure.database.session import get_db
 from app.infrastructure.redis_client import get_redis
 from app.kernel import Clock
+from app.modules.auth.application.one_time_credentials import OneTimeCredentials
+from app.modules.auth.application.sign_out_everywhere import SignOutEverywhere
 from app.modules.auth.application.token_rotation import TokenRotator
 from app.modules.auth.domain.ports import (
     PasswordHasher,
@@ -54,18 +64,20 @@ def get_password_hasher(settings: SettingsDep) -> PasswordHasher:
 PasswordHasherDep = Annotated[PasswordHasher, Depends(get_password_hasher)]
 
 
-def get_token_service(settings: SettingsDep) -> TokenService:
-    return build_token_service(settings)
-
-
-TokenServiceDep = Annotated[TokenService, Depends(get_token_service)]
-
-
 def get_clock() -> Clock:
     return build_clock()
 
 
 ClockDep = Annotated[Clock, Depends(get_clock)]
+
+
+def get_token_service(settings: SettingsDep, clock: ClockDep) -> TokenService:
+    # On the request's clock, so a token's issue instant and the account's
+    # credentials-changed instant are read off one clock (``docs/adr/0185`` §7).
+    return build_token_service(settings, clock=clock)
+
+
+TokenServiceDep = Annotated[TokenService, Depends(get_token_service)]
 
 # The runtime is the process's, not the request's — `get_event_runtime` takes no
 # request and reads no application state. It stays a `Depends` so that a test can
@@ -137,6 +149,39 @@ def get_token_rotator(
 
 
 TokenRotatorDep = Annotated[TokenRotator, Depends(get_token_rotator)]
+
+
+def get_mail_queue(db: DbSession) -> MailQueue:
+    return build_mail_queue(db)
+
+
+MailQueueDep = Annotated[MailQueue, Depends(get_mail_queue)]
+
+
+def get_one_time_credentials(
+    db: DbSession, hasher: PasswordHasherDep
+) -> OneTimeCredentials:
+    # The one credential mechanism both surfaces issue and redeem through
+    # (``docs/adr/0184`` §3), composed from ports as the rotator is.
+    return OneTimeCredentials(
+        store=build_one_time_credential_store(db),
+        secrets=build_credential_secrets(),
+        hasher=hasher,
+    )
+
+
+OneTimeCredentialsDep = Annotated[
+    OneTimeCredentials, Depends(get_one_time_credentials)
+]
+
+
+def get_sign_out_everywhere(
+    tokens: RefreshTokenRepositoryDep, events: EventPublisherDep
+) -> SignOutEverywhere:
+    return SignOutEverywhere(tokens=tokens, events=events)
+
+
+SignOutEverywhereDep = Annotated[SignOutEverywhere, Depends(get_sign_out_everywhere)]
 
 
 def get_ephemeral_store_or_nothing() -> Redis | None:

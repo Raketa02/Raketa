@@ -253,6 +253,180 @@
         }
       }
     },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Forgot password?: email a link and a code",
+        "description": "Sends an email with a button and an 8-character code, valid for **one hour** and usable once. The button opens the public site's `/reset/<token>` page, for a player or an administrator; the code does the same from wherever the person asked.\n\n**Nobody can use this to learn who has an account**: the answer is `202` with no body for an address with an account, without one, and for one asked for too often. **Throttled per address** \u2014 past three emails in an hour, a request sends nothing and says so to nobody. A newer email replaces the older one's link and code.",
+        "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted \u2014 **the same answer whether or not the address has an account**, and whether or not an email was sent.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password/claim": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Exchange the emailed code for a ticket",
+        "description": "The address and the code from the email, exchanged for a short-lived `ticket` the new password is then set with. A claim is not a use: until a password is set, the same code can be claimed again.\n\nOnly a **right** code learns why it cannot be used; a wrong one is `code_incorrect` whatever else is true.",
+        "operationId": "claim_reset_code_api_v1_auth_forgot_password_claim_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimTicketResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`code_incorrect` (`details.field`: `code`) \u2014 not the code sent to that address, **or nothing was sent to it**: the two are one answer. Five wrong codes lock the credential.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The code is right, and it can no longer be used: `credential_expired` (ask again), `credential_used` or `credential_locked` (five wrong codes).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password/new-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Set a new password, sign out everywhere, and sign in",
+        "description": "Sets the new password with **exactly one** of the email's link `token` or a claimed code's `ticket`, then **signs out everywhere** and signs this session in: every access token issued before this moment is refused (`access_token_revoked`) and every refresh token revoked, so another phone still signed in is signed out on its next request. The answer is this session's new token pair. The link, the code and the ticket are spent.",
+        "operationId": "set_new_password_api_v1_auth_forgot_password_new_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`password_too_weak` (`details.field`: `password`) \u2014 8 to 128 characters with a letter and a digit. The link and the code still work.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link or a ticket this surface never issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`credential_expired` (ask again), `credential_used`, `credential_locked`, or `ticket_expired` \u2014 the code was right and the password came too late; claiming the code again is a fresh ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sports": {
       "get": {
         "tags": [
@@ -6194,6 +6368,49 @@
         "title": "ChangeSocialTagsRequest",
         "description": "The Social tags, replaced whole (``docs/adr/0179`` \u00a78).\n\nStrings rather than an enum, as the commit carries them: an id outside the\nserved vocabulary is refused by the domain with ``unknown_social_tag``, a\ncount outside the served bounds with ``social_tag_selection_out_of_bounds``,\nand the client gets a code it can act on rather than a 422."
       },
+      "ClaimCodeRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "title": "ClaimCodeRequest",
+        "description": "The address and the 8-character code from the email. The code is read\nforgivingly \u2014 case, spaces and dashes are ignored \u2014 and its length is not\nchecked here: a code of the wrong length is simply not the right code, and\nis told ``code_incorrect`` as every other one is. The bound is a cap on\nwhat a request may carry, not a rule about codes."
+      },
+      "ClaimTicketResponse": {
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "title": "Ticket",
+            "description": "Present it as `ticket` when setting the new password. Good for `expires_in` seconds, and never past the code's own hour; claiming the code again replaces it."
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticket",
+          "expires_in"
+        ],
+        "title": "ClaimTicketResponse",
+        "description": "A correct code, exchanged for a ticket the new password is set with."
+      },
       "ClubCardSchema": {
         "properties": {
           "id": {
@@ -7898,6 +8115,22 @@
         "title": "ForecastSchema",
         "description": "How even a game is forecast to be. One type, everywhere it appears.\n\n``provisional`` travels **inside** the forecast rather than beside it: the\nfailure being guarded against is a screen showing the number without its\ncaveat, and a sibling boolean is exactly how the two get separated in a\nrefactor."
       },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
+        "description": "*Forgot password?*: the address to send a link and a code to."
+      },
       "GameKind": {
         "type": "string",
         "enum": [
@@ -9414,6 +9647,47 @@
         ],
         "title": "NamingResponse",
         "description": "What the naming recorded: the name as it now stands and the nickname.\n\nNot a ``UserResponse``, deliberately \u2014 that shape carries\n``has_player_profile``, a fact of another context's this write never asks\nabout, and ``false`` there would be a claim. The client re-reads ``/me``\nbefore moving on (``docs/adr/0171`` \u00a73); this is what lets it show the\nnormalised name back at once."
+      },
+      "NewPasswordRequest": {
+        "properties": {
+          "token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "ticket": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "NewPasswordRequest",
+        "description": "The new password, and **exactly one** of what opens the way to it: the\n`token` from the email's link, or the `ticket` a claimed code returned.\n\nThe password carries no bound here, deliberately: the rule every account\nshares \u2014 8 to 128 characters with a letter and a digit \u2014 is refused as\n`password_too_weak` naming the field, not as a validation error naming none.\nSending both or neither of `token` and `ticket` is a malformed request rather\nthan a person's mistake, and is the one refusal here that is a `422`."
       },
       "OnCourtVerdict": {
         "type": "string",

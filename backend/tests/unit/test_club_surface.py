@@ -29,6 +29,9 @@ CLUB_OPERATIONS = {
     "post /api/v1/club/auth/login",
     "post /api/v1/club/auth/refresh",
     "post /api/v1/club/auth/logout",
+    "post /api/v1/club/auth/forgot-password",
+    "post /api/v1/club/auth/forgot-password/claim",
+    "post /api/v1/club/auth/forgot-password/new-password",
 }
 
 

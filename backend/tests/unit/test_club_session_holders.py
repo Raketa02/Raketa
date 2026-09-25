@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.bootstrap.composition import build_token_service
+from app.bootstrap.composition import build_clock, build_token_service
 from app.core.config import get_settings
 from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.errors import AccessTokenInvalid
@@ -50,7 +50,7 @@ DESK = ClubAccount(
 
 def token_for(account_id: UUID, audience: Audience) -> str:
     return (
-        build_token_service(get_settings())
+        build_token_service(get_settings(), clock=build_clock())
         .issue_access(str(account_id), audience=audience)
         .token
     )
@@ -58,7 +58,8 @@ def token_for(account_id: UUID, audience: Audience) -> str:
 
 async def test_a_club_token_resolves_to_its_account():
     resolve = ResolveClubAccountFromAccessToken(
-        token_service=build_token_service(get_settings()), accounts=StubAccounts(DESK)
+        token_service=build_token_service(get_settings(), clock=build_clock()),
+        accounts=StubAccounts(DESK),
     )
 
     assert await resolve.execute(token_for(DESK.id, Audience.CLUB)) == DESK
@@ -66,7 +67,8 @@ async def test_a_club_token_resolves_to_its_account():
 
 async def test_a_club_token_whose_account_is_gone_is_refused():
     resolve = ResolveClubAccountFromAccessToken(
-        token_service=build_token_service(get_settings()), accounts=StubAccounts()
+        token_service=build_token_service(get_settings(), clock=build_clock()),
+        accounts=StubAccounts(),
     )
 
     with pytest.raises(ClubAccountNotEligible):
@@ -75,7 +77,8 @@ async def test_a_club_token_whose_account_is_gone_is_refused():
 
 async def test_a_player_token_naming_a_club_account_s_id_is_still_refused():
     resolve = ResolveClubAccountFromAccessToken(
-        token_service=build_token_service(get_settings()), accounts=StubAccounts(DESK)
+        token_service=build_token_service(get_settings(), clock=build_clock()),
+        accounts=StubAccounts(DESK),
     )
 
     with pytest.raises(AccessTokenInvalid):

@@ -30,7 +30,8 @@ make openapi     # emit openapi.{player,dev,club}.json — the player contract t
                  # client generates from, the dev console's one-path contract, and
                  # the club website's
 make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
-make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
+make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis + Mailpit,
+                 # whose inbox at http://localhost:8025 is where every email lands); logs, shell
 make migrate     # alembic upgrade head inside the API container
 make seed        # the named accounts, the cohort, the games they have played and four
                  # more nobody has played — whose plans reach nought, one, two and
@@ -127,6 +128,10 @@ Rules to preserve:
   sentence literally — and the reset argued for itself in ADR-0169's amendment of
   2026-09-15, which is the rule: a new one does **not** inherit this — it needs the same
   argument made in an ADR.
+  Two tables made that argument for a different reason — **an event would hold a
+  secret** — and are named here for it: `one_time_credentials` (ADR-0184 §3) and the
+  `mail_queue` (ADR-0186 §2). The password change they lead to is still an event on the
+  account's own stream.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural
@@ -319,7 +324,7 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Twelve jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Thirteen jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -396,6 +401,12 @@ Rules to preserve:
   candidate index's tail is built for — a gap is stepped over once the snapshot horizon
   proves it permanent, so a destruction costs that projection a tick of lag and never an
   event. `CONVERSATION_GRACE` is domain; only the cadence is a setting.
+  The thirteenth is the **mail worker** (`mail-delivery`,
+  [ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §2), a queue
+  drain written as a job the way the outbox's is, and one **correctness depends on**: nobody
+  receives a reset until it runs, and the purge that clears a link and a code off the mail
+  queue is its to do. It claims one message per transaction `FOR UPDATE SKIP LOCKED`, so it is
+  safe beside itself; a process dying between a send and its commit sends that message again.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -1324,6 +1335,28 @@ Rules to preserve:
   so the dots follow the rule (no squash or badminton dot: one member rated is not a dot),
   and the protagonist's *People I approve* group, with a member she let in through
   `ApproveJoinRequest` and `rated-in-every-sport`'s request left waiting.
+- **A use case never sends email; it writes the mail queue**
+  ([ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md)). The
+  message is rendered whole — the copy lives with its templates in the backend
+  (`app/application/mail/layout.py`, and each flow's own words beside its use case), since an
+  email has no client to choose a sentence from a code — and written through `MailQueue` in
+  the act's own transaction; the mail worker sends it through the `Mailer` port and purges
+  the body. `.importlinter` keeps `smtplib` out of every domain and application layer. **A
+  secret never enters the event store or the outbox** (ADR-0184 §4): a one-time credential is
+  a row in `one_time_credentials`, hashed, and `OneTimeCredentials` is the one mechanism every
+  flow that issues one goes through — *Forgot password?* on both surfaces today, the
+  invitations next (#508). `tests/api/test_forgot_password.py` asserts that no link, code or
+  ticket ever reaches an event, at every step.
+- **Signing out everywhere is one instant per account**
+  ([ADR-0185](../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+  §7). A password change is an event on the account's own stream — `PasswordChanged` on a
+  User's, `ClubAccountPasswordChanged` on a Club account's — projected onto the row as
+  `credentials_changed_at`, which both surfaces' token resolution already reads; an access
+  token issued **strictly before** it is refused as `access_token_revoked`, and
+  `SignOutEverywhere` revokes the account's refresh tokens on that surface. The comparison
+  reads the token's `iat_us` — microseconds **on the injected clock**, which is why
+  `get_token_service` takes `ClockDep` — never the whole-second `iat`, which would sign a reset
+  out of the session it opens.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -1405,6 +1438,11 @@ tests.
   classes implementing the `Protocol` (see `tests/unit/test_resolve_current_user.py`).
 - `tests/api/` — full HTTP flows via the `client` fixture (HTTPX ASGI + in-memory SQLite).
   Reuse fixtures from `tests/conftest.py` rather than standing up new app/db instances.
+  Two of them replace the outside world's time and mail (ADR-0186 §5): **`clock`** overrides
+  the application's clock with one the test moves (`clock.move(timedelta(hours=1))` — an
+  expiry is checked by moving time, never by waiting), and **`mailbox`** drains the outbox and
+  the mail queue through the real worker into a recording mailer, so a test reads the emails
+  sent — their links and codes — the way a person would. No test needs Mailpit running.
 - `tests/demands/` — the **outward demands**, parameterised over every implementation
   registered in a register beside the wiring
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
@@ -1483,7 +1521,7 @@ tests.
   `PHOTO_SWEEP_ENABLED`, `PHOTO_REVIEW_BACKFILL_ENABLED`, `CANDIDATE_INDEX_ENABLED`,
   `EXPOSURE_ROLL_ENABLED`, `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`,
   `INTEREST_EXPIRY_ENABLED`, `SCALE_PRESSURE_ENABLED`, `CHALLENGE_LAPSE_ENABLED`,
-  `RATING_CATCH_UP_ENABLED` — and **every
+  `RATING_CATCH_UP_ENABLED`, `MAIL_DELIVERY_ENABLED` — and **every
   job's first run is at startup**, not after its first interval, so a six-hourly job is
   observable on a laptop.
 

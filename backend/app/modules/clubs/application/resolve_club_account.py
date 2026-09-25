@@ -28,4 +28,6 @@ class ResolveClubAccountFromAccessToken:
         claims = read_access_token(
             self._token_service, raw_token, audience=Audience.CLUB
         )
-        return await eligible_club_account(self._accounts, claims.account_id)
+        account = await eligible_club_account(self._accounts, claims.account_id)
+        claims.refuse_if_signed_out(account.credentials_changed_at)
+        return account

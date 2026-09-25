@@ -1,4 +1,5 @@
 from app.modules.users.application.handlers.log_user_registered import (
+    LogPasswordChanged,
     LogUserDisabled,
     LogUserMarkedAsTester,
     LogUserNamed,
@@ -8,6 +9,7 @@ from app.modules.users.application.handlers.log_user_registered import (
 )
 
 __all__ = [
+    "LogPasswordChanged",
     "LogUserDisabled",
     "LogUserMarkedAsTester",
     "LogUserNamed",

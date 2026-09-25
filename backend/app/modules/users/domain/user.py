@@ -8,6 +8,7 @@ from uuid import UUID
 
 from app.modules.users.domain.errors import InactiveUserCannotBePromoted
 from app.modules.users.domain.events import (
+    PasswordChanged,
     UserDisabled,
     UserMarkedAsTester,
     UserNamed,
@@ -52,6 +53,10 @@ class User:
     #: The **tester mark** (``docs/adr/0180`` §9): a Tester may be given a
     #: feature before anyone else. Beside ``authority`` and never inside it.
     is_tester: bool = False
+    #: When this account's credentials last changed (``docs/adr/0185`` §7): an
+    #: access token issued before it is refused. ``None`` for an account whose
+    #: password is the one it registered with.
+    credentials_changed_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     version: int = 0
@@ -127,6 +132,7 @@ class User:
             self.is_admin = event.is_admin
             self.is_active = event.is_active
             self.is_tester = False
+            self.credentials_changed_at = None
             # ``adult_attested`` is deliberately not folded into state. It is a
             # precondition of the account existing, answered once and never
             # asked again — no later command reads it, and no rule anywhere
@@ -146,6 +152,11 @@ class User:
             return
         if isinstance(event, UserDisabled):
             self.is_active = False
+            self.version += 1
+            return
+        if isinstance(event, PasswordChanged):
+            self.password_hash = HashedPassword(event.password_hash)
+            self.credentials_changed_at = event.occurred_at
             self.version += 1
             return
         if isinstance(event, UserPromotedToAdmin):
@@ -188,6 +199,26 @@ class User:
                 user_id=self.id,
                 name=name.value,
                 nickname=nickname.value,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def change_password(
+        self, *, password_hash: HashedPassword, occurred_at: datetime
+    ) -> None:
+        """A new password, which **signs this account out everywhere**
+        (``docs/adr/0185`` §7): ``occurred_at`` becomes the instant before which
+        no access token counts. Always recorded — setting the same password
+        again is still somebody saying *end my other sessions*.
+
+        Whether a disabled account may do this is the caller's question, asked
+        before a credential is spent; this records the act."""
+
+        self._ensure_registered()
+        self._record_that(
+            PasswordChanged(
+                user_id=self.id,
+                password_hash=password_hash.value,
                 occurred_at=occurred_at,
             )
         )

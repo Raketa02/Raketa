@@ -35,7 +35,14 @@ from __future__ import annotations
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
+from app.application.ports import (
+    DomainEventPublisher,
+    DomainEventStore,
+    Mailer,
+    MailQueue,
+    PendingMail,
+    UnitOfWork,
+)
 from app.bootstrap.events import EventRuntime, get_event_runtime
 from app.core.config import Settings
 from app.engines.assessment import AssessmentEngine
@@ -46,8 +53,13 @@ from app.engines.matchfit.v1 import MatchFitV1
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
+from app.infrastructure.mail.smtp_mailer import SmtpMailer
+from app.infrastructure.mail.sqlalchemy_mail_queue import SqlAlchemyMailQueue
 from app.kernel import Clock
 from app.modules.auth.domain.ports import (
+    CredentialSecrets,
+    OneTimeCredentialStore,
+    PasswordAccounts,
     PasswordHasher,
     RefreshTokenRepository,
     SessionHolders,
@@ -55,6 +67,12 @@ from app.modules.auth.domain.ports import (
 )
 from app.modules.auth.infrastructure.jwt_token_service import JwtTokenService
 from app.modules.auth.infrastructure.password_hasher import BcryptPasswordHasher
+from app.modules.auth.infrastructure.random_credential_secrets import (
+    RandomCredentialSecrets,
+)
+from app.modules.auth.infrastructure.sqlalchemy_one_time_credential_store import (
+    SqlAlchemyOneTimeCredentialStore,
+)
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (
     SqlAlchemyRefreshTokenRepository,
 )
@@ -89,6 +107,7 @@ from app.modules.challenges.infrastructure.games_settled_game import (
 from app.modules.challenges.infrastructure.profile_friendly_choice import (
     ProfileFriendlyChoice,
 )
+from app.modules.clubs.application.password_accounts import ClubPasswordAccounts
 from app.modules.clubs.application.session_holders import ClubAccountSessionHolders
 from app.modules.clubs.domain.ports import (
     ClubAccountRepository,
@@ -488,6 +507,7 @@ from app.modules.sportsmanship.infrastructure.sqlalchemy_standing_answers import
 from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger import (
     SqlAlchemySportsmanshipLedger,
 )
+from app.modules.users.application.password_accounts import UserPasswordAccounts
 from app.modules.users.application.session_holders import UserSessionHolders
 from app.modules.users.application.set_tester_mark import SetTesterMark
 from app.modules.users.domain.ports import UserRepository
@@ -544,12 +564,52 @@ def build_password_hasher(settings: Settings) -> PasswordHasher:
     return BcryptPasswordHasher(rounds=settings.BCRYPT_ROUNDS)
 
 
-def build_token_service(settings: Settings) -> TokenService:
-    return JwtTokenService(settings)
+def build_token_service(settings: Settings, *, clock: Clock) -> TokenService:
+    return JwtTokenService(settings, clock=clock)
 
 
 def build_refresh_token_repository(session: AsyncSession) -> RefreshTokenRepository:
     return SqlAlchemyRefreshTokenRepository(session)
+
+
+def build_one_time_credential_store(session: AsyncSession) -> OneTimeCredentialStore:
+    """Where one-time credentials live: a plain table, **never** the event store
+    (``docs/adr/0184`` §3–§4)."""
+    return SqlAlchemyOneTimeCredentialStore(session)
+
+
+def build_credential_secrets() -> CredentialSecrets:
+    """A credential's randomness: the operating system's CSPRNG."""
+    return RandomCredentialSecrets()
+
+
+# --------------------------------------------------------------------------
+# Email (docs/adr/0186)
+# --------------------------------------------------------------------------
+
+
+def build_mail_queue(session: AsyncSession) -> MailQueue:
+    """Where a use case leaves an email, in its own transaction."""
+    return SqlAlchemyMailQueue(session)
+
+
+def build_pending_mail(session: AsyncSession) -> PendingMail:
+    """The worker's side of the same table."""
+    return SqlAlchemyMailQueue(session)
+
+
+def build_mailer(settings: Settings) -> Mailer:
+    """The one mailer: SMTP, at the mail catcher locally and at a relay once a
+    domain exists. Held by the worker and by nothing a request reaches."""
+    return SmtpMailer(
+        host=settings.SMTP_HOST,
+        port=settings.SMTP_PORT,
+        security=settings.SMTP_SECURITY,
+        username=settings.SMTP_USERNAME,
+        password=settings.SMTP_PASSWORD,
+        sender=settings.MAIL_SENDER,
+        timeout_seconds=settings.SMTP_TIMEOUT_SECONDS,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -594,6 +654,12 @@ def build_club_account_session_holders(
     """Who may renew a **club** session: a Club account that still exists
     (``docs/adr/0185`` §6). Over the repository the request already holds."""
     return ClubAccountSessionHolders(accounts)
+
+
+def build_club_account_passwords(accounts: ClubAccountRepository) -> PasswordAccounts:
+    """Whose password a **club** reset recovers: a Club account's
+    (``docs/adr/0184`` §5). Over the repository the request already holds."""
+    return ClubPasswordAccounts(accounts)
 
 
 def build_club_directory(session: AsyncSession) -> ClubDirectory:
@@ -704,6 +770,19 @@ def build_user_session_holders(session: AsyncSession) -> SessionHolders:
     """Who may renew a **player-app** session: an active User
     (``docs/adr/0185`` §6)."""
     return UserSessionHolders(build_user_repository(session))
+
+
+def build_user_password_accounts(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> PasswordAccounts:
+    """Whose password a **player-app** reset recovers: an active User's
+    (``docs/adr/0184`` §5), changed on the User's own stream."""
+    return UserPasswordAccounts(
+        users=build_user_repository(session), event_store=event_store, events=events
+    )
 
 
 def build_set_tester_mark(

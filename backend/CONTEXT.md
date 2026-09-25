@@ -780,6 +780,48 @@ there; they are not repeated here.
   `LiveNudgeSchema` from `components.schemas`. It is a dated shim with a test that goes red if it
   stops matching. _Avoid_: hand-writing the SSE `itemSchema` in `openapi_extra` — that is the
   mirror of a backend response ADR-0006 exists to forbid.
+- **Mail queue** — the `mail_queue` table, and the **second queue** beside the transactional
+  outbox ([ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §2). A use
+  case that sends an email **renders it whole** — recipient, subject, plain text and HTML, link and
+  code — and writes it here through the `MailQueue` port **in its own transaction**, so the email
+  and the act that caused it commit together. It is the one place a secret sits, for as long as it
+  takes to send it. _Avoid_: putting an email on the outbox — the outbox carries domain events,
+  and a domain event may never carry a secret.
+- **Mail worker** — the `mail-delivery` `PeriodicJob` that drains the mail queue through
+  `DeliverQueuedMail`: one message per transaction, claimed `FOR UPDATE SKIP LOCKED`, sent through
+  the **Mailer** port, then **purged** — `text_body` and `html_body` cleared, the kind, recipient,
+  subject and delivery record kept. A refused send waits on `RETRY_AFTER` and is tried again; once
+  the retries are spent it is **given up on and purged all the same**. At least once. _Avoid_:
+  treating `MAIL_DELIVERY_ENABLED=false` as *not sending* — it is a table of live secrets nobody
+  receives.
+- **Mailer** — the port that sends one rendered message (`SmtpMailer`: the dev stack's Mailpit
+  locally, a relay once a domain exists). The API suite reads a `RecordingMailer` through the
+  `mailbox` fixture, after draining both queues. _Avoid_: calling a mailer from a use case.
+- **One-time credential** — a **link token** (256 random bits, in a URL) and an **8-character
+  code** issued together, in the `one_time_credentials` table and never in an event
+  ([ADR-0184](../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
+  §3–§4). **Both are stored hashed** — the token by SHA-256, the code by the password hasher,
+  because the code is the one small enough to guess — and **the code is derived from the token**
+  (`credential_code.py`), so a page holding the link can show its code without either being
+  stored readable. A purpose (`invitation`, `club_reset`, `forgot_password`) sets its lifetime and
+  an audience says which surface may use it. Its **standing** — valid, expired, used, locked — is
+  folded from the clock and the row, never stored. A newer credential for the same subject
+  **retires** the older ones. One mechanism, `OneTimeCredentials`, for every flow that issues one.
+- **Claim ticket** — what a **right** code is exchanged for: a second random secret, stored hashed
+  on the credential, good for `TICKET_LIFETIME` and never past the credential's own deadline. The
+  new password is set with it, so guessing is bounded to the claim, which is the one place wrong
+  codes are counted. A claim is not a use; claiming again replaces the ticket.
+- **Credentials-changed instant** — `users.credentials_changed_at` and
+  `club_accounts.credentials_changed_at`: the `occurred_at` of the account's last
+  `PasswordChanged` / `ClubAccountPasswordChanged`, on the row each surface already reads per
+  request. An access token whose **issue instant** is strictly before it is refused
+  (`access_token_revoked`). The issue instant is the token's `iat_us` claim — **microseconds, on
+  the application's clock** — because a whole-second `iat` would refuse the very session a reset
+  opens, and an instant on another clock than the one that wrote the change would disagree with it
+  in every test that moves time. _Avoid_: comparing against `iat`.
+- **PasswordAccounts** — the auth port *Forgot password?* recovers through, answered **per
+  audience** as `SessionHolders` is: `UserPasswordAccounts` for the player app,
+  `ClubPasswordAccounts` for the club website. Each records the change on its own stream.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

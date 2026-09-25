@@ -54,6 +54,20 @@ class Environment(StrEnum):
     PRODUCTION = "production"
 
 
+class SmtpSecurity(StrEnum):
+    """How the connection to the mail relay is protected (``docs/adr/0186`` §1).
+
+    ``none`` is for the local mail catcher, and a deployed environment refuses
+    it: a reset code sent in the clear is a reset code anybody on the path can
+    use. ``starttls`` upgrades a plain connection; ``tls`` is encrypted from the
+    first byte. Either verifies the relay's certificate.
+    """
+
+    NONE = "none"
+    STARTTLS = "starttls"
+    TLS = "tls"
+
+
 #: Spelled once, for refusal messages and for the environment template.
 ENVIRONMENT_NAMES = ", ".join(e.value for e in Environment)
 
@@ -122,6 +136,23 @@ DEFAULT_REDIS_URL = "redis://redis:6379/0"
 #: nowhere else, which is what makes it safe to refuse rather than fall back on in
 #: a deployed environment, exactly as the database's and Redis's defaults are.
 DEFAULT_PUBLIC_SITE_URL = "http://localhost:3001"
+
+#: Where the club website answers on a laptop: ``frontend_club``'s dev server
+#: (``docs/adr/0187`` §7). A club's *Forgot password?* email links to its own
+#: *Set a new password* page there, and a deployed environment refuses to
+#: inherit it, exactly as it refuses the public site's.
+DEFAULT_CLUB_WEBSITE_URL = "http://localhost:3000"
+
+#: The mail catcher in ``docker-compose-local.yml`` — Mailpit's SMTP port, whose
+#: web inbox is ``localhost:8025``. A service name, so it resolves on a laptop
+#: running the dev stack and nowhere else, which is what makes it safe to refuse
+#: rather than fall back on (``docs/adr/0186`` §1).
+DEFAULT_SMTP_HOST = "mailpit"
+DEFAULT_SMTP_PORT = 1025
+
+#: Who a local email is from. The reserved ``.example`` domain, because no domain
+#: is registered and a deployed environment must name a real sender.
+DEFAULT_MAIL_SENDER = "Raketa <no-reply@raketa.example>"
 
 #: The work factor every stored password and refresh token is hashed at in production,
 #: and the floor for everything deployed. bcrypt's own default, so a deployed
@@ -233,6 +264,33 @@ class Settings(BaseSettings):
     # why a deployed environment must say it rather than inherit a laptop's.
     PUBLIC_SITE_URL: str = DEFAULT_PUBLIC_SITE_URL
 
+    # --- the club website (docs/adr/0187 §7, docs/adr/0184 §5)
+    #
+    # **A club's reset link is built from this address**: its *Forgot
+    # password?* email opens `<CLUB_WEBSITE_URL>/reset/<token>`, the website's
+    # own *Set a new password* page, because clubs already use that site. Held
+    # to `https://` once deployed, as the public site's address is.
+    CLUB_WEBSITE_URL: str = DEFAULT_CLUB_WEBSITE_URL
+
+    # --- email (docs/adr/0186)
+    #
+    # **Where mail goes and who it is from are configuration; what it says, and
+    # how long the link in it works, are not.** The copy lives with its
+    # templates and the lifetimes in `auth/domain/one_time_credential.py`.
+    #
+    # Locally every email lands in the mail catcher's inbox and none leaves the
+    # machine. **The production sender stays off until a domain exists**: a
+    # deployed environment that names no relay, no sender or an unencrypted
+    # connection refuses to start, and never falls back to not sending.
+    MAIL_SENDER: str = DEFAULT_MAIL_SENDER
+    SMTP_HOST: str = DEFAULT_SMTP_HOST
+    SMTP_PORT: int = DEFAULT_SMTP_PORT
+    SMTP_SECURITY: SmtpSecurity = SmtpSecurity.NONE
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    #: The whole budget for one send, connection included.
+    SMTP_TIMEOUT_SECONDS: float = 10.0
+
     # --- photo storage (S3-compatible: MinIO locally, S3 deployed — docs/adr/0091)
     #
     # `PHOTO_STORAGE_ENDPOINT_URL` is a **server-to-server** URL and carries no scheme
@@ -276,6 +334,20 @@ class Settings(BaseSettings):
     EVENT_DELIVERY_WORKER_ENABLED: bool = True
     EVENT_DELIVERY_POLL_INTERVAL_SECONDS: float = 1.0
     EVENT_DELIVERY_BATCH_SIZE: int = 100
+
+    # --- the mail worker (docs/adr/0186 §2)
+    #
+    # **Turning it off is not a way of not sending.** Every email a use case
+    # writes waits in the mail queue with its link and code until this sends it
+    # and purges them, so a worker that never runs is a table of live secrets
+    # nobody receives. It is a toggle for a test run, as the outbox's is.
+    #
+    # Two seconds, because a person is waiting on the other side of a *Forgot
+    # password?* and a longer tick is a longer stare at an inbox. Each tick
+    # sends at most a batch, one message per transaction.
+    MAIL_DELIVERY_ENABLED: bool = True
+    MAIL_DELIVERY_INTERVAL_SECONDS: float = 2.0
+    MAIL_DELIVERY_BATCH_SIZE: int = 20
 
     # --- scheduled jobs (docs/adr/0092)
     #
@@ -655,6 +727,35 @@ class Settings(BaseSettings):
                     f"print every group link at a laptop's address — set "
                     f"PUBLIC_SITE_URL explicitly or use 'local'."
                 )
+            if "CLUB_WEBSITE_URL" not in provided:
+                # The public site's refusal, for the other site the backend
+                # prints links to: a club's reset email would open a laptop.
+                raise ConfigurationError(
+                    f"CLUB_WEBSITE_URL is not set, and APP_ENV selects '{env}', "
+                    f"which is deployed. Falling back to the local default would "
+                    f"send every club's reset link to a laptop's address — set "
+                    f"CLUB_WEBSITE_URL explicitly or use 'local'."
+                )
+            if "SMTP_HOST" not in provided:
+                # The same refusal as Redis's, and a stronger one: the default is
+                # the local mail catcher's service name, so an environment that
+                # inherited it would queue every reset and invitation for a
+                # relay that does not exist. **This is where the production
+                # sender stays off until a domain exists** — by refusing to
+                # start, never by quietly not sending (``docs/adr/0186`` §1).
+                raise ConfigurationError(
+                    f"SMTP_HOST is not set, and APP_ENV selects '{env}', which is "
+                    f"deployed. Falling back to the local mail catcher would leave "
+                    f"every email undelivered — set SMTP_HOST to a relay or use "
+                    f"'local'."
+                )
+            if "MAIL_SENDER" not in provided:
+                raise ConfigurationError(
+                    f"MAIL_SENDER is not set, and APP_ENV selects '{env}', which "
+                    f"is deployed. The default sender is on a reserved domain no "
+                    f"relay will send from — set MAIL_SENDER explicitly or use "
+                    f"'local'."
+                )
 
         if env in DEPLOYED:
             # A second question of the same set, kept separate because it is a rule
@@ -697,6 +798,23 @@ class Settings(BaseSettings):
                     f"PUBLIC_SITE_URL is not https://, and APP_ENV selects '{env}', "
                     f"which is deployed. Every group link is built from it and "
                     f"opened over a public network, so it must be https:// there."
+                )
+            if not self.CLUB_WEBSITE_URL.lower().startswith("https://"):
+                raise ConfigurationError(
+                    f"CLUB_WEBSITE_URL is not https://, and APP_ENV selects "
+                    f"'{env}', which is deployed. A club's reset link is built "
+                    f"from it and opened over a public network, so it must be "
+                    f"https:// there."
+                )
+            # The scheme rule's mail-shaped instance: every email with a link
+            # and a code crosses a public network to the relay, and a code sent
+            # in the clear is a code anybody on the path can use.
+            if self.SMTP_SECURITY is SmtpSecurity.NONE:
+                raise ConfigurationError(
+                    f"SMTP_SECURITY is 'none', and APP_ENV selects '{env}', which "
+                    f"is deployed. Every reset and invitation email carries a code "
+                    f"that opens an account, so the connection to the relay must "
+                    f"be encrypted there — set SMTP_SECURITY to starttls or tls."
                 )
 
         if env in DEPLOYED:

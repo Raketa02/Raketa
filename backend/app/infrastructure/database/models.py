@@ -2,6 +2,10 @@
 
 from app.infrastructure.events.event_delivery_model import EventOutboxORM
 from app.infrastructure.events.event_store_model import EventStoreORM
+from app.infrastructure.mail.mail_queue_model import MailQueueORM
+from app.modules.auth.infrastructure.one_time_credential_model import (
+    OneTimeCredentialORM,
+)
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_model import (
     RefreshTokenORM,
 )
@@ -40,6 +44,8 @@ __all__ = [
     "GroupMemberORM",
     "GroupORM",
     "InterestORM",
+    "MailQueueORM",
+    "OneTimeCredentialORM",
     "RefreshTokenORM",
     "SearchCandidateORM",
     "SearchORM",

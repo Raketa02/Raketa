@@ -207,8 +207,13 @@ forbidden_modules =
     os
 allow_indirect_imports = true
 
+# `smtplib` joined the list with the mailer (docs/adr/0186 §2), on the same
+# argument: *a use case never sends*. It writes a mail queue row and a worker sends
+# it through the `Mailer` port, and that is only true while nothing on the inside
+# can reach the library — or construct the adapter over it, which the flag below
+# catches as well.
 [importlinter:contract:a-business-layer-cannot-reach-an-imaging-or-object-store-library]
-name = No domain or application layer imports an imaging, object-store or HTTP-client library
+name = No domain or application layer imports an imaging, object-store, HTTP-client or mail library
 type = forbidden
 source_modules =
     app.application
@@ -222,6 +227,7 @@ forbidden_modules =
     boto3
     botocore
     aiohttp
+    smtplib
 allow_indirect_imports = false
 
 # The ephemeral store is fenced out of the business layers on exactly the argument

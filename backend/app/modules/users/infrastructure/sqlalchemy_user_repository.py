@@ -6,7 +6,9 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.infrastructure.database.stored_time import stored_instant_or_none
 from app.modules.users.domain.events import (
+    PasswordChanged,
     UserMarkedAsTester,
     UserNamed,
     UserRegistered,
@@ -35,6 +37,7 @@ def _to_domain(row: UserORM) -> User:
         is_admin=row.is_admin,
         is_active=row.is_active,
         is_tester=row.is_tester,
+        credentials_changed_at=stored_instant_or_none(row.credentials_changed_at),
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -150,6 +153,16 @@ class SqlAlchemyUserRepository:
         await self._session.flush()
         await self._session.refresh(row)
         return _to_domain(row)
+
+    async def project_password_changed(self, event: PasswordChanged) -> None:
+        row = await self._session.get(UserORM, event.user_id)
+        if row is None:
+            raise RuntimeError(
+                f"the password of {event.user_id} has no projection row to land on"
+            )
+        row.password_hash = event.password_hash
+        row.credentials_changed_at = event.occurred_at
+        await self._session.flush()
 
     async def project_tester_mark(
         self, event: UserMarkedAsTester | UserUnmarkedAsTester

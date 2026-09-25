@@ -42,6 +42,12 @@ class UserORM(Base):
     is_tester: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # When the credentials last changed (``docs/adr/0185`` §7). On the row
+    # because every player-surface request already reads it: an access token
+    # issued before it is refused at no extra read.
+    credentials_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

@@ -95,3 +95,23 @@ class UserUnmarkedAsTester:
 
     user_id: UUID
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class PasswordChanged:
+    """A new password, and the instant every older session stopped counting.
+
+    **Carries the new hash**, as ``UserRegistered`` carries the first
+    (``docs/adr/0185`` §7): a password is chosen by its holder and lives as long
+    as the account, so the stream that records the account records it — which
+    is a different thing from the one-time credential that may have opened the
+    way to it, which never enters an event (``docs/adr/0184`` §4).
+
+    ``occurred_at`` **is the credentials-changed instant**: projected onto the
+    ``users`` row, it refuses every access token issued before it. There is no
+    field saying how the password was changed, because nothing reads one.
+    """
+
+    user_id: UUID
+    password_hash: str
+    occurred_at: datetime
