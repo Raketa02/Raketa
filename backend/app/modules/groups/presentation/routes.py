@@ -1,6 +1,7 @@
 """The player surface's group routes: create one, list yours, open one, join
-one or ask to, answer the requests waiting on yours — and the two searches, for a
-home club and for a group to join.
+one or ask to, answer the requests waiting on yours, see who in it plays a
+sport, edit yours, leave one or delete yours — and the two searches, for a home
+club and for a group to join.
 
 Mounted on the player surface (``app/api/v1/player.py``). Every route takes a
 player's token. **The backend guards no flag** (``docs/adr/0183`` §12): these
@@ -23,10 +24,14 @@ from fastapi import APIRouter, Query, status
 
 from app.api.dependencies import SettingsDep
 from app.core.exception_handlers import ErrorResponse
+from app.kernel import Sport
 from app.modules.groups.application.commands import (
     AnswerJoinRequestCommand,
     CreatePlayerGroupCommand,
+    DeleteGroupCommand,
+    EditGroupCommand,
     JoinGroupCommand,
+    LeaveGroupCommand,
     SearchGroupsToJoinCommand,
     SearchHomeClubsCommand,
 )
@@ -34,8 +39,12 @@ from app.modules.groups.presentation.dependencies import (
     ApproveJoinRequestDep,
     CreatePlayerGroupDep,
     DeclineJoinRequestDep,
+    DeleteGroupDep,
+    EditGroupDep,
     JoinGroupDep,
+    LeaveGroupDep,
     ReadGroupDep,
+    ReadGroupMembersDep,
     ReadJoinRequestsDep,
     ReadMyGroupsDep,
     SearchGroupsToJoinDep,
@@ -43,7 +52,11 @@ from app.modules.groups.presentation.dependencies import (
 )
 from app.modules.groups.presentation.schemas import (
     CreatePlayerGroupRequest,
+    EditedGroupResponse,
+    EditGroupRequest,
     GroupAtClubSchema,
+    GroupMemberSchema,
+    GroupMembersResponse,
     GroupResponse,
     HomeClubPageResponse,
     JoinRequestSchema,
@@ -68,12 +81,27 @@ _NOT_FOUND: dict[int | str, dict[str, Any]] = {
     },
 }
 
+#: A read that leaves a blocked pair out reads the block state first, and a
+#: block state that cannot be read is not guessed at (``docs/adr/0095`` §5).
+#: A reader alone in the group has nobody to hide, and is never refused this.
+_BLOCKS_UNREAD: dict[int | str, dict[str, Any]] = {
+    status.HTTP_503_SERVICE_UNAVAILABLE: {
+        "model": ErrorResponse,
+        "description": (
+            "`block_state_unavailable` — who is blocked could not be read, and "
+            "faces nobody could check are not served. Nothing was recorded; "
+            "retry."
+        ),
+    },
+}
+
 _OWNER_ONLY: dict[int | str, dict[str, Any]] = {
     status.HTTP_403_FORBIDDEN: {
         "model": ErrorResponse,
         "description": (
             "`not_the_group_owner` — the caller is in the group and is not its "
-            "Owner. **Nobody but the Owner** sees or answers its requests."
+            "Owner. **Nobody but the Owner** sees or answers its requests, edits "
+            "it or deletes it."
         ),
     },
     status.HTTP_404_NOT_FOUND: {
@@ -145,13 +173,15 @@ async def my_groups(user: CurrentUserDep, read: ReadMyGroupsDep) -> MyGroupsResp
     response_model=GroupResponse,
     response_model_exclude_unset=True,
     status_code=status.HTTP_200_OK,
-    responses=_NOT_FOUND,
+    responses={**_NOT_FOUND, **_BLOCKS_UNREAD},
     summary="A group, for its members",
     description=(
         "Its name, monogram, dots, member count and home club; its link and "
-        "join policy; whether the caller owns it; and, for every sport, how "
-        "many members are rated in it and the first of them to join — the "
-        "Games tab's *N of M*."
+        "join policy; whether the caller owns it; for every sport, how many "
+        "members are rated in it and the first of them to join — the Games "
+        "tab's *N of M*; and the faces on the Info tab's members row, which "
+        "**leaves out a blocked pair, either way round**, as the Members list "
+        "does. No count moves."
     ),
 )
 async def read_group(
@@ -162,6 +192,100 @@ async def read_group(
 ) -> GroupResponse:
     page = await read.execute(group_id, reader_id=user.id)
     return GroupResponse.from_view(page, public_site=settings.PUBLIC_SITE_URL)
+
+
+@router.put(
+    "/{group_id}/details",
+    response_model=EditedGroupResponse,
+    response_model_exclude_unset=True,
+    status_code=status.HTTP_200_OK,
+    responses={
+        **_OWNER_ONLY,
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`group_name_invalid` (`details.field` `name`) — 1–40 characters "
+                "once trimmed. Read only once the caller is known to be the "
+                "Owner. **Nothing was recorded** — the policy neither."
+            ),
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`group_not_found` — no such group, or one the caller is not in."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`block_state_unavailable` — who is blocked could not be read "
+                "for the answer's members row. **Nothing was recorded**: the "
+                "answer is drawn before the save commits, so the retry is the "
+                "whole edit again."
+            ),
+        },
+    },
+    summary="Edit a group: its name and who can join",
+    description=(
+        "**The Owner's**, both fields as *Edit group* holds them, recorded "
+        "together or not at all. Saving what the group already says records "
+        "nothing. **The link never changes**, and nor does the monogram's "
+        "colour. **Switching to `ANYONE` admits everybody waiting at once**, "
+        "and `admitted` says who. Answers the group as its page reads it, "
+        "under `group`."
+    ),
+)
+async def edit_group(
+    group_id: UUID,
+    payload: EditGroupRequest,
+    user: CurrentUserDep,
+    edit: EditGroupDep,
+    settings: SettingsDep,
+) -> EditedGroupResponse:
+    edited = await edit.execute(
+        EditGroupCommand(
+            group_id=group_id,
+            editor_id=user.id,
+            name=payload.name,
+            join_policy=payload.join_policy,
+        )
+    )
+    return EditedGroupResponse.from_view(edited, public_site=settings.PUBLIC_SITE_URL)
+
+
+@router.delete(
+    "/{group_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **_OWNER_ONLY,
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`group_not_found` — no such group, or one the caller is not in."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`group_has_other_members` — somebody besides the Owner is in it. "
+                "A group is deleted only while its Owner is its only member; an "
+                "Owner who wants out of one with people in it leaves. Nothing "
+                "was recorded."
+            ),
+        },
+    },
+    summary="Delete a group nobody else is in",
+    description=(
+        "**The Owner, and only while they are its only member.** Afterwards the "
+        "group is in no list and no search, its link reads *nothing at that "
+        "link* (join search answers `read_as` `LINK` and no clubs), and the "
+        "requests waiting on it are gone."
+    ),
+)
+async def delete_group(
+    group_id: UUID, user: CurrentUserDep, delete: DeleteGroupDep
+) -> None:
+    await delete.execute(DeleteGroupCommand(group_id=group_id, deleted_by=user.id))
 
 
 @router.post(
@@ -190,6 +314,71 @@ async def join_group(
 ) -> GroupAtClubSchema:
     joined = await join.execute(JoinGroupCommand(group_id=group_id, player_id=user.id))
     return GroupAtClubSchema.from_view(joined)
+
+
+@router.delete(
+    "/{group_id}/membership",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`group_not_found` — no such group, or one the caller is not in: "
+                "a second tap on *Leave* meets this, because they are not in it "
+                "any more."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`lone_owner_cannot_leave` — the caller owns the group and is its "
+                "only member, so there is nobody to pass it to. *Delete the "
+                "group* is what undoes it. Nothing was recorded."
+            ),
+        },
+    },
+    summary="Leave a group",
+    description=(
+        "The caller is no longer a member, and may join again later under the "
+        "group's policy. **An Owner leaving a group other people are in passes "
+        "it to the member who has been in longest** — their current stay, so "
+        "somebody who left and came back counts from their return — and the "
+        "requests waiting on it pass with it."
+    ),
+)
+async def leave_group(
+    group_id: UUID, user: CurrentUserDep, leave: LeaveGroupDep
+) -> None:
+    await leave.execute(LeaveGroupCommand(group_id=group_id, player_id=user.id))
+
+
+@router.get(
+    "/{group_id}/members",
+    response_model=GroupMembersResponse,
+    response_model_exclude_unset=True,
+    status_code=status.HTTP_200_OK,
+    responses={**_NOT_FOUND, **_BLOCKS_UNREAD},
+    summary="Members of a group, for one sport",
+    description=(
+        "**Only the members rated in `sport`** — who in the group the caller "
+        "could play it with: the caller first, then the Owner, then everybody "
+        "else newest joined first. Each with their face, their Level in the "
+        "sport, their Player Score where they have one, whether they own the "
+        "group and when they joined. **A blocked pair, either way round, is "
+        "left out of each other's list**, and the group's member count does "
+        "not change."
+    ),
+)
+async def group_members(
+    group_id: UUID,
+    user: CurrentUserDep,
+    read: ReadGroupMembersDep,
+    sport: Sport = Query(description="The sport whose players to list."),
+) -> GroupMembersResponse:
+    rows = await read.execute(group_id, reader_id=user.id, sport=sport)
+    return GroupMembersResponse(
+        sport=sport, members=[GroupMemberSchema.from_row(row) for row in rows]
+    )
 
 
 @router.get(

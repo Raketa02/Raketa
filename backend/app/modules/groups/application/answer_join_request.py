@@ -12,7 +12,7 @@ from __future__ import annotations
 from app.application.ports import UnitOfWork
 from app.kernel import Clock
 from app.modules.groups.application.commands import AnswerJoinRequestCommand
-from app.modules.groups.domain.errors import GroupNotFound
+from app.modules.groups.application.membership import group_of_a_member
 from app.modules.groups.domain.group import Group
 from app.modules.groups.domain.ports import GroupRepository
 
@@ -32,10 +32,9 @@ class _AnswerJoinRequest:
         as the group's page refuses them; the member who is not the Owner is the
         aggregate's to refuse."""
 
-        group = await self._groups.load(command.group_id)
-        if group is None or not group.is_member(command.answered_by):
-            raise GroupNotFound()
-        return group
+        return await group_of_a_member(
+            self._groups, command.group_id, command.answered_by
+        )
 
     async def _save(self, group: Group) -> None:
         await self._groups.save(group)

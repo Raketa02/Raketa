@@ -38,6 +38,15 @@ class RatingsRatedGroupMembers:
             for sport in Sport
         }
 
+    async def levels_in(
+        self, player_ids: Collection[UUID], *, sport: Sport
+    ) -> Mapping[UUID, float]:
+        wanted = set(player_ids)
+        if not wanted:
+            return {}
+        published = await self._ratings.published_for(wanted, sport=sport)
+        return {player_id: rating.mu for player_id, rating in published.items()}
+
     async def levels_of(
         self, player_ids: Collection[UUID]
     ) -> Mapping[UUID, tuple[SportLevel, ...]]:

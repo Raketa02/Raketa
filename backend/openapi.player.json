@@ -4573,7 +4573,7 @@
           "groups"
         ],
         "summary": "A group, for its members",
-        "description": "Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; and, for every sport, how many members are rated in it and the first of them to join \u2014 the Games tab's *N of M*.",
+        "description": "Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; for every sport, how many members are rated in it and the first of them to join \u2014 the Games tab's *N of M*; and the faces on the Info tab's members row, which **leaves out a blocked pair, either way round**, as the Members list does. No count moves.",
         "operationId": "read_group_api_v1_groups__group_id__get",
         "security": [
           {
@@ -4605,6 +4605,185 @@
           },
           "404": {
             "description": "`group_not_found` \u2014 **one code for two cases**: no such group, and a group the reader is not a member of. Both have one remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Delete a group nobody else is in",
+        "description": "**The Owner, and only while they are its only member.** Afterwards the group is in no list and no search, its link reads *nothing at that link* (join search answers `read_as` `LINK` and no clubs), and the requests waiting on it are gone.",
+        "operationId": "delete_group_api_v1_groups__group_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`group_has_other_members` \u2014 somebody besides the Owner is in it. A group is deleted only while its Owner is its only member; an Owner who wants out of one with people in it leaves. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/details": {
+      "put": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Edit a group: its name and who can join",
+        "description": "**The Owner's**, both fields as *Edit group* holds them, recorded together or not at all. Saving what the group already says records nothing. **The link never changes**, and nor does the monogram's colour. **Switching to `ANYONE` admits everybody waiting at once**, and `admitted` says who. Answers the group as its page reads it, under `group`.",
+        "operationId": "edit_group_api_v1_groups__group_id__details_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditedGroupResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`group_name_invalid` (`details.field` `name`) \u2014 1\u201340 characters once trimmed. Read only once the caller is known to be the Owner. **Nothing was recorded** \u2014 the policy neither.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read for the answer's members row. **Nothing was recorded**: the answer is drawn before the save commits, so the retry is the whole edit again.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4683,6 +4862,145 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Leave a group",
+        "description": "The caller is no longer a member, and may join again later under the group's policy. **An Owner leaving a group other people are in passes it to the member who has been in longest** \u2014 their current stay, so somebody who left and came back counts from their return \u2014 and the requests waiting on it pass with it.",
+        "operationId": "leave_group_api_v1_groups__group_id__membership_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in: a second tap on *Leave* meets this, because they are not in it any more.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`lone_owner_cannot_leave` \u2014 the caller owns the group and is its only member, so there is nobody to pass it to. *Delete the group* is what undoes it. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/members": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Members of a group, for one sport",
+        "description": "**Only the members rated in `sport`** \u2014 who in the group the caller could play it with: the caller first, then the Owner, then everybody else newest joined first. Each with their face, their Level in the sport, their Player Score where they have one, whether they own the group and when they joined. **A blocked pair, either way round, is left out of each other's list**, and the group's member count does not change.",
+        "operationId": "group_members_api_v1_groups__group_id__members_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport",
+              "description": "The sport whose players to list."
+            },
+            "description": "The sport whose players to list."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMembersResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for two cases**: no such group, and a group the reader is not a member of. Both have one remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/groups/{group_id}/requests": {
@@ -4722,7 +5040,7 @@
             }
           },
           "403": {
-            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests.",
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4794,7 +5112,7 @@
             "description": "Successful Response"
           },
           "403": {
-            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests.",
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4866,7 +5184,7 @@
             "description": "Successful Response"
           },
           "403": {
-            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests.",
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7225,6 +7543,50 @@
         "title": "DistanceEvidence",
         "description": "How far away they are, and whether the searcher is outside *their* ring.\n\nA candidate's own radius is a Liveness dock and **never a gate**: somebody\nwho set a small radius is not refusing to be found, and the searcher is\nshown the fact rather than having the person removed. The standalone flat\ndock for it is struck \u2014 the reciprocal reading already prices it, and\nproportionately."
       },
+      "EditGroupRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Trimmed, runs of whitespace collapsed, then 1\u201340 characters. Refused with `group_name_invalid`, `details.field` `name`."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` or `PEOPLE_I_APPROVE`. **Switching to `ANYONE` admits everybody waiting at once.**"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "join_policy"
+        ],
+        "title": "EditGroupRequest",
+        "description": "The Owner saves *Edit group* \u2014 the New group form's Name and Who can join\ncards, **both as the form holds them**. The home club is not here: it never\nchanges (``docs/adr/0183`` \u00a72)."
+      },
+      "EditedGroupResponse": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/GroupResponse",
+            "description": "The group as its page reads it, after the save."
+          },
+          "admitted": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "Admitted",
+            "description": "Everybody the switch to `ANYONE` admitted, **in the order they asked** \u2014 the Edit screen shows them. Empty for every other save."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "admitted"
+        ],
+        "title": "EditedGroupResponse",
+        "description": "The group as *Edit group* left it, and who the save let in."
+      },
       "EntryPageResponse": {
         "properties": {
           "entries": {
@@ -8024,6 +8386,91 @@
         "title": "GroupAtClubSchema",
         "description": "A group inside a club's card, with what it is to the reader."
       },
+      "GroupMemberSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 draw their initials."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**."
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level in the sport asked for, as RacketSkill published it. Always present: somebody not rated in it is not listed."
+          },
+          "player_score": {
+            "type": "integer",
+            "title": "Player Score",
+            "description": "Their published Player Score, 0\u2013100 \u2014 the figure their record and a player card print. **Omitted for somebody the platform has watched nothing of**, never `0`: no record is not a bad one."
+          },
+          "is_owner": {
+            "type": "boolean",
+            "title": "Is Owner",
+            "description": "Whether they own the group \u2014 the row the **admin** tag is drawn on."
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At",
+            "description": "When they joined \u2014 this stay: somebody who left and came back counts from their return."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "level",
+          "is_owner",
+          "joined_at"
+        ],
+        "title": "GroupMemberSchema",
+        "description": "One row of Members, for one sport \u2014 *Padel 2,71 \u00b7 score 92*."
+      },
+      "GroupMembersResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "The sport the list was asked for."
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/GroupMemberSchema"
+            },
+            "type": "array",
+            "title": "Members",
+            "description": "**Only the members rated in `sport`**: the reader first, then the Owner, then everybody else **newest joined first**. **A blocked pair, either way round, is left out of each other's list** \u2014 and nothing says so: the group's `member_count` is the same for every reader, so it may be more than the rows here. Empty when nobody in the group the reader may see is rated in it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "members"
+        ],
+        "title": "GroupMembersResponse"
+      },
       "GroupPersonSchema": {
         "properties": {
           "player_id": {
@@ -8135,6 +8582,14 @@
             "type": "array",
             "title": "Rated By Sport",
             "description": "**Every sport**, in the registry's order \u2014 one the group has no dot for too, because the reader may be rated in it and open it."
+          },
+          "member_faces": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "Member Faces",
+            "description": "The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order \u2014 the Owner, then newest joined first \u2014 with a blocked pair, either way round, left out, as the list it opens leaves them out. Empty for a reader alone (`member_count` 1), whose row draws their own face \u2014 and empty too, with `member_count` above 1, when a block hides everybody else. `member_count` is the group's, so its *+N* counts everybody."
           }
         },
         "type": "object",
@@ -8148,7 +8603,8 @@
           "link",
           "join_policy",
           "is_owner",
-          "rated_by_sport"
+          "rated_by_sport",
+          "member_faces"
         ],
         "title": "GroupResponse",
         "description": "A group, as one of its members opens it."

@@ -18,10 +18,15 @@ from app.application.events.envelope import SerializedEventEnvelope
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.groups.application.event_subscriptions import register_group_events
 from app.modules.groups.domain.events import (
+    GroupDeleted,
     GroupJoined,
+    GroupLeft,
+    GroupRenamed,
+    JoinPolicyChanged,
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    OwnershipPassed,
     PlayerGroupCreated,
 )
 
@@ -48,6 +53,15 @@ EVENTS = [
     JoinRequestDeclined(
         group_id=GROUP, player_id=ASKER, declined_by=OWNER, occurred_at=NOW
     ),
+    OwnershipPassed(group_id=GROUP, from_id=OWNER, to_id=ASKER, occurred_at=NOW),
+    GroupLeft(group_id=GROUP, player_id=OWNER, occurred_at=NOW),
+    GroupRenamed(
+        group_id=GROUP, name="Kazimierz nights", renamed_by=ASKER, occurred_at=NOW
+    ),
+    JoinPolicyChanged(
+        group_id=GROUP, join_policy="ANYONE", changed_by=ASKER, occurred_at=NOW
+    ),
+    GroupDeleted(group_id=GROUP, deleted_by=ASKER, occurred_at=NOW),
 ]
 
 
@@ -84,4 +98,9 @@ def test_each_event_is_filed_under_its_own_name_in_the_groups_namespace():
         ("groups.join_requested", 1),
         ("groups.join_request_approved", 1),
         ("groups.join_request_declined", 1),
+        ("groups.ownership_passed", 1),
+        ("groups.group_left", 1),
+        ("groups.group_renamed", 1),
+        ("groups.join_policy_changed", 1),
+        ("groups.group_deleted", 1),
     ]

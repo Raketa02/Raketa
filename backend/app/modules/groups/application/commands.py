@@ -59,3 +59,31 @@ class AnswerJoinRequestCommand:
     group_id: UUID
     player_id: UUID
     answered_by: UUID
+
+
+@dataclass(frozen=True)
+class LeaveGroupCommand:
+    """A member taps *Leave the group*. ``player_id`` comes from the session."""
+
+    group_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True)
+class DeleteGroupCommand:
+    """The Owner taps *Delete the group*. ``deleted_by`` comes from the
+    session."""
+
+    group_id: UUID
+    deleted_by: UUID
+
+
+@dataclass(frozen=True)
+class EditGroupCommand:
+    """The Owner saves *Edit group*: the name and who can join, both as the
+    form holds them. ``editor_id`` comes from the session."""
+
+    group_id: UUID
+    editor_id: UUID
+    name: str
+    join_policy: JoinPolicy

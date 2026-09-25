@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import final
 from uuid import UUID
 
@@ -122,6 +123,23 @@ class RequestCard:
 
 @final
 @dataclass(frozen=True, slots=True)
+class MemberRow:
+    """One row of Members, for one sport — play 61's: who, their Level in it
+    and their Player Score (*Padel 2,71 · score 92*), whether they own the group,
+    and when they joined.
+
+    ``player_score`` is ``None`` for somebody the platform has watched nothing
+    of, which the row prints as no score rather than a nought."""
+
+    face: GroupFace
+    level: float
+    player_score: int | None
+    is_owner: bool
+    joined_at: datetime
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class SportFaces:
     """One sport's *N of M*: how many members are rated in it, and the faces of
     the first of them to join, as many as the sport seats."""
@@ -142,6 +160,28 @@ class GroupPage:
     join_policy: JoinPolicy
     is_owner: bool
     by_sport: tuple[SportFaces, ...]
+    #: The Info tab's members row: everybody the reader may see but the
+    #: reader, in the Members list's order, at most five (``domain/members.py``).
+    member_faces: tuple[GroupFace, ...]
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class EditedGroup:
+    """The group as *Edit group* left it, and who the save let in — everybody
+    the switch to *Anyone* admitted, in the order they asked; nobody for every
+    other save."""
+
+    page: GroupPage
+    admitted: tuple[GroupFace, ...]
+
+
+def face_of(faces: Mapping[UUID, GroupFace], player_id: UUID) -> GroupFace:
+    """A person's face from a ``GroupFaces`` answer — or a face with nothing on
+    it for an account ``users`` could not answer for, **who keeps their place**
+    (the client draws initials), because they are still in the group."""
+
+    return faces.get(player_id, GroupFace(player_id=player_id))
 
 
 def row_of(listing: GroupListing, rated: Mapping[Sport, frozenset[UUID]]) -> GroupRow:

@@ -12,10 +12,15 @@ import logging
 
 from app.application.events import DeliveryContext
 from app.modules.groups.domain.events import (
+    GroupDeleted,
     GroupJoined,
+    GroupLeft,
+    GroupRenamed,
+    JoinPolicyChanged,
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    OwnershipPassed,
     PlayerGroupCreated,
 )
 
@@ -81,6 +86,69 @@ class LogJoinRequestDeclined:
     ) -> None:
         logger.info(
             "groups.join_request.declined",
+            extra={
+                "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogOwnershipPassed:
+    async def __call__(self, event: OwnershipPassed, context: DeliveryContext) -> None:
+        logger.info(
+            "groups.ownership.passed",
+            extra={
+                "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogGroupLeft:
+    async def __call__(self, event: GroupLeft, context: DeliveryContext) -> None:
+        logger.info(
+            "groups.group.left",
+            extra={
+                "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogGroupRenamed:
+    async def __call__(self, event: GroupRenamed, context: DeliveryContext) -> None:
+        logger.info(
+            "groups.group.renamed",
+            extra={
+                "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogJoinPolicyChanged:
+    async def __call__(
+        self, event: JoinPolicyChanged, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "groups.join_policy.changed",
+            extra={
+                "group_id": str(event.group_id),
+                "join_policy": event.join_policy,
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogGroupDeleted:
+    async def __call__(self, event: GroupDeleted, context: DeliveryContext) -> None:
+        logger.info(
+            "groups.group.deleted",
             extra={
                 "group_id": str(event.group_id),
                 "event_id": str(context.event_id),

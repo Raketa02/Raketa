@@ -1,15 +1,25 @@
 from app.modules.groups.application.handlers.log_group_events import (
+    LogGroupDeleted,
     LogGroupJoined,
+    LogGroupLeft,
+    LogGroupRenamed,
+    LogJoinPolicyChanged,
     LogJoinRequestApproved,
     LogJoinRequestDeclined,
     LogJoinRequested,
+    LogOwnershipPassed,
     LogPlayerGroupCreated,
 )
 
 __all__ = [
+    "LogGroupDeleted",
     "LogGroupJoined",
+    "LogGroupLeft",
+    "LogGroupRenamed",
+    "LogJoinPolicyChanged",
     "LogJoinRequestApproved",
     "LogJoinRequestDeclined",
     "LogJoinRequested",
+    "LogOwnershipPassed",
     "LogPlayerGroupCreated",
 ]

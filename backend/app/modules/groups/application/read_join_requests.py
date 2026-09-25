@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from app.modules.groups.application.views import RequestCard
-from app.modules.groups.domain.errors import GroupNotFound, NotTheGroupOwner
+from app.modules.groups.application.membership import listing_for_a_member
+from app.modules.groups.application.views import RequestCard, face_of
+from app.modules.groups.domain.errors import NotTheGroupOwner
 from app.modules.groups.domain.ports import (
     GroupDirectory,
-    GroupFace,
     GroupFaces,
     RatedGroupMembers,
 )
@@ -39,9 +39,7 @@ class ReadJoinRequests:
     async def execute(
         self, group_id: UUID, *, reader_id: UUID
     ) -> tuple[RequestCard, ...]:
-        listing = (await self._directory.listings([group_id])).get(group_id)
-        if listing is None or reader_id not in listing.members:
-            raise GroupNotFound()
+        listing = await listing_for_a_member(self._directory, group_id, reader_id)
         if listing.owner_id != reader_id:
             raise NotTheGroupOwner()
 
@@ -49,7 +47,7 @@ class ReadJoinRequests:
         levels = await self._ratings.levels_of(listing.waiting)
         return tuple(
             RequestCard(
-                face=faces.get(player_id, GroupFace(player_id=player_id)),
+                face=face_of(faces, player_id),
                 levels=levels.get(player_id, ()),
             )
             for player_id in listing.waiting

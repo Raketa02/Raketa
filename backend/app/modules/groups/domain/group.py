@@ -14,12 +14,22 @@ from datetime import datetime
 from typing import Iterable
 from uuid import UUID
 
-from app.modules.groups.domain.errors import JoinRequestNotFound, NotTheGroupOwner
+from app.modules.groups.domain.errors import (
+    GroupHasOtherMembers,
+    JoinRequestNotFound,
+    LoneOwnerCannotLeave,
+    NotTheGroupOwner,
+)
 from app.modules.groups.domain.events import (
+    GroupDeleted,
     GroupJoined,
+    GroupLeft,
+    GroupRenamed,
+    JoinPolicyChanged,
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    OwnershipPassed,
     PlayerGroupCreated,
 )
 from app.modules.groups.domain.value_objects import GroupCode, GroupName, JoinPolicy
@@ -32,9 +42,14 @@ class Group:
     """One group, as its stream leaves it.
 
     ``members`` maps each Group member to the instant they joined, in the order
-    they joined — the Owner first, because creating the group is joining it.
+    they joined — so its first key is the longest-standing member, who is who a
+    leaving Owner passes the group to. Somebody who left and came back is keyed
+    again at the end, because their stay starts again.
     ``waiting`` maps each person whose Join request is waiting to the instant
     they asked, in the order they asked.
+
+    ``is_deleted`` is the end of the stream: a deleted group has no members,
+    nobody waiting, and is loaded as no group at all.
     """
 
     id: UUID
@@ -45,6 +60,7 @@ class Group:
     code: GroupCode
     members: dict[UUID, datetime]
     waiting: dict[UUID, datetime] = field(default_factory=dict)
+    is_deleted: bool = False
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -66,6 +82,7 @@ class Group:
         group.version = 0
         group.members = {}
         group.waiting = {}
+        group.is_deleted = False
         group._events = EventRecorder()
         return group
 
@@ -175,11 +192,115 @@ class Group:
             )
         )
 
+    def leave(self, player_id: UUID, *, occurred_at: datetime) -> None:
+        """A Group member taps *Leave the group* (``docs/adr/0183`` §7) — and
+        may join again later, under whatever the group's policy is then.
+
+        **An Owner leaving a group other people are in passes it to the member
+        who has been in longest**, so the group always keeps somebody who can
+        approve people, and the requests waiting on it pass with it. *Longest*
+        is this stay: somebody who left and came back counts from their return.
+        **An Owner alone cannot leave** — there is nobody to pass it to — and
+        deletes the group instead.
+
+        Whether they are in it at all is the caller's to have asked first: a
+        stranger is refused as the group's page refuses them.
+        """
+
+        if player_id == self.owner_id:
+            heir = next(
+                (member for member in self.members if member != player_id), None
+            )
+            if heir is None:
+                raise LoneOwnerCannotLeave()
+            self._record_that(
+                OwnershipPassed(
+                    group_id=self.id,
+                    from_id=player_id,
+                    to_id=heir,
+                    occurred_at=occurred_at,
+                )
+            )
+        self._record_that(
+            GroupLeft(group_id=self.id, player_id=player_id, occurred_at=occurred_at)
+        )
+
+    def rename(self, name: GroupName, *, by: UUID, occurred_at: datetime) -> None:
+        """The Owner renames the group, from *Edit group* (``docs/adr/0183`` §2).
+
+        **Its link does not change** — the code is the group's identity and the
+        name is not (§4). Saving the name it already has records nothing.
+        """
+
+        self._refuse_unless_the_owner(by)
+        if name == self.name:
+            return
+        self._record_that(
+            GroupRenamed(
+                group_id=self.id,
+                name=name.value,
+                renamed_by=by,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def change_join_policy(
+        self, policy: JoinPolicy, *, by: UUID, occurred_at: datetime
+    ) -> tuple[UUID, ...]:
+        """The Owner changes who can join, from *Edit group*
+        (``docs/adr/0183`` §7), and learns who it let in.
+
+        **Switching to *Anyone* admits everybody waiting at once**, in the order
+        they asked, because nobody should be left waiting under a rule that no
+        longer applies. Saving the policy it already has records nothing.
+
+        Returns everybody the switch admitted, in the order they asked — empty
+        for every change but that one.
+        """
+
+        self._refuse_unless_the_owner(by)
+        if policy is self.join_policy:
+            return ()
+        self._record_that(
+            JoinPolicyChanged(
+                group_id=self.id,
+                join_policy=policy.value,
+                changed_by=by,
+                occurred_at=occurred_at,
+            )
+        )
+        if policy is not JoinPolicy.ANYONE:
+            return ()
+        admitted = tuple(self.waiting)
+        for player_id in admitted:
+            self._record_that(
+                JoinRequestApproved(
+                    group_id=self.id,
+                    player_id=player_id,
+                    approved_by=by,
+                    occurred_at=occurred_at,
+                )
+            )
+        return admitted
+
+    def delete(self, *, by: UUID, occurred_at: datetime) -> None:
+        """The Owner taps *Delete the group* (``docs/adr/0183`` §7) — **only
+        while they are its only member**, which undoes a group nobody joined and
+        can never take a group away from people in it. The requests waiting on
+        it go with it."""
+
+        self._refuse_unless_the_owner(by)
+        if any(member != by for member in self.members):
+            raise GroupHasOtherMembers()
+        self._record_that(
+            GroupDeleted(group_id=self.id, deleted_by=by, occurred_at=occurred_at)
+        )
+
     def _refuse_unless_the_owner(self, answerer: UUID) -> None:
-        """**Nobody but the Owner** answers a Join request (#505). Whether the
-        person is in the group at all is the caller's to have asked first: a
-        stranger is refused as the page refuses them, and this is the member's
-        refusal."""
+        """**Nobody but the Owner** answers a Join request (#505), edits the
+        group or deletes it (#506). Whether the person is in the group at all
+        is the caller's to have asked first: a stranger is refused as the page
+        refuses them, and this is the member's refusal."""
 
         if answerer != self.owner_id:
             raise NotTheGroupOwner()
@@ -206,6 +327,18 @@ class Group:
             self.members[event.player_id] = event.occurred_at
         elif isinstance(event, JoinRequestDeclined):
             del self.waiting[event.player_id]
+        elif isinstance(event, GroupLeft):
+            del self.members[event.player_id]
+        elif isinstance(event, OwnershipPassed):
+            self.owner_id = event.to_id
+        elif isinstance(event, JoinPolicyChanged):
+            self.join_policy = JoinPolicy(event.join_policy)
+        elif isinstance(event, GroupRenamed):
+            self.name = GroupName(event.name)
+        elif isinstance(event, GroupDeleted):
+            self.is_deleted = True
+            self.members = {}
+            self.waiting = {}
         else:
             raise TypeError(f"Unsupported group event {event!r}")
         self.version += 1

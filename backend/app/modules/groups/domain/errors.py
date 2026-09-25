@@ -9,7 +9,12 @@ and nothing else — a bound restated there would refuse first, as a ``422`` nam
 no field.
 """
 
-from app.shared.domain import BadRequestError, ForbiddenError, NotFoundError
+from app.shared.domain import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+)
 
 
 class GroupNameInvalid(BadRequestError):
@@ -55,19 +60,21 @@ class GroupNotFound(NotFoundError):
 
 
 class NotTheGroupOwner(ForbiddenError):
-    """A Group member who is not its Owner asked to see or answer its Join
-    requests.
+    """A Group member who is not its Owner asked to do what only the Owner
+    does: see or answer its Join requests (#505), rename it, change who can
+    join, or delete it (#506).
 
-    **Nobody but the Owner** (#505): a request is a person asking the one
-    who answers, and the rest of the group has no business reading who asked
-    to be let in. Refused as a ``403`` rather than as ``group_not_found``,
-    because a member already knows the group exists — the stranger's refusal
-    is for the stranger."""
+    **Nobody but the Owner**: a request is a person asking the one who
+    answers, and the rest of the group has no business reading who asked to be
+    let in; and a group's name and door are the Owner's to change
+    (``docs/adr/0183`` §2). Refused as a ``403`` rather than as
+    ``group_not_found``, because a member already knows the group exists — the
+    stranger's refusal is for the stranger."""
 
     code = "not_the_group_owner"
 
     def __init__(self) -> None:
-        super().__init__("only the group's owner answers its join requests")
+        super().__init__("only the group's owner may do that")
 
 
 class JoinRequestNotFound(NotFoundError):
@@ -83,3 +90,32 @@ class JoinRequestNotFound(NotFoundError):
 
     def __init__(self) -> None:
         super().__init__("nobody by that id is waiting to join this group")
+
+
+class LoneOwnerCannotLeave(ConflictError):
+    """The Owner asked to leave a group nobody else is in.
+
+    **The group always keeps somebody who can approve people**
+    (``docs/adr/0183`` §7): an Owner leaving passes the group to the member
+    who has been in longest, and alone there is nobody to pass it to. What
+    undoes a group nobody joined is *Delete the group*, which is the remedy
+    this refusal points at."""
+
+    code = "lone_owner_cannot_leave"
+
+    def __init__(self) -> None:
+        super().__init__("the group's only member deletes it rather than leaving it")
+
+
+class GroupHasOtherMembers(ConflictError):
+    """The Owner asked to delete a group other people are in.
+
+    **A player group is deleted only while its Owner is its only member**
+    (``docs/adr/0183`` §7): that undoes a group nobody joined, and it can never
+    take a group away from the people in it. An Owner who wants out of a group
+    with people in it leaves, and the group passes on."""
+
+    code = "group_has_other_members"
+
+    def __init__(self) -> None:
+        super().__init__("a group other people are in cannot be deleted")

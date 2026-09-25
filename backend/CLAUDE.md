@@ -1245,14 +1245,19 @@ Rules to preserve:
   password.
 - **A group is a crowd at a home club, and its link never changes**
   ([ADR-0183](../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md),
-  #504, #505). `app/modules/groups/` holds **one event-sourced aggregate for both kinds**; this
-  build writes the player kind only (`player_group_created`, `group_joined`, and the Join
-  request's three — `join_requested`, `join_request_approved`, `join_request_declined`),
-  and each later event arrives with its ticket (#506, #509, #510). The repository's `save`
-  writes **three projections in the caller's transaction** — `groups`, with `name_folded`
-  written from the first event because SQL cannot fold, `group_members`, whose
-  `joined_version` (the admitting event's stream version) is the exact joining order, and
+  #504, #505, #506). `app/modules/groups/` holds **one event-sourced aggregate for both
+  kinds**; this build writes the player kind only (`player_group_created`, `group_joined`,
+  the Join request's three — `join_requested`, `join_request_approved`,
+  `join_request_declined` — and #506's five: `group_left`, `ownership_passed`,
+  `group_renamed`, `join_policy_changed`, `group_deleted`), and each later event arrives
+  with its ticket (#509, #510). The repository's `save` writes **three projections in the
+  caller's transaction** — `groups`, with `name_folded` written from the first event (and
+  again on a rename) because SQL cannot fold, `group_members`, whose `joined_version` (the
+  admitting event's stream version) is the exact joining order, and
   `group_join_requests`, one row **while a request waits** and deleted by its answer.
+  **A deletion leaves no row in any of the three** — the link then finds nothing, which is
+  how it reads *nothing at that link* — and the repository loads a stream ending in
+  `group_deleted` as **no group**, so every act on one meets `group_not_found`.
   Five things are load-bearing. **The code is minted with `secrets`** from an alphabet
   with no look-alikes, checked against the table, unique and never changed, and the
   **link is `PUBLIC_SITE_URL` + `/join/` + code** — built in presentation, because the
@@ -1269,14 +1274,36 @@ Rules to preserve:
   `group_joined` beside it — and approving somebody with nothing waiting is
   `join_request_not_found`, because nobody is admitted who did not ask; **declining is
   silent** (the relation reads `NONE` again, they may ask again) and declining what is
-  not waiting changes nothing. **Nobody but the Owner** sees or answers requests: a
-  stranger — the asker included — meets `group_not_found`, a member `not_the_group_owner`.
-  And **it reads four contexts through ports it
+  not waiting changes nothing. **Nobody but the Owner** sees or answers requests, edits the
+  group (`PUT /groups/{id}/details`, name and policy together or neither) or deletes it: a
+  stranger — the asker included — meets `group_not_found`, a member `not_the_group_owner`,
+  and a member meets that before their name is read. **Switching to *Anyone* admits
+  everybody waiting at once** — `join_policy_changed`, then one `join_request_approved`
+  per request in the order they asked, answered by whoever switched, so there is one way
+  to become a member off a request — and the answer's `admitted` names them. **Leaving**
+  (`DELETE /groups/{id}/membership`) is open to every member but an Owner alone
+  (`lone_owner_cannot_leave`, who deletes instead); an Owner leaving a group with others in
+  it records `ownership_passed` **before** their `group_left`, to the first key of the
+  aggregate's joining-ordered `members` — this stay, so a rejoiner counts from their return
+  — and the queue passes with it because only `owner_id` moved. **Deleting**
+  (`DELETE /groups/{id}`) is the Owner's, only while alone (`group_has_other_members`).
+  **Members** (`GET /groups/{id}/members?sport=`) lists only the members rated in the
+  sport, the reader, then the Owner, then newest joined first (`domain/members.py`), each
+  with the published Level and the Player Score — omitted, never `0`, for somebody with no
+  record. **A blocked pair, either way round, is shown to neither** there and on the Info
+  tab's members row that opens it (`member_faces`, up to five, everybody but the reader in
+  the Members order) — the Games tab's seats stay the first rated in joining order,
+  whoever reads them (ADR-0183 §10, §13, #504) — and **no count moves**. The block read
+  fails closed (`503 block_state_unavailable`), is skipped for a reader alone, and on
+  `PUT /details` runs **before the commit** (`GroupPages`), so a refusal records nothing.
+  And **it reads six contexts through ports it
   declares in its own words**, each adapter over the provider's own port: clubs'
   `ClubDirectory` (which `clubs` now publishes over its search projection, folding the
   query itself and escaping `LIKE`), rating's `RatedPlayerQuery` (published Levels for a
-  request card), users and the Player profile for a face or, name only, a group's Owner,
-  and the profile's Location area for distance — and its domain
+  request card and a Members row), users and the Player profile for a face or, name only,
+  a group's Owner, the profile's Location area for distance, `player_score`'s
+  `PublishedScoreQuery` (`GroupMemberScores`) and blocks' `BlockQuery` (`HiddenMembers`,
+  its `exclusions_for` renamed) — and its domain
   borrows two pure functions, clubs' `fold` and the matcher's distance print, and says
   so where it does. **The two searches answer one card**, `ClubCardSchema`, built by
   `views.club_cards`, and one order — the **printed** distance (`shown_kilometres`, from

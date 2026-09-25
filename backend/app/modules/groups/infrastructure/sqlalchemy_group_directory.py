@@ -15,6 +15,7 @@ with ``LIKE`` escaped so that a ``%`` a player typed is a percent sign.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -95,15 +96,21 @@ class SqlAlchemyGroupDirectory:
         if not rows:
             return {}
         members: dict[UUID, list[UUID]] = {row.id: [] for row in rows}
+        joined_at: dict[UUID, dict[UUID, datetime]] = {row.id: {} for row in rows}
         found = (
             await self._session.execute(
-                select(GroupMemberORM.group_id, GroupMemberORM.player_id)
+                select(
+                    GroupMemberORM.group_id,
+                    GroupMemberORM.player_id,
+                    GroupMemberORM.joined_at,
+                )
                 .where(GroupMemberORM.group_id.in_(members))
                 .order_by(GroupMemberORM.group_id, GroupMemberORM.joined_version)
             )
         ).all()
-        for group_id, player_id in found:
+        for group_id, player_id, at in found:
             members[group_id].append(player_id)
+            joined_at[group_id][player_id] = at
         waiting: dict[UUID, list[UUID]] = {row.id: [] for row in rows}
         asked = (
             await self._session.execute(
@@ -127,6 +134,7 @@ class SqlAlchemyGroupDirectory:
                 code=GroupCode(row.code),
                 members=tuple(members[row.id]),
                 waiting=tuple(waiting[row.id]),
+                joined_at=joined_at[row.id],
             )
             for row in rows
         }

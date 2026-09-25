@@ -1977,9 +1977,10 @@ on [#501](https://github.com/Raketa02/Raketa/issues/501). **Partly built** —
 [#504](https://github.com/Raketa02/Raketa/issues/504) built a Player group's creation, the Groups
 list, the group page, home-club search and joining an *Anyone* group;
 [#505](https://github.com/Raketa02/Raketa/issues/505) built join search and Join requests — asking,
-and the Owner approving or declining; the rest of the backend half is
-[#506](https://github.com/Raketa02/Raketa/issues/506), [#509](https://github.com/Raketa02/Raketa/issues/509)
-and [#510](https://github.com/Raketa02/Raketa/issues/510).
+and the Owner approving or declining; [#506](https://github.com/Raketa02/Raketa/issues/506) built
+Members by sport, editing, leaving with ownership passing, and deleting; the rest of the backend
+half is [#509](https://github.com/Raketa02/Raketa/issues/509) and
+[#510](https://github.com/Raketa02/Raketa/issues/510).
 
 **The crowd that already plays together, brought into the app.** Clubs keep WhatsApp groups, one
 per sport; a group is where that crowd lands when somebody taps its link. It picks no games yet,

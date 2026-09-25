@@ -1,22 +1,24 @@
 """What the Groups context needs from the outside world, in its own words.
 
 **Two ports are this context's own store**: the aggregate repository, whose
-``save`` writes the groups and group-members projections in the caller's
-transaction, and the directory that reads those projections back. **The other
-five are demands on contexts it does not write** — clubs, rating, users with the
-Player profile, and the Player profile again for where the reader is — each
-declared here in this context's vocabulary and answered by an adapter in
-``infrastructure/`` over that provider's own port, never its table.
+``save`` writes the groups, group-members and join-requests projections in the
+caller's transaction, and the directory that reads those projections back.
+**The other seven are demands on contexts it does not write** — clubs, rating,
+users with the Player profile, the Player profile again for where the reader
+is, the Player Score, and blocks — each declared here in this context's
+vocabulary and answered by an adapter in ``infrastructure/`` over that
+provider's own port, never its table.
 """
 
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.kernel import Sport, invariant
+from app.kernel import Instant, Sport, invariant
 from app.modules.groups.domain.group import Group
 from app.modules.groups.domain.value_objects import GroupCode, GroupName, JoinPolicy
 
@@ -29,7 +31,9 @@ from app.modules.groups.domain.value_objects import GroupCode, GroupName, JoinPo
 class GroupRepository(Protocol):
     async def load(self, group_id: UUID) -> Optional[Group]:
         """The group as its stream tells it, or ``None`` for a stream that does
-        not exist. Its version is what the next ``save`` expects."""
+        not exist **or that ends in its deletion** — a deleted group is no
+        group, and every act on one meets what an act on a missing one meets.
+        Its version is what the next ``save`` expects."""
         ...
 
     async def save(self, group: Group) -> None:
@@ -48,7 +52,8 @@ class GroupListing:
     first, so a count is its length and *the first to join* is a prefix.
     ``waiting`` is everybody whose Join request waits, **in the order they
     asked** — the Owner's *Want to join* queue, and what a reader's relation to
-    the group is read from.
+    the group is read from. ``joined_at`` is when each member joined — this
+    stay, for somebody who left and came back.
     """
 
     id: UUID
@@ -58,7 +63,8 @@ class GroupListing:
     owner_id: UUID
     code: GroupCode
     members: tuple[UUID, ...]
-    waiting: tuple[UUID, ...] = ()
+    waiting: tuple[UUID, ...]
+    joined_at: Mapping[UUID, datetime]
 
     @property
     def member_count(self) -> int:
@@ -180,6 +186,15 @@ class RatedGroupMembers(Protocol):
         nobody here is rated in may be absent or empty — both mean none."""
         ...
 
+    async def levels_in(
+        self, player_ids: Collection[UUID], *, sport: Sport
+    ) -> Mapping[UUID, float]:
+        """The **published** Level of each of these players rated in this one
+        sport — what a Members row prints beside a name (*Padel 2,71*). Somebody
+        not rated in it is absent — the same people ``rated_in`` names for that
+        sport, both being read off the one stream a rating is kept in."""
+        ...
+
     async def levels_of(
         self, player_ids: Collection[UUID]
     ) -> Mapping[UUID, tuple[SportLevel, ...]]:
@@ -261,4 +276,52 @@ class ReaderAreas(Protocol):
         """This player's Location area, or ``None`` for somebody with none —
         who then gets clubs A–Z and no distance, because nothing should pretend
         to know where they are (``docs/adr/0182`` §6)."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# The Player Score: what the platform watched of a member
+# --------------------------------------------------------------------------- #
+
+
+@runtime_checkable
+class GroupMemberScores(Protocol):
+    """Each member's **published** Player Score — the figure their own record
+    and a player card already print (*score 92*), never re-blended here."""
+
+    async def scores_of(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> Mapping[UUID, int]:
+        """The Player Score of each of these players **who has one**. A player
+        the platform has watched nothing of is **absent** — never a nought,
+        which would print a bad record for somebody who has none. One question
+        about the set, against one instant."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# Blocks: who a reader and a member may not see of each other
+# --------------------------------------------------------------------------- #
+
+
+@runtime_checkable
+class HiddenMembers(Protocol):
+    """Who is left out of a reader's Members list, and why is never said.
+
+    **A blocked pair, in either direction, is left out of each other's Members
+    lists in every group** (``docs/adr/0183`` §10) — ADR-0095's symmetric effect
+    on a new surface — so the answer is one flat set that cannot say which way
+    round a block was taken. **Counts never change**: *12 members* is a fact
+    about the group, and a hidden person is hidden from rows, never from a
+    number.
+    """
+
+    async def hidden_from(self, reader_id: UUID) -> frozenset[UUID]:
+        """Everybody this reader and who have a block standing between them,
+        either way round.
+
+        **Raises rather than answering empty** when the block state cannot be
+        read: an empty set is *nobody is hidden*, and a gate that cannot be
+        evaluated excludes (``docs/adr/0095`` §5) — so the list is not served.
+        """
         ...

@@ -15,6 +15,7 @@ home-club search and join search both answer ``ClubCardSchema``.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -23,14 +24,16 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.kernel import Sport
 from app.modules.groups.application.views import (
     ClubCard,
+    EditedGroup,
     GroupAtClub,
     GroupPage,
     GroupRow,
     HomeClubResults,
-    RequestCard,
     JoinSearchResults,
+    MemberRow,
     MyGroup,
     NamedClub,
+    RequestCard,
 )
 from app.modules.groups.domain.join_search import ReadAs
 from app.modules.groups.domain.link import group_link
@@ -61,6 +64,27 @@ class CreatePlayerGroupRequest(BaseModel):
     )
     join_policy: JoinPolicy = Field(
         description="`ANYONE` (the form's default) or `PEOPLE_I_APPROVE`."
+    )
+
+
+class EditGroupRequest(BaseModel):
+    """The Owner saves *Edit group* — the New group form's Name and Who can join
+    cards, **both as the form holds them**. The home club is not here: it never
+    changes (``docs/adr/0183`` §2)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(
+        description=(
+            "Trimmed, runs of whitespace collapsed, then 1–40 characters. Refused "
+            "with `group_name_invalid`, `details.field` `name`."
+        )
+    )
+    join_policy: JoinPolicy = Field(
+        description=(
+            "`ANYONE` or `PEOPLE_I_APPROVE`. **Switching to `ANYONE` admits "
+            "everybody waiting at once.**"
+        )
     )
 
 
@@ -304,11 +328,18 @@ class GroupPersonSchema(BaseModel):
 
     @classmethod
     def from_view(cls, face: GroupFace) -> "GroupPersonSchema":
+        return cls(**GroupPersonSchema.fields_of(face))
+
+    @staticmethod
+    def fields_of(face: GroupFace) -> dict:
+        """A face's fields, the photograph's two only where there is one — so a
+        shape that extends this one omits them as this one does."""
+
         fields: dict = {"player_id": face.player_id, "name": face.name}
         if face.photo_id is not None and face.photo_url is not None:
             fields["photo_id"] = face.photo_id
             fields["photo_url"] = face.photo_url
-        return cls(**fields)
+        return fields
 
 
 class GroupSportSchema(BaseModel):
@@ -344,6 +375,17 @@ class GroupResponse(GroupRowSchema):
             "for too, because the reader may be rated in it and open it."
         )
     )
+    member_faces: list[GroupPersonSchema] = Field(
+        description=(
+            "The Info tab's members row: **up to five** faces of everybody but "
+            "the reader, in the Members list's order — the Owner, then newest "
+            "joined first — with a blocked pair, either way round, left out, as "
+            "the list it opens leaves them out. Empty for a reader alone "
+            "(`member_count` 1), whose row draws their own face — and empty "
+            "too, with `member_count` above 1, when a block hides everybody "
+            "else. `member_count` is the group's, so its *+N* counts everybody."
+        )
+    )
 
     @classmethod
     def from_view(cls, page: GroupPage, *, public_site: str) -> "GroupResponse":
@@ -363,6 +405,32 @@ class GroupResponse(GroupRowSchema):
                 )
                 for sport in page.by_sport
             ],
+            member_faces=[
+                GroupPersonSchema.from_view(face) for face in page.member_faces
+            ],
+        )
+
+
+class EditedGroupResponse(BaseModel):
+    """The group as *Edit group* left it, and who the save let in."""
+
+    group: GroupResponse = Field(
+        description="The group as its page reads it, after the save."
+    )
+    admitted: list[GroupPersonSchema] = Field(
+        description=(
+            "Everybody the switch to `ANYONE` admitted, **in the order they "
+            "asked** — the Edit screen shows them. Empty for every other save."
+        )
+    )
+
+    @classmethod
+    def from_view(
+        cls, edited: EditedGroup, *, public_site: str
+    ) -> "EditedGroupResponse":
+        return cls(
+            group=GroupResponse.from_view(edited.page, public_site=public_site),
+            admitted=[GroupPersonSchema.from_view(face) for face in edited.admitted],
         )
 
 
@@ -388,9 +456,8 @@ class JoinRequestSchema(GroupPersonSchema):
 
     @classmethod
     def from_card(cls, card: RequestCard) -> "JoinRequestSchema":
-        face = GroupPersonSchema.from_view(card.face)
         return cls(
-            **face.model_dump(exclude_unset=True),
+            **GroupPersonSchema.fields_of(card.face),
             levels=[
                 SportLevelSchema(sport=row.sport, level=row.level)
                 for row in card.levels
@@ -403,5 +470,61 @@ class JoinRequestsResponse(BaseModel):
         description=(
             "Everybody waiting to be let in, **in the order they asked** — "
             "*Want to join · N*. Empty when nobody is waiting."
+        )
+    )
+
+
+class GroupMemberSchema(GroupPersonSchema):
+    """One row of Members, for one sport — *Padel 2,71 · score 92*."""
+
+    level: float = Field(
+        description=(
+            "Their Level in the sport asked for, as RacketSkill published it. "
+            "Always present: somebody not rated in it is not listed."
+        )
+    )
+    player_score: int = Field(
+        OMITTED,
+        description=(
+            "Their published Player Score, 0–100 — the figure their record and "
+            "a player card print. **Omitted for somebody the platform has "
+            "watched nothing of**, never `0`: no record is not a bad one."
+        ),
+    )
+    is_owner: bool = Field(
+        description=(
+            "Whether they own the group — the row the **admin** tag is drawn on."
+        )
+    )
+    joined_at: datetime = Field(
+        description=(
+            "When they joined — this stay: somebody who left and came back "
+            "counts from their return."
+        )
+    )
+
+    @classmethod
+    def from_row(cls, row: MemberRow) -> "GroupMemberSchema":
+        fields: dict = {
+            **GroupPersonSchema.fields_of(row.face),
+            "level": row.level,
+            "is_owner": row.is_owner,
+            "joined_at": row.joined_at,
+        }
+        if row.player_score is not None:
+            fields["player_score"] = row.player_score
+        return cls(**fields)
+
+
+class GroupMembersResponse(BaseModel):
+    sport: Sport = Field(description="The sport the list was asked for.")
+    members: list[GroupMemberSchema] = Field(
+        description=(
+            "**Only the members rated in `sport`**: the reader first, then the "
+            "Owner, then everybody else **newest joined first**. **A blocked "
+            "pair, either way round, is left out of each other's list** — and "
+            "nothing says so: the group's `member_count` is the same for every "
+            "reader, so it may be more than the rows here. Empty when nobody in "
+            "the group the reader may see is rated in it."
         )
     )

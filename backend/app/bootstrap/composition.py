@@ -109,10 +109,15 @@ from app.modules.groups.domain.ports import (
     GroupCodeMinter,
     GroupDirectory,
     GroupFaces,
+    GroupMemberScores,
     GroupRepository,
+    HiddenMembers,
     HomeClubs,
     RatedGroupMembers,
     ReaderAreas,
+)
+from app.modules.groups.infrastructure.blocks_hidden_members import (
+    BlocksHiddenMembers,
 )
 from app.modules.groups.infrastructure.clubs_home_clubs import ClubsHomeClubs
 from app.modules.groups.infrastructure.event_sourced_group_repository import (
@@ -120,6 +125,9 @@ from app.modules.groups.infrastructure.event_sourced_group_repository import (
 )
 from app.modules.groups.infrastructure.profile_group_faces import ProfileGroupFaces
 from app.modules.groups.infrastructure.profile_reader_areas import ProfileReaderAreas
+from app.modules.groups.infrastructure.published_group_member_scores import (
+    PublishedGroupMemberScores,
+)
 from app.modules.groups.infrastructure.random_group_codes import RandomGroupCodes
 from app.modules.groups.infrastructure.rated_group_members import (
     RatingsRatedGroupMembers,
@@ -654,6 +662,21 @@ def build_group_faces(
         photos=build_photo_storage(settings),
         photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
     )
+
+
+def build_group_member_scores(session: AsyncSession) -> GroupMemberScores:
+    """A Members row's *score 92*, over ``player_score``'s published read — the
+    figure every other surface already prints, copied and never re-blended."""
+    return PublishedGroupMemberScores(build_published_score_query(session))
+
+
+def build_hidden_members(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> HiddenMembers:
+    """Who a reader's Members list leaves out: the one block read every surface
+    that shows one player to another consults (``docs/adr/0095`` §7), which
+    fails closed."""
+    return BlocksHiddenMembers(build_block_query(session, runtime=runtime))
 
 
 def build_reader_areas(
