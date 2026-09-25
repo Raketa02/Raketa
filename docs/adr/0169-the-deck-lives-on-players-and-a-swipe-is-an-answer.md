@@ -5,6 +5,7 @@
   ([#440](https://github.com/Raketa02/Raketa/issues/440)): a durable, event-free row per
   press, the fifth of the matchmaking module's ledgers.
 - **Date:** 2026-09-14
+- **§1's *Play opens on Find a game* amended 2026-09-25 by [ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md) §12**: Play opens on a **Groups | Explore** switch, with Find a game behind `find_a_game`. The deck on Players, *Match me*'s retirement and the five-tab bar stand.
 - **Supersedes, by named sentence:**
   - [#231](https://github.com/Raketa02/Raketa/issues/231) §3's *"Decided: buttons only"* and its
     argument — *a swipe would be the cheapest gesture in the application attached to the most

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-16
+- **Its *No tenant data* narrowed by [ADR-0182](0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md)** (2026-09-25): the Club context now exists and owns clubs, and the kernel still holds none. Its *no presentation* rule is **distinguished, not amended**, twice: a group's monogram letters are content cut from content ([ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md) §5), and an email has no client to render it ([ADR-0186](0186-email-goes-through-a-port-and-a-purged-queue.md) §4).
 
 > **Note — the 2026-08-25 reset.** It cites **ADR-0011** (the club design system), **ADR-0023** (money in integer grosze) and **ADR-0026** (the matchmaking snapshot contract), all removed in the 2026-08-25 reset. The kernel's money module went with ADR-0023; the two questions this ADR asks of a candidate constant are unchanged, and are what the surviving kernel is held to. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
 

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-15
+- **§2 and §3 amended 2026-09-25 by [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §4**: an account an Invitation created carries the club-typed Name and no Nickname, so the naming step asks only for what is missing, and the gate's first destination reads *not named in full*. The naming stays one act.
 - **The You-tab edit this record did not decide is decided by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §7** — the same
   act, from the *Name* row, refused by the server with the same code.
 - **Supersedes one sentence of [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md)

@@ -1,8 +1,8 @@
 # Raketa — Domain Context
 
 The shared, ubiquitous language for the whole system. When you name a concept — in an
-issue, a test, a type, a refactor proposal — use the term as defined here. All three
-apps obey this file; see [`CONTEXT-MAP.md`](CONTEXT-MAP.md) for how the vocabulary is
+issue, a test, a type, a refactor proposal — use the term as defined here. Every app
+obeys this file; see [`CONTEXT-MAP.md`](CONTEXT-MAP.md) for how the vocabulary is
 split, and [`docs/adr/`](docs/adr/) for the decisions behind these terms.
 
 Raketa is a racket-sport platform. Today it does one thing end to end: a player signs up,
@@ -32,7 +32,8 @@ before writing it, which is what every section from **Player profile** down was:
 accepted ADR and written here first, then built. Their terms are here because that is the order
 this file asks for, not because the code landed first — so **whether a context is built is stated
 in its own section and nowhere else**, which is what the paragraph below has always asked for and
-what the last two sections here are the first to need.
+what the last three sections here — **Club**, **Groups** and **Administrators**, settled and not
+yet built — depend on.
 
 > **A verdict narrower than that belongs to the section it is about.** This paragraph carried a
 > clause per context and went stale twice, because a per-context verdict at the top is a second
@@ -202,13 +203,22 @@ Identity and account state.
   events. Constructed only via `User.register(...)` or rehydrated via
   `User.from_history(events)`. Carries an `EventRecorder`; the application layer drains
   pending events with `pull_events()`.
-- **Player** — a User acting in the player app. **Not a separate aggregate and not a
-  separate id**: a player's identity *is* the `UserId`. `PlayerId` exists as a distinct
-  type so the code reads in the domain's own vocabulary and so the two have one place to
-  diverge, but today every `PlayerId` is a `UserId`. There is no `players` table.
-  Revisit only if a person can be known to the system as a participant without holding an
-  account, or if club staff share this accounts system — neither is true today.
-- **Authority** — role enum, `USER` or `ADMIN`.
+- **Player** — a User acting **as a player**: named, rated, with a Player profile. **Not a
+  separate aggregate and not a separate id**: a player's identity *is* the `UserId`. `PlayerId`
+  exists as a distinct type so the code reads in the domain's own vocabulary and so the two have
+  one place to diverge, but today every `PlayerId` is a `UserId`. There is no `players` table.
+  **Revisited 2026-09-25, because a settled decision meets its condition:** club staff are to
+  share this accounts system as **Administrators** — settled, not built yet
+  ([ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)).
+  The model holds: one User may act as a player, as an Administrator for each club that named
+  it, or both — **one email, one password** — and neither side is a second identity. Revisit
+  again only if a person can be known to the system as a participant without holding an account.
+  *Profile*, as the app's switcher says it (*Player* / *Administrator*), is **UI vocabulary, not a
+  domain term**, because **Player profile** already names an aggregate. _Avoid_: "player
+  account", "admin account" — there is one account.
+- **Authority** — role enum, `USER` or `ADMIN`. **Not an Administrator**: an Administrator runs a
+  club's official groups and holds no power over the platform or over any account, and becoming
+  one changes no `Authority`.
 - **Tester** — a player whose account carries the **tester mark**: a real player who may be
   given a **Feature flag**'s feature before anyone else. **A mark on the account, not an
   `Authority`** — being shown something early grants no power over anyone, so `Authority` stays
@@ -225,7 +235,10 @@ Identity and account state.
   initials over a generated poster stay the one derived form
   ([ADR-0167](docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §3),
   cut from it. Null until the **naming**
-  ([ADR-0171](docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+  ([ADR-0171](docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)) —
+  except on an account an **Invitation** created, which carries **the name the club typed** from
+  the start and no Nickname — settled, not built yet
+  ([ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §4).
 - **Nickname** — value object. Trimmed, 2–64 chars, `[A-Za-z0-9_.-]`, **unique**. A **handle**:
   shown as `@nickname` under the name on a player's record and on their own You tab, and **said
   nowhere** — never in a sentence, on a row, a card, a sheet, a toast, a seat label or a spoken
@@ -234,17 +247,23 @@ Identity and account state.
   onboarding's first step (*How should people see you?*) and never at sign-up, **repeatable** (a
   later change is the same act), refused with `NicknameAlreadyTaken` when the handle is another
   player's. Sign-up asks for credentials only — email, password, the Adult attestation — and a
-  `User` is created unnamed.
+  `User` is created unnamed. Its step is reached while the account is **not named in full** and
+  asks only for what is missing: an account an Invitation created is asked for the nickname
+  alone, and the act still carries both (settled by ADR-0185 §4, not built yet).
 - **RawPassword** — the plaintext at the boundary; 8–128 chars with ≥1 letter and ≥1
   digit. Carrying it as a type is what prevents hashing an unchecked string.
 - **HashedPassword** — non-empty bcrypt hash; the only password form ever persisted.
 - **Adult attestation** — the player's own claim, given at sign-up, that they are an adult.
   **One boolean, and never a date of birth.** The platform is adults only, and that is a
-  precondition of *holding an account* rather than a gate on who may be shown to whom
-  ([ADR-0124](docs/adr/0124-the-matcher-gates-account-state-never-age.md)) — *may you hold an
-  account* and *may these two be shown to each other* are different questions belonging to
-  different contexts. It is a value object that cannot be constructed from a missing or
-  negative answer, so no registration exists without one.
+  precondition of **playing** rather than a gate on who may be shown to whom
+  ([ADR-0124](docs/adr/0124-the-matcher-gates-account-state-never-age.md), narrowed by
+  [ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+  §5) — *may you play here* and *may these two be shown to each other* are different questions
+  belonging to different contexts. It is a value object that cannot be constructed from a missing
+  or negative answer, so no sign-up exists without one. **An account an Invitation created holds
+  none** — running a club's groups asks nobody's age — and gives it at **Start playing**, before
+  anything player-side: no Skill rating, Player profile or place in a pool exists without one.
+  Settled, not built yet: today every account is made by sign-up and holds one.
   **It is not age verification** and claims nothing of the sort: it records that the question
   was asked and answered. Nothing downstream ever asks *how old* — only *may they be here* —
   so there is no age, band or date anywhere in the system to read, and the candidate index
@@ -273,9 +292,10 @@ Identity and account state.
   `RegisterUser` reads the email before insert and raises `EmailAlreadyRegistered`; the naming
   reads the nickname and raises `NicknameAlreadyTaken` (a domain conflict, not a database
   constraint violation). **The name is never checked against anybody.**
-- **An account requires an Adult attestation, and a default is not one.** `RegisterUser`
+- **Signing up requires an Adult attestation, and a default is not one.** `RegisterUser`
   refuses without it — `AdultAttestationRequired`, a 400 — before it reads the email, so a
-  caller who answered nothing learns nothing about whether it is taken.
+  caller who answered nothing learns nothing about whether it is taken. An account an Invitation
+  created will be the one account without it, until it starts playing (ADR-0185; not built yet).
   The client writes the sentence; the backend only names the code
   ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)).
 - **`disable()` is idempotent** — a no-op on an already-inactive user.
@@ -300,6 +320,16 @@ Authentication and session lifecycle.
 - **Rotation** — on refresh the old token is revoked and a new one issued atomically
   (`RefreshToken.rotate_to(...)`); reusing a rotated token is rejected (replay
   protection).
+- **Audience** — which surface a token is for: the **player app** or the **club** website. A
+  token for one is refused on the other. The Administrator profile runs under the player app's
+  audience — switching profiles is not a new token
+  ([ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+  §6). Settled, not built yet.
+- **Signing out everywhere** — what a password change does: the account's **credentials-changed
+  instant** moves, every access token issued before it is refused, and every refresh token it
+  holds is revoked. Set by *Forgot password?*, by the club's *Reset password* and by any other
+  password change, for a User and a Club account alike (ADR-0185 §7). Settled, not built yet.
+  _Avoid_: "logout all", "kill sessions".
 - **TokenService** — port for signing/decoding JWTs (`JwtTokenService` adapter).
 - **PasswordHasher** — port for bcrypt hashing (`BcryptPasswordHasher` adapter).
 - **Auth events** (durable name / version):
@@ -1518,7 +1548,8 @@ Nothing about when, where, money or the result belongs here — it is **told** a
   two rules. **Minus the members who have left the chat, for as long as the game is behind them**
   ([ADR-0168](docs/adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md)) — the
   one membership fact a room stores, a subtraction only, whose effect is read against the game on
-  every read: a room can never hold somebody the court does not.
+  every read: a room can never hold somebody the court does not. **Not a Group member**, who
+  belongs to a Group and is on no court by belonging.
 - **Leaving the chat** — a member's own exit from the room, **not a Departure**: no seat moves.
   Admitted exactly where the seat change is refused — the game's agreed moment has passed, or the
   game has happened or never will — and refused while the game is ahead, where leaving the chat
@@ -1611,7 +1642,8 @@ The word will one day collide with Around's *plans*. It is taken anyway, on this
   **where · day · hour**. One plan per challenge, for ever; the game it becomes inherits it.
 - **Where** — short free text, one line, capped. **Never a court**: no id, no lookup, no
   autocomplete, no reuse, no geocode, and nothing anywhere reads it. A note between the people on
-  the court.
+  the court. **Nor a Club**, once clubs exist: linking a plan to one is its own later decision
+  ([ADR-0182](docs/adr/0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md) §8).
 - **Day** — a local date, chosen from **seven chips, today + 6**, clamped to a week past the
   plan's **anchor** — the challenge's send until the game exists, then the game's `planned_at`,
   only ever later — so a plan can never name a day past the game's entry window.
@@ -1909,6 +1941,126 @@ every fact read through the owning context's published port, and one rule of its
   than a fourth row. Two headings, no lie.
 
 
+### Club
+
+Settled by
+[ADR-0182](docs/adr/0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md)
+on [#501](https://github.com/Raketa02/Raketa/issues/501). **Not built yet** —
+[#503](https://github.com/Raketa02/Raketa/issues/503) builds it. The terms are here first because
+this file asks for them in that order.
+
+**A place where racket sports are played, known to the platform because it signed up.** Players
+search clubs to set a group's home and to find groups; the club manages its own facts from the club
+website.
+
+- **Club** — an **event-sourced aggregate**: a name, a district, a city, **the sports it offers**
+  (a non-empty subset of the four — they *filter* the `Sport` registry and never extend it) and
+  **a precise point on the map**, stored as the club dropped it, because a club is a public place
+  and not a person's whereabouts. Its details may change at any time, except that a sport an
+  **Official group** declares cannot be taken away. **Not verified**: nothing checks that a club is
+  who it says it is. **Not a court**: *"a court at [club] is free"* speaks of physical courts, and
+  there is still no court, booking or inventory — and **not a plan's venue**: a Plan's *Where*
+  stays free text. _Avoid_: venue, centre, facility, location (that is a player's **Location
+  area**).
+- **Club account** — the club's sign-in: **one email and one password, shared by the desk**,
+  created with the club. **A separate identity from every User**: its email is unique among club
+  accounts and may also be an unrelated User's, with a different password. It signs in **only on
+  the club website**, never in the player app, and is never matched, rated or shown to a player.
+  _Avoid_: club user, club login (as a noun), club admin.
+- **Home club** — the Club a **Group** belongs to. **Required.** A Player group's is chosen at
+  creation and never changes; an Official group's is its club. Distances to it are measured from
+  the reader's Location area and printed as everywhere else. _Avoid_: base, venue, home court.
+
+### Groups
+
+Settled by [ADR-0183](docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
+on [#501](https://github.com/Raketa02/Raketa/issues/501). **Not built yet** — the backend half is
+[#504](https://github.com/Raketa02/Raketa/issues/504)–[#506](https://github.com/Raketa02/Raketa/issues/506),
+[#509](https://github.com/Raketa02/Raketa/issues/509) and [#510](https://github.com/Raketa02/Raketa/issues/510).
+
+**The crowd that already plays together, brought into the app.** Clubs keep WhatsApp groups, one
+per sport; a group is where that crowd lands when somebody taps its link. It picks no games yet,
+posts none, and has no chat.
+
+- **Group** — an **event-sourced aggregate** of two kinds, **Player group** and **Official group**,
+  sharing the **Group link**, the **Join policy**, **Join requests**, the searches and the page. A
+  name of 1–40 characters, trimmed, **never unique**. Its **monogram** — two letters cut from its
+  name, on a colour fixed by its id — is served by the backend so that every client draws the same
+  tile. Its **sports** are read, never stored: for a Player group, those in which at least two
+  Group members hold a Skill rating; for an Official group, the ones it declares. _Avoid_: team,
+  community, circle, league, *club* (a Club is the place).
+- **Player group** — a Group a player created and runs as its **Owner**, at a Home club they chose.
+  It may be deleted only while its Owner is its only member.
+- **Official group** — a Group an **Administrator** created for their club, one per WhatsApp group
+  the club keeps. **It has no Owner**: one Administrator runs it, or none while it **needs an
+  administrator** — then it reads *"[club] approves joins"* and its requests wait for a
+  **Handover**. It **declares its sports** (a non-empty subset of the club's) and its **WhatsApp
+  group size**. Whoever runs it can neither delete it nor stop running it; only the club moves it.
+  _Avoid_: club group, verified group, public group.
+- **Owner** — the player who runs a Player group: answers its Join requests and edits its name and
+  Join policy. The creator is the first; **an Owner who leaves a group that has other members
+  passes ownership to the longest-standing member**. An Official group has none. _Avoid_: admin,
+  creator (ownership passes), moderator.
+- **Group member** — a player who belongs to a Group. **Named apart from the Conversation's
+  Member** — somebody on a court right now — which it is not, and must never be shortened to where
+  the two could meet. Counted in *N members*, including an Administrator who joined as a player; a
+  club's *Players* figure is the same count. **Nobody removes a Group member** — a member leaves,
+  and may rejoin under the group's rule. A **blocked** pair, either way, is left out of each other's
+  Members lists; counts never change for it. _Avoid_: bare *member* wherever a conversation could
+  be meant, follower, participant.
+- **Join policy** — who gets in: **Anyone** (the default: joining admits at once) or **People I
+  approve** (joining creates a Join request). **Switching to Anyone admits everyone waiting.** An
+  Administrator acting as a player joins the groups they run directly, whatever the policy.
+  _Avoid_: private / public, privacy, visibility.
+- **Join request** — a player's ask to join a *People I approve* group, waiting for its Owner or its
+  Administrator. At most one pending per player per group. **Approved** makes them a Group member;
+  **declined** removes the request **silently**, and they may ask again. _Avoid_: application,
+  invitation (an **Invitation** is a club naming an Administrator).
+- **Group link** — the public site's address, `/join/`, and the group's **code**: eight characters
+  from an alphabet with no look-alikes, unique, and **never changing** — not on a rename, a policy
+  change or a Handover. Any text containing `/join/<code>` is recognised. The way into a group from
+  outside the app, and what an Administrator posts into the WhatsApp group. _Avoid_: invite link,
+  share link, group URL.
+- **WhatsApp group size** — how many people the WhatsApp group an Official group mirrors has, as
+  its Administrator typed it: a whole number from 2 to 1024. It limits nothing; it is the
+  denominator of the club's *From WhatsApp* figure, which may pass 100% and says so. Only Official
+  groups have one. _Avoid_: capacity, limit, max members.
+- **Handover** — the club giving an Official group to another **active** Administrator of the club
+  — any group, including one that needs an administrator. The group keeps its link, Join policy,
+  WhatsApp group size, members and waiting requests; only who answers them changes. _Avoid_:
+  transfer, reassignment.
+
+### Administrators
+
+Settled by
+[ADR-0184](docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
+and
+[ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+on [#501](https://github.com/Raketa02/Raketa/issues/501). **Not built yet** —
+[#507](https://github.com/Raketa02/Raketa/issues/507) and
+[#508](https://github.com/Raketa02/Raketa/issues/508) build it.
+
+**The person a club names to run its WhatsApp groups inside Raketa.** Their one job is to make an
+Official group per WhatsApp group and post its link there.
+
+- **Administrator** — a User acting **for one club**: an **event-sourced aggregate**, one per
+  **(club, email)**, so a person running two clubs' groups is two Administrators. **Invited**
+  (shown as *expired* once its credential lapses), **active** (linked to an account) or
+  **removed**; a removed person may be invited again. Creates the club's Official groups, answers
+  their Join requests and edits their settings; can neither delete one nor stop running one.
+  Removal ends it on the next request, and leaves the person's player side untouched.
+  **Collisions, recorded:** an Administrator is **not the `ADMIN` Authority** and holds no power
+  over the platform or any account; the **admin** tag on a Members list is **copy** for *runs this
+  group*, not a role; and *Administrator* in the app's profile switcher is **UI vocabulary** for
+  this side of the account (see **Player**). _Avoid_: admin (as the noun), manager, moderator,
+  staff, group admin.
+- **Invitation** — the club naming a person as Administrator, **by name and email and nothing
+  else**: the club never sets, sees or handles a password or a code. Delivered by email as a
+  button and an **8-character code**, valid **72 hours** and resendable. A **new person** sets a password through it and gets an account under the
+  name the club typed, with no Nickname and no Adult attestation; an **existing account** accepts
+  it from the app, with no password step. _Avoid_: invite code (the code is one half of it),
+  *join request* (that is a player asking a group), onboarding.
+
 ## Cross-cutting concepts
 
 These are real and implemented; they apply across every context.
@@ -1945,14 +2097,16 @@ These are real and implemented; they apply across every context.
 
 ## Terms the client must not reinvent
 
-The player app describes the same nouns this file does. A concept that exists in this
+Every client describes the same nouns this file does. A concept that exists in this
 glossary keeps its name in TypeScript: an `Assessment` is an `Assessment`, not a `Quiz`,
 `Survey`, or `Test`. Client-only *technical* vocabulary (wire type, DTO, mapper, secure
 store) belongs in that app's own `CONTEXT.md`, never here.
 
 The client also **renders** the values the backend sends. The backend sends numbers and
 machine codes and never display text
-([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)), so the client
+([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)) — to a client; an
+**email** has no client, so the backend writes its words
+([ADR-0186](docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §4) — so the client
 formats — against one table, in [`docs/value-formatting.md`](docs/value-formatting.md).
 That is not a design system and holds no colour or size; it is the exact string a level, a
 time or a duration becomes. One client cannot drift from itself, so the table's immediate

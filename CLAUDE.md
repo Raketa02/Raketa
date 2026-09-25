@@ -1,14 +1,18 @@
 # Raketa — Monorepo
 
 A racket-sport platform. **Today it does one thing end to end:** a player signs up, signs
-in, and answers a questionnaire that gives them a Skill rating per sport. Two
-**independently deployable** apps share one repository and one domain language, and
-communicate **only over HTTP**.
+in, and answers a questionnaire that gives them a Skill rating per sport. **Independently
+deployable** apps share one repository and one domain language, and communicate **only over
+HTTP**. Two ship today; two web apps are decided
+([ADR-0187](docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md))
+and don't exist until their scaffolds land.
 
 | App | Path | Stack |
 | --- | --- | --- |
 | Backend API | `backend/` | FastAPI, Clean/hexagonal, DDD, event sourcing, Poetry |
-| Player app | `frontend_player/` | React Native + Expo + TypeScript (iOS & Android) |
+| Player app | `frontend_player/` | React Native + Expo + TypeScript (iOS & Android); also the Administrator's profile |
+| Club website | `frontend_club/` | Next.js, server-side cookie session — *scaffolded by #522* |
+| Public site | `frontend_public/` | Next.js, server-rendered, no session — *scaffolded by #525* |
 
 > **The repository was reset on 2026-08-25** to sign-up, sign-in and onboarding. The club
 > console, the pairing / balance-forecast / Match Fit engines, the kernel's money module and
@@ -52,6 +56,8 @@ the hooks themselves, `make gen-api`.
   document and finds them in perfect agreement
   ([`.github/scripts/check-contract-freshness.sh`](.github/scripts/check-contract-freshness.sh),
   `make contract-freshness`, proven still to fire by `make test-contract-freshness`).
+  ADR-0187 adds two more, `openapi.club.json` and `openapi.public.json`, each with its own
+  client; the gates learn them in #527.
 - **One Poetry writes `backend/poetry.lock` and every pin reads it.** The version is
   pinned in four places across `backend/`, `.github/` and `.sandbuket/`, and each must be
   at least the version stamped in the lock's header. Poetry only *warns* when a pin is too
@@ -120,8 +126,9 @@ the hooks themselves, `make gen-api`.
   `local` runs today; selecting another fails at start rather than falling back.
 - **A client's shape is that client's own.** `frontend_player/` follows feature-first Clean
   Architecture ([ADR-0009](docs/adr/0009-feature-first-clean-architecture-frontends.md)).
-  It is the only client today; a second one would get its own standard, and a rule learned
-  in one **does not** transfer to the other.
+  It is the only client today. The club website and the public site each get their own
+  standard ([ADR-0187](docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+  §6), and a rule learned in one client **does not** transfer to another.
 
 ## Safety — never do these without an explicit human request
 

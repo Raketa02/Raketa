@@ -26,6 +26,13 @@ Decided by
 > [`the-play-components.md`](the-play-components.md) and
 > [`the-loop-components.md`](../the-loop/the-loop-components.md).
 
+> **§F1 rule 6's *no Rakieta* has one exception, from
+> [ADR-0187](../../adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+> §8 (2026-09-25).** Wherever a Play › Groups, club website or public site mock sentence names the
+> app (*"Join Ogrody 33 Club on Raketa: <link>"*), the app is named, and it is named **Raketa**.
+> Everywhere else the rule stands. Those surfaces' mocks are in
+> [`../play-groups/`](../play-groups/README.md).
+
 ---
 
 ## 1. Where the copy lives

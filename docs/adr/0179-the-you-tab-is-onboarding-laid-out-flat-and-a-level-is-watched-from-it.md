@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-17
+- **§1's header card gains one element from [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)** (2026-09-25): the profile switcher chip, in each profile (club mock 7). This record's own rule applied: the mock won and the record is amended. Everything else stands.
 - **Amends** [ADR-0096](0096-gender-preference-mutual-gate-invisible-to-the-scorer.md) §6 by
   one shape — *no response shape carries a gender value out* gains the exception **the owner's
   own profile read**, and no other (§4); [ADR-0158](0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)
