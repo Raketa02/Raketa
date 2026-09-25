@@ -5,10 +5,18 @@ description: Change, debug or verify the Claude Code guardrails — the ownershi
 
 # The guardrails
 
-Two `PreToolUse` hooks at `.claude/hooks/`, registered **four times** — once in the root
-`.claude/settings.json` and once in each app's `.claude/settings.json`.
+Two `PreToolUse` hooks at `.claude/hooks/`, registered **five times** — once in the root
+`.claude/settings.json` and once in each app's: `backend/`, `frontend_player/`,
+`frontend_club/` and `frontend_public/`.
 
-## Why four registrations
+A new app is fenced only when every one of these names it: both hooks' `app_of`,
+`enforce-ownership.sh`'s `dir_of`, `guard-bash.sh`'s `for other in` list, its own
+`.claude/settings.json`, and its assertions in `test-hooks.sh`. Miss one and the fence fails
+**open**: an app the hooks don't know is *shared*, so a session started in it owns
+everything. `test-hooks.sh` catches the commonest miss: every directory that carries a
+`.claude/settings.json` must resolve to a tier.
+
+## Why five registrations
 
 Claude Code loads project settings **from the directory the session started in**, and does
 not inherit them from ancestors. A session started with `cd backend && claude` reads
@@ -30,7 +38,7 @@ Two consequences to keep in mind when editing them:
 ## After any change
 
 ```bash
-make test-hooks        # 69 assertions across both hooks
+make test-hooks        # 109 assertions across both hooks
 ```
 
 The suite covers the false-positive cases too — a commit message mentioning `ecs-deploy`, a

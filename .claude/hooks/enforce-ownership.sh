@@ -2,8 +2,8 @@
 # ---------------------------------------------------------------------------
 # Ownership boundary guard for the Raketa monorepo.
 #
-# The repo holds three independently deployable apps. An agent working in one of
-# them must not silently edit another — that is how a "small backend fix" quietly
+# The repo holds independently deployable apps (ADR-0005, ADR-0187). An agent working
+# in one of them must not silently edit another — that is how a "small backend fix" quietly
 # rewrites the mobile app. This hook makes that boundary mechanical instead of
 # a request in a markdown file.
 #
@@ -11,7 +11,7 @@
 # stderr text to the agent.
 #
 # Which app a session owns is resolved in this order:
-#   1. $RKTA_TIER  — explicit override: root | backend | player | club
+#   1. $RKTA_TIER  — explicit override: root | backend | player | club | public
 #   2. the session's cwd, relative to the repo root
 # A session at the repo root owns everything (you are the orchestrator).
 #
@@ -89,6 +89,7 @@ app_of() { # map a repo-relative path to the app that owns it
     backend|backend/*)                 printf 'backend' ;;
     frontend_player|frontend_player/*) printf 'player'  ;;
     frontend_club|frontend_club/*)     printf 'club'    ;;
+    frontend_public|frontend_public/*) printf 'public'  ;;
     *)                                 printf 'shared'  ;;
   esac
 }
@@ -135,6 +136,7 @@ dir_of() { # bash 3.2 on macOS has no associative arrays — keep this a case
     backend) printf 'backend/'         ;;
     player)  printf 'frontend_player/' ;;
     club)    printf 'frontend_club/'   ;;
+    public)  printf 'frontend_public/' ;;
     *)       printf '%s' "$1"          ;;
   esac
 }
@@ -142,7 +144,7 @@ dir_of() { # bash 3.2 on macOS has no associative arrays — keep this a case
 cat >&2 <<EOF
 Blocked: this session owns '${TIER}' ($(dir_of "$TIER")) but ${TOOL} targets '${REL_TARGET}', which belongs to '${TARGET_APP}' ($(dir_of "$TARGET_APP")).
 
-The three apps are separate deployables and communicate over HTTP only — see docs/adr/0005 and CONTEXT-MAP.md.
+The apps are separate deployables and communicate over HTTP only — see docs/adr/0005 and CONTEXT-MAP.md.
 
 If '${TARGET_APP}' genuinely needs a change, the correct move is one of:
   - state what the other app needs and let a session scoped to it make the change;

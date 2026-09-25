@@ -158,7 +158,7 @@ guardrail doing its job.
   and [ADR-0029](docs/adr/0029-seed-data-through-aggregates-never-in-production.md).
 - [`docs/adr/`](docs/adr/) — decisions affecting the system or the contract between apps.
 
-After changing either hook, run `make test-hooks` (69 assertions). A guardrail that
+After changing either hook, run `make test-hooks` (109 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it. The same
 argument is why `make test-drift`, `make test-poetry-pin`, `make test-judged-pairings`,
 `make test-ruleset-diff`, `make test-taskdef`, `make test-shards-add-up` and

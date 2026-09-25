@@ -4,7 +4,9 @@ How "one session owns one app" is enforced, why it is built this way, and what t
 when it blocks you.
 
 The decision behind it is
-[ADR-0005](../adr/0005-three-app-monorepo-ownership-boundaries.md).
+[ADR-0005](../adr/0005-three-app-monorepo-ownership-boundaries.md), which
+[ADR-0187](../adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+extended to four apps.
 
 ## The rule
 
@@ -14,13 +16,17 @@ The decision behind it is
 | `backend/…` | `backend` | `backend/**` + shared docs |
 | `frontend_player/…` | `player` | `frontend_player/**` + shared docs |
 | `frontend_club/…` | `club` | `frontend_club/**` + shared docs |
+| `frontend_public/…` | `public` | `frontend_public/**` + shared docs |
 
-> **`frontend_club/` no longer exists.** The club console was removed in the 2026-08-25
-> reset. Its row, and the `club` tier throughout the hooks and their test suite, are kept
-> **on purpose**: the fence costs nothing while the directory is absent, it is what makes
-> the machinery generic rather than a two-app special case, and the day a second client
-> lands it is already fenced instead of being fenced after the first cross-app write. Every
-> `frontend_club` example below is therefore about a path, not about an app that ships.
+> **The two web apps are fenced before they exist.** `frontend_club/` (the club website) and
+> `frontend_public/` (the public site) hold nothing but their `.claude/settings.json` until
+> [#522](https://github.com/Raketa02/Raketa/issues/522) and
+> [#525](https://github.com/Raketa02/Raketa/issues/525) scaffold them. That order is the point:
+> the `club` tier survived the 2026-08-25 reset so that the day a second client landed it
+> would already be fenced, and `public` got its tier
+> ([#502](https://github.com/Raketa02/Raketa/issues/502)) before any session could be
+> launched inside it. Until then `frontend_public/` classified as *shared* — writable by every
+> scoped session — and a session started inside it resolved to root and owned everything.
 
 "Shared docs" means the root glossary, `CONTEXT-MAP.md`, `docs/adr/` and `docs/agents/`.
 The boundary is about **code ownership**, not about preventing documentation — an agent
@@ -28,7 +34,7 @@ that discovers a cross-cutting decision should be able to write the ADR.
 
 ## How a session's app is resolved
 
-1. **`$RKTA_TIER`**, if set — `root` | `backend` | `player` | `club`.
+1. **`$RKTA_TIER`**, if set — `root` | `backend` | `player` | `club` | `public`.
 2. Otherwise, the session's **working directory**, relative to the repo root.
 
 So the ordinary workflow is simply:
@@ -36,6 +42,8 @@ So the ordinary workflow is simply:
 ```bash
 cd backend         && claude     # owns the backend
 cd frontend_player && claude     # owns the player app
+cd frontend_club   && claude     # owns the club website
+cd frontend_public && claude     # owns the public site
 claude                           # started at the root: owns everything
 ```
 
@@ -60,13 +68,13 @@ A pair of `PreToolUse` hooks, keyed on the session's working directory:
 
 Both exit `2` to block, and the stderr text is returned to the agent as the reason.
 
-### They are registered four times, and that is not redundancy
+### They are registered five times, and that is not redundancy
 
 Claude Code reads `.claude/settings.json` **from the directory the session started in**, and
 does **not** inherit it from ancestor directories the way it inherits `CLAUDE.md`. So the
 hooks are registered in the root `.claude/settings.json` *and* in each app's
-`backend/.claude/settings.json`, `frontend_club/.claude/settings.json` and
-`frontend_player/.claude/settings.json`.
+`backend/.claude/settings.json`, `frontend_player/.claude/settings.json`,
+`frontend_club/.claude/settings.json` and `frontend_public/.claude/settings.json`.
 
 This was originally built the other way round, on the belief that root settings covered every
 session. They did not: a session started with `cd backend && claude` ran with **no hooks at
@@ -109,7 +117,10 @@ key material, and an `ask` list for `git push` / `gh pr merge` / `gh release`.
 make test-hooks        # or: bash .claude/hooks/test-hooks.sh
 ```
 
-69 assertions across both hooks: cross-app writes, `../` escapes, scoped-session resolution,
+109 assertions across both hooks: cross-app writes for every ordered pair of apps through the
+editor tools, the `public` tier's fence in both directions, every directory that carries its
+own `.claude/settings.json` resolving to a tier rather than to *shared*, refusals that never
+count the apps, `../` escapes, scoped-session resolution, `$RKTA_TIER`,
 shared-doc writes, self-defence, deploy commands, secret writes, destructive git, and the
 false-positive cases that must **not** be blocked (a commit message mentioning `ecs-deploy`,
 editing a `.env.example` template, an ordinary `git push`, a heredoc whose body says
@@ -123,8 +134,10 @@ cd backend && claude -p "Use the Write tool to create ../frontend_club/probe.txt
   --allowedTools Write
 ```
 
-That must be blocked. If it succeeds, the problem is the app's `.claude/settings.json`, not
-the hook script.
+That must be blocked, and so must the same probe from each app into another — for the
+public site, `cd frontend_public && claude -p "… create ../backend/probe.txt"` and
+`cd backend && claude -p "… create ../frontend_public/probe.txt"`. If one succeeds, the
+problem is that app's `.claude/settings.json`, not the hook script.
 
 Run both after touching either hook. A guardrail that silently stops matching is worse than
 none, because you stop watching for what it was supposed to catch.

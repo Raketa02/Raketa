@@ -87,6 +87,7 @@ if [ -n "$ROOT" ]; then
       backend|backend/*)                 printf 'backend' ;;
       frontend_player|frontend_player/*) printf 'player'  ;;
       frontend_club|frontend_club/*)     printf 'club'    ;;
+      frontend_public|frontend_public/*) printf 'public'  ;;
       *)                                 printf 'shared'  ;;
     esac
   }
@@ -98,13 +99,13 @@ if [ -n "$ROOT" ]; then
   fi
 
   if [ "$TIER" != 'root' ]; then
-    for other in backend frontend_player frontend_club; do
+    for other in backend frontend_player frontend_club frontend_public; do
       [ "$(app_of "$other")" = "$TIER" ] && continue
       # a write verb or a redirect aimed at the other app's directory. Both arms
       # allow arbitrary leading path text so an absolute path, a '../' and a
       # 'backend/../frontend_club/' all match the same way.
       if printf '%s' "$COMMAND" | grep -qE "(${SEP}(cp|mv|rm|tee|touch|mkdir|sed[[:space:]]+-i)|>>?)[^|;&]*(^|[[:space:]/])${other}/"; then
-        echo "Blocked: this session owns '${TIER}', but the command writes into '${other}/'. The three apps are separate deployables — see docs/adr/0005. Make the change from a session scoped to that app." >&2
+        echo "Blocked: this session owns '${TIER}', but the command writes into '${other}/'. The apps are separate deployables — see docs/adr/0005. Make the change from a session scoped to that app." >&2
         exit 2
       fi
     done

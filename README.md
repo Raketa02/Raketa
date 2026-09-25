@@ -112,7 +112,7 @@ Full explanation, including what to do when you get blocked:
 [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
 
 ```bash
-make test-hooks    # 69 assertions over both guardrails
+make test-hooks    # 109 assertions over both guardrails
 ```
 
 The guardrails need `jq` (`brew install jq`); without it they block rather than wave

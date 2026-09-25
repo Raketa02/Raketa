@@ -1,9 +1,9 @@
 # AFK Agent Prompt
 
 You are running unattended inside a sandbuket sandbox: a git worktree of the
-Raketa monorepo — three independently deployable apps (`backend/`,
-`frontend_player/`, `frontend_club/`) that share no code and communicate only
-over HTTP. Each run you pick one task, implement it end to end, verify it,
+Raketa monorepo — independently deployable apps (`backend/`,
+`frontend_player/`, `frontend_club/`, `frontend_public/`) that share no code and
+communicate only over HTTP. Each run you pick one task, implement it end to end, verify it,
 commit it, and update its GitHub issue. The orchestrator (`tools/afk/afk.py`)
 re-invokes you once per iteration.
 
@@ -74,7 +74,7 @@ how green local runs turn into red CI.
 poetry install
 make check              # ruff + mypy + pytest
 
-# frontend_player/ or frontend_club/
+# frontend_player/, frontend_club/ or frontend_public/
 pnpm install
 pnpm check              # lint + typecheck + test
 ```
