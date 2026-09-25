@@ -14,6 +14,7 @@ import type { AuthenticatedUser, Naming } from '../domain/AuthenticatedUser';
 type TokenResponse = components['schemas']['TokenResponse'];
 type UserResponse = components['schemas']['UserResponse'];
 type NamingResponse = components['schemas']['NamingResponse'];
+type ClaimTicketResponse = components['schemas']['ClaimTicketResponse'];
 
 /**
  * `expires_in` is deliberately dropped. Expiry is discovered from the server's 401, not
@@ -49,6 +50,14 @@ export function toAuthenticatedUser(wire: UserResponse): AuthenticatedUser {
     // never what anybody may do (ADR-0180 §9).
     isTester: wire.is_tester,
   };
+}
+
+/**
+ * The ticket a right code bought. `expires_in` is dropped for `toTokens`' reason: the server says
+ * `ticket_expired` when it is, and a phone's clock is not the judge of that.
+ */
+export function toResetTicket(wire: ClaimTicketResponse): string {
+  return wire.ticket;
 }
 
 /** What the naming recorded: the name as normalised by the server, and the handle. */

@@ -12,23 +12,32 @@
  * — and a keychain that filled the box with the wrong entry looks identical either way. One
  * box, so the control's accessible name still says which field it is about and there is
  * nothing for it to be confused with.
+ *
+ * **Its pieces are the recovery screens' pieces** — the frame, the email box, the text link
+ * ([#515](https://github.com/Raketa02/Raketa/issues/515)). ***Forgot password?*** sits under the
+ * Sign in button, on the one sign-in screen players and administrators share, and carries what
+ * is in the email box across so it is not typed twice.
  */
 
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { Button, TextField, theme } from '@/shared/ui';
+import { Button, TextField } from '@/shared/ui';
 
 import { useSignIn } from '../hooks/useAuthActions';
 import { signInSchema, validate, type FieldErrors } from '../schemas/authForms';
 
+import { AuthFields, AuthFrame } from './AuthFrame';
+import { AuthLink } from './AuthLink';
 import { AuthNotice } from './AuthNotice';
+import { PASSWORD_LABEL, SIGN_IN_COPY } from './authPresentation';
 import { authErrorMessage } from './authErrorMessage';
+import { EmailField } from './EmailField';
+import { RESET_COPY } from './resetPresentation';
+import { askForResetHref } from './resetRoutes';
 
 export function SignInScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -47,120 +56,47 @@ export function SignInScreen() {
     signIn.mutate(result.values);
   };
 
+  const forgotPassword = () => router.push(askForResetHref(email));
+
   return (
-    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={s.flex}
-        // The keyboard covers the submit button on iOS otherwise; Android's
-        // windowSoftInputMode already handles it and would double-inset.
-        behavior={KEYBOARD_AVOIDANCE}
-      >
-        <ScrollView
-          contentContainerStyle={s.content}
-          keyboardShouldPersistTaps="handled"
-          // The form must stay reachable when large text makes it taller than the screen.
-          keyboardDismissMode="on-drag"
-        >
-          <View style={s.header}>
-            <Text style={s.eyebrow}>Raketa</Text>
-            <Text style={s.title}>Sign in</Text>
-          </View>
+    <AuthFrame title={SIGN_IN_COPY.title}>
+      {signIn.error !== null ? <AuthNotice message={authErrorMessage(signIn.error)} /> : null}
 
-          {signIn.error !== null ? <AuthNotice message={authErrorMessage(signIn.error)} /> : null}
+      <AuthFields>
+        <EmailField
+          value={email}
+          onChangeText={setEmail}
+          error={fieldErrors.email}
+          returnKeyType="next"
+          editable={!signIn.isPending}
+        />
+        <TextField
+          label={PASSWORD_LABEL}
+          value={password}
+          onChangeText={setPassword}
+          error={fieldErrors.password}
+          secureTextEntry
+          reveal
+          autoCapitalize="none"
+          autoComplete="current-password"
+          textContentType="password"
+          returnKeyType="go"
+          onSubmitEditing={submit}
+          editable={!signIn.isPending}
+        />
+      </AuthFields>
 
-          <View style={s.form}>
-            <TextField
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              error={fieldErrors.email}
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="username"
-              returnKeyType="next"
-              editable={!signIn.isPending}
-            />
-            <TextField
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              error={fieldErrors.password}
-              secureTextEntry
-              reveal
-              autoCapitalize="none"
-              autoComplete="current-password"
-              textContentType="password"
-              returnKeyType="go"
-              onSubmitEditing={submit}
-              editable={!signIn.isPending}
-            />
-          </View>
+      <Button
+        label={SIGN_IN_COPY.submit}
+        size="lg"
+        busyLabel={SIGN_IN_COPY.submitting}
+        busy={signIn.isPending}
+        onPress={submit}
+      />
 
-          <Button
-            label="Sign in"
-            size="lg"
-            busyLabel="Signing in…"
-            busy={signIn.isPending}
-            onPress={submit}
-          />
+      <AuthLink label={RESET_COPY.signInLink} onPress={forgotPassword} />
 
-          <View style={s.footer}>
-            <Text style={s.footerText}>New to Raketa?</Text>
-            {/* `asChild`, so the tappable thing is a real 44pt control rather than a line
-                of text. A `Link` renders a `Text`, whose reachable area is exactly the
-                glyphs — inside a `ScrollView`, a press that drifts a pixel becomes a scroll
-                gesture instead, which is what made this take several attempts (6.5). */}
-            <Link href="/sign-up" asChild>
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel="Create an account"
-                style={({ pressed }) => [s.footerTarget, pressed ? s.footerPressed : undefined]}
-              >
-                <Text style={s.footerLink}>Create an account</Text>
-              </Pressable>
-            </Link>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <AuthLink lead={SIGN_IN_COPY.newHere} label={SIGN_IN_COPY.createAccount} href="/sign-up" />
+    </AuthFrame>
   );
 }
-
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.color.paper },
-  flex: { flex: 1 },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: theme.size.gutter,
-    paddingVertical: theme.space.xxl,
-    gap: theme.space.lg,
-  },
-  header: { gap: theme.space.xxs },
-  eyebrow: {
-    ...theme.type.eyebrow,
-    color: theme.color.muted,
-    textTransform: 'uppercase',
-  },
-  title: { ...theme.type.h1, color: theme.color.ink },
-  form: { gap: theme.space.md },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: theme.space.xs,
-  },
-  footerText: { ...theme.type.tiny, color: theme.color.muted },
-  // 44 by its own geometry rather than by slop: the target sits in a wrapping row, so
-  // horizontal slop would be bounded by whatever ends up beside it (6.5).
-  footerTarget: {
-    minHeight: theme.size.minTouch,
-    justifyContent: 'center',
-    paddingHorizontal: theme.space.xs,
-  },
-  footerPressed: { opacity: 0.6 },
-  footerLink: { ...theme.type.rlValue, color: theme.color.ink },
-});

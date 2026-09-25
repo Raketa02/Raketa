@@ -112,6 +112,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forgot password?: email a link and a code
+         * @description Sends an email with a button and an 8-character code, valid for **one hour** and usable once. The button opens the public site's `/reset/<token>` page, for a player or an administrator; the code does the same from wherever the person asked.
+         *
+         *     **Nobody can use this to learn who has an account**: the answer is `202` with no body for an address with an account, without one, and for one asked for too often. **Throttled per address** — past three emails in an hour, a request sends nothing and says so to nobody. A newer email replaces the older one's link and code.
+         */
+        post: operations["forgot_password_api_v1_auth_forgot_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/forgot-password/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange the emailed code for a ticket
+         * @description The address and the code from the email, exchanged for a short-lived `ticket` the new password is then set with. A claim is not a use: until a password is set, the same code can be claimed again.
+         *
+         *     Only a **right** code learns why it cannot be used; a wrong one is `code_incorrect` whatever else is true.
+         */
+        post: operations["claim_reset_code_api_v1_auth_forgot_password_claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/forgot-password/new-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a new password, sign out everywhere, and sign in
+         * @description Sets the new password with **exactly one** of the email's link `token` or a claimed code's `ticket`, then **signs out everywhere** and signs this session in: every access token issued before this moment is refused (`access_token_revoked`) and every refresh token revoked, so another phone still signed in is signed out on its next request. The answer is this session's new token pair. The link, the code and the ticket are spent.
+         */
+        post: operations["set_new_password_api_v1_auth_forgot_password_new_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sports": {
         parameters: {
             query?: never;
@@ -2716,6 +2780,36 @@ export interface components {
             social_tags: string[];
         };
         /**
+         * ClaimCodeRequest
+         * @description The address and the 8-character code from the email. The code is read
+         *     forgivingly — case, spaces and dashes are ignored — and its length is not
+         *     checked here: a code of the wrong length is simply not the right code, and
+         *     is told ``code_incorrect`` as every other one is. The bound is a cap on
+         *     what a request may carry, not a rule about codes.
+         */
+        ClaimCodeRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Code */
+            code: string;
+        };
+        /**
+         * ClaimTicketResponse
+         * @description A correct code, exchanged for a ticket the new password is set with.
+         */
+        ClaimTicketResponse: {
+            /**
+             * Ticket
+             * @description Present it as `ticket` when setting the new password. Good for `expires_in` seconds, and never past the code's own hour; claiming the code again replaces it.
+             */
+            ticket: string;
+            /** Expires In */
+            expires_in: number;
+        };
+        /**
          * ClubCardSchema
          * @description One club as a search draws it: its header — which is context, not a
          *     choice — and the groups inside it.
@@ -4049,6 +4143,17 @@ export interface components {
             assumption: string | null;
         };
         /**
+         * ForgotPasswordRequest
+         * @description *Forgot password?*: the address to send a link and a code to.
+         */
+        ForgotPasswordRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
+        /**
          * GameKind
          * @description Whether this game is evidence about how well anybody plays.
          *
@@ -5180,6 +5285,25 @@ export interface components {
              * @description The handle, as recorded.
              */
             nickname: string;
+        };
+        /**
+         * NewPasswordRequest
+         * @description The new password, and **exactly one** of what opens the way to it: the
+         *     `token` from the email's link, or the `ticket` a claimed code returned.
+         *
+         *     The password carries no bound here, deliberately: the rule every account
+         *     shares — 8 to 128 characters with a letter and a digit — is refused as
+         *     `password_too_weak` naming the field, not as a validation error naming none.
+         *     Sending both or neither of `token` and `ticket` is a malformed request rather
+         *     than a person's mistake, and is the one refusal here that is a `422`.
+         */
+        NewPasswordRequest: {
+            /** Token */
+            token?: string | null;
+            /** Ticket */
+            ticket?: string | null;
+            /** Password */
+            password: string;
         };
         /**
          * OnCourtVerdict
@@ -8202,6 +8326,150 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LogoutResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forgot_password_api_v1_auth_forgot_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted — **the same answer whether or not the address has an account**, and whether or not an email was sent. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    claim_reset_code_api_v1_auth_forgot_password_claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimTicketResponse"];
+                };
+            };
+            /** @description `code_incorrect` (`details.field`: `code`) — not the code sent to that address, **or nothing was sent to it**: the two are one answer. Five wrong codes lock the credential. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The code is right, and it can no longer be used: `credential_expired` (ask again), `credential_used` or `credential_locked` (five wrong codes). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_new_password_api_v1_auth_forgot_password_new_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description `password_too_weak` (`details.field`: `password`) — 8 to 128 characters with a letter and a digit. The link and the code still work. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `credential_not_found` — a link or a ticket this surface never issued. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `credential_expired` (ask again), `credential_used`, `credential_locked`, or `ticket_expired` — the code was right and the password came too late; claiming the code again is a fresh ticket. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */

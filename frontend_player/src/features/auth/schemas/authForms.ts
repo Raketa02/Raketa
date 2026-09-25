@@ -59,6 +59,42 @@ export const ADULT_ATTESTATION_MISSING =
   'Confirm that you are 18 or over — Raketa is for adults only.';
 
 /**
+ * **The one password rule** — 8 to 128 characters, with at least one letter and one digit — which
+ * every account shares (`RawPassword` on the server; ADR-0182 §3). Stated under the box on every
+ * form that chooses one, so a refusal never surprises.
+ */
+export const PASSWORD_RULE = 'Use 8 to 128 characters, with at least one letter and one digit.';
+
+/**
+ * A password being **chosen** — on sign-up and on *Set a new password* — under that rule, with
+ * the sentence for whichever half is missing. The server's regex counts an ASCII letter and a
+ * digit; so does this.
+ *
+ * Sign-up checked only the length until #515, and a letters-only password there reached the
+ * server's rule unchecked; one rule for both forms is what closes that.
+ */
+const chosenPassword = z
+  .string()
+  .min(8, 'Use at least 8 characters.')
+  .max(128, "That's longer than 128 characters.")
+  .regex(/[A-Za-z]/, 'Use at least one letter.')
+  .regex(/\d/, 'Use at least one digit.');
+
+const repeatedPassword = z.string().min(1, 'Repeat your password.');
+
+/**
+ * The repeat must match — attached to the field the player must fix, not to the form, so the
+ * message lands under the box they need to retype.
+ */
+const SAME_PASSWORD = {
+  path: ['confirmPassword'],
+  message: "Those passwords don't match.",
+};
+
+const samePassword = (values: { readonly password: string; readonly confirmPassword: string }) =>
+  values.password === values.confirmPassword;
+
+/**
  * **Credentials, and nothing about who you are**
  * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
  * §2). The nickname left this form for the naming below: sign-up is choosing credentials, and
@@ -69,11 +105,8 @@ export const ADULT_ATTESTATION_MISSING =
 export const signUpSchema = z
   .object({
     email,
-    password: z
-      .string()
-      .min(8, 'Use at least 8 characters.')
-      .max(128, "That's longer than 128 characters."),
-    confirmPassword: z.string().min(1, 'Repeat your password.'),
+    password: chosenPassword,
+    confirmPassword: repeatedPassword,
     // `refine` rather than `z.literal(true)`: an unticked box is `false`, which is a
     // boolean, and only the value is wrong. The message is what a player reads either
     // way, and this is the one that says which of the two it is.
@@ -81,12 +114,7 @@ export const signUpSchema = z
       message: ADULT_ATTESTATION_MISSING,
     }),
   })
-  .refine((values) => values.password === values.confirmPassword, {
-    // Attached to the field the player must fix, not to the form, so the message lands
-    // under the box they need to retype.
-    path: ['confirmPassword'],
-    message: "Those passwords don't match.",
-  });
+  .refine(samePassword, SAME_PASSWORD);
 
 export type SignUpInput = z.input<typeof signUpSchema>;
 export type SignUpValues = z.output<typeof signUpSchema>;
@@ -162,3 +190,36 @@ export const namingSchema = z.object({
 
 export type NamingInput = z.input<typeof namingSchema>;
 export type NamingValues = z.output<typeof namingSchema>;
+
+/**
+ * ***Forgot password?*** — the address to send a link and a code to
+ * ([#515](https://github.com/Raketa02/Raketa/issues/515)). Only its shape is checked: whether it
+ * has an account is exactly what nobody may learn from this form (ADR-0184 §5).
+ */
+export const forgotPasswordSchema = z.object({ email });
+
+/**
+ * **The code from the email**, read the way the server reads it — spaces and dashes taken out,
+ * upper case — beside the address it was sent to. Its length *is* checked here, where the server
+ * does not: a code of the wrong length can only be a wrong code, and five wrong codes lock the
+ * email, so one that cannot be right is refused before it spends an attempt.
+ */
+export const RESET_CODE_LENGTH = 8;
+
+export const resetCodeSchema = z.object({
+  email,
+  code: z
+    .string()
+    .transform((typed) => typed.replace(/[\s-]/g, '').toUpperCase())
+    .pipe(
+      z
+        .string()
+        .min(1, 'Enter the code from the email.')
+        .length(RESET_CODE_LENGTH, `The code is ${RESET_CODE_LENGTH} characters.`),
+    ),
+});
+
+/** *Set a new password* — the rule sign-up chooses one by, and the repeat. */
+export const newPasswordSchema = z
+  .object({ password: chosenPassword, confirmPassword: repeatedPassword })
+  .refine(samePassword, SAME_PASSWORD);

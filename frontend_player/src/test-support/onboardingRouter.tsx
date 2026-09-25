@@ -54,6 +54,11 @@ import YouWhoYouPlayWithRoute from '@/app/(app)/(tabs)/you/who-you-play-with';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
 import SignUpRoute from '@/app/(auth)/sign-up';
+import ForgotPasswordRoute from '@/app/(auth)/forgot-password/index';
+import ResetCodeRoute from '@/app/(auth)/forgot-password/code';
+import ResetSentRoute from '@/app/(auth)/forgot-password/sent';
+import ResetNewPasswordRoute from '@/app/(auth)/forgot-password/new-password';
+import ResetLinkRoute from '@/app/(auth)/reset/[token]';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
 import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
@@ -173,6 +178,13 @@ export const ONBOARDING_ROUTES = {
   // Sign-up is in the tree for the one walk that starts before a session exists: an account
   // created here is unnamed, and where the gate sends it next is the naming step's suite's.
   '(auth)/sign-up': SignUpRoute,
+  // *Forgot password?* (#515), under the same guard as sign-in: the email form, the neutral
+  // confirmation, the code, *Set a new password* by a claimed code — and by the email's link.
+  '(auth)/forgot-password/index': ForgotPasswordRoute,
+  '(auth)/forgot-password/sent': ResetSentRoute,
+  '(auth)/forgot-password/code': ResetCodeRoute,
+  '(auth)/forgot-password/new-password': ResetNewPasswordRoute,
+  '(auth)/reset/[token]': ResetLinkRoute,
   '(onboarding)/_layout': OnboardingLayout,
   // The naming step — the first screen after sign-up, and the gate's first destination
   // (ADR-0171 §3). Before welcome in the table as it is in the walk.

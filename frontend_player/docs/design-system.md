@@ -1299,6 +1299,11 @@ The dimming is on the row rather than on the box, because the row is the target:
 dimmed while the sentence beside it did not would say the two are separate things, which is
 the reading 6.5 already refuses.
 
+The auth forms' text link — _Create an account_, _Forgot password?_, _Ask again_ — takes the chip's
+`opacity: .7` ([#515](https://github.com/Raketa02/Raketa/issues/515)). Sign-in and sign-up drew it
+at `.6` while each held its own copy; it is one piece now, `AuthLink`, and a shared control does not
+keep the one value this table does not have.
+
 **The add control takes the card's press state and the photo tile does not**, though they
 are the same rectangle. The add control is a pressable card-shaped surface with a border to
 change; a filled tile's border is already carrying whether it is the profile photo

@@ -6,7 +6,15 @@
  * the two disagree the server wins, and the mapped error is what the screen shows.
  */
 
-import { NICKNAME_RULE, namingSchema, signUpSchema, validate } from './authForms';
+import {
+  NICKNAME_RULE,
+  PASSWORD_RULE,
+  namingSchema,
+  newPasswordSchema,
+  resetCodeSchema,
+  signUpSchema,
+  validate,
+} from './authForms';
 
 const CREDENTIALS = {
   email: 'ada@example.com',
@@ -109,6 +117,85 @@ describe('the naming', () => {
     expect(validate(namingSchema, { name: '', nickname: '' })).toEqual({
       ok: false,
       fieldErrors: { name: 'Enter your name.', nickname: 'Enter a nickname.' },
+    });
+  });
+});
+
+/**
+ * **The one password rule** — 8 to 128 characters with a letter and a digit, every account's
+ * (`RawPassword` on the server, ADR-0182 §3) — checked on both forms that choose one, so the
+ * sentence a person reads says which half of it they missed.
+ */
+describe('choosing a password', () => {
+  const choose = (password: string, confirmPassword = password) =>
+    validate(newPasswordSchema, { password, confirmPassword });
+
+  it('takes one with a letter and a digit in 8 to 128 characters', () => {
+    expect(choose('forehand42')).toEqual({
+      ok: true,
+      values: { password: 'forehand42', confirmPassword: 'forehand42' },
+    });
+    expect(choose(`a1${'x'.repeat(126)}`).ok).toBe(true);
+  });
+
+  it.each([
+    ['short1', 'Use at least 8 characters.'],
+    [`a1${'x'.repeat(127)}`, "That's longer than 128 characters."],
+    ['12345678', 'Use at least one letter.'],
+    ['forehands', 'Use at least one digit.'],
+  ])('refuses %p, saying which half is missing', (password, message) => {
+    expect(choose(password)).toEqual({ ok: false, fieldErrors: { password: message } });
+  });
+
+  it('refuses a repeat that does not match, under the repeat box', () => {
+    expect(choose('forehand42', 'forehand43')).toEqual({
+      ok: false,
+      fieldErrors: { confirmPassword: "Those passwords don't match." },
+    });
+  });
+
+  it('states the rule in one sentence', () => {
+    expect(PASSWORD_RULE).toBe('Use 8 to 128 characters, with at least one letter and one digit.');
+  });
+
+  /** Sign-up chooses one too, and a letters-only password there is the same refusal. */
+  it('is the rule sign-up refuses by', () => {
+    expect(
+      validate(signUpSchema, {
+        ...CREDENTIALS,
+        password: 'forehands',
+        confirmPassword: 'forehands',
+      }),
+    ).toEqual({
+      ok: false,
+      fieldErrors: { password: 'Use at least one digit.' },
+    });
+  });
+});
+
+describe('the code from the email', () => {
+  it('reads it the way the server does — no spaces or dashes, upper case', () => {
+    expect(validate(resetCodeSchema, { email: 'Tomek@Example.com', code: ' k7m4-qx2p ' })).toEqual({
+      ok: true,
+      values: { email: 'tomek@example.com', code: 'K7M4QX2P' },
+    });
+    expect(validate(resetCodeSchema, { email: 'tomek@example.com', code: 'K7M4 QX2P' }).ok).toBe(
+      true,
+    );
+  });
+
+  /**
+   * A code of the wrong length is a wrong code, and five wrong codes lock the email — so one that
+   * cannot be right is refused here, before it spends an attempt.
+   */
+  it.each([
+    ['', 'Enter the code from the email.'],
+    ['K7M4QX2', 'The code is 8 characters.'],
+    ['K7M4QX2PP', 'The code is 8 characters.'],
+  ])('refuses %p before a round trip', (code, message) => {
+    expect(validate(resetCodeSchema, { email: 'tomek@example.com', code })).toEqual({
+      ok: false,
+      fieldErrors: { code: message },
     });
   });
 });

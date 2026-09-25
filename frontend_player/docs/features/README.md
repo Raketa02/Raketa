@@ -23,7 +23,7 @@ is referenced from the other by a sentence, not copied.
 | File                                         | Records                                                                  |
 | -------------------------------------------- | ------------------------------------------------------------------------ |
 | [`_shared.md`](_shared.md)                   | The platform ports, the HTTP client's three verbs, the UI primitives     |
-| [`auth.md`](auth.md)                         | Sign-up's adult attestation, the naming step, the You tab's identity     |
+| [`auth.md`](auth.md)                         | Sign-up's attestation, the naming, the You tab, Forgot password          |
 | [`challenges.md`](challenges.md)             | The send, the challenge screen, the two answers, the fill, the withdraw  |
 | [`conversations.md`](conversations.md)       | The Chats tab, the room, the optimistic send, the live layer, typing     |
 | [`feature_flags.md`](feature_flags.md)       | The datafile, the fallback order, the SDK and cache fences, the gate     |

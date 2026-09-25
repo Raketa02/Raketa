@@ -26,26 +26,27 @@
  * rendered under that box rather than in the banner. A player told "that email already has
  * an account" above a three-field form still has to work out which box to change.
  *
- * **Both password boxes can be read back.** This is the one form in the app that asks for
- * the same secret twice and refuses on a mismatch, so a typo nobody can see costs the
- * player the whole form — and, on a phone whose keychain filled one box and not the other,
- * makes it impossible to tell what actually happened. Each box reveals on its own; showing
- * one says nothing about the other.
+ * **The two password boxes are `PasswordPairFields`**, *Set a new password*'s too
+ * ([#515](https://github.com/Raketa02/Raketa/issues/515)): both can be read back, and the one
+ * password rule — a letter and a digit as well as the length — is written under the first before
+ * anything is typed. The frame, the email box and the link at the foot are the sign-in screen's
+ * pieces, so this screen owns only what it asks.
  */
 
-import { Link } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { Button, TextField, TickBox, theme } from '@/shared/ui';
+import { Button, TickBox } from '@/shared/ui';
 
 import { useSignUp } from '../hooks/useAuthActions';
 import { ADULT_LABEL, signUpSchema, validate, type FieldErrors } from '../schemas/authForms';
 
+import { AuthFields, AuthFrame } from './AuthFrame';
+import { AuthLink } from './AuthLink';
 import { AuthNotice } from './AuthNotice';
+import { PASSWORD_LABEL, SIGN_UP_COPY } from './authPresentation';
 import { bannerMessage, errorUnderField } from './authErrorMessage';
+import { EmailField } from './EmailField';
+import { PasswordPairFields } from './PasswordPairFields';
 
 export function SignUpScreen() {
   const [email, setEmail] = useState('');
@@ -88,131 +89,50 @@ export function SignUpScreen() {
   const banner = bannerMessage(signUp.error);
 
   return (
-    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={s.flex} behavior={KEYBOARD_AVOIDANCE}>
-        <ScrollView
-          contentContainerStyle={s.content}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
-          <View style={s.header}>
-            <Text style={s.eyebrow}>Raketa</Text>
-            <Text style={s.title}>Create an account</Text>
-          </View>
+    <AuthFrame title={SIGN_UP_COPY.title}>
+      {banner === undefined ? null : <AuthNotice message={banner} />}
 
-          {banner === undefined ? null : <AuthNotice message={banner} />}
+      <AuthFields>
+        <EmailField
+          value={email}
+          onChangeText={setEmail}
+          error={errorFor('email')}
+          textContentType="emailAddress"
+          editable={!signUp.isPending}
+        />
+        <PasswordPairFields
+          label={PASSWORD_LABEL}
+          password={password}
+          onChangePassword={setPassword}
+          passwordError={errorFor('password')}
+          repeat={confirmPassword}
+          onChangeRepeat={setConfirmPassword}
+          repeatError={errorFor('confirmPassword')}
+          onSubmitEditing={submit}
+          editable={!signUp.isPending}
+        />
 
-          <View style={s.form}>
-            <TextField
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              error={errorFor('email')}
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              editable={!signUp.isPending}
-            />
-            <TextField
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              error={errorFor('password')}
-              secureTextEntry
-              reveal
-              autoCapitalize="none"
-              autoComplete="new-password"
-              textContentType="newPassword"
-              editable={!signUp.isPending}
-            />
-            <TextField
-              label="Repeat password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              error={errorFor('confirmPassword')}
-              secureTextEntry
-              reveal
-              autoCapitalize="none"
-              autoComplete="new-password"
-              textContentType="newPassword"
-              returnKeyType="go"
-              onSubmitEditing={submit}
-              editable={!signUp.isPending}
-            />
+        {/* Below the three boxes and above the button, because it is the last thing a
+            player agrees to rather than another detail about the account, and because
+            a refusal has to be visible from the control that provoked it. */}
+        <TickBox
+          label={ADULT_LABEL}
+          checked={adultAttested}
+          onChange={setAdultAttested}
+          error={errorFor('adultAttested')}
+          disabled={signUp.isPending}
+        />
+      </AuthFields>
 
-            {/* Below the three boxes and above the button, because it is the last thing a
-                player agrees to rather than another detail about the account, and because
-                a refusal has to be visible from the control that provoked it. */}
-            <TickBox
-              label={ADULT_LABEL}
-              checked={adultAttested}
-              onChange={setAdultAttested}
-              error={errorFor('adultAttested')}
-              disabled={signUp.isPending}
-            />
-          </View>
+      <Button
+        label={SIGN_UP_COPY.submit}
+        size="lg"
+        busyLabel={SIGN_UP_COPY.submitting}
+        busy={signUp.isPending}
+        onPress={submit}
+      />
 
-          <Button
-            label="Create account"
-            size="lg"
-            busyLabel="Creating account…"
-            busy={signUp.isPending}
-            onPress={submit}
-          />
-
-          <View style={s.footer}>
-            <Text style={s.footerText}>Already have an account?</Text>
-            {/* The same 44pt target the sign-in screen's link wears, and for the same
-                reason — see `SignInScreen`. */}
-            <Link href="/sign-in" asChild>
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel="Sign in"
-                style={({ pressed }) => [s.footerTarget, pressed ? s.footerPressed : undefined]}
-              >
-                <Text style={s.footerLink}>Sign in</Text>
-              </Pressable>
-            </Link>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <AuthLink lead={SIGN_UP_COPY.haveAccount} label={SIGN_UP_COPY.signIn} href="/sign-in" />
+    </AuthFrame>
   );
 }
-
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.color.paper },
-  flex: { flex: 1 },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: theme.size.gutter,
-    paddingVertical: theme.space.xxl,
-    gap: theme.space.lg,
-  },
-  header: { gap: theme.space.xxs },
-  eyebrow: {
-    ...theme.type.eyebrow,
-    color: theme.color.muted,
-    textTransform: 'uppercase',
-  },
-  title: { ...theme.type.h1, color: theme.color.ink },
-  form: { gap: theme.space.md },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: theme.space.xs,
-  },
-  footerText: { ...theme.type.tiny, color: theme.color.muted },
-  footerTarget: {
-    minHeight: theme.size.minTouch,
-    justifyContent: 'center',
-    paddingHorizontal: theme.space.xs,
-  },
-  footerPressed: { opacity: 0.6 },
-  footerLink: { ...theme.type.rlValue, color: theme.color.ink },
-});

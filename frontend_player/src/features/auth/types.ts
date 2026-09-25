@@ -26,6 +26,22 @@ export { NAME_ROW_TITLE, SAVE_NAME, nameLine } from './components/namePresentati
 export { SignInScreen } from './components/SignInScreen';
 export { SignUpScreen } from './components/SignUpScreen';
 
+/**
+ * ***Forgot password?*** ([#515](https://github.com/Raketa02/Raketa/issues/515)) — the email form,
+ * the neutral confirmation, the code, and *Set a new password* by a claimed code or by the email's
+ * link. Each route file reads its params through the parser beside it and mounts the screen.
+ */
+export { ForgotPasswordScreen } from './components/ForgotPasswordScreen';
+export { ResetCodeScreen } from './components/ResetCodeScreen';
+export { ResetSentScreen } from './components/ResetSentScreen';
+export { RESET_ROUTES } from './components/resetRoutes';
+export { SetNewPasswordScreen } from './components/SetNewPasswordScreen';
+export {
+  parseEmailParam,
+  parseResetLinkParams,
+  parseResetTicketParams,
+} from './schemas/resetRouteParams';
+
 export type {
   AuthenticatedUser,
   Naming,

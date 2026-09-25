@@ -88,3 +88,75 @@ dropped — for the opposite reason: it grants nothing. Its one reader is flag e
 sends it as the `isTester` attribute so the flags repo's `testers` segment can reach a player
 without the public datafile ever naming one. A screen that drew differently for a tester would be
 the second, unreviewed flag system the ADR exists to prevent.
+
+**_Forgot password?_ is four screens and a toast, made of the sign-in screen's pieces**
+([#515](https://github.com/Raketa02/Raketa/issues/515),
+[ADR-0184](../../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
+§5). It sits under the Sign in button on the one sign-in screen players and administrators share,
+and walks: the email (`/forgot-password`, opened with whatever the sign-in box held), a neutral
+confirmation (`/forgot-password/sent`), the email and the code (`/forgot-password/code`), and
+_Set a new password_ — by a claimed code at `/forgot-password/new-password`, or by the email's
+link at `/reset/<token>`, the path the email's button names and the one #520 opens from an
+incoming link. **Nothing is drawn twice**: the sign-in screen was taken apart into `AuthFrame` (the
+paper, the keyboard's avoidance, the scroll, _RAKETA_ over the title, and an optional `lead`),
+`EmailField` (the five props that make a box an email box), `AuthLink` (the 44pt text link, by
+`href` or by `onPress`) and `PasswordPairFields` (sign-up's two revealable boxes and the rule), and
+sign-in, sign-up and the four new screens are each those pieces asking one thing. The route paths
+are `RESET_ROUTES` (with `askForResetHref` for every way back to the email form), the recovery's
+sentences are `resetPresentation`'s, and the words sign-in and sign-up still wrote inline moved to
+`authPresentation` on the way past — a label a piece draws on six screens is copy with six readers.
+The text link's press is 6.6's `.7`; the two screens it came from drew `.6`, which that table does
+not have.
+
+**The confirmation says one thing to everybody.** The server answers `202` for an address with an
+account, without one, and past its silent three-an-hour throttle, so the screen after _Send_ is the
+same screen in every case: _if_ that email has an account, a link and a code went to it, and both
+work for an hour, once. The address is said back, because a typo is the likeliest reason nothing
+arrives and saying it tells nobody anything the person did not type. The only failure the email
+form can show is one about reaching the server.
+
+**The code is read the server's way, and its length is checked here where the server does not.**
+Spaces and dashes come out and it is upper-cased before it is sent, so `k7m4-qx2p` is the code. A
+code of the wrong length can only be a wrong one, and five wrong codes lock the email — so the form
+refuses it before it spends an attempt. A wrong code lands **under the code box**; the server says
+`code_incorrect` for a wrong code and for an address nothing was sent to alike, and the sentence
+cannot tell them apart either. **Expired, used and locked each have their own sentence** in the
+banner, told only to someone who typed the right code, and the expired one says to ask again: _No
+email? Ask again_ sits under _Continue_ and carries the email back to the first form.
+
+**The ticket rides in the route, and the refusals are worded by the way in.** A right code buys a
+fifteen-minute ticket, and _Set a new password_ is pushed over the code screen with it as a param —
+navigation state, gone with the screen, and never the keychain's or a store's, since it opens one
+act and outlives nothing. The link's token arrives the same way because a link is a route. Both are
+parsed before anything trusts them (URL-safe base64 to the server's own cap); one that cannot be one
+redirects to the screen it comes from — the code screen for a ticket, the email form for a link.
+The one screen serves both, and they differ in where to go when it did not work: a ticket that ran
+out is _That took too long. Enter the code again._ with _Enter the code again_ going back to boxes
+that still hold the code, which buys another ticket because a claim is not a use; a link has no
+screen under it, so its way out is _Ask again_. **The code's way out follows the refusal**
+(`resetWayOut`): once a refusal says the email itself is spent — expired, used, locked, not found —
+going back would meet the same refusal one screen earlier, so the link becomes _Ask again_ with the
+address carried (the ticket's route carries it beside the ticket for this). Expired, used and
+locked say _that code_ or _that link_ accordingly.
+
+**Setting it is signing in, and the toast is the _done_.** The server signs out everywhere and
+answers this session's pair (ADR-0185 §7); `setNewPassword` hands it to `beginSession` exactly as
+`signIn` does, and the `(auth)` guard sees the session begin and gives it to the entry gate — the
+flow never navigates into the app itself, so an account that owes onboarding goes there. With no
+screen of the flow left to say it on, the mutation's own `onSuccess` raises _New password set. Any
+other phone is signed out._ — it says the second half because a person whose other phone goes
+quiet should know why. That other phone needs nothing new: its next request is `401
+access_token_revoked`, the rotation meets a revoked refresh token, and the session ends on the
+sign-in screen. **No mutation here is retried**: a retried ask spends one of three emails an hour
+on a request nobody saw, a retried claim of a wrong code is a wrong code nobody typed, and a
+retried set whose answer was lost meets `credential_used` about a password that is, in fact, set.
+
+**One password rule, on both forms that choose one.** _Set a new password_ asks for the rule every
+account shares — 8 to 128 characters with a letter and a digit — and states it under the box before
+anything is typed, the nickname's shape. Sign-up checked only the length, and a letters-only
+password there reached the server unchecked; it now shares the schema, the sentence for whichever
+half is missing, and `PasswordPairFields`, so **sign-up draws the rule line under its password box
+too**. The server's `password_too_weak` says the rule itself, under the box.
+
+**Not seen on a device**: the four new screens, the `lead` line under a title, the _Forgot
+password?_ link's place between _Sign in_ and _New to Raketa?_, and sign-up's new rule line.

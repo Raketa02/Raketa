@@ -1,5 +1,5 @@
 /**
- * The four auth mutations, as semantic hooks.
+ * The auth mutations, as semantic hooks.
  *
  * Each one declares its own retry decision at the call site, because the global default
  * is `retry: false` and overriding it silently is how a mutation gets repeated.
@@ -8,6 +8,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
+import { showToast } from '@/shared/store/toast.store';
 
 import type {
   AuthenticatedUser,
@@ -15,13 +16,22 @@ import type {
   Registration,
   SignInCredentials,
 } from '../domain/AuthenticatedUser';
+import type { NewPassword, ResetCodeClaim } from '../domain/passwordReset';
+import { askForPasswordReset } from '../use-cases/askForPasswordReset';
+import { claimResetCode } from '../use-cases/claimResetCode';
 import { namePlayer } from '../use-cases/namePlayer';
+import { setNewPassword } from '../use-cases/setNewPassword';
 import { signIn } from '../use-cases/signIn';
 import { signOut } from '../use-cases/signOut';
 import { signUp } from '../use-cases/signUp';
 
 import { authKeys } from './authKeys';
 import { currentUserQuery } from './useCurrentUser';
+
+/** What the toast says once a new password is set — the copy module's, handed in by the screen. */
+export interface SetNewPasswordOptions {
+  readonly done: string;
+}
 
 /**
  * **Not retried.** A failed sign-in is almost always a wrong password, and repeating it
@@ -114,5 +124,49 @@ export function useNamePlayer() {
       // honoured that would hand the write back as the server's answer.
       await queryClient.fetchQuery({ ...currentUserQuery(), staleTime: 0 });
     },
+  });
+}
+
+/**
+ * ***Forgot password?*** — ask for the email.
+ *
+ * **Not retried.** The server throttles per address and says so to nobody, so a silent retry
+ * spends one of the person's three emails an hour on a request they cannot see; the answer is
+ * identical either way, and a person who got nothing asks again with the button.
+ */
+export function useAskForPasswordReset() {
+  return useMutation<void, AppError, string>({
+    mutationFn: askForPasswordReset,
+    retry: false,
+  });
+}
+
+/**
+ * The code, exchanged for a ticket. **Not retried**: five wrong codes lock the credential, and a
+ * retry of a wrong one is a second wrong one the person never typed.
+ */
+export function useClaimResetCode() {
+  return useMutation<string, AppError, ResetCodeClaim>({
+    mutationFn: claimResetCode,
+    retry: false,
+  });
+}
+
+/**
+ * *Set a new password*, signed in at the end.
+ *
+ * **Not retried.** Setting it spends the link, the code and the ticket together, so a retry of a
+ * request that landed but whose answer was lost meets `credential_used` — a refusal about a
+ * password that is, in fact, set. The person presses again, and is told so in words.
+ *
+ * **The toast is the "done"**: the `(auth)` guard sees the session begin and hands it to the entry
+ * gate, so there is no screen of this flow left to say it on. It says what else happened, because
+ * a person whose other phone goes quiet should know why.
+ */
+export function useSetNewPassword({ done }: SetNewPasswordOptions) {
+  return useMutation<void, AppError, NewPassword>({
+    mutationFn: setNewPassword,
+    retry: false,
+    onSuccess: () => showToast({ message: done, tone: 'ok' }),
   });
 }

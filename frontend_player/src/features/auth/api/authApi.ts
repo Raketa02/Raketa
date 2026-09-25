@@ -18,6 +18,10 @@ type NamingResponse = components['schemas']['NamingResponse'];
 type LoginRequest = components['schemas']['LoginRequest'];
 type LogoutResponse = components['schemas']['LogoutResponse'];
 type RefreshRequest = components['schemas']['RefreshRequest'];
+type ForgotPasswordRequest = components['schemas']['ForgotPasswordRequest'];
+type ClaimCodeRequest = components['schemas']['ClaimCodeRequest'];
+type ClaimTicketResponse = components['schemas']['ClaimTicketResponse'];
+type NewPasswordRequest = components['schemas']['NewPasswordRequest'];
 
 export interface AuthApiOptions {
   readonly signal?: AbortSignal;
@@ -123,6 +127,61 @@ export function revokeRefreshToken(
     method: 'POST',
     path: '/api/v1/auth/logout',
     body: { refresh_token: refreshToken },
+    authenticated: false,
+    signal,
+  });
+}
+
+/**
+ * *Forgot password?* — ask for an email with a link and an 8-character code
+ * ([ADR-0184](../../../../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
+ * §5). Answered `202` with no body **whoever asks**: for an address with an account, without one,
+ * and past the per-address throttle, which sends nothing and says so to nobody.
+ */
+export function forgotPassword(
+  body: ForgotPasswordRequest,
+  { signal }: AuthApiOptions = {},
+): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: '/api/v1/auth/forgot-password',
+    body,
+    authenticated: false,
+    signal,
+  });
+}
+
+/**
+ * The email and the code, exchanged for a short-lived **ticket** the new password is set with. A
+ * claim is not a use: until a password is set, the same code buys another ticket. A wrong code is
+ * `code_incorrect` whatever else is true; only a right one learns it is expired, used or locked.
+ */
+export function claimForgotPasswordCode(
+  body: ClaimCodeRequest,
+  { signal }: AuthApiOptions = {},
+): Promise<ClaimTicketResponse> {
+  return httpRequest<ClaimTicketResponse>({
+    method: 'POST',
+    path: '/api/v1/auth/forgot-password/claim',
+    body,
+    authenticated: false,
+    signal,
+  });
+}
+
+/**
+ * Set the new password with **exactly one** of the link's `token` or a claimed code's `ticket`.
+ * It signs out everywhere — every token issued before this moment is refused from here on — and
+ * answers this session's own new pair, signed in.
+ */
+export function setForgottenPassword(
+  body: NewPasswordRequest,
+  { signal }: AuthApiOptions = {},
+): Promise<TokenResponse> {
+  return httpRequest<TokenResponse>({
+    method: 'POST',
+    path: '/api/v1/auth/forgot-password/new-password',
+    body,
     authenticated: false,
     signal,
   });
