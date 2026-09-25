@@ -32,8 +32,8 @@ before writing it, which is what every section from **Player profile** down was:
 accepted ADR and written here first, then built. Their terms are here because that is the order
 this file asks for, not because the code landed first — so **whether a context is built is stated
 in its own section and nowhere else**, which is what the paragraph below has always asked for and
-what the last three sections here — **Club**, **Groups** and **Administrators**, settled and not
-yet built — depend on.
+what the last three sections here — **Club**, **Groups** and **Administrators**, each built
+ticket by ticket — depend on.
 
 > **A verdict narrower than that belongs to the section it is about.** This paragraph carried a
 > clause per context and went stale twice, because a per-context verdict at the top is a second
@@ -208,7 +208,7 @@ Identity and account state.
   exists as a distinct type so the code reads in the domain's own vocabulary and so the two have
   one place to diverge, but today every `PlayerId` is a `UserId`. There is no `players` table.
   **Revisited 2026-09-25, because a settled decision meets its condition:** club staff are to
-  share this accounts system as **Administrators** — settled, not built yet
+  share this accounts system as **Administrators**
   ([ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)).
   The model holds: one User may act as a player, as an Administrator for each club that named
   it, or both — **one email, one password** — and neither side is a second identity. Revisit
@@ -237,7 +237,7 @@ Identity and account state.
   cut from it. Null until the **naming**
   ([ADR-0171](docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)) —
   except on an account an **Invitation** created, which carries **the name the club typed** from
-  the start and no Nickname — settled, not built yet
+  the start and no Nickname
   ([ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §4).
 - **Nickname** — value object. Trimmed, 2–64 chars, `[A-Za-z0-9_.-]`, **unique**. A **handle**:
   shown as `@nickname` under the name on a player's record and on their own You tab, and **said
@@ -249,7 +249,8 @@ Identity and account state.
   player's. Sign-up asks for credentials only — email, password, the Adult attestation — and a
   `User` is created unnamed. Its step is reached while the account is **not named in full** and
   asks only for what is missing: an account an Invitation created is asked for the nickname
-  alone, and the act still carries both (settled by ADR-0185 §4, not built yet).
+  alone, and the act still carries both (ADR-0185 §4). `/users/me` carries the name and the
+  nickname each on its own, so the step can tell which is missing.
 - **RawPassword** — the plaintext at the boundary; 8–128 chars with ≥1 letter and ≥1
   digit. Carrying it as a type is what prevents hashing an unchecked string.
 - **HashedPassword** — non-empty bcrypt hash; the only password form ever persisted.
@@ -263,7 +264,10 @@ Identity and account state.
   or negative answer, so no sign-up exists without one. **An account an Invitation created holds
   none** — running a club's groups asks nobody's age — and gives it at **Start playing**, before
   anything player-side: no Skill rating, Player profile or place in a pool exists without one.
-  Settled, not built yet: today every account is made by sign-up and holds one.
+  Given later by `POST /users/me/adult-attestation`, once; and **refused where a player-side
+  record begins** — an assessment's start and a Player profile's commit meet
+  `adult_attestation_missing` until it is given. An account registered before the question
+  existed is read as **not attested** — nobody was asked — and never as a claim it did not make.
   **It is not age verification** and claims nothing of the sort: it records that the question
   was asked and answered. Nothing downstream ever asks *how old* — only *may they be here* —
   so there is no age, band or date anywhere in the system to read, and the candidate index
@@ -281,6 +285,16 @@ Identity and account state.
   - **UserDisabled** — `users.user_disabled` / v1.
   - **UserPromotedToAdmin** — `users.user_promoted_to_admin` / v1.
   - **UserMarkedAsTester** — `users.user_marked_as_tester` / v1 — the **Tester** mark set.
+  - **AccountOpenedByInvitation** — `users.account_opened_by_invitation` / v1 — the other way
+    a stream begins: an account an **Invitation** opened when its person set a password,
+    carrying **the name the club typed**, the hash, and **no Nickname and no attestation**.
+  - **AdultAttested** — `users.adult_attested` / v1 — the Adult attestation given after the
+    account was opened, at *Start playing*. Recorded once.
+  - **PasswordChanged** — `users.password_changed` / v1 — a new password and the instant every
+    older session stopped counting; carries the new hash.
+  - **PasswordCleared** — `users.password_cleared` / v1 — the club's *Reset password* of an
+    administrator-only account: no password at all, signed out everywhere; nothing signs in
+    until one is set.
   - **UserUnmarkedAsTester** — `users.user_unmarked_as_tester` / v1 — the mark cleared. Two
     events and not one carrying a boolean, so the stream says who was a tester and when in the
     words it was done in ([ADR-0180](docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
@@ -295,7 +309,7 @@ Identity and account state.
 - **Signing up requires an Adult attestation, and a default is not one.** `RegisterUser`
   refuses without it — `AdultAttestationRequired`, a 400 — before it reads the email, so a
   caller who answered nothing learns nothing about whether it is taken. An account an Invitation
-  created will be the one account without it, until it starts playing (ADR-0185; not built yet).
+  created is the one account without it, until it starts playing (ADR-0185 §5).
   The client writes the sentence; the backend only names the code
   ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)).
 - **`disable()` is idempotent** — a no-op on an already-inactive user.
@@ -324,11 +338,13 @@ Authentication and session lifecycle.
   token for one is refused on the other. The Administrator profile runs under the player app's
   audience — switching profiles is not a new token
   ([ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
-  §6). Settled, not built yet.
+  §6). Built by [#503](https://github.com/Raketa02/Raketa/issues/503).
 - **Signing out everywhere** — what a password change does: the account's **credentials-changed
   instant** moves, every access token issued before it is refused, and every refresh token it
   holds is revoked. Set by *Forgot password?*, by the club's *Reset password* and by any other
-  password change, for a User and a Club account alike (ADR-0185 §7). Settled, not built yet.
+  password change, for a User and a Club account alike (ADR-0185 §7). Built by
+  [#507](https://github.com/Raketa02/Raketa/issues/507); the club's reset by
+  [#508](https://github.com/Raketa02/Raketa/issues/508).
   _Avoid_: "logout all", "kill sessions".
 - **TokenService** — port for signing/decoding JWTs (`JwtTokenService` adapter).
 - **PasswordHasher** — port for bcrypt hashing (`BcryptPasswordHasher` adapter).
@@ -2040,9 +2056,11 @@ Settled by
 [ADR-0184](docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
 and
 [ADR-0185](docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
-on [#501](https://github.com/Raketa02/Raketa/issues/501). **Not built yet** —
-[#507](https://github.com/Raketa02/Raketa/issues/507) and
-[#508](https://github.com/Raketa02/Raketa/issues/508) build it.
+on [#501](https://github.com/Raketa02/Raketa/issues/501), and built by
+[#507](https://github.com/Raketa02/Raketa/issues/507) (the one-time credentials) and
+[#508](https://github.com/Raketa02/Raketa/issues/508) (the Administrator, the Invitation and the
+guard). Official groups arrive with [#509](https://github.com/Raketa02/Raketa/issues/509) and the
+Handover with [#510](https://github.com/Raketa02/Raketa/issues/510).
 
 **The person a club names to run its WhatsApp groups inside Raketa.** Their one job is to make an
 Official group per WhatsApp group and post its link there.
@@ -2064,6 +2082,29 @@ Official group per WhatsApp group and post its link there.
   name the club typed, with no Nickname and no Adult attestation; an **existing account** accepts
   it from the app, with no password step. _Avoid_: invite code (the code is one half of it),
   *join request* (that is a player asking a group), onboarding.
+- **Administrator events** (durable name / version) — never a link, a code or a ticket:
+  - **AdministratorInvited** — `administrators.administrator_invited` / v1 — the club named a
+    person; the first event of the stream, and again when a removed person is invited again.
+  - **InvitationResent** — `administrators.invitation_resent` / v1 — a fresh 72 hours.
+  - **InvitationAccepted** — `administrators.invitation_accepted` / v1 — taken up, by setting a
+    password through it or by accepting in the app; *active*, linked to that account.
+  - **AdministratorPasswordReset** — `administrators.administrator_password_reset` / v1 — the
+    club's *Reset password*: back to *invited*, the account still linked.
+  - **AdministratorRemoved** — `administrators.administrator_removed` / v1.
+
+**Invariants**
+- **One Administrator per (club, email)**: inviting an address already *invited* — *expired*
+  included — or *active* at the club is refused on the spot (`administrator_already_invited`,
+  `administrator_already_active`); a removed one is invited again on the same stream.
+- **Expired is derived, never recorded**: from the last time the invitation went out plus the
+  invitation credential's 72 hours, so an existing account's invitation — which carries no code —
+  lapses when a new person's would.
+- **The club's *Reset password* is refused for an account that acts as a player**
+  (`administrator_also_plays`) — attested, or holding a Player profile — and for somebody who
+  never set a password (`administrator_has_no_account`).
+- **Every administrator operation asks again**: an active administratorship of this account at
+  the club the request names, or `not_an_administrator` — the request after a removal. The
+  person's player side and its sessions are untouched.
 
 ## Cross-cutting concepts
 
