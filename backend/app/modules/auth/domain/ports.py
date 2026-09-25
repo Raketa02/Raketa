@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional, Protocol, final, runtime_checkable
+from typing import (
+    AbstractSet,
+    Any,
+    Dict,
+    Optional,
+    Protocol,
+    final,
+    runtime_checkable,
+)
 from uuid import UUID
 
 from app.kernel import Instant
@@ -164,24 +172,28 @@ class OneTimeCredentialStore(Protocol):
         self,
         email: str,
         *,
-        purpose: CredentialPurpose,
+        purposes: AbstractSet[CredentialPurpose],
         audience: Audience,
         since: Instant,
     ) -> list[OneTimeCredential]:
-        """Every credential of this kind issued to this address on this surface
-        after ``since`` — exclusive, so *the last hour* ends an hour after the
-        first one — newest first: what a claim checks a code against, and what
-        the request throttle counts."""
+        """Every credential of these kinds issued to this address on this
+        surface after ``since`` — exclusive, so *the last hour* ends an hour
+        after the first one — newest first: what a claim checks a code against,
+        and what the request throttle counts.
+
+        **A set of purposes**, because one code box can be fed by two emails:
+        the app's *Have an invitation code?* takes the invitation's code and the
+        club's reset of one alike (``docs/adr/0186`` §3)."""
         ...
 
     async def live_for(
         self,
         subject_id: UUID,
         *,
-        purpose: CredentialPurpose,
+        purposes: AbstractSet[CredentialPurpose],
         audience: Audience,
         now: Instant,
     ) -> list[OneTimeCredential]:
-        """Every credential of this kind for this subject that has not expired
+        """Every credential of these kinds for this subject that has not expired
         and not been used — what a newer one retires."""
         ...

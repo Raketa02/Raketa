@@ -11,9 +11,13 @@ club audience and its routes refuse the player app's (``docs/adr/0185`` §6).
 
 from fastapi import APIRouter
 
+from app.modules.administrators.presentation.club_routes import (
+    router as administrators_router,
+)
 from app.modules.clubs.presentation.auth_routes import router as club_auth_router
 from app.modules.clubs.presentation.routes import router as clubs_router
 
 club_api_router = APIRouter(prefix="/api/v1/club")
 club_api_router.include_router(club_auth_router)
 club_api_router.include_router(clubs_router)
+club_api_router.include_router(administrators_router)

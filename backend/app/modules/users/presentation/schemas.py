@@ -11,7 +11,8 @@ from pydantic import (
     field_validator,
 )
 
-from app.modules.users.domain.ports import Naming
+from app.modules.administrators.presentation.schemas import AccountProfilesSchema
+from app.modules.users.application.read_own_account import OwnAccount
 from app.modules.users.domain.user import User
 
 
@@ -125,8 +126,10 @@ class UserResponse(BaseModel):
     and a second round trip for one boolean would be a second thing to fail
     (``docs/adr/0090``).
 
-    ``name`` and ``nickname`` are **null until the naming**, and this is the one
-    read where either may be null (``docs/adr/0171`` §2): a player on any
+    ``name`` and ``nickname`` are **null until the naming** — and each on its
+    own since ``docs/adr/0185`` §4, because an account an Invitation opened
+    carries the club-typed name and no nickname — and this is the one read
+    where either may be null (``docs/adr/0171`` §2): a player on any
     surface that names another player has necessarily been named, because the
     gate holds an unnamed account at the naming step. On ``/me`` they are read
     from the player's own stream, as ``has_player_profile`` is, so they are
@@ -145,8 +148,10 @@ class UserResponse(BaseModel):
         default=None,
         description=(
             "What this player is called — what every screen says. `null` until "
-            "the naming, and **the entry gate's first destination**: a player "
-            "with no name is sent to the naming step before anything else."
+            "the naming — except on an account an invitation opened, which "
+            "carries the name the club typed. The entry gate's first "
+            "destination is **not named in full**: no name, or no nickname — "
+            "and the naming step asks only for what is missing."
         ),
     )
     nickname: Optional[str] = Field(
@@ -188,10 +193,10 @@ class UserResponse(BaseModel):
         user: User,
         *,
         has_player_profile: bool = False,
-        naming: Naming | None = None,
+        own: OwnAccount | None = None,
     ) -> "UserResponse":
-        """``naming`` is the stream's answer, and the only source of the two
-        fields: ``/me`` passes what :class:`ReadNaming` folded, and the
+        """``own`` is the stream's answer, and the only source of the two
+        fields: ``/me`` passes what :class:`ReadOwnAccount` folded, and the
         registration passes nothing because a fresh account is unnamed. There
         is deliberately no fallback to the aggregate's own ``name`` — the row
         it was loaded from is a projection, and ``docs/adr/0171`` §3 reads the
@@ -200,8 +205,8 @@ class UserResponse(BaseModel):
         return cls(
             id=user.id,
             email=user.email.value,
-            name=None if naming is None else naming.name,
-            nickname=None if naming is None else naming.nickname,
+            name=None if own is None else own.name,
+            nickname=None if own is None else own.nickname,
             authority=user.authority.value,
             is_admin=user.is_admin,
             is_active=user.is_active,
@@ -209,3 +214,59 @@ class UserResponse(BaseModel):
             created_at=user.created_at,
             has_player_profile=has_player_profile,
         )
+
+
+class MeResponse(UserResponse):
+    """``/me``: the account, and **which profiles it holds**
+    (``docs/adr/0185`` §2) — what the entry gate reads ahead of every
+    onboarding destination.
+
+    Its own shape rather than more fields on :class:`UserResponse`, because the
+    registration's answer is about an account one line old and has no honest
+    value for either: it holds no profile yet, and ``/me`` is where the gate
+    reads them.
+    """
+
+    adult_attested: bool = Field(
+        ...,
+        description=(
+            "Whether this account has given the Adult attestation. Every "
+            "sign-up has; an account an invitation opened has not, and *Start "
+            "playing* asks it first — `POST /users/me/adult-attestation`."
+        ),
+    )
+    profiles: AccountProfilesSchema
+
+    @classmethod
+    def from_parts(
+        cls,
+        user: User,
+        *,
+        has_player_profile: bool,
+        own: OwnAccount,
+        profiles: AccountProfilesSchema,
+    ) -> "MeResponse":
+        base = UserResponse.from_domain(
+            user, has_player_profile=has_player_profile, own=own
+        )
+        return cls(
+            **base.model_dump(),
+            adult_attested=own.adult_attested,
+            profiles=profiles,
+        )
+
+
+class AdultAttestationRequest(BaseModel):
+    """The Adult attestation, given by an account that already exists — what
+    *Start playing* asks first (``docs/adr/0185`` §5)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    adult_attested: bool = Field(
+        ...,
+        description=(
+            "Required to be `true`, exactly as at sign-up: `false` is refused "
+            "with `adult_attestation_required`. **Not a date of birth and not "
+            "age verification.**"
+        ),
+    )

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any, Final
 
-from fastapi import Depends
+from fastapi import Depends, status
 
 from app.api.dependencies import (
     ClockDep,
@@ -13,10 +13,12 @@ from app.api.dependencies import (
     UnitOfWorkDep,
     UserRepositoryDep,
 )
+from app.core.exception_handlers import ErrorResponse
 from app.core.security import BearerCredentialsDep
 from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.application.name_user import NameUser
-from app.modules.users.application.read_naming import ReadNaming
+from app.modules.users.application.attest_adult import AttestAdult
+from app.modules.users.application.read_own_account import ReadOwnAccount
 from app.modules.users.application.register_user import RegisterUser
 from app.modules.users.application.resolve_current_user import (
     AuthenticatedSession,
@@ -61,11 +63,23 @@ def get_name_user(
 NameUserDep = Annotated[NameUser, Depends(get_name_user)]
 
 
-def get_read_naming(event_store: DomainEventStoreDep) -> ReadNaming:
-    return ReadNaming(event_store=event_store)
+def get_read_own_account(event_store: DomainEventStoreDep) -> ReadOwnAccount:
+    return ReadOwnAccount(event_store=event_store)
 
 
-ReadNamingDep = Annotated[ReadNaming, Depends(get_read_naming)]
+ReadOwnAccountDep = Annotated[ReadOwnAccount, Depends(get_read_own_account)]
+
+
+def get_attest_adult(
+    event_store: DomainEventStoreDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+    events: EventPublisherDep,
+) -> AttestAdult:
+    return AttestAdult(event_store=event_store, uow=uow, clock=clock, events=events)
+
+
+AttestAdultDep = Annotated[AttestAdult, Depends(get_attest_adult)]
 
 
 def get_current_user_use_case(
@@ -126,3 +140,29 @@ async def current_user(
 
 
 CurrentUserDep = Annotated[User, Depends(current_user)]
+
+
+async def attested_player(user: CurrentUserDep, own: ReadOwnAccountDep) -> User:
+    """The signed-in account, **refused unless it has given the Adult
+    attestation** (``docs/adr/0185`` §5) — what the two acts a player-side
+    record begins with take instead of ``CurrentUserDep``: starting an
+    assessment, and committing a Player profile. One stream read, on two routes
+    a player meets once per sport and once."""
+
+    await own.refuse_unless_attested(user.id)
+    return user
+
+
+AttestedPlayerDep = Annotated[User, Depends(attested_player)]
+
+#: What a route taking ``AttestedPlayerDep`` declares beside its own refusals.
+ADULT_ATTESTATION_MISSING: Final[dict[int | str, dict[str, Any]]] = {
+    status.HTTP_403_FORBIDDEN: {
+        "model": ErrorResponse,
+        "description": (
+            "`adult_attestation_missing` — this account has not given the Adult "
+            "attestation, which playing requires: an account an invitation "
+            "opened, before *Start playing*'s first step."
+        ),
+    },
+}

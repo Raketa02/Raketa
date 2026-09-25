@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Final, Optional, final
+from typing import AbstractSet, Final, Optional, final
 from uuid import UUID
 
 from app.kernel import Instant, instant
@@ -103,20 +103,24 @@ class OneTimeCredentials:
         subject_id: UUID,
         email: str,
         now: Instant,
+        retiring: Optional[AbstractSet[CredentialPurpose]] = None,
     ) -> OneTimeCredential:
         """Store ``prepared`` as the credential for ``subject_id``.
 
         **A newer credential retires the older ones for the same thing**: a
         second *Forgot password?*, or a resent invitation, leaves exactly one
         link and one code that work — the newest — and the older ones read
-        *expired*.
+        *expired*. ``retiring`` widens *the same thing* past this purpose: the
+        club's reset of an administrator retires a live invitation for them
+        too, since both open the same page for the same person.
         """
 
-        for older in await self._store.live_for(
-            subject_id, purpose=purpose, audience=audience, now=now
-        ):
-            older.retire(now=now)
-            await self._store.save(older)
+        await self.retire(
+            subject_id,
+            purposes=retiring if retiring is not None else {purpose},
+            audience=audience,
+            now=now,
+        )
         credential = OneTimeCredential.issue(
             credential_id=new_uuid(),
             purpose=purpose,
@@ -129,6 +133,25 @@ class OneTimeCredentials:
         )
         await self._store.add(credential)
         return credential
+
+    async def retire(
+        self,
+        subject_id: UUID,
+        *,
+        purposes: AbstractSet[CredentialPurpose],
+        audience: Audience,
+        now: Instant,
+    ) -> None:
+        """End every live credential of these kinds for ``subject_id`` now, so
+        its link and its code read *expired* — what a newer one does to the
+        older, and what an act that makes the credential pointless does to it:
+        an invitation accepted in the app, or an administrator removed."""
+
+        for older in await self._store.live_for(
+            subject_id, purposes=purposes, audience=audience, now=now
+        ):
+            older.retire(now=now)
+            await self._store.save(older)
 
     async def issued_since(
         self,
@@ -143,7 +166,7 @@ class OneTimeCredentials:
 
         return len(
             await self._store.issued_to(
-                email, purpose=purpose, audience=audience, since=since
+                email, purposes={purpose}, audience=audience, since=since
             )
         )
 
@@ -152,26 +175,49 @@ class OneTimeCredentials:
         *,
         email: str,
         code: str,
-        purpose: CredentialPurpose,
+        purposes: AbstractSet[CredentialPurpose],
         audience: Audience,
         now: Instant,
     ) -> ClaimTicket:
-        """Exchange a correct code for a ticket.
-
-        **Only the right code learns the credential's standing.** A wrong one —
-        and a code for an address nothing was sent to — is ``code_incorrect``
-        and nothing else, so the claim cannot be used to learn that an address
-        has an account. A wrong code counts against every credential of this
-        kind still live for that address; the fifth locks each.
+        """Exchange a correct code for a ticket: :meth:`verify_code`, then
+        :meth:`grant_ticket`, for a flow with nothing to ask in between.
 
         The caller commits whether this returns or raises: a wrong code that was
         not recorded would be a guess that cost nothing.
         """
 
+        credential = await self.verify_code(
+            email=email, code=code, purposes=purposes, audience=audience, now=now
+        )
+        return await self.grant_ticket(credential, now=now)
+
+    async def verify_code(
+        self,
+        *,
+        email: str,
+        code: str,
+        purposes: AbstractSet[CredentialPurpose],
+        audience: Audience,
+        now: Instant,
+    ) -> OneTimeCredential:
+        """The credential this code was sent with, if it may still be used.
+
+        **Only the right code learns the credential's standing.** A wrong one —
+        and a code for an address nothing was sent to — is ``code_incorrect``
+        and nothing else, so the claim cannot be used to learn that an address
+        has an account. A wrong code counts against every credential of these
+        kinds still live for that address; the fifth locks each.
+
+        Split from :meth:`grant_ticket` so a flow may ask one more question of
+        the credential a right code opened before it hands a ticket out — an
+        invitation whose address has since become an account's is answered
+        *sign in to accept* instead (``docs/adr/0184`` §2).
+        """
+
         typed = TypedCode(code).value
         candidates = await self._store.issued_to(
             email,
-            purpose=purpose,
+            purposes=purposes,
             audience=audience,
             since=instant(now - CLAIM_LOOKBACK),
         )
@@ -185,12 +231,7 @@ class OneTimeCredentials:
             if not self._hasher.verify(typed, candidate.code_hash):
                 continue
             candidate.refuse_unless_valid(now=now)
-            ticket = self._secrets.mint()
-            candidate.grant_ticket(digest_of(ticket), now=now)
-            await self._store.save(candidate)
-            return ClaimTicket(
-                ticket=ticket, expires_in=candidate.ticket_seconds_left(now=now)
-            )
+            return candidate
 
         for candidate in candidates:
             if candidate.standing(now=now) is Standing.VALID:
@@ -198,22 +239,38 @@ class OneTimeCredentials:
                 await self._store.save(candidate)
         raise CredentialCodeIncorrect()
 
+    async def grant_ticket(
+        self, credential: OneTimeCredential, *, now: Instant
+    ) -> ClaimTicket:
+        """A ticket for a credential :meth:`verify_code` opened, replacing any
+        earlier one."""
+
+        ticket = self._secrets.mint()
+        credential.grant_ticket(digest_of(ticket), now=now)
+        await self._store.save(credential)
+        return ClaimTicket(
+            ticket=ticket, expires_in=credential.ticket_seconds_left(now=now)
+        )
+
     async def redeemable(
         self,
         *,
         token: Optional[str],
         ticket: Optional[str],
-        purpose: CredentialPurpose,
+        purposes: AbstractSet[CredentialPurpose],
         audience: Audience,
         now: Instant,
     ) -> OneTimeCredential:
         """The credential a link or a ticket opens, if it may be used now.
 
-        A link or a ticket this surface did not issue for this purpose is
-        ``credential_not_found`` — a player's link presented to the club website
-        included. Otherwise the credential's own refusals come first, and a
-        ticket's lapse only after them: a used credential is *used* whatever its
-        ticket says.
+        A link or a ticket this surface did not issue for one of these purposes
+        is ``credential_not_found`` — a player's link presented to the club
+        website included, and a reset link presented to the invitation's page.
+        **A set**, because the invitation's page opens two kinds: the invitation
+        and the club's reset of an administrator (``docs/adr/0186`` §3).
+
+        Otherwise the credential's own refusals come first, and a ticket's lapse
+        only after them: a used credential is *used* whatever its ticket says.
         """
 
         if token is not None:
@@ -222,17 +279,41 @@ class OneTimeCredentials:
             credential = await self._store.by_ticket_hash(digest_of(ticket))
         else:
             raise CredentialNotFound()
-        if (
-            credential is None
-            or credential.purpose is not purpose
-            or credential.audience is not audience
-        ):
+        if credential is None or not _issued_for(credential, purposes, audience):
             raise CredentialNotFound()
         credential.refuse_unless_valid(now=now)
         if token is None:
             credential.refuse_unless_ticket_lasts(now=now)
         return credential
 
+    async def opened_by(
+        self,
+        token: str,
+        *,
+        purposes: AbstractSet[CredentialPurpose],
+        audience: Audience,
+    ) -> Optional[OneTimeCredential]:
+        """The credential a link opens, **whatever its standing** — what a page
+        that reads *valid*, *expired*, *used* or *locked* off a link is drawn
+        from — or ``None`` for a link this surface never issued for these
+        purposes."""
+
+        credential = await self._store.by_token_hash(digest_of(token))
+        if credential is None or not _issued_for(credential, purposes, audience):
+            return None
+        return credential
+
     async def use(self, credential: OneTimeCredential, *, now: Instant) -> None:
         credential.use(now=now)
         await self._store.save(credential)
+
+
+def _issued_for(
+    credential: OneTimeCredential,
+    purposes: AbstractSet[CredentialPurpose],
+    audience: Audience,
+) -> bool:
+    """Whether a link or a ticket was issued by this surface for one of these
+    purposes — anything else is a link this flow never sent."""
+
+    return credential.purpose in purposes and credential.audience is audience

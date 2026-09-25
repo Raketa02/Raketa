@@ -54,13 +54,13 @@ READS = {
     "by_ticket_hash": lambda store: store.by_ticket_hash("digest"),
     "issued_to": lambda store: store.issued_to(
         "tomek@example.com",
-        purpose=CredentialPurpose.FORGOT_PASSWORD,
+        purposes={CredentialPurpose.FORGOT_PASSWORD},
         audience=Audience.PLAYER_APP,
         since=NOW,
     ),
     "live_for": lambda store: store.live_for(
         uuid4(),
-        purpose=CredentialPurpose.FORGOT_PASSWORD,
+        purposes={CredentialPurpose.FORGOT_PASSWORD},
         audience=Audience.PLAYER_APP,
         now=NOW,
     ),

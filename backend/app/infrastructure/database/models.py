@@ -3,6 +3,9 @@
 from app.infrastructure.events.event_delivery_model import EventOutboxORM
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.infrastructure.mail.mail_queue_model import MailQueueORM
+from app.modules.administrators.infrastructure.administrator_model import (
+    AdministratorORM,
+)
 from app.modules.auth.infrastructure.one_time_credential_model import (
     OneTimeCredentialORM,
 )
@@ -32,6 +35,7 @@ from app.modules.sportsmanship.infrastructure.card_model import (
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
+    "AdministratorORM",
     "CandidateIndexCursorORM",
     "CandidatePlayerFactsORM",
     "CandidateRowORM",

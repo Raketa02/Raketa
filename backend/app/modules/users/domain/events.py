@@ -115,3 +115,57 @@ class PasswordChanged:
     user_id: UUID
     password_hash: str
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class AccountOpenedByInvitation:
+    """An account an **Invitation** opened, the moment its person set a password
+    (``docs/adr/0184`` §2, ``docs/adr/0185`` §4–§5).
+
+    The other way a stream begins, beside :class:`UserRegistered`, and a
+    different shape on purpose: **the name the club typed** arrives with the
+    account, so it is not unnamed — and there is **no nickname and no Adult
+    attestation**, because the club typed an email and not the person. Nothing
+    player-side reacts to it: an account like this is in no pool until it has
+    attested and been through onboarding.
+
+    Carries the hash, as ``UserRegistered`` does — a password is chosen by its
+    holder and lives as long as the account. The one-time credential that opened
+    the way to it never enters an event (``docs/adr/0184`` §4).
+    """
+
+    user_id: UUID
+    email: str
+    password_hash: str
+    name: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class AdultAttested:
+    """The Adult attestation, **given after the account was opened**
+    (``docs/adr/0185`` §5) — at *Start playing*, by an account an Invitation
+    opened, before anything player-side can be reached.
+
+    A claim and never a date, exactly as the sign-up's is (``docs/adr/0124``).
+    Recorded once: an account that has attested is not asked again.
+    """
+
+    user_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class PasswordCleared:
+    """The club's *Reset password* cleared this account's password
+    (``docs/adr/0184`` §6), and **signed it out everywhere**: ``occurred_at``
+    is the credentials-changed instant, as :class:`PasswordChanged`'s is.
+
+    **Carries no hash**, because there is none: until the person sets one
+    through the invitation's page, or *Forgot password?*, nothing signs in.
+    Only an account holding nothing but administrator profiles is ever
+    cleared — the club made it, and may help recover it.
+    """
+
+    user_id: UUID
+    occurred_at: datetime

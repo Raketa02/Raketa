@@ -53,7 +53,11 @@ from app.modules.rating.presentation.schemas import (
     RatingsResponse,
     SubmitAnswerRequest,
 )
-from app.modules.users.presentation.dependencies import CurrentUserDep
+from app.modules.users.presentation.dependencies import (
+    ADULT_ATTESTATION_MISSING,
+    AttestedPlayerDep,
+    CurrentUserDep,
+)
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
 ratings_router = APIRouter(prefix="/ratings", tags=["ratings"])
@@ -93,6 +97,7 @@ async def list_ratings(
                 "A new assessment was started; its opening question is returned."
             ),
         },
+        **ADULT_ATTESTATION_MISSING,
         status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,
             "description": (
@@ -121,7 +126,7 @@ async def list_ratings(
 )
 async def create_assessment(
     body: CreateAssessmentRequest,
-    current_user: CurrentUserDep,
+    current_user: AttestedPlayerDep,
     use_case: CreateAssessmentDep,
     response: Response,
 ) -> AssessmentStepResponse:

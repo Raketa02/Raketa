@@ -180,6 +180,11 @@ from app.seeds.clock import (
     age_in_days,
     days_before,
 )
+from app.seeds.administrators import (
+    SeededAdministrators,
+    administrator_lines,
+    write_the_administrators,
+)
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.groups import SeededGroups, group_lines, write_the_groups
 from app.seeds.cohort import (
@@ -1201,6 +1206,9 @@ class SeedReport:
     #: The player groups at those clubs, and who is in each. ``None`` on the same
     #: callers and for the same reason.
     groups: SeededGroups | None = None
+    #: The people a club made administrators, and how each got in. ``None`` on
+    #: the same callers and for the same reason.
+    administrators: SeededAdministrators | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1262,6 +1270,14 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # anybody else reads — no pair, no index row, no court — so its position
         # among the later layers is free.
         groups = await write_the_groups(session_factory, settings=settings, now=now)
+        # **The administrators after their club and the accounts they name.**
+        # Nothing below reads an administratorship, and one changes nothing a
+        # player-side layer reads — the administrator-only account is in no
+        # pool — so, like the groups, its position among the later layers is
+        # free.
+        administrators = await write_the_administrators(
+            session_factory, settings=settings, now=now
+        )
         # **The played history first, and the order is load-bearing.** A game is
         # a challenge every seat accepted, so each one spends a pair for good;
         # the relationship layer then plans its inboxes against a world those
@@ -1341,6 +1357,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             opinions=opinions,
             clubs=clubs,
             groups=groups,
+            administrators=administrators,
             photographs=photographs,
         )
     finally:
@@ -1433,6 +1450,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *club_lines(run_report.clubs)])
     if run_report.groups is not None:
         lines.extend(["", *group_lines(run_report.groups)])
+    if run_report.administrators is not None:
+        lines.extend(["", *administrator_lines(run_report.administrators)])
     if run_report.played is not None:
         lines.extend(["", *_played_lines(run_report.played)])
     if run_report.opinions is not None:

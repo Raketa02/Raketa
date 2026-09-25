@@ -272,6 +272,16 @@ class Settings(BaseSettings):
     # to `https://` once deployed, as the public site's address is.
     CLUB_WEBSITE_URL: str = DEFAULT_CLUB_WEBSITE_URL
 
+    # --- the player app's scheme (docs/adr/0187 §7, docs/adr/0186 §3)
+    #
+    # **Where a button that opens the app goes**: the invitation an existing
+    # account is sent has no link to set a password through, only the app to
+    # accept it in, and its button opens `<APP_SCHEME>://`. One scheme at every
+    # environment, as the app itself declares one (`frontend_player`'s
+    # `app.config.ts`), so there is nothing here for a deployed environment to
+    # refuse; universal links arrive with a domain and replace it there.
+    APP_SCHEME: str = "raketa"
+
     # --- email (docs/adr/0186)
     #
     # **Where mail goes and who it is from are configuration; what it says, and

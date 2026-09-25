@@ -56,6 +56,7 @@ from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
 from app.infrastructure.mail.smtp_mailer import SmtpMailer
 from app.infrastructure.mail.sqlalchemy_mail_queue import SqlAlchemyMailQueue
 from app.kernel import Clock
+from app.modules.auth.application.one_time_credentials import OneTimeCredentials
 from app.modules.auth.domain.ports import (
     CredentialSecrets,
     OneTimeCredentialStore,
@@ -75,6 +76,29 @@ from app.modules.auth.infrastructure.sqlalchemy_one_time_credential_store import
 )
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (
     SqlAlchemyRefreshTokenRepository,
+)
+from app.modules.administrators.application.sending import InvitationSender
+from app.modules.administrators.domain.ports import (
+    AccountHolders,
+    AdministratorDirectory,
+    AdministratorRepository,
+    ClubNames,
+    InvitationLinks,
+)
+from app.modules.administrators.infrastructure.clubs_club_names import (
+    ClubsClubNames,
+)
+from app.modules.administrators.infrastructure.event_sourced_administrator_repository import (  # noqa: E501
+    EventSourcedAdministratorRepository,
+)
+from app.modules.administrators.infrastructure.sqlalchemy_administrator_directory import (  # noqa: E501
+    SqlAlchemyAdministratorDirectory,
+)
+from app.modules.administrators.infrastructure.users_account_holders import (
+    UsersAccountHolders,
+)
+from app.modules.player_profile.application.has_player_profile import (
+    HasPlayerProfile,
 )
 from app.modules.blocks.domain.ports import BlockQuery, BlockRepository
 from app.modules.blocks.infrastructure.event_sourced_block_query import (
@@ -507,6 +531,7 @@ from app.modules.sportsmanship.infrastructure.sqlalchemy_standing_answers import
 from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger import (
     SqlAlchemySportsmanshipLedger,
 )
+from app.modules.users.application.invitation_accounts import InvitationAccounts
 from app.modules.users.application.password_accounts import UserPasswordAccounts
 from app.modules.users.application.session_holders import UserSessionHolders
 from app.modules.users.application.set_tester_mark import SetTesterMark
@@ -666,6 +691,85 @@ def build_club_directory(session: AsyncSession) -> ClubDirectory:
     """What the Club context publishes: its clubs, read off the search
     projection (``docs/adr/0182`` §2) and never as an aggregate."""
     return SqlAlchemyClubDirectory(session)
+
+
+# --------------------------------------------------------------------------
+# Administrators (docs/adr/0184)
+# --------------------------------------------------------------------------
+
+
+def build_administrator_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> AdministratorRepository:
+    """Per unit of work, as every aggregate repository is. **It takes the
+    session as well as the store**, because its ``save`` writes the
+    ``administrators`` row in the same transaction."""
+    return EventSourcedAdministratorRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_administrator_directory(session: AsyncSession) -> AdministratorDirectory:
+    return SqlAlchemyAdministratorDirectory(session)
+
+
+def build_account_holders(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> AccountHolders:
+    """The Users behind administratorships: written by ``users`` on its own
+    stream — an account opened or cleared by ``InvitationAccounts``, a password
+    set by the same ``PasswordAccounts`` *Forgot password?* uses — and *acts as
+    a player* read off that stream and the Player profile's."""
+    return UsersAccountHolders(
+        accounts=InvitationAccounts(
+            users=build_user_repository(session),
+            event_store=event_store,
+            events=events,
+        ),
+        passwords=build_user_password_accounts(
+            session, event_store=event_store, events=events
+        ),
+        profiles=HasPlayerProfile(
+            profiles=build_player_profile_repository(
+                event_store=event_store, events=events
+            )
+        ),
+    )
+
+
+def build_club_names(session: AsyncSession) -> ClubNames:
+    """A club's name, off the clubs' published directory."""
+    return ClubsClubNames(build_club_directory(session))
+
+
+def build_invitation_sender(
+    session: AsyncSession,
+    settings: Settings,
+    *,
+    accounts: AccountHolders,
+    credentials: OneTimeCredentials,
+) -> InvitationSender:
+    """Where every invitation email is decided and queued — the invite, a
+    resend and the club's reset. Its buttons go to the public site's
+    ``/invite/<token>`` for somebody with a password to set, and to the app
+    for an account that only has to accept; both addresses are settings
+    (``docs/adr/0187`` §7). ``credentials`` is the caller's, so a request and a
+    seed run issue through the mechanism they already hold."""
+    return InvitationSender(
+        accounts=accounts,
+        credentials=credentials,
+        mail=build_mail_queue(session),
+        clubs=build_club_names(session),
+        links=InvitationLinks(
+            site=settings.PUBLIC_SITE_URL, app_scheme=settings.APP_SCHEME
+        ),
+    )
 
 
 # --------------------------------------------------------------------------

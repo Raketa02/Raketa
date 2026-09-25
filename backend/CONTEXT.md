@@ -806,7 +806,11 @@ there; they are not repeated here.
   stored readable. A purpose (`invitation`, `club_reset`, `forgot_password`) sets its lifetime and
   an audience says which surface may use it. Its **standing** — valid, expired, used, locked — is
   folded from the clock and the row, never stored. A newer credential for the same subject
-  **retires** the older ones. One mechanism, `OneTimeCredentials`, for every flow that issues one.
+  **retires** the older ones of its purpose — or of every purpose the issuer names: an
+  Administrator's `invitation` and `club_reset` retire each other, because both open the same
+  page for the same person. One mechanism, `OneTimeCredentials`, for every flow that issues one;
+  `verify_code` and `grant_ticket` are its claim split in two, so the invitation's claim can
+  answer *sign in to accept* between them, to somebody holding the right code and nobody else.
 - **Claim ticket** — what a **right** code is exchanged for: a second random secret, stored hashed
   on the credential, good for `TICKET_LIFETIME` and never past the credential's own deadline. The
   new password is set with it, so guessing is bounded to the claim, which is the one place wrong
@@ -822,6 +826,28 @@ there; they are not repeated here.
 - **PasswordAccounts** — the auth port *Forgot password?* recovers through, answered **per
   audience** as `SessionHolders` is: `UserPasswordAccounts` for the player app,
   `ClubPasswordAccounts` for the club website. Each records the change on its own stream.
+
+- **Invitation sender** — `InvitationSender`, where the invite, a resend and the club's reset all
+  end, so the three choose **which email** by one rule read off the account at the moment of
+  sending and recorded nowhere: an account that can sign in is asked to accept in the app, with
+  no credential; anybody else has a password to set and is sent a link and a code — the reset's
+  while one is pending, the invitation's otherwise
+  ([ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §3).
+- **Administrator guard** — `AdministratorAtClubDep`: the request dependency every administrator
+  operation declares, reading **an active administratorship of this account at the club its own
+  path names** on every request, and refusing with `403 not_an_administrator`
+  ([ADR-0184](../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
+  §7). It is also the only writer of **last used**, at most once an hour and in its own commit —
+  the one column on `administrators` no event carries.
+- **AccountHolders** — the Administrators context's demand on `users`: the account behind an
+  address, opening one by invitation, setting or clearing its password, and **acts as a player**
+  (attested, or holding a Player profile). Every write is `users`' own, on the User's stream
+  (`InvitationAccounts`); the adapter only translates.
+- **Attested player** — `AttestedPlayerDep`, what starting an assessment and committing a Player
+  profile take instead of the current user: the account **refused with `403
+  adult_attestation_missing` unless its stream holds the Adult attestation** (ADR-0185 §5). Read
+  off the stream, because the `users` row has no column for it — and a `User` read from the row
+  carries `adult_attested=None`, meaning *not read here*, never *not attested*.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

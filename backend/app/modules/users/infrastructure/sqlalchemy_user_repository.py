@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.stored_time import stored_instant_or_none
 from app.modules.users.domain.events import (
+    AccountOpenedByInvitation,
     PasswordChanged,
+    PasswordCleared,
     UserMarkedAsTester,
     UserNamed,
     UserRegistered,
@@ -32,7 +34,9 @@ def _to_domain(row: UserORM) -> User:
         email=Email(row.email),
         name=None if row.name is None else Name(row.name),
         nickname=None if row.nickname is None else Nickname(row.nickname),
-        password_hash=HashedPassword(row.password_hash),
+        password_hash=(
+            None if row.password_hash is None else HashedPassword(row.password_hash)
+        ),
         authority=Authority(row.authority),
         is_admin=row.is_admin,
         is_active=row.is_active,
@@ -49,7 +53,7 @@ def _to_orm(user: User) -> UserORM:
         email=user.email.value,
         name=None if user.name is None else user.name.value,
         nickname=None if user.nickname is None else user.nickname.value,
-        password_hash=user.password_hash.value,
+        password_hash=None if user.password_hash is None else user.password_hash.value,
         authority=user.authority.value,
         is_admin=user.is_admin,
         is_active=user.is_active,
@@ -142,6 +146,23 @@ class SqlAlchemyUserRepository:
         await self._session.refresh(row)
         return _to_domain(row)
 
+    async def project_opened_by_invitation(
+        self, event: AccountOpenedByInvitation
+    ) -> User:
+        row = UserORM(
+            id=event.user_id,
+            email=event.email,
+            name=event.name,
+            password_hash=event.password_hash,
+            authority="USER",
+            is_admin=False,
+            is_active=True,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return _to_domain(row)
+
     async def project_named(self, event: UserNamed) -> User:
         row = await self._session.get(UserORM, event.user_id)
         if row is None:
@@ -161,6 +182,17 @@ class SqlAlchemyUserRepository:
                 f"the password of {event.user_id} has no projection row to land on"
             )
         row.password_hash = event.password_hash
+        row.credentials_changed_at = event.occurred_at
+        await self._session.flush()
+
+    async def project_password_cleared(self, event: PasswordCleared) -> None:
+        row = await self._session.get(UserORM, event.user_id)
+        if row is None:
+            raise RuntimeError(
+                f"the cleared password of {event.user_id} has no projection row "
+                f"to land on"
+            )
+        row.password_hash = None
         row.credentials_changed_at = event.occurred_at
         await self._session.flush()
 

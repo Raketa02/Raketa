@@ -35,8 +35,12 @@ class Login:
 
     async def execute(self, command: LoginCommand) -> TokenPair:
         user = await self._users.get_by_email(command.email.strip().lower())
-        if user is None or not self._hasher.verify(
-            command.password, user.password_hash.value
+        if (
+            user is None
+            # Cleared by the club's reset (``docs/adr/0184`` §6): nothing signs
+            # in until a new one is set, and the answer is a stranger's.
+            or user.password_hash is None
+            or not self._hasher.verify(command.password, user.password_hash.value)
         ):
             raise InvalidCredentials()
         if not user.is_active:

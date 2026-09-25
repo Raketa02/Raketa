@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Final, Optional
+from typing import AbstractSet, Final, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -24,6 +24,12 @@ from app.modules.auth.infrastructure.one_time_credential_model import (
 #: password-hasher verify, so the look-back is bounded by count as well as by
 #: time; the request throttle keeps an honest address far below it.
 _CLAIM_CANDIDATES: Final = 10
+
+
+def _codes(purposes: AbstractSet[CredentialPurpose]) -> list[str]:
+    # Sorted, so the statement a set of purposes renders is the same every time
+    # (``docs/adr/0105``).
+    return sorted(purpose.value for purpose in purposes)
 
 
 def _to_domain(row: OneTimeCredentialORM) -> OneTimeCredential:
@@ -102,7 +108,7 @@ class SqlAlchemyOneTimeCredentialStore:
         self,
         email: str,
         *,
-        purpose: CredentialPurpose,
+        purposes: AbstractSet[CredentialPurpose],
         audience: Audience,
         since: Instant,
     ) -> list[OneTimeCredential]:
@@ -110,7 +116,7 @@ class SqlAlchemyOneTimeCredentialStore:
             select(OneTimeCredentialORM)
             .where(
                 OneTimeCredentialORM.email == email,
-                OneTimeCredentialORM.purpose == purpose.value,
+                OneTimeCredentialORM.purpose.in_(_codes(purposes)),
                 OneTimeCredentialORM.audience == audience.value,
                 OneTimeCredentialORM.issued_at > since,
             )
@@ -124,7 +130,7 @@ class SqlAlchemyOneTimeCredentialStore:
         self,
         subject_id: UUID,
         *,
-        purpose: CredentialPurpose,
+        purposes: AbstractSet[CredentialPurpose],
         audience: Audience,
         now: Instant,
     ) -> list[OneTimeCredential]:
@@ -132,7 +138,7 @@ class SqlAlchemyOneTimeCredentialStore:
             select(OneTimeCredentialORM)
             .where(
                 OneTimeCredentialORM.subject_id == subject_id,
-                OneTimeCredentialORM.purpose == purpose.value,
+                OneTimeCredentialORM.purpose.in_(_codes(purposes)),
                 OneTimeCredentialORM.audience == audience.value,
                 OneTimeCredentialORM.used_at.is_(None),
                 OneTimeCredentialORM.expires_at > now,

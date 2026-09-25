@@ -127,6 +127,8 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: through `JoinGroup`, and the projections are the repository's to write.
 WRITTEN_CONTEXTS = frozenset(
     {
+        "administrators",
+        "auth",
         "clubs",
         "groups",
         "users",
@@ -189,6 +191,14 @@ AGGREGATE_WRITERS = {
     # A group, created by its Owner and joined by its members — the two use
     # cases a request runs, over the one repository both take.
     "build_group_repository": "groups",
+    # An Administrator, invited by its club and let in the way that person
+    # would get in — `InviteAdministrator`, then `SetInvitationPassword` or
+    # `AcceptInvitation` — over the one repository all three take.
+    "build_administrator_repository": "administrators",
+    # The session setting a password signs in: `SetInvitationPassword` answers
+    # a signed-in pair, as the request it is does, and that pair is a refresh
+    # token row written through `auth`'s own `TokenRotator`.
+    "build_refresh_token_repository": "auth",
 }
 
 #: The two infrastructure modules the seed path may import, and neither is an
@@ -275,6 +285,7 @@ def test_the_walk_has_something_to_walk():
     assert names == {
         "__init__.py",
         "__main__.py",
+        "administrators.py",
         "catalog.py",
         "clock.py",
         "clubs.py",

@@ -27,7 +27,9 @@ class UserORM(Base):
     nickname: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True
     )
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Null only between the club's *Reset password* clearing it and a new one
+    # being set (``docs/adr/0184`` §6): nothing signs in to such an account.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     authority: Mapped[str] = mapped_column(
         String(32), nullable=False, default="USER", server_default="USER"
     )

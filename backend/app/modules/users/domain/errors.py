@@ -1,6 +1,7 @@
 from app.shared.domain import (
     BadRequestError,
     ConflictError,
+    ForbiddenError,
     NotFoundError,
     UnauthorizedError,
 )
@@ -23,9 +24,27 @@ class AdultAttestationRequired(BadRequestError):
 
     def __init__(self) -> None:
         super().__init__(
-            "registration requires an adult attestation",
+            "an adult attestation is required",
             details={"field": "adult_attested"},
         )
+
+
+class AdultAttestationMissing(ForbiddenError):
+    """This account has not given the Adult attestation, and **playing
+    requires it** (``docs/adr/0185`` §5): no Skill rating and no Player profile
+    begins for an account that has not attested.
+
+    Every sign-up attested, so this is met only by an account an Invitation
+    opened, before *Start playing*'s first step — or by a client that skipped
+    it. A 403 and not the sign-up's 400: nothing is missing from the request;
+    the account has not yet done what the act requires. The way on is
+    ``POST /users/me/adult-attestation``.
+    """
+
+    code = "adult_attestation_missing"
+
+    def __init__(self) -> None:
+        super().__init__("playing requires the adult attestation first")
 
 
 class EmailInvalid(BadRequestError):

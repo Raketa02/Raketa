@@ -52,7 +52,7 @@
           "users"
         ],
         "summary": "Current authenticated user",
-        "description": "Carries `name` and `nickname` \u2014 null until the naming, and `name` is the **first** branch of onboarding's entry gate \u2014 and `has_player_profile`, its fourth. All three are read from the player's own event streams rather than from a projection, so a player who has just named themselves or committed their profile is never sent back to a step they just finished by a read model that has not caught up.",
+        "description": "Carries `name` and `nickname` \u2014 the entry gate's first destination is *not named in full*, either missing \u2014 `has_player_profile`, its fourth, and `adult_attested`, all read from the account's own event streams rather than from a projection, so a player who has just named themselves or committed their profile is never sent back to a step they just finished by a read model that has not caught up. And `profiles` (docs/adr/0185 \u00a72), which the gate reads **ahead of every destination**: whether the account acts as a player, the clubs it administers, and any invitation pending for its email.",
         "operationId": "me_api_v1_users_me_get",
         "responses": {
           "200": {
@@ -60,7 +60,57 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/adult-attestation": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Attest that you are an adult \u2014 Start playing's first step",
+        "description": "For an account that exists without the Adult attestation: one an invitation opened, which gives it the first time it acts as a player (docs/adr/0185 \u00a75). Once given, giving it again records nothing \u2014 so an account that attested at sign-up is answered the same.",
+        "operationId": "attest_adult_api_v1_users_me_adult_attestation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdultAttestationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "`adult_attestation_required` \u2014 the answer was not yes; `details.field` is `adult_attested`. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -483,6 +533,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AssessmentStepResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`adult_attestation_missing` \u2014 this account has not given the Adult attestation, which playing requires: an account an invitation opened, before *Start playing*'s first step.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -917,6 +977,16 @@
           },
           "400": {
             "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`availability_grid_empty` \u2014 nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`adult_attestation_missing` \u2014 this account has not given the Adult attestation, which playing requires: an account an invitation opened, before *Start playing*'s first step.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5515,6 +5585,320 @@
           }
         }
       }
+    },
+    "/api/v1/invitations/claim": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "summary": "Have an invitation code?: exchange it for a ticket",
+        "description": "The email and the 8-character code from an invitation \u2014 or from the club's reset of an administrator. The ticket lasts a few minutes, and *Set your password* is set with it.",
+        "operationId": "claim_invitation_api_v1_invitations_claim_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimTicketResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`code_incorrect` (`details.field`: `code`) \u2014 not the code sent to that address, **or nothing was sent to it**: one answer. Five wrong codes lock the invitation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The invitation can no longer be used: `credential_expired` (ask the club to send a new one), `credential_used`, `credential_locked` (five wrong codes) \u2014 or `sign_in_to_accept`: the email has an account now, which accepts from the app, signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/password": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "summary": "Set your password, by the invitation's link or a ticket, and sign in",
+        "description": "**A new person's account is created** \u2014 its Name the one the club typed, no nickname, and no Adult attestation \u2014 and **an account the club reset gets its password back**. Either way the administrator is active and this answers a signed-in session. `ticket_expired` is a 409 too: claiming the code again is a fresh ticket.",
+        "operationId": "set_invitation_password_api_v1_invitations_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`password_too_weak` (`details.field`: `password`) \u2014 8 to 128 characters with a letter and a digit. The link and the code still work.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link or ticket never issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The invitation can no longer be used: `credential_expired` (ask the club to send a new one), `credential_used`, `credential_locked` (five wrong codes) \u2014 or `sign_in_to_accept`: the email has an account now, which accepts from the app, signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/by-token": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "summary": "What an invitation's link opens",
+        "description": "Read before anything is set: the email *Set your password* locks its field to, the name the club typed, the club, and whether the link still works. Changes nothing.",
+        "operationId": "read_invitation_by_token_api_v1_invitations_by_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationByTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationByTokenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link never issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/{administrator_id}/acceptance": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "summary": "Accept a pending invitation",
+        "description": "For the signed-in account whose email the invitation names: the administrator profile is added, with no password step. Answers the account's profiles as `/users/me` would, so the switcher can be drawn at once. Accepting again is the same answer.",
+        "operationId": "accept_invitation_api_v1_invitations__administrator_id__acceptance_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "administrator_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Administrator Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfilesSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`invitation_not_found` \u2014 no invitation to this account's email has that id: somebody else's, a removed one, or none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`invitation_expired` \u2014 ask the club to send a new one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}": {
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "My administrator profile at a club",
+        "description": "The guarded read the administrator area opens on: the club's name. Checked for an active administratorship on every request.",
+        "operationId": "administrator_profile_api_v1_administrator_clubs__club_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministratorProfileResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5552,6 +5936,94 @@
         ],
         "title": "AcceptanceSchema",
         "description": "Somebody agreed with the other side's score, and it has not settled yet.\n\n**Present only while the grace runs.** Once it has passed the game is\nconfirmed and the agreed score is on `score`; inside it nothing has settled,\na disagreement still wins, and the proposing side is no longer waiting on\nsilence \u2014 which is a different sentence on their screen and a correction the\naggregate will now refuse."
+      },
+      "AccountProfilesSchema": {
+        "properties": {
+          "acts_as_player": {
+            "type": "boolean",
+            "title": "Acts As Player",
+            "description": "Whether this account acts as a player: it has given the Adult attestation \u2014 every sign-up did, and *Start playing* asks it first \u2014 or it holds a Player profile. `false` only for an account an invitation opened that has not started playing."
+          },
+          "administers": {
+            "items": {
+              "$ref": "#/components/schemas/AdministeredClubSchema"
+            },
+            "type": "array",
+            "title": "Administers",
+            "description": "One entry per club whose groups this account runs, by name."
+          },
+          "pending_invitations": {
+            "items": {
+              "$ref": "#/components/schemas/PendingInvitationSchema"
+            },
+            "type": "array",
+            "title": "Pending Invitations",
+            "description": "Invitations addressed to this account's email that are still open, soonest to expire first. One disappears once accepted, removed or past its 72 hours."
+          }
+        },
+        "type": "object",
+        "required": [
+          "acts_as_player",
+          "administers",
+          "pending_invitations"
+        ],
+        "title": "AccountProfilesSchema",
+        "description": "Which profiles this account holds (``docs/adr/0185`` \u00a72) \u2014 what the\nentry gate reads first. *Profile* is the switcher's word."
+      },
+      "AdministeredClubSchema": {
+        "properties": {
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "club_id",
+          "club_name"
+        ],
+        "title": "AdministeredClubSchema"
+      },
+      "AdministratorProfileResponse": {
+        "properties": {
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "club_id",
+          "club_name"
+        ],
+        "title": "AdministratorProfileResponse",
+        "description": "*My administrator profile at club X* \u2014 the guarded read."
+      },
+      "AdultAttestationRequest": {
+        "properties": {
+          "adult_attested": {
+            "type": "boolean",
+            "title": "Adult Attested",
+            "description": "Required to be `true`, exactly as at sign-up: `false` is refused with `adult_attestation_required`. **Not a date of birth and not age verification.**"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "adult_attested"
+        ],
+        "title": "AdultAttestationRequest",
+        "description": "The Adult attestation, given by an account that already exists \u2014 what\n*Start playing* asks first (``docs/adr/0185`` \u00a75)."
       },
       "AnswerOptionResponse": {
         "properties": {
@@ -6390,6 +6862,30 @@
         ],
         "title": "ClaimCodeRequest",
         "description": "The address and the 8-character code from the email. The code is read\nforgivingly \u2014 case, spaces and dashes are ignored \u2014 and its length is not\nchecked here: a code of the wrong length is simply not the right code, and\nis told ``code_incorrect`` as every other one is. The bound is a cap on\nwhat a request may carry, not a rule about codes."
+      },
+      "ClaimInvitationRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Email"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "title": "ClaimInvitationRequest",
+        "description": "*Have an invitation code?*: the address and the 8-character code. The\ncode is read forgivingly \u2014 case, spaces and dashes are ignored \u2014 and its\nlength is not checked here: a code of the wrong length is simply not the\nright code."
       },
       "ClaimTicketResponse": {
         "properties": {
@@ -9015,6 +9511,105 @@
         "title": "InterestListResponse",
         "description": "Your own *Let's play* screen. **Outgoing and mutuals only.**\n\nThere is no incoming list and there will not be one: a yes nobody has\nanswered stays silent, which is what makes saying yes low-stakes. The two\nlists are disjoint \u2014 a yes that came back is in `mutual` and not in\n`outgoing` \u2014 so a client renders both without deriving either."
       },
+      "InvitationByTokenRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "InvitationByTokenRequest",
+        "description": "The token off an invitation's link. In a body rather than a path, so it\nis in no access log."
+      },
+      "InvitationByTokenResponse": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The name the club typed."
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          },
+          "state": {
+            "$ref": "#/components/schemas/InvitationLinkState",
+            "description": "`valid`, `expired` (ask the club to send a new one), `used`, or `locked` \u2014 five wrong codes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "name",
+          "club_name",
+          "state"
+        ],
+        "title": "InvitationByTokenResponse",
+        "description": "What a link opens, before anything is set: the email *Set your\npassword* locks its field to, whom it greets, and whether it still\nworks."
+      },
+      "InvitationLinkState": {
+        "type": "string",
+        "enum": [
+          "valid",
+          "expired",
+          "used",
+          "locked"
+        ],
+        "title": "InvitationLinkState",
+        "description": "Whether an invitation's link still works \u2014 the credential's standing,\nunder a name of its own on the wire (``Standing`` is a challenge's)."
+      },
+      "InvitationPasswordRequest": {
+        "properties": {
+          "token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "ticket": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "InvitationPasswordRequest",
+        "description": "*Set your password*, and **exactly one** of what opens the way to it:\nthe `token` from the email's link, or the `ticket` a claimed code returned.\n\nThe password carries no bound here: the rule every account shares \u2014 8 to\n128 characters with a letter and a digit \u2014 is refused as\n`password_too_weak` naming the field. Sending both or neither of `token`\nand `ticket` is the one refusal here that is a `422`."
+      },
       "JoinPolicy": {
         "type": "string",
         "enum": [
@@ -9439,6 +10034,100 @@
         "type": "object",
         "title": "LogoutResponse"
       },
+      "MeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "What this player is called \u2014 what every screen says. `null` until the naming \u2014 except on an account an invitation opened, which carries the name the club typed. The entry gate's first destination is **not named in full**: no name, or no nickname \u2014 and the naming step asks only for what is missing."
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname",
+            "description": "The handle, unique across the platform, drawn as `@nickname` under the name on the You tab and nowhere else. `null` until the naming."
+          },
+          "authority": {
+            "type": "string",
+            "title": "Authority"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "is_tester": {
+            "type": "boolean",
+            "title": "Is Tester",
+            "description": "Whether this account carries the **tester mark**: a real player who may be given a feature before anyone else. Set and cleared by an admin command, never by the player, and `false` for every account until then. **Not a role** \u2014 `authority` does not move with it. The player app passes it to flag evaluation as `isTester`, so no published datafile ever has to name a tester."
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "has_player_profile": {
+            "type": "boolean",
+            "title": "Has Player Profile",
+            "description": "Whether this player has committed a Player profile \u2014 the fourth branch of the entry gate. Read from the profile's own event stream rather than from a projection, so it is correct immediately after the commit that creates one. False on a response that is not about the authenticated player, such as the one registration returns.",
+            "default": false
+          },
+          "adult_attested": {
+            "type": "boolean",
+            "title": "Adult Attested",
+            "description": "Whether this account has given the Adult attestation. Every sign-up has; an account an invitation opened has not, and *Start playing* asks it first \u2014 `POST /users/me/adult-attestation`."
+          },
+          "profiles": {
+            "$ref": "#/components/schemas/AccountProfilesSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "authority",
+          "is_admin",
+          "is_active",
+          "is_tester",
+          "adult_attested",
+          "profiles"
+        ],
+        "title": "MeResponse",
+        "description": "``/me``: the account, and **which profiles it holds**\n(``docs/adr/0185`` \u00a72) \u2014 what the entry gate reads ahead of every\nonboarding destination.\n\nIts own shape rather than more fields on :class:`UserResponse`, because the\nregistration's answer is about an account one line old and has no honest\nvalue for either: it holds no profile yet, and ``/me`` is where the gate\nreads them."
+      },
       "MessageSchema": {
         "properties": {
           "type": {
@@ -9858,6 +10547,38 @@
         ],
         "title": "PairingAbsence",
         "description": "Why a court came back with no cards on it. **Two codes, and a third\nanswer that is their absence** (``docs/adr/0143`` \u00a76).\n\nThree answers rather than two, because an outage drawing the *identical*\nabsence as an unrated sport is the collapse ADR-0141's Consequences refused\nin as many words. And refusing the whole read with a 503 is worse than\neither: it turns an unrelated matchmaking outage into *you cannot answer your\nchallenge*, and answering is not gated.\n\n**The codes are the contract and the client writes both sentences**\n(``docs/adr/0106``)."
+      },
+      "PendingInvitationSchema": {
+        "properties": {
+          "administrator_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Administrator Id",
+            "description": "What `POST /invitations/{administrator_id}/acceptance` takes."
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "administrator_id",
+          "club_id",
+          "club_name",
+          "expires_at"
+        ],
+        "title": "PendingInvitationSchema"
       },
       "PhotoResponse": {
         "properties": {
@@ -12693,7 +13414,7 @@
               }
             ],
             "title": "Name",
-            "description": "What this player is called \u2014 what every screen says. `null` until the naming, and **the entry gate's first destination**: a player with no name is sent to the naming step before anything else."
+            "description": "What this player is called \u2014 what every screen says. `null` until the naming \u2014 except on an account an invitation opened, which carries the name the club typed. The entry gate's first destination is **not named in full**: no name, or no nickname \u2014 and the naming step asks only for what is missing."
           },
           "nickname": {
             "anyOf": [
@@ -12753,7 +13474,7 @@
           "is_tester"
         ],
         "title": "UserResponse",
-        "description": "The account, plus the one fact about it onboarding's entry gate needs.\n\n``has_player_profile`` is not a property of a ``User`` and the domain layer\nhas no idea it exists \u2014 it is answered by the Player profile context and\njoined here, on the response, because the gate reads it on every cold launch\nand a second round trip for one boolean would be a second thing to fail\n(``docs/adr/0090``).\n\n``name`` and ``nickname`` are **null until the naming**, and this is the one\nread where either may be null (``docs/adr/0171`` \u00a72): a player on any\nsurface that names another player has necessarily been named, because the\ngate holds an unnamed account at the naming step. On ``/me`` they are read\nfrom the player's own stream, as ``has_player_profile`` is, so they are\nright the instant after the commit the gate reads them after.\n\n**It is not an \"onboarded\" flag.** The rating context's invariant against one\nstands: whether a player has been through onboarding *for a sport* is asked\nby asking whether a rating exists for that sport, and this field cannot\nanswer it. This asks a genuinely per-player question, because a profile is\none per player and has no sport dimension at all."
+        "description": "The account, plus the one fact about it onboarding's entry gate needs.\n\n``has_player_profile`` is not a property of a ``User`` and the domain layer\nhas no idea it exists \u2014 it is answered by the Player profile context and\njoined here, on the response, because the gate reads it on every cold launch\nand a second round trip for one boolean would be a second thing to fail\n(``docs/adr/0090``).\n\n``name`` and ``nickname`` are **null until the naming** \u2014 and each on its\nown since ``docs/adr/0185`` \u00a74, because an account an Invitation opened\ncarries the club-typed name and no nickname \u2014 and this is the one read\nwhere either may be null (``docs/adr/0171`` \u00a72): a player on any\nsurface that names another player has necessarily been named, because the\ngate holds an unnamed account at the naming step. On ``/me`` they are read\nfrom the player's own stream, as ``has_player_profile`` is, so they are\nright the instant after the commit the gate reads them after.\n\n**It is not an \"onboarded\" flag.** The rating context's invariant against one\nstands: whether a player has been through onboarding *for a sport* is asked\nby asking whether a rating exists for that sport, and this field cannot\nanswer it. This asks a genuinely per-player question, because a profile is\none per player and has no sport dimension at all."
       },
       "ValidationError": {
         "properties": {

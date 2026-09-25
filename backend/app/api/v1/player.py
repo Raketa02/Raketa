@@ -10,6 +10,10 @@ of its own (``app/api/v1/club.py``), and no path is in both.
 from fastapi import APIRouter
 
 from app.api.v1.sports import router as sports_router
+from app.modules.administrators.presentation.routes import (
+    administrator_router,
+    invitations_router,
+)
 from app.modules.auth.presentation.routes import router as auth_router
 from app.modules.blocks.presentation.routes import router as blocks_router
 from app.modules.challenges.presentation.routes import (
@@ -95,3 +99,5 @@ player_api_router.include_router(player_record_router)
 player_api_router.include_router(groups_router)
 player_api_router.include_router(home_clubs_router)
 player_api_router.include_router(join_search_router)
+player_api_router.include_router(invitations_router)
+player_api_router.include_router(administrator_router)

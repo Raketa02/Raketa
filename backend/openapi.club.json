@@ -445,10 +445,411 @@
           }
         ]
       }
+    },
+    "/api/v1/club/administrators": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "The club's administrators, and where each one stands",
+        "operationId": "list_administrators_api_v1_club_administrators_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministratorListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Invite an administrator by name and email",
+        "description": "Emails the person through the mail queue, in this request's transaction. **A new person** gets a button to the public site's `/invite/<token>` and an 8-character code, valid 72 hours; **an existing account** gets *\"[Club] wants to make you an administrator\"* and a button that opens the app, with no code. Inviting somebody this club removed invites them again.",
+        "operationId": "invite_administrator_api_v1_club_administrators_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteAdministratorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministratorSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field the desk has to correct, named by `details.field`: `administrator_name_invalid` or `email_invalid`. Nothing was recorded and nothing was sent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`administrator_already_invited` \u2014 that email is invited here, expired included: resend instead \u2014 or `administrator_already_active`. `details.field` is `email`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/administrators/{administrator_id}/invitation": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Resend an invitation: a fresh 72 hours",
+        "description": "For somebody `INVITED` or `EXPIRED`. The email is the original's again, with a new link and code where it carries them; the older ones stop working.",
+        "operationId": "resend_invitation_api_v1_club_administrators__administrator_id__invitation_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "administrator_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Administrator Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministratorSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`administrator_not_found` \u2014 no administrator of this club has that id: another club's, a removed one, or none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`administrator_already_active` \u2014 there is nothing left to open.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/administrators/{administrator_id}/password-reset": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Reset an administrator's password",
+        "description": "**Only for an account that holds nothing but administrator profiles** \u2014 `can_reset_password` on the row. Clears the password, signs the account out everywhere, and puts the person back to `INVITED` with a fresh 72-hour email carrying the invitation's own link and code.",
+        "operationId": "reset_administrator_password_api_v1_club_administrators__administrator_id__password_reset_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "administrator_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Administrator Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministratorSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`administrator_not_found` \u2014 no administrator of this club has that id: another club's, a removed one, or none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`administrator_also_plays` \u2014 the account also plays, and only its owner resets it, through *Forgot password?*; or `administrator_has_no_account` \u2014 nobody has set a password yet: resend instead. Nothing moved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/administrators/{administrator_id}": {
+      "delete": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Remove an administrator",
+        "description": "The administrator profile ends: the person's next administrator request is refused with `not_an_administrator`. Their player profile and their sessions are untouched, and an invitation still in their inbox opens nothing.",
+        "operationId": "remove_administrator_api_v1_club_administrators__administrator_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "administrator_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Administrator Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`administrator_not_found` \u2014 no administrator of this club has that id: another club's, a removed one, or none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AdministratorGroupSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "AdministratorGroupSchema"
+      },
+      "AdministratorListResponse": {
+        "properties": {
+          "administrators": {
+            "items": {
+              "$ref": "#/components/schemas/AdministratorSchema"
+            },
+            "type": "array",
+            "title": "Administrators",
+            "description": "Everybody not removed, by name."
+          }
+        },
+        "type": "object",
+        "required": [
+          "administrators"
+        ],
+        "title": "AdministratorListResponse"
+      },
+      "AdministratorSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "As the club typed it: trimmed and collapsed."
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AdministratorStatus",
+            "description": "`ACTIVE` once the invitation was taken up; `INVITED` until then; `EXPIRED` once its 72 hours have passed unanswered \u2014 resendable."
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "On an `ACTIVE` row: when the administrator profile was last used, **to the hour** \u2014 *today*, *this week*. `null` otherwise."
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At",
+            "description": "On an `INVITED` row, when it expires; on an `EXPIRED` row, when it did. `null` on an `ACTIVE` row."
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/AdministratorGroupSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "The official groups this administrator runs. Empty until official groups exist."
+          },
+          "can_reset_password": {
+            "type": "boolean",
+            "title": "Can Reset Password",
+            "description": "Whether *Reset password* may be pressed: only for an account that holds nothing but administrator profiles. Pressing it anyway is `409 administrator_also_plays` or `administrator_has_no_account`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "status",
+          "last_used_at",
+          "expires_at",
+          "groups",
+          "can_reset_password"
+        ],
+        "title": "AdministratorSchema",
+        "description": "One row of the club's Administrators table (``docs/adr/0184`` \u00a71).\n**Every status is derived**, and so is whether *Reset password* is drawn."
+      },
+      "AdministratorStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INVITED",
+          "EXPIRED"
+        ],
+        "title": "AdministratorStatus",
+        "description": "What the Administrators table says of somebody, now."
+      },
       "ClaimCodeRequest": {
         "properties": {
           "email": {
@@ -703,6 +1104,28 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "InviteAdministratorRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Trimmed, runs of whitespace collapsed, then 2\u201364 characters \u2014 `administrator_name_invalid` otherwise. It becomes the person's Name if they are new to Raketa."
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "Malformed is `email_invalid`. Already invited here \u2014 expired included \u2014 is `409 administrator_already_invited`; already active here is `409 administrator_already_active`."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "email"
+        ],
+        "title": "InviteAdministratorRequest",
+        "description": "*+ Add administrator*: a name and an email, and nothing else \u2014 the club\nnever sets, sees or handles a password or a code."
       },
       "LoginRequest": {
         "properties": {

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from app.application.events import EventDispatcher, EventCatalog
 from app.modules.users.application.handlers import (
+    LogAccountOpenedByInvitation,
+    LogAdultAttested,
     LogPasswordChanged,
+    LogPasswordCleared,
     LogUserDisabled,
     LogUserMarkedAsTester,
     LogUserNamed,
@@ -11,7 +14,10 @@ from app.modules.users.application.handlers import (
     LogUserUnmarkedAsTester,
 )
 from app.modules.users.domain.events import (
+    AccountOpenedByInvitation,
+    AdultAttested,
     PasswordChanged,
+    PasswordCleared,
     UserDisabled,
     UserMarkedAsTester,
     UserNamed,
@@ -33,6 +39,13 @@ def register_user_events(catalog: EventCatalog) -> None:
     catalog.register(
         UserUnmarkedAsTester, name="users.user_unmarked_as_tester", version=1
     )
+    catalog.register(
+        AccountOpenedByInvitation,
+        name="users.account_opened_by_invitation",
+        version=1,
+    )
+    catalog.register(AdultAttested, name="users.adult_attested", version=1)
+    catalog.register(PasswordCleared, name="users.password_cleared", version=1)
 
 
 def subscribe_user_handlers(dispatcher: EventDispatcher) -> None:
@@ -43,3 +56,6 @@ def subscribe_user_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(UserPromotedToAdmin, LogUserPromotedToAdmin())
     dispatcher.subscribe(UserMarkedAsTester, LogUserMarkedAsTester())
     dispatcher.subscribe(UserUnmarkedAsTester, LogUserUnmarkedAsTester())
+    dispatcher.subscribe(AccountOpenedByInvitation, LogAccountOpenedByInvitation())
+    dispatcher.subscribe(AdultAttested, LogAdultAttested())
+    dispatcher.subscribe(PasswordCleared, LogPasswordCleared())

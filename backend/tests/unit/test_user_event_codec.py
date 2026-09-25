@@ -24,6 +24,9 @@ from app.application.events.envelope import SerializedEventEnvelope
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.users.application.event_subscriptions import register_user_events
 from app.modules.users.domain.events import (
+    AccountOpenedByInvitation,
+    AdultAttested,
+    PasswordCleared,
     UserMarkedAsTester,
     UserNamed,
     UserRegistered,
@@ -163,3 +166,57 @@ def test_the_tester_mark_round_trips_under_its_own_contracts(
     assert encoded.event_type == event_type
     assert encoded.schema_version == 1
     assert codec.decode(_envelope(encoded.payload, event_type=event_type)) == event
+
+
+@pytest.mark.parametrize(
+    ("event", "event_type"),
+    [
+        (
+            AccountOpenedByInvitation(
+                user_id=REGISTERED.user_id,
+                email="marta@ogrody33.pl",
+                password_hash="$2b$12$notarealhash",
+                name="Marta Wójcik",
+                occurred_at=NOW,
+            ),
+            "users.account_opened_by_invitation",
+        ),
+        (
+            AdultAttested(user_id=REGISTERED.user_id, occurred_at=NOW),
+            "users.adult_attested",
+        ),
+        (
+            PasswordCleared(user_id=REGISTERED.user_id, occurred_at=NOW),
+            "users.password_cleared",
+        ),
+    ],
+)
+def test_the_invitation_s_three_facts_round_trip_under_their_own_contracts(
+    event: object, event_type: str
+) -> None:
+    """``docs/adr/0185`` grows the stream by an account an Invitation opened, an
+    attestation given after it, and a password the club cleared — each filed
+    under its own name."""
+
+    codec = _codec()
+
+    encoded = codec.encode(event)
+
+    assert encoded.event_type == event_type
+    assert encoded.schema_version == 1
+    assert codec.decode(_envelope(encoded.payload, event_type=event_type)) == event
+
+
+def test_an_account_an_invitation_opened_carries_a_name_and_no_nickname() -> None:
+    encoded = _codec().encode(
+        AccountOpenedByInvitation(
+            user_id=REGISTERED.user_id,
+            email="marta@ogrody33.pl",
+            password_hash="$2b$12$notarealhash",
+            name="Marta Wójcik",
+            occurred_at=NOW,
+        )
+    )
+
+    assert "nickname" not in encoded.payload
+    assert "adult_attested" not in encoded.payload

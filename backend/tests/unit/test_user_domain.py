@@ -6,6 +6,9 @@ import pytest
 
 from app.modules.users.domain.errors import InactiveUserCannotBePromoted
 from app.modules.users.domain.events import (
+    AccountOpenedByInvitation,
+    AdultAttested,
+    PasswordCleared,
     UserDisabled,
     UserMarkedAsTester,
     UserNamed,
@@ -487,3 +490,105 @@ def test_the_fold_keeps_the_latest_mark():
 
     assert user.is_tester is True
     assert user.version == 4
+
+
+# ---------------------------------------------------------------------------
+# An account an Invitation opened, the attestation after it, and a cleared
+# password (docs/adr/0185 §4, §5, §7)
+# ---------------------------------------------------------------------------
+
+
+def _opened_by_invitation(user_id, now) -> User:
+    return User.open_by_invitation(
+        user_id=user_id,
+        email=Email("marta@ogrody33.pl"),
+        name=Name("  Marta   Wójcik "),
+        password_hash=HashedPassword("hash"),
+        occurred_at=now,
+    )
+
+
+def test_an_invitation_opens_an_account_named_by_the_club_with_no_nickname():
+    now = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
+    user_id = new_uuid()
+
+    user = _opened_by_invitation(user_id, now)
+
+    (opened,) = user.pull_events()
+    assert isinstance(opened, AccountOpenedByInvitation)
+    assert opened.name == "Marta Wójcik"
+    assert opened.email == "marta@ogrody33.pl"
+    assert user.name == Name("Marta Wójcik")
+    assert user.nickname is None
+    # The club typed the email, not the person: nobody has attested.
+    assert user.adult_attested is False
+    assert user.has_password
+
+
+def test_an_account_an_invitation_opened_attests_once_and_then_records_nothing():
+    now = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
+    user = User.from_history(
+        _opened_by_invitation(new_uuid(), now).pull_events()
+    )
+
+    user.attest_adult(occurred_at=now)
+    user.attest_adult(occurred_at=now)
+
+    (attested,) = user.pull_events()
+    assert isinstance(attested, AdultAttested)
+    assert user.adult_attested is True
+
+
+def test_a_sign_up_already_attested_so_attesting_again_records_nothing():
+    now = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
+    user = User.register(
+        user_id=new_uuid(),
+        email=Email("tomek@example.com"),
+        password_hash=HashedPassword("hash"),
+        attestation=AdultAttestation(True),
+        occurred_at=now,
+    )
+    user.pull_events()
+
+    user.attest_adult(occurred_at=now)
+
+    assert user.pull_events() == []
+    assert user.adult_attested is True
+
+
+def test_an_account_registered_before_the_question_is_read_as_not_attested():
+    """``None`` on the registration is *nobody was asked*, so the account is
+    asked the first time it acts as a player — never read as a claim it did not
+    make (``docs/adr/0124``, ``docs/adr/0185`` §5)."""
+
+    user = _registered(new_uuid(), datetime(2026, 9, 25, tzinfo=timezone.utc))
+
+    assert user.adult_attested is False
+
+
+def test_clearing_a_password_signs_out_everywhere_and_leaves_none():
+    now = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
+    user = User.from_history(
+        _opened_by_invitation(new_uuid(), now).pull_events()
+    )
+
+    user.clear_password(occurred_at=now)
+
+    (cleared,) = user.pull_events()
+    assert isinstance(cleared, PasswordCleared)
+    assert not user.has_password
+    assert user.password_hash is None
+    assert user.credentials_changed_at == now
+
+
+def test_a_password_set_after_it_was_cleared_is_a_password_again():
+    now = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
+    user = User.from_history(
+        _opened_by_invitation(new_uuid(), now).pull_events()
+    )
+    user.clear_password(occurred_at=now)
+
+    user.change_password(password_hash=HashedPassword("new"), occurred_at=now)
+
+    assert user.has_password
+    assert user.password_hash == HashedPassword("new")

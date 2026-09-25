@@ -155,7 +155,7 @@ class ClaimPasswordReset:
             ticket = await self._credentials.claim(
                 email=address,
                 code=command.code,
-                purpose=_PURPOSE,
+                purposes={_PURPOSE},
                 audience=self._audience,
                 now=self._clock.now(),
             )
@@ -202,7 +202,7 @@ class SetNewPassword:
         credential = await self._credentials.redeemable(
             token=command.token,
             ticket=command.ticket,
-            purpose=_PURPOSE,
+            purposes={_PURPOSE},
             audience=self._audience,
             now=now,
         )

@@ -32,6 +32,11 @@ CLUB_OPERATIONS = {
     "post /api/v1/club/auth/forgot-password",
     "post /api/v1/club/auth/forgot-password/claim",
     "post /api/v1/club/auth/forgot-password/new-password",
+    "get /api/v1/club/administrators",
+    "post /api/v1/club/administrators",
+    "post /api/v1/club/administrators/{administrator_id}/invitation",
+    "post /api/v1/club/administrators/{administrator_id}/password-reset",
+    "delete /api/v1/club/administrators/{administrator_id}",
 }
 
 
