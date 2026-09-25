@@ -17,4 +17,20 @@ describe('the groups query keys', () => {
   it('keys a group’s page by its id', () => {
     expect(groupKeys.detail('a')).not.toEqual(groupKeys.detail('b'));
   });
+
+  // Leaving or deleting a group reaches everything read about it through its page's key.
+  it('keys a group’s Members and requests under its page', () => {
+    const page = groupKeys.detail('a');
+
+    expect(groupKeys.members('a', 'padel').slice(0, page.length)).toEqual(page);
+    expect(groupKeys.requests('a').slice(0, page.length)).toEqual(page);
+  });
+
+  it('keys the answers to a group’s requests apart from every other group’s', () => {
+    expect(groupKeys.answers('a')).not.toEqual(groupKeys.answers('b'));
+  });
+
+  it('keys Members by the sport', () => {
+    expect(groupKeys.members('a', 'padel')).not.toEqual(groupKeys.members('a', 'tennis'));
+  });
 });

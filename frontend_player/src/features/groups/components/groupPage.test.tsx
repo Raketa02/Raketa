@@ -2,7 +2,7 @@
  * **A group's page, walked** — the fast filter, the tab bar, and the Games, Fill in and Friends
  * tabs in their starting states, and the Friends screen behind the court
  * ([#513](https://github.com/Raketa02/Raketa/issues/513), PRD #500 stories 51–70; play mocks
- * 14–17, 39–55).
+ * 14–17, 39–55). Info and Members are `groupInfo.test.tsx`'s.
  *
  * The real route tree, with the socket, the share sheet and the clipboard faked at the platform
  * edge. *A relaunch* is the process ending and a new one starting: the Query cache and the session
@@ -117,6 +117,7 @@ function pageOf(
     join_policy: 'ANYONE',
     is_owner: true,
     rated_by_sport: JUST_TOMEK,
+    member_faces: [],
     ...overrides,
   };
 }
@@ -351,15 +352,6 @@ describe('the tab bar', () => {
     expect(await tab('Fill in', false)).toBeTruthy();
     expect(await tab('Friends', false)).toBeTruthy();
     expect(await tab('Info', false)).toBeTruthy();
-  });
-
-  it('draws nothing under Info yet', async () => {
-    await openGroup();
-
-    await openTab('Info');
-
-    expect(screen.queryByText(COPY.games.justYou)).toBeNull();
-    expect(screen.queryByRole('button', { name: COPY.link.share })).toBeNull();
   });
 });
 

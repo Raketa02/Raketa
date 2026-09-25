@@ -105,8 +105,56 @@ export const GROUPS_COPY = {
   link: {
     share: 'Share the link',
     copy: 'Copy link',
+    /** Info's link card draws the two doors short, beside the link (play 57, 60); spoken whole. */
+    shareShort: 'Share',
+    copyShort: 'Copy',
     copied: 'Link copied',
     notCopied: 'Couldn’t copy the link',
+  },
+  /** The Info tab (play 57–60, club 20; #514). */
+  info: {
+    /** The members row's policy line — who answers a request, from where the reader stands. */
+    anyoneCanJoin: 'anyone can join',
+    youApprove: 'you approve joins',
+    ownerApproves: 'the owner approves joins',
+    membersHint: 'Opens Members',
+    approve: 'Approve',
+    editGroup: 'Edit group',
+    editGroupLine: 'Name and who can join',
+    delete: 'Delete the group',
+    deleting: 'Deleting the group',
+    leave: 'Leave the group',
+    leaving: 'Leaving the group',
+    /** The confirmations name the moment; the act is named once, by the control that does it. */
+    deleteTitle: 'Delete this group?',
+    deleteBody:
+      'Nobody else is in it. Its link stops working, and the group can’t be brought back.',
+    deleteClose: 'Keep the group',
+    leaveTitle: 'Leave this group?',
+    /** An Owner leaving with other members in it — ADR-0183 §7's handover, said before it happens. */
+    leaveHandover: 'It passes to whoever has been in it longest, with the requests waiting.',
+    rejoinAnyone: 'You can join again any time with its link.',
+    rejoinAsk: 'To come back, you ask to join again with its link.',
+    leaveClose: 'Stay in the group',
+    deleted: 'Group deleted',
+    left: 'You left the group',
+  },
+  /** Members (play 61). No friend tag: there is no friends feature (PRD #500). */
+  members: {
+    title: 'Members',
+    back: 'Back to the group',
+    admin: 'admin',
+    footer: 'Press and hold anyone for the full record.',
+    holdHint: 'Press and hold for the full record',
+  },
+  /** Edit group — the New group form's two cards and Save (no mock; #514). */
+  editGroup: {
+    title: 'Edit group',
+    back: 'Back to the group',
+    save: 'Save',
+    saving: 'Saving the group',
+    saved: 'Saved',
+    admittedLine: 'Everybody who was waiting is in the group now.',
   },
   action: {
     join: 'Join',

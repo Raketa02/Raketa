@@ -1828,10 +1828,34 @@ export interface paths {
         };
         /**
          * A group, for its members
-         * @description Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; and, for every sport, how many members are rated in it and the first of them to join — the Games tab's *N of M*.
+         * @description Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; for every sport, how many members are rated in it and the first of them to join — the Games tab's *N of M*; and the faces on the Info tab's members row, which **leaves out a blocked pair, either way round**, as the Members list does. No count moves.
          */
         get: operations["read_group_api_v1_groups__group_id__get"];
         put?: never;
+        post?: never;
+        /**
+         * Delete a group nobody else is in
+         * @description **The Owner, and only while they are its only member.** Afterwards the group is in no list and no search, its link reads *nothing at that link* (join search answers `read_as` `LINK` and no clubs), and the requests waiting on it are gone.
+         */
+        delete: operations["delete_group_api_v1_groups__group_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit a group: its name and who can join
+         * @description **The Owner's**, both fields as *Edit group* holds them, recorded together or not at all. Saving what the group already says records nothing. **The link never changes**, and nor does the monogram's colour. **Switching to `ANYONE` admits everybody waiting at once**, and `admitted` says who. Answers the group as its page reads it, under `group`.
+         */
+        put: operations["edit_group_api_v1_groups__group_id__details_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1853,6 +1877,30 @@ export interface paths {
          * @description **One tap, and the group's policy decides what it was.** Under *Anyone* the caller is a member **at once** (`relation` `MEMBER`). Under *People I approve* their Join request waits for the Owner (`relation` `REQUESTED`). Neither is recorded twice: tapping again as a member, or while the request waits, changes nothing and answers the same. Answers the group as a club's card draws it, so the card is patched in place.
          */
         post: operations["join_group_api_v1_groups__group_id__membership_post"];
+        /**
+         * Leave a group
+         * @description The caller is no longer a member, and may join again later under the group's policy. **An Owner leaving a group other people are in passes it to the member who has been in longest** — their current stay, so somebody who left and came back counts from their return — and the requests waiting on it pass with it.
+         */
+        delete: operations["leave_group_api_v1_groups__group_id__membership_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Members of a group, for one sport
+         * @description **Only the members rated in `sport`** — who in the group the caller could play it with: the caller first, then the Owner, then everybody else newest joined first. Each with their face, their Level in the sport, their Player Score where they have one, whether they own the group and when they joined. **A blocked pair, either way round, is left out of each other's list**, and the group's member count does not change.
+         */
+        get: operations["group_members_api_v1_groups__group_id__members_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3740,6 +3788,34 @@ export interface components {
             outside_their_radius: boolean;
         };
         /**
+         * EditGroupRequest
+         * @description The Owner saves *Edit group* — the New group form's Name and Who can join
+         *     cards, **both as the form holds them**. The home club is not here: it never
+         *     changes (``docs/adr/0183`` §2).
+         */
+        EditGroupRequest: {
+            /**
+             * Name
+             * @description Trimmed, runs of whitespace collapsed, then 1–40 characters. Refused with `group_name_invalid`, `details.field` `name`.
+             */
+            name: string;
+            /** @description `ANYONE` or `PEOPLE_I_APPROVE`. **Switching to `ANYONE` admits everybody waiting at once.** */
+            join_policy: components["schemas"]["JoinPolicy"];
+        };
+        /**
+         * EditedGroupResponse
+         * @description The group as *Edit group* left it, and who the save let in.
+         */
+        EditedGroupResponse: {
+            /** @description The group as its page reads it, after the save. */
+            group: components["schemas"]["GroupResponse"];
+            /**
+             * Admitted
+             * @description Everybody the switch to `ANYONE` admitted, **in the order they asked** — the Edit screen shows them. Empty for every other save.
+             */
+            admitted: components["schemas"]["GroupPersonSchema"][];
+        };
+        /**
          * EntryPageResponse
          * @description One page backward. **No header, and no instant** — but the page's own faces.
          *
@@ -4321,6 +4397,64 @@ export interface components {
             relation: components["schemas"]["GroupRelation"];
         };
         /**
+         * GroupMemberSchema
+         * @description One row of Members, for one sport — *Padel 2,71 · score 92*.
+         */
+        GroupMemberSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description The whole Name, never the nickname. `null` for an account that can no longer be named — the member keeps their seat.
+             */
+            name: string | null;
+            /**
+             * Photo Id
+             * Format: uuid
+             * @description Their current photograph. Omitted when they have none, and omitted together with `photo_url` — draw their initials.
+             */
+            photo_id?: string;
+            /**
+             * Photo Url
+             * @description A short-lived signed link to that photograph, minted for **this response**.
+             */
+            photo_url?: string;
+            /**
+             * Level
+             * @description Their Level in the sport asked for, as RacketSkill published it. Always present: somebody not rated in it is not listed.
+             */
+            level: number;
+            /**
+             * Player Score
+             * @description Their published Player Score, 0–100 — the figure their record and a player card print. **Omitted for somebody the platform has watched nothing of**, never `0`: no record is not a bad one.
+             */
+            player_score?: number;
+            /**
+             * Is Owner
+             * @description Whether they own the group — the row the **admin** tag is drawn on.
+             */
+            is_owner: boolean;
+            /**
+             * Joined At
+             * Format: date-time
+             * @description When they joined — this stay: somebody who left and came back counts from their return.
+             */
+            joined_at: string;
+        };
+        /** GroupMembersResponse */
+        GroupMembersResponse: {
+            /** @description The sport the list was asked for. */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Members
+             * @description **Only the members rated in `sport`**: the reader first, then the Owner, then everybody else **newest joined first**. **A blocked pair, either way round, is left out of each other's list** — and nothing says so: the group's `member_count` is the same for every reader, so it may be more than the rows here. Empty when nobody in the group the reader may see is rated in it.
+             */
+            members: components["schemas"]["GroupMemberSchema"][];
+        };
+        /**
          * GroupPersonSchema
          * @description A member's face — **a name and a photograph, and nothing else**.
          */
@@ -4414,6 +4548,11 @@ export interface components {
              * @description **Every sport**, in the registry's order — one the group has no dot for too, because the reader may be rated in it and open it.
              */
             rated_by_sport: components["schemas"]["GroupSportSchema"][];
+            /**
+             * Member Faces
+             * @description The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order — the Owner, then newest joined first — with a blocked pair, either way round, left out, as the list it opens leaves them out. Empty for a reader alone (`member_count` 1), whose row draws their own face — and empty too, with `member_count` above 1, when a block hides everybody else. `member_count` is the group's, so its *+N* counts everybody.
+             */
+            member_faces: components["schemas"]["GroupPersonSchema"][];
         };
         /**
          * GroupSportSchema
@@ -11467,6 +11606,142 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description `block_state_unavailable` — who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_group_api_v1_groups__group_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `group_not_found` — no such group, or one the caller is not in. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `group_has_other_members` — somebody besides the Owner is in it. A group is deleted only while its Owner is its only member; an Owner who wants out of one with people in it leaves. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_group_api_v1_groups__group_id__details_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditedGroupResponse"];
+                };
+            };
+            /** @description `group_name_invalid` (`details.field` `name`) — 1–40 characters once trimmed. Read only once the caller is known to be the Owner. **Nothing was recorded** — the policy neither. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `group_not_found` — no such group, or one the caller is not in. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — who is blocked could not be read for the answer's members row. **Nothing was recorded**: the answer is drawn before the save commits, so the retry is the whole edit again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     join_group_api_v1_groups__group_id__membership_post: {
@@ -11509,6 +11784,105 @@ export interface operations {
             };
         };
     };
+    leave_group_api_v1_groups__group_id__membership_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `group_not_found` — no such group, or one the caller is not in: a second tap on *Leave* meets this, because they are not in it any more. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `lone_owner_cannot_leave` — the caller owns the group and is its only member, so there is nobody to pass it to. *Delete the group* is what undoes it. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    group_members_api_v1_groups__group_id__members_get: {
+        parameters: {
+            query: {
+                /** @description The sport whose players to list. */
+                sport: components["schemas"]["Sport"];
+            };
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupMembersResponse"];
+                };
+            };
+            /** @description `group_not_found` — **one code for two cases**: no such group, and a group the reader is not a member of. Both have one remedy. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     join_requests_api_v1_groups__group_id__requests_get: {
         parameters: {
             query?: never;
@@ -11529,7 +11903,7 @@ export interface operations {
                     "application/json": components["schemas"]["JoinRequestsResponse"];
                 };
             };
-            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests. */
+            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -11577,7 +11951,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests. */
+            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -11625,7 +11999,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests. */
+            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it. */
             403: {
                 headers: {
                     [name: string]: unknown;

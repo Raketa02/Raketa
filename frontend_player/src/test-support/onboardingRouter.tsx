@@ -35,6 +35,8 @@ import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
 import JoinGroupRoute from '@/app/(app)/(tabs)/play/join';
 import GroupRoute from '@/app/(app)/(tabs)/play/group/[groupId]/index';
 import GroupFriendsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/friends';
+import GroupMembersRoute from '@/app/(app)/(tabs)/play/group/[groupId]/members';
+import GroupEditRoute from '@/app/(app)/(tabs)/play/group/[groupId]/edit';
 import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
@@ -118,11 +120,14 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/play/index': PlayRoute,
   '(app)/(tabs)/play/builder': BuilderRoute,
   '(app)/(tabs)/play/pool': PoolRoute,
-  // Play › Groups' three screens (#512), under Play so the column stays lit and *back* is the list.
+  // Play › Groups' screens (#512–#514), under Play so the column stays lit and *back* is the list —
+  // and Friends, Members and Edit group over a group's page, so *back* is the page.
   '(app)/(tabs)/play/new-group': NewGroupRoute,
   '(app)/(tabs)/play/join': JoinGroupRoute,
   '(app)/(tabs)/play/group/[groupId]/index': GroupRoute,
   '(app)/(tabs)/play/group/[groupId]/friends': GroupFriendsRoute,
+  '(app)/(tabs)/play/group/[groupId]/members': GroupMembersRoute,
+  '(app)/(tabs)/play/group/[groupId]/edit': GroupEditRoute,
   // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,
   // because the Now tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,

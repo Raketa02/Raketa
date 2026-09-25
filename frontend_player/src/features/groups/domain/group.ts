@@ -127,6 +127,54 @@ export interface Group {
    * a sport only they play here, and open it.
    */
   readonly ratedBySport: readonly SportRoster[];
+  /**
+   * **The Info tab's members row** (#514): up to five faces of everybody **but the reader**, in
+   * the Members list's order — the Owner, then newest joined first — with a blocked pair left
+   * out, either way round. Empty for a reader alone, and for one a block hides everybody from.
+   */
+  readonly memberFaces: readonly GroupPerson[];
+}
+
+/**
+ * **One row of Members, for one sport** (play 61; #514) — *Padel 2,71 · score 92*. Only members
+ * rated in the sport are listed, so `level` is always there; `playerScore` is **absent** for
+ * somebody the platform has watched nothing of — no record is not a bad one, and never `0`.
+ * `isOwner` is the row the **admin** tag is drawn on.
+ */
+export interface GroupMember extends GroupPerson {
+  readonly level: number;
+  readonly playerScore?: number;
+  readonly isOwner: boolean;
+}
+
+/** One sport a person is rated in, with its Level — *Padel 2,44*. */
+export interface SportLevel {
+  readonly sport: Sport;
+  readonly level: number;
+}
+
+/**
+ * **A Join request, as its Owner sees it** (club 20, the request card everywhere): who is asking
+ * and **every sport they are rated in**, in the registry's order. No Player Score — club 20
+ * replaces play 62 by name.
+ */
+export interface JoinRequest extends GroupPerson {
+  readonly levels: readonly SportLevel[];
+}
+
+/** **What Edit group saves** — the New group form's Name and Who can join; the home club never changes. */
+export interface GroupDetails {
+  readonly name: string;
+  readonly joinPolicy: JoinPolicy;
+}
+
+/**
+ * **An edit's answer**: the group as the save left it, and **who the switch to Anyone let in**,
+ * in the order they asked — empty for every other save.
+ */
+export interface EditedGroup {
+  readonly group: Group;
+  readonly admitted: readonly GroupPerson[];
 }
 
 /** A group's name is 1–40 characters once trimmed (ADR-0183 §3). The field stops at 40. */

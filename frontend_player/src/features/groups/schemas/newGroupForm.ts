@@ -21,11 +21,20 @@ export interface NewGroupForm {
   readonly joinPolicy: JoinPolicy;
 }
 
+/**
+ * **A group's name, as a form sends it** — trimmed, then 1–40 characters (ADR-0183 §3). One rule
+ * for New group and Edit group, so the two forms cannot disagree about what a name is.
+ */
+export const GroupNameSchema = z.string().trim().min(1).max(GROUP_NAME_MAX);
+
+/** Who can join, as either form holds it. */
+export const JoinPolicySchema = z.enum(['ANYONE', 'PEOPLE_I_APPROVE']);
+
 const NewGroupSchema = z
   .object({
-    name: z.string().trim().min(1).max(GROUP_NAME_MAX),
+    name: GroupNameSchema,
     homeClub: z.object({ id: z.string().min(1) }),
-    joinPolicy: z.enum(['ANYONE', 'PEOPLE_I_APPROVE']),
+    joinPolicy: JoinPolicySchema,
   })
   .transform((form): NewGroup => ({
     name: form.name,

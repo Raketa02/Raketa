@@ -1,5 +1,6 @@
 /**
- * **The feature's reads** — the Groups list, one group, and the two searches. Pass-throughs over
+ * **The feature's reads** — the Groups list, one group, its Members for a sport, the Join
+ * requests waiting on it, and the two searches. Pass-throughs over
  * `api/` and `mappers/`, as the uniform-strict rule allows where there is no rule to apply: the
  * backend orders, filters and folds everything these return, and nothing is decided here.
  *
@@ -7,15 +8,27 @@
  * empty result quotes what was searched for rather than what has been typed since.
  */
 
+import { toWireSport } from '@/features/onboarding/types';
+import type { Sport } from '@/shared/vocabulary/sport';
+
 import {
   getGroup,
+  getGroupMembers,
   getHomeClubs,
+  getJoinRequests,
   getJoinSearch,
   getMyGroups,
   type Cancellable,
 } from '../api/groupsApi';
-import type { ClubSearch, Group, MyGroup } from '../domain/group';
-import { toGroup, toHomeClubSearch, toJoinSearch, toMyGroups } from '../mappers/groupMappers';
+import type { ClubSearch, Group, GroupMember, JoinRequest, MyGroup } from '../domain/group';
+import {
+  toGroup,
+  toGroupMembers,
+  toHomeClubSearch,
+  toJoinRequests,
+  toJoinSearch,
+  toMyGroups,
+} from '../mappers/groupMappers';
 
 export async function readMyGroups(options: Cancellable = {}): Promise<readonly MyGroup[]> {
   return toMyGroups(await getMyGroups(options));
@@ -23,6 +36,23 @@ export async function readMyGroups(options: Cancellable = {}): Promise<readonly 
 
 export async function readGroup(groupId: string, options: Cancellable = {}): Promise<Group> {
   return toGroup(await getGroup(groupId, options));
+}
+
+/** Members rated in `sport`: the reader, the Owner, then newest joined first. */
+export async function readGroupMembers(
+  groupId: string,
+  sport: Sport,
+  options: Cancellable = {},
+): Promise<readonly GroupMember[]> {
+  return toGroupMembers(await getGroupMembers(groupId, toWireSport(sport), options));
+}
+
+/** *Want to join · N* — the Owner's read, in the order they asked. */
+export async function readJoinRequests(
+  groupId: string,
+  options: Cancellable = {},
+): Promise<readonly JoinRequest[]> {
+  return toJoinRequests(await getJoinRequests(groupId, options));
 }
 
 export async function searchHomeClubs(

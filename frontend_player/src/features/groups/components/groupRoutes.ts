@@ -8,6 +8,9 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
+/** **The Groups list** — Play's root while `find_a_game` is off; where leaving a group lands. */
+export const GROUPS_LIST_ROUTE = '/play';
+
 export const NEW_GROUP_ROUTE = '/play/new-group';
 export const JOIN_GROUP_ROUTE = '/play/join';
 
@@ -23,4 +26,18 @@ export function groupRoute(groupId: string) {
  */
 export function groupFriendsRoute(groupId: string, sport: Sport) {
   return { pathname: '/play/group/[groupId]/friends', params: { groupId, sport } } as const;
+}
+
+/**
+ * **Members** (play 61), pushed over a group's page from Info's members row. No sport in the
+ * route: the page shares the fast filter's one state, so it opens on the sport the group page is
+ * on and a pick there is the page's too.
+ */
+export function groupMembersRoute(groupId: string) {
+  return { pathname: '/play/group/[groupId]/members', params: { groupId } } as const;
+}
+
+/** **Edit group**, pushed over a group's page from Info's Edit group row — the Owner's. */
+export function groupEditRoute(groupId: string) {
+  return { pathname: '/play/group/[groupId]/edit', params: { groupId } } as const;
 }

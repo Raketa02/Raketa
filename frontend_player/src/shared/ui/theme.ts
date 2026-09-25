@@ -769,8 +769,13 @@ const size = {
    *  so its corner is the face's third and no second radius exists. `filterPad` is the white
    *  bar's inset around the sport pills it unfolds into (play 42): the pills are chips, and
    *  `chip` + 2 × 9 is 45 — so the bar is a reachable target tall and each pill's `hit.chip`
-   *  ends at the bar's edge rather than past it, where Android would never deliver the touch. */
-  groupPage: { seat: 34, filterPad: 9 },
+   *  ends at the bar's edge rather than past it, where Android would never deliver the touch.
+   *
+   *  The Info tab's members row (#514, play 58–60) stacks up to five faces: `stackFace` is each
+   *  one, 28 — the monogram's row size, and what the mocks draw beside the row's `cardTitle` —
+   *  `stackOverlap` how far each slides under the one before it, about a third, and `stackRing`
+   *  the card-coloured ring that keeps one face from merging into the next. */
+  groupPage: { seat: 34, filterPad: 9, stackFace: 28, stackOverlap: 9, stackRing: 2 },
   /** The yes screen's tile — a face at this screen's two sizes, and the initials over a poster
    *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
    *  §2, §3). MEASURED off the mocks at 1x: 64 x 64 in the singles mock, 54 x 54 in the doubles

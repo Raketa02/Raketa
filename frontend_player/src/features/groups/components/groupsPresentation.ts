@@ -16,10 +16,19 @@
 import { sportLabel } from '@/features/onboarding/types';
 import { courtSummaryLabel, seatLabel, type SeatPlace } from '@/features/play/types';
 import { counted } from '@/shared/formatting/counted';
+import { playerName } from '@/shared/formatting/playerName';
 import { formatDistanceKm, formatLevel } from '@/shared/formatting/ratingFormat';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { GROUP_NAME_MAX, type GroupAtClub, type SearchedClub } from '../domain/group';
+import {
+  GROUP_NAME_MAX,
+  type Group,
+  type GroupAtClub,
+  type GroupMember,
+  type SearchedClub,
+  type SportLevel,
+} from '../domain/group';
+import type { GroupExit } from '../domain/groupInfo';
 import type { GamesCard } from '../domain/groupPage';
 import type { GroupAction } from '../domain/groupRules';
 
@@ -218,4 +227,199 @@ export function friendsLine(groupName: string): string {
  */
 export function shareMessage(groupName: string, link: string): string {
   return `Join ${groupName} on Raketa: ${link}`;
+}
+
+// ---------------------------------------------------------------------------
+// The Info tab, Members and Edit group (#514)
+// ---------------------------------------------------------------------------
+
+/**
+ * *raketa.app/join/K7PQ2MXA* — the link as Info's card draws it (play 57, 60): the address
+ * without its scheme, which the mocks never print. Spoken, copied and shared whole.
+ */
+export function linkShown(link: string): string {
+  return link.replace(/^https?:\/\//, '');
+}
+
+/** *Group link, raketa.app/join/K7PQ2MXA* — the card's link, spoken. */
+export function linkLabel(link: string): string {
+  return `Group link, ${linkShown(link)}`;
+}
+
+/**
+ * *anyone can join*, *you approve joins*, *the owner approves joins* — the members row's policy
+ * line. The group's read names no Owner, so a member who is not one reads *the owner*, as a row
+ * whose Owner can no longer be named does.
+ */
+export function infoPolicyLine(group: Pick<Group, 'joinPolicy' | 'isOwner'>): string {
+  if (group.joinPolicy === 'ANYONE') return GROUPS_COPY.info.anyoneCanJoin;
+  return group.isOwner ? GROUPS_COPY.info.youApprove : GROUPS_COPY.info.ownerApproves;
+}
+
+/** *+2* — the members row's count of everybody it does not draw. */
+export function moreFaces(count: number): string {
+  return `+${count}`;
+}
+
+/** *8 members, plays Padel, Tennis, anyone can join* — the members row, spoken; it opens Members. */
+export function membersRowLabel(
+  group: Pick<Group, 'memberCount' | 'sports' | 'joinPolicy' | 'isOwner'>,
+): string {
+  const plays = group.sports.length > 0 ? [`plays ${sportsList(group.sports)}`] : [];
+  return [membersLine(group.memberCount), ...plays, infoPolicyLine(group)].join(', ');
+}
+
+/** *Want to join · 2* — the Owner's queue, drawn upper case (club 20). */
+export function wantToJoin(count: number): string {
+  return `Want to join${DOT}${count}`;
+}
+
+/** *Padel 2,44 · Tennis 2,60* — every sport a person asking is rated in, full names (club 20). */
+export function requestLevels(levels: readonly SportLevel[]): string {
+  return levels.map(({ sport, level }) => `${sportLabel(sport)} ${formatLevel(level)}`).join(DOT);
+}
+
+/** A name as a row draws it — the whole Name, or the word for somebody who can't be named. */
+export function personName(name: string | null): string {
+  return name === null ? playerName({ kind: 'unknown' }) : playerName({ kind: 'player', name });
+}
+
+/** *Michał Rogalski, Padel 2,44 · Tennis 2,60* — a request's row, spoken before its two taps. */
+export function requestLabel(request: {
+  readonly name: string | null;
+  readonly levels: readonly SportLevel[];
+}): string {
+  const levels = request.levels.length > 0 ? [requestLevels(request.levels)] : [];
+  return [personName(request.name), ...levels].join(', ');
+}
+
+/** *Approve Michał Rogalski* — the tap is named for whom it admits. */
+export function approveLabel(name: string | null): string {
+  return `${GROUPS_COPY.info.approve} ${personName(name)}`;
+}
+
+/** *Decline Michał Rogalski* — the ✕, named for what it does and to whom. */
+export function declineLabel(name: string | null): string {
+  return `Decline ${personName(name)}`;
+}
+
+/**
+ * **What the Leave or Delete sheet says** (stories 77–79): a delete that it cannot be undone; a
+ * leave, the handover first where the reader owns the group, then the way back in under the
+ * group's rule.
+ */
+export function exitSheetBody(
+  exit: GroupExit,
+  group: Pick<Group, 'isOwner' | 'joinPolicy'>,
+): readonly string[] {
+  const copy = GROUPS_COPY.info;
+  if (exit === 'delete') return [copy.deleteBody];
+  const rejoin = group.joinPolicy === 'ANYONE' ? copy.rejoinAnyone : copy.rejoinAsk;
+  return group.isOwner ? [copy.leaveHandover, rejoin] : [rejoin];
+}
+
+/** One code for *no such group* and *not one of yours*, met by a write after the group has gone. */
+const GROUP_GONE = 'This group isn’t one of yours any more.';
+
+/**
+ * **The way out's words, by which way it is** — the door, the sheet's title and close, the act
+ * busy, and the toast once it is done. One table, so the two doors cannot be half one and half
+ * the other.
+ */
+export interface ExitWords {
+  readonly door: string;
+  readonly busy: string;
+  readonly title: string;
+  readonly close: string;
+  readonly done: string;
+}
+
+export const EXIT_WORDS: Readonly<Record<GroupExit, ExitWords>> = {
+  delete: {
+    door: GROUPS_COPY.info.delete,
+    busy: GROUPS_COPY.info.deleting,
+    title: GROUPS_COPY.info.deleteTitle,
+    close: GROUPS_COPY.info.deleteClose,
+    done: GROUPS_COPY.info.deleted,
+  },
+  leave: {
+    door: GROUPS_COPY.info.leave,
+    busy: GROUPS_COPY.info.leaving,
+    title: GROUPS_COPY.info.leaveTitle,
+    close: GROUPS_COPY.info.leaveClose,
+    done: GROUPS_COPY.info.left,
+  },
+};
+
+/**
+ * **A refused leave or delete, in the sheet's words.** The two conflicts mean the member count
+ * moved since the page was read, and each names the other door, which the page now draws.
+ */
+export const EXIT_REFUSALS = {
+  lone_owner_cannot_leave: 'You’re the only one left in the group — delete it instead.',
+  group_has_other_members: 'Somebody else is in the group now — leave it instead.',
+  not_the_group_owner: 'Only the group’s owner can delete it.',
+  group_not_found: GROUP_GONE,
+} as const satisfies Readonly<Record<string, string>>;
+
+/** A refused answer to a request — answered from another phone, or a group that changed hands. */
+export const REQUEST_REFUSALS = {
+  join_request_not_found: 'That request isn’t waiting any more.',
+  not_the_group_owner: 'Only the group’s owner answers requests.',
+  group_not_found: GROUP_GONE,
+} as const satisfies Readonly<Record<string, string>>;
+
+/** A refused save — the name the form can name, and the two it cannot fix. */
+export const EDIT_REFUSALS = {
+  group_name_invalid: CREATE_REFUSALS.group_name_invalid,
+  not_the_group_owner: 'Only the group’s owner can edit it.',
+  group_not_found: GROUP_GONE,
+} as const satisfies Readonly<Record<string, string>>;
+
+/** *Kazimierz crew · 8* — Members' eyebrow (play 61), drawn upper case. */
+export function membersEyebrow(group: Pick<Group, 'name' | 'memberCount'>): string {
+  return `${group.name}${DOT}${group.memberCount}`;
+}
+
+/** *Play Padel · 8* — the list's heading: the sport, and how many here play it. */
+export function playSportCount(sport: Sport, count: number): string {
+  return `Play ${sportLabel(sport)}${DOT}${count}`;
+}
+
+/** *Padel 2,71 · score 92* — a row's line; no score for somebody with no record, never *score 0*. */
+export function memberLine(
+  sport: Sport,
+  member: Pick<GroupMember, 'level' | 'playerScore'>,
+): string {
+  const level = `${sportLabel(sport)} ${formatLevel(member.level)}`;
+  return member.playerScore === undefined ? level : `${level}${DOT}score ${member.playerScore}`;
+}
+
+/** Who a Members row is about, and whether it is the reader's own. */
+export interface MemberRowPerson extends Pick<
+  GroupMember,
+  'name' | 'level' | 'playerScore' | 'isOwner'
+> {
+  readonly you: boolean;
+}
+
+/** *You* for the reader's own row, the whole Name for anybody else (play 61). */
+export function memberName(member: Pick<MemberRowPerson, 'name' | 'you'>): string {
+  return member.you ? playerName({ kind: 'you' }) : personName(member.name);
+}
+
+/** *Karol Tomczak, admin, Padel 2,75 · score 93* — a row, spoken as it is drawn. */
+export function memberRowLabel(sport: Sport, member: MemberRowPerson): string {
+  const admin = member.isOwner ? [GROUPS_COPY.members.admin] : [];
+  return [memberName(member), ...admin, memberLine(sport, member)].join(', ');
+}
+
+/** *Open Zofia Bąk's record* — what a hold on the row does, named for the rotor. */
+export function openRecordLabel(member: Pick<MemberRowPerson, 'name' | 'you'>): string {
+  return member.you ? 'Open your record' : `Open ${personName(member.name)}’s record`;
+}
+
+/** *Let in · 2* — who a switch to Anyone admitted, on Edit group after the save. */
+export function admittedEyebrow(count: number): string {
+  return `Let in${DOT}${count}`;
 }

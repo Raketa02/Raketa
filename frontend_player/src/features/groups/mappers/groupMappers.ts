@@ -17,11 +17,15 @@ import type {
   SearchedClub,
   ClubName,
   ClubSearch,
+  EditedGroup,
   Group,
   GroupAtClub,
+  GroupMember,
   GroupPerson,
+  JoinRequest,
   Monogram,
   MyGroup,
+  SportLevel,
   SportRoster,
 } from '../domain/group';
 
@@ -99,11 +103,12 @@ export function toJoinSearch(text: string, wire: Schemas['JoinSearchResponse']):
 
 /** A face: the photograph's link travels only when there is one — the poster stands in otherwise. */
 function toGroupPerson(wire: Schemas['GroupPersonSchema']): GroupPerson {
-  return {
-    playerId: wire.player_id,
-    name: wire.name,
-    ...(wire.photo_url === undefined ? {} : { photoUrl: wire.photo_url }),
-  };
+  return { playerId: wire.player_id, name: wire.name, ...photoOf(wire) };
+}
+
+/** A photograph's link, where the wire carried one. */
+function photoOf(wire: { readonly photo_url?: string }): { readonly photoUrl?: string } {
+  return wire.photo_url === undefined ? {} : { photoUrl: wire.photo_url };
 }
 
 /** Every sport's roster this build can name — a count with no sport behind it claims nothing. */
@@ -133,5 +138,44 @@ export function toGroup(wire: Schemas['GroupResponse']): Group {
     joinPolicy: wire.join_policy,
     isOwner: wire.is_owner,
     ratedBySport: toRosters(wire.rated_by_sport),
+    memberFaces: wire.member_faces.map(toGroupPerson),
   };
+}
+
+/**
+ * **Members, for one sport** — in the order served: the reader, the Owner, then newest joined
+ * first. The score travels only where there is one: no record is not a bad one, and a `0` drawn
+ * in its place would say it was.
+ */
+export function toGroupMembers(wire: Schemas['GroupMembersResponse']): readonly GroupMember[] {
+  return wire.members.map((member) => ({
+    playerId: member.player_id,
+    name: member.name,
+    ...photoOf(member),
+    level: member.level,
+    ...(member.player_score === undefined ? {} : { playerScore: member.player_score }),
+    isOwner: member.is_owner,
+  }));
+}
+
+/** Every Level this build can name — a figure with no sport behind it claims nothing. */
+function toLevels(wire: readonly Schemas['SportLevelSchema'][]): readonly SportLevel[] {
+  return wire.flatMap((row) => {
+    const sport = toSport(row.sport);
+    return sport === undefined ? [] : [{ sport, level: row.level }];
+  });
+}
+
+/** *Want to join · N* — everybody waiting, in the order they asked. */
+export function toJoinRequests(wire: Schemas['JoinRequestsResponse']): readonly JoinRequest[] {
+  return wire.requests.map((request) => ({
+    playerId: request.player_id,
+    name: request.name,
+    ...photoOf(request),
+    levels: toLevels(request.levels),
+  }));
+}
+
+export function toEditedGroup(wire: Schemas['EditedGroupResponse']): EditedGroup {
+  return { group: toGroup(wire.group), admitted: wire.admitted.map(toGroupPerson) };
 }

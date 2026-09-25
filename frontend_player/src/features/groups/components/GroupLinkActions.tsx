@@ -10,6 +10,10 @@
  *
  * Volt then `onDark`: the one bright door on a dark card is the one that reaches people, and the
  * copy beside it is the quieter of the two, as the mocks draw them.
+ *
+ * **Info's card draws them short** — *Share* and *Copy*, beside the link rather than under a
+ * headline (play 57, 60) — and they are **spoken whole** there too: a listener meets the two
+ * doors out of the card's context, where *Share* alone says nothing about what goes out.
  */
 
 import { StyleSheet, View } from 'react-native';
@@ -25,7 +29,13 @@ import { shareMessage } from './groupsPresentation';
 
 const COPY = GROUPS_COPY.link;
 
-export function GroupLinkActions({ group }: { readonly group: Pick<Group, 'name' | 'link'> }) {
+export interface GroupLinkActionsProps {
+  readonly group: Pick<Group, 'name' | 'link'>;
+  /** Info's *Share* and *Copy* — drawn short, spoken whole. */
+  readonly short?: boolean;
+}
+
+export function GroupLinkActions({ group, short = false }: GroupLinkActionsProps) {
   const sheet = useShare();
   const clipboard = useClipboard();
 
@@ -39,11 +49,17 @@ export function GroupLinkActions({ group }: { readonly group: Pick<Group, 'name'
   return (
     <View style={s.row}>
       <Button
-        label={COPY.share}
+        label={short ? COPY.shareShort : COPY.share}
+        accessibilityLabel={COPY.share}
         variant="volt"
         onPress={() => void sheet.shareText(shareMessage(group.name, group.link))}
       />
-      <Button label={COPY.copy} variant="onDark" onPress={() => void copy()} />
+      <Button
+        label={short ? COPY.copyShort : COPY.copy}
+        accessibilityLabel={COPY.copy}
+        variant="onDark"
+        onPress={() => void copy()}
+      />
     </View>
   );
 }

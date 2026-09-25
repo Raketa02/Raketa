@@ -69,6 +69,7 @@ function pageOf(
     join_policy: 'ANYONE',
     is_owner: false,
     rated_by_sport: [],
+    member_faces: [],
     ...overrides,
   };
 }

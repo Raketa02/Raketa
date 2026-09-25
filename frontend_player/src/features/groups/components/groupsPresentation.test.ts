@@ -5,6 +5,16 @@ import type { GamesCard } from '../domain/groupPage';
 import {
   approverLine,
   clubLine,
+  exitSheetBody,
+  infoPolicyLine,
+  linkShown,
+  memberLine,
+  memberRowLabel,
+  membersEyebrow,
+  membersRowLabel,
+  openRecordLabel,
+  playSportCount,
+  requestLevels,
   emptySeatLabel,
   friendsPicked,
   gamesHeadline,
@@ -143,5 +153,94 @@ describe('the group page’s sentences', () => {
     expect(shareMessage('my raketa group', 'https://raketa.app/join/K7PQ2MXA')).toBe(
       'Join my raketa group on Raketa: https://raketa.app/join/K7PQ2MXA',
     );
+  });
+});
+
+describe('the Info tab', () => {
+  it('shows the link without its scheme', () => {
+    expect(linkShown('https://raketa.app/join/K7PQ2MXA')).toBe('raketa.app/join/K7PQ2MXA');
+    expect(linkShown('http://localhost:3000/join/K7PQ2MXA')).toBe('localhost:3000/join/K7PQ2MXA');
+  });
+
+  it('says who answers a request, from where the reader stands', () => {
+    expect(infoPolicyLine({ joinPolicy: 'ANYONE', isOwner: true })).toBe('anyone can join');
+    expect(infoPolicyLine({ joinPolicy: 'PEOPLE_I_APPROVE', isOwner: true })).toBe(
+      'you approve joins',
+    );
+    expect(infoPolicyLine({ joinPolicy: 'PEOPLE_I_APPROVE', isOwner: false })).toBe(
+      'the owner approves joins',
+    );
+  });
+
+  it('speaks the members row whole, the sports by name', () => {
+    expect(
+      membersRowLabel({
+        memberCount: 8,
+        sports: ['padel', 'tennis'],
+        joinPolicy: 'ANYONE',
+        isOwner: false,
+      }),
+    ).toBe('8 members, plays Padel, Tennis, anyone can join');
+    expect(
+      membersRowLabel({ memberCount: 1, sports: [], joinPolicy: 'ANYONE', isOwner: true }),
+    ).toBe('1 member, anyone can join');
+  });
+
+  // Club 20: full sport names, each with its Level.
+  it('lists every sport a person asking is rated in, with its Level', () => {
+    expect(
+      requestLevels([
+        { sport: 'padel', level: 2.44 },
+        { sport: 'tennis', level: 2.6 },
+      ]),
+    ).toBe('Padel 2,44 · Tennis 2,60');
+  });
+
+  it('says what leaving does — the handover for an Owner, and the way back in', () => {
+    expect(exitSheetBody('leave', { isOwner: false, joinPolicy: 'ANYONE' })).toEqual([
+      'You can join again any time with its link.',
+    ]);
+    expect(exitSheetBody('leave', { isOwner: true, joinPolicy: 'PEOPLE_I_APPROVE' })).toEqual([
+      'It passes to whoever has been in it longest, with the requests waiting.',
+      'To come back, you ask to join again with its link.',
+    ]);
+    expect(exitSheetBody('delete', { isOwner: true, joinPolicy: 'ANYONE' })).toEqual([
+      'Nobody else is in it. Its link stops working, and the group can’t be brought back.',
+    ]);
+  });
+});
+
+describe('Members', () => {
+  it('heads the page with the group’s name and its count', () => {
+    expect(membersEyebrow({ name: 'Kazimierz crew', memberCount: 8 })).toBe('Kazimierz crew · 8');
+  });
+
+  it('heads the list with the sport and how many play it here', () => {
+    expect(playSportCount('padel', 8)).toBe('Play Padel · 8');
+  });
+
+  it('reads a row’s Level and Player Score, and no score where there is none', () => {
+    expect(memberLine('padel', { level: 2.71, playerScore: 92 })).toBe('Padel 2,71 · score 92');
+    expect(memberLine('tennis', { level: 3.1 })).toBe('Tennis 3,10');
+  });
+
+  it('speaks a row as who, the admin tag, and the line', () => {
+    expect(
+      memberRowLabel('padel', {
+        name: 'Karol Tomczak',
+        level: 2.75,
+        playerScore: 93,
+        isOwner: true,
+        you: false,
+      }),
+    ).toBe('Karol Tomczak, admin, Padel 2,75 · score 93');
+    expect(
+      memberRowLabel('padel', { name: 'Tomek Kowal', level: 2.71, isOwner: false, you: true }),
+    ).toBe('You, Padel 2,71');
+  });
+
+  it('names the record a hold opens', () => {
+    expect(openRecordLabel({ name: 'Zofia Bąk', you: false })).toBe('Open Zofia Bąk’s record');
+    expect(openRecordLabel({ name: 'Tomek Kowal', you: true })).toBe('Open your record');
   });
 });

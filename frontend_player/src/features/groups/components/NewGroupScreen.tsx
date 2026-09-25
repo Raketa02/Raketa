@@ -21,20 +21,21 @@
 
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { codeMessage } from '@/shared/errors';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
-import { Button, Card, Chip, Note, ScreenHeader, TextField, theme } from '@/shared/ui';
+import { Button, Note, ScreenHeader, theme } from '@/shared/ui';
 
-import { GROUP_NAME_MAX, type SearchedClub } from '../domain/group';
+import type { SearchedClub } from '../domain/group';
 import type { JoinPolicy } from '../domain/vocabulary';
 import { useHomeClubSearch } from '../hooks/useClubSearch';
 import { useCreateGroup } from '../hooks/useGroupWrites';
 import { newGroupFrom } from '../schemas/newGroupForm';
 
+import { GroupNameCard, WhoCanJoinCard } from './GroupFormCards';
 import { groupRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
 import { CREATE_REFUSALS } from './groupsPresentation';
@@ -80,18 +81,7 @@ export function NewGroupScreen() {
             if (homeClub === undefined && nearTheEnd(event.nativeEvent)) search.loadMore();
           }}
         >
-          <Card style={s.card}>
-            <TextField
-              label={COPY.name}
-              recessed
-              placeholder={COPY.namePlaceholder}
-              value={name}
-              onChangeText={setName}
-              maxLength={GROUP_NAME_MAX}
-              autoCapitalize="sentences"
-              returnKeyType="next"
-            />
-          </Card>
+          <GroupNameCard name={name} onName={setName} />
 
           <HomeClubCard
             typed={typed}
@@ -102,22 +92,7 @@ export function NewGroupScreen() {
             onChange={() => setHomeClub(undefined)}
           />
 
-          <Card style={s.card}>
-            <Text style={s.label}>{COPY.whoCanJoin}</Text>
-            <View style={s.chips}>
-              <Chip
-                label={COPY.anyone}
-                selected={joinPolicy === 'ANYONE'}
-                onPress={() => setJoinPolicy('ANYONE')}
-              />
-              <Chip
-                label={COPY.peopleIApprove}
-                selected={joinPolicy === 'PEOPLE_I_APPROVE'}
-                onPress={() => setJoinPolicy('PEOPLE_I_APPROVE')}
-              />
-            </View>
-            <Text style={s.note}>{COPY.noSportNote}</Text>
-          </Card>
+          <WhoCanJoinCard joinPolicy={joinPolicy} onJoinPolicy={setJoinPolicy} />
 
           <Button
             label={COPY.create}
@@ -149,9 +124,5 @@ const s = StyleSheet.create({
     paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
-  card: { gap: theme.space.sm },
-  label: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
-  chips: { flexDirection: 'row', gap: theme.space.xs },
-  note: { ...theme.type.tiny, color: theme.color.muted },
   footnote: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
 });

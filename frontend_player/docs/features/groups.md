@@ -136,7 +136,7 @@ each end of the unfold and under reduced motion, with the layout handed in as ev
 
 **Four tabs, no counts, and the page always opens on Games** (story 59; ADR-0188 §5 keeps which
 tab nowhere). Games, Fill in and Friends are each drawn for the filter's sport; Info is
-[#514](https://github.com/Raketa02/Raketa/issues/514)'s and draws nothing yet. **Every starting
+[#514](https://github.com/Raketa02/Raketa/issues/514)'s, below. **Every starting
 tab has one dark card whose remedy is the link** (`LinkCard`): a headline, what the app is waiting
 for, and **Share the link** (volt) beside **Copy link** (`onDark`). Share hands the phone's own
 sheet one sentence — _Join my raketa group on Raketa: <link>_, the administrator's WhatsApp words
@@ -195,3 +195,83 @@ screen's, the glow the ⚡Play disc's, and a full-strength button that ignored i
 opposite of what it does. All three are flagged for the product owner. **Nothing on the page has
 been seen on a device** — the unfold's pace, and whether four sports fit the bar on a 320pt phone,
 are asked for a look.
+
+**Info is the group rather than a sport of it** ([#514](https://github.com/Raketa02/Raketa/issues/514),
+stories 71–79; play 57–60, club 20). Top to bottom: **the link card** — the link in mono on one line,
+cut in the middle so its code stays in view, and **Share** and **Copy** beside it, drawn short and
+spoken whole (_Share the link_, _Copy link_), the same two doors as every other dark card on the page;
+**Want to join · N**, the Owner's; **the members row**; **Edit group**, the Owner's; and the way out.
+Info never waits for the filter's sport, because nothing on it is drawn for one.
+
+**The members row is the server's faces and the phone's arithmetic** (`domain/groupInfo.ts`'
+`membersRow`). The group's read serves up to five faces of everybody but the reader in Members' order
+— the Owner, then newest joined first — with a blocked pair left out; the row stacks them, each ringed
+in the card's white, and _+N_ counts the other members it does not draw, `member_count − 1 − faces`.
+With no face served the reader's own stands in, off the roster the page already holds (`readerFace`):
+alone, that is play 57; hidden from everybody by a block, it is still a face, and _+N_ counts the
+rest. The line under _N members_ is the dots and who approves: _anyone can join_, _you approve joins_
+to an Owner, _the owner approves joins_ to anybody else — the group's read names no Owner, so a member
+reads _the owner_, as a search row whose Owner can no longer be named does. The whole row is one
+element, spoken with the sports by name, and it opens Members.
+
+**Want to join is club 20's card, and an answer takes its row at once.** Asked only while the reader
+owns the group — anybody else would be refused, and a read that can only be refused is not asked —
+and drawn only while somebody is waiting, and not while the queue is being read, so the members row
+never drops a card's height and comes back. Each row is the face, the whole Name and every sport the
+person is rated in with its Level, in mono; **✕** is _Decline {name}_ and **Approve** _Approve
+{name}_. **This write is optimistic where a join is not** (`useAnswerRequest`): either answer ends the
+request whatever the server then does, so there is nothing for it to decide about where the row goes,
+only whether the tap reached it — the row goes on the tap and comes back, with a toast in the Owner's
+words, only on a refusal — that row alone, where it stood, since another answer may still be on its
+way. The queue is re-read once the last answer in flight has landed, never after
+each, which would draw a row answered a moment ago back in. An approval re-reads the group, its
+Members and the Groups list: every count moves by one. The refusal's words are handed into the hook
+by the section rather than said by the row, because the row is gone by the time a refusal lands.
+
+**Edit group is New group's two cards and the You tab's Save**
+(`EditGroupScreen`, pushed at `/play/group/[groupId]/edit`). _Name_ and _Who can join_ are
+`GroupFormCards`, drawn for both forms, and the name is one Zod rule for both (`GroupNameSchema`).
+**Save** reads _Saved_, settled, while the form says what the group says (`detailsUnchanged`), so a
+save that would record nothing is never sent; the screen stays after a save, as the You tab's do, and
+the answer is written under the page's key, so _back_ lands on the new name. **A switch to Anyone
+shows who it let in** — _LET IN · N_, a face and a name each, in the order they asked, off the answer's
+`admitted` — and re-reads the requests and Members, which the switch emptied and grew. A refusal the
+form can name is said under Save; `block_state_unavailable` records nothing, so the next Save is the
+whole edit again.
+
+**The way out is one door and a sheet** (`ExitDoor`). _Delete the group_ for an Owner who is the only
+member, _Leave the group_ for everybody else — an Owner with others included (`groupExit`). The sheet
+is the departure's shape: a title naming the moment, a close named by what it keeps, focus on the
+title, and the act named once. It says what leaving does before it happens — an Owner's group passes
+to whoever has been in it longest, with the requests waiting — and how to come back under the
+group's rule. **The sheet is the surface while the act is in flight**: it stays up, its act busy, and
+says a refusal in words. `lone_owner_cannot_leave` and `group_has_other_members` mean the count moved
+since the page was read; the group is re-read, and the sheet's act becomes the door that works.
+Success is a `dismissTo` the Groups list, the card already dropped from it, and a toast. **What is
+read about the group is marked stale and not re-read**: the page is still on its way out, and a
+re-read would draw _not one of yours_ over it as it leaves.
+
+**Members is the server's list for the filter's sport** (play 61, stories 80–84; `MembersScreen`,
+pushed at `/play/group/[groupId]/members`). The header is _GROUP · N_ over _Members_ — N the group's
+member count, which a block does not change — and **the same pill as the page, over the same state**:
+the filter is now `SportFilterPage`, the header, the body and the unfolding bar the page and Members
+share, and the sport is `useGroupSport`'s one value, so a pick on Members is the page's sport when the
+player goes back. _PLAY PADEL · N_ counts the rows drawn. The rows come in the server's order — the
+reader as _You_, the Owner with a `base` **admin** tag, then newest joined first — each _Padel 2,71 ·
+score 92_, with **no score where there is no record**, never _score 0_. **No friend tag**: PRD #500
+overrides play 61 by name.
+
+**Members opens the record on a press and hold, as the ticket asks.** The games feature's players
+card refused the hold on #285's argument — no affordance, no announcement, no accessibility
+equivalent — and taps instead; #514 and play 61 decide the gesture here, and the row answers the third
+objection the way the photo tile does: the hold is also the row's standard `longpress` accessibility
+action, named for the record it opens (_Open Zofia Bąk's record_, _Open your record_), with a hint
+that says the gesture, and the page ends in _Press and hold anyone for the full record._ It opens the
+existing `PlayerRecordSheet` with the filter's sport; the reader's own row opens their own record.
+
+**What this record departs from, and what is open.** The way out is 6.1's `secondary` where play
+57–60 draw it in dark red: `red` is _ended badly_ and coral is closed at six. Club 20 draws the
+Levels in sans; they are mono, as every Level is. Members' hold is the second gesture for the record
+sheet across two people lists. All three are in design-system Part 16 for the product owner, with the
+stacked faces' sizes. Leave, Delete, Save and the two answers pause offline and resume, as join and
+create do; no act here says so beside itself yet. **Nothing here has been seen on a device.**

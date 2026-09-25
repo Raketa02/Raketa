@@ -109,6 +109,7 @@ const CREATED: Wire['GroupResponse'] = {
   join_policy: 'ANYONE',
   is_owner: true,
   rated_by_sport: [],
+  member_faces: [],
 };
 
 const HOME_CLUBS = '/api/v1/home-clubs';
