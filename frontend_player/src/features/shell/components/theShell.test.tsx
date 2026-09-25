@@ -51,19 +51,19 @@ import { queryClient } from '@/shared/lib/query-client';
 import {
   CHALLENGES_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoFindAGame,
+  OWN_RECORD_SERVED,
+  PROFILE_OPTIONS_SERVED,
+  PROFILE_SURFACE_SERVED,
   stubChallenges,
   stubConversation,
   stubConversations,
   stubEntries,
   stubGate,
+  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
-  stubInterest,
   stubProfileSurface,
-  OWN_RECORD_SERVED,
-  PROFILE_OPTIONS_SERVED,
-  PROFILE_SURFACE_SERVED,
 } from '@/test-support/onboardingRouter';
 import {
   errorResponse,
@@ -152,7 +152,7 @@ afterEach(async () => {
 
 /** A player standing on the tab the entry gate lands them on. */
 async function launchIntoTheApp() {
-  await launchSignedIn();
+  await launchIntoFindAGame(transport);
   expect(await screen.findByText(NOW_COPY.empty.line)).toBeTruthy();
 }
 

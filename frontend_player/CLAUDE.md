@@ -142,11 +142,13 @@ src/
   `player_record` do this).
 - **One chokepoint per capability**, each the only importer of its module: `shared/lib/auth`
   (keychain), `shared/lib/http` (`fetch`, the 401 → refresh → retry rotation, timeouts as named
-  classes), and three platform ports in `shared/lib/platform/` — `location.ts`,
-  `imagePicking.ts`, `liveStream.ts`. Features depend on the port and drive the fakes in
-  `src/test-support/platform.ts`. The flag seam adds two, one file each in
+  classes), and five platform ports in `shared/lib/platform/` — `location.ts`,
+  `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`. Features depend on the port
+  and drive the fakes in `src/test-support/platform.ts`. The flag seam adds two, one file each in
   `features/feature_flags/api/`: `featurevisor.ts` (the SDK) and `datafileCache.ts`
-  (AsyncStorage — a public datafile, never a credential; ADR-0180). _(lint)_
+  (AsyncStorage — a public datafile, never a credential; ADR-0180). AsyncStorage's second and
+  last importer is `shared/lib/preferences/phonePreferences.ts` — three per-account choices,
+  wiped at sign-out (ADR-0188). _(lint)_
 - **`shared/` never imports a feature; a feature never deep-imports another** — go through its
   `types.ts`. `features/plans` may import `features/games`, never the reverse. _(lint)_ But do
   not move code to `shared/` because two files use it; keep it local until cross-feature
@@ -177,6 +179,7 @@ src/
 | Form input                | The form + one Zod schema                                                                                                        |
 | Navigation                | expo-router — a route param is not app state                                                                                     |
 | Config                    | `shared/config/env.ts`, Zod-validated at startup                                                                                 |
+| A choice the phone keeps  | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out — the Play segment today (ADR-0188)                      |
 
 Reach for Zustand last: component-local → feature store → app-wide store, and only with a
 reason. Zustand never holds API entities, tokens, a backend cache, or a global loading flag.

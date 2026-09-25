@@ -12,6 +12,7 @@
  * through one sequence instead of three.
  */
 
+import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 
 import { setSessionStatus } from './authSession';
@@ -75,4 +76,10 @@ export async function endSession(reason: SignOutReason): Promise<void> {
     .cancelQueries()
     .catch(() => undefined)
     .then(() => queryClient.clear());
+
+  // 4. Forget what the phone kept for this person — the Play segment and, later, the last sport
+  //    and profile (ADR-0188 §3). The same privacy step as 3, one store over: the next person to
+  //    sign in on this phone starts from the defaults. Awaited, unlike 3, because it waits on no
+  //    query and so cannot be waiting on this function's own caller; it never rejects.
+  await forgetPhonePreferences();
 }

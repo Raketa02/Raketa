@@ -46,8 +46,8 @@ import { BALANCE_SOFT, POSTER_LABEL, courtSeatCount, theme } from '@/shared/ui';
 import { NO_TAGS_IN_COMMON, socialTagChip } from '@/shared/vocabulary/socialTagPresentation';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
+  launchIntoFindAGame,
   PROFILE_SURFACE_SERVED,
-  launchSignedIn,
   stubGate,
   stubInterest,
   stubOutgoingYeses,
@@ -404,7 +404,7 @@ const summary = (filled: number) => courtSummaryLabel({ sportName: 'Padel', fill
 
 /** Search, spend the latch, and arrive on the court the search minted. */
 async function openTheBuilder() {
-  await launchSignedIn();
+  await launchIntoFindAGame(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 
@@ -1739,7 +1739,7 @@ describe('singles', () => {
 
   /** Search, spend the latch, and let the engine seat the one empty seat a match has. */
   async function openTheMatch() {
-    await launchSignedIn();
+    await launchIntoFindAGame(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
     await screen.findByLabelText('Tuesday evening');
 
@@ -1906,7 +1906,7 @@ describe('the question ⚡ raised', () => {
     transport.on('POST', SEARCHES, () => json(shortlist([keepTheseTimes])));
     raising([keepTheseTimes]);
 
-    await launchSignedIn();
+    await launchIntoFindAGame(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
     fireEvent.press(await screen.findByLabelText('Monday morning'));
 

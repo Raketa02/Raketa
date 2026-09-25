@@ -212,3 +212,19 @@ one loop**, so the guard that stops a malformed URL being blamed on the environm
 written for one and forgotten for the other. `platform/appBuild.ts` is the platform module's one
 plain _reading_ — `platform` (`ios` / `android`) and the app's own version — the two device facts
 a flag's rules may target; each is absent rather than guessed when the build cannot say.
+
+**The phone-preferences store, the clipboard port, and three primitives that grew a form each**
+([#512](https://github.com/Raketa02/Raketa/issues/512)). `shared/lib/preferences` is the second
+and last AsyncStorage importer (ADR-0188): **one key per account per value**, a read that fails is
+_nothing saved_, and `forgetPhonePreferences` is step 4 of `endSession`, awaited after the status
+change because it waits on no query — whichever way the session ended. It judges no value; the
+owning feature turns a stale one into its default, and `phonePreferenceKeys` spells the Query key
+every owner holds its value under, so the three owners share one root. `shared/lib/platform/clipboard.ts` is the fifth
+port, **read-only and one verb wide** (`readText`, never rejecting), for Join a group's **Paste**;
+`fakeClipboard()` and `stubClipboard` drive it. Both fences are lint rules proved by
+`pnpm test:boundaries`. The primitives: `Segment` gained **`prominent`** (the tab's own view
+switch, 6.3), `TextField` gained a **`trailing`** slot, a **`recessed`** ground for a field inside
+a card and a **`focusRing`** of `ink` or `coral` (6.13), and `ScreenHeader` gained **`compact`** —
+an `h2` title and a sub-line each ending in an ellipsis, for a header that names a thing rather
+than a screen (10.3). `theme.ts` gained `MONOGRAM_HUES` beside `POSTER_HUES` and
+`size.monogram` (7.20). All recorded in design-system Part 16.

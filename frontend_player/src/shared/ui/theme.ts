@@ -305,6 +305,41 @@ export const POSTER_HUES = [
 /** One member of the closed set. `CourtPoster` takes this and never a string. */
 export type PosterHue = (typeof POSTER_HUES)[number];
 
+// ---------------------------------------------------------------------------
+// The group monogram's hues — a second closed set, and for the poster's reason NOT in `color`
+// ---------------------------------------------------------------------------
+
+/**
+ * THE EIGHT FILLS A GROUP'S MONOGRAM CAN BE — one per colour key the backend serves, 0 to 7
+ * ([ADR-0183](../../../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
+ * §5, docs/design-system.md 7.20). The key is fixed for a group for ever — derived from its id —
+ * and **the backend never names a colour**: this list is the one place a key becomes a hue, so
+ * every screen that draws a group's tile draws the same one.
+ *
+ * Exported beside the theme and never inside it, as `POSTER_HUES` is: a monogram's hue is picked
+ * by a hash of a group's id, so it means nothing, and a `theme.color.monogram…` would be a value
+ * that means nothing sitting where every other one means something. `GroupMonogram` is the only
+ * component that reads it.
+ *
+ * MEASURED where the mocks draw one — play 1's *Oo* `#308361` and *Kc* `#87641A`, play 9's *O3*
+ * `#213E50`, play 40's *Mr* `#9E3C2B` — and four more chosen to sit between them on the wheel.
+ * **White letters on every one clear 4.5:1**, the floor for the tile's letters, which are text;
+ * the green is the tightest at 4,62. Derived in `monogramHues.test.ts`, which computes the ratio
+ * rather than asserting it. Unlike the poster, a monogram DOES sit near the sport hues: the mocks
+ * draw it so, and the tile always carries the group's name beside it, which is what tells a group
+ * from a sport.
+ */
+export const MONOGRAM_HUES = [
+  '#308361',
+  '#87641A',
+  '#213E50',
+  '#9E3C2B',
+  '#6A4C93',
+  '#1E6B73',
+  '#8C3F6E',
+  '#3D5A99',
+] as const;
+
 /**
  * The level bar's four bands. Three values each, not one with opacity:
  *   tint — the large bar fill
@@ -718,6 +753,16 @@ const size = {
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
    *  `hitSlop` around it would leave the words beside it inert. */
   switch: { track: 40, height: 23, knob: 18, row: 44 },
+  /** THE GROUP'S MONOGRAM — its tile at the three places a group is drawn (7.20, #512), MEASURED
+   *  off the mocks at 1×: 38 on a Groups list card (play 1, 38), 28 in a row inside a club's
+   *  card (play 9, 24, 35) and 36 in the group page's header (play 39, 40).
+   *
+   *  `radius` and `letters` are SHARES of the tile's side, for `yesTile.initials`' reason: one
+   *  drawn object at three sizes, and a point value per size is three numbers to keep in step.
+   *  A 38 tile's corner is 10 and its letters 14; a 28 tile's are 8 and 10. The letters are the
+   *  one font size in the app after the yes tile's that is computed from a box, and it is computed
+   *  inside the tile that owns the box. */
+  monogram: { card: 38, row: 28, header: 36, radius: 0.27, letters: 0.37 },
   /** The yes screen's tile — a face at this screen's two sizes, and the initials over a poster
    *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
    *  §2, §3). MEASURED off the mocks at 1x: 64 x 64 in the singles mock, 54 x 54 in the doubles

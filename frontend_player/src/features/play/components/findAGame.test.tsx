@@ -20,9 +20,9 @@ import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  launchIntoFindAGame,
   PROFILE_SURFACE_PATH,
   profileSurface,
-  launchSignedIn,
   stubGate,
   stubProfileOptions,
   stubProfileSurface,
@@ -125,7 +125,7 @@ afterEach(async () => {
 async function reachPlay(surface?: Wire['PlayerProfileReadResponse']) {
   if (surface !== undefined) stubProfileSurface(transport, surface);
 
-  await launchSignedIn();
+  await launchIntoFindAGame(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await waitFor(() => expect(screen).toHavePathname('/play'));
 }

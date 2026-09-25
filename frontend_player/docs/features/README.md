@@ -27,8 +27,9 @@ is referenced from the other by a sentence, not copied.
 | [`challenges.md`](challenges.md)             | The send, the challenge screen, the two answers, the fill, the withdraw  |
 | [`conversations.md`](conversations.md)       | The Chats tab, the room, the optimistic send, the live layer, typing     |
 | [`feature_flags.md`](feature_flags.md)       | The datafile, the fallback order, the SDK and cache fences, the gate     |
-| [`find_a_game_next.md`](find_a_game_next.md) | The empty screen the Play tab shows while `find_a_game` is off           |
+| [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore while `find_a_game` is off       |
 | [`games.md`](games.md)                       | The result argument's eight states, the score pad, the game screen       |
+| [`groups.md`](groups.md)                     | Play › Groups, New group, Join a group, a group's page header            |
 | [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate   |
 | [`plans.md`](plans.md)                       | The plan card, the ladder, the Now rail and its nine card states         |
 | [`play.md`](play.md)                         | The copy deck, the three cards, the court, the four screens, `SH.whyfit` |

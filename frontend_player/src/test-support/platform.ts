@@ -41,6 +41,7 @@
  */
 
 import type {
+  ClipboardPort,
   FollowLive,
   HapticsPort,
   ImagePickingPort,
@@ -353,4 +354,21 @@ export function pickedImage(overrides: Partial<PickedImage> = {}): PickedImage {
     fileName: 'one.jpg',
     ...overrides,
   };
+}
+
+/**
+ * **A clipboard holding what the suite put on it** — Join a group's Paste chip reads it. It never
+ * rejects, as the device's port never does: nothing on it is `''`.
+ */
+export interface FakeClipboard extends ClipboardPort {
+  /** What is on the clipboard now. Assign to copy something between two presses. */
+  text: string;
+}
+
+export function fakeClipboard(text = ''): FakeClipboard {
+  const clipboard: FakeClipboard = {
+    text,
+    readText: () => Promise.resolve(clipboard.text),
+  };
+  return clipboard;
 }

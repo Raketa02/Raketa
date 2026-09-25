@@ -29,6 +29,9 @@
  * native module with nothing under it in a test, and *exactly one, and none under reduced
  * motion* is a rule a fake can count where a mock could only record.
  *
+ * **The fifth is the clipboard** (#512), read-only and one verb wide, for the same reason: *Join a
+ * group*'s **Paste** is a native read, and a suite has to be able to put a link on it.
+ *
  * `appBuild` is the one plain *reading*: which platform and which version of the app this is,
  * the two device facts a feature flag's rules may target (ADR-0180 §8). Nothing to decide and
  * nothing a test would drive, so no port.
@@ -76,3 +79,5 @@ export {
 } from './LiveStreamProvider';
 export { deviceHaptics, type HapticsPort } from './haptics';
 export { HapticsProvider, useHaptics, type HapticsProviderProps } from './HapticsProvider';
+export { deviceClipboard, type ClipboardPort } from './clipboard';
+export { ClipboardProvider, useClipboard, type ClipboardProviderProps } from './ClipboardProvider';

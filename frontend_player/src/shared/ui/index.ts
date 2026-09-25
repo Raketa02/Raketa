@@ -148,6 +148,7 @@ export {
   type ReducedMotionProviderProps,
 } from './overlay';
 export {
+  MONOGRAM_HUES,
   POSTER_HUES,
   theme,
   type BandKey,

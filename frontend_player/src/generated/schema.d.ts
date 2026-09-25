@@ -1798,6 +1798,167 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The groups the caller belongs to, newest joined first */
+        get: operations["my_groups_api_v1_groups_get"];
+        put?: never;
+        /**
+         * Create a player group at a home club
+         * @description The caller becomes the group's **Owner and first member**, and the group gets its link, which never changes. Answers the group as its page reads it.
+         */
+        post: operations["create_group_api_v1_groups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A group, for its members
+         * @description Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; and, for every sport, how many members are rated in it and the first of them to join — the Games tab's *N of M*.
+         */
+        get: operations["read_group_api_v1_groups__group_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/membership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join a group, or ask to
+         * @description **One tap, and the group's policy decides what it was.** Under *Anyone* the caller is a member **at once** (`relation` `MEMBER`). Under *People I approve* their Join request waits for the Owner (`relation` `REQUESTED`). Neither is recorded twice: tapping again as a member, or while the request waits, changes nothing and answers the same. Answers the group as a club's card draws it, so the card is patched in place.
+         */
+        post: operations["join_group_api_v1_groups__group_id__membership_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Join requests waiting on a group, for its Owner
+         * @description *Want to join · N*: everybody waiting, in the order they asked — each with their name, their face and every sport they are rated in with its Level.
+         */
+        get: operations["join_requests_api_v1_groups__group_id__requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/requests/{player_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a Join request
+         * @description The player is a Group member **at once**. Approving somebody already in changes nothing.
+         */
+        post: operations["approve_join_request_api_v1_groups__group_id__requests__player_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/requests/{player_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline a Join request
+         * @description The request is gone **silently**: nothing tells the player, their relation to the group is `NONE` again, and they may ask again. Declining a request that is not waiting changes nothing, and never removes a member.
+         */
+        post: operations["decline_join_request_api_v1_groups__group_id__requests__player_id__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/home-clubs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search every club in Raketa for a group's home club
+         * @description Clubs whose name or district contains `q` anywhere, ignoring case and accents (*debniki* finds *Dębniki*). **Nearest first** from the caller's Location area, then by name, twenty to a page; a caller with no Location area gets A–Z and no distance. A blank `q` finds nothing. Each club carries every group at it and what each is to the caller.
+         */
+        get: operations["search_home_clubs_api_v1_home_clubs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/join-search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search for a group to join by club, district, group name or link
+         * @description One field, four matches, answered as **club cards with groups inside**. A club whose name or district contains `q` comes with **every** group at it; a group whose name contains `q` comes inside its club's card, with **only** the matching groups when the club itself did not match — ignoring case and accents either way. **Any text containing `/join/<code>` is a link**, whatever domain or words are around it, and finds exactly that group; a link that leads nowhere answers no clubs with `read_as` `LINK` — *nothing at that link*. **Nearest first** from the caller's Location area, then by name, twenty to a page; a caller with no Location area gets A–Z and no distance. A blank `q` finds nothing.
+         */
+        get: operations["join_search_api_v1_join_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2505,6 +2666,50 @@ export interface components {
              * @description Every tag this player now holds, as ids served by `GET /player-profile/options`. **The list is the selection** — what is absent is dropped. Re-checked against the served vocabulary and the served floor and ceiling exactly as the commit re-checks them; the same id twice is refused with `duplicate_social_tag`.
              */
             social_tags: string[];
+        };
+        /**
+         * ClubCardSchema
+         * @description One club as a search draws it: its header — which is context, not a
+         *     choice — and the groups inside it.
+         */
+        ClubCardSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** District */
+            district: string;
+            /**
+             * Distance Km
+             * @description From the reader's Location area to the club, one decimal and never below `0.1`. **`null` for a reader with no Location area**, whose clubs come A–Z.
+             */
+            distance_km: number | null;
+            /**
+             * Sports
+             * @description What the club offers, in the registry's order.
+             */
+            sports: components["schemas"]["Sport"][];
+            /**
+             * Groups
+             * @description The biggest crowd first. **Home-club search**: every group at the club — and a club with some is the one the New group form tints and tags *group already here*. **Join search**: every group when the club itself matched, only the groups whose name matched when it did not, and exactly the linked group for a link. Empty for a club with none: *no groups here yet*.
+             */
+            groups: components["schemas"]["GroupAtClubSchema"][];
+        };
+        /**
+         * ClubNameSchema
+         * @description The group's home club, as a line under its name.
+         */
+        ClubNameSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /**
          * CommitPlayerProfileRequest
@@ -3302,6 +3507,26 @@ export interface components {
             sport: components["schemas"]["Sport"];
         };
         /**
+         * CreatePlayerGroupRequest
+         * @description A player creates a group. **No sport is asked for**: the group plays
+         *     whatever its members are rated in (``docs/adr/0183`` §6).
+         */
+        CreatePlayerGroupRequest: {
+            /**
+             * Name
+             * @description Trimmed, runs of whitespace collapsed, then 1–40 characters. Never unique. Refused with `group_name_invalid`, `details.field` `name`.
+             */
+            name: string;
+            /**
+             * Home Club Id
+             * Format: uuid
+             * @description A club from home-club search — **required**. A club Raketa does not have is `home_club_unknown`, `details.field` `home_club_id`.
+             */
+            home_club_id: string;
+            /** @description `ANYONE` (the form's default) or `PEOPLE_I_APPROVE`. */
+            join_policy: components["schemas"]["JoinPolicy"];
+        };
+        /**
          * DayPart
          * @description The three parts of a day a player may tick.
          *
@@ -4063,6 +4288,66 @@ export interface components {
          */
         GenderPreference: "WOMEN_ONLY" | "MEN_ONLY" | "ANY";
         /**
+         * GroupAtClubSchema
+         * @description A group inside a club's card, with what it is to the reader.
+         */
+        GroupAtClubSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            monogram: components["schemas"]["MonogramSchema"];
+            /**
+             * Sports
+             * @description The sport dots, in the registry's order: each sport **at least two** members hold a Skill rating in. Read when the group is read — a rating earned or a member leaving moves them on the next read.
+             */
+            sports: components["schemas"]["Sport"][];
+            /**
+             * Member Count
+             * @description Every Group member, the Owner included. The same for every reader.
+             */
+            member_count: number;
+            /** @description `ANYONE` — *Join* admits at once (*anyone can join*); `PEOPLE_I_APPROVE` — *Ask to join* leaves a request for the Owner (*Karol approves joins*). */
+            join_policy: components["schemas"]["JoinPolicy"];
+            /**
+             * Owner Name
+             * @description The Owner's **whole Name**, never the nickname — who answers a request, for the *approves joins* line. **No first name is cut from it, here or by a client**: a sentence naming somebody uses the whole Name (`docs/adr/0171` §4), so the line reads *Karol Nowak approves joins* and the row truncates it as it truncates any line. `null` for an account that can no longer be named.
+             */
+            owner_name: string | null;
+            /** @description `MEMBER` — the reader is in it (*you're in*); `REQUESTED` — they asked and their request is waiting (*requested · waiting*); `NONE` — neither, and *Join* or *Ask to join* is the tap. **A declined request reads `NONE`**: nothing tells them it was declined, and they may ask again. */
+            relation: components["schemas"]["GroupRelation"];
+        };
+        /**
+         * GroupPersonSchema
+         * @description A member's face — **a name and a photograph, and nothing else**.
+         */
+        GroupPersonSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description The whole Name, never the nickname. `null` for an account that can no longer be named — the member keeps their seat.
+             */
+            name: string | null;
+            /**
+             * Photo Id
+             * Format: uuid
+             * @description Their current photograph. Omitted when they have none, and omitted together with `photo_url` — draw their initials.
+             */
+            photo_id?: string;
+            /**
+             * Photo Url
+             * @description A short-lived signed link to that photograph, minted for **this response**.
+             */
+            photo_url?: string;
+        };
+        /**
          * GroupReason
          * @description Why this four beat the runner-up. **One closed code, never a number.**
          *
@@ -4079,10 +4364,91 @@ export interface components {
          * @enum {string}
          */
         GroupReason: "EVENEST_ARRANGEMENT" | "STRONGEST_WEAKEST_SEAT" | "BEST_AVERAGE_FIT" | "MOST_SHARED_SLOTS" | "GROUP_RAPPORT";
+        /**
+         * GroupRelation
+         * @description What a group is to the person reading it (``docs/adr/0183`` §9): they
+         *     are in it, they have asked and their Join request is waiting, or neither.
+         *
+         *     **A declined request reads as ``NONE``** — the request is gone, and nothing
+         *     tells them it was declined (``docs/adr/0183`` §7).
+         * @enum {string}
+         */
+        GroupRelation: "MEMBER" | "REQUESTED" | "NONE";
+        /**
+         * GroupResponse
+         * @description A group, as one of its members opens it.
+         */
+        GroupResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            monogram: components["schemas"]["MonogramSchema"];
+            /**
+             * Sports
+             * @description The sport dots, in the registry's order: each sport **at least two** members hold a Skill rating in. Read when the group is read — a rating earned or a member leaving moves them on the next read.
+             */
+            sports: components["schemas"]["Sport"][];
+            /**
+             * Member Count
+             * @description Every Group member, the Owner included. The same for every reader.
+             */
+            member_count: number;
+            home_club: components["schemas"]["ClubNameSchema"];
+            /**
+             * Link
+             * @description The Group link: the public site's address, `/join/` and the group's code. **It never changes** — not on a rename, a policy change or a handover.
+             */
+            link: string;
+            join_policy: components["schemas"]["JoinPolicy"];
+            /**
+             * Is Owner
+             * @description Whether the reader is the group's Owner.
+             */
+            is_owner: boolean;
+            /**
+             * Rated By Sport
+             * @description **Every sport**, in the registry's order — one the group has no dot for too, because the reader may be rated in it and open it.
+             */
+            rated_by_sport: components["schemas"]["GroupSportSchema"][];
+        };
+        /**
+         * GroupSportSchema
+         * @description One sport's *N of M* for the Games tab.
+         */
+        GroupSportSchema: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Rated Count
+             * @description How many members hold a Skill rating in it.
+             */
+            rated_count: number;
+            /**
+             * First Rated
+             * @description The first members to join who are rated in it, in joining order — **at most as many as the sport seats**, the faces that fill its seats.
+             */
+            first_rated: components["schemas"]["GroupPersonSchema"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HomeClubPageResponse */
+        HomeClubPageResponse: {
+            /**
+             * Clubs
+             * @description Nearest first, then by name — or A–Z for a reader with no Location area.
+             */
+            clubs: components["schemas"]["ClubCardSchema"][];
+            /**
+             * Next Page
+             * @description The page to ask for next, or `null` when this was the last.
+             */
+            next_page: number | null;
         };
         /**
          * InProgressAssessmentResponse
@@ -4164,6 +4530,73 @@ export interface components {
              * @description One entry per sport, always — the count and the cap in force. Sent before you are near the limit, on purpose.
              */
             outstanding: components["schemas"]["OutstandingSchema"][];
+        };
+        /**
+         * JoinPolicy
+         * @description Who gets in (``docs/adr/0183`` §7).
+         *
+         *     **Anyone** admits a player the moment they join, and is the default the New
+         *     group form opens on. **People I approve** turns a join into a Join request
+         *     its Owner answers.
+         * @enum {string}
+         */
+        JoinPolicy: "ANYONE" | "PEOPLE_I_APPROVE";
+        /**
+         * JoinRequestSchema
+         * @description A Join request as the Owner sees it: who is asking — ``player_id`` is the
+         *     id to approve or decline — and what they play. **No Player Score**: the
+         *     request card is club 20's everywhere.
+         */
+        JoinRequestSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description The whole Name, never the nickname. `null` for an account that can no longer be named — the member keeps their seat.
+             */
+            name: string | null;
+            /**
+             * Photo Id
+             * Format: uuid
+             * @description Their current photograph. Omitted when they have none, and omitted together with `photo_url` — draw their initials.
+             */
+            photo_id?: string;
+            /**
+             * Photo Url
+             * @description A short-lived signed link to that photograph, minted for **this response**.
+             */
+            photo_url?: string;
+            /**
+             * Levels
+             * @description **Every sport they are rated in**, in the registry's order, each with its Level — *Padel 2,44 · Tennis 2,60*. Empty for somebody rated in nothing.
+             */
+            levels: components["schemas"]["SportLevelSchema"][];
+        };
+        /** JoinRequestsResponse */
+        JoinRequestsResponse: {
+            /**
+             * Requests
+             * @description Everybody waiting to be let in, **in the order they asked** — *Want to join · N*. Empty when nobody is waiting.
+             */
+            requests: components["schemas"]["JoinRequestSchema"][];
+        };
+        /** JoinSearchResponse */
+        JoinSearchResponse: {
+            /**
+             * Clubs
+             * @description Nearest first, then by name — or A–Z for a reader with no Location area. Empty when nothing matched.
+             */
+            clubs: components["schemas"]["ClubCardSchema"][];
+            /**
+             * Next Page
+             * @description The page to ask for next, or `null` when this was the last.
+             */
+            next_page: number | null;
+            /** @description What the text was read as. `LINK` — it held `/join/` and a code, and the answer is exactly that group; **`LINK` with no clubs is *nothing at that link***, a link that leads nowhere. `TEXT` — matched against clubs, districts and group names; `TEXT` with no clubs is *no match*. */
+            read_as: components["schemas"]["ReadAs"];
         };
         /**
          * LevelDirection
@@ -4509,6 +4942,56 @@ export interface components {
             code: components["schemas"]["ModifierCode"];
             /** Points */
             points: number;
+        };
+        /**
+         * MonogramSchema
+         * @description The group's tile, **cut by the backend** so every client draws the same
+         *     one (``docs/adr/0183`` §5).
+         */
+        MonogramSchema: {
+            /**
+             * Letters
+             * @description The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes — never change its case.
+             */
+            letters: string;
+            /**
+             * Colour
+             * @description A colour **key** from 0 to 7, fixed for the group for ever — derived from its id, so a rename keeps it. Map it to your own palette; the backend never names a colour.
+             */
+            colour: number;
+        };
+        /**
+         * MyGroupSchema
+         * @description A card on the reader's Groups list.
+         */
+        MyGroupSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            monogram: components["schemas"]["MonogramSchema"];
+            /**
+             * Sports
+             * @description The sport dots, in the registry's order: each sport **at least two** members hold a Skill rating in. Read when the group is read — a rating earned or a member leaving moves them on the next read.
+             */
+            sports: components["schemas"]["Sport"][];
+            /**
+             * Member Count
+             * @description Every Group member, the Owner included. The same for every reader.
+             */
+            member_count: number;
+            home_club: components["schemas"]["ClubNameSchema"];
+        };
+        /** MyGroupsResponse */
+        MyGroupsResponse: {
+            /**
+             * Groups
+             * @description Every group the reader belongs to, **newest joined first**. Empty for a player in none.
+             */
+            groups: components["schemas"]["MyGroupSchema"][];
         };
         /**
          * NameRequest
@@ -5679,6 +6162,14 @@ export interface components {
             /** Ratings */
             ratings: components["schemas"]["RatingResponse"][];
         };
+        /**
+         * ReadAs
+         * @description What the text was read as — so an empty answer can say which empty it is:
+         *     *no match for "…"* for text, *nothing at that link* for a link (#500
+         *     stories 37 and 38).
+         * @enum {string}
+         */
+        ReadAs: "TEXT" | "LINK";
         /**
          * ReadRadarRequest
          * @description What a reading is asked for. **The sport, and that is the whole
@@ -6851,6 +7342,18 @@ export interface components {
          * @enum {string}
          */
         Sport: "PADEL" | "TENNIS" | "SQUASH" | "BADMINTON";
+        /**
+         * SportLevelSchema
+         * @description One sport somebody is rated in, and their Level in it.
+         */
+        SportLevelSchema: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Level
+             * @description Their Level in it, as RacketSkill published it.
+             */
+            level: number;
+        };
         /**
          * SportPillSchema
          * @description One sport this person is rated in, as a pill: the dot, the Level, the band.
@@ -10851,6 +11354,361 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_groups_api_v1_groups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyGroupsResponse"];
+                };
+            };
+        };
+    };
+    create_group_api_v1_groups_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlayerGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
+                };
+            };
+            /** @description A field the player has to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) — 1–40 characters once trimmed; `home_club_unknown` (`home_club_id`) — only a club in Raketa can be a home club. Nothing was recorded. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_group_api_v1_groups__group_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
+                };
+            };
+            /** @description `group_not_found` — **one code for two cases**: no such group, and a group the reader is not a member of. Both have one remedy. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_group_api_v1_groups__group_id__membership_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupAtClubSchema"];
+                };
+            };
+            /** @description `group_not_found` — there is no such group. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_requests_api_v1_groups__group_id__requests_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinRequestsResponse"];
+                };
+            };
+            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `group_not_found` — no such group, or one the caller is not in: the person waiting is not in it yet, and meets this too. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_join_request_api_v1_groups__group_id__requests__player_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                player_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `group_not_found` — no such group, or one the caller is not in. `join_request_not_found` — the player has no request waiting: it was declined, or never made, and nobody is admitted who did not ask. Nothing was recorded. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_join_request_api_v1_groups__group_id__requests__player_id__decline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                player_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `not_the_group_owner` — the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `group_not_found` — no such group, or one the caller is not in: the person waiting is not in it yet, and meets this too. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_home_clubs_api_v1_home_clubs_get: {
+        parameters: {
+            query: {
+                /** @description What was typed into the home club field. */
+                q: string;
+                /** @description Which page, from one. */
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeClubPageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_search_api_v1_join_search_get: {
+        parameters: {
+            query: {
+                /** @description What was typed or pasted into *Join a group*. */
+                q: string;
+                /** @description Which page, from one. */
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinSearchResponse"];
                 };
             };
             /** @description Validation Error */

@@ -44,7 +44,8 @@ import {
   CHALLENGES_PATH,
   CONVERSATIONS_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoFindAGame,
+  profileSurface,
   resetHaptics,
   stubConversation,
   stubConversations,
@@ -53,7 +54,6 @@ import {
   stubHaptics,
   stubInterest,
   stubProfileOptions,
-  profileSurface,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
 import { fakeHaptics, type FakeHaptics } from '@/test-support/platform';
@@ -451,7 +451,7 @@ afterEach(async () => {
 
 /** A signed-in player standing on the deck — the Players tab, one press from anywhere. */
 async function openDeck() {
-  await launchSignedIn();
+  await launchIntoFindAGame(transport);
   fireEvent.press(await screen.findByLabelText('Players'));
   await waitFor(() => expect(screen).toHavePathname('/players'));
 }
@@ -532,7 +532,7 @@ describe('what the deck deals', () => {
    * §1). The ask carries no override at all — *"omit it, never send `null`"*.
    */
   it('deals on the profile’s week, whatever was improvised on Find a game', async () => {
-    await launchSignedIn();
+    await launchIntoFindAGame(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
     await screen.findByLabelText('Tuesday evening');
     fireEvent.press(screen.getByLabelText('Monday morning'));

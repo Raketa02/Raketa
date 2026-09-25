@@ -372,6 +372,12 @@ profile editor that later edits the same values.
 
 ### The Play tab
 
+- **Play segment** — _Groups_ or _Explore_, the two pages the Play tab opens on while
+  `find_a_game` is off (#512): Groups is the player's groups, Explore the empty screen the rebuilt
+  Find a game grows in. The shell's, remembered per account by the phone-preferences store, and
+  **Groups** whenever nothing — or nothing this build recognises — was saved. _Avoid_: "tab" —
+  Play is the tab and these are its segments.
+
 Nine client-only concepts, one kit of parts, and one gate that is **not** client-only. The
 nine do not exist on the backend, and the first four are the shape
 [#228](https://github.com/Raketa02/Raketa/issues/228) settled: what Play remembers, for how
@@ -1225,14 +1231,22 @@ it.
 
 - **Platform port** — a narrow TypeScript interface in `shared/lib/platform/` over one
   capability the app cannot run in a test, with exactly two implementations: the real one that
-  imports the module, and a fake in `src/test-support/platform.ts`. Three exist —
-  `LocationPort`, `ImagePickingPort` and `LiveStreamPort` — and each is **the only importer of
-  its module**, the way `shared/lib/auth` is the only importer of the keychain. The reason is
+  imports the module, and a fake in `src/test-support/platform.ts`. Five exist —
+  `LocationPort`, `ImagePickingPort`, `LiveStreamPort`, `HapticsPort` and `ClipboardPort` (#512,
+  read-only, for Join a group's Paste) — and each is **the only importer of its module**, the way `shared/lib/auth` is the only importer of the keychain. The reason is
   not tidiness: a native module has no JS underneath it, so a feature that imports one is a
   feature no test can drive — and **the third one is a socket rather than a native module**,
   here on that argument alone, which is why _platform_ and not _native_ is the word. _Avoid_:
   "device module", "native service" — a module holding several capabilities is the utils bucket
   this app bans, and a capability is one file.
+- **Phone-preferences store** — `shared/lib/preferences`, the **choices a player made that the
+  phone keeps for them**: one key per account per value, the second and last AsyncStorage
+  importer, and **emptied at every sign-out** as a step of `endSession`
+  ([ADR-0188](../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
+  Three values at most — the **Play segment** since #512, the last sport and the last profile to
+  come — and a stale or unreadable one is its default, judged by the feature that owns it.
+  _Avoid_: "settings", "local storage", "cache" — it holds a choice, never a copy of the server,
+  and never a credential.
 - **Permission state** — the four answers a platform port gives about a capability:
   `undetermined | granted | denied | blocked`. **Denied and blocked are different
   refusals** — denied can be asked again at the moment the player understands why; blocked

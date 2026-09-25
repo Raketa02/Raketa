@@ -145,3 +145,24 @@ the pinned action wrapped in `KeyboardAvoidingView` under `KEYBOARD_AVOIDANCE`, 
 `SocialStepLayout` already does, and off everywhere else. **Not seen on a device**: the header
 card's fit beside a long name, the row lead's 28 pt against the chevron, and the push over the
 tab.
+
+**Play with `find_a_game` off is a _Groups | Explore_ segment, and the shell draws it**
+([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3, PRD #500 stories 1–4).
+`PlayScreen` is the shell's for the reason Now, Chats and You are — a tab owns its own words and
+composes other features' pages under them: _Groups_ is `features/groups`' list, _Explore_ is
+`features/find_a_game_next`'s empty screen. The segment is `Segment`'s new **`prominent`** form —
+`ink` under a `surface` label on a `paper2` track, a `btn`-high thumb, and no shadow although the
+mocks draw one (design-system 6.3 as amended) — and it is **pinned above the page** rather than in
+`ShellScreen`'s header, whose title column would take half its width. **The segment is the first
+value the phone remembers** ([ADR-0188](../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)):
+`usePlaySegment` reads it once per account per session from `shared/lib/preferences` into the
+Query cache (under `shared/lib/preferences`' `phonePreferenceKeys`, so the next two values'
+owners share one root; `networkMode: 'always'`, never stale), and **draws nothing until the read
+lands** — a local key, so a frame — because a screen that drew Groups and jumped to
+Explore is §4's flash. A choice is written to the cache and then to the phone, fire and forget.
+`playSegmentFrom` turns whatever was saved into a segment, and anything this build does not know
+is Groups — and so is a phone that cannot tell whose choice to read, which is §4's store that
+cannot be read. The account is read from the cache once and never observed, as the flag gate
+reads it, so entering Play never refetches `/users/me`. The walks are `components/playSegment.test.tsx`: the segment across a relaunch and
+across a tab change, another account on the same phone, a sign-out, and a value that is not a
+segment. **Not seen on a device.**

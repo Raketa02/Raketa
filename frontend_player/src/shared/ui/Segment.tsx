@@ -67,6 +67,17 @@ export interface SegmentProps<K extends string> {
    * version takes, read from the other side. `selected` carries the state either way.
    */
   readonly onDark?: boolean;
+  /**
+   * **The tab's own view switch**, drawn as play mocks 1 and 3 draw Play's *Groups | Explore*
+   * ([#512](https://github.com/Raketa02/Raketa/issues/512), 6.3 as amended in Part 16): a taller
+   * control whose raised segment is **`ink` with a `surface` label** rather than `surface` with an
+   * `ink` one. It switches the whole tab rather than a pane inside a screen, and the mocks set it
+   * apart for that — the same lightness step read from the dark side, as `onDark` reads it. The
+   * track is `paper2`, the recess the popover close and the situation header already use, and the
+   * label is `btn`'s 12 / 700. **No shadow under the thumb**, although the mocks draw one: a
+   * segment does not float (4.3). `selected` still carries the state.
+   */
+  readonly prominent?: boolean;
 }
 
 export function Segment<K extends string>({
@@ -75,9 +86,17 @@ export function Segment<K extends string>({
   onSelect,
   style,
   onDark = false,
+  prominent = false,
 }: SegmentProps<K>) {
   return (
-    <View style={[s.track, onDark ? s.trackOnDark : undefined, style]}>
+    <View
+      style={[
+        s.track,
+        onDark ? s.trackOnDark : undefined,
+        prominent ? s.trackProminent : undefined,
+        style,
+      ]}
+    >
       {options.map((option) => {
         const on = option.key === selected;
 
@@ -96,15 +115,17 @@ export function Segment<K extends string>({
             // rather than a second fill: the segment is one of the five surfaces 6.6 names.
             style={({ pressed }) => [
               s.segment,
-              on ? s.selected : undefined,
+              prominent ? s.segmentProminent : undefined,
+              on ? (prominent ? s.selectedProminent : s.selected) : undefined,
               pressed ? s.pressed : undefined,
             ]}
           >
             <Text
               style={[
                 s.label,
+                prominent ? s.labelProminent : undefined,
                 onDark && !on ? s.labelOnDark : undefined,
-                on ? s.labelSelected : undefined,
+                on ? (prominent ? s.labelSelectedProminent : s.labelSelected) : undefined,
               ]}
               numberOfLines={1}
             >
@@ -142,4 +163,10 @@ const s = StyleSheet.create({
   label: { ...theme.type.seg, color: theme.color.muted },
   labelOnDark: { color: theme.color.onDarkTiny },
   labelSelected: { color: theme.color.ink },
+  trackProminent: { backgroundColor: theme.color.paper2 },
+  // `btn`'s height — the thumb is a control the size of a button, which is what the mock draws.
+  segmentProminent: { minHeight: theme.size.btn },
+  selectedProminent: { backgroundColor: theme.color.ink },
+  labelProminent: { ...theme.type.btn },
+  labelSelectedProminent: { color: theme.color.surface },
 });

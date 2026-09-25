@@ -7,7 +7,7 @@
  * builds, so a failure means the order is wrong rather than an evaluation.
  */
 
-import type { Datafile, FlagContext } from '../domain/featureFlags';
+import { FEATURE_DEFAULTS, type Datafile, type FlagContext } from '../domain/featureFlags';
 
 import { isFeatureEnabled } from './isFeatureEnabled';
 
@@ -61,18 +61,33 @@ describe('the fallback order', () => {
     ).toBe(true);
   });
 
+  // On, because on is the answer only the cache can give: the code default is off (#512).
   it('takes the cached datafile when nothing was fetched', () => {
-    expect(isFeatureEnabled('find_a_game', { cached: findAGameFor(0), context: PLAYER })).toBe(
-      false,
+    expect(isFeatureEnabled('find_a_game', { cached: findAGameFor(100), context: PLAYER })).toBe(
+      true,
     );
   });
 
   it('takes the code default when there is neither', () => {
-    expect(isFeatureEnabled('find_a_game', { cached: null, context: PLAYER })).toBe(true);
+    expect(isFeatureEnabled('find_a_game', { cached: null, context: PLAYER })).toBe(false);
   });
 });
 
+/**
+ * The SDK answers `false` for a feature it cannot find, and `find_a_game`'s code default is off
+ * since #512 — so with the shipped default the two would agree and nothing here could fail. The
+ * default is raised to **on** for these walks, which is what makes *the code default, not the
+ * SDK's `false`* observable; the rule is about whichever default a key has.
+ */
 describe('a datafile with nothing to say', () => {
+  beforeEach(() => {
+    jest.replaceProperty(FEATURE_DEFAULTS, 'find_a_game', true as never);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   // The SDK answers `false` for a feature it cannot find. Taken at its word, a key missing from
   // the flags repo would switch Find a game off for everybody; ADR-0180 says it evaluates to its
   // code default instead.

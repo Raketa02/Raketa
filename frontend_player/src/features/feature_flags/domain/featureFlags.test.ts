@@ -13,9 +13,9 @@ const datafile = (revision: string): Datafile => ({
 });
 
 describe('the code defaults', () => {
-  // The app as it ships: a first launch with no network gets Find a game.
-  it('has Find a game on', () => {
-    expect(FEATURE_DEFAULTS.find_a_game).toBe(true);
+  // The app as it ships since #512: a first launch with no network gets Play › Groups.
+  it('has Find a game off', () => {
+    expect(FEATURE_DEFAULTS.find_a_game).toBe(false);
   });
 });
 

@@ -17,8 +17,7 @@
  * **Every feature the app gates, and its code default** — declared once.
  *
  * The code default is what a player gets when no datafile has ever arrived: a first launch with
- * no network, or a flags host that has never answered. It is the app *as it ships*, so a feature
- * that exists today defaults on. A flag may be defaulted per environment in the flags repo; it is
+ * no network, or a flags host that has never answered. It is the app *as it ships*. A flag may be defaulted per environment in the flags repo; it is
  * never derived from the environment here (`docs/environments.md`).
  *
  * **Each key says who owns it, what it is for, and when it goes** (architecture Part 21): a flag
@@ -29,17 +28,21 @@ export const FEATURE_DEFAULTS = {
   /**
    * **Find a game**, the Play tab's first screen, with the builder and the pool behind it.
    *
-   * On by default because it is the screen the app ships. Off is the empty placeholder that
-   * will host its replacement, and with it a link to the builder or pool under Play lands on
-   * Play's root — a search already under way is finished. Fill-the-seat and the Players tab are
-   * not behind it.
+   * **Off by default since [#512](https://github.com/Raketa02/Raketa/issues/512)**: the app ships
+   * Play › Groups, with the *Groups | Explore* segment where the empty placeholder used to be and
+   * the placeholder under *Explore*, where the rebuilt Find a game will grow (PRD #500). On
+   * restores Find a game whole — the bridge is not burned (story 141). With it off, a link to the
+   * builder or pool under Play lands on Play's root — a search already under way is finished.
+   * Fill-the-seat and the Players tab are not behind it.
    *
-   * - **Owner:** the Play tab — `features/play` today, `features/find_a_game_next` once it grows.
-   * - **Purpose:** let the rebuilt Find a game replace the current one in place, testers first.
+   * - **Owner:** the Play tab — `features/play` for Find a game, `features/find_a_game_next` for
+   *   what grows under Explore.
+   * - **Purpose:** keep the current Find a game one pull request away while Groups ships and the
+   *   rebuild grows under Explore.
    * - **Removal:** when the rebuild has reached everyone, this key goes with the old screen, the
    *   gate in `play/index.tsx` and the two redirects in `play/builder.tsx` and `play/pool.tsx`.
    */
-  find_a_game: true,
+  find_a_game: false,
 } as const satisfies Readonly<Record<string, boolean>>;
 
 /** A feature the app knows how to ask about. A key not declared above does not compile. */

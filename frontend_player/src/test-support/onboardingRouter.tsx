@@ -30,7 +30,10 @@ import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
 import NowRoute from '@/app/(app)/(tabs)/index';
 import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
 import PoolRoute from '@/app/(app)/(tabs)/play/pool';
-import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
+import PlayRoute from '@/app/(app)/(tabs)/play/index';
+import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
+import JoinGroupRoute from '@/app/(app)/(tabs)/play/join';
+import GroupRoute from '@/app/(app)/(tabs)/play/group/[groupId]';
 import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
@@ -69,10 +72,12 @@ import { featureFlagKeys } from '@/features/feature_flags/types';
 import { NOW_COPY } from '@/features/shell/types';
 import { beginSession } from '@/shared/lib/auth';
 import {
+  ClipboardProvider,
   HapticsProvider,
   ImagePickingProvider,
   LiveStreamProvider,
   LocationProvider,
+  type ClipboardPort,
   type HapticsPort,
   type ImagePickingPort,
   type LiveStreamPort,
@@ -107,9 +112,13 @@ export const ONBOARDING_ROUTES = {
   // root: the deck is the whole tab (ADR-0169 §1).
   '(app)/(tabs)/index': NowRoute,
   '(app)/(tabs)/players': PlayersRoute,
-  '(app)/(tabs)/play/index': FindAGameRoute,
+  '(app)/(tabs)/play/index': PlayRoute,
   '(app)/(tabs)/play/builder': BuilderRoute,
   '(app)/(tabs)/play/pool': PoolRoute,
+  // Play › Groups' three screens (#512), under Play so the column stays lit and *back* is the list.
+  '(app)/(tabs)/play/new-group': NewGroupRoute,
+  '(app)/(tabs)/play/join': JoinGroupRoute,
+  '(app)/(tabs)/play/group/[groupId]': GroupRoute,
   // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,
   // because the Now tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,
@@ -268,6 +277,23 @@ export function resetHaptics(): void {
 }
 
 /**
+ * The clipboard this tree reads, for the suite whose screen has a Paste — Join a group's (#512).
+ * Same shape and reasons as the motor above; unset is the real port over a native module jest
+ * has mocked, which answers nothing.
+ */
+let clipboard: ClipboardPort | undefined;
+
+/** Run the tree against this clipboard. Call before `launchSignedIn`. */
+export function stubClipboard(port: ClipboardPort): void {
+  clipboard = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetClipboard(): void {
+  clipboard = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -303,8 +329,19 @@ function TestRoot() {
  * the device, for the reason `stubLiveStream` states.
  */
 function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withClipboard =
+    clipboard === undefined ? (
+      children
+    ) : (
+      <ClipboardProvider port={clipboard}>{children}</ClipboardProvider>
+    );
+
   const withHaptics =
-    haptics === undefined ? children : <HapticsProvider port={haptics}>{children}</HapticsProvider>;
+    haptics === undefined ? (
+      withClipboard
+    ) : (
+      <HapticsProvider port={haptics}>{withClipboard}</HapticsProvider>
+    );
 
   const withLive = (
     <LiveStreamProvider port={liveStream ?? SILENT_CHANNEL}>{withHaptics}</LiveStreamProvider>
@@ -790,6 +827,35 @@ export async function datafileSettled(transport: Transport, count = 1) {
   await waitFor(() => expect(queryClient.isFetching({ queryKey: featureFlagKeys.all })).toBe(0));
 }
 
+/**
+ * **Find a game, switched on** — for every suite about it, since
+ * [#512](https://github.com/Raketa02/Raketa/issues/512) turned `find_a_game`'s code default off and
+ * the Play tab opens on Groups without a datafile.
+ *
+ * Served, launched, and **waited on before anything presses Play**: a gate reads its flag once, when
+ * its screen mounts, so a Play press that raced the datafile would land on Groups — correctly, and
+ * not what the suite is about. Call it where the suite would have called `launchSignedIn`, after
+ * `stubGate` (which serves no datafile).
+ */
+export async function launchIntoFindAGame(transport: Transport, initialUrl = '/') {
+  stubDatafile(transport, datafileFor({ find_a_game: 'on' }));
+  await launchSignedIn(initialUrl);
+  await datafileSettled(transport);
+}
+
+export const MY_GROUPS_PATH = '/api/v1/groups';
+
+/**
+ * **The player's Groups list** — `GET /groups`, newest joined first. Defaulted to none by
+ * `stubGate`, because the Play tab opens on Groups since #512 and every suite that presses Play
+ * reads it; a suite about the list calls this again to serve one.
+ */
+export function stubMyGroups(transport: Transport, groups: readonly Wire['MyGroupSchema'][] = []) {
+  transport.on('GET', MY_GROUPS_PATH, () =>
+    json<Wire['MyGroupsResponse']>({ groups: [...groups] }),
+  );
+}
+
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
@@ -927,6 +993,9 @@ export const GATE_USER: Wire['UserResponse'] = {
  * All three are defaulted to nothing, and a suite with any of them calls the stub again afterwards
  * to replace it.
  *
+ * **So is the Groups list** ([#512](https://github.com/Raketa02/Raketa/issues/512)): the Play tab
+ * opens on Groups with the code defaults, so a suite that presses Play for any reason reads it.
+ *
  * **So is the feature-flag datafile**, and for the same reason: the signed-in app fetches it the
  * moment it opens, whatever the suite is about (ADR-0180 §6). It is defaulted to **none**, which
  * is every flag at its code default — the app as it ships. A suite about a flag calls
@@ -972,6 +1041,7 @@ export function stubGate(
   stubConversations(transport);
   stubSportsmanship(transport);
   stubDatafile(transport);
+  stubMyGroups(transport);
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

@@ -4,20 +4,23 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Seven modules may be imported from exactly one place:
+# Eight modules may be imported from exactly one place:
 #
 #   expo-secure-store                            → src/shared/lib/auth
 #   @react-native-async-storage/async-storage    → feature_flags/api/datafileCache.ts
+#                                                  and preferences/phonePreferences.ts
 #   expo-location                                → platform/location.ts
 #   expo-image-picker                            → platform/imagePicking.ts
 #   react-native-sse                             → platform/liveStream.ts
 #   expo-haptics                                 → platform/haptics.ts
+#   expo-clipboard                               → platform/clipboard.ts
 #   @featurevisor/sdk                            → feature_flags/api/featurevisor.ts
 #
 # AsyncStorage was banned everywhere until ADR-0180 let the feature flags' saved datafile
-# use it — a public file, never a credential. The ban is still asserted everywhere else,
-# the owning module's own directory included, because an allow-list of one is only one
-# while something checks it.
+# use it — a public file, never a credential — and ADR-0188 let the phone-preferences store
+# keep three choices a player made beside it. The ban is still asserted everywhere else, both
+# owning modules' own directories included, because an allow-list of two is only two while
+# something checks it.
 #
 # And one is banned everywhere *except* a feature's api/ and mappers/ layers, plus the
 # one file above that is an api/ layer without a feature to live in:
@@ -135,6 +138,7 @@ LOCATION_PORT='src/shared/lib/platform/location.ts'
 PICKING_PORT='src/shared/lib/platform/imagePicking.ts'
 LIVE_PORT='src/shared/lib/platform/liveStream.ts'
 HAPTICS_PORT='src/shared/lib/platform/haptics.ts'
+CLIPBOARD_PORT='src/shared/lib/platform/clipboard.ts'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 
 # The flag seam's three edges, each an api/ file of one feature: the fetch, the saved
@@ -145,6 +149,12 @@ FLAGS_FETCH='src/features/feature_flags/api/datafileApi.ts'
 FLAGS_CACHE='src/features/feature_flags/api/datafileCache.ts'
 FLAGS_SDK='src/features/feature_flags/api/featurevisor.ts'
 FLAGS_HOOK='src/features/feature_flags/hooks/useFeatureOnMount.ts'
+
+# The phone-preferences store (ADR-0188 §1) — the second AsyncStorage importer, one file wide
+# like the first: its own directory's barrel may not, and neither may the sign-out sequence that
+# empties it through the barrel.
+PREFERENCES_STORE='src/shared/lib/preferences/phonePreferences.ts'
+PREFERENCES_OTHER='src/shared/lib/preferences/index.ts'
 
 # Where a generated wire type is legitimately read: the two layers of a feature, and the
 # one file outside a feature that is an api/ layer — the live channel, whose frame ADR-0147
@@ -183,6 +193,13 @@ expect_blocked @react-native-async-storage/async-storage "$FLAGS_FETCH" 'datafil
 expect_blocked @react-native-async-storage/async-storage "$FLAGS_SDK" 'datafileCache.ts'
 expect_blocked @react-native-async-storage/async-storage "$FLAGS_HOOK" 'datafileCache.ts'
 expect_allowed @react-native-async-storage/async-storage "$FLAGS_CACHE"
+# The second owner, and the message names it so a blocked import knows where the door is.
+expect_blocked @react-native-async-storage/async-storage "$FEATURE" 'phonePreferences.ts'
+expect_blocked @react-native-async-storage/async-storage "$PREFERENCES_OTHER" 'phonePreferences.ts'
+expect_blocked @react-native-async-storage/async-storage "$OTHER_PLATFORM_FILE" 'phonePreferences.ts'
+expect_allowed @react-native-async-storage/async-storage "$PREFERENCES_STORE"
+# And it is exempt from the path ban only: the keychain is still the auth module's.
+expect_blocked expo-secure-store "$PREFERENCES_STORE" 'src/shared/lib/auth'
 
 echo
 echo "the device's position — expo-location belongs to src/shared/lib/platform"
@@ -235,6 +252,19 @@ expect_blocked expo-haptics "$OTHER_PLATFORM_FILE" 'haptics.ts'
 expect_allowed expo-haptics "$HAPTICS_PORT"
 # And the port itself is still under every other ban.
 expect_blocked expo-location "$HAPTICS_PORT" 'src/shared/lib/platform'
+
+echo
+echo "the clipboard — expo-clipboard belongs to platform/clipboard.ts"
+expect_blocked expo-clipboard "$FEATURE" 'clipboard.ts'
+expect_blocked expo-clipboard "$SCREEN" 'clipboard.ts'
+expect_blocked expo-clipboard "$TEST" 'clipboard.ts'
+expect_blocked expo-clipboard "$AUTH" 'clipboard.ts'
+# One file wide: the motor beside it may not read the clipboard.
+expect_blocked expo-clipboard "$HAPTICS_PORT" 'clipboard.ts'
+expect_blocked expo-clipboard "$OTHER_PLATFORM_FILE" 'clipboard.ts'
+expect_allowed expo-clipboard "$CLIPBOARD_PORT"
+# And the port itself is still under every other ban.
+expect_blocked expo-haptics "$CLIPBOARD_PORT" 'haptics.ts'
 
 echo
 echo "flag evaluation — @featurevisor/sdk belongs to feature_flags/api/featurevisor.ts"
