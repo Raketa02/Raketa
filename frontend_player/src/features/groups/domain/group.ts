@@ -88,7 +88,29 @@ export interface ClubSearch {
   readonly readAs: ReadAs;
 }
 
-/** **A group, as one of its members opens it** — the page's header reads this (play mock 40). */
+/**
+ * **A member's face** — a name and a photograph, and nothing else. `name` is the whole Name, and
+ * `null` for an account that can no longer be named: the member keeps their seat. `photoUrl` is
+ * a link signed for the one answer it came on, absent when they have none — the poster stands in.
+ */
+export interface GroupPerson {
+  readonly playerId: string;
+  readonly name: string | null;
+  readonly photoUrl?: string;
+}
+
+/**
+ * **One sport's *N of M***, for the Games tab (ADR-0183 §13): how many members hold a Skill
+ * rating in it, and the first of them to join, in joining order — at most as many as the sport
+ * seats, which are the faces that fill its seats.
+ */
+export interface SportRoster {
+  readonly sport: Sport;
+  readonly ratedCount: number;
+  readonly firstRated: readonly GroupPerson[];
+}
+
+/** **A group, as one of its members opens it** — the page reads this (play mocks 14–17, 39–55). */
 export interface Group {
   readonly id: string;
   readonly name: string;
@@ -100,6 +122,11 @@ export interface Group {
   readonly link: string;
   readonly joinPolicy: JoinPolicy;
   readonly isOwner: boolean;
+  /**
+   * **Every sport's roster**, the ones the group has no dot for too — the reader may be rated in
+   * a sport only they play here, and open it.
+   */
+  readonly ratedBySport: readonly SportRoster[];
 }
 
 /** A group's name is 1–40 characters once trimmed (ADR-0183 §3). The field stops at 40. */

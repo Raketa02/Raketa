@@ -33,7 +33,8 @@ import PoolRoute from '@/app/(app)/(tabs)/play/pool';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
 import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
 import JoinGroupRoute from '@/app/(app)/(tabs)/play/join';
-import GroupRoute from '@/app/(app)/(tabs)/play/group/[groupId]';
+import GroupRoute from '@/app/(app)/(tabs)/play/group/[groupId]/index';
+import GroupFriendsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/friends';
 import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
@@ -74,11 +75,13 @@ import { beginSession } from '@/shared/lib/auth';
 import {
   ClipboardProvider,
   HapticsProvider,
+  ShareProvider,
   ImagePickingProvider,
   LiveStreamProvider,
   LocationProvider,
   type ClipboardPort,
   type HapticsPort,
+  type SharePort,
   type ImagePickingPort,
   type LiveStreamPort,
   type LocationPort,
@@ -118,7 +121,8 @@ export const ONBOARDING_ROUTES = {
   // Play › Groups' three screens (#512), under Play so the column stays lit and *back* is the list.
   '(app)/(tabs)/play/new-group': NewGroupRoute,
   '(app)/(tabs)/play/join': JoinGroupRoute,
-  '(app)/(tabs)/play/group/[groupId]': GroupRoute,
+  '(app)/(tabs)/play/group/[groupId]/index': GroupRoute,
+  '(app)/(tabs)/play/group/[groupId]/friends': GroupFriendsRoute,
   // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,
   // because the Now tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,
@@ -294,6 +298,23 @@ export function resetClipboard(): void {
 }
 
 /**
+ * The share sheet this tree opens, for the suite whose screen has a Share the link — a group
+ * page's (#513). Same shape and reasons as the clipboard above; unset is React Native's own
+ * module, which jest's setup has made answer nothing.
+ */
+let share: SharePort | undefined;
+
+/** Run the tree against this share sheet. Call before `launchSignedIn`. */
+export function stubShare(port: SharePort): void {
+  share = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetShare(): void {
+  share = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -329,11 +350,14 @@ function TestRoot() {
  * the device, for the reason `stubLiveStream` states.
  */
 function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withShare =
+    share === undefined ? children : <ShareProvider port={share}>{children}</ShareProvider>;
+
   const withClipboard =
     clipboard === undefined ? (
-      children
+      withShare
     ) : (
-      <ClipboardProvider port={clipboard}>{children}</ClipboardProvider>
+      <ClipboardProvider port={clipboard}>{withShare}</ClipboardProvider>
     );
 
   const withHaptics =

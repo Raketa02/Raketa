@@ -1,4 +1,4 @@
-import { parseGroupRouteParams } from './groupRouteParams';
+import { parseFriendsRouteParams, parseGroupRouteParams } from './groupRouteParams';
 
 describe('a group page’s route param', () => {
   it('reads a group id', () => {
@@ -13,4 +13,25 @@ describe('a group page’s route param', () => {
       expect(parseGroupRouteParams(params)).toBeUndefined();
     },
   );
+});
+
+describe('the Friends screen’s route params', () => {
+  const GROUP = 'a0000000-0000-4000-8000-000000000002';
+
+  it('reads a group id and the sport being built', () => {
+    expect(parseFriendsRouteParams({ groupId: GROUP, sport: 'tennis' })).toEqual({
+      groupId: GROUP,
+      sport: 'tennis',
+    });
+  });
+
+  it.each([
+    { groupId: GROUP },
+    { groupId: GROUP, sport: 'pickleball' },
+    { groupId: GROUP, sport: 'PADEL' },
+    { groupId: 'not-a-group', sport: 'padel' },
+    undefined,
+  ])('refuses %p', (params) => {
+    expect(parseFriendsRouteParams(params)).toBeUndefined();
+  });
 });

@@ -220,7 +220,7 @@ _nothing saved_, and `forgetPhonePreferences` is step 4 of `endSession`, awaited
 change because it waits on no query — whichever way the session ended. It judges no value; the
 owning feature turns a stale one into its default, and `phonePreferenceKeys` spells the Query key
 every owner holds its value under, so the three owners share one root. `shared/lib/platform/clipboard.ts` is the fifth
-port, **read-only and one verb wide** (`readText`, never rejecting), for Join a group's **Paste**;
+port, **read-only and one verb wide** at #512 (`readText`, never rejecting — #513 gave it a second), for Join a group's **Paste**;
 `fakeClipboard()` and `stubClipboard` drive it. Both fences are lint rules proved by
 `pnpm test:boundaries`. The primitives: `Segment` gained **`prominent`** (the tab's own view
 switch, 6.3), `TextField` gained a **`trailing`** slot, a **`recessed`** ground for a field inside
@@ -228,3 +228,20 @@ a card and a **`focusRing`** of `ink` or `coral` (6.13), and `ScreenHeader` gain
 an `h2` title and a sub-line each ending in an ellipsis, for a header that names a thing rather
 than a screen (10.3). `theme.ts` gained `MONOGRAM_HUES` beside `POSTER_HUES` and
 `size.monogram` (7.20). All recorded in design-system Part 16.
+
+**The sixth port is the share sheet, the clipboard writes, and a group page's pieces**
+([#513](https://github.com/Raketa02/Raketa/issues/513)). `shared/lib/platform/share.ts` wraps
+**React Native's own `Share`** — one verb, `shareText`, never rejecting, because closing the sheet
+is an answer and a sheet that did not open has nothing to say — behind `ShareProvider`/`useShare`,
+with `fakeShare()` recording every text it was handed and `stubShare` wiring it into the router
+harness. It is fenced like the native ports, but as a **path ban with `importNames`**: `Share` is
+one name out of a module every screen imports, so the ban is that name and every other one stays
+free; the port file subtracts the one path ban it owns, the two AsyncStorage files keep it, and
+`pnpm test:boundaries` drives a named import at all of them. **The clipboard gained `writeText`**,
+answering whether the OS took the text — so a screen confirms only a copy that happened — and
+`fakeClipboard()` gained `writable` to be the phone that refuses. **The store's second value,
+`lastSport`**, is groups', judged there against the ratings on every read. The primitives:
+`PlusOnMedia` in `Tick.tsx`, the plus in `surface` for a court's ground — a third bed for one
+drawing — and `theme.ts` gained `size.groupPage` (the Games card's seat, 34, and the fast
+filter's bar inset, 9) and **`motion.unfold`**, 280 ms, the eighth motion (7.21). All recorded in
+design-system Part 16.

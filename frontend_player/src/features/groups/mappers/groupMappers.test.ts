@@ -120,4 +120,65 @@ describe('the reader’s groups and a group’s page', () => {
       isOwner: true,
     });
   });
+
+  it('reads each sport’s count and its first faces, in joining order', () => {
+    const page: Wire['GroupResponse'] = {
+      id: 'b0000000-0000-4000-8000-000000000001',
+      name: 'My raketa group',
+      monogram: { letters: 'Mr', colour: 3 },
+      sports: ['PADEL'],
+      member_count: 3,
+      home_club: { id: OGRODY.id, name: 'Ogrody 33' },
+      link: 'https://raketa.app/join/ABCDEFGH',
+      join_policy: 'ANYONE',
+      is_owner: true,
+      rated_by_sport: [
+        {
+          sport: 'PADEL',
+          rated_count: 2,
+          first_rated: [
+            {
+              player_id: 'p1',
+              name: 'Tomek Kowal',
+              photo_id: 'f1',
+              photo_url: 'https://photos.test/f1',
+            },
+            { player_id: 'p2', name: null },
+          ],
+        },
+        { sport: 'TENNIS', rated_count: 0, first_rated: [] },
+      ],
+    };
+
+    expect(toGroup(page).ratedBySport).toEqual([
+      {
+        sport: 'padel',
+        ratedCount: 2,
+        firstRated: [
+          { playerId: 'p1', name: 'Tomek Kowal', photoUrl: 'https://photos.test/f1' },
+          // No photograph and no name: the seat is still theirs, drawn as the poster.
+          { playerId: 'p2', name: null },
+        ],
+      },
+      { sport: 'tennis', ratedCount: 0, firstRated: [] },
+    ]);
+  });
+
+  // A roster with no sport behind it is a count claiming something.
+  it('drops a roster for a sport this build cannot name', () => {
+    const page = {
+      id: 'b0000000-0000-4000-8000-000000000001',
+      name: 'My raketa group',
+      monogram: { letters: 'Mr', colour: 3 },
+      sports: [],
+      member_count: 1,
+      home_club: { id: OGRODY.id, name: 'Ogrody 33' },
+      link: 'https://raketa.app/join/ABCDEFGH',
+      join_policy: 'ANYONE',
+      is_owner: true,
+      rated_by_sport: [{ sport: 'PICKLEBALL', rated_count: 1, first_rated: [] }],
+    } as unknown as Wire['GroupResponse'];
+
+    expect(toGroup(page).ratedBySport).toEqual([]);
+  });
 });

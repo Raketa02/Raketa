@@ -142,8 +142,9 @@ src/
   `player_record` do this).
 - **One chokepoint per capability**, each the only importer of its module: `shared/lib/auth`
   (keychain), `shared/lib/http` (`fetch`, the 401 → refresh → retry rotation, timeouts as named
-  classes), and five platform ports in `shared/lib/platform/` — `location.ts`,
-  `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`. Features depend on the port
+  classes), and six platform ports in `shared/lib/platform/` — `location.ts`,
+  `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`, `share.ts` (React Native's
+  `Share`, the one fenced name out of that module). Features depend on the port
   and drive the fakes in `src/test-support/platform.ts`. The flag seam adds two, one file each in
   `features/feature_flags/api/`: `featurevisor.ts` (the SDK) and `datafileCache.ts`
   (AsyncStorage — a public datafile, never a credential; ADR-0180). AsyncStorage's second and

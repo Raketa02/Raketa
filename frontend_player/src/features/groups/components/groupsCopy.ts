@@ -62,6 +62,51 @@ export const GROUPS_COPY = {
     refused: {
       group_not_found: 'This group isn’t one of yours.',
     },
+    /** The page's four tabs (play 43) — no counts: nothing claims news that does not exist. */
+    tabs: { games: 'Games', fillIn: 'Fill in', friends: 'Friends', info: 'Info' },
+  },
+  /** The fast filter (play 41–42). */
+  filter: {
+    pillHint: 'Shows this group for another sport you play',
+    /** The pill's faint chevron, and the bar's once it has unfolded — the fold's direction. */
+    unfold: '‹',
+    fold: '›',
+  },
+  /** The Games tab's card (play 14–17, 39). */
+  games: {
+    justYou: 'Just you so far',
+    nothingPicked: 'Nothing picked right now',
+  },
+  /** The Fill in tab (play 45–47). */
+  fillIn: {
+    alone: 'No games yet — it’s just you',
+    others: 'No games yet',
+    line: 'Post the first game and it is the first thing people see when they arrive with the link. Or send the link and let somebody else post.',
+    postAGame: 'Post a game',
+    /** Drawn with its plus; spoken without it, as `postAGame`. */
+    postAGameDrawn: '+ Post a game',
+  },
+  /** The Friends tab and the Friends screen (play 49–55). */
+  friends: {
+    competitive: 'Competitive',
+    forFun: 'For fun',
+    yourSide: 'Your side',
+    theirSide: 'Their side',
+    /** The reader's seat, drawn as its three letters over their Level. */
+    you: 'You',
+    addFriends: '+ Friends',
+    addFriendsLabel: 'Pick friends',
+    title: 'Friends',
+    back: 'Back to the group',
+    nobody: 'Nobody you know here yet',
+    emptySeatHint: 'Opens Friends',
+  },
+  /** The link's two doors, on every dark card of the page. */
+  link: {
+    share: 'Share the link',
+    copy: 'Copy link',
+    copied: 'Link copied',
+    notCopied: 'Couldn’t copy the link',
   },
   action: {
     join: 'Join',

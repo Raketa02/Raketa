@@ -95,10 +95,9 @@ the failure (`codeMessage`) and the recovery's otherwise, and _Try again_ **only
 failure's recovery says trying again can help** — never for `group_not_found`, which answers the
 same however often it is asked.
 
-**A group's page is its header, for now** (play 40). `ScreenHeader`'s new `compact` form — the
+**A group's page opens with its header** (play 40). `ScreenHeader`'s new `compact` form — the
 title at `h2` beside the tile in the lead slot, the title and _N members · Home club_ each on one
-line and ending in an ellipsis (story 50), spoken whole. The sport pill and the four tabs are
-[#513](https://github.com/Raketa02/Raketa/issues/513)'s. An id that is not a UUID redirects to
+line and ending in an ellipsis (story 50), spoken whole. An id that is not a UUID redirects to
 Play; `group_not_found` — one code for _no such group_ and _not one of yours_ — is one sentence.
 
 **Two things the mocks draw that this record departs from, and why.** The mocks draw the sport
@@ -109,3 +108,90 @@ tell the four hues apart still gets them only from the group's page. And the hom
 focus ring is **coral**, as the ticket asks (_live, coral focus ring_), which is a seventh coral
 beside 1.2's closed list; both are recorded in design-system Part 16 for the product owner to rule
 on. **Nothing here has been seen on a device.**
+
+**The page is filtered by one sport, and the phone remembers which**
+([#513](https://github.com/Raketa02/Raketa/issues/513), stories 51–58, ADR-0188). The fast
+filter lists **only the sports the reader is rated in**, in the registry's order — never the
+group's dots, since a player may be the only one here who plays a sport and a dot they are not
+rated in is a sport they cannot play — and a player rated in one sport gets a **plain label** with
+nothing to unfold. It opens on **the sport last picked in any group's filter**, the store's
+`lastSport`, judged against the ratings on every read (`domain/groupPage.ts`' `openingSport`): a
+sport no longer rated, or a value that was never a sport, is the first rated sport in the order
+padel › tennis › squash › badminton. **Nothing is drawn for a sport until the phone has answered**
+— the pill and the tabs' bodies wait for both reads — so a page never draws one sport and jumps to
+another. The read and the write are `usePlaySegment`'s shape (`useGroupSport`): local, never
+waiting on the network, a pick written to the cache and then the phone, never a mutation.
+
+**The filter unfolds on the UI thread and folds at once** (play 41–42; design-system 7.21). The
+pill is a chip; tapped, a white bar with the popover's shadow grows leftwards over the group's
+name from where the pill stood, the current sport dark at its right end, the others sliding out
+one by one — one Reanimated shared value over `motion.unfold`, read by the bar's width and each
+sport's opacity and slide, never a scale. It is the second surface on Reanimated after the radar
+and the first with no gesture. The bar is drawn over the header's measured box, above a backdrop
+across the page, so **a tap on another sport picks it, and a tap on the current one, anywhere else,
+or Android's back folds it and changes nothing.** The shell's tab bar is outside the page and
+stays live, so leaving by it folds the bar too, and a page the player comes back to is never
+open. It is never a `Modal` (ADR-0178). The fold is immediate; under reduced motion the bar is simply open. `sportFilter.test.tsx` holds the width at
+each end of the unfold and under reduced motion, with the layout handed in as events.
+
+**Four tabs, no counts, and the page always opens on Games** (story 59; ADR-0188 §5 keeps which
+tab nowhere). Games, Fill in and Friends are each drawn for the filter's sport; Info is
+[#514](https://github.com/Raketa02/Raketa/issues/514)'s and draws nothing yet. **Every starting
+tab has one dark card whose remedy is the link** (`LinkCard`): a headline, what the app is waiting
+for, and **Share the link** (volt) beside **Copy link** (`onDark`). Share hands the phone's own
+sheet one sentence — _Join my raketa group on Raketa: <link>_, the administrator's WhatsApp words
+(story 128) — through the new **share port**; closing the sheet is an answer, never an error. Copy
+puts the bare link on the clipboard, which learned to write (`writeText`), and says _Link copied_
+in `ok`, or _Couldn't copy the link_ in `bad`, so a tap never passes silently.
+
+**Games reads the group's per-sport roster, and says only what it can** (stories 60–63, ADR-0183
+§13). `GET /groups/{id}` serves `rated_by_sport` — every sport's count of members rated in it and
+the first of them in joining order, at most a court's worth — and `gamesCard` turns it into three
+states against the court's seat count (handed in: `courtSeatCount` is drawn knowledge): **Just you
+so far** while nobody else is rated in the sport; **N of M** once others are, their faces in the
+order they joined; **Nothing picked right now** once the seats could be filled — and then **no
+waiting line**, because what the app would wait for is not people. The row of seats is one element
+to a listener, play's court summary — _Padel, 1 of 4 seats filled._ — and _3 of 4_ is drawn in
+mono, as every count is (design-system 1.4).
+
+**Fill in counts members, not players of the sport** (stories 66–67). _No games yet — it's just
+you_ while the reader is the only member, _No games yet_ once anybody has joined: a posted game is
+seen by everybody who arrives with the link. **+ Post a game** is the primary button, disabled, over
+the page's bottom corner — drawn, inert, and `disabled` to a listener.
+
+**Friends is a court with nobody to put on it yet** (stories 68–70; PRD #500 overrides play 49–56:
+no friends feature). **Competitive · For fun** is a process-scoped store (`gameIntent.store`) —
+it keeps its position when the player leaves the page and comes back, and ADR-0188 §5 keeps it off
+the phone; one value for the app, since it is the intent of the game being built. Like the app's
+other process stores, a sign-out does not reset it.
+
+**The court is play's court, spoken in play's sentences.** `Court` at `court.build` with play's
+`SeatFace` and `SeatCaption` through `play/types` — the edge `plans` and `games` already cross —
+and the reader in the first seat, captioned _You 2,71_; every other seat is a dashed ring with a
+white plus that opens **Friends**, as **+ Friends** does. Who sits on which side is play's rule
+(`seatPlaces`, a side is a team, so squash's other seat is _their side_) and every seat says so in
+play's sentences: _Padel, 1 of 4 seats filled._ first, then _Your side, you, level 2,71_, _Your
+side, your partner, empty_, _Their side, empty_. The Games card's row speaks the same summary.
+**Side labels are drawn on padel and badminton only**, as the mocks draw them: squash has no
+halves, and tennis's far seat stands where the label would be written.
+
+**The reader's face is the roster's, and their own record's only when it must be.** The group's
+read carries the first rated in each sport, which is the reader in nearly every group; one who
+joined after a court's worth gets their photograph from their own record (`player_record`'s
+`useOwnFace`, a read asked only then), and the poster until it answers.
+
+**The Friends screen** is pushed at `/play/group/[groupId]/friends?sport=…` — the sport is a
+validated route param because the eyebrow counts that court: _PADEL · 0 OF 3 PICKED_ — and always
+shows _Nobody you know here yet_ with the link's doors. The page's route moved to
+`[groupId]/index` to make room for it.
+
+**Three things the group page's mocks draw that this record departs from**
+([#513](https://github.com/Raketa02/Raketa/issues/513), design-system Part 16). The Games card's
+faces are **the face box, not circles** — this app has no round face (#338) — and **no face carries
+initials**, which ADR-0167 §3 fences to the yes screen's tile; widening that fence is an amendment
+to the ADR, not a drawing call. **+ Post a game** is the **disabled primary button at 4.2's corner**
+rather than the mocks' full-strength coral pill with a glow: the pill is the chip's and the yes
+screen's, the glow the ⚡Play disc's, and a full-strength button that ignored its press would say the
+opposite of what it does. All three are flagged for the product owner. **Nothing on the page has
+been seen on a device** — the unfold's pace, and whether four sports fit the bar on a 320pt phone,
+are asked for a look.

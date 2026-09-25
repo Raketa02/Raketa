@@ -36,7 +36,8 @@
  * stroke cannot be reused — volt on `surface` is 1,3:1 and simply not there — and the second
  * one is `ink` on `surface`, which is the tick's own contrast read the other way round. Two
  * named marks rather than one taking a colour, for the reason above: the bed is a fact about
- * where each is drawn, not a decision a caller makes.
+ * where each is drawn, not a decision a caller makes. **A third bed is a court's ground**
+ * (#513): `PlusOnMedia`, `surface` over the scrim every label on a court already stands on.
  */
 
 import Svg, { Path } from 'react-native-svg';
@@ -85,6 +86,16 @@ export function Plus() {
 /** A slot this search dropped. Drawn on the unselected cell, so `muted` is the value. */
 export function Dash() {
   return <Mark d={DASH} stroke={theme.color.muted} />;
+}
+
+/**
+ * The same plus **on a court's ground**, in `surface` — a group's Friends court draws it in every
+ * empty seat, a friend's place still open (play 49–53, #513). White rather than volt: the seat is
+ * an invitation on generated media, as the side labels over it are, and volt on that court would
+ * say *picked for a swap*, which is what the builder's volt ring means.
+ */
+export function PlusOnMedia() {
+  return <Mark d={PLUS} stroke={theme.color.surface} />;
 }
 
 /**

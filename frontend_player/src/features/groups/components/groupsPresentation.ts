@@ -3,7 +3,7 @@
  * and every name a control is spoken by. The fixed sentences are `groupsCopy.ts`, re-exported
  * here; copy is code, and nothing is inlined in a component.
  *
- * Taken from the mocks (play 1, 3–13, 23–40), with the mocks' *Rakieta* read as **Raketa**
+ * Taken from the mocks (play 1, 3–17, 23–55), with the mocks' *Rakieta* read as **Raketa**
  * (ADR-0187 §8). Two rules sit over it:
  *
  * - **A name is said whole.** The *approves joins* line carries the Owner's whole Name and the
@@ -14,10 +14,13 @@
  */
 
 import { sportLabel } from '@/features/onboarding/types';
+import { courtSummaryLabel, seatLabel, type SeatPlace } from '@/features/play/types';
 import { counted } from '@/shared/formatting/counted';
-import { formatDistanceKm } from '@/shared/formatting/ratingFormat';
+import { formatDistanceKm, formatLevel } from '@/shared/formatting/ratingFormat';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import { GROUP_NAME_MAX, type GroupAtClub, type SearchedClub } from '../domain/group';
+import type { GamesCard } from '../domain/groupPage';
 import type { GroupAction } from '../domain/groupRules';
 
 import { GROUPS_COPY } from './groupsCopy';
@@ -134,4 +137,85 @@ export function clubCardLabel(club: SearchedClub): string {
 /** The chosen home club's card, spoken. */
 export function chosenClubLabel(club: SearchedClub): string {
   return `Home club: ${club.name}, ${clubLine(club, { distance: true })}`;
+}
+
+// ---------------------------------------------------------------------------
+// The group page (#513)
+// ---------------------------------------------------------------------------
+
+/**
+ * *Sport: Padel* — the fast filter's pill, spoken. The same name for the plain label a player
+ * rated in one sport gets, which says the sport and offers nothing to unfold.
+ */
+export function sportPillLabel(sport: Sport): string {
+  return `Sport: ${sportLabel(sport)}`;
+}
+
+/** *padel*, inside a sentence — the mocks write a sport in lower case mid-line (play 14–17). */
+function sportInLine(sport: Sport): string {
+  return sportLabel(sport).toLowerCase();
+}
+
+/** The Games card's headline: *Just you so far*, *3 of 4*, or *Nothing picked right now*. */
+export function gamesHeadline(card: GamesCard): string {
+  switch (card.kind) {
+    case 'just-you':
+      return GROUPS_COPY.games.justYou;
+    case 'filling':
+      return `${card.rated} of ${card.seats}`;
+    case 'nothing-picked':
+      return GROUPS_COPY.games.nothingPicked;
+  }
+}
+
+/**
+ * *The app picks games here once 4 who play padel are in and a court at Bonarka Arena is free…*
+ * — what the app is waiting for (story 61). **Not said once the seats could be filled**: what it
+ * would wait for then is not people, and the headline already says nothing is picked.
+ */
+export function gamesLine(card: GamesCard, sport: Sport, clubName: string): string | undefined {
+  if (card.kind === 'nothing-picked') return undefined;
+  return `The app picks games here once ${card.seats} who play ${sportInLine(sport)} are in and a court at ${clubName} is free. Send the link — it all starts when they arrive.`;
+}
+
+/**
+ * *Padel, 1 of 4 seats filled.* — a court's seats, spoken as one element before any seat: the
+ * Friends court's summary and the Games card's row of seats alike. It is play's sentence
+ * (`courtSummaryLabel`, the-words §20.4), so a group's court and a line-up's say the same thing.
+ */
+export function seatsFilledLabel(sport: Sport, filled: number, seats: number): string {
+  return courtSummaryLabel({ sportName: sportLabel(sport), filled, seats });
+}
+
+/**
+ * *Your side, you, level 2,71* — the reader's seat on the Friends court: play's seat sentence, and
+ * the Level the seat draws under the face, in the words play's seats say a Level in.
+ */
+export function yourSeatLabel(place: SeatPlace, level: number | undefined): string {
+  const seat = seatLabel(place, { kind: 'you' });
+  return level === undefined ? seat : `${seat}, level ${formatLevel(level)}`;
+}
+
+/** *Their side, empty* — a seat a friend could fill, named by where it is (play's `seatLabel`). */
+export function emptySeatLabel(place: SeatPlace): string {
+  return seatLabel(place, { kind: 'empty', unfilled: null });
+}
+
+/** *Padel · 0 of 3 picked* — the Friends screen's eyebrow (play 54), drawn upper case. */
+export function friendsPicked(sport: Sport, picked: number, toPick: number): string {
+  return `${sportLabel(sport)}${DOT}${picked} of ${toPick} picked`;
+}
+
+/** *Friends who join my raketa group with the link show up on this page.* (play 55) */
+export function friendsLine(groupName: string): string {
+  return `Friends who join ${groupName} with the link show up on this page.`;
+}
+
+/**
+ * *Join my raketa group on Raketa: https://…* — what Share the link hands the sheet. The link is
+ * the whole of what has to arrive; the sentence says what it is to whoever it lands with, in the
+ * words the Administrator's WhatsApp post uses (story 128).
+ */
+export function shareMessage(groupName: string, link: string): string {
+  return `Join ${groupName} on Raketa: ${link}`;
 }

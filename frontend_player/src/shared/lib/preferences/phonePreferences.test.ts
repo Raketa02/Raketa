@@ -40,13 +40,23 @@ describe('the phone-preferences store', () => {
     await expect(readPhonePreference(ADA, 'playSegment')).resolves.toBe('groups');
   });
 
+  it('keeps each value apart from the others', async () => {
+    await savePhonePreference(ADA, 'playSegment', 'explore');
+    await savePhonePreference(ADA, 'lastSport', 'tennis');
+
+    await expect(readPhonePreference(ADA, 'playSegment')).resolves.toBe('explore');
+    await expect(readPhonePreference(ADA, 'lastSport')).resolves.toBe('tennis');
+  });
+
   it('forgets every account’s choices when a session ends', async () => {
     await savePhonePreference(ADA, 'playSegment', 'explore');
+    await savePhonePreference(ADA, 'lastSport', 'tennis');
     await savePhonePreference(BORIS, 'playSegment', 'explore');
 
     await endSession('requested');
 
     await expect(readPhonePreference(ADA, 'playSegment')).resolves.toBeUndefined();
+    await expect(readPhonePreference(ADA, 'lastSport')).resolves.toBeUndefined();
     await expect(readPhonePreference(BORIS, 'playSegment')).resolves.toBeUndefined();
   });
 });

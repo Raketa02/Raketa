@@ -1215,6 +1215,9 @@ encodes:
   `platform/clipboard.ts`, one file each rather than the platform directory, so a module of
   ports cannot become the device bucket. The ban holds in tests too, which could not drive a
   native module anyway
+- **`Share` from `react-native`** — one name out of a module every screen imports — is importable
+  only by `platform/share.ts`, the share sheet's port (#513). It is a path ban with
+  `importNames` rather than a pattern, so every other name out of `react-native` stays free
 - `platform/liveStream.ts` is the one file outside a feature's `api/` and `mappers/` that
   may read `src/generated/`, and it is exempt from **two** bans rather than one: ADR-0147 §7
   requires the live envelope to be the generated type, and a stream body is not a response

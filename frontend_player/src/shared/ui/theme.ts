@@ -763,6 +763,14 @@ const size = {
    *  one font size in the app after the yes tile's that is computed from a box, and it is computed
    *  inside the tile that owns the box. */
   monogram: { card: 38, row: 28, header: 36, radius: 0.27, letters: 0.37 },
+  /** THE GROUP PAGE'S TWO DRAWN PIECES (#513), MEASURED off the mocks at 1×. `seat` is a face or
+   *  an empty seat in the Games card's row under its headline — 34 in play 14–17 and 39, the
+   *  radar card's identity face and a `btn` high. It is `PlayerPhoto`'s `face` box at that size,
+   *  so its corner is the face's third and no second radius exists. `filterPad` is the white
+   *  bar's inset around the sport pills it unfolds into (play 42): the pills are chips, and
+   *  `chip` + 2 × 9 is 45 — so the bar is a reachable target tall and each pill's `hit.chip`
+   *  ends at the bar's edge rather than past it, where Android would never deliver the touch. */
+  groupPage: { seat: 34, filterPad: 9 },
   /** The yes screen's tile — a face at this screen's two sizes, and the initials over a poster
    *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
    *  §2, §3). MEASURED off the mocks at 1x: 64 x 64 in the singles mock, 54 x 54 in the doubles
@@ -1191,8 +1199,9 @@ const shadow = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, and
-// the yes screen's entrance, which is the first and the fade composed. Nothing else moves.
+// Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, one
+// unfold, and the yes screen's entrance, which is the first and the fade composed. Nothing else
+// moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
@@ -1242,6 +1251,16 @@ const motion = {
    * presentation, where the card is drawn at rest.
    */
   settle: 160,
+  /**
+   * The group page's fast filter unfolding from its pill (play 41–42, #513): the white bar grows
+   * leftwards from the pill over the group's name while the other sports slide out one by one
+   * from under the current one, each over half of this and each starting a step after the one
+   * nearer the pill. Between `sheet` and `rise`, because three words have to be seen arriving
+   * in turn and a `popover` is over before the second has moved. `easeDecel`, on the UI thread.
+   * **Folding is not animated**: the finger has already chosen, and the pill it folds back to is
+   * a state the eye already knows. Skipped under reduced motion, where the bar is simply open.
+   */
+  unfold: 280,
   /**
    * The radar's flight — a tap on a face carries the view to them, centred, at the 3 km stop
    * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)

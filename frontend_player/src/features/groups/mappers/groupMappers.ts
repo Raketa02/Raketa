@@ -1,6 +1,6 @@
 /**
- * **The wire boundary** — the five group and club shapes the contract serves, in the app's
- * spelling. Generated types stop here and in `api/`.
+ * **The wire boundary** — the group and club shapes the contract serves, in the app's spelling.
+ * Generated types stop here and in `api/`.
  *
  * **A sport this build cannot name is dropped**, from a dot row and from a club's sports alike:
  * a dot with no sport behind it is a colour claiming something, and `toSport` is the one place
@@ -19,8 +19,10 @@ import type {
   ClubSearch,
   Group,
   GroupAtClub,
+  GroupPerson,
   Monogram,
   MyGroup,
+  SportRoster,
 } from '../domain/group';
 
 type Schemas = components['schemas'];
@@ -95,6 +97,30 @@ export function toJoinSearch(text: string, wire: Schemas['JoinSearchResponse']):
   };
 }
 
+/** A face: the photograph's link travels only when there is one — the poster stands in otherwise. */
+function toGroupPerson(wire: Schemas['GroupPersonSchema']): GroupPerson {
+  return {
+    playerId: wire.player_id,
+    name: wire.name,
+    ...(wire.photo_url === undefined ? {} : { photoUrl: wire.photo_url }),
+  };
+}
+
+/** Every sport's roster this build can name — a count with no sport behind it claims nothing. */
+function toRosters(wire: readonly Schemas['GroupSportSchema'][]): readonly SportRoster[] {
+  return wire.flatMap((roster) => {
+    const sport = toSport(roster.sport);
+    if (sport === undefined) return [];
+    return [
+      {
+        sport,
+        ratedCount: roster.rated_count,
+        firstRated: roster.first_rated.map(toGroupPerson),
+      },
+    ];
+  });
+}
+
 export function toGroup(wire: Schemas['GroupResponse']): Group {
   return {
     id: wire.id,
@@ -106,5 +132,6 @@ export function toGroup(wire: Schemas['GroupResponse']): Group {
     link: wire.link,
     joinPolicy: wire.join_policy,
     isOwner: wire.is_owner,
+    ratedBySport: toRosters(wire.rated_by_sport),
   };
 }

@@ -1,7 +1,7 @@
 /**
  * **The keys a phone preference is held under in the Query cache** — one per account per value,
  * beside the store's own one-per-account-per-value layout, and spelled once here so the three
- * features that each own one value (the Play segment now, the last sport and the last profile to
+ * features that each own one value (the Play segment and the last sport now, the last profile to
  * come) cannot spell the root three ways.
  *
  * A preference is not server data, and Query holds it for the reason the flags' saved datafile is
