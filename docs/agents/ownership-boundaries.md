@@ -18,10 +18,10 @@ extended to four apps.
 | `frontend_club/…` | `club` | `frontend_club/**` + shared docs |
 | `frontend_public/…` | `public` | `frontend_public/**` + shared docs |
 
-> **The two web apps are fenced before they exist.** `frontend_club/` (the club website) and
-> `frontend_public/` (the public site) hold nothing but their `.claude/settings.json` until
-> [#522](https://github.com/Raketa02/Raketa/issues/522) and
-> [#525](https://github.com/Raketa02/Raketa/issues/525) scaffold them. That order is the point:
+> **The two web apps were fenced before they existed.** `frontend_club/` (the club website) was
+> scaffolded inside its fence by [#522](https://github.com/Raketa02/Raketa/issues/522);
+> `frontend_public/` (the public site) holds nothing but its `.claude/settings.json` until
+> [#525](https://github.com/Raketa02/Raketa/issues/525) scaffolds it. That order is the point:
 > the `club` tier survived the 2026-08-25 reset so that the day a second client landed it
 > would already be fenced, and `public` got its tier
 > ([#502](https://github.com/Raketa02/Raketa/issues/502)) before any session could be

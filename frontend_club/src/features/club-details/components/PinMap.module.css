@@ -1,0 +1,27 @@
+.map {
+  width: 100%;
+  height: var(--size-map);
+  border: var(--size-hairline) solid var(--colour-line);
+  border-radius: var(--radius-control);
+  background: var(--colour-rule);
+  z-index: 0;
+}
+
+/* Leaflet places the icon's top-left corner on the point; the margins put its centre there. */
+.pin {
+  width: var(--size-pin);
+  height: var(--size-pin);
+  margin-top: calc(var(--size-pin) / -2);
+  margin-left: calc(var(--size-pin) / -2);
+  border: var(--size-focus) solid var(--colour-surface);
+  border-radius: 50%;
+  background: var(--colour-coral);
+  box-shadow: var(--shadow-pin);
+  cursor: grab;
+}
+
+@media (max-width: 480px) {
+  .map {
+    height: var(--size-map-phone);
+  }
+}

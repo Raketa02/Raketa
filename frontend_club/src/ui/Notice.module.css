@@ -1,0 +1,24 @@
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  font-size: var(--text-small);
+}
+
+.success {
+  background: var(--colour-green-soft);
+  color: var(--colour-green);
+}
+
+.error {
+  background: var(--colour-red-soft);
+  color: var(--colour-red);
+}
+
+.info {
+  background: var(--colour-selected);
+  color: var(--colour-ink-deep);
+}

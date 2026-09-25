@@ -69,7 +69,7 @@ own **technical** vocabulary:
 | **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Player, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Audience, Signing out everywhere, Player profile, Social tag, Availability grid, Search radius, Proposals opt-in, Challenge, Seat, Standing, Game, Result, Score, Counted game, Ghost game, Player Score, Strand, Player card, Record block, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Club, Club account, Home club, Group, Player group, Official group, Owner, Group member, Join policy, Join request, Group link, WhatsApp group size, Handover, Administrator, Invitation, Tester, Feature flag… |
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation, presentation module, copy deck… |
-| **`frontend_club/CONTEXT.md`** | Club-website technical vocab only — *arrives with [#522](https://github.com/Raketa02/Raketa/issues/522)* | server layer, cookie session, server action, view model… |
+| **`frontend_club/CONTEXT.md`** | Club-website technical vocab only | server layer, cookie session, recovery cookie, single flight, server action, view model, stub backend… |
 | **`frontend_public/CONTEXT.md`** | Public-site technical vocab only — *arrives with [#525](https://github.com/Raketa02/Raketa/issues/525)* | preview tags, app-link files, Open in Raketa… |
 
 An app `CONTEXT.md` must **never redefine** a domain term — it points back to the root
