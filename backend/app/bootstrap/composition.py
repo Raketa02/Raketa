@@ -90,14 +90,43 @@ from app.modules.challenges.infrastructure.profile_friendly_choice import (
     ProfileFriendlyChoice,
 )
 from app.modules.clubs.application.session_holders import ClubAccountSessionHolders
-from app.modules.clubs.domain.ports import ClubAccountRepository, ClubRepository
+from app.modules.clubs.domain.ports import (
+    ClubAccountRepository,
+    ClubDirectory,
+    ClubRepository,
+)
 from app.modules.clubs.infrastructure.event_sourced_club_account_repository import (
     EventSourcedClubAccountRepository,
 )
 from app.modules.clubs.infrastructure.event_sourced_club_repository import (
     EventSourcedClubRepository,
 )
+from app.modules.clubs.infrastructure.sqlalchemy_club_directory import (
+    SqlAlchemyClubDirectory,
+)
 from app.modules.games.application.call_off_game import CallOffGame
+from app.modules.groups.domain.ports import (
+    GroupCodeMinter,
+    GroupDirectory,
+    GroupFaces,
+    GroupRepository,
+    HomeClubs,
+    RatedGroupMembers,
+    ReaderAreas,
+)
+from app.modules.groups.infrastructure.clubs_home_clubs import ClubsHomeClubs
+from app.modules.groups.infrastructure.event_sourced_group_repository import (
+    EventSourcedGroupRepository,
+)
+from app.modules.groups.infrastructure.profile_group_faces import ProfileGroupFaces
+from app.modules.groups.infrastructure.profile_reader_areas import ProfileReaderAreas
+from app.modules.groups.infrastructure.random_group_codes import RandomGroupCodes
+from app.modules.groups.infrastructure.rated_group_members import (
+    RatingsRatedGroupMembers,
+)
+from app.modules.groups.infrastructure.sqlalchemy_group_directory import (
+    SqlAlchemyGroupDirectory,
+)
 from app.modules.games.application.dismiss_game import DismissGameOfCourt
 from app.modules.games.application.open_planned_game import OpenPlannedGame
 from app.modules.games.application.vacate_seat import VacateSeat
@@ -557,6 +586,85 @@ def build_club_account_session_holders(
     """Who may renew a **club** session: a Club account that still exists
     (``docs/adr/0185`` §6). Over the repository the request already holds."""
     return ClubAccountSessionHolders(accounts)
+
+
+def build_club_directory(session: AsyncSession) -> ClubDirectory:
+    """What the Club context publishes: its clubs, read off the search
+    projection (``docs/adr/0182`` §2) and never as an aggregate."""
+    return SqlAlchemyClubDirectory(session)
+
+
+# --------------------------------------------------------------------------
+# Groups
+# --------------------------------------------------------------------------
+
+
+def build_group_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> GroupRepository:
+    """Per unit of work, as every aggregate repository is. **It takes the session
+    as well as the store**, because its ``save`` writes the groups and
+    group-members projections in the same transaction (``docs/adr/0183`` §1)."""
+    return EventSourcedGroupRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_group_directory(session: AsyncSession) -> GroupDirectory:
+    return SqlAlchemyGroupDirectory(session)
+
+
+def build_group_code_minter(session: AsyncSession) -> GroupCodeMinter:
+    return RandomGroupCodes(session)
+
+
+def build_home_clubs(session: AsyncSession) -> HomeClubs:
+    """A group's home club, and the clubs a player searches — over the clubs'
+    own published directory, never their table."""
+    return ClubsHomeClubs(build_club_directory(session))
+
+
+def build_rated_group_members(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RatedGroupMembers:
+    """The sport dots' ratings, over the rating context's published read — which
+    replays and remembers nothing, so a dot cannot move a Level."""
+    return RatingsRatedGroupMembers(build_rated_player_query(session, runtime=runtime))
+
+
+def build_group_faces(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> GroupFaces:
+    """A name from ``users``, a face from the Player profile, a link from the
+    store — ``build_member_faces``' three providers, for the Games tab's seats.
+    The window is the platform's one photo window."""
+    return ProfileGroupFaces(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        photos=build_photo_storage(settings),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+
+def build_reader_areas(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReaderAreas:
+    """Where the reader is, read off their Player profile's Location area."""
+    return ProfileReaderAreas(
+        build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
 
 
 # --------------------------------------------------------------------------

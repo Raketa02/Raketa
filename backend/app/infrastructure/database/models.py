@@ -9,6 +9,7 @@ from app.modules.clubs.infrastructure.club_model import ClubAccountORM, ClubORM
 from app.modules.conversations.infrastructure.conversation_model import (
     ConversationORM,
 )
+from app.modules.groups.infrastructure.group_model import GroupMemberORM, GroupORM
 from app.modules.matchmaking.infrastructure.candidate_index_model import (
     CandidateIndexCursorORM,
     CandidatePlayerFactsORM,
@@ -36,6 +37,8 @@ __all__ = [
     "DeckResetORM",
     "EventOutboxORM",
     "EventStoreORM",
+    "GroupMemberORM",
+    "GroupORM",
     "InterestORM",
     "RefreshTokenORM",
     "SearchCandidateORM",

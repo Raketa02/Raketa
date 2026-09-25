@@ -1243,6 +1243,39 @@ Rules to preserve:
   `app/seeds/clubs.py` — eight Kraków clubs placed as offsets from the seed centre, each
   signed up through `SignUpClub`, each desk at `desk.<name>@raketa.example` on the seed
   password.
+- **A group is a crowd at a home club, and its link never changes**
+  ([ADR-0183](../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md),
+  #504). `app/modules/groups/` holds **one event-sourced aggregate for both kinds**; this
+  build writes the player kind only (`player_group_created`, `group_joined`), and each
+  later event arrives with its ticket (#505, #506, #509, #510). The repository's `save`
+  writes **two projections in the caller's transaction** — `groups`, with `name_folded`
+  written from the first event because SQL cannot fold, and `group_members`, whose
+  `joined_version` (the admitting event's stream version) is the exact joining order.
+  Four things are load-bearing. **The code is minted with `secrets`** from an alphabet
+  with no look-alikes, checked against the table, unique and never changed, and the
+  **link is `PUBLIC_SITE_URL` + `/join/` + code** — built in presentation, because the
+  address is configuration and a domain may not read it; a deployed environment refuses
+  to start without it or with a non-`https://` one. **The monogram is cut here and the
+  colour crosses as a key** (0–7, from a SHA-256 of the id), so three clients draw one
+  tile; the cut is by what a reader sees as a character, so an emoji or a decomposed
+  accent is never halved (`domain/monogram.py`). **Dots and each sport's *N of M* are
+  read, never stored** — `domain/sports.py`, over `RatedGroupMembers`, one question about the
+  union of every member a response names. And **it reads four contexts through ports it
+  declares in its own words**, each adapter over the provider's own port: clubs'
+  `ClubDirectory` (which `clubs` now publishes over its search projection, folding the
+  query itself and escaping `LIKE`), rating's `RatedPlayerQuery`, users and the Player
+  profile for a face, and the profile's Location area for distance — and its domain
+  borrows two pure functions, clubs' `fold` and the matcher's distance print, and says
+  so where it does. Home-club search is
+  **`/home-clubs`, never `/clubs`** — anything beginning `/api/v1/club` reads as the club
+  surface — ordered by the **printed** distance (`shown_kilometres`, from the reader's
+  Location area to the club's point), then the folded name, twenty to a page; a reader with no
+  Location area gets A–Z and `distance_km: null`, a blank query answers nothing, and a
+  club's groups come the biggest crowd first. Reading a group is members-only and a
+  stranger meets the same `group_not_found` as a missing id; tapping *Join* on a *People
+  I approve* group is refused `group_needs_approval` until requests exist (#505). Seeded
+  by `app/seeds/groups.py` — four *Anyone* groups owned and joined by the named accounts,
+  so the dots follow the rule (no squash or badminton dot: one member rated is not a dot).
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one

@@ -121,9 +121,14 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: below used to name Clubs as the example of a context modeled nowhere. A club
 #: exists because a club signed up (`docs/adr/0182` §7), so the seed signs each
 #: one up through `SignUpClub` and writes no row.
+#:
+#: `groups` joined the day after (#504), the same way: a group exists because a
+#: player created it, so each is created through `CreatePlayerGroup` and joined
+#: through `JoinGroup`, and the projections are the repository's to write.
 WRITTEN_CONTEXTS = frozenset(
     {
         "clubs",
+        "groups",
         "users",
         "rating",
         "player_profile",
@@ -181,6 +186,9 @@ AGGREGATE_WRITERS = {
     # runs — which is why the layer needs both, and nothing else.
     "build_club_repository": "clubs",
     "build_club_account_repository": "clubs",
+    # A group, created by its Owner and joined by its members — the two use
+    # cases a request runs, over the one repository both take.
+    "build_group_repository": "groups",
 }
 
 #: The two infrastructure modules the seed path may import, and neither is an
@@ -272,6 +280,7 @@ def test_the_walk_has_something_to_walk():
         "clubs.py",
         "cohort.py",
         "games.py",
+        "groups.py",
         "guard.py",
         "loop.py",
         "pairs.py",

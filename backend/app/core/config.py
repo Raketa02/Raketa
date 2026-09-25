@@ -117,6 +117,12 @@ DEFAULT_PHOTO_STORAGE_SECRET_KEY = "raketa_photos_pwd"
 #: than fall back on, exactly as the writer database's default is.
 DEFAULT_REDIS_URL = "redis://redis:6379/0"
 
+#: Where the public site answers on a laptop: ``frontend_public``'s dev server,
+#: beside the club website's on 3000. It resolves on a developer's own machine and
+#: nowhere else, which is what makes it safe to refuse rather than fall back on in
+#: a deployed environment, exactly as the database's and Redis's defaults are.
+DEFAULT_PUBLIC_SITE_URL = "http://localhost:3001"
+
 #: The work factor every stored password and refresh token is hashed at in production,
 #: and the floor for everything deployed. bcrypt's own default, so a deployed
 #: environment that says nothing about it hashes exactly as it did before the setting
@@ -211,6 +217,21 @@ class Settings(BaseSettings):
 
     # --- migrations
     RUN_MIGRATIONS_ON_STARTUP: bool = False
+
+    # --- the public site (docs/adr/0187 §7, docs/adr/0183 §4)
+    #
+    # **Every group link is built from this address**: `<PUBLIC_SITE_URL>/join/`
+    # and the group's code. The address is configuration and the shape is not —
+    # the code is the group's identity, and a link printed under one
+    # environment's domain and pasted into another's is still recognised by the
+    # `/join/<code>` inside it. A browser and a phone open it over a public
+    # network, so the scheme rule below holds it to `https://` once deployed.
+    #
+    # **Changing it re-addresses every link the backend serves from then on**
+    # and none of the ones already posted into WhatsApp, which keep the domain
+    # they were printed with. That is why it is set once per environment and
+    # why a deployed environment must say it rather than inherit a laptop's.
+    PUBLIC_SITE_URL: str = DEFAULT_PUBLIC_SITE_URL
 
     # --- photo storage (S3-compatible: MinIO locally, S3 deployed — docs/adr/0091)
     #
@@ -623,6 +644,17 @@ class Settings(BaseSettings):
                     f"would degrade silently — set REDIS_URL explicitly or use "
                     f"'local'."
                 )
+            if "PUBLIC_SITE_URL" not in provided:
+                # The fourth of the same refusal, and the one whose damage
+                # outlives the fix: every group link served while it is wrong
+                # is posted into a WhatsApp chat and stays there, pointing at a
+                # laptop's dev server, after the setting is corrected.
+                raise ConfigurationError(
+                    f"PUBLIC_SITE_URL is not set, and APP_ENV selects '{env}', "
+                    f"which is deployed. Falling back to the local default would "
+                    f"print every group link at a laptop's address — set "
+                    f"PUBLIC_SITE_URL explicitly or use 'local'."
+                )
 
         if env in DEPLOYED:
             # A second question of the same set, kept separate because it is a rule
@@ -630,10 +662,11 @@ class Settings(BaseSettings):
             #
             # The backend's instance of the platform's **public-network scheme rule**: a
             # URL a browser reaches over the internet is `https://` in every deployed
-            # environment. The backend calls nothing over HTTP, so `ALLOW_ORIGINS` is
-            # the only such URL it holds — these are the origins a browser presents, and
-            # an `http://` one in a deployed environment means the club console is being
-            # served in the clear, which is a session cookie in the clear.
+            # environment. The backend calls nothing over HTTP, so it holds two such
+            # URLs: `ALLOW_ORIGINS` — the origins a browser presents, where an
+            # `http://` one in a deployed environment means the club console is being
+            # served in the clear, which is a session cookie in the clear — and
+            # `PUBLIC_SITE_URL`, which every group link is printed under (#504).
             #
             # #99 added this. Until then the rule was carried by the two clients and not
             # by the backend, so "the three apps agree" was false in the one direction
@@ -655,6 +688,15 @@ class Settings(BaseSettings):
                     f"https://, and APP_ENV selects '{env}', which is deployed. A "
                     f"browser origin reached over a public network must be https:// "
                     f"there — an http:// one transmits the session cookie in the clear."
+                )
+            # The second URL the backend holds that crosses a public network:
+            # the address every group link is printed under, opened by whoever
+            # taps one in a chat.
+            if not self.PUBLIC_SITE_URL.lower().startswith("https://"):
+                raise ConfigurationError(
+                    f"PUBLIC_SITE_URL is not https://, and APP_ENV selects '{env}', "
+                    f"which is deployed. Every group link is built from it and "
+                    f"opened over a public network, so it must be https:// there."
                 )
 
         if env in DEPLOYED:

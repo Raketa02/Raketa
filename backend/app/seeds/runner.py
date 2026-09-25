@@ -181,6 +181,7 @@ from app.seeds.clock import (
     days_before,
 )
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
+from app.seeds.groups import SeededGroups, group_lines, write_the_groups
 from app.seeds.cohort import (
     BAND_HISTOGRAM,
     COHORT,
@@ -1197,6 +1198,9 @@ class SeedReport:
     #: The clubs, each signed up by its own desk. ``None`` on the callers that
     #: drive the populations without the layers above them.
     clubs: SeededClubs | None = None
+    #: The player groups at those clubs, and who is in each. ``None`` on the same
+    #: callers and for the same reason.
+    groups: SeededGroups | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1250,11 +1254,14 @@ async def run(settings: Settings | None = None) -> SeedReport:
             )
             await refuse_a_cohort_that_has_aged_out(session, members, now=now)
             await refuse_a_histogram_that_has_moved(session, members)
-        # **The clubs next, before anything that could stand at one.** Nothing
-        # below reads a club yet, and a club reads nobody, so today the position
-        # is free; it sits here because a group needs a home club and the groups
-        # arrive as the next layer (#504).
+        # **The clubs next, before anything that could stand at one.** A club
+        # reads nobody, and a group needs a home club.
         clubs = await write_the_clubs(session_factory, settings=settings, now=now)
+        # **The groups straight after their clubs**, created and joined by the
+        # named accounts. Nothing below reads a group and a group changes nothing
+        # anybody else reads — no pair, no index row, no court — so its position
+        # among the later layers is free.
+        groups = await write_the_groups(session_factory, now=now)
         # **The played history first, and the order is load-bearing.** A game is
         # a challenge every seat accepted, so each one spends a pair for good;
         # the relationship layer then plans its inboxes against a world those
@@ -1333,6 +1340,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             loop=loop,
             opinions=opinions,
             clubs=clubs,
+            groups=groups,
             photographs=photographs,
         )
     finally:
@@ -1423,6 +1431,8 @@ def report(run_report: SeedReport) -> list[str]:
     lines.extend(["", *_cohort_lines(run_report.members)])
     if run_report.clubs is not None:
         lines.extend(["", *club_lines(run_report.clubs)])
+    if run_report.groups is not None:
+        lines.extend(["", *group_lines(run_report.groups)])
     if run_report.played is not None:
         lines.extend(["", *_played_lines(run_report.played)])
     if run_report.opinions is not None:

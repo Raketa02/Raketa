@@ -43,6 +43,10 @@ from app.modules.clubs.application.event_subscriptions import (
     register_club_events,
     subscribe_club_handlers,
 )
+from app.modules.groups.application.event_subscriptions import (
+    register_group_events,
+    subscribe_group_handlers,
+)
 from app.modules.conversations.application.event_subscriptions import (
     register_conversation_events,
     subscribe_conversation_handlers,
@@ -172,6 +176,7 @@ def build_event_runtime() -> EventRuntime:
     register_plan_events(catalog)
     register_conversation_events(catalog)
     register_club_events(catalog)
+    register_group_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
@@ -184,6 +189,7 @@ def build_event_runtime() -> EventRuntime:
     subscribe_plan_handlers(dispatcher)
     subscribe_conversation_handlers(dispatcher)
     subscribe_club_handlers(dispatcher)
+    subscribe_group_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),

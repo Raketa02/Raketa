@@ -44,6 +44,8 @@ POISON_DB_URL = f"postgresql+asyncpg://u:{POISON_PASSWORD}@db.example:5432/raket
 POISON_SECRET = "s3cret-do-not-log-me"
 POISON_PHOTO_SECRET = "photo-s3cret-do-not-log-me"
 POISON_REDIS_URL = f"redis://:{POISON_PASSWORD}@redis.example:6379/0"
+#: A public site on a host nobody should read in a crash report.
+POISON_PUBLIC_SITE_URL = f"https://{POISON_PASSWORD}.raketa.example"
 
 
 @pytest.fixture
@@ -73,9 +75,10 @@ def settings_for(env, **overrides) -> Settings:
     """A minimally *valid* configuration for `env`, plus whatever a case overrides.
 
     What each environment needs differs, which is the whole subject of this file: a
-    laptop needs nothing, anything deployed needs the three addresses whose shipped
-    defaults are the dev stack's own service names, and production needs those plus
-    the four things it refuses to start with the shipped value of.
+    laptop needs nothing, anything deployed needs the four addresses whose shipped
+    defaults are the dev stack's own — three service names and the public site's
+    dev server — and production needs those plus the four things it refuses to
+    start with the shipped value of.
     """
     env = Environment(env)
     base: dict = {"APP_ENV": env}
@@ -84,6 +87,7 @@ def settings_for(env, **overrides) -> Settings:
             "APP_HOST": "10.0.0.1",
             "WRITER_DB_URL": POISON_DB_URL,
             "REDIS_URL": POISON_REDIS_URL,
+            "PUBLIC_SITE_URL": POISON_PUBLIC_SITE_URL,
         }
     if env is Environment.PRODUCTION:
         base |= {
@@ -253,11 +257,12 @@ def test_a_deployed_environment_inherits_no_local_address(clean_env, env) -> Non
     environment that deliberately configured the laptop's address is somebody's
     decision, and an empty variable is nobody's.
     """
-    for missing in ("APP_HOST", "WRITER_DB_URL", "REDIS_URL"):
+    for missing in ("APP_HOST", "WRITER_DB_URL", "REDIS_URL", "PUBLIC_SITE_URL"):
         supplied = {
             "APP_HOST": "10.0.0.1",
             "WRITER_DB_URL": POISON_DB_URL,
             "REDIS_URL": POISON_REDIS_URL,
+            "PUBLIC_SITE_URL": POISON_PUBLIC_SITE_URL,
         }
         del supplied[missing]
         with pytest.raises(ConfigurationError) as exc:
@@ -278,7 +283,7 @@ def test_an_unprovisioned_environment_that_is_provisioned_starts(
     clean_env, env
 ) -> None:
     """`development` and `staging` are not forbidden — they are unbuilt. The day a
-    domain is registered, turning one on is setting these three variables.
+    domain is registered, turning one on is setting these four variables.
 
     Still only the unbuilt two: `production` is covered by
     `test_a_valid_production_configuration_starts`, which has four more things to
@@ -288,6 +293,7 @@ def test_an_unprovisioned_environment_that_is_provisioned_starts(
         APP_HOST="10.0.0.1",
         WRITER_DB_URL=POISON_DB_URL,
         REDIS_URL=POISON_REDIS_URL,
+        PUBLIC_SITE_URL=POISON_PUBLIC_SITE_URL,
     )
     assert settings.APP_ENV is Environment(env)
 
@@ -341,9 +347,10 @@ def test_production_allows_a_wildcard_without_credentials(clean_env) -> None:
 # A URL a browser reaches over a public network is `https://` in every deployed
 # environment. The two clients have carried that rule since #95 and #96; the backend
 # carried none, so "the three apps agree" was false in the direction nobody was
-# looking. `ALLOW_ORIGINS` is the only such URL the backend holds — it calls nothing
-# over HTTP — and an `http://` entry is a browser origin served in the clear, which is
-# the session cookie ADR-0007 puts in an httpOnly cookie travelling in the clear.
+# looking. The backend calls nothing over HTTP and holds two such URLs: an `http://`
+# entry in `ALLOW_ORIGINS` is a browser origin served in the clear, which is the session
+# cookie ADR-0007 puts in an httpOnly cookie travelling in the clear; and
+# `PUBLIC_SITE_URL` is the address every group link is printed under (#504).
 
 
 @pytest.mark.parametrize("env", ["development", "staging", "production"])
@@ -362,6 +369,29 @@ def test_a_deployed_environment_accepts_https_browser_origins(
     """The other half. A guard that fires on everything is not a guard."""
     origins = ["https://club.raketa.example", "https://admin.raketa.example"]
     assert settings_for(env, ALLOW_ORIGINS=origins).ALLOW_ORIGINS == origins
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_refuses_a_plaintext_public_site(clean_env, env) -> None:
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(env, PUBLIC_SITE_URL="http://raketa.example")
+    assert "PUBLIC_SITE_URL" in str(exc.value)
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_accepts_an_https_public_site(clean_env, env) -> None:
+    site = "https://raketa.example"
+    assert settings_for(env, PUBLIC_SITE_URL=site).PUBLIC_SITE_URL == site
+
+
+def test_local_links_to_the_public_site_s_dev_server(clean_env) -> None:
+    """The one environment that runs today needs no public site configured, and
+    its links are plaintext because a laptop is not a public network."""
+
+    from app.core.config import DEFAULT_PUBLIC_SITE_URL
+
+    assert build(APP_ENV="local").PUBLIC_SITE_URL == DEFAULT_PUBLIC_SITE_URL
+    assert DEFAULT_PUBLIC_SITE_URL.startswith("http://localhost")
 
 
 def test_one_plaintext_origin_among_several_is_enough_to_refuse(clean_env) -> None:
@@ -540,6 +570,15 @@ REFUSALS = [
     # The same three in production. Not redundant: production reaches them through
     # a different branch than it used to, and these are the messages a deploy of the
     # ECS task definition would actually print into CloudWatch.
+    (
+        "PUBLIC_SITE_URL",
+        lambda: build(
+            APP_ENV="staging",
+            APP_HOST="10.0.0.1",
+            WRITER_DB_URL=POISON_DB_URL,
+            REDIS_URL=POISON_REDIS_URL,
+        ),
+    ),
     ("APP_HOST", lambda: build(APP_ENV="production", WRITER_DB_URL=POISON_DB_URL)),
     ("WRITER_DB_URL", lambda: build(APP_ENV="production", APP_HOST="10.0.0.1")),
     (
@@ -561,6 +600,10 @@ REFUSALS = [
         "ALLOW_ORIGINS",
         lambda: production(ALLOW_ORIGINS=[f"http://{POISON_PASSWORD}.example"]),
     ),
+    (
+        "PUBLIC_SITE_URL",
+        lambda: production(PUBLIC_SITE_URL=f"http://{POISON_PASSWORD}.example"),
+    ),
     ("DB_SSL_MODE", lambda: production(DB_SSL_MODE="disable")),
     (
         "BCRYPT_ROUNDS",
@@ -576,6 +619,7 @@ REFUSAL_IDS = [
     "APP_HOST",
     "WRITER_DB_URL",
     "REDIS_URL",
+    "PUBLIC_SITE_URL",
     "APP_HOST-in-production",
     "WRITER_DB_URL-in-production",
     "REDIS_URL-in-production",
@@ -584,6 +628,7 @@ REFUSAL_IDS = [
     "DEBUG",
     "ALLOW_ORIGINS-wildcard-with-credentials",
     "ALLOW_ORIGINS-plaintext-when-deployed",
+    "PUBLIC_SITE_URL-plaintext-when-deployed",
     "DB_SSL_MODE",
     "BCRYPT_ROUNDS",
     "BCRYPT_ROUNDS-in-production",
@@ -609,6 +654,7 @@ def test_no_refusal_echoes_a_value(clean_env, variable, trigger) -> None:
         POISON_PASSWORD,
         POISON_DB_URL,
         POISON_REDIS_URL,
+        POISON_PUBLIC_SITE_URL,
         POISON_SECRET,
         POISON_PHOTO_SECRET,
         DEFAULT_JWT_SECRET_KEY,

@@ -4485,6 +4485,278 @@
           }
         }
       }
+    },
+    "/api/v1/groups": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "The groups the caller belongs to, newest joined first",
+        "operationId": "my_groups_api_v1_groups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyGroupsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Create a player group at a home club",
+        "description": "The caller becomes the group's **Owner and first member**, and the group gets its link, which never changes. Answers the group as its page reads it.",
+        "operationId": "create_group_api_v1_groups_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlayerGroupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field the player has to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) \u2014 1\u201340 characters once trimmed; `home_club_unknown` (`home_club_id`) \u2014 only a club in Raketa can be a home club. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/groups/{group_id}": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "A group, for its members",
+        "description": "Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; and, for every sport, how many members are rated in it and the first of them to join \u2014 the Games tab's *N of M*.",
+        "operationId": "read_group_api_v1_groups__group_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for two cases**: no such group, and a group the reader is not a member of. Both have one remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/membership": {
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Join a group",
+        "description": "Under *Anyone* the caller is a member **at once**. Joining a group you are already in changes nothing and answers the same. Answers the group as a club's card draws it, with the caller's relation.",
+        "operationId": "join_group_api_v1_groups__group_id__membership_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupAtClubSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 there is no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`group_needs_approval` \u2014 the group admits people its Owner approves, and a tap cannot admit anybody to it. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/home-clubs": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Search every club in Raketa for a group's home club",
+        "description": "Clubs whose name or district contains `q` anywhere, ignoring case and accents (*debniki* finds *D\u0119bniki*). **Nearest first** from the caller's Location area, then by name, twenty to a page; a caller with no Location area gets A\u2013Z and no distance. A blank `q` finds nothing. Each club carries every group at it and what each is to the caller.",
+        "operationId": "search_home_clubs_api_v1_home_clubs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "What was typed into the home club field.",
+              "title": "Q"
+            },
+            "description": "What was typed into the home club field."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Which page, from one.",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Which page, from one."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeClubPageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5337,6 +5609,26 @@
         ],
         "title": "ChangeSocialTagsRequest",
         "description": "The Social tags, replaced whole (``docs/adr/0179`` \u00a78).\n\nStrings rather than an enum, as the commit carries them: an id outside the\nserved vocabulary is refused by the domain with ``unknown_social_tag``, a\ncount outside the served bounds with ``social_tag_selection_out_of_bounds``,\nand the client gets a code it can act on rather than a 422."
+      },
+      "ClubNameSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ClubNameSchema",
+        "description": "The group's home club, as a line under its name."
       },
       "CommitPlayerProfileRequest": {
         "properties": {
@@ -6403,6 +6695,34 @@
         ],
         "title": "CreateAssessmentRequest"
       },
+      "CreatePlayerGroupRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Trimmed, runs of whitespace collapsed, then 1\u201340 characters. Never unique. Refused with `group_name_invalid`, `details.field` `name`."
+          },
+          "home_club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Home Club Id",
+            "description": "A club from home-club search \u2014 **required**. A club Raketa does not have is `home_club_unknown`, `details.field` `home_club_id`."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` (the form's default) or `PEOPLE_I_APPROVE`."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "home_club_id",
+          "join_policy"
+        ],
+        "title": "CreatePlayerGroupRequest",
+        "description": "A player creates a group. **No sport is asked for**: the group plays\nwhatever its members are rated in (``docs/adr/0183`` \u00a76)."
+      },
       "DayPart": {
         "type": "string",
         "enum": [
@@ -7320,6 +7640,93 @@
         "title": "GenderPreference",
         "description": "Who a player is willing to be matched with \u2014 durable, not per search.\n\n**Durable rather than per-search because the gate is mutual.** It has to be\nevaluated against a player when somebody *else* searches and they are not\npresent, and a per-search setting cannot bind that direction at all. A\nper-search override may **narrow** this, never widen past it."
       },
+      "GroupAtClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order: each sport **at least two** members hold a Skill rating in. Read when the group is read \u2014 a rating earned or a member leaving moves them on the next read."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member, the Owner included. The same for every reader."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy"
+          },
+          "relation": {
+            "$ref": "#/components/schemas/GroupRelation",
+            "description": "`MEMBER` \u2014 the reader is in it (*you're in*); `NONE` \u2014 they are not, and *Join* is the tap."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "join_policy",
+          "relation"
+        ],
+        "title": "GroupAtClubSchema",
+        "description": "A group inside a club's card, with what it is to the reader."
+      },
+      "GroupPersonSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 draw their initials."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name"
+        ],
+        "title": "GroupPersonSchema",
+        "description": "A member's face \u2014 **a name and a photograph, and nothing else**."
+      },
       "GroupReason": {
         "type": "string",
         "enum": [
@@ -7331,6 +7738,111 @@
         ],
         "title": "GroupReason",
         "description": "Why this four beat the runner-up. **One closed code, never a number.**\n\n``G`` chose these four over the other combinations and the third refusal \u2014\n*never a number it cannot explain in one sentence with the evidence named* \u2014\napplies. A second score the player must trust is worse than none: it competes\nwith Fit and nobody can act on it. So the evidence half is paid here, by the\nterm with the largest margin between the winning combination and the\nrunner-up \u2014 the group analogue of the card's top three reasons\n(``docs/adr/0117``).\n\nClosed vocabulary and ``docs/adr/0106``-shaped: **the client writes the\nsentence, the engine names which.**"
+      },
+      "GroupRelation": {
+        "type": "string",
+        "enum": [
+          "MEMBER",
+          "NONE"
+        ],
+        "title": "GroupRelation",
+        "description": "What a group is to the person reading it: they are in it, or they are\nnot. A pending request is the third answer, and it arrives with requests\n(#505)."
+      },
+      "GroupResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order: each sport **at least two** members hold a Skill rating in. Read when the group is read \u2014 a rating earned or a member leaving moves them on the next read."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member, the Owner included. The same for every reader."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/ClubNameSchema"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link",
+            "description": "The Group link: the public site's address, `/join/` and the group's code. **It never changes** \u2014 not on a rename, a policy change or a handover."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy"
+          },
+          "is_owner": {
+            "type": "boolean",
+            "title": "Is Owner",
+            "description": "Whether the reader is the group's Owner."
+          },
+          "rated_by_sport": {
+            "items": {
+              "$ref": "#/components/schemas/GroupSportSchema"
+            },
+            "type": "array",
+            "title": "Rated By Sport",
+            "description": "**Every sport**, in the registry's order \u2014 one the group has no dot for too, because the reader may be rated in it and open it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "home_club",
+          "link",
+          "join_policy",
+          "is_owner",
+          "rated_by_sport"
+        ],
+        "title": "GroupResponse",
+        "description": "A group, as one of its members opens it."
+      },
+      "GroupSportSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "rated_count": {
+            "type": "integer",
+            "title": "Rated Count",
+            "description": "How many members hold a Skill rating in it."
+          },
+          "first_rated": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "First Rated",
+            "description": "The first members to join who are rated in it, in joining order \u2014 **at most as many as the sport seats**, the faces that fill its seats."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "rated_count",
+          "first_rated"
+        ],
+        "title": "GroupSportSchema",
+        "description": "One sport's *N of M* for the Games tab."
       },
       "HTTPValidationError": {
         "properties": {
@@ -7344,6 +7856,92 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HomeClubPageResponse": {
+        "properties": {
+          "clubs": {
+            "items": {
+              "$ref": "#/components/schemas/HomeClubSchema"
+            },
+            "type": "array",
+            "title": "Clubs",
+            "description": "Nearest first, then by name \u2014 or A\u2013Z for a reader with no Location area."
+          },
+          "next_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Page",
+            "description": "The page to ask for next, or `null` when this was the last."
+          }
+        },
+        "type": "object",
+        "required": [
+          "clubs",
+          "next_page"
+        ],
+        "title": "HomeClubPageResponse"
+      },
+      "HomeClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "district": {
+            "type": "string",
+            "title": "District"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km",
+            "description": "From the reader's Location area to the club, one decimal and never below `0.1`. **`null` for a reader with no Location area**, whose clubs come A\u2013Z."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "What the club offers, in the registry's order."
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GroupAtClubSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "**Every** group at this club, the biggest crowd first. Empty for a club with none \u2014 and a club with some is the one the form tints and tags *group already here*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "district",
+          "distance_km",
+          "sports",
+          "groups"
+        ],
+        "title": "HomeClubSchema",
+        "description": "One club a player could set as a group's home."
       },
       "InProgressAssessmentResponse": {
         "properties": {
@@ -7446,6 +8044,15 @@
         ],
         "title": "InterestListResponse",
         "description": "Your own *Let's play* screen. **Outgoing and mutuals only.**\n\nThere is no incoming list and there will not be one: a yes nobody has\nanswered stays silent, which is what makes saying yes low-stakes. The two\nlists are disjoint \u2014 a yes that came back is in `mutual` and not in\n`outgoing` \u2014 so a client renders both without deriving either."
+      },
+      "JoinPolicy": {
+        "type": "string",
+        "enum": [
+          "ANYONE",
+          "PEOPLE_I_APPROVE"
+        ],
+        "title": "JoinPolicy",
+        "description": "Who gets in (``docs/adr/0183`` \u00a77).\n\n**Anyone** admits a player the moment they join, and is the default the New\ngroup form opens on. **People I approve** turns a join into a Join request\nits Owner answers (#505)."
       },
       "LevelDirection": {
         "type": "string",
@@ -7839,6 +8446,89 @@
         ],
         "title": "ModifierSchema",
         "description": "One modifier that fired, and what it was worth on this pairing."
+      },
+      "MonogramSchema": {
+        "properties": {
+          "letters": {
+            "type": "string",
+            "title": "Letters",
+            "description": "The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes \u2014 never change its case."
+          },
+          "colour": {
+            "type": "integer",
+            "exclusiveMaximum": 8.0,
+            "minimum": 0.0,
+            "title": "Colour",
+            "description": "A colour **key** from 0 to 7, fixed for the group for ever \u2014 derived from its id, so a rename keeps it. Map it to your own palette; the backend never names a colour."
+          }
+        },
+        "type": "object",
+        "required": [
+          "letters",
+          "colour"
+        ],
+        "title": "MonogramSchema",
+        "description": "The group's tile, **cut by the backend** so every client draws the same\none (``docs/adr/0183`` \u00a75)."
+      },
+      "MyGroupSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order: each sport **at least two** members hold a Skill rating in. Read when the group is read \u2014 a rating earned or a member leaving moves them on the next read."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member, the Owner included. The same for every reader."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/ClubNameSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "home_club"
+        ],
+        "title": "MyGroupSchema",
+        "description": "A card on the reader's Groups list."
+      },
+      "MyGroupsResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/MyGroupSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "Every group the reader belongs to, **newest joined first**. Empty for a player in none."
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups"
+        ],
+        "title": "MyGroupsResponse"
       },
       "NameRequest": {
         "properties": {

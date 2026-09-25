@@ -1,4 +1,10 @@
-"""What the Club context needs from the outside world.
+"""What the Club context needs from the outside world, and the one read it
+publishes to it.
+
+**The published read is ``ClubDirectory``** (#504): the clubs as the search
+projection holds them, for home-club search, join search and anything that names
+a group's home club. A consumer reads it and never the table, and never gets an
+aggregate back.
 
 **Each repository writes the search projection in the caller's transaction.**
 A club's projection is what home-club search and join search read, and a club
@@ -11,9 +17,12 @@ account's row, which is what sign-in and every club request read.
 
 from __future__ import annotations
 
-from typing import Optional, Protocol, runtime_checkable
+from collections.abc import Collection, Mapping, Sequence
+from dataclasses import dataclass
+from typing import Optional, Protocol, final, runtime_checkable
 from uuid import UUID
 
+from app.kernel import Sport
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.club_account import ClubAccount
 from app.modules.users.domain.value_objects import Email
@@ -49,4 +58,45 @@ class ClubAccountRepository(Protocol):
     async def save(self, account: ClubAccount) -> None:
         """Append what the account recorded, enqueue it, and write its row — in
         the caller's transaction, and without committing it."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ClubListing:
+    """A club as its search projection holds it: what a player reads about a
+    club they did not sign up.
+
+    The point is the club's precise one, as the desk dropped it
+    (``docs/adr/0182`` §6); the sports are in the registry's order.
+    """
+
+    id: UUID
+    name: str
+    district: str
+    sports: tuple[Sport, ...]
+    latitude: float
+    longitude: float
+
+
+@runtime_checkable
+class ClubDirectory(Protocol):
+    """**What this context publishes to the rest of the platform**: the clubs,
+    read off the search projection and nothing else (``docs/adr/0182`` §2).
+
+    Home-club search and join search both read it (``docs/adr/0183`` §9), and so
+    does anything that names a group's home club. It never answers with an
+    aggregate, so a reader has no path to change a club.
+    """
+
+    async def listed(self, club_ids: Collection[UUID]) -> Mapping[UUID, ClubListing]:
+        """Each of these clubs. A club that does not exist is absent."""
+        ...
+
+    async def matching(self, text: str) -> Sequence[ClubListing]:
+        """Every club whose name or district contains ``text`` anywhere, **both
+        folded by** ``clubs/domain/folding.py`` — the one function the stored
+        copies were folded by, so the two sides of a match cannot disagree about
+        what a letter is. ``text`` is matched as typed: ``%`` and ``_`` are
+        characters, not patterns. In no particular order."""
         ...

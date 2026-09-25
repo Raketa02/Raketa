@@ -74,6 +74,7 @@ a migration or a seed run — not only for a process serving HTTP.
 | backend | `production` with `DEBUG=true` | It serves verbose errors to callers. |
 | backend | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway, so it cannot be mistaken for working configuration. |
 | backend | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
+| backend | **any deployed environment** with no `PUBLIC_SITE_URL`, or one that is not `https://` | Every group link is built from it and posted into a chat, where it stays after the setting is fixed. The default is `frontend_public`'s dev server on a laptop. |
 | backend | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
 | backend | a deployed environment with `BCRYPT_ROUNDS` below production's 12 | Nothing fails at a weak cost — every login still works — so the stored passwords would just be cheaper to crack, and nobody would notice. The default is 12 everywhere, and only a laptop may lower it; the test suite uses bcrypt's minimum, 4. |
 | player | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
@@ -130,6 +131,7 @@ question no application can answer for its operator.
 | player | `EXPO_PUBLIC_API_URL` | a phone, over the internet | `https://` when deployed |
 | player | `EXPO_PUBLIC_FEATURES_URL` | a phone, over the internet | `https://` when deployed |
 | backend | `ALLOW_ORIGINS` entries | a browser (they *are* browser origins) | `https://` when deployed; the `*` wildcard is not an origin and is exempt |
+| backend | `PUBLIC_SITE_URL` | whoever taps a group link in a chat | `https://` when deployed |
 
 **Why the datafile host is on the list though it serves nothing secret.** The feature-flag
 datafile is public-read by design
@@ -348,7 +350,7 @@ The day a domain is registered, this is a configuration task rather than a redes
 2. **Issue a TLS certificate** for every public-network host. Rule 6 is not satisfiable
    without one, which is the intended ordering.
 3. **Set the backend's variables**: `APP_ENV`, and — because nothing deployed may inherit the
-   local defaults — `APP_HOST`, `WRITER_DB_URL` and `REDIS_URL` explicitly. Then
+   local defaults — `APP_HOST`, `WRITER_DB_URL`, `REDIS_URL` and `PUBLIC_SITE_URL` explicitly. Then
    `JWT_SECRET_KEY` (`openssl rand -hex 32`), `PHOTO_STORAGE_SECRET_KEY`, `DB_SSL_MODE` (one of
    `require`, `verify-ca`, `verify-full`), and `ALLOW_ORIGINS` as an explicit `https://` list
    rather than a wildcard — or an explicit empty list, which is what it is today, because no

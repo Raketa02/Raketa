@@ -1945,9 +1945,8 @@ every fact read through the owning context's published port, and one rule of its
 
 Settled by
 [ADR-0182](docs/adr/0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md)
-on [#501](https://github.com/Raketa02/Raketa/issues/501). **Not built yet** —
-[#503](https://github.com/Raketa02/Raketa/issues/503) builds it. The terms are here first because
-this file asks for them in that order.
+on [#501](https://github.com/Raketa02/Raketa/issues/501), and built by
+[#503](https://github.com/Raketa02/Raketa/issues/503).
 
 **A place where racket sports are played, known to the platform because it signed up.** Players
 search clubs to set a group's home and to find groups; the club manages its own facts from the club
@@ -1974,8 +1973,10 @@ website.
 ### Groups
 
 Settled by [ADR-0183](docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
-on [#501](https://github.com/Raketa02/Raketa/issues/501). **Not built yet** — the backend half is
-[#504](https://github.com/Raketa02/Raketa/issues/504)–[#506](https://github.com/Raketa02/Raketa/issues/506),
+on [#501](https://github.com/Raketa02/Raketa/issues/501). **Partly built** —
+[#504](https://github.com/Raketa02/Raketa/issues/504) built a Player group's creation, the Groups
+list, the group page, home-club search and joining an *Anyone* group; the rest of the backend half is
+[#505](https://github.com/Raketa02/Raketa/issues/505), [#506](https://github.com/Raketa02/Raketa/issues/506),
 [#509](https://github.com/Raketa02/Raketa/issues/509) and [#510](https://github.com/Raketa02/Raketa/issues/510).
 
 **The crowd that already plays together, brought into the app.** Clubs keep WhatsApp groups, one
