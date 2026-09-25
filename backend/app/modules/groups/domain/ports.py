@@ -46,6 +46,9 @@ class GroupListing:
 
     ``members`` is every Group member **in the order they joined**, the Owner
     first, so a count is its length and *the first to join* is a prefix.
+    ``waiting`` is everybody whose Join request waits, **in the order they
+    asked** — the Owner's *Want to join* queue, and what a reader's relation to
+    the group is read from.
     """
 
     id: UUID
@@ -55,6 +58,7 @@ class GroupListing:
     owner_id: UUID
     code: GroupCode
     members: tuple[UUID, ...]
+    waiting: tuple[UUID, ...] = ()
 
     @property
     def member_count(self) -> int:
@@ -83,6 +87,18 @@ class GroupDirectory(Protocol):
         self, club_ids: Collection[UUID]
     ) -> Mapping[UUID, Sequence[GroupListing]]:
         """Every group at each of these home clubs. A club with none is absent."""
+        ...
+
+    async def with_code(self, code: GroupCode) -> GroupListing | None:
+        """The group whose link carries this code, or ``None`` for a code no
+        group has — a link that leads nowhere."""
+        ...
+
+    async def named(self, text: str) -> Mapping[UUID, frozenset[UUID]]:
+        """Every group whose name contains ``text`` **anywhere, once both are
+        folded** — by the fold the stored copy was made with, the one clubs'
+        search folds by (``docs/adr/0183`` §9) — **by home club**. Ids only: a
+        search reads the members of the page it serves and of nothing else."""
         ...
 
 
@@ -135,13 +151,26 @@ class HomeClubs(Protocol):
 # --------------------------------------------------------------------------- #
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class SportLevel:
+    """One sport somebody is rated in, and their **published** Level in it —
+    the figure a rating route already prints, never re-derived here."""
+
+    sport: Sport
+    level: float
+
+
 @runtime_checkable
 class RatedGroupMembers(Protocol):
-    """Which of these players hold a Skill rating in each sport.
+    """Which of these players hold a Skill rating in each sport, and at what
+    Level.
 
     **Read and never held**: the dots and the Games tab's *N of M* are computed
     when a group is read (``docs/adr/0183`` §6), so a rating earned or a member
-    leaving moves them on the next read with nothing to keep in step.
+    leaving moves them on the next read with nothing to keep in step — and a
+    Join request shows the Level the person holds when the Owner looks, not the
+    one they held when they asked.
     """
 
     async def rated_in(
@@ -149,6 +178,15 @@ class RatedGroupMembers(Protocol):
     ) -> Mapping[Sport, frozenset[UUID]]:
         """For each sport, the ones among these players rated in it. A sport
         nobody here is rated in may be absent or empty — both mean none."""
+        ...
+
+    async def levels_of(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[UUID, tuple[SportLevel, ...]]:
+        """Every sport each of these players is rated in, **with its Level as
+        RacketSkill published it**, in the registry's order — what a Join
+        request shows its Owner (*Padel 2,44 · Tennis 2,60*). A player rated in
+        nothing may be absent or empty — both mean none."""
         ...
 
 
@@ -192,6 +230,13 @@ class GroupFaces(Protocol):
     async def faces_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, GroupFace]:
         """Each of these players, in **one question about the union** — never
         one per seat. A player absent from the answer keeps their seat."""
+        ...
+
+    async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        """The Name of each of these players and **nothing else** — a face with
+        no photograph, for a line that names somebody and draws nobody: the
+        Owner on *Karol approves joins*. One question about the union; a player
+        ``users`` cannot name is absent."""
         ...
 
 

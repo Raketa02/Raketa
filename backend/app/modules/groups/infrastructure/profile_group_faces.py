@@ -66,6 +66,13 @@ class ProfileGroupFaces:
             )
         return faces
 
+    async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        wanted = sorted(set(player_ids))
+        if not wanted:
+            return {}
+        namings = await self._users.find_namings_of(wanted)
+        return {player_id: naming.name for player_id, naming in namings.items()}
+
     async def _first_photo(self, player_id: UUID) -> UUID | None:
         """The photograph a face shows — **the first**, because order is meaning
         in a player's photo list. ``None`` draws their initials."""

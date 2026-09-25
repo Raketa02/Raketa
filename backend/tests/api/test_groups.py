@@ -278,24 +278,6 @@ async def test_the_owner_joining_their_own_group_changes_nothing(client):
     assert joined.json()["member_count"] == 1
 
 
-async def test_a_people_i_approve_group_is_not_joined_by_tapping_join(client):
-    """Until join requests exist (#505), a group that needs approval admits
-    nobody by a tap — and says why, rather than admitting them."""
-
-    tomek = await a_player(client, "tomek")
-    kuba = await a_player(client, "kuba")
-    group = await a_group(
-        client, tomek, await a_club(client), join_policy="PEOPLE_I_APPROVE"
-    )
-
-    refused = await join(client, kuba, group)
-
-    assert refused.status_code == 409, refused.text
-    assert refused.json()["code"] == "group_needs_approval"
-    assert (await read(client, tomek, group)).json()["member_count"] == 1
-    assert await my_groups(client, kuba) == []
-
-
 async def test_joining_a_group_that_does_not_exist_is_not_found(client):
     kuba = await a_player(client, "kuba")
 

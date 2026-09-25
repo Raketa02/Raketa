@@ -311,6 +311,7 @@ async def test_a_club_carries_every_group_at_it_and_the_caller_s_relation(client
             "sports": ["PADEL"],
             "member_count": 2,
             "join_policy": "ANYONE",
+            "owner_name": "kuba",
             "relation": "NONE",
         },
         {
@@ -320,6 +321,7 @@ async def test_a_club_carries_every_group_at_it_and_the_caller_s_relation(client
             "sports": [],
             "member_count": 1,
             "join_policy": "PEOPLE_I_APPROVE",
+            "owner_name": "tomek",
             "relation": "MEMBER",
         },
     ]

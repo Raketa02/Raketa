@@ -1,9 +1,15 @@
-"""``GroupDirectory`` over the groups and group-members projections.
+"""``GroupDirectory`` over the groups, group-members and join-requests
+projections.
 
-**Two queries per answer and never one per group**: the groups asked about, then
-every member of all of them in one read, ordered so each group's members come
-out in the order they joined. A list of twenty groups costs two round trips, not
-twenty-one.
+**Three queries per answer and never one per group**: the groups asked about,
+then every member of all of them in one read, ordered so each group's members
+come out in the order they joined, then everybody waiting on any of them, in the
+order they asked. A list of twenty groups costs three round trips, not sixty-one.
+
+**Matching a name is a scan**, as matching a club's is (``docs/adr/0182`` accepted
+that by name for the clubs' copy, and the groups' copy is the same shape): the
+query is folded here by the function the stored copy was folded by, and matched
+with ``LIKE`` escaped so that a ``%`` a player typed is a percent sign.
 """
 
 from __future__ import annotations
@@ -14,9 +20,14 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.clubs.domain.folding import fold
 from app.modules.groups.domain.ports import GroupListing
 from app.modules.groups.domain.value_objects import GroupCode, GroupName, JoinPolicy
-from app.modules.groups.infrastructure.group_model import GroupMemberORM, GroupORM
+from app.modules.groups.infrastructure.group_model import (
+    GroupJoinRequestORM,
+    GroupMemberORM,
+    GroupORM,
+)
 
 
 class SqlAlchemyGroupDirectory:
@@ -59,6 +70,27 @@ class SqlAlchemyGroupDirectory:
             by_club.setdefault(listing.home_club_id, []).append(listing)
         return by_club
 
+    async def with_code(self, code: GroupCode) -> GroupListing | None:
+        row = await self._session.scalar(
+            select(GroupORM).where(GroupORM.code == code.value)
+        )
+        if row is None:
+            return None
+        return (await self._listed([row]))[row.id]
+
+    async def named(self, text: str) -> Mapping[UUID, frozenset[UUID]]:
+        found = (
+            await self._session.execute(
+                select(GroupORM.home_club_id, GroupORM.id).where(
+                    GroupORM.name_folded.contains(fold(text), autoescape=True)
+                )
+            )
+        ).all()
+        by_club: dict[UUID, set[UUID]] = {}
+        for club_id, group_id in found:
+            by_club.setdefault(club_id, set()).add(group_id)
+        return {club_id: frozenset(ids) for club_id, ids in by_club.items()}
+
     async def _listed(self, rows: Sequence[GroupORM]) -> dict[UUID, GroupListing]:
         if not rows:
             return {}
@@ -72,6 +104,19 @@ class SqlAlchemyGroupDirectory:
         ).all()
         for group_id, player_id in found:
             members[group_id].append(player_id)
+        waiting: dict[UUID, list[UUID]] = {row.id: [] for row in rows}
+        asked = (
+            await self._session.execute(
+                select(GroupJoinRequestORM.group_id, GroupJoinRequestORM.player_id)
+                .where(GroupJoinRequestORM.group_id.in_(waiting))
+                .order_by(
+                    GroupJoinRequestORM.group_id,
+                    GroupJoinRequestORM.requested_version,
+                )
+            )
+        ).all()
+        for group_id, player_id in asked:
+            waiting[group_id].append(player_id)
         return {
             row.id: GroupListing(
                 id=row.id,
@@ -81,6 +126,7 @@ class SqlAlchemyGroupDirectory:
                 owner_id=row.owner_id,
                 code=GroupCode(row.code),
                 members=tuple(members[row.id]),
+                waiting=tuple(waiting[row.id]),
             )
             for row in rows
         }

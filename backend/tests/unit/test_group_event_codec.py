@@ -17,10 +17,18 @@ from app.application.events import EventCatalog
 from app.application.events.envelope import SerializedEventEnvelope
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.groups.application.event_subscriptions import register_group_events
-from app.modules.groups.domain.events import GroupJoined, PlayerGroupCreated
+from app.modules.groups.domain.events import (
+    GroupJoined,
+    JoinRequestApproved,
+    JoinRequestDeclined,
+    JoinRequested,
+    PlayerGroupCreated,
+)
 
 NOW = datetime(2026, 9, 25, tzinfo=timezone.utc)
 GROUP = uuid4()
+OWNER = uuid4()
+ASKER = uuid4()
 
 EVENTS = [
     PlayerGroupCreated(
@@ -28,11 +36,18 @@ EVENTS = [
         name="my raketa group",
         home_club_id=uuid4(),
         join_policy="ANYONE",
-        owner_id=uuid4(),
+        owner_id=OWNER,
         code="ab3de7fg",
         occurred_at=NOW,
     ),
     GroupJoined(group_id=GROUP, player_id=uuid4(), occurred_at=NOW),
+    JoinRequested(group_id=GROUP, player_id=ASKER, occurred_at=NOW),
+    JoinRequestApproved(
+        group_id=GROUP, player_id=ASKER, approved_by=OWNER, occurred_at=NOW
+    ),
+    JoinRequestDeclined(
+        group_id=GROUP, player_id=ASKER, declined_by=OWNER, occurred_at=NOW
+    ),
 ]
 
 
@@ -66,4 +81,7 @@ def test_each_event_is_filed_under_its_own_name_in_the_groups_namespace():
     assert [(row.event_type, row.schema_version) for row in encoded] == [
         ("groups.player_group_created", 1),
         ("groups.group_joined", 1),
+        ("groups.join_requested", 1),
+        ("groups.join_request_approved", 1),
+        ("groups.join_request_declined", 1),
     ]

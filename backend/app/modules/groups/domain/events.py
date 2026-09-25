@@ -1,9 +1,10 @@
 """The Group's stream.
 
 ``docs/adr/0183`` §1 lists the whole of what a group's stream will say. This
-build writes the first two: a player group is **created**, and somebody **joins**
-it. Requests, leaving, ownership, edits, official groups and handovers are each
-their own event and arrive with the tickets that need them (#505, #506, #509,
+build writes five: a player group is **created**, somebody **joins** it, and on a
+*People I approve* group somebody **asks** and the Owner **approves** or
+**declines** (#505). Leaving, ownership, edits, official groups and handovers are
+each their own event and arrive with the tickets that need them (#506, #509,
 #510).
 
 **Each kind is created by its own event**, because every rule that differs by
@@ -44,4 +45,42 @@ class GroupJoined:
 
     group_id: UUID
     player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class JoinRequested:
+    """A player asked to join a *People I approve* group, and their Join request
+    waits for whoever answers it. **At most one waits per player per group**:
+    asking again while waiting records nothing (``docs/adr/0183`` §7)."""
+
+    group_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class JoinRequestApproved:
+    """The Owner approved a Join request — **and the person is a Group member
+    from this instant**, so there is no separate *joined* beside it: approving
+    is admitting, and one act is one event. ``approved_by`` is who answered,
+    because ownership passes (#506) and the history should still say who let
+    somebody in."""
+
+    group_id: UUID
+    player_id: UUID
+    approved_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class JoinRequestDeclined:
+    """The Owner declined a Join request. **Silent**: the request is gone, the
+    person's relation to the group is *none* again and they may ask again, and
+    nothing tells them (``docs/adr/0183`` §7). The stream remembers it; no read
+    serves it."""
+
+    group_id: UUID
+    player_id: UUID
+    declined_by: UUID
     occurred_at: datetime

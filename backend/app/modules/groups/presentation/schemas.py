@@ -1,4 +1,4 @@
-"""The player surface's shapes for groups and home-club search.
+"""The player surface's shapes for groups, the two searches and Join requests.
 
 **The requests declare types and nothing else.** A name's length is the value
 object's rule and is refused with ``group_name_invalid`` under
@@ -9,7 +9,8 @@ types: a club's id and a join policy are refused before they are read.
 
 **One row, three frames** (``application/views.py``): a group's name, monogram,
 dots and member count cross in one shape wherever a group is drawn, and each
-response adds only what its surface alone says.
+response adds only what its surface alone says. **One card, two searches**:
+home-club search and join search both answer ``ClubCardSchema``.
 """
 
 from __future__ import annotations
@@ -26,9 +27,12 @@ from app.modules.groups.application.views import (
     GroupPage,
     GroupRow,
     HomeClubResults,
+    RequestCard,
+    JoinSearchResults,
     MyGroup,
     NamedClub,
 )
+from app.modules.groups.domain.join_search import ReadAs
 from app.modules.groups.domain.link import group_link
 from app.modules.groups.domain.monogram import MONOGRAM_COLOURS
 from app.modules.groups.domain.ports import GroupFace
@@ -149,11 +153,30 @@ class MyGroupsResponse(BaseModel):
 class GroupAtClubSchema(GroupRowSchema):
     """A group inside a club's card, with what it is to the reader."""
 
-    join_policy: JoinPolicy
+    join_policy: JoinPolicy = Field(
+        description=(
+            "`ANYONE` — *Join* admits at once (*anyone can join*); "
+            "`PEOPLE_I_APPROVE` — *Ask to join* leaves a request for the Owner "
+            "(*Karol approves joins*)."
+        )
+    )
+    owner_name: str | None = Field(
+        description=(
+            "The Owner's **whole Name**, never the nickname — who answers a "
+            "request, for the *approves joins* line. **No first name is cut "
+            "from it, here or by a client**: a sentence naming somebody uses the "
+            "whole Name (`docs/adr/0171` §4), so the line reads *Karol Nowak "
+            "approves joins* and the row truncates it as it truncates any line. "
+            "`null` for an account that can no longer be named."
+        )
+    )
     relation: GroupRelation = Field(
         description=(
-            "`MEMBER` — the reader is in it (*you're in*); `NONE` — they are "
-            "not, and *Join* is the tap."
+            "`MEMBER` — the reader is in it (*you're in*); `REQUESTED` — they "
+            "asked and their request is waiting (*requested · waiting*); `NONE` "
+            "— neither, and *Join* or *Ask to join* is the tap. **A declined "
+            "request reads `NONE`**: nothing tells them it was declined, and "
+            "they may ask again."
         )
     )
 
@@ -162,12 +185,14 @@ class GroupAtClubSchema(GroupRowSchema):
         return cls(
             **GroupRowSchema.fields_of(group.row),
             join_policy=group.join_policy,
+            owner_name=group.owner_name,
             relation=group.relation,
         )
 
 
-class HomeClubSchema(BaseModel):
-    """One club a player could set as a group's home."""
+class ClubCardSchema(BaseModel):
+    """One club as a search draws it: its header — which is context, not a
+    choice — and the groups inside it."""
 
     id: UUID
     name: str
@@ -184,14 +209,17 @@ class HomeClubSchema(BaseModel):
     )
     groups: list[GroupAtClubSchema] = Field(
         description=(
-            "**Every** group at this club, the biggest crowd first. Empty for a "
-            "club with none — and a club with some is the one the form tints and "
-            "tags *group already here*."
+            "The biggest crowd first. **Home-club search**: every group at the "
+            "club — and a club with some is the one the New group form tints "
+            "and tags *group already here*. **Join search**: every group when "
+            "the club itself matched, only the groups whose name matched when "
+            "it did not, and exactly the linked group for a link. Empty for a "
+            "club with none: *no groups here yet*."
         )
     )
 
     @classmethod
-    def from_view(cls, card: ClubCard) -> "HomeClubSchema":
+    def from_view(cls, card: ClubCard) -> "ClubCardSchema":
         return cls(
             id=card.club.id,
             name=card.club.name,
@@ -203,7 +231,7 @@ class HomeClubSchema(BaseModel):
 
 
 class HomeClubPageResponse(BaseModel):
-    clubs: list[HomeClubSchema] = Field(
+    clubs: list[ClubCardSchema] = Field(
         description=(
             "Nearest first, then by name — or A–Z for a reader with no Location area."
         )
@@ -215,8 +243,37 @@ class HomeClubPageResponse(BaseModel):
     @classmethod
     def from_view(cls, results: HomeClubResults) -> "HomeClubPageResponse":
         return cls(
-            clubs=[HomeClubSchema.from_view(card) for card in results.clubs],
+            clubs=[ClubCardSchema.from_view(card) for card in results.clubs],
             next_page=results.next_page,
+        )
+
+
+class JoinSearchResponse(BaseModel):
+    clubs: list[ClubCardSchema] = Field(
+        description=(
+            "Nearest first, then by name — or A–Z for a reader with no Location "
+            "area. Empty when nothing matched."
+        )
+    )
+    next_page: int | None = Field(
+        description="The page to ask for next, or `null` when this was the last."
+    )
+    read_as: ReadAs = Field(
+        description=(
+            "What the text was read as. `LINK` — it held `/join/` and a code, "
+            "and the answer is exactly that group; **`LINK` with no clubs is "
+            "*nothing at that link***, a link that leads nowhere. `TEXT` — "
+            "matched against clubs, districts and group names; `TEXT` with no "
+            "clubs is *no match*."
+        )
+    )
+
+    @classmethod
+    def from_view(cls, results: JoinSearchResults) -> "JoinSearchResponse":
+        return cls(
+            clubs=[ClubCardSchema.from_view(card) for card in results.clubs],
+            next_page=results.next_page,
+            read_as=results.read_as,
         )
 
 
@@ -307,3 +364,44 @@ class GroupResponse(GroupRowSchema):
                 for sport in page.by_sport
             ],
         )
+
+
+class SportLevelSchema(BaseModel):
+    """One sport somebody is rated in, and their Level in it."""
+
+    sport: Sport
+    level: float = Field(description="Their Level in it, as RacketSkill published it.")
+
+
+class JoinRequestSchema(GroupPersonSchema):
+    """A Join request as the Owner sees it: who is asking — ``player_id`` is the
+    id to approve or decline — and what they play. **No Player Score**: the
+    request card is club 20's everywhere."""
+
+    levels: list[SportLevelSchema] = Field(
+        description=(
+            "**Every sport they are rated in**, in the registry's order, each "
+            "with its Level — *Padel 2,44 · Tennis 2,60*. Empty for somebody "
+            "rated in nothing."
+        )
+    )
+
+    @classmethod
+    def from_card(cls, card: RequestCard) -> "JoinRequestSchema":
+        face = GroupPersonSchema.from_view(card.face)
+        return cls(
+            **face.model_dump(exclude_unset=True),
+            levels=[
+                SportLevelSchema(sport=row.sport, level=row.level)
+                for row in card.levels
+            ],
+        )
+
+
+class JoinRequestsResponse(BaseModel):
+    requests: list[JoinRequestSchema] = Field(
+        description=(
+            "Everybody waiting to be let in, **in the order they asked** — "
+            "*Want to join · N*. Empty when nobody is waiting."
+        )
+    )

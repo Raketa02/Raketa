@@ -16,13 +16,24 @@ from __future__ import annotations
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.modules.clubs.domain.folding import fold
-from app.modules.groups.domain.events import GroupJoined, PlayerGroupCreated
+from app.modules.groups.domain.events import (
+    GroupJoined,
+    JoinRequestApproved,
+    JoinRequestDeclined,
+    JoinRequested,
+    PlayerGroupCreated,
+)
 from app.modules.groups.domain.group import Group
-from app.modules.groups.infrastructure.group_model import GroupMemberORM, GroupORM
+from app.modules.groups.infrastructure.group_model import (
+    GroupJoinRequestORM,
+    GroupMemberORM,
+    GroupORM,
+)
 from app.shared.domain import DomainEvent
 
 GROUP_AGGREGATE = "group"
@@ -89,14 +100,39 @@ class EventSourcedGroupRepository:
             self._admit(event.group_id, event.owner_id, event, version)
         elif isinstance(event, GroupJoined):
             self._admit(event.group_id, event.player_id, event, version)
+        elif isinstance(event, JoinRequested):
+            self._session.add(
+                GroupJoinRequestORM(
+                    group_id=event.group_id,
+                    player_id=event.player_id,
+                    requested_at=event.occurred_at,
+                    requested_version=version,
+                )
+            )
+        elif isinstance(event, JoinRequestApproved):
+            await self._stop_waiting(event.group_id, event.player_id)
+            self._admit(event.group_id, event.player_id, event, version)
+        elif isinstance(event, JoinRequestDeclined):
+            await self._stop_waiting(event.group_id, event.player_id)
         else:
             raise TypeError(f"Unsupported group event {event!r}")
+
+    async def _stop_waiting(self, group_id: UUID, player_id: UUID) -> None:
+        # A statement, not a unit-of-work change, so whatever this save added
+        # before it is flushed first — the request row it deletes may be one.
+        await self._session.flush()
+        await self._session.execute(
+            delete(GroupJoinRequestORM).where(
+                GroupJoinRequestORM.group_id == group_id,
+                GroupJoinRequestORM.player_id == player_id,
+            )
+        )
 
     def _admit(
         self,
         group_id: UUID,
         player_id: UUID,
-        event: PlayerGroupCreated | GroupJoined,
+        event: PlayerGroupCreated | GroupJoined | JoinRequestApproved,
         version: int,
     ) -> None:
         self._session.add(

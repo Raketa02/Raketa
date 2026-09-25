@@ -1,19 +1,11 @@
 from __future__ import annotations
 
 from app.modules.groups.application.commands import SearchHomeClubsCommand
-from app.modules.groups.application.views import (
-    ClubCard,
-    HomeClubResults,
-    at_club,
-    rated_among,
-)
-from app.modules.groups.domain.home_club_search import (
-    in_card_order,
-    in_search_order,
-    page_of,
-)
+from app.modules.groups.application.views import HomeClubResults, club_cards
+from app.modules.groups.domain.home_club_search import in_search_order, page_of
 from app.modules.groups.domain.ports import (
     GroupDirectory,
+    GroupFaces,
     HomeClubs,
     RatedGroupMembers,
     ReaderAreas,
@@ -30,8 +22,8 @@ class SearchHomeClubs:
 
     The whole match is ordered before a page is cut, because *nearest first* is
     a property of the answer and not of a page. Only the page's clubs have their
-    groups read, and the ratings behind their dots are one question about every
-    member of every one of those groups.
+    groups read, and the ratings behind their dots and their Owners' names are
+    one question each about every one of those groups.
     """
 
     def __init__(
@@ -41,11 +33,13 @@ class SearchHomeClubs:
         areas: ReaderAreas,
         directory: GroupDirectory,
         ratings: RatedGroupMembers,
+        faces: GroupFaces,
     ) -> None:
         self._clubs = clubs
         self._areas = areas
         self._directory = directory
         self._ratings = ratings
+        self._faces = faces
 
     async def execute(self, command: SearchHomeClubsCommand) -> HomeClubResults:
         typed = SearchText(command.text)
@@ -62,21 +56,13 @@ class SearchHomeClubs:
         groups_at = await self._directory.listings_at(
             [placed.club.id for placed in page.clubs]
         )
-        rated = await rated_among(
-            self._ratings,
-            [listing for groups in groups_at.values() for listing in groups],
-        )
         return HomeClubResults(
-            clubs=tuple(
-                ClubCard(
-                    club=placed.club,
-                    distance_km=placed.distance_km,
-                    groups=tuple(
-                        at_club(listing, rated, command.reader_id)
-                        for listing in in_card_order(groups_at.get(placed.club.id, ()))
-                    ),
-                )
-                for placed in page.clubs
+            clubs=await club_cards(
+                page,
+                groups_at,
+                reader_id=command.reader_id,
+                ratings=self._ratings,
+                faces=self._faces,
             ),
             next_page=page.next_page,
         )

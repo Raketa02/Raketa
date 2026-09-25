@@ -9,7 +9,7 @@ and nothing else — a bound restated there would refuse first, as a ``422`` nam
 no field.
 """
 
-from app.shared.domain import BadRequestError, ConflictError, NotFoundError
+from app.shared.domain import BadRequestError, ForbiddenError, NotFoundError
 
 
 class GroupNameInvalid(BadRequestError):
@@ -54,15 +54,32 @@ class GroupNotFound(NotFoundError):
         super().__init__("group not found")
 
 
-class GroupNeedsApproval(ConflictError):
-    """Tapping *Join* on a *People I approve* group admits nobody.
+class NotTheGroupOwner(ForbiddenError):
+    """A Group member who is not its Owner asked to see or answer its Join
+    requests.
 
-    **Until join requests exist** (#505), which is where asking to join such a
-    group becomes a request its Owner answers. Refused rather than quietly
-    admitted, because admitting would be the one thing the Owner chose this
-    policy to prevent."""
+    **Nobody but the Owner** (#505): a request is a person asking the one
+    who answers, and the rest of the group has no business reading who asked
+    to be let in. Refused as a ``403`` rather than as ``group_not_found``,
+    because a member already knows the group exists — the stranger's refusal
+    is for the stranger."""
 
-    code = "group_needs_approval"
+    code = "not_the_group_owner"
 
     def __init__(self) -> None:
-        super().__init__("this group admits people its owner approves")
+        super().__init__("only the group's owner answers its join requests")
+
+
+class JoinRequestNotFound(NotFoundError):
+    """The Owner approved somebody who has no Join request waiting — one that
+    was declined, or never made.
+
+    **Nobody is admitted who did not ask**, so approving is refused rather than
+    turned into a membership; the person has to ask again. A decline of a
+    request that is not waiting is not refused — it wanted the request gone, and
+    it is."""
+
+    code = "join_request_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("nobody by that id is waiting to join this group")

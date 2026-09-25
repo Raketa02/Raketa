@@ -1,8 +1,8 @@
-"""The Groups context's two rows: the group, and each Group member.
+"""The Groups context's three rows: the group, each Group member, and each Join
+request waiting.
 
-**Both are projections**, written beside the event in the same transaction
-(``docs/adr/0183`` §1) — the stream is the record. The join requests' projection
-is the third ``docs/adr/0183`` names, and it arrives with requests (#505).
+**All three are projections**, written beside the event in the same transaction
+(``docs/adr/0183`` §1) — the stream is the record.
 """
 
 from __future__ import annotations
@@ -79,3 +79,30 @@ class GroupMemberORM(Base):
     )
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     joined_version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class GroupJoinRequestORM(Base):
+    """One Join request **while it waits**, and not a moment longer.
+
+    Approved or declined, the row is deleted: the stream remembers every
+    answer, and this table answers only *who is waiting*. The key is the
+    group and the person, which is *at most one waiting per player per group*
+    (``docs/adr/0183`` §7) held by the database as well as by the aggregate.
+
+    ``requested_version`` is the stream version of the ask, so the Owner's
+    queue is in the exact order people asked even when two asked in one
+    instant.
+    """
+
+    __tablename__ = "group_join_requests"
+
+    group_id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False),
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    player_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    requested_version: Mapped[int] = mapped_column(Integer, nullable=False)

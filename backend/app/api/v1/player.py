@@ -21,6 +21,7 @@ from app.modules.conversations.presentation.routes import (
 from app.modules.games.presentation.routes import router as games_router
 from app.modules.groups.presentation.routes import (
     home_clubs_router,
+    join_search_router,
     router as groups_router,
 )
 from app.modules.matchmaking.presentation.deck_routes import (
@@ -93,3 +94,4 @@ player_api_router.include_router(sportsmanship_router)
 player_api_router.include_router(player_record_router)
 player_api_router.include_router(groups_router)
 player_api_router.include_router(home_clubs_router)
+player_api_router.include_router(join_search_router)

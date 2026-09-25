@@ -34,7 +34,7 @@ async def seeded(session_factory, now):
     async with session_factory() as session:
         await seed(session)
     await write_the_clubs(session_factory, settings=get_settings(), now=now)
-    return await write_the_groups(session_factory, now=now)
+    return await write_the_groups(session_factory, settings=get_settings(), now=now)
 
 
 async def signed_in(client, account: SeedAccount) -> dict:
@@ -53,7 +53,7 @@ async def groups_of(client, account: SeedAccount) -> list[dict]:
     return listed.json()["groups"]
 
 
-async def test_the_default_protagonist_owns_one_group_and_joined_another_later(
+async def test_the_default_protagonist_owns_two_groups_and_joined_another_later(
     client, seeded
 ):
     listed = await groups_of(client, THE_POPULATED_PLAYER)
@@ -64,6 +64,7 @@ async def test_the_default_protagonist_owns_one_group_and_joined_another_later(
     ] == [
         ("Bonarka weekend", "Bonarka Arena", ["PADEL", "TENNIS"], 4),
         ("Czwartkowy padel", "Centrum Ruchu", ["PADEL"], 4),
+        ("Ogrody wieczorem", "Ogrody 33", ["PADEL"], 2),
     ]
 
 
@@ -124,12 +125,61 @@ async def test_searching_b_shows_the_protagonist_a_group_to_join(client, seeded)
     assert [club["name"] for club in found.json()["clubs"]] == list(relations)
 
 
+async def the_approval_group(client) -> tuple[dict, dict]:
+    headers = await signed_in(client, THE_POPULATED_PLAYER)
+    [group] = [
+        row
+        for row in await groups_of(client, THE_POPULATED_PLAYER)
+        if row["name"] == "Ogrody wieczorem"
+    ]
+    return headers, group
+
+
+async def test_the_protagonist_s_approval_group_has_one_request_waiting(client, seeded):
+    """The request card, club 20: the one waiting is rated in all four sports,
+    the longest line of Levels a card can be asked to draw."""
+
+    headers, group = await the_approval_group(client)
+
+    page = await client.get(f"/api/v1/groups/{group['id']}", headers=headers)
+    listed = await client.get(f"/api/v1/groups/{group['id']}/requests", headers=headers)
+
+    assert page.json()["join_policy"] == "PEOPLE_I_APPROVE"
+    assert listed.status_code == 200, listed.text
+    [request] = listed.json()["requests"]
+    assert request["name"] == RATED_IN_EVERY_SPORT.name
+    assert [row["sport"] for row in request["levels"]] == [
+        "PADEL",
+        "TENNIS",
+        "SQUASH",
+        "BADMINTON",
+    ]
+
+
+async def test_the_one_waiting_sees_requested_on_the_group(client, seeded):
+    _, group = await the_approval_group(client)
+    headers = await signed_in(client, RATED_IN_EVERY_SPORT)
+
+    found = await client.get(
+        "/api/v1/join-search", params={"q": "ogrody wieczorem"}, headers=headers
+    )
+
+    assert found.status_code == 200, found.text
+    [card] = found.json()["clubs"]
+    [row] = card["groups"]
+    assert (row["id"], row["relation"]) == (group["id"], "REQUESTED")
+    assert row["owner_name"] == THE_POPULATED_PLAYER.name
+
+
 async def test_a_second_run_creates_nothing_and_joins_nobody_twice(
     client, session_factory, seeded, now
 ):
     before = await groups_of(client, RATED_IN_EVERY_SPORT)
+    headers, group = await the_approval_group(client)
+    requests = f"/api/v1/groups/{group['id']}/requests"
+    waiting = (await client.get(requests, headers=headers)).json()
 
-    again = await write_the_groups(session_factory, now=now)
+    again = await write_the_groups(session_factory, settings=get_settings(), now=now)
 
     assert [entry.created for entry in seeded.groups] == [True] * len(SEED_GROUPS)
     assert [entry.created for entry in again.groups] == [False] * len(SEED_GROUPS)
@@ -137,3 +187,4 @@ async def test_a_second_run_creates_nothing_and_joins_nobody_twice(
         entry.group_id for entry in seeded.groups
     ]
     assert await groups_of(client, RATED_IN_EVERY_SPORT) == before
+    assert (await client.get(requests, headers=headers)).json() == waiting

@@ -38,3 +38,24 @@ class SearchHomeClubsCommand:
     reader_id: UUID
     text: str
     page: int
+
+
+@dataclass(frozen=True)
+class SearchGroupsToJoinCommand:
+    """What the player typed or pasted into *Join a group*'s one field, and
+    which page of the answer they have scrolled to — from one."""
+
+    reader_id: UUID
+    text: str
+    page: int
+
+
+@dataclass(frozen=True)
+class AnswerJoinRequestCommand:
+    """Somebody approves or declines a Join request — the Owner, or a refusal.
+    ``answered_by`` comes from the session, never from the body; ``player_id``
+    is who asked."""
+
+    group_id: UUID
+    player_id: UUID
+    answered_by: UUID

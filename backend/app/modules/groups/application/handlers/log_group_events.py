@@ -11,7 +11,13 @@ from __future__ import annotations
 import logging
 
 from app.application.events import DeliveryContext
-from app.modules.groups.domain.events import GroupJoined, PlayerGroupCreated
+from app.modules.groups.domain.events import (
+    GroupJoined,
+    JoinRequestApproved,
+    JoinRequestDeclined,
+    JoinRequested,
+    PlayerGroupCreated,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +41,46 @@ class LogGroupJoined:
     async def __call__(self, event: GroupJoined, context: DeliveryContext) -> None:
         logger.info(
             "groups.group.joined",
+            extra={
+                "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogJoinRequested:
+    async def __call__(self, event: JoinRequested, context: DeliveryContext) -> None:
+        logger.info(
+            "groups.join.requested",
+            extra={
+                "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogJoinRequestApproved:
+    async def __call__(
+        self, event: JoinRequestApproved, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "groups.join_request.approved",
+            extra={
+                "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogJoinRequestDeclined:
+    async def __call__(
+        self, event: JoinRequestDeclined, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "groups.join_request.declined",
             extra={
                 "group_id": str(event.group_id),
                 "event_id": str(context.event_id),

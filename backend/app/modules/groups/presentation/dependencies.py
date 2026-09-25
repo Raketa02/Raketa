@@ -32,16 +32,24 @@ from app.bootstrap.composition import (
     build_rated_group_members,
     build_reader_areas,
 )
+from app.modules.groups.application.answer_join_request import (
+    ApproveJoinRequest,
+    DeclineJoinRequest,
+)
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.application.join_group import JoinGroup
 from app.modules.groups.application.read_group import ReadGroup
+from app.modules.groups.application.read_join_requests import ReadJoinRequests
 from app.modules.groups.application.read_my_groups import ReadMyGroups
+from app.modules.groups.application.search_groups_to_join import SearchGroupsToJoin
 from app.modules.groups.application.search_home_clubs import SearchHomeClubs
 from app.modules.groups.domain.ports import (
     GroupDirectory,
+    GroupFaces,
     GroupRepository,
     HomeClubs,
     RatedGroupMembers,
+    ReaderAreas,
 )
 
 
@@ -75,6 +83,20 @@ def get_rated_group_members(db: DbSession) -> RatedGroupMembers:
 RatedGroupMembersDep = Annotated[RatedGroupMembers, Depends(get_rated_group_members)]
 
 
+def get_group_faces(db: DbSession, settings: SettingsDep) -> GroupFaces:
+    return build_group_faces(db, settings=settings)
+
+
+GroupFacesDep = Annotated[GroupFaces, Depends(get_group_faces)]
+
+
+def get_reader_areas(db: DbSession) -> ReaderAreas:
+    return build_reader_areas(db)
+
+
+ReaderAreasDep = Annotated[ReaderAreas, Depends(get_reader_areas)]
+
+
 def get_create_player_group(
     db: DbSession,
     groups: GroupRepositoryDep,
@@ -98,11 +120,17 @@ def get_join_group(
     groups: GroupRepositoryDep,
     directory: GroupDirectoryDep,
     ratings: RatedGroupMembersDep,
+    faces: GroupFacesDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> JoinGroup:
     return JoinGroup(
-        groups=groups, directory=directory, ratings=ratings, uow=uow, clock=clock
+        groups=groups,
+        directory=directory,
+        ratings=ratings,
+        faces=faces,
+        uow=uow,
+        clock=clock,
     )
 
 
@@ -119,35 +147,73 @@ ReadMyGroupsDep = Annotated[ReadMyGroups, Depends(get_read_my_groups)]
 
 
 def get_read_group(
-    db: DbSession,
-    settings: SettingsDep,
     directory: GroupDirectoryDep,
     clubs: HomeClubsDep,
     ratings: RatedGroupMembersDep,
+    faces: GroupFacesDep,
 ) -> ReadGroup:
-    return ReadGroup(
-        directory=directory,
-        clubs=clubs,
-        ratings=ratings,
-        faces=build_group_faces(db, settings=settings),
-    )
+    return ReadGroup(directory=directory, clubs=clubs, ratings=ratings, faces=faces)
 
 
 ReadGroupDep = Annotated[ReadGroup, Depends(get_read_group)]
 
 
 def get_search_home_clubs(
-    db: DbSession,
     directory: GroupDirectoryDep,
     clubs: HomeClubsDep,
+    areas: ReaderAreasDep,
     ratings: RatedGroupMembersDep,
+    faces: GroupFacesDep,
 ) -> SearchHomeClubs:
     return SearchHomeClubs(
-        clubs=clubs,
-        areas=build_reader_areas(db),
-        directory=directory,
-        ratings=ratings,
+        clubs=clubs, areas=areas, directory=directory, ratings=ratings, faces=faces
     )
 
 
 SearchHomeClubsDep = Annotated[SearchHomeClubs, Depends(get_search_home_clubs)]
+
+
+def get_search_groups_to_join(
+    directory: GroupDirectoryDep,
+    clubs: HomeClubsDep,
+    areas: ReaderAreasDep,
+    ratings: RatedGroupMembersDep,
+    faces: GroupFacesDep,
+) -> SearchGroupsToJoin:
+    return SearchGroupsToJoin(
+        clubs=clubs, areas=areas, directory=directory, ratings=ratings, faces=faces
+    )
+
+
+SearchGroupsToJoinDep = Annotated[
+    SearchGroupsToJoin, Depends(get_search_groups_to_join)
+]
+
+
+def get_read_join_requests(
+    directory: GroupDirectoryDep,
+    faces: GroupFacesDep,
+    ratings: RatedGroupMembersDep,
+) -> ReadJoinRequests:
+    return ReadJoinRequests(directory=directory, faces=faces, ratings=ratings)
+
+
+ReadJoinRequestsDep = Annotated[ReadJoinRequests, Depends(get_read_join_requests)]
+
+
+def get_approve_join_request(
+    groups: GroupRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> ApproveJoinRequest:
+    return ApproveJoinRequest(groups=groups, uow=uow, clock=clock)
+
+
+ApproveJoinRequestDep = Annotated[ApproveJoinRequest, Depends(get_approve_join_request)]
+
+
+def get_decline_join_request(
+    groups: GroupRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> DeclineJoinRequest:
+    return DeclineJoinRequest(groups=groups, uow=uow, clock=clock)
+
+
+DeclineJoinRequestDep = Annotated[DeclineJoinRequest, Depends(get_decline_join_request)]

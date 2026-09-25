@@ -1261,7 +1261,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # named accounts. Nothing below reads a group and a group changes nothing
         # anybody else reads — no pair, no index row, no court — so its position
         # among the later layers is free.
-        groups = await write_the_groups(session_factory, now=now)
+        groups = await write_the_groups(session_factory, settings=settings, now=now)
         # **The played history first, and the order is load-bearing.** A game is
         # a challenge every seat accepted, so each one spends a pair for good;
         # the relationship layer then plans its inboxes against a world those

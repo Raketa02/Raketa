@@ -642,8 +642,9 @@ def build_group_faces(
     runtime: EventRuntime | None = None,
 ) -> GroupFaces:
     """A name from ``users``, a face from the Player profile, a link from the
-    store — ``build_member_faces``' three providers, for the Games tab's seats.
-    The window is the platform's one photo window."""
+    store — ``build_member_faces``' three providers, for the Games tab's seats,
+    a Join request's asker and, name only, a group's Owner. The window is the
+    platform's one photo window."""
     return ProfileGroupFaces(
         users=build_user_repository(session),
         profiles=build_player_profile_repository(

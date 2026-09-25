@@ -4631,8 +4631,8 @@
         "tags": [
           "groups"
         ],
-        "summary": "Join a group",
-        "description": "Under *Anyone* the caller is a member **at once**. Joining a group you are already in changes nothing and answers the same. Answers the group as a club's card draws it, with the caller's relation.",
+        "summary": "Join a group, or ask to",
+        "description": "**One tap, and the group's policy decides what it was.** Under *Anyone* the caller is a member **at once** (`relation` `MEMBER`). Under *People I approve* their Join request waits for the Owner (`relation` `REQUESTED`). Neither is recorded twice: tapping again as a member, or while the request waits, changes nothing and answers the same. Answers the group as a club's card draws it, so the card is patched in place.",
         "operationId": "join_group_api_v1_groups__group_id__membership_post",
         "security": [
           {
@@ -4672,8 +4672,211 @@
               }
             }
           },
-          "409": {
-            "description": "`group_needs_approval` \u2014 the group admits people its Owner approves, and a tap cannot admit anybody to it. Nothing was recorded.",
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/requests": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "The Join requests waiting on a group, for its Owner",
+        "description": "*Want to join \u00b7 N*: everybody waiting, in the order they asked \u2014 each with their name, their face and every sport they are rated in with its Level.",
+        "operationId": "join_requests_api_v1_groups__group_id__requests_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinRequestsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in: the person waiting is not in it yet, and meets this too.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/requests/{player_id}/approve": {
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Approve a Join request",
+        "description": "The player is a Group member **at once**. Approving somebody already in changes nothing.",
+        "operationId": "approve_join_request_api_v1_groups__group_id__requests__player_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in. `join_request_not_found` \u2014 the player has no request waiting: it was declined, or never made, and nobody is admitted who did not ask. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/requests/{player_id}/decline": {
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Decline a Join request",
+        "description": "The request is gone **silently**: nothing tells the player, their relation to the group is `NONE` again, and they may ask again. Declining a request that is not waiting changes nothing, and never removes a member.",
+        "operationId": "decline_join_request_api_v1_groups__group_id__requests__player_id__decline_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in: the person waiting is not in it yet, and meets this too.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4741,6 +4944,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HomeClubPageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/join-search": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Search for a group to join by club, district, group name or link",
+        "description": "One field, four matches, answered as **club cards with groups inside**. A club whose name or district contains `q` comes with **every** group at it; a group whose name contains `q` comes inside its club's card, with **only** the matching groups when the club itself did not match \u2014 ignoring case and accents either way. **Any text containing `/join/<code>` is a link**, whatever domain or words are around it, and finds exactly that group; a link that leads nowhere answers no clubs with `read_as` `LINK` \u2014 *nothing at that link*. **Nearest first** from the caller's Location area, then by name, twenty to a page; a caller with no Location area gets A\u2013Z and no distance. A blank `q` finds nothing.",
+        "operationId": "join_search_api_v1_join_search_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "What was typed or pasted into *Join a group*.",
+              "title": "Q"
+            },
+            "description": "What was typed or pasted into *Join a group*."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Which page, from one.",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Which page, from one."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinSearchResponse"
                 }
               }
             }
@@ -5609,6 +5875,62 @@
         ],
         "title": "ChangeSocialTagsRequest",
         "description": "The Social tags, replaced whole (``docs/adr/0179`` \u00a78).\n\nStrings rather than an enum, as the commit carries them: an id outside the\nserved vocabulary is refused by the domain with ``unknown_social_tag``, a\ncount outside the served bounds with ``social_tag_selection_out_of_bounds``,\nand the client gets a code it can act on rather than a 422."
+      },
+      "ClubCardSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "district": {
+            "type": "string",
+            "title": "District"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km",
+            "description": "From the reader's Location area to the club, one decimal and never below `0.1`. **`null` for a reader with no Location area**, whose clubs come A\u2013Z."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "What the club offers, in the registry's order."
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GroupAtClubSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "The biggest crowd first. **Home-club search**: every group at the club \u2014 and a club with some is the one the New group form tints and tags *group already here*. **Join search**: every group when the club itself matched, only the groups whose name matched when it did not, and exactly the linked group for a link. Empty for a club with none: *no groups here yet*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "district",
+          "distance_km",
+          "sports",
+          "groups"
+        ],
+        "title": "ClubCardSchema",
+        "description": "One club as a search draws it: its header \u2014 which is context, not a\nchoice \u2014 and the groups inside it."
       },
       "ClubNameSchema": {
         "properties": {
@@ -7668,11 +7990,24 @@
             "description": "Every Group member, the Owner included. The same for every reader."
           },
           "join_policy": {
-            "$ref": "#/components/schemas/JoinPolicy"
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` \u2014 *Join* admits at once (*anyone can join*); `PEOPLE_I_APPROVE` \u2014 *Ask to join* leaves a request for the Owner (*Karol approves joins*)."
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name",
+            "description": "The Owner's **whole Name**, never the nickname \u2014 who answers a request, for the *approves joins* line. **No first name is cut from it, here or by a client**: a sentence naming somebody uses the whole Name (`docs/adr/0171` \u00a74), so the line reads *Karol Nowak approves joins* and the row truncates it as it truncates any line. `null` for an account that can no longer be named."
           },
           "relation": {
             "$ref": "#/components/schemas/GroupRelation",
-            "description": "`MEMBER` \u2014 the reader is in it (*you're in*); `NONE` \u2014 they are not, and *Join* is the tap."
+            "description": "`MEMBER` \u2014 the reader is in it (*you're in*); `REQUESTED` \u2014 they asked and their request is waiting (*requested \u00b7 waiting*); `NONE` \u2014 neither, and *Join* or *Ask to join* is the tap. **A declined request reads `NONE`**: nothing tells them it was declined, and they may ask again."
           }
         },
         "type": "object",
@@ -7683,6 +8018,7 @@
           "sports",
           "member_count",
           "join_policy",
+          "owner_name",
           "relation"
         ],
         "title": "GroupAtClubSchema",
@@ -7743,10 +8079,11 @@
         "type": "string",
         "enum": [
           "MEMBER",
+          "REQUESTED",
           "NONE"
         ],
         "title": "GroupRelation",
-        "description": "What a group is to the person reading it: they are in it, or they are\nnot. A pending request is the third answer, and it arrives with requests\n(#505)."
+        "description": "What a group is to the person reading it (``docs/adr/0183`` \u00a79): they\nare in it, they have asked and their Join request is waiting, or neither.\n\n**A declined request reads as ``NONE``** \u2014 the request is gone, and nothing\ntells them it was declined (``docs/adr/0183`` \u00a77)."
       },
       "GroupResponse": {
         "properties": {
@@ -7861,7 +8198,7 @@
         "properties": {
           "clubs": {
             "items": {
-              "$ref": "#/components/schemas/HomeClubSchema"
+              "$ref": "#/components/schemas/ClubCardSchema"
             },
             "type": "array",
             "title": "Clubs",
@@ -7886,62 +8223,6 @@
           "next_page"
         ],
         "title": "HomeClubPageResponse"
-      },
-      "HomeClubSchema": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "district": {
-            "type": "string",
-            "title": "District"
-          },
-          "distance_km": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Distance Km",
-            "description": "From the reader's Location area to the club, one decimal and never below `0.1`. **`null` for a reader with no Location area**, whose clubs come A\u2013Z."
-          },
-          "sports": {
-            "items": {
-              "$ref": "#/components/schemas/Sport"
-            },
-            "type": "array",
-            "title": "Sports",
-            "description": "What the club offers, in the registry's order."
-          },
-          "groups": {
-            "items": {
-              "$ref": "#/components/schemas/GroupAtClubSchema"
-            },
-            "type": "array",
-            "title": "Groups",
-            "description": "**Every** group at this club, the biggest crowd first. Empty for a club with none \u2014 and a club with some is the one the form tints and tags *group already here*."
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "district",
-          "distance_km",
-          "sports",
-          "groups"
-        ],
-        "title": "HomeClubSchema",
-        "description": "One club a player could set as a group's home."
       },
       "InProgressAssessmentResponse": {
         "properties": {
@@ -8052,7 +8333,107 @@
           "PEOPLE_I_APPROVE"
         ],
         "title": "JoinPolicy",
-        "description": "Who gets in (``docs/adr/0183`` \u00a77).\n\n**Anyone** admits a player the moment they join, and is the default the New\ngroup form opens on. **People I approve** turns a join into a Join request\nits Owner answers (#505)."
+        "description": "Who gets in (``docs/adr/0183`` \u00a77).\n\n**Anyone** admits a player the moment they join, and is the default the New\ngroup form opens on. **People I approve** turns a join into a Join request\nits Owner answers."
+      },
+      "JoinRequestSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 draw their initials."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**."
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/SportLevelSchema"
+            },
+            "type": "array",
+            "title": "Levels",
+            "description": "**Every sport they are rated in**, in the registry's order, each with its Level \u2014 *Padel 2,44 \u00b7 Tennis 2,60*. Empty for somebody rated in nothing."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "levels"
+        ],
+        "title": "JoinRequestSchema",
+        "description": "A Join request as the Owner sees it: who is asking \u2014 ``player_id`` is the\nid to approve or decline \u2014 and what they play. **No Player Score**: the\nrequest card is club 20's everywhere."
+      },
+      "JoinRequestsResponse": {
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/JoinRequestSchema"
+            },
+            "type": "array",
+            "title": "Requests",
+            "description": "Everybody waiting to be let in, **in the order they asked** \u2014 *Want to join \u00b7 N*. Empty when nobody is waiting."
+          }
+        },
+        "type": "object",
+        "required": [
+          "requests"
+        ],
+        "title": "JoinRequestsResponse"
+      },
+      "JoinSearchResponse": {
+        "properties": {
+          "clubs": {
+            "items": {
+              "$ref": "#/components/schemas/ClubCardSchema"
+            },
+            "type": "array",
+            "title": "Clubs",
+            "description": "Nearest first, then by name \u2014 or A\u2013Z for a reader with no Location area. Empty when nothing matched."
+          },
+          "next_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Page",
+            "description": "The page to ask for next, or `null` when this was the last."
+          },
+          "read_as": {
+            "$ref": "#/components/schemas/ReadAs",
+            "description": "What the text was read as. `LINK` \u2014 it held `/join/` and a code, and the answer is exactly that group; **`LINK` with no clubs is *nothing at that link***, a link that leads nowhere. `TEXT` \u2014 matched against clubs, districts and group names; `TEXT` with no clubs is *no match*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "clubs",
+          "next_page",
+          "read_as"
+        ],
+        "title": "JoinSearchResponse"
       },
       "LevelDirection": {
         "type": "string",
@@ -9719,6 +10100,15 @@
         "title": "RatingsResponse",
         "description": "Every sport this player is rated at \u2014 empty when they are rated at none."
       },
+      "ReadAs": {
+        "type": "string",
+        "enum": [
+          "TEXT",
+          "LINK"
+        ],
+        "title": "ReadAs",
+        "description": "What the text was read as \u2014 so an empty answer can say which empty it is:\n*no match for \"\u2026\"* for text, *nothing at that link* for a link (#500\nstories 37 and 38)."
+      },
       "ReadRadarRequest": {
         "properties": {
           "sport": {
@@ -11073,6 +11463,25 @@
         ],
         "title": "Sport",
         "description": "The four sports Raketa rates, as a closed enum."
+      },
+      "SportLevelSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level in it, as RacketSkill published it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level"
+        ],
+        "title": "SportLevelSchema",
+        "description": "One sport somebody is rated in, and their Level in it."
       },
       "SportPillSchema": {
         "properties": {

@@ -58,7 +58,7 @@ class JoinPolicy(StrEnum):
 
     **Anyone** admits a player the moment they join, and is the default the New
     group form opens on. **People I approve** turns a join into a Join request
-    its Owner answers (#505).
+    its Owner answers.
     """
 
     ANYONE = "ANYONE"
@@ -66,11 +66,14 @@ class JoinPolicy(StrEnum):
 
 
 class GroupRelation(StrEnum):
-    """What a group is to the person reading it: they are in it, or they are
-    not. A pending request is the third answer, and it arrives with requests
-    (#505)."""
+    """What a group is to the person reading it (``docs/adr/0183`` §9): they
+    are in it, they have asked and their Join request is waiting, or neither.
+
+    **A declined request reads as ``NONE``** — the request is gone, and nothing
+    tells them it was declined (``docs/adr/0183`` §7)."""
 
     MEMBER = "MEMBER"
+    REQUESTED = "REQUESTED"
     NONE = "NONE"
 
 
@@ -93,10 +96,27 @@ class GroupCode:
 
     def __post_init__(self) -> None:
         invariant(
-            len(self.value) == GROUP_CODE_LENGTH
-            and all(char in GROUP_CODE_ALPHABET for char in self.value),
+            _is_a_code(self.value),
             f"a group code outside its alphabet or length: {self.value!r}",
         )
+
+    @classmethod
+    def read(cls, typed: str) -> "GroupCode | None":
+        """The code in something a person pasted, or ``None`` when it could be
+        no group's code. **Read lower-cased**: every code is minted lower case,
+        so an app that capitalised a link cannot have made it name a different
+        group. Minted codes are constructed directly and a bad one is a broken
+        caller; a pasted one is only ever a guess, and this is where it is
+        checked."""
+
+        lowered = typed.lower()
+        return cls(lowered) if _is_a_code(lowered) else None
+
+
+def _is_a_code(text: str) -> bool:
+    return len(text) == GROUP_CODE_LENGTH and all(
+        char in GROUP_CODE_ALPHABET for char in text
+    )
 
 
 @dataclass(frozen=True, slots=True)
