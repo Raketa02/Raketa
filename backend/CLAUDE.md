@@ -26,8 +26,9 @@ make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
-make openapi     # emit openapi.{player,dev}.json — the player contract the client
-                 # generates from, and the dev console's one-path contract
+make openapi     # emit openapi.{player,dev,club}.json — the player contract the
+                 # client generates from, the dev console's one-path contract, and
+                 # the club website's
 make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
 make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
 make migrate     # alembic upgrade head inside the API container
@@ -607,8 +608,12 @@ Rules to preserve:
   one whose posture is `CLOSED` without being a gate: a fill that cannot read the court it
   names would silently become an ordinary ⚡ over a pool that still excludes the very people
   it was meant to seat around.
-- **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix. The one
-  exception is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
+- **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix, and mount
+  them on **the surface whose client calls them**: `app/api/v1/player.py` for the player
+  app, `app/api/v1/club.py` — everything under `/api/v1/club` — for the club website
+  ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+  §5). No path is in both documents (`tests/unit/test_club_surface.py`). The one
+  exception to the prefix is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
   second client: one no-build `console.html` behind a `FileResponse` at `/dev`, and one
   roster route, which is the whole of `openapi.dev.json`. It **acts as another player by
   signing in as them** through the ordinary `POST /api/v1/auth/login` with the public seed
@@ -1212,6 +1217,32 @@ Rules to preserve:
   test walks the emitted contract to prove the words reach exactly one response type — and
   that the band's field is on none — which
   is where *it is not on search result cards* stopped being a promise.
+- **A club is a place players search, and its account signs in only on the club
+  surface** ([ADR-0182](../docs/adr/0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md),
+  [ADR-0185](../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+  §6, #503). `app/modules/clubs/` holds **two event-sourced aggregates**, and the split is
+  the point: a **Club** (`club_registered`, `club_details_changed` — name, district, city,
+  a non-empty subset of the four sports, and a precise point stored as the desk dropped
+  it) and its **Club account** (`club_account_opened` — email and hash), because a club's
+  facts are searched by every player and its credentials must not sit on that stream.
+  Each repository's `save` **writes its projection in the caller's transaction** —
+  `clubs` for search, with `name_folded` and `district_folded` folded by
+  `clubs/domain/folding.py`, the function a query will be folded by (ł → l is the one row
+  Unicode needs help with); `club_accounts` for sign-in, its email unique among club
+  accounts and deliberately nowhere else, since the same address may be an unrelated
+  User's. **Every refusal a sign-up or a details edit can meet names its field**
+  (`details.field`) with its own code, so the request schemas carry types and no bounds —
+  a bound there would refuse first, as a `422` naming no field. **Every token names an
+  audience** (`aud`: `player_app` or `club`), a decode states the one it expects, and a
+  token with none is a player-app token so sessions from before survive; the five access
+  refusals are one function, `auth/application/access.py`, shared by both surfaces.
+  `RefreshAuthTokens` and `Logout` are **built once per audience**, each context answers
+  `SessionHolders` for its own accounts, and a `refresh_tokens` row records whose it is by
+  filling **exactly one** of `user_id` and `club_account_id` (a check constraint). The
+  candidate index counts only a **player-app** refresh as liveness. Seeded by
+  `app/seeds/clubs.py` — eight Kraków clubs placed as offsets from the seed centre, each
+  signed up through `SignUpClub`, each desk at `desk.<name>@raketa.example` on the seed
+  password.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -1239,10 +1270,12 @@ This app is the single source of truth for the API
 (`make openapi`), so a response-shape change is load-bearing outside this directory. When
 you change it, run the `api-contract-change` skill.
 
-**`make openapi` writes one document per surface, and there are two.** The second is the
+**`make openapi` writes one document per surface, and there are three.** The second is the
 **dev console**'s `openapi.dev.json` — one path, and no client, so nothing generates types
-from it. Both are committed, and both are gated at the repository root by
-`make contract-freshness`: re-emit and diff, which is a different question from
+from it. The third is the **club website**'s `openapi.club.json`, which `frontend_club`
+generates from; until the root gates learn it (#527), `tests/unit/test_club_surface.py`
+is what fails a stale one. All are committed, and the first two are gated at the
+repository root by `make contract-freshness`: re-emit and diff, which is a different question from
 `make test-drift`'s (that one asks whether the *client's* generated types reproduce from
 the document, and has no purchase on a document with no client). Commit the regenerated
 documents with whatever moved them.

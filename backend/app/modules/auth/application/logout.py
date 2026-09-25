@@ -6,6 +6,7 @@ import jwt
 
 from app.application.ports import DomainEventPublisher, UnitOfWork
 from app.kernel import Clock
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.ports import (
     PasswordHasher,
     RefreshTokenRepository,
@@ -23,10 +24,16 @@ class Logout:
 
     We deliberately swallow validation failures and missing-token lookups —
     logout must not leak whether a given token exists.
+
+    **Built once per audience** (``docs/adr/0185`` §6), and a token the other
+    surface issued is one of those swallowed failures: signing out of the club
+    website never ends a session in the player app, even for the same email.
     """
 
     def __init__(
         self,
+        *,
+        audience: Audience,
         tokens: RefreshTokenRepository,
         jwt_service: TokenService,
         hasher: PasswordHasher,
@@ -34,6 +41,7 @@ class Logout:
         clock: Clock,
         events: DomainEventPublisher,
     ) -> None:
+        self._audience = audience
         self._tokens = tokens
         self._jwt = jwt_service
         self._hasher = hasher
@@ -43,11 +51,15 @@ class Logout:
 
     async def execute(self, command: LogoutCommand) -> None:
         try:
-            payload = self._jwt.decode_refresh(command.presented_token)
+            payload = self._jwt.decode_refresh(
+                command.presented_token, audience=self._audience
+            )
         except jwt.InvalidTokenError:
             return
         stored = await self._tokens.get_by_jti(payload.get("jti", ""))
-        if stored is None or not stored.is_valid:
+        if stored is None or stored.audience is not self._audience:
+            return
+        if not stored.is_valid:
             return
         if not self._hasher.verify(command.presented_token, stored.token_hash):
             return

@@ -180,6 +180,7 @@ from app.seeds.clock import (
     age_in_days,
     days_before,
 )
+from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.cohort import (
     BAND_HISTOGRAM,
     COHORT,
@@ -1193,6 +1194,9 @@ class SeedReport:
     #: The cards those evenings left behind, and what the published fold makes
     #: of them. ``None`` on the same callers and for the same reason.
     opinions: SeededOpinions | None = None
+    #: The clubs, each signed up by its own desk. ``None`` on the callers that
+    #: drive the populations without the layers above them.
+    clubs: SeededClubs | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1246,6 +1250,11 @@ async def run(settings: Settings | None = None) -> SeedReport:
             )
             await refuse_a_cohort_that_has_aged_out(session, members, now=now)
             await refuse_a_histogram_that_has_moved(session, members)
+        # **The clubs next, before anything that could stand at one.** Nothing
+        # below reads a club yet, and a club reads nobody, so today the position
+        # is free; it sits here because a group needs a home club and the groups
+        # arrive as the next layer (#504).
+        clubs = await write_the_clubs(session_factory, settings=settings, now=now)
         # **The played history first, and the order is load-bearing.** A game is
         # a challenge every seat accepted, so each one spends a pair for good;
         # the relationship layer then plans its inboxes against a world those
@@ -1323,6 +1332,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             rooms=rooms,
             loop=loop,
             opinions=opinions,
+            clubs=clubs,
             photographs=photographs,
         )
     finally:
@@ -1411,6 +1421,8 @@ def report(run_report: SeedReport) -> list[str]:
                 f"assessment {seeded_scenario.assessment_id}"
             )
     lines.extend(["", *_cohort_lines(run_report.members)])
+    if run_report.clubs is not None:
+        lines.extend(["", *club_lines(run_report.clubs)])
     if run_report.played is not None:
         lines.extend(["", *_played_lines(run_report.played)])
     if run_report.opinions is not None:

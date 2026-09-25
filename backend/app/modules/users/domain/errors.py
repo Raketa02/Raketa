@@ -28,6 +28,43 @@ class AdultAttestationRequired(BadRequestError):
         )
 
 
+class EmailInvalid(BadRequestError):
+    """:class:`Email` refused an address, for a caller that has to name the field.
+
+    ``Email`` itself raises ``ValueError``, which is right for an invariant and
+    a 500 for a typo (``CONTEXT.md``, *Invariant vs Unavailability*). A form that
+    takes an address from a person raises this instead, with ``details.field``
+    under the control that took it. **The club's sign-up is the only one today**
+    (``docs/adr/0182`` §3); the player's refuses a malformed address at its
+    schema, as a ``422``, before ``Email`` is reached.
+    """
+
+    code = "email_invalid"
+
+    def __init__(self) -> None:
+        super().__init__("invalid email address", details={"field": "email"})
+
+
+class PasswordTooWeak(BadRequestError):
+    """:class:`RawPassword` refused a password, for a caller that has to name
+    the field — **the same rule for every account** (``docs/adr/0182`` §3).
+
+    **Raised by the club's sign-up only.** The player's sign-up bounds the
+    length at its schema and does not catch the rest of the rule, so a
+    sixteen-letter password with no digit still reaches ``RawPassword`` there as
+    a ``ValueError``. Here beside the rule so that fixing that path is one
+    ``except`` rather than a second code.
+    """
+
+    code = "password_too_weak"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "password must be 8-128 chars with at least one letter and one digit",
+            details={"field": "password"},
+        )
+
+
 class EmailAlreadyRegistered(ConflictError):
     code = "email_already_registered"
 

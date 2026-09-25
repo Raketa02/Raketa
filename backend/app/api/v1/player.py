@@ -1,9 +1,10 @@
 """The player API surface.
 
-Every endpoint the player client (``frontend_player/``) may depend on. It is the
-only surface this backend serves, and ``app/api/contract.py`` emits it as
-``openapi.player.json`` — the one document the client generates its wire types
-from (``docs/adr/0006-backend-owns-api-contract.md``).
+Every endpoint the player client (``frontend_player/``) may depend on, and
+``app/api/contract.py`` emits it as ``openapi.player.json`` — the one document
+that client generates its wire types from
+(``docs/adr/0006-backend-owns-api-contract.md``). The club website has a surface
+of its own (``app/api/v1/club.py``), and no path is in both.
 """
 
 from fastapi import APIRouter

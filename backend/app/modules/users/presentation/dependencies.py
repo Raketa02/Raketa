@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import Depends
-from fastapi.security import HTTPAuthorizationCredentials
 
 from app.api.dependencies import (
     ClockDep,
@@ -14,7 +13,7 @@ from app.api.dependencies import (
     UnitOfWorkDep,
     UserRepositoryDep,
 )
-from app.core.security import bearer_scheme
+from app.core.security import BearerCredentialsDep
 from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.application.name_user import NameUser
 from app.modules.users.application.read_naming import ReadNaming
@@ -90,10 +89,6 @@ def get_resolve_current_user_use_case(
 
 ResolveCurrentUserUseCaseDep = Annotated[
     ResolveCurrentUserFromAccessToken, Depends(get_resolve_current_user_use_case)
-]
-
-BearerCredentialsDep = Annotated[
-    HTTPAuthorizationCredentials | None, Depends(bearer_scheme)
 ]
 
 

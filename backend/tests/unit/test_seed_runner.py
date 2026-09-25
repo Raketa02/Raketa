@@ -8,8 +8,8 @@ Four claims, and each fails differently.
    that signs in perfectly and has no event stream behind it; the seeded data and
    the system's own account of that data then disagree, and only a replay ever
    says so. The same walk is what states *no aggregate is invented for a context
-   that is not yet modeled*: the seed path reaches into `users` and `rating`, and
-   the day it imports a Clubs module is the day one of those aggregates exists.
+   that is not yet modeled*: the seed path writes only the contexts listed in
+   `WRITTEN_CONTEXTS`, and a context joins that list on the day it exists.
 2. **Every account is named for a state, and the name is checked.** The
    catalog's own refusals fire before a session is opened; the runner's fire
    against the rating that is stored, so an engine retune that moves
@@ -94,9 +94,9 @@ SEED_MODULES = sorted((ROOT / "app" / "seeds").glob("*.py"))
 #: will sell a name under any of them.
 RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"})
 
-#: The contexts the seed path **writes an aggregate in**. Clubs, Courts,
-#: Bookings and Matches are named in the glossary and modeled nowhere, so a seed
-#: for one of them would have to invent the aggregate first.
+#: The contexts the seed path **writes an aggregate in**. Courts, Bookings and
+#: Matches are modeled nowhere, so a seed for one of them would have to invent
+#: the aggregate first.
 #:
 #: `challenges` and `blocks` joined on the day the relationship layer landed, and
 #: they joined as *writes through their own use cases*: five of the ten
@@ -111,12 +111,19 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: something — through `SendMessage`, because a room long enough to page backward
 #: through is a screen state and no arrangement produces one.
 #:
-#: `plans` joined last, and it joined the ordinary way: three slot writes through
-#: the three use cases a request runs, on four games this fixture arranges and
-#: deliberately never plays. A plan is *born by being used*, so there is no
-#: opening act to seed and the write **is** the birth.
+#: `plans` joined the ordinary way: three slot writes through the three use
+#: cases a request runs, on four games this fixture arranges and deliberately
+#: never plays. A plan is *born by being used*, so there is no opening act to
+#: seed and the write **is** the birth.
+#:
+#: `clubs` joined on the day the Club context was written (#503), and it is the
+#: first context this rule *waited for* rather than one it admitted: the list
+#: below used to name Clubs as the example of a context modeled nowhere. A club
+#: exists because a club signed up (`docs/adr/0182` §7), so the seed signs each
+#: one up through `SignUpClub` and writes no row.
 WRITTEN_CONTEXTS = frozenset(
     {
+        "clubs",
         "users",
         "rating",
         "player_profile",
@@ -170,6 +177,10 @@ AGGREGATE_WRITERS = {
     # plan is born by being used, so the first slot write is the birth and this
     # is the only repository the layer needs.
     "build_plan_repository": "plans",
+    # The club and its account, both written by the one `SignUpClub` a desk
+    # runs — which is why the layer needs both, and nothing else.
+    "build_club_repository": "clubs",
+    "build_club_account_repository": "clubs",
 }
 
 #: The two infrastructure modules the seed path may import, and neither is an
@@ -258,6 +269,7 @@ def test_the_walk_has_something_to_walk():
         "__main__.py",
         "catalog.py",
         "clock.py",
+        "clubs.py",
         "cohort.py",
         "games.py",
         "guard.py",
@@ -301,7 +313,7 @@ def test_no_seed_module_writes_through_a_session(path):
     assert not offending, f"{path.name} calls {sorted(offending)}"
 
 
-def test_the_seed_path_writes_six_contexts_and_only_reads_the_rest():
+def test_the_seed_path_touches_only_the_contexts_that_exist():
     """*No aggregate is invented for a context that is not yet modeled*, stated
     as **writes against reads** rather than as imports.
 
@@ -328,7 +340,7 @@ def test_the_seed_path_writes_six_contexts_and_only_reads_the_rest():
     there is not one to import; the day somebody writes one, the builder check
     above is what fails.
 
-    Equality in both directions, on purpose. A Clubs repository appearing is the
+    Equality in both directions, on purpose. A Courts repository appearing is the
     scope creep the rule forbids; `rating` *disappearing* is the seed quietly
     reducing to a list of registrations, which is the state this catalog grew out
     of.

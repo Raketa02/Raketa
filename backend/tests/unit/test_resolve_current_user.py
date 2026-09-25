@@ -8,6 +8,7 @@ import jwt
 import pytest
 
 from app.shared.domain import UnauthorizedError
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.ports import IssuedToken
 from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.application.resolve_current_user import (
@@ -38,18 +39,18 @@ class StubTokenService:
         self._payload = payload or {}
         self._error = error
 
-    def issue_access(self, subject: str) -> IssuedToken:
+    def issue_access(self, subject: str, *, audience: Audience) -> IssuedToken:
         raise NotImplementedError
 
-    def issue_refresh(self, subject: str) -> IssuedToken:
+    def issue_refresh(self, subject: str, *, audience: Audience) -> IssuedToken:
         raise NotImplementedError
 
-    def decode_access(self, token: str) -> dict:
+    def decode_access(self, token: str, *, audience: Audience) -> dict:
         if self._error is not None:
             raise self._error
         return self._payload
 
-    def decode_refresh(self, token: str) -> dict:
+    def decode_refresh(self, token: str, *, audience: Audience) -> dict:
         raise NotImplementedError
 
     @property

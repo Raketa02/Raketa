@@ -116,11 +116,12 @@ gen-cohort:        ## rewrite the seed cohort's committed population
 	poetry run python -m scripts.gen_cohort
 
 ## ----- API contract
-## One document per surface. `openapi.player.json` is what the client generates
-## its wire types from; `openapi.dev.json` is the dev console's one path and has
-## no client at all, which is why it is gated by a freshness check at the
+## One document per surface. `openapi.player.json` is what the player app
+## generates its wire types from, and `openapi.club.json` what the club website
+## will (docs/adr/0187 §5); `openapi.dev.json` is the dev console's one path and
+## has no client at all, which is why it is gated by a freshness check at the
 ## repository root (`make contract-freshness`) rather than by the drift check.
-openapi:           ## emit the API contracts (openapi.player.json, openapi.dev.json)
+openapi:           ## emit the API contracts (openapi.{player,dev,club}.json)
 	poetry run python -m app.api.contract
 
 ## ----- local docker

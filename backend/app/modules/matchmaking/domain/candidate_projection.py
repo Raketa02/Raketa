@@ -42,6 +42,7 @@ from dataclasses import dataclass
 from typing import Mapping, Type, final
 from uuid import UUID
 
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.events import RefreshTokenIssued, RefreshTokenRotated
 from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
@@ -231,15 +232,23 @@ def project(event: DomainEvent) -> tuple[Movement, ...]:
                     changes={"declared_intent": event.intent},
                 ),
             )
-        case RefreshTokenIssued() | RefreshTokenRotated():
+        case (
+            RefreshTokenIssued(audience=Audience.PLAYER_APP)
+            | RefreshTokenRotated(audience=Audience.PLAYER_APP)
+        ):
             # The only activity signal this platform contains. It means *last
             # session refresh* and therefore resolves days rather than hours
             # (`docs/adr/0111`), which is true precisely because these two are
             # the only events that move it — a revoked token is a sign-out and
             # is deliberately not one of them.
+            #
+            # **The player app's sessions only.** A club website's token belongs
+            # to a Club account, which is not a player and has no row here
+            # (`docs/adr/0185` §6); its refresh says nothing about anybody's
+            # liveness and falls to the `case _` below.
             return (
                 PlayerFactsMoved(
-                    player_id=event.user_id,
+                    player_id=event.account_id,
                     changes={"last_active_at": event.occurred_at},
                 ),
             )

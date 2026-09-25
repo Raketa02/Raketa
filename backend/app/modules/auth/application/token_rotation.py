@@ -5,6 +5,7 @@ from uuid import UUID
 
 from app.application.ports import DomainEventPublisher, UnitOfWork
 from app.kernel import Clock
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.ports import (
     PasswordHasher,
     RefreshTokenRepository,
@@ -24,8 +25,14 @@ class TokenPair:
 
 class TokenRotator:
     """Application service that issues new JWT pairs and persists hashed
-    refresh-token state. Reused by `Login` (fresh issuance) and
-    `RefreshAuthTokens` (revoke-old + issue-new)."""
+    refresh-token state. Reused by `Login` and the club's sign-in (fresh
+    issuance) and `RefreshAuthTokens` (revoke-old + issue-new).
+
+    **A pair is issued for one audience and rotated within it** (``docs/adr/0185``
+    §6): a fresh pair names the audience it is for, and a rotation reads it off
+    the token being rotated, so a refresh can never move a session from one
+    surface to the other.
+    """
 
     def __init__(
         self,
@@ -43,10 +50,10 @@ class TokenRotator:
         self._clock = clock
         self._events = events
 
-    async def issue_pair(self, user_id: UUID) -> TokenPair:
-        access = self._jwt.issue_access(str(user_id))
-        refresh = self._jwt.issue_refresh(str(user_id))
-        refresh_record = self._new_refresh_token(user_id, refresh)
+    async def issue_pair(self, account_id: UUID, *, audience: Audience) -> TokenPair:
+        access = self._jwt.issue_access(str(account_id), audience=audience)
+        refresh = self._jwt.issue_refresh(str(account_id), audience=audience)
+        refresh_record = self._new_refresh_token(account_id, audience, refresh)
 
         await self._tokens.add(refresh_record)
         await self._events.publish_many(refresh_record.pull_events())
@@ -58,10 +65,11 @@ class TokenRotator:
             expires_in=self._jwt.access_ttl_seconds,
         )
 
-    async def rotate(self, stored: RefreshToken, user_id: UUID) -> TokenPair:
-        access = self._jwt.issue_access(str(user_id))
-        refresh = self._jwt.issue_refresh(str(user_id))
-        refresh_record = self._new_refresh_token(user_id, refresh)
+    async def rotate(self, stored: RefreshToken) -> TokenPair:
+        account_id, audience = stored.account_id, stored.audience
+        access = self._jwt.issue_access(str(account_id), audience=audience)
+        refresh = self._jwt.issue_refresh(str(account_id), audience=audience)
+        refresh_record = self._new_refresh_token(account_id, audience, refresh)
         now = self._clock.now()
 
         stored.rotate_to(refresh_record, now=now)
@@ -78,10 +86,13 @@ class TokenRotator:
             expires_in=self._jwt.access_ttl_seconds,
         )
 
-    def _new_refresh_token(self, user_id: UUID, refresh) -> RefreshToken:
+    def _new_refresh_token(
+        self, account_id: UUID, audience: Audience, refresh
+    ) -> RefreshToken:
         return RefreshToken.issue(
             token_id=new_uuid(),
-            user_id=user_id,
+            account_id=account_id,
+            audience=audience,
             token_hash=self._hasher.hash(refresh.token),
             jti=refresh.jti,
             refresh_expires_at=refresh.expires_at,

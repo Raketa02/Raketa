@@ -1,0 +1,180 @@
+from __future__ import annotations
+
+from typing import Annotated
+
+from fastapi import Depends
+
+from app.api.dependencies import (
+    ClockDep,
+    DbSession,
+    DomainEventStoreDep,
+    EventPublisherDep,
+    PasswordHasherDep,
+    RefreshTokenRepositoryDep,
+    TokenRotatorDep,
+    TokenServiceDep,
+    UnitOfWorkDep,
+)
+from app.bootstrap.composition import (
+    build_club_account_repository,
+    build_club_account_session_holders,
+    build_club_repository,
+)
+from app.core.security import BearerCredentialsDep
+from app.modules.auth.application.logout import Logout
+from app.modules.auth.application.refresh_token import RefreshAuthTokens
+from app.modules.auth.domain.audience import Audience
+from app.modules.auth.domain.ports import SessionHolders
+from app.modules.clubs.application.club_details import (
+    ChangeClubDetails,
+    ReadClubDetails,
+)
+from app.modules.clubs.application.resolve_club_account import (
+    ResolveClubAccountFromAccessToken,
+)
+from app.modules.clubs.application.sign_in_club import SignInClub
+from app.modules.clubs.application.sign_up_club import SignUpClub
+from app.modules.clubs.domain.club_account import ClubAccount
+from app.modules.clubs.domain.ports import ClubAccountRepository, ClubRepository
+
+
+def get_club_repository(
+    db: DbSession, event_store: DomainEventStoreDep, events: EventPublisherDep
+) -> ClubRepository:
+    return build_club_repository(db, event_store=event_store, events=events)
+
+
+ClubRepositoryDep = Annotated[ClubRepository, Depends(get_club_repository)]
+
+
+def get_club_account_repository(
+    db: DbSession, event_store: DomainEventStoreDep, events: EventPublisherDep
+) -> ClubAccountRepository:
+    return build_club_account_repository(db, event_store=event_store, events=events)
+
+
+ClubAccountRepositoryDep = Annotated[
+    ClubAccountRepository, Depends(get_club_account_repository)
+]
+
+
+def get_sign_up_club(
+    clubs: ClubRepositoryDep,
+    accounts: ClubAccountRepositoryDep,
+    hasher: PasswordHasherDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> SignUpClub:
+    return SignUpClub(
+        clubs=clubs, accounts=accounts, hasher=hasher, uow=uow, clock=clock
+    )
+
+
+SignUpClubDep = Annotated[SignUpClub, Depends(get_sign_up_club)]
+
+
+def get_read_club_details(clubs: ClubRepositoryDep) -> ReadClubDetails:
+    return ReadClubDetails(clubs=clubs)
+
+
+ReadClubDetailsDep = Annotated[ReadClubDetails, Depends(get_read_club_details)]
+
+
+def get_change_club_details(
+    clubs: ClubRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> ChangeClubDetails:
+    return ChangeClubDetails(clubs=clubs, uow=uow, clock=clock)
+
+
+ChangeClubDetailsDep = Annotated[ChangeClubDetails, Depends(get_change_club_details)]
+
+
+# --- The club's session: the auth use cases, built for the club audience -----
+
+
+def get_sign_in_club(
+    accounts: ClubAccountRepositoryDep,
+    hasher: PasswordHasherDep,
+    rotator: TokenRotatorDep,
+) -> SignInClub:
+    return SignInClub(accounts=accounts, hasher=hasher, rotator=rotator)
+
+
+SignInClubDep = Annotated[SignInClub, Depends(get_sign_in_club)]
+
+
+def get_club_session_holders(accounts: ClubAccountRepositoryDep) -> SessionHolders:
+    return build_club_account_session_holders(accounts)
+
+
+ClubSessionHoldersDep = Annotated[SessionHolders, Depends(get_club_session_holders)]
+
+
+def get_refresh_club_tokens(
+    holders: ClubSessionHoldersDep,
+    tokens: RefreshTokenRepositoryDep,
+    jwt_service: TokenServiceDep,
+    hasher: PasswordHasherDep,
+    rotator: TokenRotatorDep,
+    clock: ClockDep,
+) -> RefreshAuthTokens:
+    return RefreshAuthTokens(
+        audience=Audience.CLUB,
+        holders=holders,
+        tokens=tokens,
+        jwt_service=jwt_service,
+        hasher=hasher,
+        rotator=rotator,
+        clock=clock,
+    )
+
+
+RefreshClubTokensDep = Annotated[RefreshAuthTokens, Depends(get_refresh_club_tokens)]
+
+
+def get_sign_out_club(
+    tokens: RefreshTokenRepositoryDep,
+    jwt_service: TokenServiceDep,
+    hasher: PasswordHasherDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+    events: EventPublisherDep,
+) -> Logout:
+    return Logout(
+        audience=Audience.CLUB,
+        tokens=tokens,
+        jwt_service=jwt_service,
+        hasher=hasher,
+        uow=uow,
+        clock=clock,
+        events=events,
+    )
+
+
+SignOutClubDep = Annotated[Logout, Depends(get_sign_out_club)]
+
+
+def get_resolve_club_account(
+    token_service: TokenServiceDep, accounts: ClubAccountRepositoryDep
+) -> ResolveClubAccountFromAccessToken:
+    return ResolveClubAccountFromAccessToken(
+        token_service=token_service, accounts=accounts
+    )
+
+
+ResolveClubAccountDep = Annotated[
+    ResolveClubAccountFromAccessToken, Depends(get_resolve_club_account)
+]
+
+
+async def current_club_account(
+    credentials: BearerCredentialsDep, use_case: ResolveClubAccountDep
+) -> ClubAccount:
+    """The Club account a **club-audience** bearer token was issued to. A
+    player's token is refused here, whatever account it names."""
+
+    token = credentials.credentials if credentials else None
+    return await use_case.execute(token)
+
+
+CurrentClubAccountDep = Annotated[ClubAccount, Depends(current_club_account)]

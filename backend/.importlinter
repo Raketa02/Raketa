@@ -46,7 +46,7 @@
 # appears anywhere in these four layers today, so this costs nothing to hold.
 #
 # The two `app.modules.*` arms are wildcards so that a context nobody has written yet
-# — Clubs, Courts, Bookings, Matches — is fenced on the day it is created rather than
+# — Courts, Bookings, Matches — is fenced on the day it is created rather than
 # on the day somebody remembers to come back here. That convenience carries a cost
 # worth knowing, and it was measured rather than assumed: **a wildcard matching
 # nothing is reported KEPT**, so an arm that stops matching becomes decoration in

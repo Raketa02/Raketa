@@ -34,12 +34,7 @@ async def login(
     pair = await use_case.execute(
         LoginCommand(email=payload.email, password=payload.password)
     )
-    return TokenResponse(
-        access_token=pair.access_token,
-        refresh_token=pair.refresh_token,
-        token_type=pair.token_type,
-        expires_in=pair.expires_in,
-    )
+    return TokenResponse.from_pair(pair)
 
 
 @router.post(
@@ -55,12 +50,7 @@ async def refresh(
     pair = await use_case.execute(
         RefreshTokensCommand(presented_token=payload.refresh_token)
     )
-    return TokenResponse(
-        access_token=pair.access_token,
-        refresh_token=pair.refresh_token,
-        token_type=pair.token_type,
-        expires_in=pair.expires_in,
-    )
+    return TokenResponse.from_pair(pair)
 
 
 @router.post(

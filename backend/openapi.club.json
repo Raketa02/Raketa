@@ -1,0 +1,644 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Raketa Club API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/club/auth/login": {
+      "post": {
+        "tags": [
+          "club-auth"
+        ],
+        "summary": "Sign the club in and obtain a club access/refresh token pair",
+        "description": "Club accounts only: a player's email and password are refused with `invalid_credentials`, exactly as a stranger's are.",
+        "operationId": "sign_in_api_v1_club_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/auth/refresh": {
+      "post": {
+        "tags": [
+          "club-auth"
+        ],
+        "summary": "Rotate the club's access and refresh tokens",
+        "operationId": "refresh_api_v1_club_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/auth/logout": {
+      "post": {
+        "tags": [
+          "club-auth"
+        ],
+        "summary": "Sign the club out: revoke its refresh token (idempotent)",
+        "operationId": "sign_out_api_v1_club_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/sign-up": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Sign a club up, with the account its desk signs in with",
+        "description": "Creates the club and its account **together, in one transaction**. There is no verification step. The account then signs in at `POST /api/v1/club/auth/login` \u2014 this route issues no tokens.",
+        "operationId": "sign_up_api_v1_club_sign_up_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClubSignUpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubDetailsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field the desk has to correct, named by `details.field` \u2014 the five details' codes, and `email_invalid` or `password_too_weak`. Every field is checked before the email is looked up.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`club_email_already_registered` \u2014 another club's account signs in with this email; `details.field` is `email`. A player holding the same address is never a conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/details": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "The signed-in club's details",
+        "operationId": "read_details_api_v1_club_details_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubDetailsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Change the signed-in club's details",
+        "description": "A full replacement of the five details, at any time. Saving them unchanged records nothing. Answers the details as recorded \u2014 names trimmed and collapsed, sports in the registry's order.",
+        "operationId": "change_details_api_v1_club_details_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClubDetailsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubDetailsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field the desk has to correct, named by `details.field`: `club_name_invalid`, `club_district_invalid`, `club_city_invalid`, `club_sports_required` or `club_point_invalid`. Nothing was recorded. The website writes the sentence under that field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ClubDetailsRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Trimmed, runs of whitespace collapsed, then 2\u201380 characters. Never unique. Refused with `club_name_invalid`."
+          },
+          "district": {
+            "type": "string",
+            "title": "District",
+            "description": "As the desk writes it, 2\u201364 characters. `club_district_invalid`."
+          },
+          "city": {
+            "type": "string",
+            "title": "City",
+            "description": "2\u201364 characters. `club_city_invalid`."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sports the club offers \u2014 at least one, `club_sports_required` otherwise. A sport ticked twice is ticked once, and the answer lists them in the registry's order."
+          },
+          "point": {
+            "$ref": "#/components/schemas/MapPointSchema",
+            "description": "The map pin. Off the globe is `club_point_invalid`."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "district",
+          "city",
+          "sports",
+          "point"
+        ],
+        "title": "ClubDetailsRequest",
+        "description": "The five details, **all of them on every save** \u2014 the club website edits\nthem on one page, and a save is a full replacement."
+      },
+      "ClubDetailsResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "district": {
+            "type": "string",
+            "title": "District"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "In the registry's order."
+          },
+          "point": {
+            "$ref": "#/components/schemas/MapPointSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "district",
+          "city",
+          "sports",
+          "point"
+        ],
+        "title": "ClubDetailsResponse",
+        "description": "A club as the desk sees it."
+      },
+      "ClubSignUpRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Trimmed, runs of whitespace collapsed, then 2\u201380 characters. Never unique. Refused with `club_name_invalid`."
+          },
+          "district": {
+            "type": "string",
+            "title": "District",
+            "description": "As the desk writes it, 2\u201364 characters. `club_district_invalid`."
+          },
+          "city": {
+            "type": "string",
+            "title": "City",
+            "description": "2\u201364 characters. `club_city_invalid`."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sports the club offers \u2014 at least one, `club_sports_required` otherwise. A sport ticked twice is ticked once, and the answer lists them in the registry's order."
+          },
+          "point": {
+            "$ref": "#/components/schemas/MapPointSchema",
+            "description": "The map pin. Off the globe is `club_point_invalid`."
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "Unique among club accounts, and may also belong to an unrelated player. Malformed is `email_invalid`; another club's is `409 club_email_already_registered`."
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "8\u2013128 characters with a letter and a digit \u2014 the player's rule. `password_too_weak` otherwise."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "district",
+          "city",
+          "sports",
+          "point",
+          "email",
+          "password"
+        ],
+        "title": "ClubSignUpRequest",
+        "description": "A club signs up: its details, and the email and password its desk signs\nin with. **No second password field** \u2014 the website asks once."
+      },
+      "ErrorResponse": {
+        "description": "The body of every error response, on both API surfaces.",
+        "properties": {
+          "code": {
+            "description": "Stable, machine-readable identifier for this exact failure. The only half of the envelope a client may branch on.",
+            "examples": [
+              "question_not_outstanding"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "Human-readable diagnostic. Never the copy shown to a user \u2014 that is the client's, chosen from the code.",
+            "title": "Message",
+            "type": "string"
+          },
+          "trace_id": {
+            "description": "This request's identifier, also returned on the X-Request-ID header. Ties a client-side failure to a server log without logging a payload.",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Structured context for this code, when the code defines any.",
+            "title": "Details"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "LogoutRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "LogoutRequest"
+      },
+      "LogoutResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Logged out successfully"
+          }
+        },
+        "type": "object",
+        "title": "LogoutResponse"
+      },
+      "MapPointSchema": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "title": "Latitude",
+            "description": "Decimal degrees, within \u00b190."
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude",
+            "description": "Decimal degrees, within \u00b1180."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "MapPointSchema",
+        "description": "Where the club is: the pin as the desk dropped it, never rounded."
+      },
+      "RefreshRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshRequest"
+      },
+      "Sport": {
+        "type": "string",
+        "enum": [
+          "PADEL",
+          "TENNIS",
+          "SQUASH",
+          "BADMINTON"
+        ],
+        "title": "Sport",
+        "description": "The four sports Raketa rates, as a closed enum."
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expires_in"
+        ],
+        "title": "TokenResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "Bearer access token",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

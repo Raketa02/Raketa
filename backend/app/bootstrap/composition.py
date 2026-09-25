@@ -50,6 +50,7 @@ from app.kernel import Clock
 from app.modules.auth.domain.ports import (
     PasswordHasher,
     RefreshTokenRepository,
+    SessionHolders,
     TokenService,
 )
 from app.modules.auth.infrastructure.jwt_token_service import JwtTokenService
@@ -87,6 +88,14 @@ from app.modules.challenges.infrastructure.games_settled_game import (
 )
 from app.modules.challenges.infrastructure.profile_friendly_choice import (
     ProfileFriendlyChoice,
+)
+from app.modules.clubs.application.session_holders import ClubAccountSessionHolders
+from app.modules.clubs.domain.ports import ClubAccountRepository, ClubRepository
+from app.modules.clubs.infrastructure.event_sourced_club_account_repository import (
+    EventSourcedClubAccountRepository,
+)
+from app.modules.clubs.infrastructure.event_sourced_club_repository import (
+    EventSourcedClubRepository,
 )
 from app.modules.games.application.call_off_game import CallOffGame
 from app.modules.games.application.dismiss_game import DismissGameOfCourt
@@ -442,6 +451,7 @@ from app.modules.sportsmanship.infrastructure.sqlalchemy_standing_answers import
 from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger import (
     SqlAlchemySportsmanshipLedger,
 )
+from app.modules.users.application.session_holders import UserSessionHolders
 from app.modules.users.application.set_tester_mark import SetTesterMark
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
@@ -506,12 +516,62 @@ def build_refresh_token_repository(session: AsyncSession) -> RefreshTokenReposit
 
 
 # --------------------------------------------------------------------------
+# Clubs
+# --------------------------------------------------------------------------
+
+
+def build_club_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> ClubRepository:
+    """Per unit of work, for the reason every aggregate repository is: it
+    remembers the stream versions it loaded.
+
+    **It takes the session as well as the store**, unlike ``blocks``', because
+    its ``save`` writes the club's search row in the same transaction as the
+    event (``docs/adr/0182`` §2).
+    """
+    return EventSourcedClubRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_club_account_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> ClubAccountRepository:
+    """The club's sign-in: read from its row, written to its stream and its row
+    in one transaction (``docs/adr/0182`` §3)."""
+    return EventSourcedClubAccountRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_club_account_session_holders(
+    accounts: ClubAccountRepository,
+) -> SessionHolders:
+    """Who may renew a **club** session: a Club account that still exists
+    (``docs/adr/0185`` §6). Over the repository the request already holds."""
+    return ClubAccountSessionHolders(accounts)
+
+
+# --------------------------------------------------------------------------
 # Users
 # --------------------------------------------------------------------------
 
 
 def build_user_repository(session: AsyncSession) -> UserRepository:
     return SqlAlchemyUserRepository(session)
+
+
+def build_user_session_holders(session: AsyncSession) -> SessionHolders:
+    """Who may renew a **player-app** session: an active User
+    (``docs/adr/0185`` §6)."""
+    return UserSessionHolders(build_user_repository(session))
 
 
 def build_set_tester_mark(

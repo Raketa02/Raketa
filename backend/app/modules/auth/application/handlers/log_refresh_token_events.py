@@ -19,7 +19,8 @@ class LogRefreshTokenIssued:
         logger.info(
             "auth.refresh_token.issued",
             extra={
-                "user_id": str(event.user_id),
+                "account_id": str(event.account_id),
+                "audience": event.audience,
                 "jti": event.jti,
                 "expires_at": event.expires_at.isoformat(),
                 "event_id": str(context.event_id),
@@ -35,7 +36,8 @@ class LogRefreshTokenRevoked:
         logger.info(
             "auth.refresh_token.revoked",
             extra={
-                "user_id": str(event.user_id),
+                "account_id": str(event.account_id),
+                "audience": event.audience,
                 "jti": event.jti,
                 "reason": event.reason,
                 "event_id": str(context.event_id),
@@ -51,7 +53,8 @@ class LogRefreshTokenRotated:
         logger.info(
             "auth.refresh_token.rotated",
             extra={
-                "user_id": str(event.user_id),
+                "account_id": str(event.account_id),
+                "audience": event.audience,
                 "revoked_jti": event.revoked_jti,
                 "issued_jti": event.issued_jti,
                 "event_id": str(context.event_id),

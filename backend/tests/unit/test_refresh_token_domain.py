@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.events import (
     RefreshTokenIssued,
     RefreshTokenRevoked,
@@ -12,7 +13,8 @@ from app.shared.ids import new_uuid
 def _token(expires_at):
     return RefreshToken(
         id=new_uuid(),
-        user_id=new_uuid(),
+        account_id=new_uuid(),
+        audience=Audience.PLAYER_APP,
         token_hash="hash",
         jti="jti-1",
         refresh_expires_at=expires_at,
@@ -44,13 +46,14 @@ def test_revoke_flips_state():
 
 def test_issue_records_refresh_token_issued_event():
     token_id = new_uuid()
-    user_id = new_uuid()
+    account_id = new_uuid()
     expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
     occurred_at = datetime.now(timezone.utc)
 
     tok = RefreshToken.issue(
         token_id=token_id,
-        user_id=user_id,
+        account_id=account_id,
+        audience=Audience.CLUB,
         token_hash="hash",
         jti="jti-1",
         refresh_expires_at=expires_at,
@@ -60,10 +63,11 @@ def test_issue_records_refresh_token_issued_event():
     assert tok.pull_events() == [
         RefreshTokenIssued(
             token_id=token_id,
-            user_id=user_id,
+            account_id=account_id,
             jti="jti-1",
             expires_at=expires_at,
             occurred_at=occurred_at,
+            audience="club",
         )
     ]
 
@@ -77,10 +81,11 @@ def test_revoke_records_refresh_token_revoked_event():
     assert tok.pull_events() == [
         RefreshTokenRevoked(
             token_id=tok.id,
-            user_id=tok.user_id,
+            account_id=tok.account_id,
             jti=tok.jti,
             reason="logout",
             occurred_at=now,
+            audience="player_app",
         )
     ]
 
@@ -96,11 +101,12 @@ def test_rotate_to_records_refresh_token_rotated_event():
     assert old.revoked_at == now
     assert old.pull_events() == [
         RefreshTokenRotated(
-            user_id=old.user_id,
+            account_id=old.account_id,
             revoked_token_id=old.id,
             revoked_jti=old.jti,
             issued_token_id=new.id,
             issued_jti=new.jti,
             occurred_at=now,
+            audience="player_app",
         )
     ]

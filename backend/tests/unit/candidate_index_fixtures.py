@@ -186,6 +186,8 @@ ONE_OF_EACH_PROJECTED_CONTRACT: tuple[DomainEvent, ...] = (
     opt_in(_SOMEBODY),
     rating_initialised(_SOMEBODY),
     intent_declared(_SOMEBODY),
-    RefreshTokenIssued(_SOMEBODY, _SOMEBODY, "jti", START, START),
-    RefreshTokenRotated(_SOMEBODY, _SOMEBODY, "old", _SOMEBODY, "new", START),
+    RefreshTokenIssued(_SOMEBODY, _SOMEBODY, "jti", START, START, "player_app"),
+    RefreshTokenRotated(
+        _SOMEBODY, _SOMEBODY, "old", _SOMEBODY, "new", START, "player_app"
+    ),
 )

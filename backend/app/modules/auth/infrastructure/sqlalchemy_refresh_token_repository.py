@@ -2,20 +2,44 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.refresh_token import RefreshToken
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_model import (
     RefreshTokenORM,
 )
 
 
+#: The column each audience's account is recorded in — **the one place the
+#: two are paired**. Each audience has one kind of account behind it
+#: (``auth/domain/audience.py``), so the column a row fills is also the audience
+#: its token was issued for; the table's check constraint guarantees exactly one.
+_HOLDER_COLUMN: dict[Audience, str] = {
+    Audience.PLAYER_APP: "user_id",
+    Audience.CLUB: "club_account_id",
+}
+
+
+def _holder_of(row: RefreshTokenORM) -> tuple[UUID, Audience]:
+    """Whose the row is, read off the one column it fills."""
+
+    for audience, column in _HOLDER_COLUMN.items():
+        account_id = getattr(row, column)
+        if account_id is not None:
+            return account_id, audience
+    raise RuntimeError(f"refresh token {row.id} names no account")
+
+
 def _to_domain(row: RefreshTokenORM) -> RefreshToken:
+    account_id, audience = _holder_of(row)
     return RefreshToken(
         id=row.id,
-        user_id=row.user_id,
+        account_id=account_id,
+        audience=audience,
         token_hash=row.token_hash,
         jti=row.jti,
         refresh_expires_at=row.refresh_expires_at,
@@ -33,13 +57,13 @@ class SqlAlchemyRefreshTokenRepository:
     async def add(self, token: RefreshToken) -> RefreshToken:
         row = RefreshTokenORM(
             id=token.id,
-            user_id=token.user_id,
             token_hash=token.token_hash,
             jti=token.jti,
             refresh_expires_at=token.refresh_expires_at,
             is_valid=token.is_valid,
             revoked_at=token.revoked_at,
         )
+        setattr(row, _HOLDER_COLUMN[token.audience], token.account_id)
         self._session.add(row)
         await self._session.flush()
         await self._session.refresh(row)

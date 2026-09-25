@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.modules.auth.application.token_rotation import TokenPair, TokenRotator
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.errors import AccountDisabled, InvalidCredentials
 from app.modules.auth.domain.ports import PasswordHasher
 from app.modules.users.domain.ports import UserRepository
@@ -15,7 +16,12 @@ class LoginCommand:
 
 
 class Login:
-    """Verify email + password and issue a fresh token pair."""
+    """Verify a player's email + password and issue a fresh **player-app** pair.
+
+    Reads Users only: a Club account's credentials are refused here exactly as
+    a stranger's are, because the two are separate identities that may share an
+    email (``docs/adr/0182`` §3). The club signs in on its own surface.
+    """
 
     def __init__(
         self,
@@ -35,4 +41,4 @@ class Login:
             raise InvalidCredentials()
         if not user.is_active:
             raise AccountDisabled()
-        return await self._rotator.issue_pair(user.id)
+        return await self._rotator.issue_pair(user.id, audience=Audience.PLAYER_APP)

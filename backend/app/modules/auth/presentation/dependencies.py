@@ -6,6 +6,7 @@ from fastapi import Depends
 
 from app.api.dependencies import (
     ClockDep,
+    DbSession,
     EventPublisherDep,
     PasswordHasherDep,
     RefreshTokenRepositoryDep,
@@ -14,9 +15,12 @@ from app.api.dependencies import (
     UnitOfWorkDep,
     UserRepositoryDep,
 )
+from app.bootstrap.composition import build_user_session_holders
 from app.modules.auth.application.login import Login
 from app.modules.auth.application.logout import Logout
 from app.modules.auth.application.refresh_token import RefreshAuthTokens
+from app.modules.auth.domain.audience import Audience
+from app.modules.auth.domain.ports import SessionHolders
 
 
 def get_login_use_case(
@@ -34,8 +38,15 @@ def get_login_use_case(
 LoginUseCaseDep = Annotated[Login, Depends(get_login_use_case)]
 
 
+def get_player_session_holders(db: DbSession) -> SessionHolders:
+    return build_user_session_holders(db)
+
+
+PlayerSessionHoldersDep = Annotated[SessionHolders, Depends(get_player_session_holders)]
+
+
 def get_refresh_use_case(
-    users: UserRepositoryDep,
+    holders: PlayerSessionHoldersDep,
     tokens: RefreshTokenRepositoryDep,
     jwt_service: TokenServiceDep,
     hasher: PasswordHasherDep,
@@ -43,7 +54,8 @@ def get_refresh_use_case(
     clock: ClockDep,
 ) -> RefreshAuthTokens:
     return RefreshAuthTokens(
-        users=users,
+        audience=Audience.PLAYER_APP,
+        holders=holders,
         tokens=tokens,
         jwt_service=jwt_service,
         hasher=hasher,
@@ -64,6 +76,7 @@ def get_logout_use_case(
     events: EventPublisherDep,
 ) -> Logout:
     return Logout(
+        audience=Audience.PLAYER_APP,
         tokens=tokens,
         jwt_service=jwt_service,
         hasher=hasher,
