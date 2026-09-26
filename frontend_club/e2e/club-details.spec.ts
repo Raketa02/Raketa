@@ -114,6 +114,37 @@ test.describe('Club details', () => {
     await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
   });
 
+  test('unticking a sport an official group plays is refused, naming the group', async ({
+    page,
+    stub,
+    club,
+  }) => {
+    void club;
+    stub.on('put', '/api/v1/club/details', () => ({
+      status: 409,
+      body: refusal('club_sport_declared_by_group', 'sports', {
+        sport: 'PADEL',
+        group: 'Ogrody 33 Club',
+      }),
+    }));
+    await signIn(page);
+    await page.goto('/details');
+    const padel = page.getByRole('checkbox', { name: 'Padel' });
+    await padel.uncheck();
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    const sports = page.getByRole('group', { name: 'Sports offered' });
+    await expect(
+      sports.getByText('Ogrody 33 Club plays padel. Tick padel again to save the rest.'),
+    ).toBeVisible();
+    await expect(sports).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
+
+    // Ticking it again is the other way out, and takes the refusal with it.
+    await padel.check();
+    await expect(sports.getByText(/plays padel/)).toBeHidden();
+  });
+
   test('a refusal this site has no sentence for still lands under the field it names', async ({
     page,
     stub,

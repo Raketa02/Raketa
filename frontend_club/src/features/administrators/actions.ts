@@ -4,7 +4,14 @@ import { revalidatePath } from 'next/cache';
 
 import { writeAsClub } from '@/server/club';
 import type { Outcome } from '@/server/outcome';
-import { formText, hasRefusals, placeRefusal, type FormState } from '@/ui/forms';
+import {
+  formId,
+  formText,
+  hasRefusals,
+  placeRefusal,
+  type FormState,
+  type RefusalAbout,
+} from '@/ui/forms';
 
 import { toInvitationBody, toSent, type Sent } from './mappers';
 import {
@@ -12,7 +19,6 @@ import {
   INVITE_FIELDS,
   invitationOf,
   isAct,
-  isAdministratorId,
   readInvitation,
   type InviteField,
 } from './schemas';
@@ -58,7 +64,7 @@ export interface ActState {
   /** Who an email just went to, after *Resend invitation* or *Reset password*. */
   readonly sent: Sent | null;
   /** What the backend refused, and about whom. */
-  readonly refusal: { readonly code: string; readonly name: string } | null;
+  readonly refusal: RefusalAbout | null;
 }
 
 /**
@@ -82,10 +88,10 @@ function settleAct<T>(outcome: Outcome<T>, name: string, sent: (data: T) => Sent
  */
 export async function actOnAdministrator(_previous: ActState, form: FormData): Promise<ActState> {
   const act = formText(form, 'act');
-  const id = formText(form, 'id');
+  const id = formId(form, 'id');
   const name = formText(form, 'name');
   if (!isAct(act)) return { sent: null, refusal: { code: 'request_invalid', name } };
-  if (!isAdministratorId(id)) {
+  if (id === null) {
     return { sent: null, refusal: { code: 'administrator_not_found', name } };
   }
   const path = { params: { path: { administrator_id: id } } };

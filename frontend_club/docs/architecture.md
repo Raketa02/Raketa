@@ -28,11 +28,12 @@ e2e/                   the Playwright suite and its stub backend (§7)
   components, so the backend is only ever reached through a query or an action. The exception is
   `src/app/session/`, whose two route handlers belong to the server layer as the proxy does.
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
-  password?_, _Set a new password_), `club-details`, `overview`, `administrators`, and soon
-  `groups`. A feature may use another feature's components, schemas, copy and mappers
-  (sign-up draws Club details' fields; Overview greets a `Club`), and never another feature's
-  actions or queries. A feature's queries and actions call the backend only through the three
-  doors of §4, and may read the session, the recovery cookie and the configuration directly.
+  password?_, _Set a new password_), `club-details`, `overview`, `administrators` and `groups`
+  (the Groups table and _Hand over_). A feature may use another feature's components, schemas,
+  copy and mappers (sign-up draws Club details' fields; Overview greets a `Club`), and never
+  another feature's actions or queries. A feature's queries and actions call the backend only
+  through the three doors of §4, and may read the session, the recovery cookie and the
+  configuration directly.
 - **`mappers.ts` is the only file outside `src/server/` that imports a generated type**, besides
   the suite's stub in `e2e/`, which types its replies from the contract on purpose. It
   turns a wire type into a view model and back. A contract change then lands in one file per
@@ -100,13 +101,15 @@ deploy-time question for the day there is a deployment.
 
 Each call is `openapi-fetch` over the generated `paths`, with a ten-second timeout, and each
 settles into an **outcome**: `{ ok: true, data }` or `{ ok: false, error: { status, code,
-field? } }`. `code` is the backend's, or one of three of the website's own: `backend_unreachable`
-(no answer), `backend_failed` (an answer with no envelope) and `request_invalid` (any `422`, whose
-envelope reads `validation_error` and names no field). A `422` is this site's bug, said over the
-form, except on the three forms whose one box the contract checks by format is an email (sign-in,
-_Forgot password?_ and the code): there the backend's email check disagreed with this site's, and
-the action turns it into `email_invalid` under the box. Failures that are nobody's typing are logged by
-code and trace id, never with a payload.
+field?, details? } }`, where `details` keeps the envelope's words, such as the group a
+`club_sport_declared_by_group` names. `code` is the backend's, or one of three of the website's
+own: `backend_unreachable` (no answer), `backend_failed` (an answer with no envelope) and
+`request_invalid` (any `422`, whose envelope reads `validation_error` and names no field). A
+`422` is this site's bug, said over the form, except on the three forms whose one box the
+contract checks by format is an email (sign-in, _Forgot password?_ and the code): there the
+backend's email check disagreed with this site's, and the action turns it into `email_invalid`
+under the box. Failures that are nobody's typing are logged by code and trace id, never with a
+payload.
 
 **Decisions branch on `code`, never on `message`.** The backend's message is a diagnostic; the
 sentence the desk reads is this site's, chosen by code.
@@ -166,9 +169,11 @@ points.
   `/api/v1/club/administrators/{administrator_id}`, and its handler and `stub.requests` read
   the ids in `params`.
 - **The fake club** installs the default handlers: one club, whose tokens rotate, whose spent
-  refresh tokens are refused, whose reset signs every session out, and whose administrators
-  keep ADR-0184's rules. A test seats its people in `club.administrators`, and a test about one
-  reply overrides that operation. Its tokens are unique across the run (`club.accessToken(n)`),
+  refresh tokens are refused, whose reset signs every session out, whose administrators keep
+  ADR-0184's rules, and whose official groups are run only by an active administrator, so a
+  removal leaves them needing one until a handover. A test seats its people in
+  `club.administrators` and its groups in `club.groups` (`officialGroup(…)`), and a test about
+  one reply overrides that operation. Its tokens are unique across the run (`club.accessToken(n)`),
   because the single flight's grace window would hand one test the pair it renewed for another.
 - **Tests assert what the desk or the backend would see**: text on the page, the URL, the
   cookie's attributes, and the requests that arrived at the stub. They never read the cookie's
@@ -191,5 +196,8 @@ literal anywhere else, and ESLint refuses an inline `style`. A media query's wid
 literal CSS allows no variable for.
 
 **A page works at every width, down to a phone with no sideways scrolling.** On a phone the top
-bar becomes three rows: the wordmark and _Sign out_, the club, then the pages. A table's rows
-become blocks, one cell under another, and its column heads are left to a screen reader.
+bar becomes three rows: the wordmark and _Sign out_, the club, then the pages. Every table is
+drawn by `src/ui/Table.module.css`: on a phone its rows become blocks, one cell under another,
+and its column heads are left to a screen reader. A cell that would be a bare figure there
+(Groups' _Players_, _From WhatsApp_ and _Games_) prints its column's name before it, for the eye
+only.

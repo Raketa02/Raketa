@@ -1,0 +1,25 @@
+.bar {
+  display: block;
+  width: 100%;
+  min-width: var(--size-bar-width);
+  height: var(--size-bar);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-pill);
+  appearance: none;
+  background: var(--colour-rule);
+}
+
+.bar::-webkit-progress-bar {
+  background: var(--colour-rule);
+}
+
+.bar::-webkit-progress-value {
+  border-radius: var(--radius-pill);
+  background: var(--colour-green);
+}
+
+.bar::-moz-progress-bar {
+  border-radius: var(--radius-pill);
+  background: var(--colour-green);
+}

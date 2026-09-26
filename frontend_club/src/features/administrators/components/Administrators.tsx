@@ -89,9 +89,7 @@ export function Administrators({ administrators }: { administrators: readonly Ad
         />
       ) : null}
       {sent === null ? null : <SentBanner sent={sent} onDone={() => setSent(null)} />}
-      {refused === null ? null : (
-        <Notice tone="error">{actRefusal(refused.code, refused.name)}</Notice>
-      )}
+      {refused === null ? null : <Notice tone="error">{actRefusal(refused)}</Notice>}
       <AdministratorsTable
         administrators={administrators}
         action={act}

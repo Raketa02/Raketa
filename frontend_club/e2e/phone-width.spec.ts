@@ -1,5 +1,5 @@
 import { expect, signIn, test } from './fixtures';
-import { administrator, DAY_MS, fromNow } from './stub/club';
+import { administrator, DAY_MS, fromNow, officialGroup } from './stub/club';
 
 /** **Every page works at phone width** (#500 story 95): nothing scrolls sideways at 360 px. */
 
@@ -73,4 +73,45 @@ test('Administrators fits a phone: its rows, its form, its banner and its questi
   await page.getByRole('button', { name: 'Remove' }).first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await fitsSideways(page, '/administrators, removing');
+});
+
+test('Groups and Hand over fit a phone: the table, the choices and the question', async ({
+  page,
+  club,
+}) => {
+  const active = (name: string, email: string) =>
+    administrator({
+      name,
+      email,
+      status: 'ACTIVE',
+      last_used_at: fromNow(-DAY_MS),
+      expires_at: null,
+    });
+  const marta = active('Marta Wójcik', 'marta.wojcik.coaching@ogrody33-krakow.pl');
+  club.administrators = [marta, active('Tomek Kowalczykiewicz', 'tomek.kowalczykiewicz@gmail.com')];
+  const group = officialGroup({
+    name: 'Ogrody 33 Club — wieczorne granie dla wszystkich',
+    runBy: marta,
+    member_count: 52,
+    waiting_count: 12,
+    whatsapp_size: 48,
+  });
+  club.groups = [group, officialGroup({ name: 'Ogrody open play', member_count: 8 })];
+  await signIn(page);
+  await page.goto('/groups');
+  await expect(page.getByText('52 of 48 · 108%')).toBeVisible();
+  await fitsSideways(page, '/groups');
+  // With the column heads gone, a bare figure says what it counts.
+  const games = page.getByRole('row').nth(1).getByRole('cell').last();
+  expect(await games.evaluate((cell) => getComputedStyle(cell, '::before').content)).toMatch(
+    /Games/,
+  );
+
+  await page.goto(`/groups/${group.id}`);
+  await page.getByRole('radio', { name: /Tomek/ }).check();
+  await fitsSideways(page, '/groups/<id>');
+
+  await page.getByRole('button', { name: 'Hand over', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await fitsSideways(page, '/groups/<id>, confirming');
 });

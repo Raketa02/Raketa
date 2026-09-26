@@ -153,7 +153,7 @@ export interface paths {
         get: operations["read_details_api_v1_club_details_get"];
         /**
          * Change the signed-in club's details
-         * @description A full replacement of the five details, at any time. Saving them unchanged records nothing. Answers the details as recorded — names trimmed and collapsed, sports in the registry's order.
+         * @description A full replacement of the five details, at any time. Saving them unchanged records nothing. **A sport an official group declares cannot be unticked**, and the refusal names the group. Answers the details as recorded — names trimmed and collapsed, sports in the registry's order.
          */
         put: operations["change_details_api_v1_club_details_put"];
         post?: never;
@@ -244,6 +244,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/club/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The club's official groups, and how much of each WhatsApp crowd arrived
+         * @description *Official groups at [club]*: each one's name and monogram, who runs it — or `null`, *needs an administrator* — its players and how many are waiting, *From WhatsApp* as players of the WhatsApp group's size, and how many games it gave birth to. By name.
+         */
+        get: operations["club_groups_api_v1_club_groups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/groups/{group_id}/administrator": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Hand an official group over to one of the club's administrators
+         * @description Any official group of the club, **one that needs an administrator included**, to any **active** Administrator. Only who answers changes: the link, who can join, the WhatsApp size, the players and **the requests waiting** all stay, and the new Administrator finds them. The previous one stops seeing it — and stays in it if they joined it as a player. Handing it to whoever runs it changes nothing. Answers the group's row as the table now reads it.
+         */
+        put: operations["hand_over_api_v1_club_groups__group_id__administrator_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -298,7 +338,7 @@ export interface components {
             expires_at: string | null;
             /**
              * Groups
-             * @description The official groups this administrator runs. Empty until official groups exist.
+             * @description The official groups this administrator runs now, by name — the row's dropdown. **Only on an `ACTIVE` row**: empty for somebody invited, expired or put back to invited by *Reset password*, whose groups read *needs an administrator* on the Groups table meanwhile.
              */
             groups: components["schemas"]["AdministratorGroupSchema"][];
             /**
@@ -396,6 +436,72 @@ export interface components {
             point: components["schemas"]["MapPointSchema"];
         };
         /**
+         * ClubGroupAdministratorSchema
+         * @description The Administrator running a group, as the club's own tables name them.
+         */
+        ClubGroupAdministratorSchema: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The administratorship — the `id` of their row on the Administrators table, and what a handover names.
+             */
+            id: string;
+            /**
+             * Name
+             * @description **The name the club gave them**, whole — the one its Administrators table prints beside the same person.
+             */
+            name: string;
+        };
+        /**
+         * ClubGroupSchema
+         * @description One row of the club's Groups table: an official group at the club.
+         */
+        ClubGroupSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            monogram: components["schemas"]["MonogramSchema"];
+            /** @description Who runs it now. **`null` while it needs an administrator** — the club removed whoever ran it, and nobody has been handed it: players read *[club] approves joins* and its requests wait, until a handover. */
+            administrator: components["schemas"]["ClubGroupAdministratorSchema"] | null;
+            /**
+             * Member Count
+             * @description *Players*: every Group member — an Administrator who joined it as a player included. **The same number the group page shows**, whoever reads it.
+             */
+            member_count: number;
+            /**
+             * Waiting Count
+             * @description How many Join requests are waiting — the amber *N waiting*. `0` when nobody is.
+             */
+            waiting_count: number;
+            /**
+             * Whatsapp Size
+             * @description How many people the WhatsApp group it mirrors has — *of 48*.
+             */
+            whatsapp_size: number;
+            /**
+             * Whatsapp Percent
+             * @description *From WhatsApp*: `member_count` over `whatsapp_size`, as a whole percent rounded half up — *11 of 48 · 23%*. **Never capped**: more players than the WhatsApp group has is the real figure, *52 of 48 · 108%*, and the bar is drawn full.
+             */
+            whatsapp_percent: number;
+            /**
+             * Games
+             * @description How many games **the group gave birth to** — never a game two of its members arranged elsewhere. No group picks a game yet, so `0`; the day one can, it counts them and means the same.
+             */
+            games: number;
+        };
+        /** ClubGroupsResponse */
+        ClubGroupsResponse: {
+            /**
+             * Groups
+             * @description **Every official group at the club**, whoever runs it or nobody, by name. A player group whose home club this is is not the club's, and is never here. Empty before an Administrator makes the first.
+             */
+            groups: components["schemas"]["ClubGroupSchema"][];
+        };
+        /**
          * ClubSignUpRequest
          * @description A club signs up: its details, and the email and password its desk signs
          *     in with. **No second password field** — the website asks once.
@@ -481,6 +587,18 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * HandOverRequest
+         * @description *Hand over*: who the club chose.
+         */
+        HandOverRequest: {
+            /**
+             * Administrator Id
+             * Format: uuid
+             * @description An **active** Administrator of the club — the `id` of an `ACTIVE` row on the Administrators table. Anybody else is `409 administrator_not_active`.
+             */
+            administrator_id: string;
+        };
+        /**
          * InviteAdministratorRequest
          * @description *+ Add administrator*: a name and an email, and nothing else — the club
          *     never sets, sees or handles a password or a code.
@@ -535,6 +653,23 @@ export interface components {
              * @description Decimal degrees, within ±180.
              */
             longitude: number;
+        };
+        /**
+         * MonogramSchema
+         * @description The group's tile, **cut by the backend** so every client draws the same
+         *     one (``docs/adr/0183`` §5).
+         */
+        MonogramSchema: {
+            /**
+             * Letters
+             * @description The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes — never change its case.
+             */
+            letters: string;
+            /**
+             * Colour
+             * @description A colour **key** from 0 to 7, fixed for the group for ever — derived from its id, so a rename keeps it. Map it to your own palette; the backend never names a colour.
+             */
+            colour: number;
         };
         /**
          * NewPasswordRequest
@@ -947,6 +1082,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `club_sport_declared_by_group` — the save unticks a sport an official group at the club declares; `details.field` is `sports`, `details.sport` the sport and `details.group` the group's name (the first by name, where several play it). Nothing was recorded. The group's administrator changes its sports first, or the sport stays ticked. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1147,6 +1291,79 @@ export interface operations {
             };
             /** @description `administrator_not_found` — no administrator of this club has that id: another club's, a removed one, or none. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    club_groups_api_v1_club_groups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClubGroupsResponse"];
+                };
+            };
+        };
+    };
+    hand_over_api_v1_club_groups__group_id__administrator_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandOverRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClubGroupSchema"];
+                };
+            };
+            /** @description `group_not_found` — not an official group of this club: no such group, a player group whose home club this is, or another club's. Nothing was recorded. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `administrator_not_active` — the one chosen is not an active Administrator of this club: still invited, expired, removed, another club's, or nobody. Nothing was recorded; choose again from the Administrators table as it stands. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

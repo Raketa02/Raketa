@@ -46,5 +46,5 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
 - **Stub backend** — `e2e/stub/backend.ts`: an HTTP server standing in for the club surface in
   the Playwright suite, typed from the wire types, recording every request.
 - **Fake club** — `e2e/stub/club.ts`: the stub's default handlers, one club whose tokens rotate,
-  whose reset signs everyone out and whose administrators keep the backend's rules, so a test
-  programs only the reply it is about.
+  whose reset signs everyone out and whose administrators and official groups keep the
+  backend's rules, so a test programs only the reply it is about.

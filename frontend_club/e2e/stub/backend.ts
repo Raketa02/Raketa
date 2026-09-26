@@ -97,13 +97,17 @@ function paramsOf(template: string, path: string): Record<string, string> | null
   );
 }
 
-/** An error envelope, as every backend refusal is shaped. */
-export function refusal(code: string, field?: string): ErrorBody {
+/**
+ * An error envelope, as every backend refusal is shaped: `field` names the control it is about,
+ * and `more` is whatever else the code defines (`club_sport_declared_by_group`'s group).
+ */
+export function refusal(code: string, field?: string, more?: Record<string, string>): ErrorBody {
+  const details = { ...(field === undefined ? {} : { field }), ...more };
   return {
     code,
     message: `stub: ${code}`,
     trace_id: 'stub-trace',
-    details: field === undefined ? null : { field },
+    details: Object.keys(details).length === 0 ? null : details,
   };
 }
 

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import tableStyles from '@/ui/Table.module.css';
 import { Tag } from '@/ui/Tag';
 
 import { ADMINISTRATORS_COPY as COPY, lastUsed } from '../copy';
@@ -94,8 +95,8 @@ export function AdministratorsTable({
 }) {
   return (
     <Card>
-      <table className={styles.table}>
-        <thead className={styles.head}>
+      <table className={tableStyles.table}>
+        <thead className={tableStyles.head}>
           <tr>
             <th scope="col">{COPY.columns.name}</th>
             <th scope="col">{COPY.columns.email}</th>

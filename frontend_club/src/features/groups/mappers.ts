@@ -1,0 +1,85 @@
+/**
+ * **The club's official groups, wire to view.** The only file in this feature that imports a
+ * generated type (ADR-0187 §6); everything else reads the {@link GroupRow} it makes.
+ */
+
+import type { components } from '@/generated/schema';
+
+type WireGroup = components['schemas']['ClubGroupSchema'];
+type WireGroups = components['schemas']['ClubGroupsResponse'];
+type WireAdministrators = components['schemas']['AdministratorListResponse'];
+
+/** Who runs a group: the name the club gave them, as its Administrators table prints it. */
+export interface GroupAdministrator {
+  readonly id: string;
+  readonly name: string;
+}
+
+/** One row of the Groups table (club mocks 15–16). */
+export interface GroupRow {
+  readonly id: string;
+  readonly name: string;
+  /** `null` while it needs an administrator: the club removed whoever ran it (ADR-0183 §8). */
+  readonly administrator: GroupAdministrator | null;
+  /** Every Group member, an Administrator who joined it as a player included. */
+  readonly players: number;
+  /** Join requests waiting for an answer. */
+  readonly waiting: number;
+  /**
+   * *From WhatsApp*: the players, of the WhatsApp group's size. The percent is the backend's,
+   * rounded half up and never capped (*52 of 48 · 108%*), and is never worked out again here.
+   */
+  readonly whatsApp: { readonly size: number; readonly percent: number };
+  /** Games born in the group. None can be yet, so `0` (ADR-0183 §11). */
+  readonly games: number;
+}
+
+export function toGroupRow(wire: WireGroup): GroupRow {
+  return {
+    id: wire.id,
+    name: wire.name,
+    administrator:
+      wire.administrator === null
+        ? null
+        : { id: wire.administrator.id, name: wire.administrator.name },
+    players: wire.member_count,
+    waiting: wire.waiting_count,
+    whatsApp: { size: wire.whatsapp_size, percent: wire.whatsapp_percent },
+    games: wire.games,
+  };
+}
+
+/** Somebody a group can be handed to: an active Administrator of the club. */
+export interface Choice {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+}
+
+/** **The Hand over page**: the group, and whom the club can give it to. */
+export interface HandOverView {
+  readonly group: GroupRow;
+  /**
+   * The club's **active** administrators, by name, but for whoever runs the group already:
+   * handing it to them would change nothing. Somebody invited or expired can't take a group
+   * (ADR-0183 §8).
+   */
+  readonly choices: readonly Choice[];
+}
+
+/** The Hand over page for one group, or `null` when it is none of the club's official groups. */
+export function toHandOver(
+  groupId: string,
+  groups: WireGroups,
+  administrators: WireAdministrators,
+): HandOverView | null {
+  const wire = groups.groups.find((group) => group.id === groupId);
+  if (wire === undefined) return null;
+  const group = toGroupRow(wire);
+  return {
+    group,
+    choices: administrators.administrators
+      .filter((each) => each.status === 'ACTIVE' && each.id !== group.administrator?.id)
+      .map((each) => ({ id: each.id, name: each.name, email: each.email })),
+  };
+}

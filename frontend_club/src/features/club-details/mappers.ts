@@ -31,6 +31,34 @@ export function isSport(value: unknown): value is Sport {
   return typeof value === 'string' && value in SPORT_NAMES;
 }
 
+/** *Padel*: a sport as a person names it. */
+export function sportName(sport: Sport): string {
+  return SPORT_NAMES[sport];
+}
+
+/**
+ * **A sport the club can't stop offering**, because an official group plays it (ADR-0182 §5):
+ * the first such group by name, as the backend's refusal names it.
+ */
+export interface SportInUse {
+  readonly sport: Sport;
+  readonly group: string;
+}
+
+/**
+ * Which group plays the sport a save unticked, from the backend's refusal: `details.sport` and
+ * `details.group` of a `club_sport_declared_by_group`. `null` for any other refusal, or one
+ * that names neither.
+ */
+export function toSportInUse(error: {
+  readonly code: string;
+  readonly details?: Readonly<Record<string, string>>;
+}): SportInUse | null {
+  if (error.code !== 'club_sport_declared_by_group') return null;
+  const { sport, group } = error.details ?? {};
+  return isSport(sport) && group !== undefined ? { sport, group } : null;
+}
+
 export interface MapPoint {
   readonly latitude: number;
   readonly longitude: number;

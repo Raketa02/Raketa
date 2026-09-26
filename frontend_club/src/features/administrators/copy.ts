@@ -1,7 +1,6 @@
 /** **Every sentence the Administrators page says** (club mocks 2–4 and 14). */
 
-import { FALLBACK_REFUSAL } from '@/ui/copy';
-import { sentenceFor } from '@/ui/forms';
+import { sentenceAbout, type RefusalAbout } from '@/ui/forms';
 
 export const ADMINISTRATORS_COPY = {
   caption: 'People who run your groups in the app',
@@ -83,8 +82,8 @@ const ACT_REFUSALS: Readonly<Record<string, (name: string) => string>> = {
 };
 
 /** The sentence for an act's refusal: about the person, or one every form can meet. */
-export function actRefusal(code: string, name: string): string {
-  return ACT_REFUSALS[code]?.(name) ?? sentenceFor(code, {}) ?? FALLBACK_REFUSAL;
+export function actRefusal(refusal: RefusalAbout): string {
+  return sentenceAbout(refusal, ACT_REFUSALS);
 }
 
 /**

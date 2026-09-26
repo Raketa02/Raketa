@@ -64,3 +64,29 @@ export function formText(form: FormData, name: string): string {
   const value = form.get(name);
   return typeof value === 'string' ? value : '';
 }
+
+/**
+ * An id from a posted form, as the backend's routes take one (a UUID), or `null`: anything else
+ * names nothing the club has, and never reaches the backend.
+ */
+export function formId(form: FormData, name: string): string | null {
+  const value = formText(form, name);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : null;
+}
+
+/** A refusal of something the desk did to somebody on the page, said about them by name. */
+export interface RefusalAbout {
+  readonly code: string;
+  /** Whom it was about, as the page named them when the desk pressed. */
+  readonly name: string;
+}
+
+/** The sentence for a refusal about somebody: the feature's own, the common one, or the fallback. */
+export function sentenceAbout(
+  refusal: RefusalAbout,
+  table: Readonly<Record<string, (name: string) => string>>,
+): string {
+  return table[refusal.code]?.(refusal.name) ?? COMMON_REFUSALS[refusal.code] ?? FALLBACK_REFUSAL;
+}

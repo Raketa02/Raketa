@@ -1,0 +1,50 @@
+.row {
+  cursor: pointer;
+}
+
+.row:hover > * {
+  background: var(--colour-paper);
+}
+
+.name {
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+}
+
+.open {
+  text-decoration: none;
+}
+
+.open:hover {
+  text-decoration: underline;
+}
+
+.players {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.whatsApp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.figure {
+  color: var(--colour-muted);
+}
+
+@media (max-width: 800px) {
+  /* The column's name before its figure, for the eye only: a screen reader has the heads. */
+  .labelled::before {
+    margin-right: var(--space-2);
+    color: var(--colour-muted);
+    content: attr(data-label) / '';
+    font-size: var(--text-label);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+}

@@ -71,8 +71,9 @@ exit is deliberate. `APP_ENV` is one of the four names and only `local` runs tod
 Playwright drives the built pages while `API_URL` points at **the stub backend** in `e2e/stub/`,
 which answers with payloads typed from the generated contract and records every request. The
 fixtures reset it before each test and install **the fake club** (`e2e/stub/club.ts`): one
-club whose tokens rotate, whose reset signs everyone out, and whose administrators keep the
-backend's rules (a test seats them in `club.administrators`). A test about one reply overrides
+club whose tokens rotate, whose reset signs everyone out, and whose administrators and official
+groups keep the backend's rules (a test seats them in `club.administrators` and `club.groups`;
+a group is run only while its administrator is active). A test about one reply overrides
 that operation with `stub.on`, naming it by the contract's path, `{administrator_id}` and all.
 One worker, because the one server talks to the one stub.
 

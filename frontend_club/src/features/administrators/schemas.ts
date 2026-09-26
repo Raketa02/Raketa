@@ -45,8 +45,3 @@ export type Act = (typeof ACTS)[number];
 export function isAct(value: string): value is Act {
   return (ACTS as readonly string[]).includes(value);
 }
-
-/** An administrator's id, as the backend's routes take one: anything else names nobody here. */
-export function isAdministratorId(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-}

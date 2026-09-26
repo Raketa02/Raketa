@@ -16,7 +16,18 @@ import { refusal, type StubBackend } from './backend';
 
 type ClubDetails = components['schemas']['ClubDetailsResponse'];
 type TokenPair = components['schemas']['TokenResponse'];
+type ClubGroup = components['schemas']['ClubGroupSchema'];
 export type Administrator = components['schemas']['AdministratorSchema'];
+
+/**
+ * **An official group as the backend keeps it**: a row of the Groups table, except that it
+ * records whom it was given to rather than who runs it. Somebody runs it only while they are an
+ * active Administrator of the club, so removing them, or *Reset password*, leaves it needing an
+ * administrator until a handover (ADR-0183 §8, #510).
+ */
+export type OfficialGroup = Omit<ClubGroup, 'administrator'> & {
+  administrator_id: string | null;
+};
 
 const HOUR_MS = 3_600_000;
 export const DAY_MS = 24 * HOUR_MS;
@@ -43,6 +54,31 @@ export function administrator(
     groups: [],
     can_reset_password: false,
     ...fields,
+  };
+}
+
+/**
+ * **An official group of the club**, given to `runBy` (nobody by default), with no players yet
+ * unless the test says. Its *From WhatsApp* percent is the backend's: players over the WhatsApp
+ * group's size, rounded half up and never capped.
+ */
+export function officialGroup(
+  fields: Pick<OfficialGroup, 'name'> &
+    Partial<Omit<OfficialGroup, 'administrator_id'>> & { runBy?: Administrator | null },
+): OfficialGroup {
+  const { runBy = null, ...rest } = fields;
+  const members = rest.member_count ?? 0;
+  const size = rest.whatsapp_size ?? 30;
+  return {
+    id: randomUUID(),
+    monogram: { letters: [...rest.name].slice(0, 2).join(''), colour: 0 },
+    administrator_id: runBy?.id ?? null,
+    member_count: members,
+    waiting_count: 0,
+    whatsapp_size: size,
+    whatsapp_percent: Math.floor((200 * members + size) / (2 * size)),
+    games: 0,
+    ...rest,
   };
 }
 
@@ -89,6 +125,11 @@ export class FakeClub {
   private readonly tickets = new Set<string>();
   /** The club's administrators, removed ones gone; the list answers them by name. */
   administrators: Administrator[] = [];
+  /**
+   * The club's official groups; the Groups table answers them by name. The Administrators
+   * table's *groups* column is not derived from them: it says what a test seats in each row.
+   */
+  groups: OfficialGroup[] = [];
 
   constructor(private readonly stub: StubBackend) {}
 
@@ -224,6 +265,7 @@ export class FakeClub {
     });
 
     this.installAdministrators();
+    this.installGroups();
     return this;
   }
 
@@ -316,6 +358,43 @@ export class FakeClub {
         (each) => each.id !== params.administrator_id,
       );
       return { status: 204, body: undefined };
+    });
+  }
+
+  /** A group's row as the Groups table reads it: run by whom it was given to, if still active. */
+  private rowOf({ administrator_id, ...group }: OfficialGroup): ClubGroup {
+    const runner = this.administrators.find(
+      (each) => each.id === administrator_id && each.status === 'ACTIVE',
+    );
+    return {
+      ...group,
+      administrator: runner === undefined ? null : { id: runner.id, name: runner.name },
+    };
+  }
+
+  /** The club's official groups, as #510 keeps them. */
+  private installGroups(): void {
+    const stub = this.stub;
+    const signedOut = { status: 401, body: refusal('access_token_invalid') } as const;
+
+    stub.on('get', '/api/v1/club/groups', ({ headers }) => {
+      if (!this.accessIsLive(headers.authorization)) return signedOut;
+      const byName = [...this.groups].sort((a, b) => a.name.localeCompare(b.name));
+      return { status: 200, body: { groups: byName.map((group) => this.rowOf(group)) } };
+    });
+
+    // Any official group of the club, to any active Administrator of it; nobody else.
+    stub.on('put', '/api/v1/club/groups/{group_id}/administrator', ({ headers, params, body }) => {
+      if (!this.accessIsLive(headers.authorization)) return signedOut;
+      const group = this.groups.find((each) => each.id === params.group_id);
+      if (group === undefined) return { status: 404, body: refusal('group_not_found') };
+      const to = this.find(body.administrator_id);
+      if (to?.status !== 'ACTIVE') {
+        return { status: 409, body: refusal('administrator_not_active') };
+      }
+      const handed = { ...group, administrator_id: to.id };
+      this.groups = this.groups.map((each) => (each.id === group.id ? handed : each));
+      return { status: 200, body: this.rowOf(handed) };
     });
   }
 }

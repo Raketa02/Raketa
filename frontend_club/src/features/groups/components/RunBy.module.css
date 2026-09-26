@@ -1,0 +1,4 @@
+.needsAdministrator {
+  color: var(--colour-amber);
+  font-weight: var(--weight-medium);
+}

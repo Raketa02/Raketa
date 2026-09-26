@@ -20,6 +20,11 @@ export interface ApiError {
   readonly code: string;
   /** `details.field`, when the refusal names the control it is about. */
   readonly field?: string;
+  /**
+   * `details`' words, when the code defines any: `club_sport_declared_by_group` names the sport
+   * and the group. Only a string survives; the code says what each one means.
+   */
+  readonly details?: Readonly<Record<string, string>>;
 }
 
 export type Outcome<T> =
@@ -36,13 +41,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+/** The string entries of an envelope's `details`, or nothing when it has none. */
+function wordsOf(details: unknown): Record<string, string> | undefined {
+  if (!isRecord(details)) return undefined;
+  const words = Object.entries(details).filter(
+    (entry): entry is [string, string] => typeof entry[1] === 'string',
+  );
+  return words.length === 0 ? undefined : Object.fromEntries(words);
+}
+
 export function toApiError(status: number, body: unknown): ApiError {
   if (status === 422) return { status, code: 'request_invalid' };
   if (isRecord(body) && typeof body.code === 'string') {
-    const field = isRecord(body.details) ? body.details.field : undefined;
-    return typeof field === 'string'
-      ? { status, code: body.code, field }
-      : { status, code: body.code };
+    const details = wordsOf(body.details);
+    if (details === undefined) return { status, code: body.code };
+    const { field } = details;
+    return field === undefined
+      ? { status, code: body.code, details }
+      : { status, code: body.code, field, details };
   }
   return { status, code: 'backend_failed' };
 }

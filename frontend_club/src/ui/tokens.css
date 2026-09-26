@@ -83,6 +83,8 @@
   --size-control-small: 2.5rem;
   --size-mark: 2rem;
   --size-pin: 1.5rem;
+  --size-bar: 0.5rem; /* From WhatsApp's bar */
+  --size-bar-width: 12rem;
   --size-map: 20rem;
   --size-map-phone: 16rem;
   --size-card-narrow: 29.75rem;
