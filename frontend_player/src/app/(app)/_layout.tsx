@@ -34,6 +34,8 @@
  * §3): an account that holds nothing but administrator profiles has not asked to play, so it is
  * redirected to its **administrator area** — a sibling group, `(administrator)`, with its own two
  * tabs — and never into onboarding. Which route that is belongs to the feature that owns the area.
+ * An account that holds **no profile at all** is offered *Start playing* from its first step, the
+ * Adult attestation, which the naming and the player setup follow through this gate.
  *
  * ## A pass that began at the passport ends on it
  *
@@ -52,7 +54,7 @@ import { Redirect, Stack, router, usePathname } from 'expo-router';
 import { useCallback } from 'react';
 
 import { administratorHome } from '@/features/administrator/types';
-import { NAMING_STEP } from '@/features/auth/types';
+import { NAMING_STEP, START_PLAYING_STEP } from '@/features/auth/types';
 import { useFeatureDatafile } from '@/features/feature_flags/types';
 import {
   EntryUnavailableScreen,
@@ -115,6 +117,10 @@ export default function AppLayout() {
       // Ahead of everything a player is asked: this account runs a club's groups and has not asked
       // to play (ADR-0185 §3).
       return <Redirect href={administratorHome(entry.clubId)} />;
+    case 'start-playing':
+      // An account that holds no profile at all — an administrator-only account its club removed —
+      // takes Start playing's steps from here, the Adult attestation first (ADR-0185 §3).
+      return <Redirect href={START_PLAYING_STEP} />;
     case 'naming':
       // Before anything else: every destination after this one says the player's name. Which
       // route that is belongs to the feature that owns the naming, not to this file.

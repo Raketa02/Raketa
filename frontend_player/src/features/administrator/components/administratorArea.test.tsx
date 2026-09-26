@@ -28,11 +28,28 @@ import {
   type FakeShare,
 } from '@/test-support/platform';
 import {
+  ADMINISTRATOR_ONLY,
+  CLUB_ID,
+  club,
+  CREATED_ID,
+  EVERYBODY,
+  GROUPS_PATH,
+  KUBA,
+  MICHAL,
+  NOW,
+  O3_CLUB_GROUP,
+  O3_CLUB_ID,
+  OPEN_PLAY_GROUP,
+  rating,
+  refusal,
+  TOMEK,
+  type GroupSetup,
+} from '@/test-support/officialGroupsServer';
+import {
   errorResponse,
   installTransport,
   json,
   neverResponds,
-  noContent,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -42,267 +59,6 @@ import { GROUPS_COPY } from '@/features/groups/types';
 import { ADMINISTRATOR_COPY } from './administratorCopy';
 
 const COPY = ADMINISTRATOR_COPY;
-
-// ---------------------------------------------------------------------------
-// The club, its people and its groups
-// ---------------------------------------------------------------------------
-
-const CLUB_ID = 'c0000000-0000-4000-8000-000000000033';
-const CLUB = { id: CLUB_ID, name: 'Ogrody 33', sports: ['PADEL', 'TENNIS', 'SQUASH'] } as const;
-const CLUB_PATH = `/api/v1/administrator/clubs/${CLUB_ID}`;
-const GROUPS_PATH = `${CLUB_PATH}/groups`;
-
-/** Marta runs Ogrody 33's WhatsApp groups and has never played on Raketa. */
-const ADMINISTRATOR_ONLY: Wire['AccountProfilesSchema'] = {
-  acts_as_player: false,
-  administers: [{ club_id: CLUB_ID, club_name: CLUB.name }],
-  pending_invitations: [],
-};
-
-interface Person {
-  readonly id: string;
-  readonly name: string;
-  readonly levels: Readonly<Partial<Record<Wire['Sport'], number>>>;
-}
-
-function person(n: number, name: string, levels: Person['levels'] = {}): Person {
-  return { id: `e0000000-0000-4000-8000-${String(n).padStart(12, '0')}`, name, levels };
-}
-
-const MICHAL = person(1, 'Michał Rogalski', { PADEL: 2.44, TENNIS: 2.6 });
-const TOMEK = person(2, 'Tomek Kowal', { PADEL: 2.71, TENNIS: 3.1, SQUASH: 2.3 });
-const ANIA = person(3, 'Ania Kowalczyk', { PADEL: 2.68 });
-const STAS = person(4, 'Staś Wójcik', { PADEL: 2.5 });
-const FILIP = person(5, 'Filip Nowak', { TENNIS: 3.0 });
-const BARTEK = person(6, 'Bartek Lis', { PADEL: 2.9 });
-const KUBA = person(7, 'Kuba Wróbel', { PADEL: 2.8 });
-
-const EVERYBODY = [MICHAL, TOMEK, ANIA, STAS, FILIP, BARTEK, KUBA];
-
-/** "Now", for *this week* — the router's fake clock is set to it before every walk. */
-const NOW = '2026-09-26T12:00:00Z';
-
-interface Stay {
-  readonly who: Person;
-  readonly joinedAt: string;
-}
-
-interface GroupSetup {
-  readonly id: string;
-  readonly name: string;
-  readonly letters: string;
-  readonly colour?: number;
-  readonly sports?: readonly Wire['Sport'][];
-  readonly policy?: Wire['JoinPolicy'];
-  readonly size?: number;
-  /** Newest joined first, as the server serves them. */
-  readonly players?: readonly Stay[];
-  /** In the order they asked. */
-  readonly requests?: readonly Person[];
-}
-
-const O3_CLUB_ID = 'a0000000-0000-4000-8000-000000000001';
-const OPEN_PLAY_ID = 'a0000000-0000-4000-8000-000000000002';
-/** The id the fake server gives the one group a walk creates. */
-const CREATED_ID = 'a0000000-0000-4000-8000-000000000100';
-const LINK_OF: Readonly<Record<string, string>> = {
-  [O3_CLUB_ID]: 'https://raketa.app/join/K7PQ2MXA',
-  [OPEN_PLAY_ID]: 'https://raketa.app/join/R4TW9ZHB',
-  [CREATED_ID]: 'https://raketa.app/join/G4H3JK2M',
-};
-
-/** *Ogrody 33 Club* as club 17 and 18 draw it: players, and Michał waiting. */
-const O3_CLUB_GROUP: GroupSetup = {
-  id: O3_CLUB_ID,
-  name: 'Ogrody 33 Club',
-  letters: 'O3',
-  colour: 1,
-  sports: ['PADEL', 'TENNIS', 'SQUASH'],
-  policy: 'PEOPLE_I_APPROVE',
-  size: 48,
-  players: [
-    { who: ANIA, joinedAt: '2026-09-07T18:00:00Z' },
-    { who: STAS, joinedAt: '2026-09-07T10:00:00Z' },
-    { who: FILIP, joinedAt: '2026-08-31T10:00:00Z' },
-  ],
-  requests: [MICHAL],
-};
-
-/** *Ogrody open play* (club 19): nobody waiting. */
-const OPEN_PLAY_GROUP: GroupSetup = {
-  id: OPEN_PLAY_ID,
-  name: 'Ogrody open play',
-  letters: 'Oo',
-  colour: 2,
-  sports: ['PADEL', 'TENNIS'],
-  policy: 'ANYONE',
-  size: 30,
-  players: [
-    { who: MICHAL, joinedAt: '2026-09-24T09:00:00Z' },
-    { who: TOMEK, joinedAt: '2026-08-31T10:00:00Z' },
-  ],
-};
-
-function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
-  return {
-    sport,
-    mu: 2.71,
-    sigma: 0.62,
-    confidence: 28,
-    range: { low: 2.1, high: 3.3 },
-    band: { name: 'Established', lower: 2.7, upper: 3.8 },
-    status: 'initial_estimate',
-    engine_version: 'racketskill-v3',
-    updated_at: '2026-08-14T09:00:00Z',
-  };
-}
-
-function refusal(code: string, field: string): Response {
-  return json<Wire['ErrorResponse']>(
-    { code, message: 'test failure', trace_id: 'trace-test', details: { field } },
-    400,
-  );
-}
-
-/**
- * **The club's server, faked** — the rules the routes document and nothing more: the groups the
- * administrator runs, newest created first; a create checked field by field in the form's order;
- * an approval making the person a player at once; a decline removing the request; and, once the
- * club has removed them, `not_an_administrator` on every route.
- */
-function club(setups: readonly GroupSetup[] = []) {
-  const state = {
-    removed: false,
-    groups: setups.map((setup) => ({
-      id: setup.id,
-      name: setup.name,
-      letters: setup.letters,
-      colour: setup.colour ?? 0,
-      sports: [...(setup.sports ?? ['PADEL'])],
-      policy: setup.policy ?? 'ANYONE',
-      size: setup.size ?? 48,
-      players: [...(setup.players ?? [])],
-      requests: [...(setup.requests ?? [])],
-    })),
-  };
-  type Held = (typeof state.groups)[number];
-
-  const card = (group: Held): Wire['AdministeredGroupCardSchema'] => ({
-    id: group.id,
-    kind: 'OFFICIAL',
-    name: group.name,
-    monogram: { letters: group.letters, colour: group.colour },
-    sports: group.sports,
-    member_count: group.players.length,
-    waiting_count: group.requests.length,
-    home_club: { id: CLUB_ID, name: CLUB.name },
-  });
-
-  const page = (group: Held): Wire['AdministeredGroupResponse'] => ({
-    id: group.id,
-    kind: 'OFFICIAL',
-    name: group.name,
-    monogram: { letters: group.letters, colour: group.colour },
-    sports: group.sports,
-    member_count: group.players.length,
-    home_club: { ...CLUB, sports: [...CLUB.sports] },
-    link: LINK_OF[group.id] ?? 'https://raketa.app/join/UNKNOWN0',
-    join_policy: group.policy,
-    whatsapp_size: group.size,
-    players: group.players.map(({ who, joinedAt }) => ({
-      player_id: who.id,
-      name: who.name,
-      joined_at: joinedAt,
-    })),
-    requests: group.requests.map((who) => ({
-      player_id: who.id,
-      name: who.name,
-      levels: (['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON'] as const).flatMap((sport) => {
-        const level = who.levels[sport];
-        return level === undefined ? [] : [{ sport, level }];
-      }),
-    })),
-  });
-
-  const removed = () => errorResponse(403, 'not_an_administrator');
-  const find = (id: string) => state.groups.find((group) => group.id === id);
-
-  function create(body: Wire['CreateOfficialGroupRequest']): Response {
-    const name = body.name.trim().replace(/\s+/g, ' ');
-    if (name.length < 1 || name.length > 40) return refusal('group_name_invalid', 'name');
-    if (
-      !Number.isInteger(body.whatsapp_size) ||
-      body.whatsapp_size < 2 ||
-      body.whatsapp_size > 1024
-    ) {
-      return refusal('whatsapp_size_invalid', 'whatsapp_size');
-    }
-    if (body.sports.length === 0) return refusal('group_sports_required', 'sports');
-    const group: Held = {
-      id: CREATED_ID,
-      name,
-      letters: 'O3',
-      colour: 4,
-      sports: [...new Set(body.sports)],
-      policy: body.join_policy,
-      size: body.whatsapp_size,
-      players: [],
-      requests: [],
-    };
-    state.groups.unshift(group);
-    return json(page(group), 201);
-  }
-
-  return {
-    state,
-    /** The club removes the administrator, from its website. */
-    remove() {
-      state.removed = true;
-    },
-    /** Somebody taps the link in WhatsApp and asks to join. */
-    ask(groupId: string, who: Person) {
-      find(groupId)?.requests.push(who);
-    },
-    install(transport: Transport) {
-      transport.on('GET', GROUPS_PATH, () =>
-        state.removed
-          ? removed()
-          : json<Wire['AdministeredGroupsResponse']>({
-              club: { ...CLUB, sports: [...CLUB.sports] },
-              groups: state.groups.map(card),
-            }),
-      );
-      transport.on('POST', GROUPS_PATH, (request) =>
-        state.removed ? removed() : create(request.body as Wire['CreateOfficialGroupRequest']),
-      );
-      for (const id of [O3_CLUB_ID, OPEN_PLAY_ID, CREATED_ID]) {
-        transport.on('GET', `${GROUPS_PATH}/${id}`, () => {
-          if (state.removed) return removed();
-          const group = find(id);
-          return group === undefined ? errorResponse(404, 'group_not_found') : json(page(group));
-        });
-        for (const who of EVERYBODY) {
-          const requestPath = `${GROUPS_PATH}/${id}/requests/${who.id}`;
-          transport.on('POST', `${requestPath}/approve`, () => {
-            if (state.removed) return removed();
-            const group = find(id);
-            if (group === undefined) return errorResponse(404, 'group_not_found');
-            group.requests = group.requests.filter((asking) => asking.id !== who.id);
-            group.players.unshift({ who, joinedAt: NOW });
-            return noContent();
-          });
-          transport.on('POST', `${requestPath}/decline`, () => {
-            if (state.removed) return removed();
-            const group = find(id);
-            if (group === undefined) return errorResponse(404, 'group_not_found');
-            group.requests = group.requests.filter((asking) => asking.id !== who.id);
-            return noContent();
-          });
-        }
-      }
-    },
-  };
-}
 
 // ---------------------------------------------------------------------------
 // The walk
@@ -886,7 +642,8 @@ describe('the two tabs', () => {
     fireEvent.press(screen.getByRole('tab', { name: 'You' }));
 
     await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}/you`));
-    expect(await screen.findByRole('header', { name: COPY.you.title })).toBeTruthy();
+    // Club 8's header, moved here: the club and the role over the account's name (#517).
+    expect(await screen.findByRole('header', { name: 'Marta Nowak' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'You', selected: true })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
 

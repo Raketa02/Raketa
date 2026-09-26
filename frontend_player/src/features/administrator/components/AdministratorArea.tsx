@@ -109,9 +109,12 @@ function AreaShell({ club }: { readonly club: AdministeredClub }) {
           first for their transition. */}
       <Stack initialRouteName="index" screenOptions={{ headerShown: false, animation: 'none' }}>
         {/* New official group and a group's page are pushed over the Groups list and come back
-            out to it; the two tabs' roots replace each other and take the shell's `none`. */}
+            out to it, and a group's settings and Start playing over You; the two tabs' roots
+            replace each other and take the shell's `none`. */}
         <Stack.Screen name="new-group" options={{ animation: 'default' }} />
         <Stack.Screen name="group/[groupId]" options={{ animation: 'default' }} />
+        <Stack.Screen name="you/settings/[groupId]" options={{ animation: 'default' }} />
+        <Stack.Screen name="you/start-playing" options={{ animation: 'default' }} />
       </Stack>
       <AdministratorTabBar
         active={areaTabFor(club.clubId, pathname)}

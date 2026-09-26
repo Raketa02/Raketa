@@ -20,6 +20,9 @@ export const administratorKeys = {
     [...administratorKeys.club(clubId), 'group', groupId] as const,
   /** **A mutation key**: a create — keyed so the removal watch knows it is this feature's. */
   create: (clubId: string) => [...administratorKeys.club(clubId), 'create'] as const,
+  /** **A mutation key**: a settings save — keyed so the removal watch knows it is this feature's. */
+  settings: (clubId: string, groupId: string) =>
+    [...administratorKeys.group(clubId, groupId), 'settings'] as const,
   /** **A mutation key**: the answers to one group's requests, counted to re-read it once. */
   answers: (clubId: string, groupId: string) =>
     [...administratorKeys.group(clubId, groupId), 'answer'] as const,

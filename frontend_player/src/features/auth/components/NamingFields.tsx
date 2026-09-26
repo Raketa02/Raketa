@@ -27,9 +27,15 @@ import { NAME_LABEL, NICKNAME_LABEL } from './namingPresentation';
 
 export interface NamingFieldsProps {
   readonly form: NamingForm;
+  /**
+   * Whether the Name box is drawn — **false where the account already holds a name and only the
+   * nickname is missing** (ADR-0185 §4): an account an Invitation opened carries the club-typed
+   * name, and the step asks only for what is missing. The form still sends the name it holds.
+   */
+  readonly askName?: boolean;
 }
 
-export function NamingFields({ form }: NamingFieldsProps) {
+export function NamingFields({ form, askName = true }: NamingFieldsProps) {
   // A conflict the server raised against one field belongs under that field. Anything else
   // stays in the banner.
   const nameError = errorUnderField('name', form.fieldErrors, form.error);
@@ -43,16 +49,18 @@ export function NamingFields({ form }: NamingFieldsProps) {
       <View style={s.form}>
         {/* No note under the name: it has no rule, and a form that explains one of two boxes
             leaves the other looking like the one with the rules — which is right. */}
-        <TextField
-          label={NAME_LABEL}
-          value={form.name}
-          onChangeText={form.setName}
-          error={nameError}
-          autoCapitalize="words"
-          autoComplete="name"
-          textContentType="name"
-          editable={!form.pending}
-        />
+        {askName ? (
+          <TextField
+            label={NAME_LABEL}
+            value={form.name}
+            onChangeText={form.setName}
+            error={nameError}
+            autoCapitalize="words"
+            autoComplete="name"
+            textContentType="name"
+            editable={!form.pending}
+          />
+        ) : null}
 
         <View style={s.box}>
           <TextField

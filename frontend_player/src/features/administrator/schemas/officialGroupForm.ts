@@ -1,8 +1,10 @@
 /**
- * **The New official group form's one schema** (club 10, plus the Sports card;
- * [#516](https://github.com/Raketa02/Raketa/issues/516), PRD #500 story 125).
+ * **An official group's form, and its one schema** — New official group's (club 10, plus the Sports
+ * card; [#516](https://github.com/Raketa02/Raketa/issues/516), PRD #500 story 125) and the group's
+ * settings' ([#517](https://github.com/Raketa02/Raketa/issues/517), story 131), which ask the same
+ * four things.
  *
- * Four fields, and *Create the group* is pressable exactly when this answers a group:
+ * *Create the group* and *Save* are pressable only when this answers settings:
  *
  * - **the name** — the player group's own rule, `GroupNameSchema`: trimmed, 1–40 characters;
  * - **who can join** — *Anyone* or *People I approve*;
@@ -20,7 +22,7 @@ import { z } from 'zod';
 import { GroupNameSchema, JoinPolicySchema, type JoinPolicy } from '@/features/groups/types';
 import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
-import { WHATSAPP_SIZE, type NewOfficialGroup } from '../domain/officialGroup';
+import { WHATSAPP_SIZE, type OfficialGroupSettings } from '../domain/officialGroup';
 
 export interface OfficialGroupForm {
   readonly name: string;
@@ -54,7 +56,7 @@ function officialGroupSchema(clubSports: readonly Sport[]) {
         .min(1)
         .refine((sports) => sports.every((sport) => clubSports.includes(sport))),
     })
-    .transform((form): NewOfficialGroup => ({
+    .transform((form): OfficialGroupSettings => ({
       name: form.name,
       joinPolicy: form.joinPolicy,
       whatsAppSize: form.whatsAppSize,
@@ -66,10 +68,10 @@ function officialGroupSchema(clubSports: readonly Sport[]) {
  * The group to create, or nothing while the form is not one yet. `clubSports` are the sports the
  * club offers — the only ones a group may declare.
  */
-export function newOfficialGroupFrom(
+export function officialGroupSettingsFrom(
   form: OfficialGroupForm,
   clubSports: readonly Sport[],
-): NewOfficialGroup | undefined {
+): OfficialGroupSettings | undefined {
   const parsed = officialGroupSchema(clubSports).safeParse(form);
   return parsed.success ? parsed.data : undefined;
 }

@@ -13,6 +13,12 @@ export { AccountPanel } from './components/AccountPanel';
  * context's, and the follow-up that edits them will drive the same rules. See the screen.
  */
 export { NamingScreen } from './components/NamingScreen';
+/**
+ * ***Start playing*'s first step, the Adult attestation** (ADR-0185 §4–§5,
+ * [#517](https://github.com/Raketa02/Raketa/issues/517)) — this feature's on the naming's precedent:
+ * the act is the users context's, on the account, and the tick box and its sentence are sign-up's.
+ */
+export { StartPlayingScreen } from './components/StartPlayingScreen';
 
 /**
  * **The naming, from the You tab**
@@ -42,6 +48,12 @@ export {
   parseResetTicketParams,
 } from './schemas/resetRouteParams';
 
+/**
+ * **Named in full** — a name and a nickname (ADR-0185 §4) — for the entry gate's first destination;
+ * the naming step reads the same rule from inside this feature.
+ */
+export { namedInFull } from './domain/naming';
+
 export type {
   AccountProfiles,
   AdministeredClub,
@@ -56,6 +68,12 @@ export type {
  * route is one place to change it — `SOCIAL_STEPS_ENTRY`'s own argument.
  */
 export const NAMING_STEP = '/name';
+
+/**
+ * Where *Start playing* begins — the Adult attestation. The administrator's You tab pushes it, and
+ * the entry gate sends an account that holds no profile at all to it; one spelling for both.
+ */
+export const START_PLAYING_STEP = '/start-playing';
 
 export { authKeys } from './hooks/authKeys';
 /**

@@ -117,6 +117,16 @@ answers it **from the player read alone**, the moment that read answers, without
 ratings or the run — and once the player read says so, those two reads are not asked at all. An
 account that also plays falls through to the five destinations as before and opens in Player; the
 last-used profile is #518's. The redirect is `(app)/_layout`'s, to the route the `administrator`
-feature names (`administratorHome`). **An account with no profile at all** — an administrator-only
-account its club removed — still falls through to the player's flow; ADR-0185 §3 sends it to the
-Adult attestation first, which #517 builds.
+feature names (`administratorHome`).
+
+**No profile at all goes to _Start playing_, and named in full is a name and a nickname**
+([#517](https://github.com/Raketa02/Raketa/issues/517), ADR-0185 §3–§4). The gate's first read is
+`profileDestination` now: the administrator area for an account that only administers, and **a
+seventh destination, `start-playing`**, for one that holds no profile at all — an administrator-only
+account its club removed — which the layout redirects to `auth`'s `START_PLAYING_STEP`, the Adult
+attestation, ahead of the naming and of anything a player owes; like the area, it is answered from the
+player read alone. Past that read the first destination is **not named in full** (`namedInFull`: a
+name _and_ a nickname), because an account an Invitation opened carries the club's name and no
+nickname: once it attests, it acts as a player and the naming is still owed — asking only for the
+nickname ([`auth.md`](auth.md)). For every account sign-up creates this is the same destination as
+before, since it holds neither until the naming.

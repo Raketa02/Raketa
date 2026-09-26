@@ -1,8 +1,8 @@
 /**
  * **Where the administrator area lives** — its own group of screens, outside the player's tab shell
  * (PRD #500: *its own group of screens outside the player's tab shell*), one area per club it runs:
- * `/administrator/<club>` is the Groups tab, `…/you` the You tab, and New official group and a
- * group's page are pushed over Groups.
+ * `/administrator/<club>` is the Groups tab, `…/you` the You tab, New official group and a group's
+ * page are pushed over Groups, and a group's settings over You.
  *
  * **The club is in the path**, because every screen here is one Administrator's at one club and a
  * person running two clubs' groups is two Administrators (ADR-0184 §1): the area is whole from its
@@ -40,4 +40,24 @@ export function officialGroupRoute(clubId: string, groupId: string) {
     pathname: '/administrator/[clubId]/group/[groupId]',
     params: { clubId, groupId },
   } as const;
+}
+
+/**
+ * **An official group's settings**, pushed over the You tab from the group's row — under the tab's
+ * own segment, so the You column stays lit and *back* is the tab.
+ */
+export function groupSettingsRoute(clubId: string, groupId: string) {
+  return {
+    pathname: '/administrator/[clubId]/you/settings/[groupId]',
+    params: { clubId, groupId },
+  } as const;
+}
+
+/**
+ * ***Start playing*'s first step, the Adult attestation**, pushed over the You tab — `auth`'s
+ * screen at an address inside the area, so *back* is the tab (the entry gate's own address for it
+ * is `auth`'s `START_PLAYING_STEP`). The steps after it are the gate's.
+ */
+export function startPlayingRoute(clubId: string) {
+  return { pathname: '/administrator/[clubId]/you/start-playing', params: { clubId } } as const;
 }

@@ -1,6 +1,6 @@
 /**
- * **Creating an official group, and answering its Join requests** — and what each does to the
- * cache.
+ * **Creating an official group, saving its settings and answering its Join requests** — and what
+ * each does to the cache.
  *
  * ## A create seeds the page it lands on
  *
@@ -8,6 +8,14 @@
  * and the page draws at once, with *Group created* over it; the Groups tab is re-read, since it has a
  * new card. **Never retried** — two creates are two groups — and the button is busy while it is in
  * flight.
+ *
+ * ## A save writes the group it answers
+ *
+ * The answer to a settings save is the group as its settings left it, so it is written under the
+ * page's key — the settings screen and the page both draw it at once — and the Groups tab is re-read:
+ * its card's name and sports may have moved, and a switch to *Anyone* admitted everybody waiting,
+ * which moves *N waiting* and *N members*. **Never retried**: a refused save records nothing, and
+ * the next press is the whole form again.
  *
  * ## An answer takes its row at once
  *
@@ -29,10 +37,11 @@ import type { JoinRequest } from '@/features/groups/types';
 import type { AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
 
-import type { NewOfficialGroup, OfficialGroup } from '../domain/officialGroup';
+import type { OfficialGroup, OfficialGroupSettings, SavedSettings } from '../domain/officialGroup';
 import {
   answerRequest,
   createOfficialGroup,
+  saveSettings,
   type RequestAnswer,
 } from '../use-cases/officialGroups';
 
@@ -42,11 +51,24 @@ import { isRemoval } from './useRemovalWatch';
 export function useCreateOfficialGroup(clubId: string) {
   const client = useQueryClient();
 
-  return useMutation<OfficialGroup, AppError, NewOfficialGroup>({
+  return useMutation<OfficialGroup, AppError, OfficialGroupSettings>({
     mutationKey: administratorKeys.create(clubId),
     mutationFn: (group) => createOfficialGroup(clubId, group),
     onSuccess: (group) => {
       client.setQueryData(administratorKeys.group(clubId, group.id), group);
+      void client.invalidateQueries({ queryKey: administratorKeys.groups(clubId) });
+    },
+  });
+}
+
+export function useSaveSettings(clubId: string, groupId: string) {
+  const client = useQueryClient();
+
+  return useMutation<SavedSettings, AppError, OfficialGroupSettings>({
+    mutationKey: administratorKeys.settings(clubId, groupId),
+    mutationFn: (settings) => saveSettings(clubId, groupId, settings),
+    onSuccess: ({ group }) => {
+      client.setQueryData(administratorKeys.group(clubId, groupId), group);
       void client.invalidateQueries({ queryKey: administratorKeys.groups(clubId) });
     },
   });

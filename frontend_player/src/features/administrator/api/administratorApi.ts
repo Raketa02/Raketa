@@ -12,9 +12,9 @@
  *
  * `groupsApi`'s rule, for its reason: an abandoned `GET` records nothing, and a write appends to the
  * group's stream. **Creating twice would make two groups** — names are never unique — so the create
- * is never retried and its button is busy while it is in flight. Approving somebody already in and
- * declining a request that is not waiting change nothing, by the routes' own word; neither is
- * retried all the same, every mutation's rule.
+ * is never retried and its button is busy while it is in flight. Approving somebody already in,
+ * declining a request that is not waiting and saving settings the group already holds change
+ * nothing, by the routes' own word; none is retried all the same, every mutation's rule.
  */
 
 import type { components } from '@/generated/schema';
@@ -67,6 +67,24 @@ export function postOfficialGroup(
   body: Schemas['CreateOfficialGroupRequest'],
 ): Promise<Schemas['AdministeredGroupResponse']> {
   return httpRequest({ method: 'POST', path: groupsPath(clubId), body, authenticated: true });
+}
+
+/**
+ * **Save an official group's settings** — all four together or none. The link never changes, and
+ * **switching to `ANYONE` admits everybody waiting at once**: the answer says who, beside the group
+ * as its settings left it.
+ */
+export function putSettings(
+  clubId: string,
+  groupId: string,
+  body: Schemas['OfficialGroupSettingsRequest'],
+): Promise<Schemas['SavedSettingsResponse']> {
+  return httpRequest({
+    method: 'PUT',
+    path: `${groupPath(clubId, groupId)}/settings`,
+    body,
+    authenticated: true,
+  });
 }
 
 /** The player is a Group member at once. */

@@ -6,17 +6,17 @@
  * the root glossary's **Groups** and **Administrators**).
  *
  * Three shapes, one per place the administrator area draws a group: a card on its Groups tab, the
- * group as its page reads it, and the group to create. The tile, the dots and the request card are
+ * group as its page reads it, and its settings — to create it, and to change it later. The tile, the dots and the request card are
  * the `groups` feature's own — an official group is a Group — and the shapes here add what only an
  * Administrator sees: *N waiting* on the card, the **WhatsApp group size**, the declared sports and
  * every player with the day they joined.
  *
- * **Nothing here is computed on the phone** but *this week* and the share of the WhatsApp group,
- * both in `officialGroupRules.ts`: the monogram, the dots, the counts and the order are the
+ * **Nothing here is computed on the phone** but *this week*, the share of the WhatsApp group and
+ * whether the settings changed, all in `officialGroupRules.ts`: the monogram, the dots, the counts and the order are the
  * server's.
  */
 
-import type { JoinPolicy, JoinRequest, Monogram } from '@/features/groups/types';
+import type { GroupPerson, JoinPolicy, JoinRequest, Monogram } from '@/features/groups/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 /**
@@ -93,12 +93,21 @@ export const WHATSAPP_SIZE = { min: 2, max: 1024 } as const;
 
 /**
  * **An Official group to create** — the New official group form, checked
- * (`schemas/newOfficialGroupForm`). Its Home club is the club in the route, so it is not here.
+ * (`schemas/officialGroupForm`). Its Home club is the club in the route, so it is not here.
  */
-export interface NewOfficialGroup {
+export interface OfficialGroupSettings {
   readonly name: string;
   readonly joinPolicy: JoinPolicy;
   readonly whatsAppSize: number;
   /** At least one, and only the club's, in the registry's order. */
   readonly sports: readonly Sport[];
+}
+
+/**
+ * **What a settings save answers** — the group as its settings left it, and who the save let in:
+ * everybody waiting, in the order they asked, when it switched to *Anyone*; nobody otherwise.
+ */
+export interface SavedSettings {
+  readonly group: OfficialGroup;
+  readonly admitted: readonly GroupPerson[];
 }

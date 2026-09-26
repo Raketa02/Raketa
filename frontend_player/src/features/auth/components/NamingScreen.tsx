@@ -27,6 +27,12 @@
  * which is nothing this player may see yet. The screen draws no back control, and the
  * hardware press does what the missing control already says: nothing.
  *
+ * **It asks only for what is missing** (ADR-0185 §4). An account an Invitation opened carries the
+ * Name its club typed and no Nickname, and reaches this step through *Start playing*: the step draws
+ * the nickname's box alone, says the name it keeps under the title, and still sends both — the
+ * naming stays one act, carrying the name the account already holds. Every account sign-up creates
+ * has neither, and sees both boxes.
+ *
  * **On success it re-reads the player and hands the next step to the gate.** The mutation
  * writes what the server recorded into the cached player and *awaits* a fresh read of `/me`
  * (ADR-0171 §3), so by the time this screen navigates the cache is right and the server has
@@ -43,16 +49,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KEYBOARD_AVOIDANCE, useHardwareBack } from '@/shared/lib/platform';
 import { Button, ScreenHeader, theme } from '@/shared/ui';
 
+import { heldNameWithoutNickname } from '../domain/naming';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNamingForm } from '../hooks/useNamingForm';
 
 import { NamingFields } from './NamingFields';
-import { CONTINUE, NAMING_EYEBROW, NAMING_TITLE } from './namingPresentation';
+import { CONTINUE, NAMING_EYEBROW, NAMING_TITLE, nameKeptLine } from './namingPresentation';
 
 export function NamingScreen() {
   const router = useRouter();
+  const player = useCurrentUser().data;
+  // A name the account holds without a nickname: the club's (ADR-0185 §4). Only the nickname is
+  // asked, and the held name travels with it.
+  const kept = player === undefined ? undefined : heldNameWithoutNickname(player);
   // The mutation has already written the recorded name into the cache and re-read the player
   // by the time this runs; the gate reads a named player and moves on.
-  const form = useNamingForm({ onSaved: () => router.replace('/') });
+  const form = useNamingForm({
+    ...(kept === undefined ? {} : { initial: { name: kept, nickname: '' } }),
+    onSaved: () => router.replace('/'),
+  });
 
   // Claimed and refused — see the module note. This screen draws no back control, and the
   // press does what the missing control already says.
@@ -61,14 +76,18 @@ export function NamingScreen() {
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={s.flex} behavior={KEYBOARD_AVOIDANCE}>
-        <ScreenHeader eyebrow={NAMING_EYEBROW} title={NAMING_TITLE} />
+        <ScreenHeader
+          eyebrow={NAMING_EYEBROW}
+          title={NAMING_TITLE}
+          {...(kept === undefined ? {} : { subline: nameKeptLine(kept) })}
+        />
 
         <ScrollView
           contentContainerStyle={s.content}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          <NamingFields form={form} />
+          <NamingFields form={form} askName={kept === undefined} />
         </ScrollView>
 
         <View style={s.action}>

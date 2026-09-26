@@ -1,5 +1,5 @@
 /**
- * **The three things the administrator area works out on the phone** — everything else about an
+ * **The four things the administrator area works out on the phone** — everything else about an
  * official group is the server's.
  *
  * - **When a player joined**, as the players list says it: *this week* within seven days, the date
@@ -12,9 +12,13 @@
  *   may pass 100%, and says so: the size limits nothing (ADR-0183 §3).
  * - **Which faces the players card draws** — the five newest, and *+N* for the rest of the group's
  *   count, as Info's members row counts (#514).
+ * - **Whether the settings say what the group already says** — *Saved*, settled, in place of *Save*
+ *   (#517), so a save that would record nothing is never a round trip.
  */
 
 import { platformDay } from '@/shared/date/platformZone';
+
+import type { OfficialGroup, OfficialGroupSettings } from './officialGroup';
 
 /** Seven days, rolling — *this week*. */
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -58,4 +62,23 @@ export function playersStack<Player>(
 ): { readonly faces: readonly Player[]; readonly more: number } {
   const faces = players.slice(0, STACKED_FACES);
   return { faces, more: faces.length === 0 ? 0 : Math.max(0, memberCount - faces.length) };
+}
+
+/**
+ * **Whether the settings as the form holds them are the group's own** — the four fields, the sports
+ * compared in the registry's order both sides are in. The name is compared as the form trims it;
+ * one the server would collapse to the same is a save that records nothing, which the server
+ * admits.
+ */
+export function settingsUnchanged(
+  settings: OfficialGroupSettings,
+  group: Pick<OfficialGroup, 'name' | 'joinPolicy' | 'whatsAppSize' | 'sports'>,
+): boolean {
+  return (
+    settings.name === group.name &&
+    settings.joinPolicy === group.joinPolicy &&
+    settings.whatsAppSize === group.whatsAppSize &&
+    settings.sports.length === group.sports.length &&
+    settings.sports.every((sport, at) => group.sports[at] === sport)
+  );
 }

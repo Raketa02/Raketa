@@ -8,7 +8,8 @@
  * The order is deliberate and not arbitrary:
  *
  *   only administrator profiles    -> the administrator area, before anything is asked of a player
- *   no name yet                    -> the naming step, before anything else
+ *   no profile at all              -> Start playing's first step, the Adult attestation
+ *   not named in full              -> the naming step, before anything else
  *   run in progress, not set aside -> resume it, at its outstanding question
  *   no ratings at all              -> onboarding, from welcome
  *   no Player profile              -> onboarding's second part, from its first step
@@ -50,6 +51,18 @@
  * that holds both — which opens in Player until then, so it passes straight through to the player's
  * gate below.
  *
+ * **An account that holds no profile at all is offered the player setup, from its first step**
+ * (ADR-0185 §3, [#517](https://github.com/Raketa02/Raketa/issues/517)). The only way to be one is an
+ * administrator-only account whose club removed it; the account stays, and signing in again must
+ * never be a dead end. So it takes *Start playing*'s three steps from the gate instead of from the
+ * administrator's You tab — and the first is the **Adult attestation**, which such an account has
+ * never given and which comes before anything player-side (ADR-0185 §5), the naming included.
+ *
+ * **Named in full is a name and a nickname** (ADR-0185 §4). An account an Invitation opened carries
+ * the club-typed Name and no Nickname, so once it attests and acts as a player the naming step is
+ * still owed — and asks only for the nickname. For every account sign-up creates this is the same
+ * destination as before: it has neither until the naming.
+ *
  * ## The fourth destination, and why it is not the flag the glossary bans
  *
  * Onboarding is two parts ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)),
@@ -84,8 +97,13 @@ export type EntryDestination =
    */
   | { readonly kind: 'administrator'; readonly clubId: string }
   /**
-   * The naming step — *How should people see you?* — which an unnamed account cannot get
-   * past: it submits the naming, re-reads the player, and only then moves on.
+   * **Start playing's first step, the Adult attestation** — for an account that holds no profile at
+   * all. The naming and the player setup follow it, through this gate.
+   */
+  | { readonly kind: 'start-playing' }
+  /**
+   * The naming step — *How should people see you?* — which an account not named in full cannot
+   * get past: it submits the naming, re-reads the player, and only then moves on.
    */
   | { readonly kind: 'naming' }
   /** Onboarding from the beginning: what it produces, then the sports picker. */
@@ -101,13 +119,14 @@ export type EntryDestination =
 
 export interface EntryInput {
   /**
-   * Whether the player has named themselves. Served on the authenticated player beside
-   * `hasPlayerProfile`, and read from the `User`'s own stream for the same reason: the moment
-   * after the naming is exactly when a lagging read model would send a player back to the
-   * step they just finished. A per-player question with a per-player answer — a name has no
-   * sport dimension — so the glossary's ban on a per-player onboarding flag does not bite.
+   * Whether the player is **named in full** — a name *and* a nickname (ADR-0185 §4). Served on the
+   * authenticated player beside `hasPlayerProfile`, and read from the `User`'s own stream for the
+   * same reason: the moment after the naming is exactly when a lagging read model would send a
+   * player back to the step they just finished. A per-player question with a per-player answer — a
+   * name has no sport dimension — so the glossary's ban on a per-player onboarding flag does not
+   * bite.
    */
-  readonly hasName: boolean;
+  readonly namedInFull: boolean;
   readonly ratings: readonly SkillRating[];
   readonly runInProgress: AssessmentRun | undefined;
   /** Runs the player chose to come back to later, since this launch. */
@@ -127,30 +146,33 @@ export interface EntryInput {
 }
 
 /**
- * **Where an account that only runs a club's groups belongs** — its administrator area — or
- * nothing for every account that plays or holds no profile at all. The first step of
+ * **Where the account's profiles send it before anything a player is asked** — the administrator
+ * area for an account that only runs a club's groups, *Start playing*'s first step for one that
+ * holds no profile at all, and nothing for every account that acts as a player. The first step of
  * `entryDestination`, and readable on its own: the gate's hook asks it the moment the player is
- * read, because nothing else it waits for is a question this account owes an answer to.
+ * read, because nothing else it waits for is a question such an account owes an answer to.
  */
-export function administratorArea(
+export function profileDestination(
   profiles: EntryInput['profiles'],
-): Extract<EntryDestination, { kind: 'administrator' }> | undefined {
+): Extract<EntryDestination, { kind: 'administrator' | 'start-playing' }> | undefined {
+  if (profiles.actsAsPlayer) return undefined;
   const [club] = profiles.administers;
-  if (profiles.actsAsPlayer || club === undefined) return undefined;
-  return { kind: 'administrator', clubId: club.clubId };
+  return club === undefined
+    ? { kind: 'start-playing' }
+    : { kind: 'administrator', clubId: club.clubId };
 }
 
 export function entryDestination({
-  hasName,
+  namedInFull,
   ratings,
   runInProgress,
   deferredRunIds,
   hasPlayerProfile,
   profiles,
 }: EntryInput): EntryDestination {
-  const area = administratorArea(profiles);
-  if (area !== undefined) return area;
-  if (!hasName) return { kind: 'naming' };
+  const byProfile = profileDestination(profiles);
+  if (byProfile !== undefined) return byProfile;
+  if (!namedInFull) return { kind: 'naming' };
   if (runInProgress !== undefined && !deferredRunIds.includes(runInProgress.assessmentId)) {
     return { kind: 'resume', run: runInProgress };
   }

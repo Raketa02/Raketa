@@ -5,7 +5,12 @@
 
 import type { components } from '@/generated/schema';
 
-import { toAdministeredGroups, toCreateRequest, toOfficialGroup } from './administratorMappers';
+import {
+  toAdministeredGroups,
+  toOfficialGroup,
+  toSavedSettings,
+  toSettingsRequest,
+} from './administratorMappers';
 
 type Schemas = components['schemas'];
 
@@ -132,10 +137,49 @@ describe('an official group’s page', () => {
   });
 });
 
-describe('the group to create', () => {
+describe('a settings save’s answer', () => {
+  const GROUP: Schemas['AdministeredGroupResponse'] = {
+    id: 'a0000000-0000-4000-8000-000000000001',
+    kind: 'OFFICIAL',
+    name: 'Ogrody 33 Club',
+    monogram: { letters: 'O3', colour: 1 },
+    sports: ['PADEL'],
+    member_count: 4,
+    home_club: CLUB,
+    link: 'https://raketa.app/join/K7PQ2MXA',
+    join_policy: 'ANYONE',
+    whatsapp_size: 52,
+    players: [],
+    requests: [],
+  };
+
+  it('carries the group as saved, and who the switch let in, in the order they asked', () => {
+    const saved = toSavedSettings({
+      group: GROUP,
+      admitted: [
+        {
+          player_id: 'p3',
+          name: 'Michał Rogalski',
+          photo_id: 'f3',
+          photo_url: 'https://photos.test/f3',
+        },
+        { player_id: 'p7', name: null },
+      ],
+    });
+
+    expect(saved.group).toEqual(toOfficialGroup(GROUP));
+    expect(saved.admitted).toEqual([
+      { playerId: 'p3', name: 'Michał Rogalski', photoUrl: 'https://photos.test/f3' },
+      { playerId: 'p7', name: null },
+    ]);
+    expect(saved.admitted[1]).not.toHaveProperty('photoUrl');
+  });
+});
+
+describe('the group to create, and its settings', () => {
   it('is the wire’s spelling of the four fields', () => {
     expect(
-      toCreateRequest({
+      toSettingsRequest({
         name: 'Ogrody 33 Club',
         joinPolicy: 'ANYONE',
         whatsAppSize: 48,

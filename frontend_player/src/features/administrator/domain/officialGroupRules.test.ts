@@ -4,7 +4,8 @@
  * arrived.
  */
 
-import { joinedWhen, playersStack, whatsAppShare } from './officialGroupRules';
+import type { OfficialGroupSettings } from './officialGroup';
+import { joinedWhen, playersStack, settingsUnchanged, whatsAppShare } from './officialGroupRules';
 
 const READ_AT = Date.parse('2026-09-26T12:00:00Z');
 
@@ -55,5 +56,30 @@ describe('the players card’s faces', () => {
   it('counts nobody more with no face drawn, where it would only repeat the count', () => {
     expect(playersStack([], 3)).toEqual({ faces: [], more: 0 });
     expect(playersStack([], 0)).toEqual({ faces: [], more: 0 });
+  });
+});
+
+describe('whether the settings say what the group already says', () => {
+  const GROUP = {
+    name: 'Ogrody 33 Club',
+    joinPolicy: 'PEOPLE_I_APPROVE',
+    whatsAppSize: 48,
+    sports: ['padel', 'tennis'],
+  } as const;
+  const AS_READ: OfficialGroupSettings = { ...GROUP, sports: ['padel', 'tennis'] };
+
+  it('is so when all four are the group’s', () => {
+    expect(settingsUnchanged(AS_READ, GROUP)).toBe(true);
+  });
+
+  it.each<[string, Partial<OfficialGroupSettings>]>([
+    ['a new name', { name: 'Ogrody 33 Klub' }],
+    ['a switch to Anyone', { joinPolicy: 'ANYONE' }],
+    ['a new WhatsApp group size', { whatsAppSize: 52 }],
+    ['a sport added', { sports: ['padel', 'tennis', 'squash'] }],
+    ['a sport taken away', { sports: ['tennis'] }],
+    ['another sport in place of one', { sports: ['padel', 'squash'] }],
+  ])('is not so with %s', (_case, change) => {
+    expect(settingsUnchanged({ ...AS_READ, ...change }, GROUP)).toBe(false);
   });
 });

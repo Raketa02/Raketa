@@ -21,7 +21,9 @@ import { ReducedMotionProvider } from '@/shared/ui';
 import AdministratorLayout from '@/app/(administrator)/_layout';
 import AdministratorAreaLayout from '@/app/(administrator)/administrator/[clubId]/_layout';
 import AdministratorGroupsRoute from '@/app/(administrator)/administrator/[clubId]/index';
-import AdministratorYouRoute from '@/app/(administrator)/administrator/[clubId]/you';
+import AdministratorYouRoute from '@/app/(administrator)/administrator/[clubId]/you/index';
+import GroupSettingsRoute from '@/app/(administrator)/administrator/[clubId]/you/settings/[groupId]';
+import AdministratorStartPlayingRoute from '@/app/(administrator)/administrator/[clubId]/you/start-playing';
 import NewOfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/new-group';
 import OfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/group/[groupId]';
 import AppLayout from '@/app/(app)/_layout';
@@ -71,6 +73,7 @@ import DoneRoute from '@/app/(onboarding)/done';
 import IntroRoute from '@/app/(onboarding)/intro';
 import LocationRoute from '@/app/(onboarding)/location';
 import NameRoute from '@/app/(onboarding)/name';
+import StartPlayingRoute from '@/app/(onboarding)/start-playing';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
 import OptInRoute from '@/app/(onboarding)/opt-in';
 import PhotosRoute from '@/app/(onboarding)/photos';
@@ -180,12 +183,14 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/intro': YouIntroRoute,
   '(app)/(tabs)/you/name': YouNameRoute,
   // The administrator area (#516) — a sibling of `(app)`, one club's area per id, with its own two
-  // tabs: Groups at the root, You beside it, and New official group and a group's page pushed over
-  // Groups.
+  // tabs: Groups at the root, You beside it, New official group and a group's page pushed over
+  // Groups, and a group's settings and Start playing's first step pushed over You (#517).
   '(administrator)/_layout': AdministratorLayout,
   '(administrator)/administrator/[clubId]/_layout': AdministratorAreaLayout,
   '(administrator)/administrator/[clubId]/index': AdministratorGroupsRoute,
-  '(administrator)/administrator/[clubId]/you': AdministratorYouRoute,
+  '(administrator)/administrator/[clubId]/you/index': AdministratorYouRoute,
+  '(administrator)/administrator/[clubId]/you/settings/[groupId]': GroupSettingsRoute,
+  '(administrator)/administrator/[clubId]/you/start-playing': AdministratorStartPlayingRoute,
   '(administrator)/administrator/[clubId]/new-group': NewOfficialGroupRoute,
   '(administrator)/administrator/[clubId]/group/[groupId]': OfficialGroupRoute,
   '(auth)/_layout': AuthLayout,
@@ -204,6 +209,10 @@ export const ONBOARDING_ROUTES = {
   // The naming step — the first screen after sign-up, and the gate's first destination
   // (ADR-0171 §3). Before welcome in the table as it is in the walk.
   '(onboarding)/name': NameRoute,
+  // *Start playing*'s first step, the Adult attestation (#517), at the gate's own address: where it
+  // sends an account that holds no profile at all. The You tab pushes the same screen inside its
+  // area.
+  '(onboarding)/start-playing': StartPlayingRoute,
   '(onboarding)/welcome': WelcomeRoute,
   '(onboarding)/sports': SportsRoute,
   '(onboarding)/question/[assessmentId]': QuestionRoute,
@@ -1008,6 +1017,12 @@ export interface GateStub {
    */
   readonly name?: string | null;
   /**
+   * The handle — **with the name by default**, since the two are one act: an account with no name
+   * has no handle, and a named one has `ada`. An account an Invitation opened is the one shape that
+   * holds a name and no handle (ADR-0185 §4), so its suites pass `null`.
+   */
+  readonly nickname?: string | null;
+  /**
    * Whether the account carries the **tester mark** (ADR-0180 §9) — the one thing on this read the
    * flag seam sends on. Defaults to **false**, which is every account until an admin marks it.
    */
@@ -1086,6 +1101,7 @@ export function stubGate(
     hasPlayerProfile = false,
     id = GATE_USER.id,
     name = GATE_USER.name ?? null,
+    nickname = name === null ? null : (GATE_USER.nickname ?? null),
     isTester = false,
     profiles = PLAYER_ONLY,
   }: GateStub = {},
@@ -1099,8 +1115,7 @@ export function stubGate(
       ...GATE_USER,
       id,
       name,
-      // The two are one act: an account with no name has no handle either.
-      nickname: name === null ? null : GATE_USER.nickname,
+      nickname,
       has_player_profile: hasPlayerProfile,
       is_tester: isTester,
       adult_attested: profiles.acts_as_player,

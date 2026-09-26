@@ -15,6 +15,7 @@ type UserResponse = components['schemas']['UserResponse'];
 type MeResponse = components['schemas']['MeResponse'];
 type UserCreateRequest = components['schemas']['UserCreateRequest'];
 type NameRequest = components['schemas']['NameRequest'];
+type AdultAttestationRequest = components['schemas']['AdultAttestationRequest'];
 type NamingResponse = components['schemas']['NamingResponse'];
 type LoginRequest = components['schemas']['LoginRequest'];
 type LogoutResponse = components['schemas']['LogoutResponse'];
@@ -113,6 +114,22 @@ export function nameMe(
     body,
     authenticated: true,
     signal,
+  });
+}
+
+/**
+ * **The Adult attestation, given by an account that already exists** — *Start playing*'s first
+ * step ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §5). `204`, and giving it twice records nothing, so an account that attested at sign-up is
+ * answered the same. Anything but `true` is refused `adult_attestation_required` on
+ * `details.field` — a body this app never sends.
+ */
+export function postAdultAttestation(body: AdultAttestationRequest): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: '/api/v1/users/me/adult-attestation',
+    body,
+    authenticated: true,
   });
 }
 

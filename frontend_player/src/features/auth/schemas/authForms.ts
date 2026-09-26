@@ -95,6 +95,16 @@ const samePassword = (values: { readonly password: string; readonly confirmPassw
   values.password === values.confirmPassword;
 
 /**
+ * **The Adult attestation, as a form field** — sign-up's and *Start playing*'s. `refine` rather than
+ * `z.literal(true)`: an unticked box is `false`, which is a boolean, and only the value is wrong.
+ * The message is what a player reads either way, and this is the one that says which of the two it
+ * is.
+ */
+const adultAttested = z.boolean().refine((given) => given, {
+  message: ADULT_ATTESTATION_MISSING,
+});
+
+/**
  * **Credentials, and nothing about who you are**
  * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
  * §2). The nickname left this form for the naming below: sign-up is choosing credentials, and
@@ -107,17 +117,20 @@ export const signUpSchema = z
     email,
     password: chosenPassword,
     confirmPassword: repeatedPassword,
-    // `refine` rather than `z.literal(true)`: an unticked box is `false`, which is a
-    // boolean, and only the value is wrong. The message is what a player reads either
-    // way, and this is the one that says which of the two it is.
-    adultAttested: z.boolean().refine((given) => given, {
-      message: ADULT_ATTESTATION_MISSING,
-    }),
+    adultAttested,
   })
   .refine(samePassword, SAME_PASSWORD);
 
 export type SignUpInput = z.input<typeof signUpSchema>;
 export type SignUpValues = z.output<typeof signUpSchema>;
+
+/**
+ * ***Start playing*'s first step** — the Adult attestation alone, given by an account that already
+ * exists: one an Invitation opened, the first time it acts as a player
+ * ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §5). The same box and the same sentence as sign-up's, because it is the same claim.
+ */
+export const adultAttestationSchema = z.object({ adultAttested });
 
 /** Field name -> first message. One message per field is all a form row can show. */
 export type FieldErrors = Readonly<Record<string, string>>;

@@ -18,11 +18,12 @@
  * destination ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
  * §3) costs nothing more than the fourth did.
  *
- * **Except for an account that only runs a club's groups.** Its profiles are the gate's first read
+ * **Except for an account that does not act as a player.** Its profiles are the gate's first read
  * (ADR-0185 §3), and they ride on the player read too — so the moment that read answers *only an
- * administrator*, the gate answers the administrator area and waits for nothing else. The two
- * player reads are not even asked for once the player read says so: an account that has not asked
- * to play owes the gate no rating and no run.
+ * administrator*, or *no profile at all*, the gate answers the administrator area or *Start
+ * playing*'s first step and waits for nothing else. The two player reads are not even asked for
+ * once the player read says so: an account that has not asked to play owes the gate no rating and
+ * no run.
  *
  * **Otherwise all three must answer before the gate does.** A launch that can read ratings but not the
  * player has no safe default — routing into the app is exactly the outcome the fourth branch
@@ -33,13 +34,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 
-import { useCurrentUser } from '@/features/auth/types';
+import { namedInFull, useCurrentUser } from '@/features/auth/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 import type { AppError } from '@/shared/errors';
 
 import {
-  administratorArea,
   entryDestination,
+  profileDestination,
   type EntryDestination,
 } from '../domain/entryDecision';
 import { useDeferredRuns } from '../store/deferredRuns.store';
@@ -92,8 +93,8 @@ export function useEntryDecision(): EntryDecision {
   const user = useCurrentUser();
   // Read off the player once it has answered; until then nothing is known, and the two player
   // reads go out beside it as they always have.
-  const area = user.data === undefined ? undefined : administratorArea(user.data.profiles);
-  const playerReadsEnabled = enabled && area === undefined;
+  const byProfile = user.data === undefined ? undefined : profileDestination(user.data.profiles);
+  const playerReadsEnabled = enabled && byProfile === undefined;
 
   const ratings = useQuery({
     queryKey: onboardingKeys.ratings(),
@@ -132,11 +133,11 @@ export function useEntryDecision(): EntryDecision {
     void refetchUser();
   }, [refetchRatings, refetchRun, refetchUser]);
 
-  // **The profiles first** (ADR-0185 §3): an account that only runs a club's groups is routed by
+  // **The profiles first** (ADR-0185 §3): an account that does not act as a player is routed by
   // the player read alone, the moment it answers — unless this mount is replacing that read, for
   // the reason `beingReplaced` below gives.
   const userBeingReplaced = staleAtMount.user && user.isFetching && !user.isFetchedAfterMount;
-  if (area !== undefined && !userBeingReplaced) return area;
+  if (byProfile !== undefined && !userBeingReplaced) return byProfile;
 
   const error = (ratings.error ?? run.error ?? user.error) as AppError | null;
   if (error !== null) return { kind: 'unavailable', reason: { kind: 'failed', error }, retry };
@@ -200,7 +201,9 @@ export function useEntryDecision(): EntryDecision {
   if (beingReplaced) return { kind: 'pending' };
 
   return entryDestination({
-    hasName: user.data.name !== undefined,
+    // A name *and* a nickname (ADR-0185 §4): an account an Invitation opened holds the club's
+    // name and no handle, and the naming is still owed once it plays.
+    namedInFull: namedInFull(user.data),
     ratings: ratings.data,
     runInProgress: run.data ?? undefined,
     deferredRunIds,

@@ -45,7 +45,7 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -58,7 +58,7 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -71,7 +71,7 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -87,7 +87,7 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -104,7 +104,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -117,7 +117,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -132,7 +132,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: ['a-different-assessment'],
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -150,7 +150,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -167,7 +167,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -182,7 +182,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -198,7 +198,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -221,7 +221,7 @@ describe('an account with no name yet', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: false,
+        namedInFull: false,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -237,7 +237,7 @@ describe('an account with no name yet', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        hasName: false,
+        namedInFull: false,
         hasPlayerProfile: false,
         profiles: A_PLAYER,
       }),
@@ -250,7 +250,7 @@ describe('an account with no name yet', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: false,
+        namedInFull: false,
         hasPlayerProfile: true,
         profiles: A_PLAYER,
       }),
@@ -277,7 +277,7 @@ describe('an account that holds only administrator profiles', () => {
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
         // An account an Invitation opened: the club typed a name, and nobody chose a nickname.
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
         profiles: ADMINISTRATOR_ONLY,
       }),
@@ -290,7 +290,7 @@ describe('an account that holds only administrator profiles', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        hasName: false,
+        namedInFull: false,
         hasPlayerProfile: false,
         profiles: ADMINISTRATOR_ONLY,
       }),
@@ -303,7 +303,7 @@ describe('an account that holds only administrator profiles', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
         profiles: { actsAsPlayer: false, administers: [BONARKA, OGRODY] },
       }),
@@ -318,10 +318,71 @@ describe('an account that holds only administrator profiles', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
         profiles: { actsAsPlayer: true, administers: [OGRODY] },
       }),
     ).toEqual({ kind: 'app' });
+  });
+});
+
+/**
+ * **An account with no profile at all is offered the player setup, from the Adult attestation**
+ * ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §3, [#517](https://github.com/Raketa02/Raketa/issues/517)). The only way to be one is an
+ * administrator-only account whose club removed it: it does not act as a player and runs no
+ * club's groups. Signing in again must never be a dead end, so it takes *Start playing*'s steps,
+ * from the gate instead of from a row — and the first is the attestation, which it has never given.
+ */
+describe('an account that holds no profile at all', () => {
+  const NO_PROFILE: EntryInput['profiles'] = { actsAsPlayer: false, administers: [] };
+
+  it('is sent to Start playing’s first step, the Adult attestation', () => {
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        // The club typed a name, and nobody chose a nickname.
+        namedInFull: false,
+        hasPlayerProfile: false,
+        profiles: NO_PROFILE,
+      }),
+    ).toEqual({ kind: 'start-playing' });
+  });
+
+  // Nothing player-side may be reached before the attestation (ADR-0185 §5) — not the naming, and
+  // not a run, which the server would refuse `adult_attestation_missing` anyway.
+  it('is asked for the attestation ahead of the naming and of anything a player owes', () => {
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: RUN,
+        deferredRunIds: NONE_DEFERRED,
+        namedInFull: false,
+        hasPlayerProfile: false,
+        profiles: NO_PROFILE,
+      }),
+    ).toEqual({ kind: 'start-playing' });
+  });
+});
+
+/**
+ * **Named in full is a name and a nickname** (ADR-0185 §4). An account an Invitation opened
+ * carries the club-typed Name and no Nickname; once it has attested it acts as a player, and the
+ * naming step is where it goes first — asking only for the nickname.
+ */
+describe('an administrator who has just started playing', () => {
+  it('is sent to the naming step, not past it on the strength of the club’s name', () => {
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        namedInFull: false,
+        hasPlayerProfile: false,
+        profiles: { actsAsPlayer: true, administers: [OGRODY] },
+      }),
+    ).toEqual({ kind: 'naming' });
   });
 });

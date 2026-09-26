@@ -1,40 +1,141 @@
 /**
- * **The administrator's You tab — a placeholder**, until
- * [#517](https://github.com/Raketa02/Raketa/issues/517) gives it each group's settings and *Start
- * playing*, and [#518](https://github.com/Raketa02/Raketa/issues/518) the profile switcher chip.
+ * **The administrator's You tab** — who is here, each official group's settings, *Start playing*
+ * and the way out ([#517](https://github.com/Raketa02/Raketa/issues/517), PRD #500 stories
+ * 131–133). No mock draws it, so it is the player's You tab's arrangement (ADR-0179 §1) with the
+ * administrator's rows in it:
  *
- * **It keeps the one thing a placeholder may not leave out: the way out.** An account that only
- * administers has no other screen with *Sign out* on it, and a tab with nothing on it would make the
- * area a place such an account can never leave. So the header — *OGRODY 33 · ADMINISTRATOR / You* —
- * and the account's own *Sign out*, the player You tab's foot (`AccountPanel`), and nothing that
- * pretends to be more.
+ * ```
+ * OGRODY 33 · ADMINISTRATOR     the area's eyebrow
+ * Marta Nowak                   the account's name — club 8's header, which club 17 moved here
+ * GROUP SETTINGS                one row per official group she runs, opening its settings
+ * PLAYING                       Start playing — only while the account does not act as a player
+ * Sign out
+ * ```
+ *
+ * **The header is club 8's**: the club and the role over the person's name. PRD #500 gave the Groups
+ * tab club 17's *Groups* in its place, and left the name to this tab — the one that is about the
+ * account. The switcher chip joins it here ([#518](https://github.com/Raketa02/Raketa/issues/518)).
+ *
+ * **A group's row is the You tab's door row**: a glyph, the group's name, and the one of its settings
+ * the Groups tab's read already carries — its sports — so the tab asks nothing of its own. The rows
+ * come in the Groups tab's order, newest created first, and before the first group there are none:
+ * a card of settings for nothing is nothing.
+ *
+ * ***Start playing* is offered while the account does not act as a player** (ADR-0185 §4) — an
+ * account an Invitation opened, which has never given the Adult attestation. It pushes that step over
+ * this tab — inside the area, so *back* is here — and the naming and the player setup follow through
+ * the entry gate; afterwards the account holds both profiles, and the row is gone because the
+ * account plays.
+ *
+ * ***Sign out* is the account's**, the player You tab's foot (`AccountPanel`): an account that only
+ * administers has no other screen with a way out.
  */
 
-import { ScrollView, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import type { ReactNode } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AccountPanel } from '@/features/auth/types';
-import { ScreenHeader, theme } from '@/shared/ui';
+import { AccountPanel, useCurrentUser } from '@/features/auth/types';
+import { ReadFailure } from '@/features/groups/types';
+import { Card, DoorRow, ScreenHeader, theme } from '@/shared/ui';
 
 import { useAreaClubName } from '../hooks/useAreaAccess';
+import { useAdministeredGroups } from '../hooks/useOfficialGroups';
 
 import { ADMINISTRATOR_COPY } from './administratorCopy';
-import { administratorEyebrow } from './administratorPresentation';
+import { administratorEyebrow, settingsRowLine } from './administratorPresentation';
+import { groupSettingsRoute, startPlayingRoute } from './administratorRoutes';
+
+const COPY = ADMINISTRATOR_COPY.you;
 
 export function AdministratorYouScreen({ clubId }: { readonly clubId: string }) {
   const clubName = useAreaClubName(clubId);
+  const user = useCurrentUser();
+  // The area opened on this read, so it is here; *acts as a player* until it says otherwise, so
+  // the row never flashes in for an account that plays.
+  const plays = user.data?.profiles.actsAsPlayer ?? true;
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <ScreenHeader eyebrow={administratorEyebrow(clubName)} title={ADMINISTRATOR_COPY.you.title} />
+      <ScreenHeader
+        eyebrow={administratorEyebrow(clubName)}
+        title={user.data?.name ?? COPY.title}
+      />
       <ScrollView contentContainerStyle={s.content}>
+        <GroupSettingsRows clubId={clubId} />
+
+        {plays ? null : (
+          <YouGroup title={COPY.playing}>
+            <DoorRow
+              glyph="play-circle"
+              title={COPY.startPlaying}
+              line={COPY.startPlayingLine}
+              onPress={() => router.push(startPlayingRoute(clubId))}
+            />
+          </YouGroup>
+        )}
+
         <AccountPanel />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+/** One row per official group, off the Groups tab's read — or why it could not be read. */
+function GroupSettingsRows({ clubId }: { readonly clubId: string }) {
+  const read = useAdministeredGroups(clubId);
+  const groups = read.data?.groups;
+
+  if (groups === undefined) {
+    return read.error === null ? null : (
+      <YouGroup title={COPY.groups}>
+        <ReadFailure error={read.error} onRetry={() => void read.refetch()} />
+      </YouGroup>
+    );
+  }
+  if (groups.length === 0) return null;
+
+  return (
+    <YouGroup title={COPY.groups}>
+      {groups.map((group, index) => {
+        const line = settingsRowLine(group);
+        return (
+          <DoorRow
+            key={group.id}
+            glyph="sliders"
+            title={group.name}
+            {...(line === undefined ? {} : { line })}
+            divided={index > 0}
+            onPress={() => router.push(groupSettingsRoute(clubId, group.id))}
+          />
+        );
+      })}
+    </YouGroup>
+  );
+}
+
+/**
+ * A group: a `flab` title, uppercase, over one `Card` of rows — the player You tab's (`shell`'s
+ * `YouGroup`, Part 16, 2026-09-17), drawn here for the second tab that has one.
+ */
+function YouGroup({ title, children }: { readonly title: string; readonly children: ReactNode }) {
+  return (
+    <View style={s.group}>
+      <Text style={s.groupTitle}>{title}</Text>
+      <Card style={s.rows}>{children}</Card>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
-  content: { paddingHorizontal: theme.size.gutter, paddingBottom: theme.space.lg },
+  content: {
+    paddingHorizontal: theme.size.gutter,
+    paddingBottom: theme.space.lg,
+    gap: theme.space.sm,
+  },
+  group: { gap: theme.space.xs, paddingTop: theme.space.xs },
+  groupTitle: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
+  rows: { paddingVertical: theme.space.xxs },
 });

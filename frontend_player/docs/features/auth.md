@@ -168,3 +168,27 @@ gate's first read, kept for `hasPlayerProfile`'s reason. The pending invitations
 the invitation sheet (#518) draws them. **`useSignOut` is public** for one caller outside this feature,
 the administrator area, which signs out an account its club removed; the sequence stays this
 feature's.
+
+**_Start playing_'s first step is this feature's, and so is the naming that follows it**
+([#517](https://github.com/Raketa02/Raketa/issues/517), ADR-0185 §4–§5). An account an Invitation
+opened runs a club's groups and has never been asked its age, so the first time it acts as a player
+it gives **the Adult attestation**: `StartPlayingScreen`, `POST /users/me/adult-attestation` through
+`attestAdult` and `useAttestAdult`. It lives here on the naming's precedent — the act is the users
+context's, on the account — and asks with **sign-up's own box, claim and refusal** (`TickBox`,
+`ADULT_LABEL`, `ADULT_ATTESTATION_MISSING`; the schema's `adultAttested` field is shared), never ticked
+on arrival, with _Continue_ never disabled by it. **Not retried.** Like the naming, it **writes and then
+re-reads**: _acts as a player_ goes into the cached player at once and a fresh `/users/me` is awaited,
+so the gate reading the cache next already moves the account on, and the screen replaces itself with
+`/`. **Two addresses, one screen**: the administrator's You tab pushes it inside its area (so _back_ is
+the tab), and the gate redirects an account with no profile at all to `START_PLAYING_STEP`, where
+nothing is behind it: no back is drawn, and **_Sign out_ is drawn under _Continue_ instead**, a link,
+because signing in again must never be a dead end and a person who does not want to play has no other
+screen with a way out. The screen reads which from `router.canGoBack()` as it opens. **Named in full
+is one rule, `domain/naming.ts`** — a name and a nickname — which the gate reads through `types.ts`
+(`namedInFull`) and the naming step beside it (`heldNameWithoutNickname`).
+
+**The naming asks only for what is missing** (ADR-0185 §4). An account that holds a name and no
+nickname — the club's name — sees the nickname's box alone, and the sub-line _People will see you as
+Marta Nowak. Pick a nickname to go with it._; the form opens holding that name and sends it with the
+nickname, so the naming stays one act carrying both. Every account sign-up creates holds neither and
+sees both boxes. **Not seen on a device**: the attestation step, and the naming with one box.

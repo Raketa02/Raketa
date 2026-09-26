@@ -51,6 +51,25 @@ export const ADMINISTRATOR_COPY = {
     },
   },
   you: {
+    /** The header's title where the account's name has not been read — it always has one here. */
     title: 'You',
+    /** The group of one row per official group, each opening its settings. */
+    groups: 'Group settings',
+    /** The group holding *Start playing*, for an account that does not play yet. */
+    playing: 'Playing',
+    startPlaying: 'Start playing',
+    startPlayingLine: 'Get a Skill rating, then find people to play with',
+  },
+  /** An official group's settings, opened from its row on the You tab (#517). */
+  settings: {
+    title: 'Group settings',
+    back: 'Back to You',
+    save: 'Save',
+    saved: 'Saved',
+    saving: 'Saving the settings',
+    /** One code for every group that is not theirs — a colleague's, another club's, none. */
+    refused: {
+      group_not_found: 'This isn’t a group you run any more.',
+    },
   },
 } as const;

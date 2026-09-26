@@ -287,4 +287,6 @@ which answers nothing itself — the two taps are props, so an Owner's queue and
 answer through their own routes, as #514's handover suggested; **_Who can join_ can be drawn without its _no sport to pick_ note**
 (`noSportNote`), which is false of an official group; and **the Name card takes a placeholder and an
 error**, for _Same name as the WhatsApp group_ and a refusal said on the field. The share sentence is
-the administrator's WhatsApp post too, as #513 already wrote it for.
+the administrator's WhatsApp post too, as #513 already wrote it for. **Edit group's _LET IN · N_ card left the
+screen** for `AdmittedCard` ([#517](https://github.com/Raketa02/Raketa/issues/517)), which an official
+group's settings draw after the same switch to Anyone.

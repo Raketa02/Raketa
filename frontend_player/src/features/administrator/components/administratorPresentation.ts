@@ -19,6 +19,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import { WHATSAPP_SIZE, type AdministeredGroup, type OfficialGroup } from '../domain/officialGroup';
 import type { JoinedWhen } from '../domain/officialGroupRules';
+import { isRemoval } from '../hooks/useRemovalWatch';
 
 import { ADMINISTRATOR_COPY } from './administratorCopy';
 
@@ -45,6 +46,14 @@ function sportsList(sports: readonly Sport[]): string {
   return sports.map(sportLabel).join(', ');
 }
 
+/**
+ * *Padel, Tennis, Squash* — a group's row on the You tab, under its name: the one of its settings
+ * the Groups tab's read carries. Nothing where no sport this build can name is left.
+ */
+export function settingsRowLine(group: Pick<AdministeredGroup, 'sports'>): string | undefined {
+  return group.sports.length === 0 ? undefined : sportsList(group.sports);
+}
+
 /** *Ogrody 33 Club, 11 members, 1 waiting, plays Padel, Tennis, Ogrody 33* — a card, spoken. */
 export function officialCardLabel(card: AdministeredGroup): string {
   const waiting = card.waitingCount > 0 ? [waitingTag(card.waitingCount)] : [];
@@ -65,31 +74,50 @@ export function sportsCardLine(clubName: string): string {
 }
 
 /**
- * **A refused create, in the form's words** — the server checks the four fields in the form's order
- * and names the one it refused (`details.field`); the screen says this on that field, and anything
- * the form cannot name under the button. The limits are the domain's, so a sentence cannot state
- * another. A function rather than a table, so `groups`' limit is read when a refusal is said.
+ * **A refused create or settings save, in the form's words** — the server checks the four fields in
+ * the form's order and names the one it refused (`details.field`); the screen says this on that
+ * field, and anything the form cannot name under the button. The limits are the domain's, so a
+ * sentence cannot state another. A function rather than a table, so `groups`' limit is read when a
+ * refusal is said.
  */
-export function createRefusal(error: AppError): string {
+function settingsRefusal(error: AppError): string {
   return codeMessage(
     {
       group_name_invalid: `Give the group a name of up to ${GROUP_NAME_MAX} characters.`,
       whatsapp_size_invalid: `The WhatsApp group size is a whole number from ${WHATSAPP_SIZE.min} to ${WHATSAPP_SIZE.max}.`,
       group_sports_required: 'Pick at least one sport the group plays.',
       sport_not_offered_by_club: 'The club doesn’t offer one of those sports any more. Pick again.',
+      ...ADMINISTRATOR_COPY.settings.refused,
     },
     error,
   );
 }
 
 /** The fields a refusal can be said on. Anything else is said under the button. */
-export const CREATE_FIELDS = ['name', 'whatsapp_size', 'sports'] as const;
-export type CreateField = (typeof CREATE_FIELDS)[number];
+const FORM_FIELDS = ['name', 'whatsapp_size', 'sports'] as const;
+export type FormField = (typeof FORM_FIELDS)[number];
 
-/** Which field a refused create names, if it names one of the form's. */
-export function refusedField(error: AppError): CreateField | undefined {
+/** Which field a refused create or save names, if it names one of the form's. */
+function refusedField(error: AppError): FormField | undefined {
   const field = error.details?.['field'];
-  return CREATE_FIELDS.find((known) => known === field);
+  return FORM_FIELDS.find((known) => known === field);
+}
+
+/** A refusal in the form's words, and the field it is said on — none: under the button. */
+export interface FormRefusal {
+  readonly words: string;
+  readonly field?: FormField;
+}
+
+/**
+ * **What a refused create or settings save says, and where** — or nothing: no refusal, or a
+ * removal, which is the area's to answer, once (`useRemovalWatch`), and not the form's as well.
+ * One reading for both forms, so they cannot say a refusal differently.
+ */
+export function formRefusal(error: AppError | null): FormRefusal | undefined {
+  if (error === null || isRemoval(error)) return undefined;
+  const field = refusedField(error);
+  return { words: settingsRefusal(error), ...(field === undefined ? {} : { field }) };
 }
 
 /** A refused answer to a request — answered from another phone, or a group that moved on. */

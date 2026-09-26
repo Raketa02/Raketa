@@ -11,16 +11,17 @@
 
 import type { components } from '@/generated/schema';
 import { toSport, toWireSport } from '@/features/onboarding/types';
-import type { JoinRequest, Monogram, SportLevel } from '@/features/groups/types';
+import type { GroupPerson, JoinRequest, Monogram, SportLevel } from '@/features/groups/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type {
   OfficialGroupsClub,
   AdministeredGroups,
   GroupPlayer,
-  NewOfficialGroup,
+  OfficialGroupSettings,
   OfficialGroup,
   AdministeredGroup,
+  SavedSettings,
 } from '../domain/officialGroup';
 
 type Schemas = components['schemas'];
@@ -95,11 +96,26 @@ export function toOfficialGroup(wire: Schemas['AdministeredGroupResponse']): Off
   };
 }
 
-export function toCreateRequest(group: NewOfficialGroup): Schemas['CreateOfficialGroupRequest'] {
+/**
+ * **The four settings in the wire's spelling** — one body for both routes that take them, the
+ * create and the settings save, which the contract spells alike.
+ */
+export function toSettingsRequest(
+  settings: OfficialGroupSettings,
+): Schemas['OfficialGroupSettingsRequest'] & Schemas['CreateOfficialGroupRequest'] {
   return {
-    name: group.name,
-    join_policy: group.joinPolicy,
-    whatsapp_size: group.whatsAppSize,
-    sports: group.sports.map(toWireSport),
+    name: settings.name,
+    join_policy: settings.joinPolicy,
+    whatsapp_size: settings.whatsAppSize,
+    sports: settings.sports.map(toWireSport),
   };
+}
+
+function toGroupPerson(wire: Schemas['GroupPersonSchema']): GroupPerson {
+  return { playerId: wire.player_id, name: wire.name, ...photoOf(wire) };
+}
+
+/** The group as its settings left it, and who a switch to *Anyone* let in, in the order they asked. */
+export function toSavedSettings(wire: Schemas['SavedSettingsResponse']): SavedSettings {
+  return { group: toOfficialGroup(wire.group), admitted: wire.admitted.map(toGroupPerson) };
 }

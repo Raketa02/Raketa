@@ -18,6 +18,7 @@ import type {
 } from '../domain/AuthenticatedUser';
 import type { NewPassword, ResetCodeClaim } from '../domain/passwordReset';
 import { askForPasswordReset } from '../use-cases/askForPasswordReset';
+import { attestAdult } from '../use-cases/attestAdult';
 import { claimResetCode } from '../use-cases/claimResetCode';
 import { namePlayer } from '../use-cases/namePlayer';
 import { setNewPassword } from '../use-cases/setNewPassword';
@@ -122,6 +123,38 @@ export function useNamePlayer() {
       );
       // `staleTime: 0` is the point: the write above just made the entry fresh, and a fetch that
       // honoured that would hand the write back as the server's answer.
+      await queryClient.fetchQuery({ ...currentUserQuery(), staleTime: 0 });
+    },
+  });
+}
+
+/**
+ * ***Start playing*'s first step, the Adult attestation** — and the cache effect it declares
+ * ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §4–§5).
+ *
+ * **Not retried.** The act is safe to repeat — giving it twice records nothing — but a failure is
+ * the player's to see and press again, every mutation's rule.
+ *
+ * **Written, and then re-read, in that order** — the naming's shape, for its reasons. The account
+ * **acts as a player** from the moment it attests (ADR-0185 §2), and that is what the entry gate
+ * reads first: the write puts it in the cached player at once, so a gate reading the cache in the
+ * next instant already sends the account on to the naming rather than back to its administrator
+ * area, and the awaited `fetchQuery` is the server staying the authority. The caller's own
+ * `onSuccess` navigates on a cache that is already right.
+ */
+export function useAttestAdult() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, AppError, void>({
+    mutationFn: attestAdult,
+    retry: false,
+    onSuccess: async () => {
+      queryClient.setQueryData<AuthenticatedUser>(authKeys.currentUser(), (player) =>
+        player === undefined
+          ? undefined
+          : { ...player, profiles: { ...player.profiles, actsAsPlayer: true } },
+      );
       await queryClient.fetchQuery({ ...currentUserQuery(), staleTime: 0 });
     },
   });

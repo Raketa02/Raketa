@@ -9,6 +9,7 @@ describe('the administrator query keys', () => {
       administratorKeys.groups('c'),
       administratorKeys.group('c', 'g'),
       administratorKeys.create('c'),
+      administratorKeys.settings('c', 'g'),
       administratorKeys.answers('c', 'g'),
     ]) {
       expect(key.slice(0, club.length)).toEqual(club);

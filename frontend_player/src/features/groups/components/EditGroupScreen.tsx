@@ -11,7 +11,7 @@
  *
  * **Switching to Anyone shows the people it admitted** (story 76): everybody waiting is in at once,
  * and the answer says who, in the order they asked, as a card under the button — *LET IN · 2*,
- * a face and a name each. It stays until the next save.
+ * a face and a name each (`AdmittedCard`). It stays until the next save.
  *
  * A refusal the form can name — the name, the ownership, the group gone — is said under the
  * button in the form's words; any other says why it failed. Nothing is recorded on a refusal
@@ -20,23 +20,23 @@
 
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { codeMessage } from '@/shared/errors';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { Button, Card, Note, PlayerPhoto, ScreenHeader, theme } from '@/shared/ui';
+import { Button, Note, ScreenHeader, theme } from '@/shared/ui';
 
-import type { Group, GroupPerson } from '../domain/group';
+import type { Group } from '../domain/group';
 import { detailsUnchanged } from '../domain/groupInfo';
 import { useGroup } from '../hooks/useGroups';
 import { useEditGroup } from '../hooks/useGroupWrites';
 import { groupDetailsFrom } from '../schemas/groupDetailsForm';
 
+import { AdmittedCard } from './AdmittedCard';
 import { GroupNameCard, WhoCanJoinCard } from './GroupFormCards';
 import { GROUPS_COPY } from './groupsCopy';
-import { admittedEyebrow, EDIT_REFUSALS, personName } from './groupsPresentation';
-import { ROW_FACE } from './peopleRow';
+import { EDIT_REFUSALS } from './groupsPresentation';
 import { ReadFailure } from './ReadFailure';
 
 const COPY = GROUPS_COPY.editGroup;
@@ -103,41 +103,9 @@ function EditGroupForm({ group }: { readonly group: Group }) {
           </Note>
         ) : null}
 
-        {admitted.length > 0 ? <Admitted people={admitted} /> : null}
+        {admitted.length > 0 ? <AdmittedCard people={admitted} /> : null}
       </ScrollView>
     </KeyboardAvoidingView>
-  );
-}
-
-/** *LET IN · 2* — who the switch to Anyone admitted, in the order they asked. */
-function Admitted({ people }: { readonly people: readonly GroupPerson[] }) {
-  return (
-    <View style={s.section}>
-      <Text accessibilityRole="header" style={s.eyebrow}>
-        {admittedEyebrow(people.length)}
-      </Text>
-      <Card style={s.card}>
-        <Text style={s.line}>{COPY.admittedLine}</Text>
-        {people.map((person) => (
-          <View
-            key={person.playerId}
-            testID={`admitted-${person.playerId}`}
-            style={s.row}
-            accessible
-            accessibilityLabel={personName(person.name)}
-          >
-            <PlayerPhoto
-              playerId={person.playerId}
-              {...(person.photoUrl === undefined ? {} : { photoUrl: person.photoUrl })}
-              box={{ kind: 'face', size: ROW_FACE }}
-            />
-            <Text style={s.name} numberOfLines={1}>
-              {personName(person.name)}
-            </Text>
-          </View>
-        ))}
-      </Card>
-    </View>
   );
 }
 
@@ -149,10 +117,4 @@ const s = StyleSheet.create({
     paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
-  section: { gap: theme.space.xs },
-  eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
-  card: { gap: theme.space.sm },
-  line: { ...theme.type.tiny, color: theme.color.muted },
-  row: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
-  name: { ...theme.type.cardTitle, color: theme.color.ink, flexShrink: 1 },
 });
