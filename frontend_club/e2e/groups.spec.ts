@@ -30,6 +30,34 @@ function rowOf(page: Page, name: string) {
   return page.getByRole('row').filter({ has: page.getByRole('rowheader', { name, exact: true }) });
 }
 
+/**
+ * The colour on screen `across` the way along a row's bar (0 its left end, 1 its right), read
+ * from a picture of it: what the desk sees, which no style property says for a progress bar.
+ */
+async function barColourAt(page: Page, name: string, across: number) {
+  const picture = await rowOf(page, name).locator('progress').screenshot();
+  return page.evaluate(
+    async ({ png, across }) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${png}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext('2d');
+      if (context === null) throw new Error('no 2d canvas');
+      context.drawImage(image, 0, 0);
+      const x = Math.floor((image.width - 1) * across);
+      const [red, green, blue] = context.getImageData(x, Math.floor(image.height / 2), 1, 1).data;
+      return `rgb(${red}, ${green}, ${blue})`;
+    },
+    { png: picture.toString('base64'), across },
+  );
+}
+
+const GREEN = 'rgb(48, 131, 97)';
+const TRACK = 'rgb(238, 236, 227)';
+
 test.describe('Groups', () => {
   test("the table reads each group's administrator, players and crowd, and nothing is created here", async ({
     page,
@@ -119,6 +147,11 @@ test.describe('Groups', () => {
       '12 of 48 · 25%',
     );
     expect(await filled('Ogrody 33 Club')).toBe(0.25);
+
+    // Green as far as the players reach, then the pale track; green to the end past 100%.
+    expect(await barColourAt(page, 'Ogrody 33 Club', 0.1)).toBe(GREEN);
+    expect(await barColourAt(page, 'Ogrody 33 Club', 0.9)).toBe(TRACK);
+    expect(await barColourAt(page, 'Ogrody wieczorem', 0.9)).toBe(GREEN);
   });
 
   test('a group whose administrator was removed needs an administrator, in amber', async ({
