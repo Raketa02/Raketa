@@ -64,6 +64,7 @@ from app.modules.groups.application.official_groups import (
     ReadAdministeredGroups,
 )
 from app.modules.groups.application.read_group import GroupPages, ReadGroup
+from app.modules.groups.application.read_group_by_link import ReadGroupByLink
 from app.modules.groups.application.read_group_members import ReadGroupMembers
 from app.modules.groups.application.read_join_requests import ReadJoinRequests
 from app.modules.groups.application.read_my_groups import ReadMyGroups
@@ -206,6 +207,15 @@ def get_read_my_groups(
 
 
 ReadMyGroupsDep = Annotated[ReadMyGroups, Depends(get_read_my_groups)]
+
+
+def get_read_group_by_link(
+    directory: GroupDirectoryDep, clubs: HomeClubsDep, ratings: RatedGroupMembersDep
+) -> ReadGroupByLink:
+    return ReadGroupByLink(directory=directory, clubs=clubs, ratings=ratings)
+
+
+ReadGroupByLinkDep = Annotated[ReadGroupByLink, Depends(get_read_group_by_link)]
 
 
 def get_group_pages(

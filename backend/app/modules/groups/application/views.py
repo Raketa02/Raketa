@@ -192,6 +192,19 @@ class GroupPage:
 
 @final
 @dataclass(frozen=True, slots=True)
+class LinkedGroup:
+    """A group as a stranger holding its link sees it, on the public site
+    (``docs/adr/0187`` §4–§5): the row every list draws, and where it plays —
+    **and nobody in it**. There is no field here a member could be named by, so
+    no surface can print one."""
+
+    row: GroupRow
+    club_name: str
+    club_district: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class EditedGroup:
     """The group as *Edit group* left it, and who the save let in — everybody
     the switch to *Anyone* admitted, in the order they asked; nobody for every

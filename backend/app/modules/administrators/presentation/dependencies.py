@@ -45,6 +45,7 @@ from app.modules.administrators.application.invitations import (
     ClaimInvitation,
     ReadInvitationByToken,
     SetInvitationPassword,
+    SetInvitationPasswordWithoutSigningIn,
 )
 from app.modules.administrators.application.profiles import ReadAccountProfiles
 from app.modules.administrators.application.sending import InvitationSender
@@ -347,3 +348,32 @@ async def administrator_at(
 
 
 AdministratorAtClubDep = Annotated[AdministratorListing, Depends(administrator_at)]
+
+
+# --- The public surface --------------------------------------------------------
+
+
+def get_set_invitation_password_without_signing_in(
+    credentials: OneTimeCredentialsDep,
+    administrators: AdministratorRepositoryDep,
+    accounts: AccountHoldersDep,
+    sign_out_everywhere: SignOutEverywhereDep,
+    hasher: PasswordHasherDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> SetInvitationPasswordWithoutSigningIn:
+    return SetInvitationPasswordWithoutSigningIn(
+        credentials=credentials,
+        administrators=administrators,
+        accounts=accounts,
+        sign_out_everywhere=sign_out_everywhere,
+        hasher=hasher,
+        uow=uow,
+        clock=clock,
+    )
+
+
+SetInvitationPasswordWithoutSigningInDep = Annotated[
+    SetInvitationPasswordWithoutSigningIn,
+    Depends(get_set_invitation_password_without_signing_in),
+]

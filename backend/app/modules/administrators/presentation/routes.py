@@ -10,7 +10,6 @@ Never under ``/api/v1/club``: anything beginning that way reads as the club
 surface.
 """
 
-from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, status
@@ -29,6 +28,10 @@ from app.modules.administrators.presentation.dependencies import (
     ReadInvitationByTokenDep,
     SetInvitationPasswordDep,
 )
+from app.modules.administrators.presentation.invitation_docs import (
+    CREDENTIAL_REFUSALS,
+    WEAK_PASSWORD,
+)
 from app.modules.administrators.presentation.schemas import (
     AccountProfilesSchema,
     AdministratorProfileResponse,
@@ -42,18 +45,6 @@ from app.modules.users.presentation.dependencies import CurrentUserDep
 
 invitations_router = APIRouter(prefix="/invitations", tags=["invitations"])
 administrator_router = APIRouter(prefix="/administrator", tags=["administrator"])
-
-_CREDENTIAL_REFUSALS: dict[int | str, dict[str, Any]] = {
-    status.HTTP_409_CONFLICT: {
-        "model": ErrorResponse,
-        "description": (
-            "The invitation can no longer be used: `credential_expired` (ask the "
-            "club to send a new one), `credential_used`, `credential_locked` "
-            "(five wrong codes) — or `sign_in_to_accept`: the email has an "
-            "account now, which accepts from the app, signed in."
-        ),
-    },
-}
 
 
 @invitations_router.post(
@@ -69,7 +60,7 @@ _CREDENTIAL_REFUSALS: dict[int | str, dict[str, Any]] = {
                 "Five wrong codes lock the invitation."
             ),
         },
-        **_CREDENTIAL_REFUSALS,
+        **CREDENTIAL_REFUSALS,
     },
     summary="Have an invitation code?: exchange it for a ticket",
     description=(
@@ -92,19 +83,12 @@ async def claim_invitation(
     response_model=TokenResponse,
     status_code=status.HTTP_200_OK,
     responses={
-        status.HTTP_400_BAD_REQUEST: {
-            "model": ErrorResponse,
-            "description": (
-                "`password_too_weak` (`details.field`: `password`) — 8 to 128 "
-                "characters with a letter and a digit. The link and the code "
-                "still work."
-            ),
-        },
+        **WEAK_PASSWORD,
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
             "description": "`credential_not_found` — a link or ticket never issued.",
         },
-        **_CREDENTIAL_REFUSALS,
+        **CREDENTIAL_REFUSALS,
     },
     summary="Set your password, by the invitation's link or a ticket, and sign in",
     description=(

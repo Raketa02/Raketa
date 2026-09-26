@@ -26,9 +26,9 @@ make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
-make openapi     # emit openapi.{player,dev,club}.json — the player contract the
-                 # client generates from, the dev console's one-path contract, and
-                 # the club website's
+make openapi     # emit openapi.{player,dev,club,public}.json — the player contract
+                 # the client generates from, the dev console's one-path contract,
+                 # the club website's, and the public site's
 make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
 make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis + Mailpit,
                  # whose inbox at http://localhost:8025 is where every email lands); logs, shell
@@ -621,9 +621,12 @@ Rules to preserve:
   it was meant to seat around.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix, and mount
   them on **the surface whose client calls them**: `app/api/v1/player.py` for the player
-  app, `app/api/v1/club.py` — everything under `/api/v1/club` — for the club website
+  app, `app/api/v1/club.py` — everything under `/api/v1/club` — for the club website, and
+  `app/api/v1/public.py` — everything under `/api/v1/public`, and no route taking a session —
+  for the public site
   ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
-  §5). No path is in both documents (`tests/unit/test_club_surface.py`). The one
+  §5). No path is in two documents (`tests/unit/test_club_surface.py`,
+  `tests/unit/test_public_surface.py`). The one
   exception to the prefix is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
   second client: one no-build `console.html` behind a `FileResponse` at `/dev`, and one
   roster route, which is the whole of `openapi.dev.json`. It **acts as another player by
@@ -1468,11 +1471,14 @@ This app is the single source of truth for the API
 (`make openapi`), so a response-shape change is load-bearing outside this directory. When
 you change it, run the `api-contract-change` skill.
 
-**`make openapi` writes one document per surface, and there are three.** The second is the
+**`make openapi` writes one document per surface, and there are four.** The second is the
 **dev console**'s `openapi.dev.json` — one path, and no client, so nothing generates types
 from it. The third is the **club website**'s `openapi.club.json`, which `frontend_club`
-generates from; until the root gates learn it (#527), `tests/unit/test_club_surface.py`
-is what fails a stale one. All are committed, and the first two are gated at the
+generates from; the fourth is the **public site**'s `openapi.public.json`, which
+`frontend_public` will — **no route on it takes a session**, and its password routes run the
+app's own rules and sign nobody in (#511). Until the root gates learn those two (#527),
+`tests/unit/test_club_surface.py` and `tests/unit/test_public_surface.py` are what fail a
+stale one. All are committed, and the first two are gated at the
 repository root by `make contract-freshness`: re-emit and diff, which is a different question from
 `make test-drift`'s (that one asks whether the *client's* generated types reproduce from
 the document, and has no purchase on a document with no client). Commit the regenerated

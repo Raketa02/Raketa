@@ -16,12 +16,19 @@ email both identities share.
    §7) and signs this session in — in one transaction, so a password that
    changed without its sessions ending cannot be committed, and neither can a
    new session without the password it was opened with.
+
+**The public site's reset page** (``docs/adr/0187`` §4) reads a player's or an
+administrator's link — its standing and nothing else — and sets the new
+password by the same rules with the same results, **signing nobody in**: the
+site holds no session. The rules are one class both endings call, so the page
+and the app cannot come to two answers about one link.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
+from uuid import UUID
 
 from app.application.ports import MailQueue, UnitOfWork
 from app.kernel import Clock, instant
@@ -33,8 +40,11 @@ from app.modules.auth.application.reset_email import reset_email
 from app.modules.auth.application.sign_out_everywhere import SignOutEverywhere
 from app.modules.auth.application.token_rotation import TokenPair, TokenRotator
 from app.modules.auth.domain.audience import Audience
-from app.modules.auth.domain.errors import CredentialCodeIncorrect
-from app.modules.auth.domain.one_time_credential import CredentialPurpose
+from app.modules.auth.domain.errors import (
+    CredentialCodeIncorrect,
+    CredentialNotFound,
+)
+from app.modules.auth.domain.one_time_credential import CredentialPurpose, Standing
 from app.modules.auth.domain.password_reset import (
     RESET_REQUEST_WINDOW,
     RESET_REQUESTS_PER_WINDOW,
@@ -168,9 +178,11 @@ class ClaimPasswordReset:
         return ticket
 
 
-class SetNewPassword:
-    """The new password, set by the link or by a claimed code — and every other
-    session this account holds on this surface, ended."""
+class _NewPassword:
+    """The new password, set by the link or by a claimed code — and every
+    session this account holds on this surface, ended — **wherever it is set**.
+    Nothing is committed: what ends the act — a session, or none — is the
+    caller's."""
 
     def __init__(
         self,
@@ -180,7 +192,6 @@ class SetNewPassword:
         credentials: OneTimeCredentials,
         sign_out_everywhere: SignOutEverywhere,
         hasher: PasswordHasher,
-        rotator: TokenRotator,
         clock: Clock,
     ) -> None:
         self._audience = audience
@@ -188,10 +199,11 @@ class SetNewPassword:
         self._credentials = credentials
         self._sign_out_everywhere = sign_out_everywhere
         self._hasher = hasher
-        self._rotator = rotator
         self._clock = clock
 
-    async def execute(self, command: SetNewPasswordCommand) -> TokenPair:
+    async def set(self, command: SetNewPasswordCommand) -> UUID:
+        """The account whose password was set."""
+
         # The rule first: a password that is refused must not spend the link.
         try:
             password = RawPassword(command.password)
@@ -215,9 +227,94 @@ class SetNewPassword:
             credential.subject_id, audience=self._audience, now=now
         )
         await self._credentials.use(credential, now=now)
+        return credential.subject_id
+
+
+class SetNewPassword:
+    """The new password, set by the link or by a claimed code — and every other
+    session this account holds on this surface, ended, and this one signed in."""
+
+    def __init__(
+        self,
+        *,
+        audience: Audience,
+        accounts: PasswordAccounts,
+        credentials: OneTimeCredentials,
+        sign_out_everywhere: SignOutEverywhere,
+        hasher: PasswordHasher,
+        rotator: TokenRotator,
+        clock: Clock,
+    ) -> None:
+        self._audience = audience
+        self._password = _NewPassword(
+            audience=audience,
+            accounts=accounts,
+            credentials=credentials,
+            sign_out_everywhere=sign_out_everywhere,
+            hasher=hasher,
+            clock=clock,
+        )
+        self._rotator = rotator
+
+    async def execute(self, command: SetNewPasswordCommand) -> TokenPair:
+        account_id = await self._password.set(command)
         # The one commit, and the session this reset signs in. Its token is
         # issued after `now` on the same clock, so it survives the instant it
         # was opened under (``docs/adr/0185`` §7).
-        return await self._rotator.issue_pair(
-            credential.subject_id, audience=self._audience
+        return await self._rotator.issue_pair(account_id, audience=self._audience)
+
+
+class SetNewPasswordWithoutSigningIn:
+    """The new password, set by the link **on the public site's reset page**:
+    the same rules and the same results as :class:`SetNewPassword` — every
+    session on this surface ended — and **no session opened**, because the
+    site holds none (``docs/adr/0187`` §4). The person signs in to Raketa with
+    the password they have just chosen."""
+
+    def __init__(
+        self,
+        *,
+        audience: Audience,
+        accounts: PasswordAccounts,
+        credentials: OneTimeCredentials,
+        sign_out_everywhere: SignOutEverywhere,
+        hasher: PasswordHasher,
+        uow: UnitOfWork,
+        clock: Clock,
+    ) -> None:
+        self._password = _NewPassword(
+            audience=audience,
+            accounts=accounts,
+            credentials=credentials,
+            sign_out_everywhere=sign_out_everywhere,
+            hasher=hasher,
+            clock=clock,
         )
+        self._uow = uow
+
+    async def execute(self, command: SetNewPasswordCommand) -> None:
+        await self._password.set(command)
+        await self._uow.commit()
+
+
+class ReadPasswordResetByToken:
+    """Whether a reset's link still works — ``valid``, ``expired``, ``used`` or
+    ``locked`` — read before anything is set, and **nothing else about it**:
+    not whose it is, and not its code, which the email already carries
+    (``docs/adr/0187`` §5). A link this surface never issued as a reset is
+    ``credential_not_found``, as it is everywhere else."""
+
+    def __init__(
+        self, *, audience: Audience, credentials: OneTimeCredentials, clock: Clock
+    ) -> None:
+        self._audience = audience
+        self._credentials = credentials
+        self._clock = clock
+
+    async def execute(self, token: str) -> Standing:
+        credential = await self._credentials.opened_by(
+            token, purposes={_PURPOSE}, audience=self._audience
+        )
+        if credential is None:
+            raise CredentialNotFound()
+        return credential.standing(now=self._clock.now())

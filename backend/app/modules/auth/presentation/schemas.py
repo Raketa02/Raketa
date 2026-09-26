@@ -1,9 +1,11 @@
+from enum import StrEnum
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from app.modules.auth.application.one_time_credentials import ClaimTicket
 from app.modules.auth.application.token_rotation import TokenPair
+from app.modules.auth.domain.one_time_credential import Standing
 
 
 class LoginRequest(BaseModel):
@@ -103,3 +105,57 @@ class NewPasswordRequest(BaseModel):
         if (self.token is None) == (self.ticket is None):
             raise ValueError("send exactly one of token and ticket")
         return self
+
+
+# --- The public site's reset page (docs/adr/0187 §4) ---------------------------
+
+
+class ResetPageRequest(BaseModel):
+    """The token off a reset's link. In a body rather than a path, so it is in
+    no access log."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, max_length=256)
+
+
+class ResetLinkState(StrEnum):
+    """Whether a reset's link still works — the credential's standing, under a
+    name of its own on the wire."""
+
+    VALID = "valid"
+    EXPIRED = "expired"
+    USED = "used"
+    LOCKED = "locked"
+
+
+class ResetPageResponse(BaseModel):
+    """What the reset page reads off its link — **its state and nothing else**
+    (``docs/adr/0187`` §5): not whose it is, and not its code."""
+
+    state: ResetLinkState = Field(
+        description=(
+            "`valid`; `expired` — after an hour, or once a newer email was "
+            "asked for: ask again; `used`; or `locked` — five wrong codes."
+        )
+    )
+
+    @classmethod
+    def from_standing(cls, standing: Standing) -> "ResetPageResponse":
+        return cls(state=ResetLinkState(standing.value))
+
+
+class ResetPagePasswordRequest(BaseModel):
+    """*Set a new password* on the reset page: the link's `token` and the
+    password — **never a ticket**, since the page holds the link and a claimed
+    code is the app's way in.
+
+    The password carries no bound here, exactly as in the app: 8 to 128
+    characters with a letter and a digit, refused as `password_too_weak`
+    naming the field.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, max_length=256)
+    password: str

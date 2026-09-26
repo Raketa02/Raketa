@@ -826,6 +826,20 @@ there; they are not repeated here.
 - **PasswordAccounts** — the auth port *Forgot password?* recovers through, answered **per
   audience** as `SessionHolders` is: `UserPasswordAccounts` for the player app,
   `ClubPasswordAccounts` for the club website. Each records the change on its own stream.
+- **Public surface** — `/api/v1/public`, emitted as `openapi.public.json`, which only the public
+  site generates from
+  ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+  §4–§5): what a group link, an invitation email or a reset email opens without the app. **No
+  route on it takes a session**, and its document carries no bearer scheme —
+  `tests/unit/test_public_surface.py` refuses one. It **discloses the least a page needs**: a
+  group's row and its club, never anybody in it; an invitation's name — whole, as the club typed
+  it (ADR-0171 §4) — club and standing, and its code while it is valid, recomputed from the link;
+  a reset's standing and nothing else. A link token travels in a body, a group's code in the
+  path. **Its two password routes sign nobody in**: `SetInvitationPasswordWithoutSigningIn` and
+  `SetNewPasswordWithoutSigningIn` call the very rules the app's `SetInvitationPassword` and
+  `SetNewPassword` call — one class per flow — and commit where those issue a token pair, so the
+  page and the app cannot come to two answers about one link. _Avoid_: a second copy of a
+  password rule for the web; a token in a public path; a first name cut out of a name.
 
 - **Invitation sender** — `InvitationSender`, where the invite, a resend and the club's reset all
   end, so the three choose **which email** by one rule read off the account at the moment of

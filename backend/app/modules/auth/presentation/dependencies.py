@@ -26,8 +26,10 @@ from app.bootstrap.composition import (
 )
 from app.modules.auth.application.forgot_password import (
     ClaimPasswordReset,
+    ReadPasswordResetByToken,
     RequestPasswordReset,
     SetNewPassword,
+    SetNewPasswordWithoutSigningIn,
 )
 from app.modules.auth.application.login import Login
 from app.modules.auth.application.logout import Logout
@@ -175,3 +177,45 @@ def get_set_new_password(
 
 
 SetNewPasswordDep = Annotated[SetNewPassword, Depends(get_set_new_password)]
+
+
+# --- The public site's reset page, for the player app's accounts ---------------
+
+
+def get_read_password_reset_by_token(
+    credentials: OneTimeCredentialsDep, clock: ClockDep
+) -> ReadPasswordResetByToken:
+    # A player's or an administrator's link: a club's opens the club website's
+    # own page, and is not this one's to read.
+    return ReadPasswordResetByToken(
+        audience=Audience.PLAYER_APP, credentials=credentials, clock=clock
+    )
+
+
+ReadPasswordResetByTokenDep = Annotated[
+    ReadPasswordResetByToken, Depends(get_read_password_reset_by_token)
+]
+
+
+def get_set_new_password_without_signing_in(
+    accounts: PlayerPasswordAccountsDep,
+    credentials: OneTimeCredentialsDep,
+    sign_out_everywhere: SignOutEverywhereDep,
+    hasher: PasswordHasherDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> SetNewPasswordWithoutSigningIn:
+    return SetNewPasswordWithoutSigningIn(
+        audience=Audience.PLAYER_APP,
+        accounts=accounts,
+        credentials=credentials,
+        sign_out_everywhere=sign_out_everywhere,
+        hasher=hasher,
+        uow=uow,
+        clock=clock,
+    )
+
+
+SetNewPasswordWithoutSigningInDep = Annotated[
+    SetNewPasswordWithoutSigningIn, Depends(get_set_new_password_without_signing_in)
+]

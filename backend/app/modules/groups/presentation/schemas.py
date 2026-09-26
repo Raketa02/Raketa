@@ -15,9 +15,10 @@ home-club search and join search both answer ``ClubCardSchema``.
 **Every row says its kind** (``docs/adr/0183`` §1), so a client never reads an
 official group as a player group with a null where its Owner would be. The
 administrator's shapes — the Groups tab, an official group's page and its
-settings — come after the player's, on the administrator surface's paths; and
-the club's — its Groups table and the handover — are last, on the club
-surface's (#510).
+settings — come after the player's, on the administrator surface's paths; the
+club's — its Groups table and the handover — on the club surface's (#510); and
+last, the public site's one shape, which **carries nobody in the group**
+(``docs/adr/0187`` §5).
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ from app.modules.groups.application.views import (
     GroupRow,
     HomeClubResults,
     JoinSearchResults,
+    LinkedGroup,
     MemberRow,
     MyGroup,
     NamedClub,
@@ -55,7 +57,7 @@ from app.modules.groups.application.views import (
 )
 from app.modules.groups.domain.join_search import ReadAs
 from app.modules.groups.domain.link import group_link
-from app.modules.groups.domain.monogram import MONOGRAM_COLOURS
+from app.modules.groups.domain.monogram import MONOGRAM_COLOURS, Monogram
 from app.modules.groups.domain.ports import GroupFace
 from app.modules.groups.domain.value_objects import (
     GroupKind,
@@ -132,6 +134,10 @@ class MonogramSchema(BaseModel):
         ),
     )
 
+    @classmethod
+    def from_view(cls, monogram: Monogram) -> "MonogramSchema":
+        return cls(letters=monogram.letters, colour=monogram.colour)
+
 
 class ClubNameSchema(BaseModel):
     """The group's home club, as a line under its name."""
@@ -179,9 +185,7 @@ class GroupRowSchema(BaseModel):
             "id": row.id,
             "kind": row.kind,
             "name": row.name,
-            "monogram": MonogramSchema(
-                letters=row.monogram.letters, colour=row.monogram.colour
-            ),
+            "monogram": MonogramSchema.from_view(row.monogram),
             "sports": list(row.sports),
             "member_count": row.member_count,
         }
@@ -914,9 +918,7 @@ class ClubGroupSchema(BaseModel):
         return cls(
             id=row.id,
             name=row.name,
-            monogram=MonogramSchema(
-                letters=row.monogram.letters, colour=row.monogram.colour
-            ),
+            monogram=MonogramSchema.from_view(row.monogram),
             administrator=(
                 None
                 if row.administrator is None
@@ -950,3 +952,49 @@ class HandOverRequest(BaseModel):
             "`409 administrator_not_active`."
         )
     )
+
+
+# --------------------------------------------------------------------------- #
+# The public surface
+# --------------------------------------------------------------------------- #
+
+
+class LinkedGroupClubSchema(BaseModel):
+    """Where the group plays, as the page's line under its name."""
+
+    name: str
+    district: str
+
+
+class LinkedGroupResponse(BaseModel):
+    """A group as its link's page draws it for somebody who has not signed in —
+    and the preview a messenger draws from that page (``docs/adr/0187`` §4).
+    **The least that page needs, and nobody in the group**: no member, Owner or
+    administrator is named, counted apart or pictured (§5)."""
+
+    name: str
+    monogram: MonogramSchema
+    club: LinkedGroupClubSchema
+    sports: list[Sport] = Field(
+        description=(
+            "The sport dots, in the registry's order, by the rule every surface "
+            "draws them by. **A player group's**: each sport **at least two** "
+            "members hold a Skill rating in, read now. **An official group's**: "
+            "the sports it declares."
+        )
+    )
+    member_count: int = Field(
+        description="How many are in it — the same count the app draws."
+    )
+
+    @classmethod
+    def from_view(cls, group: LinkedGroup) -> "LinkedGroupResponse":
+        return cls(
+            name=group.row.name,
+            monogram=MonogramSchema.from_view(group.row.monogram),
+            club=LinkedGroupClubSchema(
+                name=group.club_name, district=group.club_district
+            ),
+            sports=list(group.row.sports),
+            member_count=group.row.member_count,
+        )

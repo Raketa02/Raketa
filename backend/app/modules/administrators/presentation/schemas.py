@@ -1,4 +1,5 @@
-"""The shapes of administrators and invitations, on both surfaces.
+"""The shapes of administrators and invitations, on the three surfaces that
+carry them: the club's, the player's, and the public site's invitation page.
 
 **The club's requests declare types and nothing else**, as every club form's do
 (``clubs/presentation/schemas.py``): a bound here would refuse first, as a
@@ -280,3 +281,60 @@ class AdministratorProfileResponse(BaseModel):
         cls, profile: AdministratorProfile
     ) -> "AdministratorProfileResponse":
         return cls(club_id=profile.club_id, club_name=profile.club_name)
+
+
+# --------------------------------------------------------------------------- #
+# The public surface
+# --------------------------------------------------------------------------- #
+
+
+class InvitationPagePasswordRequest(BaseModel):
+    """*Set your password here*, on the invitation page: the link's `token`
+    and the password — **never a ticket**, since the page holds the link and a
+    claimed code is the app's way in.
+
+    The password carries no bound here, exactly as in the app: 8 to 128
+    characters with a letter and a digit, refused as `password_too_weak`
+    naming the field.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, max_length=256)
+    password: str
+
+
+class InvitationPageResponse(BaseModel):
+    """What the invitation page greets with — **the least it needs**
+    (``docs/adr/0187`` §5), and no email: the page locks no field to it."""
+
+    name: str = Field(
+        description=(
+            "The name the club typed, **whole** — *Marta Wójcik*, never a first "
+            "name cut out of it (``docs/adr/0171`` §4). It becomes the person's "
+            "Name when they set a password."
+        )
+    )
+    club_name: str
+    state: InvitationLinkState = Field(
+        description=(
+            "`valid`, `expired` (ask the club to send a new one), `used`, or "
+            "`locked` — five wrong codes."
+        )
+    )
+    code: Optional[str] = Field(
+        description=(
+            "The 8-character code the email carries under its button, for *after "
+            "you install, open Raketa and enter this code* — **only while "
+            "`valid`**, `null` otherwise."
+        )
+    )
+
+    @classmethod
+    def from_opened(cls, opened: OpenedInvitation) -> "InvitationPageResponse":
+        return cls(
+            name=opened.name,
+            club_name=opened.club_name,
+            state=InvitationLinkState(opened.standing.value),
+            code=opened.code,
+        )
