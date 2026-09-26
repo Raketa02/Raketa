@@ -61,7 +61,8 @@ export function readDetails(form: FormData): DetailsDraft {
   };
 }
 
-function between(value: string, min: number, max: number): boolean {
+/** Whether a name is `min` to `max` characters once tidied, counted as the backend counts them. */
+export function between(value: string, min: number, max: number): boolean {
   const length = [...tidy(value)].length;
   return length >= min && length <= max;
 }

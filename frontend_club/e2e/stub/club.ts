@@ -16,6 +16,35 @@ import { refusal, type StubBackend } from './backend';
 
 type ClubDetails = components['schemas']['ClubDetailsResponse'];
 type TokenPair = components['schemas']['TokenResponse'];
+export type Administrator = components['schemas']['AdministratorSchema'];
+
+const HOUR_MS = 3_600_000;
+export const DAY_MS = 24 * HOUR_MS;
+/** How long an invitation stays open, from its sending or its resending (ADR-0184 §3). */
+const INVITATION_MS = 72 * HOUR_MS;
+
+/** An instant `ms` from now, written as the wire writes one. */
+export function fromNow(ms: number): string {
+  return new Date(Date.now() + ms).toISOString();
+}
+
+/**
+ * **Somebody the club named**, invited a moment ago unless the test says otherwise: a test
+ * gives the name, the email and whatever its reply is about.
+ */
+export function administrator(
+  fields: Pick<Administrator, 'name' | 'email'> & Partial<Administrator>,
+): Administrator {
+  return {
+    id: randomUUID(),
+    status: 'INVITED',
+    last_used_at: null,
+    expires_at: fromNow(INVITATION_MS),
+    groups: [],
+    can_reset_password: false,
+    ...fields,
+  };
+}
 
 export const DESK_EMAIL = 'desk@ogrody33.pl';
 export const DESK_PASSWORD = 'kort33ogrody';
@@ -58,6 +87,8 @@ export class FakeClub {
   /** Every reset email "sent", newest last. */
   readonly outbox: ResetEmail[] = [];
   private readonly tickets = new Set<string>();
+  /** The club's administrators, removed ones gone; the list answers them by name. */
+  administrators: Administrator[] = [];
 
   constructor(private readonly stub: StubBackend) {}
 
@@ -192,6 +223,99 @@ export class FakeClub {
       return { status: 200, body: this.issue() };
     });
 
+    this.installAdministrators();
     return this;
+  }
+
+  private find(id: string | undefined): Administrator | undefined {
+    return this.administrators.find((each) => each.id === id);
+  }
+
+  /** Put a changed row in the place of the old one, and answer with it. */
+  private replace(row: Administrator): Administrator {
+    this.administrators = this.administrators.map((each) => (each.id === row.id ? row : each));
+    return row;
+  }
+
+  /** The club's Administrators, as ADR-0184 keeps them: one per email, every status derived. */
+  private installAdministrators(): void {
+    const stub = this.stub;
+    const signedOut = { status: 401, body: refusal('access_token_invalid') } as const;
+    const notFound = { status: 404, body: refusal('administrator_not_found') } as const;
+    const reopened = (row: Administrator): Administrator => ({
+      ...row,
+      status: 'INVITED',
+      last_used_at: null,
+      expires_at: fromNow(INVITATION_MS),
+    });
+
+    stub.on('get', '/api/v1/club/administrators', ({ headers }) => {
+      if (!this.accessIsLive(headers.authorization)) return signedOut;
+      const byName = [...this.administrators].sort((a, b) => a.name.localeCompare(b.name));
+      return { status: 200, body: { administrators: byName } };
+    });
+
+    stub.on('post', '/api/v1/club/administrators', ({ headers, body }) => {
+      if (!this.accessIsLive(headers.authorization)) return signedOut;
+      const name = body.name.trim().replace(/\s+/g, ' ');
+      const length = [...name].length;
+      if (length < 2 || length > 64) {
+        return { status: 400, body: refusal('administrator_name_invalid', 'name') };
+      }
+      const email = body.email.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return { status: 400, body: refusal('email_invalid', 'email') };
+      }
+      const here = this.administrators.find(
+        (each) => each.email.toLowerCase() === email.toLowerCase(),
+      );
+      if (here !== undefined) {
+        const code =
+          here.status === 'ACTIVE'
+            ? 'administrator_already_active'
+            : 'administrator_already_invited';
+        return { status: 409, body: refusal(code, 'email') };
+      }
+      const invited = administrator({ name, email });
+      this.administrators.push(invited);
+      return { status: 201, body: invited };
+    });
+
+    stub.on(
+      'post',
+      '/api/v1/club/administrators/{administrator_id}/invitation',
+      ({ headers, params }) => {
+        if (!this.accessIsLive(headers.authorization)) return signedOut;
+        const row = this.find(params.administrator_id);
+        if (row === undefined) return notFound;
+        if (row.status === 'ACTIVE') {
+          return { status: 409, body: refusal('administrator_already_active') };
+        }
+        return { status: 200, body: this.replace(reopened(row)) };
+      },
+    );
+
+    stub.on(
+      'post',
+      '/api/v1/club/administrators/{administrator_id}/password-reset',
+      ({ headers, params }) => {
+        if (!this.accessIsLive(headers.authorization)) return signedOut;
+        const row = this.find(params.administrator_id);
+        if (row === undefined) return notFound;
+        if (!row.can_reset_password) {
+          return { status: 409, body: refusal('administrator_also_plays') };
+        }
+        return { status: 200, body: this.replace(reopened(row)) };
+      },
+    );
+
+    stub.on('delete', '/api/v1/club/administrators/{administrator_id}', ({ headers, params }) => {
+      if (!this.accessIsLive(headers.authorization)) return signedOut;
+      if (this.find(params.administrator_id) === undefined) return notFound;
+      this.administrators = this.administrators.filter(
+        (each) => each.id !== params.administrator_id,
+      );
+      return { status: 204, body: undefined };
+    });
   }
 }

@@ -16,12 +16,17 @@
   cursor: default;
 }
 
-.primary {
+.primary,
+.outline,
+.inverse {
   min-height: var(--size-control-small);
   padding: var(--space-3) var(--space-6);
+  font-size: var(--text-control);
+}
+
+.primary {
   background: var(--colour-coral);
   color: var(--colour-on-coral);
-  font-size: var(--text-control);
 }
 
 .primary:hover:not(:disabled),
@@ -31,6 +36,25 @@
 
 .primary:disabled {
   background: var(--colour-disabled);
+}
+
+.outline {
+  border-color: var(--colour-line);
+  background: var(--colour-surface);
+  color: var(--colour-ink);
+}
+
+.outline:hover:not(:disabled) {
+  background: var(--colour-paper);
+}
+
+.inverse {
+  background: var(--colour-on-dark-button);
+  color: var(--colour-on-dark);
+}
+
+.inverse:hover:not(:disabled) {
+  filter: brightness(1.15);
 }
 
 .secondary,

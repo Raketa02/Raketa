@@ -28,8 +28,8 @@ e2e/                   the Playwright suite and its stub backend (§7)
   components, so the backend is only ever reached through a query or an action. The exception is
   `src/app/session/`, whose two route handlers belong to the server layer as the proxy does.
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
-  password?_, _Set a new password_), `club-details`, `overview`, and soon `groups` and
-  `administrators`. A feature may use another feature's components, schemas, copy and mappers
+  password?_, _Set a new password_), `club-details`, `overview`, `administrators`, and soon
+  `groups`. A feature may use another feature's components, schemas, copy and mappers
   (sign-up draws Club details' fields; Overview greets a `Club`), and never another feature's
   actions or queries. A feature's queries and actions call the backend only through the three
   doors of §4, and may read the session, the recovery cookie and the configuration directly.
@@ -162,9 +162,13 @@ points.
   operation's declared responses in the generated contract. It also accepts the envelope-bearing
   statuses the backend sends without declaring per route (a `401`, a `5xx`), and `drop`, which
   closes the connection unanswered. It records every request, and it serves the map's tiles.
+  An operation is named by its path as the contract writes it,
+  `/api/v1/club/administrators/{administrator_id}`, and its handler and `stub.requests` read
+  the ids in `params`.
 - **The fake club** installs the default handlers: one club, whose tokens rotate, whose spent
-  refresh tokens are refused, and whose reset signs every session out. A test about one reply
-  overrides that operation. Its tokens are unique across the run (`club.accessToken(n)`),
+  refresh tokens are refused, whose reset signs every session out, and whose administrators
+  keep ADR-0184's rules. A test seats its people in `club.administrators`, and a test about one
+  reply overrides that operation. Its tokens are unique across the run (`club.accessToken(n)`),
   because the single flight's grace window would hand one test the pair it renewed for another.
 - **Tests assert what the desk or the backend would see**: text on the page, the URL, the
   cookie's attributes, and the requests that arrived at the stub. They never read the cookie's
@@ -187,4 +191,5 @@ literal anywhere else, and ESLint refuses an inline `style`. A media query's wid
 literal CSS allows no variable for.
 
 **A page works at every width, down to a phone with no sideways scrolling.** On a phone the top
-bar becomes three rows: the wordmark and _Sign out_, the club, then the pages.
+bar becomes three rows: the wordmark and _Sign out_, the club, then the pages. A table's rows
+become blocks, one cell under another, and its column heads are left to a screen reader.

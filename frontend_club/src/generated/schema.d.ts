@@ -163,10 +163,156 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/club/administrators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The club's administrators, and where each one stands */
+        get: operations["list_administrators_api_v1_club_administrators_get"];
+        put?: never;
+        /**
+         * Invite an administrator by name and email
+         * @description Emails the person through the mail queue, in this request's transaction. **A new person** gets a button to the public site's `/invite/<token>` and an 8-character code, valid 72 hours; **an existing account** gets *"[Club] wants to make you an administrator"* and a button that opens the app, with no code. Inviting somebody this club removed invites them again.
+         */
+        post: operations["invite_administrator_api_v1_club_administrators_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/administrators/{administrator_id}/invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend an invitation: a fresh 72 hours
+         * @description For somebody `INVITED` or `EXPIRED`. The email is the original's again, with a new link and code where it carries them; the older ones stop working.
+         */
+        post: operations["resend_invitation_api_v1_club_administrators__administrator_id__invitation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/administrators/{administrator_id}/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset an administrator's password
+         * @description **Only for an account that holds nothing but administrator profiles** — `can_reset_password` on the row. Clears the password, signs the account out everywhere, and puts the person back to `INVITED` with a fresh 72-hour email carrying the invitation's own link and code.
+         */
+        post: operations["reset_administrator_password_api_v1_club_administrators__administrator_id__password_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/administrators/{administrator_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove an administrator
+         * @description The administrator profile ends: the person's next administrator request is refused with `not_an_administrator`. Their player profile and their sessions are untouched, and an invitation still in their inbox opens nothing.
+         */
+        delete: operations["remove_administrator_api_v1_club_administrators__administrator_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdministratorGroupSchema */
+        AdministratorGroupSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** AdministratorListResponse */
+        AdministratorListResponse: {
+            /**
+             * Administrators
+             * @description Everybody not removed, by name.
+             */
+            administrators: components["schemas"]["AdministratorSchema"][];
+        };
+        /**
+         * AdministratorSchema
+         * @description One row of the club's Administrators table (``docs/adr/0184`` §1).
+         *     **Every status is derived**, and so is whether *Reset password* is drawn.
+         */
+        AdministratorSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Name
+             * @description As the club typed it: trimmed and collapsed.
+             */
+            name: string;
+            /** Email */
+            email: string;
+            /** @description `ACTIVE` once the invitation was taken up; `INVITED` until then; `EXPIRED` once its 72 hours have passed unanswered — resendable. */
+            status: components["schemas"]["AdministratorStatus"];
+            /**
+             * Last Used At
+             * @description On an `ACTIVE` row: when the administrator profile was last used, **to the hour** — *today*, *this week*. `null` otherwise.
+             */
+            last_used_at: string | null;
+            /**
+             * Expires At
+             * @description On an `INVITED` row, when it expires; on an `EXPIRED` row, when it did. `null` on an `ACTIVE` row.
+             */
+            expires_at: string | null;
+            /**
+             * Groups
+             * @description The official groups this administrator runs. Empty until official groups exist.
+             */
+            groups: components["schemas"]["AdministratorGroupSchema"][];
+            /**
+             * Can Reset Password
+             * @description Whether *Reset password* may be pressed: only for an account that holds nothing but administrator profiles. Pressing it anyway is `409 administrator_also_plays` or `administrator_has_no_account`.
+             */
+            can_reset_password: boolean;
+        };
+        /**
+         * AdministratorStatus
+         * @description What the Administrators table says of somebody, now.
+         * @enum {string}
+         */
+        AdministratorStatus: "ACTIVE" | "INVITED" | "EXPIRED";
         /**
          * ClaimCodeRequest
          * @description The address and the 8-character code from the email. The code is read
@@ -333,6 +479,23 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * InviteAdministratorRequest
+         * @description *+ Add administrator*: a name and an email, and nothing else — the club
+         *     never sets, sees or handles a password or a code.
+         */
+        InviteAdministratorRequest: {
+            /**
+             * Name
+             * @description Trimmed, runs of whitespace collapsed, then 2–64 characters — `administrator_name_invalid` otherwise. It becomes the person's Name if they are new to Raketa.
+             */
+            name: string;
+            /**
+             * Email
+             * @description Malformed is `email_invalid`. Already invited here — expired included — is `409 administrator_already_invited`; already active here is `409 administrator_already_active`.
+             */
+            email: string;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -777,6 +940,213 @@ export interface operations {
             };
             /** @description A field the desk has to correct, named by `details.field`: `club_name_invalid`, `club_district_invalid`, `club_city_invalid`, `club_sports_required` or `club_point_invalid`. Nothing was recorded. The website writes the sentence under that field. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_administrators_api_v1_club_administrators_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministratorListResponse"];
+                };
+            };
+        };
+    };
+    invite_administrator_api_v1_club_administrators_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteAdministratorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministratorSchema"];
+                };
+            };
+            /** @description A field the desk has to correct, named by `details.field`: `administrator_name_invalid` or `email_invalid`. Nothing was recorded and nothing was sent. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `administrator_already_invited` — that email is invited here, expired included: resend instead — or `administrator_already_active`. `details.field` is `email`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_invitation_api_v1_club_administrators__administrator_id__invitation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                administrator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministratorSchema"];
+                };
+            };
+            /** @description `administrator_not_found` — no administrator of this club has that id: another club's, a removed one, or none. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `administrator_already_active` — there is nothing left to open. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_administrator_password_api_v1_club_administrators__administrator_id__password_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                administrator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministratorSchema"];
+                };
+            };
+            /** @description `administrator_not_found` — no administrator of this club has that id: another club's, a removed one, or none. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `administrator_also_plays` — the account also plays, and only its owner resets it, through *Forgot password?*; or `administrator_has_no_account` — nobody has set a password yet: resend instead. Nothing moved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_administrator_api_v1_club_administrators__administrator_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                administrator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `administrator_not_found` — no administrator of this club has that id: another club's, a removed one, or none. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

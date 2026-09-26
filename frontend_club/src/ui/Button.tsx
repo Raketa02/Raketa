@@ -3,16 +3,18 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import styles from './Button.module.css';
 
-type Tone = 'primary' | 'secondary' | 'danger' | 'quiet';
+type Tone = 'primary' | 'outline' | 'secondary' | 'danger' | 'quiet' | 'inverse';
 
 function classes(tone: Tone, full: boolean): string {
   return [styles.button, styles[tone], full ? styles.full : ''].filter(Boolean).join(' ');
 }
 
 /**
- * A button. **`primary`** is the coral one a page has at most one of; **`secondary`** is
- * outlined (club mock 2's *Reset password*); **`danger`** is outlined with red words (*Remove*);
- * **`quiet`** is words alone, for *Sign out*.
+ * A button. **`primary`** is the coral one a page has at most one of; **`outline`** is its
+ * outlined twin, for the way back beside it (club mock 3's *Cancel*); **`secondary`** is an
+ * outlined pill (club mock 2's *Reset password*); **`danger`** is that pill with red words
+ * (*Remove*); **`quiet`** is words alone, for *Sign out*; **`inverse`** sits on the dark banner
+ * (club mock 4's *Done*).
  */
 export function Button({
   tone = 'primary',

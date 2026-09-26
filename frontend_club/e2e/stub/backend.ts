@@ -6,7 +6,8 @@
  * way they reach the real backend: over HTTP, from the server, never from the browser. A test
  * installs a handler per operation with {@link StubBackend.on}, whose reply the compiler checks
  * against that operation's declared responses, and reads what arrived with
- * {@link StubBackend.requests}.
+ * {@link StubBackend.requests}. An operation is named by its path as the contract writes it,
+ * `{administrator_id}` and all, and a handler reads the ids it was called with in `params`.
  *
  * It also serves the map's tiles, so no test fetches OpenStreetMap.
  */
@@ -54,7 +55,13 @@ export type Reply<P extends Path, M extends MethodOf<P>> =
 
 export interface Received<P extends Path = Path, M extends Method = Method> {
   readonly method: M;
-  readonly path: P;
+  /** The path as the request named it, ids and all. */
+  readonly path: string;
+  /**
+   * The path's ids, by the names the operation's template gives them: as a handler receives the
+   * request, and as {@link StubBackend.requests} returns it. `all()` knows no template, so none.
+   */
+  readonly params: Readonly<Record<string, string>>;
   readonly headers: Readonly<Record<string, string>>;
   readonly body: M extends MethodOf<P> ? RequestBody<Operation<P, M>> : unknown;
   /** When it arrived, in milliseconds since the stub started. */
@@ -69,6 +76,26 @@ const TILE = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
   'base64',
 );
+
+/**
+ * The ids a path holds in the places a template names, or `null` when the path is not one of the
+ * template's: `/administrators/{administrator_id}` never matches `/administrators/x/invitation`.
+ */
+function paramsOf(template: string, path: string): Record<string, string> | null {
+  const source = template
+    .split(/(\{\w+\})/)
+    .map((part) =>
+      /^\{\w+\}$/.test(part)
+        ? `(?<${part.slice(1, -1)}>[^/]+)`
+        : part.replace(/[.*+?^$()|[\]\\]/g, '\\$&'),
+    )
+    .join('');
+  const match = new RegExp(`^${source}$`).exec(path);
+  if (match === null) return null;
+  return Object.fromEntries(
+    Object.entries(match.groups ?? {}).map(([name, value]) => [name, decodeURIComponent(value)]),
+  );
+}
 
 /** An error envelope, as every backend refusal is shaped. */
 export function refusal(code: string, field?: string): ErrorBody {
@@ -127,14 +154,35 @@ export class StubBackend {
 
   /** Every request that arrived for one operation, oldest first. */
   requests<P extends Path, M extends MethodOf<P>>(method: M, path: P): Received<P, M>[] {
-    return this.log.filter(
-      (request) => request.method === method && request.path === path,
-    ) as unknown as Received<P, M>[];
+    return this.log.flatMap((request) => {
+      const params = request.method === method ? paramsOf(path, request.path) : null;
+      return params === null ? [] : [{ ...request, params }];
+    }) as unknown as Received<P, M>[];
   }
 
   /** Every request that arrived, of any kind, tiles aside. */
   all(): readonly Received[] {
     return this.log;
+  }
+
+  /**
+   * The handler whose method and path template the request fits, or the stub's own 404. Where two
+   * templates fit, the one with fewer ids wins, as `/groups/search` beats `/groups/{group_id}`.
+   */
+  private answer(received: Received): AnyReply | Promise<AnyReply> {
+    let best: { handler: AnyHandler; params: Record<string, string> } | undefined;
+    for (const [key, handler] of this.handlers) {
+      const [method, template] = key.split(' ') as [string, string];
+      const params =
+        method === received.method.toUpperCase() ? paramsOf(template, received.path) : null;
+      if (params === null) continue;
+      if (best === undefined || Object.keys(params).length < Object.keys(best.params).length) {
+        best = { handler, params };
+      }
+    }
+    return best === undefined
+      ? { status: 404, body: refusal('stub_no_handler') }
+      : best.handler({ ...received, params: best.params });
   }
 
   private async handle(request: http.IncomingMessage, response: http.ServerResponse) {
@@ -155,18 +203,15 @@ export class StubBackend {
     }
     const received = {
       method: (request.method ?? 'GET').toLowerCase() as Method,
-      path: url.pathname as Path,
+      path: url.pathname,
+      params: {},
       headers,
       body: raw === '' ? undefined : (JSON.parse(raw) as unknown),
       at: Date.now() - this.started,
     } as Received;
     this.log.push(received);
 
-    const handler = this.handlers.get(`${request.method} ${url.pathname}`);
-    const reply: AnyReply =
-      handler === undefined
-        ? { status: 404, body: refusal('stub_no_handler') }
-        : await handler(received);
+    const reply: AnyReply = await this.answer(received);
 
     if (reply.status === 'drop') {
       request.socket.destroy();

@@ -1,0 +1,26 @@
+.dialog {
+  width: calc(100% - 2 * var(--space-gutter));
+  max-width: var(--size-dialog);
+  padding: var(--space-6);
+  border: var(--size-hairline) solid var(--colour-line);
+  border-radius: var(--radius-card);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-dialog);
+  color: var(--colour-ink);
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.dialog::backdrop {
+  background: var(--colour-scrim);
+}
+
+.title {
+  font-size: var(--text-wordmark);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
