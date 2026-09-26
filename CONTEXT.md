@@ -1997,8 +1997,9 @@ and the Owner approving or declining; [#506](https://github.com/Raketa02/Raketa/
 Members by sport, editing, leaving with ownership passing, and deleting;
 [#509](https://github.com/Raketa02/Raketa/issues/509) built Official groups — created and run by
 an Administrator from the app, declared sports and a WhatsApp group size, an Administrator who
-plays joining directly, and the club's refusal to untick a declared sport; the rest of the backend
-half is [#510](https://github.com/Raketa02/Raketa/issues/510), the Handover.
+plays joining directly, and the club's refusal to untick a declared sport; and
+[#510](https://github.com/Raketa02/Raketa/issues/510) built the club's side — its Groups table and
+the Handover — which completes the backend half.
 
 **The crowd that already plays together, brought into the app.** Clubs keep WhatsApp groups, one
 per sport; a group is where that crowd lands when somebody taps its link. It picks no games yet,
@@ -2061,8 +2062,8 @@ and
 on [#501](https://github.com/Raketa02/Raketa/issues/501), and built by
 [#507](https://github.com/Raketa02/Raketa/issues/507) (the one-time credentials) and
 [#508](https://github.com/Raketa02/Raketa/issues/508) (the Administrator, the Invitation and the
-guard). Official groups are built by [#509](https://github.com/Raketa02/Raketa/issues/509); the
-Handover arrives with [#510](https://github.com/Raketa02/Raketa/issues/510).
+guard). Official groups are built by [#509](https://github.com/Raketa02/Raketa/issues/509), and
+the Handover by [#510](https://github.com/Raketa02/Raketa/issues/510).
 
 **The person a club names to run its WhatsApp groups inside Raketa.** Their one job is to make an
 Official group per WhatsApp group and post its link there.
