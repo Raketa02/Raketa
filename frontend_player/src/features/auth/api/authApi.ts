@@ -24,6 +24,10 @@ type ForgotPasswordRequest = components['schemas']['ForgotPasswordRequest'];
 type ClaimCodeRequest = components['schemas']['ClaimCodeRequest'];
 type ClaimTicketResponse = components['schemas']['ClaimTicketResponse'];
 type NewPasswordRequest = components['schemas']['NewPasswordRequest'];
+type ClaimInvitationRequest = components['schemas']['ClaimInvitationRequest'];
+type InvitationPasswordRequest = components['schemas']['InvitationPasswordRequest'];
+type InvitationByTokenResponse = components['schemas']['InvitationByTokenResponse'];
+type AccountProfilesSchema = components['schemas']['AccountProfilesSchema'];
 
 export interface AuthApiOptions {
   readonly signal?: AbortSignal;
@@ -202,5 +206,75 @@ export function setForgottenPassword(
     body,
     authenticated: false,
     signal,
+  });
+}
+
+/**
+ * ***Have an invitation code?*** — the email the club invited and the 8-character code, exchanged
+ * for a short-lived **ticket** *Set your password* is sent with
+ * ([ADR-0184](../../../../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
+ * §2, §4). The same machinery as *Forgot password?*'s claim, on the invitation's own route: a wrong
+ * code is `code_incorrect` whatever else is true, and only a right one learns it is expired, used or
+ * locked — or that the email has an account now, `sign_in_to_accept`.
+ */
+export function claimInvitationCode(
+  body: ClaimInvitationRequest,
+  { signal }: AuthApiOptions = {},
+): Promise<ClaimTicketResponse> {
+  return httpRequest<ClaimTicketResponse>({
+    method: 'POST',
+    path: '/api/v1/invitations/claim',
+    body,
+    authenticated: false,
+    signal,
+  });
+}
+
+/**
+ * ***Set your password*** with **exactly one** of the link's `token` or a claimed code's `ticket`.
+ * A new person's account is created — the name the club typed, no nickname, no Adult attestation —
+ * or an account the club reset gets its password back; either way it answers a signed-in session.
+ */
+export function setInvitationPassword(
+  body: InvitationPasswordRequest,
+  { signal }: AuthApiOptions = {},
+): Promise<TokenResponse> {
+  return httpRequest<TokenResponse>({
+    method: 'POST',
+    path: '/api/v1/invitations/password',
+    body,
+    authenticated: false,
+    signal,
+  });
+}
+
+/**
+ * **What an invitation's link opens**, read before anything is set: the email *Set your password*
+ * locks its field to, and whether the link still works. Changes nothing. The token travels in the
+ * body so that it is in no access log.
+ */
+export function readInvitationByToken(
+  token: string,
+  { signal }: AuthApiOptions = {},
+): Promise<InvitationByTokenResponse> {
+  return httpRequest<InvitationByTokenResponse>({
+    method: 'POST',
+    path: '/api/v1/invitations/by-token',
+    body: { token },
+    authenticated: false,
+    signal,
+  });
+}
+
+/**
+ * **Accept a pending invitation** — for the signed-in account whose email it names, with no password
+ * step. Answers the account's profiles as `/users/me` would, so the switcher is drawn at once;
+ * accepting again is the same answer.
+ */
+export function acceptInvitation(administratorId: string): Promise<AccountProfilesSchema> {
+  return httpRequest<AccountProfilesSchema>({
+    method: 'POST',
+    path: `/api/v1/invitations/${encodeURIComponent(administratorId)}/acceptance`,
+    authenticated: true,
   });
 }

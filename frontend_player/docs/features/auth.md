@@ -192,3 +192,55 @@ nickname — the club's name — sees the nickname's box alone, and the sub-line
 Marta Nowak. Pick a nickname to go with it._; the form opens holding that name and sends it with the
 nickname, so the naming stays one act carrying both. Every account sign-up creates holds neither and
 sees both boxes. **Not seen on a device**: the attestation step, and the naming with one box.
+
+**_Have an invitation code?_ and _Set your password_ are _Forgot password?_'s pieces asking for an
+invitation's** ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 113–116 and
+121, ADR-0184 §2–§4). The link sits under _Forgot password?_ on the one sign-in screen, carrying the
+email typed there. `/invitation` takes **the email and the code** — read the server's way, its length
+checked first, `invitationCodeSchema` being `resetCodeSchema` since it is one credential machinery —
+and `POST /invitations/claim` answers a ticket, which pushes **_Set your password_** at
+`/invitation/password` with the ticket and the email in the route. **The email is drawn in its box and
+locked** (`editable={false}`, the busy shape and never 6.13's `disabled`, which says _refused_): the
+invitation is to that address. Sign-up's two password boxes and the rule follow, and
+`POST /invitations/password` creates the account — the club's name, no nickname, no attestation — or
+gives back a password the club reset, and **answers this session's pair**, which `beginSession` takes
+exactly as sign-in's; the `(auth)` guard hands it to the gate, which opens the area of an account that
+only administers. **No toast**: the area is the _done_. By the email's button the path is
+**`/invite/<token>`** (`INVITATION_ROUTES.link`, what #520 opens), and **the token is validated before
+anything is drawn**: `POST /invitations/by-token` is read first, and only a link that still works
+draws the form, with the email the server read. While the read is out the frame and its title stand
+alone, so no form flashes; a spent link says why in the sentence the set would have used, and a read
+that could not be made offers itself again — except `credential_not_found`, which a second read will
+not change. A token or ticket that cannot be one redirects to the code form, the other door.
+
+**Every refusal has its own sentence, and an expired invitation names who to ask**
+(`invitationPresentation`). A wrong code lands under the code box, in the auth-wide sentence.
+_Expired_, _used_ and _locked_ are the banner's, worded by the way in (_that invitation_, _that
+link_), and **expired says _ask the club to send a new one_** where _Forgot password?_ says _ask
+again_: an invitation is the club's to send. **`sign_in_to_accept` is _This email already has an account
+— sign in to accept._**, and _Back to sign in_ sits under every form of the flow. The way out of _Set
+your password_ follows the refusal, `resetWayOut`'s rule (`invitationWayOut`): back to the code while
+it can buy another ticket (`ticket_expired`), sign in once the invitation is spent. No mutation here is
+retried, for #515's reasons. The link's four states are spelled in `domain/vocabulary.ts` and held equal
+to the wire's in `mappers/wireVocabulary.ts`.
+
+**The account's profiles carry the invitations it is offered, and accepting one is this feature's
+act** (#518, ADR-0185 §2). `AccountProfiles` gains `pendingInvitations` — administrator id, club,
+expiry, soonest first, as the server lists them — mapped once (`toAccountProfiles`) for `/users/me`
+and for `POST /invitations/{administrator_id}/acceptance`, whose answer is the same shape: so
+**`useAcceptInvitation` writes that answer into the cached player and re-reads nothing**, and the
+switcher the sheet becomes draws both profiles from it. The readers that only care what the account
+_holds_ — the gate, the switcher, a removal — take `HeldProfiles`, the two fields without the
+invitations. The sheet itself is the administrator feature's ([`administrator.md`](administrator.md)).
+
+**The last profile is this feature's value on the phone** (#518, ADR-0188 §2): `ProfileChoice` —
+Player, or one club's administrator profile — kept as `player` or `administrator:<club>` under the
+store's third key, `lastProfile`, and read back by `profileChoiceFrom`, for which anything else is
+nothing chosen. `useLastProfile` is the Play segment's shape (read once per account into the Query
+cache, `networkMode: 'always'`, never stale) and `useKeepProfile` writes the cache first and the phone
+second. Auth owns it because the profiles are auth's and three writers need it: the switcher, a
+removal, and **the Adult attestation, which now keeps Player** — starting to play is choosing Player,
+and an account that wore a club's profile last would otherwise be sent back to that club's area the
+moment the gate took the next step.
+
+**Not seen on a device**: the two new screens, the locked email box, and the third link under Sign in.

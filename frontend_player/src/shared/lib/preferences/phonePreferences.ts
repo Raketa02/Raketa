@@ -16,7 +16,7 @@
  * cannot tell *me again* from *somebody else*.
  *
  * **Why `shared/lib` and not a feature.** Three features each own one value (the shell the Play
- * segment, groups the last sport, and the last profile to come), and the sign-out sequence in
+ * segment, groups the last sport, and auth the last profile), and the sign-out sequence in
  * `shared/lib/auth` has to empty it — `shared/` may never import a feature.
  *
  * **Why AsyncStorage.** Not the keychain: that is the credentials store, and one module owning it
@@ -34,11 +34,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
- * **The values the phone may keep** (ADR-0188 §2): the Play segment (#512) and the sport last
- * picked in a group's fast filter (#513). The last profile (#518) joins them, and a value not
- * listed here cannot be stored.
+ * **The values the phone may keep** (ADR-0188 §2): the Play segment (#512), the sport last picked
+ * in a group's fast filter (#513) and the profile an account with two wore last (#518). The table
+ * is full: a value not listed here cannot be stored, and a fourth is a new record.
  */
-export type PhonePreference = 'playSegment' | 'lastSport';
+export type PhonePreference = 'playSegment' | 'lastSport' | 'lastProfile';
 
 /** Every key this module writes starts with this, and nothing else's does. */
 const PREFIX = 'raketa.phone-preferences.';

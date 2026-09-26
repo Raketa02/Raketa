@@ -67,6 +67,9 @@ import ResetCodeRoute from '@/app/(auth)/forgot-password/code';
 import ResetSentRoute from '@/app/(auth)/forgot-password/sent';
 import ResetNewPasswordRoute from '@/app/(auth)/forgot-password/new-password';
 import ResetLinkRoute from '@/app/(auth)/reset/[token]';
+import InvitationCodeRoute from '@/app/(auth)/invitation/index';
+import InvitationPasswordRoute from '@/app/(auth)/invitation/password';
+import InvitationLinkRoute from '@/app/(auth)/invite/[token]';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
 import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
@@ -205,6 +208,11 @@ export const ONBOARDING_ROUTES = {
   '(auth)/forgot-password/code': ResetCodeRoute,
   '(auth)/forgot-password/new-password': ResetNewPasswordRoute,
   '(auth)/reset/[token]': ResetLinkRoute,
+  // *Have an invitation code?* and *Set your password* (#518), under the same guard: the email and
+  // the code, the password by a claimed code — and by the invitation email's link.
+  '(auth)/invitation/index': InvitationCodeRoute,
+  '(auth)/invitation/password': InvitationPasswordRoute,
+  '(auth)/invite/[token]': InvitationLinkRoute,
   '(onboarding)/_layout': OnboardingLayout,
   // The naming step — the first screen after sign-up, and the gate's first destination
   // (ADR-0171 §3). Before welcome in the table as it is in the walk.

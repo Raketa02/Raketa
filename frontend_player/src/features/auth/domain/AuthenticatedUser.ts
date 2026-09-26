@@ -91,6 +91,28 @@ export interface AccountProfiles {
   readonly actsAsPlayer: boolean;
   /** One per club whose groups this account runs as its **Administrator**, in the server's order. */
   readonly administers: readonly AdministeredClub[];
+  /**
+   * **Invitations to this account's email still open**, soonest to expire first (ADR-0185 §2) — what
+   * the invitation sheet offers on launch. The server drops one once it is accepted, removed or past
+   * its 72 hours, so a list read after that no longer holds it.
+   */
+  readonly pendingInvitations: readonly PendingInvitation[];
+}
+
+/**
+ * **The profiles an account holds, without the invitations it is offered** — what the entry gate,
+ * the switcher and a removal read. An invitation is not a profile until it is accepted.
+ */
+export type HeldProfiles = Pick<AccountProfiles, 'actsAsPlayer' | 'administers'>;
+
+/** **A club's invitation to be its Administrator**, waiting for this account to accept it. */
+export interface PendingInvitation {
+  /** What accepting it names. */
+  readonly administratorId: string;
+  readonly clubId: string;
+  readonly clubName: string;
+  /** When it lapses — the server's instant, carried as it came. */
+  readonly expiresAt: string;
 }
 
 /** A club this account is an active Administrator of — the administrator area opens on it. */

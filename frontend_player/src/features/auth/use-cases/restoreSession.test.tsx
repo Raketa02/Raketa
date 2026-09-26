@@ -86,7 +86,7 @@ describe('relaunching', () => {
       nickname: USER.nickname,
       hasPlayerProfile: USER.has_player_profile,
       isTester: USER.is_tester,
-      profiles: { actsAsPlayer: true, administers: [] },
+      profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [] },
     });
   });
 
@@ -262,7 +262,7 @@ describe('the launch sequence', () => {
         nickname: USER.nickname,
         hasPlayerProfile: USER.has_player_profile,
         isTester: USER.is_tester,
-        profiles: { actsAsPlayer: true, administers: [] },
+        profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [] },
       }),
     );
     expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(1);

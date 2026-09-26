@@ -17,7 +17,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 
-import { Button, TextField } from '@/shared/ui';
+import { Button } from '@/shared/ui';
 
 import { useClaimResetCode } from '../hooks/useAuthActions';
 import { resetCodeSchema, validate, type FieldErrors } from '../schemas/authForms';
@@ -26,6 +26,7 @@ import { AuthFields, AuthFrame } from './AuthFrame';
 import { AuthLink } from './AuthLink';
 import { AuthNotice } from './AuthNotice';
 import { bannerMessage, errorUnderField } from './authErrorMessage';
+import { CodeField } from './CodeField';
 import { EmailField } from './EmailField';
 import { RESET_COPY, resetErrorMessage } from './resetPresentation';
 import { RESET_ROUTES, askForResetHref } from './resetRoutes';
@@ -80,17 +81,11 @@ export function ResetCodeScreen({ email: initialEmail }: ResetCodeScreenProps) {
           returnKeyType="next"
           editable={!claim.isPending}
         />
-        <TextField
+        <CodeField
           label={RESET_COPY.code.label}
           value={code}
           onChangeText={setCode}
           error={errorFor('code')}
-          // Upper case is how the code is written and read aloud; the server forgives either.
-          autoCapitalize="characters"
-          autoCorrect={false}
-          autoComplete="one-time-code"
-          textContentType="oneTimeCode"
-          returnKeyType="go"
           onSubmitEditing={submit}
           editable={!claim.isPending}
         />

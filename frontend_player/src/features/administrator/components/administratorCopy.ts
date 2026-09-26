@@ -60,6 +60,34 @@ export const ADMINISTRATOR_COPY = {
     startPlaying: 'Start playing',
     startPlayingLine: 'Get a Skill rating, then find people to play with',
   },
+  /**
+   * **The profile switcher** (club 6–7, #518) — the chip in each profile's You header, and the sheet
+   * it opens: one row per profile the account holds, the one worn ticked.
+   */
+  switcher: {
+    /** The chip's name, ahead of the profile it shows now. */
+    chip: 'Switch profile',
+    /** No mock titles the sheet; a sheet is a real modal, and its heading is where focus lands. */
+    title: 'Your profiles',
+    /** The sheet's close keeps the profile worn — named by what it keeps, never just *Close*. */
+    close: 'Keep this profile',
+    player: 'Player',
+    administrator: 'Administrator',
+  },
+  /**
+   * **The invitation sheet** (club 5, #518) — a club offering an account that already exists the
+   * administrator profile, on launch. The title and the body are functions of the club and of what
+   * the account holds, in `administratorPresentation`.
+   */
+  invitation: {
+    accept: 'Accept',
+    accepting: 'Accepting the invitation',
+    notNow: 'Not now',
+    /** The sheet's close sets it aside too — named by what it does, never just *Close*. */
+    close: 'Decide later',
+    /** The one button left once the invitation has gone — nothing to decide later. */
+    done: 'OK',
+  },
   /** An official group's settings, opened from its row on the You tab (#517). */
   settings: {
     title: 'Group settings',

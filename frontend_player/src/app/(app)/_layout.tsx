@@ -37,6 +37,13 @@
  * An account that holds **no profile at all** is offered *Start playing* from its first step, the
  * Adult attestation, which the naming and the player setup follow through this gate.
  *
+ * ## Two profiles, and an invitation to a third
+ *
+ * An account that holds both opens in **the profile the phone remembers** — Player by default — and
+ * the gate's decision already reads it (ADR-0185 §3, ADR-0188 §2). And a club's **invitation** is
+ * offered here, as a sheet over the player's app, the moment the account is in it (#518) — the
+ * administrator area offers it over its own screens the same way.
+ *
  * ## A pass that began at the passport ends on it
  *
  * The gate's app branch is where every onboarding pass ends, and a pass has an origin
@@ -53,8 +60,8 @@
 import { Redirect, Stack, router, usePathname } from 'expo-router';
 import { useCallback } from 'react';
 
-import { administratorHome } from '@/features/administrator/types';
-import { NAMING_STEP, START_PLAYING_STEP } from '@/features/auth/types';
+import { administratorHome, InvitationSheet } from '@/features/administrator/types';
+import { NAMING_STEP, PLAYER_PROFILE, START_PLAYING_STEP } from '@/features/auth/types';
 import { useFeatureDatafile } from '@/features/feature_flags/types';
 import {
   EntryUnavailableScreen,
@@ -143,6 +150,13 @@ export default function AppLayout() {
         />
       );
     case 'app':
-      return <Stack screenOptions={{ headerShown: false }} />;
+      return (
+        <>
+          <Stack screenOptions={{ headerShown: false }} />
+          {/* A club's invitation, offered on launch over the player's app and never inside
+              onboarding: it waits until the account is in (#518). */}
+          <InvitationSheet worn={PLAYER_PROFILE} />
+        </>
+      );
   }
 }

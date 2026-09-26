@@ -259,3 +259,11 @@ the only importer of `Share`; no new port.
 · You**, a second fixed inventory beside the five, drawn from the same columns — Feather, one weight,
 selection in tone alone — with no disc and no badge. `TabBarTab` and the columns are generic over the
 key so the two inventories share one drawing. Recorded in design-system Part 16.
+
+**The phone keeps its third and last value, and a sheet can put a mark over its title**
+([#518](https://github.com/Raketa02/Raketa/issues/518)). `PhonePreference` gains `lastProfile` — the
+profile an account with two wore last, owned by `auth` ([`auth.md`](auth.md)) — and ADR-0188 §2's table
+is full: a fourth value is a new record. `BottomSheet` takes an optional **`mark`**: the close alone on
+the top row, then the mark and the title under it, centred, the title still the heading focus lands on
+(9.1 as amended, for the invitation sheet's club tile). `theme.size.switcher` holds the switcher chip's
+drawn ⇅ — a 16pt box and a 1,5pt stroke — because Feather ships no up-and-down pair.

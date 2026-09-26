@@ -44,9 +44,21 @@ export { RESET_ROUTES } from './components/resetRoutes';
 export { SetNewPasswordScreen } from './components/SetNewPasswordScreen';
 export {
   parseEmailParam,
+  parseInvitationLinkParams,
+  parseInvitationTicketParams,
   parseResetLinkParams,
   parseResetTicketParams,
-} from './schemas/resetRouteParams';
+} from './schemas/credentialRouteParams';
+
+/**
+ * ***Have an invitation code?*** and ***Set your password*** ([#518](https://github.com/Raketa02/Raketa/issues/518))
+ * — the email and the code, and the password by a claimed code or by the invitation email's link,
+ * validated before the form is drawn. `INVITATION_ROUTES.link` is what the links ticket (#520) opens.
+ */
+export { InvitationCodeScreen } from './components/InvitationCodeScreen';
+export { InvitationLinkScreen } from './components/InvitationLinkScreen';
+export { SetYourPasswordScreen } from './components/SetYourPasswordScreen';
+export { INVITATION_ROUTES } from './components/invitationRoutes';
 
 /**
  * **Named in full** — a name and a nickname (ADR-0185 §4) — for the entry gate's first destination;
@@ -54,10 +66,20 @@ export {
  */
 export { namedInFull } from './domain/naming';
 
+/**
+ * **Which profile the account wears, and the one the phone remembers** (ADR-0188 §2, #518) — the
+ * value, its reading back, and the hooks that read and keep it per account. The entry gate opens an
+ * account with two profiles in the one it wore last; the switcher keeps what is chosen.
+ */
+export { PLAYER_PROFILE, type ProfileChoice } from './domain/lastProfile';
+export { useKeepProfile, useLastProfile } from './hooks/useLastProfile';
+
 export type {
   AccountProfiles,
   AdministeredClub,
   AuthenticatedUser,
+  HeldProfiles,
+  PendingInvitation,
   Naming,
   Registration,
   SignInCredentials,
@@ -99,6 +121,13 @@ export { useMarkPlayerProfileCommitted } from './hooks/useMarkPlayerProfileCommi
  * so the caller gets the hook and never the steps.
  */
 export { useSignOut } from './hooks/useAuthActions';
+
+/**
+ * **Accepting a club's invitation** (#518) — for the invitation sheet, which the administrator
+ * feature draws. The act and its cache effect are this feature's: what it changes is the account's
+ * profiles, which this feature carries.
+ */
+export { useAcceptInvitation } from './hooks/useAuthActions';
 
 /**
  * The two launch steps. Exported because the bootstrap sequence needs them and

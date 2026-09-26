@@ -9,6 +9,7 @@
  * because the feature barrels form a cycle.
  */
 
+import type { HeldProfiles } from '@/features/auth/types';
 import { GROUP_NAME_MAX, membersLine, personName, shareMessage } from '@/features/groups/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { codeMessage, type AppError } from '@/shared/errors';
@@ -171,4 +172,65 @@ export function removedMessage(
 ): string {
   const removed = `${clubName} removed you as an administrator.`;
   return signedOut ? `${removed} You’re signed out.` : removed;
+}
+
+/**
+ * **A club's two letters, for its tile** in the switcher (club 5–7: *O3* for Ogrody 33). A club is
+ * served no monogram of its own — a group's letters are cut by the backend (ADR-0183 §5), a club's
+ * are not — so they are taken here: the first character of each of the first two words, or the
+ * first two of a name that is one word. Drawn as they come, never re-cased, as a group's are.
+ */
+export function clubLetters(clubName: string): string {
+  const [first = '', second] = clubName.trim().split(/\s+/);
+  const initial = (word: string) => [...word][0] ?? '';
+  return second === undefined ? [...first].slice(0, 2).join('') : initial(first) + initial(second);
+}
+
+/** **A profile's row, spoken** — who, then which hat: *Tomek Kowal, Player*, *Ogrody 33, Administrator*. */
+export function profileRowLabel(title: string, role: string): string {
+  return `${title}, ${role}`;
+}
+
+/** **The chip's name** — what it does, and the profile it shows now. */
+export function switcherChipLabel(worn: string): string {
+  return `${ADMINISTRATOR_COPY.switcher.chip}, now ${worn}`;
+}
+
+/** **The invitation sheet's title** (club 5): the club, and what it is asking. */
+export function invitationTitle(clubName: string): string {
+  return `${clubName} wants to make you an administrator`;
+}
+
+/**
+ * **What accepting does, next to what the account holds** (club 5). The mock's sentence is a
+ * player's; an account that does not play and runs another club's groups is told the same thing
+ * about the profile it has.
+ */
+export function invitationBody(profiles: HeldProfiles): string {
+  const [club] = profiles.administers;
+  const nextTo = profiles.actsAsPlayer
+    ? ', next to your player profile'
+    : club === undefined
+      ? ''
+      : `, next to ${club.clubName}`;
+  return `It becomes a second profile on this account${nextTo}. You switch between them from You.`;
+}
+
+/**
+ * **Accepting refused** — by the codes the route documents, with the club named where it is the one
+ * to ask; anything else is the category's sentence, and Accept stays to be pressed again.
+ */
+export function invitationRefusal(clubName: string, error: AppError): string {
+  return codeMessage(
+    {
+      invitation_expired: `This invitation has expired. Ask ${clubName} to send a new one.`,
+      invitation_not_found: 'This invitation isn’t open any more.',
+    },
+    error,
+  );
+}
+
+/** Whether a refusal means the invitation is gone, so there is nothing left to accept. */
+export function invitationEnded(error: AppError | null): boolean {
+  return error?.code === 'invitation_expired' || error?.code === 'invitation_not_found';
 }

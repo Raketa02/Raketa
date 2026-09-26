@@ -14,7 +14,8 @@
  *
  * **The header is club 8's**: the club and the role over the person's name. PRD #500 gave the Groups
  * tab club 17's *Groups* in its place, and left the name to this tab — the one that is about the
- * account. The switcher chip joins it here ([#518](https://github.com/Raketa02/Raketa/issues/518)).
+ * account. **The switcher chip is its right slot** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+ * club 7), drawn only for an account with a second profile to switch to.
  *
  * **A group's row is the You tab's door row**: a glyph, the group's name, and the one of its settings
  * the Groups tab's read already carries — its sports — so the tab asks nothing of its own. The rows
@@ -46,6 +47,7 @@ import { useAdministeredGroups } from '../hooks/useOfficialGroups';
 import { ADMINISTRATOR_COPY } from './administratorCopy';
 import { administratorEyebrow, settingsRowLine } from './administratorPresentation';
 import { groupSettingsRoute, startPlayingRoute } from './administratorRoutes';
+import { ProfileChip } from './ProfileChip';
 
 const COPY = ADMINISTRATOR_COPY.you;
 
@@ -61,6 +63,7 @@ export function AdministratorYouScreen({ clubId }: { readonly clubId: string }) 
       <ScreenHeader
         eyebrow={administratorEyebrow(clubName)}
         title={user.data?.name ?? COPY.title}
+        right={<ProfileChip worn={{ kind: 'administrator', clubId }} />}
       />
       <ScrollView contentContainerStyle={s.content}>
         <GroupSettingsRows clubId={clubId} />

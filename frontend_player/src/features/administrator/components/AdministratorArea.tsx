@@ -18,13 +18,14 @@
  * next administrator request is refused (`useRemovalWatch`), or the profile read, re-read on focus,
  * no longer lists the club. Either is answered once (`useLeaveOnRemoval`, `afterRemoval`): an
  * account that holds **nothing but** administrator profiles has nowhere left to be, so it is told
- * and signed out (PRD #500 story 136); one that also plays is told and moved to its player side —
- * the move the profile switcher will own ([#518](https://github.com/Raketa02/Raketa/issues/518)) —
- * and one that runs another club's groups to that club's area.
+ * and signed out (PRD #500 story 136); one that also plays is told and switched to Player, and one
+ * that runs another club's groups to that club's area — the switcher's own move
+ * ([#518](https://github.com/Raketa02/Raketa/issues/518)), so the phone keeps it and the next launch
+ * opens where the removal left it.
  */
 
 import { useQueryClient } from '@tanstack/react-query';
-import { Redirect, router, Stack, usePathname } from 'expo-router';
+import { Redirect, Stack, usePathname } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -37,8 +38,8 @@ import { useAreaAccess } from '../hooks/useAreaAccess';
 import { useRemovalWatch } from '../hooks/useRemovalWatch';
 
 import { removedMessage } from './administratorPresentation';
-import { administratorHome } from './administratorRoutes';
-import { areaTabFor, openAreaTab } from './areaNavigation';
+import { areaTabFor, openAreaTab, useSwitchProfile } from './areaNavigation';
+import { InvitationSheet } from './InvitationSheet';
 
 export function AdministratorArea({ clubId }: { readonly clubId: string }) {
   const access = useAreaAccess(clubId);
@@ -79,6 +80,7 @@ function useLeaveOnRemoval(
   const client = useQueryClient();
   const user = useCurrentUser();
   const { mutate: signOut } = useSignOut();
+  const switchTo = useSwitchProfile();
   const profiles = user.data?.profiles;
   const left = useRef(false);
 
@@ -95,8 +97,11 @@ function useLeaveOnRemoval(
     }
     // What the account holds has changed: the next read of it is the one every profile goes by.
     void client.invalidateQueries({ queryKey: authKeys.currentUser() });
-    router.replace(next.kind === 'player' ? '/' : administratorHome(next.clubId));
-  }, [client, clubId, opened, profiles, signOut]);
+    // **A switch, and kept as one** (#518): the phone's last profile is the removed club's, and a
+    // gate reading it — now, before the profile read catches up, or at the next launch — would
+    // open that area again.
+    switchTo(next);
+  }, [client, clubId, opened, profiles, signOut, switchTo]);
 }
 
 function AreaShell({ club }: { readonly club: AdministeredClub }) {
@@ -120,6 +125,8 @@ function AreaShell({ club }: { readonly club: AdministeredClub }) {
         active={areaTabFor(club.clubId, pathname)}
         onPress={(tab) => openAreaTab(club.clubId, tab, pathname)}
       />
+      {/* Another club's invitation is offered here too, over the area it would sit beside (#518). */}
+      <InvitationSheet worn={{ kind: 'administrator', clubId: club.clubId }} />
     </View>
   );
 }

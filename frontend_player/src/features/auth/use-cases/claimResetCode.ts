@@ -4,9 +4,9 @@
 
 import { claimForgotPasswordCode } from '../api/authApi';
 import type { ResetCodeClaim } from '../domain/passwordReset';
-import { toResetTicket } from '../mappers/authMappers';
+import { toClaimTicket } from '../mappers/authMappers';
 
 export async function claimResetCode(claim: ResetCodeClaim): Promise<string> {
   const wire = await claimForgotPasswordCode({ email: claim.email, code: claim.code });
-  return toResetTicket(wire);
+  return toClaimTicket(wire);
 }

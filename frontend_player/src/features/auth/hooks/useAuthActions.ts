@@ -11,16 +11,22 @@ import type { AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
 
 import type {
+  AccountProfiles,
   AuthenticatedUser,
   Naming,
   Registration,
   SignInCredentials,
 } from '../domain/AuthenticatedUser';
+import type { InvitationCodeClaim, InvitationPassword } from '../domain/invitation';
+import { PLAYER_PROFILE } from '../domain/lastProfile';
 import type { NewPassword, ResetCodeClaim } from '../domain/passwordReset';
+import { acceptInvitation } from '../use-cases/acceptInvitation';
 import { askForPasswordReset } from '../use-cases/askForPasswordReset';
 import { attestAdult } from '../use-cases/attestAdult';
+import { claimInvitationCode } from '../use-cases/claimInvitationCode';
 import { claimResetCode } from '../use-cases/claimResetCode';
 import { namePlayer } from '../use-cases/namePlayer';
+import { setInvitationPassword } from '../use-cases/setInvitationPassword';
 import { setNewPassword } from '../use-cases/setNewPassword';
 import { signIn } from '../use-cases/signIn';
 import { signOut } from '../use-cases/signOut';
@@ -28,6 +34,7 @@ import { signUp } from '../use-cases/signUp';
 
 import { authKeys } from './authKeys';
 import { currentUserQuery } from './useCurrentUser';
+import { useKeepProfile } from './useLastProfile';
 
 /** What the toast says once a new password is set — the copy module's, handed in by the screen. */
 export interface SetNewPasswordOptions {
@@ -142,14 +149,21 @@ export function useNamePlayer() {
  * next instant already sends the account on to the naming rather than back to its administrator
  * area, and the awaited `fetchQuery` is the server staying the authority. The caller's own
  * `onSuccess` navigates on a cache that is already right.
+ *
+ * **Starting to play is choosing Player** ([#518](https://github.com/Raketa02/Raketa/issues/518)):
+ * the gate reads the profile the phone remembers first, and an account that wore a club's profile
+ * last would be sent straight back to that club's area. So the choice is kept here, before the
+ * re-read, and the gate goes on to the naming.
  */
 export function useAttestAdult() {
   const queryClient = useQueryClient();
+  const keepProfile = useKeepProfile();
 
   return useMutation<void, AppError, void>({
     mutationFn: attestAdult,
     retry: false,
     onSuccess: async () => {
+      keepProfile(PLAYER_PROFILE);
       queryClient.setQueryData<AuthenticatedUser>(authKeys.currentUser(), (player) =>
         player === undefined
           ? undefined
@@ -201,5 +215,58 @@ export function useSetNewPassword({ done }: SetNewPasswordOptions) {
     mutationFn: setNewPassword,
     retry: false,
     onSuccess: () => showToast({ message: done, tone: 'ok' }),
+  });
+}
+
+/**
+ * ***Have an invitation code?*** — the code, exchanged for a ticket. **Not retried**, for
+ * `useClaimResetCode`'s reason: five wrong codes lock the invitation, and a retry of a wrong one is
+ * a second wrong one nobody typed.
+ */
+export function useClaimInvitationCode() {
+  return useMutation<string, AppError, InvitationCodeClaim>({
+    mutationFn: claimInvitationCode,
+    retry: false,
+  });
+}
+
+/**
+ * ***Set your password***, signed in at the end. **Not retried**: setting it spends the link, the
+ * code and the ticket together, so a retry of a request that landed meets `credential_used` about a
+ * password that is, in fact, set.
+ *
+ * **No toast.** The `(auth)` guard hands the session to the entry gate, which opens the
+ * administrator area — the place the invitation was for, and the *done* in itself.
+ */
+export function useSetInvitationPassword() {
+  return useMutation<void, AppError, InvitationPassword>({
+    mutationFn: setInvitationPassword,
+    retry: false,
+  });
+}
+
+/**
+ * **Accept a club's invitation** — the administrator profile added to this account, and the cache
+ * effect it declares ([#518](https://github.com/Raketa02/Raketa/issues/518), ADR-0184 §2).
+ *
+ * **Not retried**, though accepting twice is the same answer: a failure is the person's to see and
+ * press again, every mutation's rule here.
+ *
+ * **The answer is written, not re-read.** The server answers the account's profiles exactly as
+ * `/users/me` would — the new club among them, the invitation gone from those pending — so they go
+ * into the cached player at once: the switcher the sheet turns into draws both profiles from it, and
+ * nothing offers the invitation again.
+ */
+export function useAcceptInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<AccountProfiles, AppError, string>({
+    mutationFn: acceptInvitation,
+    retry: false,
+    onSuccess: (profiles) => {
+      queryClient.setQueryData<AuthenticatedUser>(authKeys.currentUser(), (player) =>
+        player === undefined ? undefined : { ...player, profiles },
+      );
+    },
   });
 }

@@ -124,6 +124,14 @@ review comment and a test description all use the same word.
   per-player question with a per-player answer, which is the distinction
   [ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md) draws and the shared
   glossary now carries.
+- **Profile (the switcher's)** — which hat the app is wearing for an account: **Player**, or the
+  **Administrator** of one club ([ADR-0185](../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+  §1). UI vocabulary, never a domain term — a _Player profile_ is an aggregate, and this is not it.
+  In code it is `ProfileChoice` (auth's) and the switcher's rows `ProfileOption`. The **last
+  profile** is the one the phone remembers per account and the entry gate opens in
+  ([ADR-0188](../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)
+  §2). Switching is client state, never a token. _Avoid_: "role" — `authority` on the wire is a
+  different thing — and "account type".
 - **Datafile** — the JSON a **Feature flag** is decided from: one per environment, built by the
   flags repo and fetched from `EXPO_PUBLIC_FEATURES_URL`. **Fresh** is this session's, **saved**
   is the last readable one kept in AsyncStorage, and the **code default** is what a feature says

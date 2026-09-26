@@ -310,8 +310,7 @@ describe('an account that holds only administrator profiles', () => {
     ).toEqual({ kind: 'administrator', clubId: BONARKA.clubId });
   });
 
-  // Two profiles open in Player by default (ADR-0185 §3); the switcher and the remembered
-  // profile are #518's.
+  // Two profiles open in Player by default (ADR-0185 §3).
   it('does not take an account that also plays out of the player’s app', () => {
     expect(
       entryDestination({
@@ -384,5 +383,81 @@ describe('an administrator who has just started playing', () => {
         profiles: { actsAsPlayer: true, administers: [OGRODY] },
       }),
     ).toEqual({ kind: 'naming' });
+  });
+});
+
+/**
+ * **An account with two profiles opens in the one used last** (ADR-0185 §3, ADR-0188 §2, #518) —
+ * which the phone remembers, and which is checked against what the account holds *now*: an
+ * administrator profile it no longer holds is Player (ADR-0188 §4), and Player is the default.
+ */
+describe('an account with two profiles', () => {
+  const BOTH: EntryInput['profiles'] = { actsAsPlayer: true, administers: [OGRODY] };
+  const IN_THE_APP = {
+    ratings: [rating('padel')],
+    runInProgress: undefined,
+    deferredRunIds: NONE_DEFERRED,
+    namedInFull: true,
+    hasPlayerProfile: true,
+  } as const;
+
+  it('opens in the administrator profile it used last', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        profiles: BOTH,
+        lastProfile: { kind: 'administrator', clubId: OGRODY.clubId },
+      }),
+    ).toEqual({ kind: 'administrator', clubId: OGRODY.clubId });
+  });
+
+  it('opens in Player when Player was used last', () => {
+    expect(
+      entryDestination({ ...IN_THE_APP, profiles: BOTH, lastProfile: { kind: 'player' } }),
+    ).toEqual({ kind: 'app' });
+  });
+
+  it('opens in Player when the club it used last no longer has it', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        profiles: BOTH,
+        lastProfile: { kind: 'administrator', clubId: BONARKA.clubId },
+      }),
+    ).toEqual({ kind: 'app' });
+  });
+
+  // The profile was chosen, and choosing it is choosing not to be asked a player's questions now:
+  // they are still owed, and switching back to Player is where they are asked.
+  it('opens in the administrator profile ahead of anything the player side still owes', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        namedInFull: false,
+        ratings: [],
+        profiles: BOTH,
+        lastProfile: { kind: 'administrator', clubId: OGRODY.clubId },
+      }),
+    ).toEqual({ kind: 'administrator', clubId: OGRODY.clubId });
+  });
+
+  it('opens an account running two clubs in the one it used last', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        profiles: { actsAsPlayer: false, administers: [BONARKA, OGRODY] },
+        lastProfile: { kind: 'administrator', clubId: OGRODY.clubId },
+      }),
+    ).toEqual({ kind: 'administrator', clubId: OGRODY.clubId });
+  });
+
+  it('opens an account that does not play on its first club, whatever Player said', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        profiles: { actsAsPlayer: false, administers: [BONARKA, OGRODY] },
+        lastProfile: { kind: 'player' },
+      }),
+    ).toEqual({ kind: 'administrator', clubId: BONARKA.clubId });
   });
 });

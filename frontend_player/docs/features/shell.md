@@ -166,3 +166,12 @@ cannot be read. The account is read from the cache once and never observed, as t
 reads it, so entering Play never refetches `/users/me`. The walks are `components/playSegment.test.tsx`: the segment across a relaunch and
 across a tab change, another account on the same phone, a sign-out, and a value that is not a
 segment. **Not seen on a device.**
+
+**The You header's right slot is the profile switcher's chip** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+club 7; ADR-0185 §3 amends ADR-0179 §1's locked header by this element). The You route hands it
+to `YouScreen` (`headerRight`), which forwards it to `ShellScreen`'s right slot: the chip is the
+administrator feature's, and the shell importing it would close a cycle through `auth`, so the route
+file — whose job is composition — composes it. What it draws, its sheet and the switch are that
+feature's ([`administrator.md`](administrator.md)). **It draws
+nothing for an account that only plays**, so the tab most people see is unchanged. **Not seen on a
+device.**

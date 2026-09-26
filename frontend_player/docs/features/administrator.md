@@ -219,3 +219,56 @@ them yet. **Nothing here has been seen on a device** — the bar's two columns, 
 long name, the two equal doors on the link card, WhatsApp opening on both platforms, the You tab's
 header and rows, the settings form with the keyboard up, and the attestation step over the bar are
 asked for a look.
+
+**The invitation sheet offers an account that already exists a club's administrator profile, on
+launch** ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 117–119, club 5–6;
+`InvitationSheet`). It is offered **whenever the signed-in account's own read lists an invitation this
+launch has not set aside** — `/users/me` carries the ones addressed to its email, and the server stops
+listing one once it is accepted, removed or past its 72 hours, so _it stops appearing once the invitation
+expires_ is the read's, never the phone's clock. It is mounted **over each profile's home** — by
+`(app)/_layout` over the player's app, and by the area over its own screens, so another club's invitation
+reaches an administrator who does not play — and **never inside onboarding**: an invitation waits until
+the account is in. Club 5 is drawn with `BottomSheet`'s new **`mark` head**: the club's tile over _Ogrody
+33 wants to make you an administrator_, centred, then what accepting does — _next to your player
+profile_, or _next to Bonarka Arena_ for an account that does not play — and **Accept** (`dark`) over
+**Not now** (`secondary`). **Accept adds the profile and the same sheet becomes club 6's profile
+list**, Player ticked: one modal changing its content, never a second presented as the first leaves. A
+row there switches at once; the close keeps what is worn. **Accepting is not switching**: the sheet keeps
+the worn profile as the remembered one, so no choice left on the phone from an earlier time the account
+held that club can move it. **_Not now_ — and the close, _Decide later_ — set it aside until the next
+launch** (`useInvitationsSetAside`, memory only, `onboarding`'s set-aside runs' shape): the next launch
+offers it again. An invitation that ran out while the sheet was up is said — _This invitation has
+expired. Ask Ogrody 33 to send a new one._ — with nothing left to accept and _OK_ to close; a failure to
+reach the server keeps Accept to press again.
+
+**The profile switcher is a chip on each You tab and a sheet of profiles** (#518, stories 134–135 and
+138, club 6–7; `ProfileChip`, `ProfileRows`). The chip sits in the header's right slot on the player's
+You tab and on this area's — ADR-0185 §3 amends ADR-0179 §1's locked header by exactly this element —
+and holds the worn profile's face beside a drawn ⇅: the player's own photograph or poster
+(`player_record`'s `useOwnFace`, read only where Player is drawn), or **the club's tile** (`ClubTile`,
+7.20's drawing on `night` with two letters taken from the name, since a club is served neither).
+**It is not drawn for an account with one profile** (`switcherShown`). The sheet lists Player first,
+when the account plays, then one administrator profile per club in the server's order
+(`profileOptions`), the worn one ticked and `selected`. **A row switches at once and costs nothing on
+the wire** (`useSwitchProfile`, beside the area's other moves in `areaNavigation`): the phone keeps the
+choice — the cache first, so the gate agrees in the next instant — and the app goes to that profile's
+home, `/` for Player, where the gate lays the player's app down, or the club's Groups tab. Switching is
+client state because the administrator's authority is never in the token (ADR-0185 §6). **The phone
+remembers it** ([`onboarding.md`](onboarding.md), [`auth.md`](auth.md)), so the app reopens in the
+profile worn last, and opens in Player when nothing was chosen or the club it remembers has let the
+account go.
+
+**A removal is a switch now, and kept as one** (#518). `useLeaveOnRemoval` moves an account that also
+plays, or runs another club, through `useSwitchProfile`: the remembered profile was the removed club's,
+and a gate reading it before the profile read caught up — or at the next launch — would have opened that
+area again. So a removed administrator who plays is told, lands in Player, and reopens there.
+
+**#518's calls, open for a ruling.** The switcher sheet is titled **_Your profiles_** with the close
+**_Keep this profile_**; club 6 draws neither, and a real modal needs a heading for focus. Names are
+**whole** — _Tomek Kowal_ where club 6 draws _Tomek K._ — as everywhere since #505. **No initials over
+the face** in the chip, where club 7 draws _TK_ (#513's call, ADR-0167 §3). **A club's letters are the
+app's own cut** (_O3_ from _Ogrody 33_), since clubs serve no monogram. **Switching lands on the
+profile's home**, not on its You tab where the chip was pressed. The invitation's body for an account
+that does not play, and the sheet's close _Decide later_ and _OK_ once the invitation is gone, are new
+words. **Not seen on a device**: the chip in both headers, the ⇅ at 16pt, the sheet's two states, and
+the club tile on `night`.

@@ -232,7 +232,14 @@ export const resetCodeSchema = z.object({
     ),
 });
 
-/** *Set a new password* — the rule sign-up chooses one by, and the repeat. */
+/**
+ * ***Have an invitation code?*** — the same pair, read the same way: an invitation's code is the
+ * one credential machinery's (ADR-0184 §4), 8 characters from the same alphabet, and five wrong
+ * ones lock it too.
+ */
+export const invitationCodeSchema = resetCodeSchema;
+
+/** *Set a new password* and *Set your password* — the rule sign-up chooses one by, and the repeat. */
 export const newPasswordSchema = z
   .object({ password: chosenPassword, confirmPassword: repeatedPassword })
   .refine(samePassword, SAME_PASSWORD);

@@ -1,5 +1,5 @@
 /**
- * **The recovery screens' route params, checked before anything trusts them.** A route param is
+ * **The recovery and invitation screens' route params, checked before anything trusts them.** A route param is
  * input from outside the app — the reset link arrives from an email (#520 wires it), and any of
  * these paths can be opened by a link somebody made up.
  *
@@ -35,3 +35,11 @@ export function parseResetTicketParams(params: unknown): { readonly ticket: stri
   const parsed = z.object({ ticket: SECRET }).safeParse(params);
   return parsed.success ? parsed.data : undefined;
 }
+
+/**
+ * **An invitation's two secrets** (#518) — the token from its email's link and the ticket a right
+ * code bought. The same machinery mints them (ADR-0184 §4), so the same shape reads them; named
+ * apart so a route file says which door it is.
+ */
+export const parseInvitationLinkParams = parseResetLinkParams;
+export const parseInvitationTicketParams = parseResetTicketParams;

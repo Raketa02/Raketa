@@ -16,6 +16,17 @@ export { GroupSettingsScreen } from './components/GroupSettingsScreen';
 export { NewOfficialGroupScreen } from './components/NewOfficialGroupScreen';
 export { OfficialGroupScreen } from './components/OfficialGroupScreen';
 export { administratorHome } from './components/administratorRoutes';
+/**
+ * **The profile switcher's chip** (#518, club 7) — for the one caller outside this feature: the
+ * player's You route, which hands it to the shell's header as the administrator's You tab carries
+ * its own. It draws nothing for an account with one profile.
+ */
+export { ProfileChip } from './components/ProfileChip';
+/**
+ * **The invitation sheet** (#518, club 5–6) — offered over each profile's home on launch: the area
+ * mounts it itself, and the player's app layout mounts it over the player's.
+ */
+export { InvitationSheet } from './components/InvitationSheet';
 export {
   parseClubRouteParams,
   parseOfficialGroupRouteParams,

@@ -9,12 +9,15 @@
 import type { components } from '@/generated/schema';
 import type { Tokens } from '@/shared/lib/auth';
 
-import type { AuthenticatedUser, Naming } from '../domain/AuthenticatedUser';
+import type { AccountProfiles, AuthenticatedUser, Naming } from '../domain/AuthenticatedUser';
+import type { InvitationLink } from '../domain/invitation';
 
 type TokenResponse = components['schemas']['TokenResponse'];
 type MeResponse = components['schemas']['MeResponse'];
 type NamingResponse = components['schemas']['NamingResponse'];
 type ClaimTicketResponse = components['schemas']['ClaimTicketResponse'];
+type InvitationByTokenResponse = components['schemas']['InvitationByTokenResponse'];
+type AccountProfilesSchema = components['schemas']['AccountProfilesSchema'];
 
 /**
  * `expires_in` is deliberately dropped. Expiry is discovered from the server's 401, not
@@ -51,27 +54,50 @@ export function toAuthenticatedUser(wire: MeResponse): AuthenticatedUser {
     isTester: wire.is_tester,
     // Kept for `hasPlayerProfile`'s reason, one read earlier: the gate routes an account that
     // only runs a club's groups to its administrator area before it asks anything about playing
-    // (ADR-0185 §3). The invitations waiting for it are the invitation sheet's, which reads them
-    // when it is built — they are not carried until something draws them.
-    profiles: {
-      actsAsPlayer: wire.profiles.acts_as_player,
-      administers: wire.profiles.administers.map((club) => ({
-        clubId: club.club_id,
-        clubName: club.club_name,
-      })),
-    },
+    // (ADR-0185 §3), and the invitations waiting for it are what the invitation sheet offers.
+    profiles: toAccountProfiles(wire.profiles),
   };
 }
 
 /**
- * The ticket a right code bought. `expires_in` is dropped for `toTokens`' reason: the server says
+ * **The account's profiles** — on `/users/me`, and as accepting an invitation answers them, so the
+ * switcher is drawn from one mapping whichever read it came from.
+ */
+export function toAccountProfiles(wire: AccountProfilesSchema): AccountProfiles {
+  return {
+    actsAsPlayer: wire.acts_as_player,
+    administers: wire.administers.map((club) => ({
+      clubId: club.club_id,
+      clubName: club.club_name,
+    })),
+    pendingInvitations: wire.pending_invitations.map((invitation) => ({
+      administratorId: invitation.administrator_id,
+      clubId: invitation.club_id,
+      clubName: invitation.club_name,
+      expiresAt: invitation.expires_at,
+    })),
+  };
+}
+
+/**
+ * The ticket a right code bought — *Forgot password?*'s or an invitation's, one machinery (ADR-0184
+ * §4). `expires_in` is dropped for `toTokens`' reason: the server says
  * `ticket_expired` when it is, and a phone's clock is not the judge of that.
  */
-export function toResetTicket(wire: ClaimTicketResponse): string {
+export function toClaimTicket(wire: ClaimTicketResponse): string {
   return wire.ticket;
 }
 
 /** What the naming recorded: the name as normalised by the server, and the handle. */
 export function toNaming(wire: NamingResponse): Naming {
   return { name: wire.name, nickname: wire.nickname };
+}
+
+/**
+ * What an invitation's link opens: the address *Set your password* locks to, and whether it still
+ * works. The name the club typed and the club's name are dropped — nothing on the screen says them,
+ * since the account is not signed in and the email's own greeting already did.
+ */
+export function toInvitationLink(wire: InvitationByTokenResponse): InvitationLink {
+  return { email: wire.email, state: wire.state };
 }

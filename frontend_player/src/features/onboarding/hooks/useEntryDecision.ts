@@ -25,6 +25,13 @@
  * once the player read says so: an account that has not asked to play owes the gate no rating and
  * no run.
  *
+ * **And the profile the phone remembers** (ADR-0185 §3, ADR-0188 §2,
+ * [#518](https://github.com/Raketa02/Raketa/issues/518)). An account that runs a club's groups opens
+ * in the profile it wore last, so for it the gate reads that — a local read, never the network — and
+ * decides nothing before it has. Every other launch is not held for it; the read is made anyway, so
+ * an account that gains a club while the gate is mounted finds it already settled, and the app it is
+ * drawing is never blanked for it.
+ *
  * **Otherwise all three must answer before the gate does.** A launch that can read ratings but not the
  * player has no safe default — routing into the app is exactly the outcome the fourth branch
  * exists to prevent — so a failure on any of them is the same *unavailable* it already was
@@ -34,7 +41,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 
-import { namedInFull, useCurrentUser } from '@/features/auth/types';
+import { namedInFull, useCurrentUser, useLastProfile } from '@/features/auth/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 import type { AppError } from '@/shared/errors';
 
@@ -91,10 +98,23 @@ export function useEntryDecision(): EntryDecision {
   // authenticated player, and a second query against the same route under a second key
   // would be two requests answering one question and two chances to disagree.
   const user = useCurrentUser();
+  // **The profile the phone remembers** (ADR-0188 §2) — a local read, and the gate waits for it for
+  // an account that runs a club's groups: one that wore its administrator profile last must never
+  // draw the player's app first. An account that runs none has nothing else to have worn, so its
+  // launch never waits — but the read is still made for it, so that an account gaining a club under
+  // a mounted gate (an invitation accepted over the app) finds it long settled, rather than sending
+  // the gate back to *pending* and unmounting the app it is drawing.
+  const runsAClub = (user.data?.profiles.administers.length ?? 0) > 0;
+  const last = useLastProfile(user.data?.id, enabled);
+  const lastUnread = runsAClub && !last.settled;
   // Read off the player once it has answered; until then nothing is known, and the two player
-  // reads go out beside it as they always have.
-  const byProfile = user.data === undefined ? undefined : profileDestination(user.data.profiles);
-  const playerReadsEnabled = enabled && byProfile === undefined;
+  // reads go out beside it as they always have — but never for an account that does not play.
+  const byProfile =
+    user.data === undefined || lastUnread
+      ? undefined
+      : profileDestination(user.data.profiles, last.choice);
+  const playerReadsEnabled =
+    enabled && byProfile === undefined && (user.data?.profiles.actsAsPlayer ?? true);
 
   const ratings = useQuery({
     queryKey: onboardingKeys.ratings(),
@@ -138,6 +158,8 @@ export function useEntryDecision(): EntryDecision {
   // the reason `beingReplaced` below gives.
   const userBeingReplaced = staleAtMount.user && user.isFetching && !user.isFetchedAfterMount;
   if (byProfile !== undefined && !userBeingReplaced) return byProfile;
+  // Nothing is decided for an account with two profiles until the phone has said which it wore.
+  if (lastUnread) return { kind: 'pending' };
 
   const error = (ratings.error ?? run.error ?? user.error) as AppError | null;
   if (error !== null) return { kind: 'unavailable', reason: { kind: 'failed', error }, retry };
@@ -209,5 +231,6 @@ export function useEntryDecision(): EntryDecision {
     deferredRunIds,
     hasPlayerProfile: user.data.hasPlayerProfile,
     profiles: user.data.profiles,
+    ...(last.choice === undefined ? {} : { lastProfile: last.choice }),
   });
 }

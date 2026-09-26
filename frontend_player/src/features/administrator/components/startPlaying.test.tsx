@@ -13,6 +13,7 @@ import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
+import { readPhonePreference, savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   GATE_USER,
@@ -306,6 +307,37 @@ describe('the Adult attestation', () => {
     expect(
       screen.getByRole('checkbox', { name: 'I am 18 or over' }).props.accessibilityState.checked,
     ).toBe(true);
+  });
+});
+
+/**
+ * **Starting to play is choosing Player** (#518). Marta runs two clubs' groups and wore Bonarka's
+ * profile last, so the phone remembers Bonarka — and the gate, which reads that first, would open
+ * Bonarka's area again the moment the attestation hands it the next step. The step keeps Player.
+ */
+describe('Start playing, for an account the phone remembers in a club', () => {
+  const BONARKA_ID = 'c0000000-0000-4000-8000-000000000044';
+
+  it('goes on to the naming rather than back to the club, and keeps Player', async () => {
+    account({
+      administers: [OGRODY, { club_id: BONARKA_ID, club_name: 'Bonarka Arena' }],
+    }).install(transport);
+    transport.on('GET', `/api/v1/administrator/clubs/${BONARKA_ID}/groups`, () =>
+      json<Wire['AdministeredGroupsResponse']>({
+        club: { id: BONARKA_ID, name: 'Bonarka Arena', sports: ['PADEL'] },
+        groups: [],
+      }),
+    );
+    await savePhonePreference(GATE_USER.id, 'lastProfile', `administrator:${BONARKA_ID}`);
+    await launchSignedIn();
+    await waitFor(() => expect(screen).toHavePathname(`/administrator/${BONARKA_ID}`));
+    fireEvent.press(await screen.findByRole('tab', { name: 'You' }));
+    fireEvent.press(await screen.findByRole('button', { name: /^Start playing,/ }));
+    expect(await screen.findByRole('checkbox', { name: 'I am 18 or over' })).toBeTruthy();
+
+    await attest();
+
+    await expect(readPhonePreference(GATE_USER.id, 'lastProfile')).resolves.toBe('player');
   });
 });
 

@@ -7,6 +7,7 @@
  *
  * The order is deliberate and not arbitrary:
  *
+ *   the club it wore last          -> that administrator area, while the account still holds it
  *   only administrator profiles    -> the administrator area, before anything is asked of a player
  *   no profile at all              -> Start playing's first step, the Adult attestation
  *   not named in full              -> the naming step, before anything else
@@ -83,7 +84,7 @@
  * been rated, which is the one shape the flow cannot produce.
  */
 
-import type { AccountProfiles } from '@/features/auth/types';
+import type { HeldProfiles, ProfileChoice } from '@/features/auth/types';
 
 import type { AssessmentRun } from './Assessment';
 import type { SkillRating } from './SkillRating';
@@ -142,7 +143,13 @@ export interface EntryInput {
    * **Which profiles the account holds**, served on the authenticated player beside the two facts
    * above (ADR-0185 §2) — whether it acts as a player, and each club whose groups it runs.
    */
-  readonly profiles: AccountProfiles;
+  readonly profiles: HeldProfiles;
+  /**
+   * **The profile this account wore last on this phone**, as the phone keeps it (ADR-0188 §2) —
+   * absent when nothing was chosen, which is Player. Checked here against what the account holds
+   * now, so a club that has since removed it is Player again (§4).
+   */
+  readonly lastProfile?: ProfileChoice;
 }
 
 /**
@@ -154,7 +161,13 @@ export interface EntryInput {
  */
 export function profileDestination(
   profiles: EntryInput['profiles'],
+  lastProfile?: ProfileChoice,
 ): Extract<EntryDestination, { kind: 'administrator' | 'start-playing' }> | undefined {
+  const last =
+    lastProfile?.kind === 'administrator'
+      ? profiles.administers.find((club) => club.clubId === lastProfile.clubId)
+      : undefined;
+  if (last !== undefined) return { kind: 'administrator', clubId: last.clubId };
   if (profiles.actsAsPlayer) return undefined;
   const [club] = profiles.administers;
   return club === undefined
@@ -169,8 +182,9 @@ export function entryDestination({
   deferredRunIds,
   hasPlayerProfile,
   profiles,
+  lastProfile,
 }: EntryInput): EntryDestination {
-  const byProfile = profileDestination(profiles);
+  const byProfile = profileDestination(profiles, lastProfile);
   if (byProfile !== undefined) return byProfile;
   if (!namedInFull) return { kind: 'naming' };
   if (runInProgress !== undefined && !deferredRunIds.includes(runInProgress.assessmentId)) {

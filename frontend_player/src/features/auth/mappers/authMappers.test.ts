@@ -50,7 +50,7 @@ describe('toAuthenticatedUser', () => {
       nickname: 'ada',
       hasPlayerProfile: false,
       isTester: false,
-      profiles: { actsAsPlayer: true, administers: [] },
+      profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [] },
     });
     // A client that renders differently for an admin has invented an authorization
     // decision it cannot enforce. Backend authorization is the only authorization.
@@ -165,10 +165,49 @@ describe('toAuthenticatedUser', () => {
         { clubId: 'c0000000-0000-4000-8000-000000000001', clubName: 'Ogrody 33' },
         { clubId: 'c0000000-0000-4000-8000-000000000002', clubName: 'Bonarka Arena' },
       ],
+      pendingInvitations: [],
     });
     // A club's name the club typed, and nickname-less: an account an invitation opened.
     expect(user.name).toBe('Marta Nowak');
     expect(user).not.toHaveProperty('nickname');
+  });
+});
+
+describe('the invitations an account is offered', () => {
+  it('carries each one the accept names, with its club and when it lapses', () => {
+    const user = toAuthenticatedUser({
+      id: '11111111-2222-4333-8444-555555555555',
+      email: 'tomek@example.com',
+      name: 'Tomek Kowal',
+      nickname: 'tomek',
+      authority: 'player',
+      is_admin: false,
+      is_active: true,
+      is_tester: false,
+      has_player_profile: true,
+      adult_attested: true,
+      profiles: {
+        acts_as_player: true,
+        administers: [],
+        pending_invitations: [
+          {
+            administrator_id: 'd0000000-0000-4000-8000-000000000001',
+            club_id: 'c0000000-0000-4000-8000-000000000001',
+            club_name: 'Ogrody 33',
+            expires_at: '2026-09-29T12:00:00Z',
+          },
+        ],
+      },
+    });
+
+    expect(user.profiles.pendingInvitations).toEqual([
+      {
+        administratorId: 'd0000000-0000-4000-8000-000000000001',
+        clubId: 'c0000000-0000-4000-8000-000000000001',
+        clubName: 'Ogrody 33',
+        expiresAt: '2026-09-29T12:00:00Z',
+      },
+    ]);
   });
 });
 

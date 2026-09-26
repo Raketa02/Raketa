@@ -23,6 +23,14 @@
  * looks for a game, what does a stranger read about me. The fourth question, the account, is
  * not asked on this tab (§9); *Sign out* stays at the foot as the account panel draws it.
  *
+ * ## The switcher chip
+ *
+ * **The header's right slot is the profile switcher** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+ * club 7; ADR-0185 §3 amends ADR-0179 §1's locked header by exactly this element) — the
+ * administrator feature's, drawn only for an account that also runs a club's groups. **The route
+ * file hands it in** (`headerRight`) rather than this file importing it: the administrator feature
+ * reads `auth`, which reads this one, and a feature importing back into that chain is a cycle.
+ *
  * ## The one overlay the tab holds
  *
  * *How others see you* is the record sheet on `{ kind: 'me' }`, and two things open it — the
@@ -65,14 +73,27 @@ import { Card, behindOverlay, theme } from '@/shared/ui';
 import { ShellScreen } from './ShellScreen';
 import { YOU_COPY } from './youCopy';
 
-export function YouScreen() {
+export interface YouScreenProps {
+  /**
+   * **The header's right slot — the profile switcher's chip**, handed in by the route file, which
+   * composes it from the administrator feature: this feature importing that one would close an
+   * import cycle through `auth`. Absent, the header has no right slot.
+   */
+  readonly headerRight?: ReactNode;
+}
+
+export function YouScreen({ headerRight }: YouScreenProps) {
   const [reading, setReading] = useState(false);
   const openRecord = () => setReading(true);
 
   return (
     <>
       <View style={s.root} {...behindOverlay(reading)}>
-        <ShellScreen title={YOU_COPY.title} eyebrow={YOU_COPY.eyebrow}>
+        <ShellScreen
+          title={YOU_COPY.title}
+          eyebrow={YOU_COPY.eyebrow}
+          {...(headerRight === undefined ? {} : { right: headerRight })}
+        >
           <YouHeaderCard onPress={openRecord} />
 
           <YouGroup title={YOU_COPY.groups.playing}>

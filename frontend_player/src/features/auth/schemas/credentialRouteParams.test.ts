@@ -1,4 +1,8 @@
-import { parseEmailParam, parseResetLinkParams, parseResetTicketParams } from './resetRouteParams';
+import {
+  parseEmailParam,
+  parseResetLinkParams,
+  parseResetTicketParams,
+} from './credentialRouteParams';
 
 /** URL-safe base64, 43 characters — what `secrets.token_urlsafe(32)` mints. */
 const MINTED = 'Zx9_link-token-4Kq2Wm8Rt6Yv0Bn3Hs5Jd7Lf1Pg';

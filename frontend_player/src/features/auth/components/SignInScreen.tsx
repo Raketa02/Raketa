@@ -16,7 +16,9 @@
  * **Its pieces are the recovery screens' pieces** — the frame, the email box, the text link
  * ([#515](https://github.com/Raketa02/Raketa/issues/515)). ***Forgot password?*** sits under the
  * Sign in button, on the one sign-in screen players and administrators share, and carries what
- * is in the email box across so it is not typed twice.
+ * is in the email box across so it is not typed twice. ***Have an invitation code?*** sits under
+ * it ([#518](https://github.com/Raketa02/Raketa/issues/518)), for somebody a club invited whose
+ * phone the email's button cannot reach, and carries the email the same way.
  */
 
 import { useRouter } from 'expo-router';
@@ -33,6 +35,8 @@ import { AuthNotice } from './AuthNotice';
 import { PASSWORD_LABEL, SIGN_IN_COPY } from './authPresentation';
 import { authErrorMessage } from './authErrorMessage';
 import { EmailField } from './EmailField';
+import { INVITATION_COPY } from './invitationPresentation';
+import { invitationCodeHref } from './invitationRoutes';
 import { RESET_COPY } from './resetPresentation';
 import { askForResetHref } from './resetRoutes';
 
@@ -57,6 +61,7 @@ export function SignInScreen() {
   };
 
   const forgotPassword = () => router.push(askForResetHref(email));
+  const haveACode = () => router.push(invitationCodeHref(email));
 
   return (
     <AuthFrame title={SIGN_IN_COPY.title}>
@@ -95,6 +100,8 @@ export function SignInScreen() {
       />
 
       <AuthLink label={RESET_COPY.signInLink} onPress={forgotPassword} />
+
+      <AuthLink label={INVITATION_COPY.signInLink} onPress={haveACode} />
 
       <AuthLink lead={SIGN_IN_COPY.newHere} label={SIGN_IN_COPY.createAccount} href="/sign-up" />
     </AuthFrame>

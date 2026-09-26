@@ -9,14 +9,15 @@
  * with nothing left is signed out.
  */
 
-import type { AccountProfiles } from '@/features/auth/types';
+import type { HeldProfiles, ProfileChoice } from '@/features/auth/types';
 
-export type AfterRemoval =
-  | { readonly kind: 'player' }
-  | { readonly kind: 'administrator'; readonly clubId: string }
-  | { readonly kind: 'sign-out' };
+/**
+ * **The profile to switch to, or nothing left** — a switch like the switcher's, so the phone keeps
+ * it and the next launch agrees (#518).
+ */
+export type AfterRemoval = ProfileChoice | { readonly kind: 'sign-out' };
 
-export function afterRemoval(profiles: AccountProfiles, removedClubId: string): AfterRemoval {
+export function afterRemoval(profiles: HeldProfiles, removedClubId: string): AfterRemoval {
   if (profiles.actsAsPlayer) return { kind: 'player' };
   const other = profiles.administers.find((club) => club.clubId !== removedClubId);
   return other === undefined
