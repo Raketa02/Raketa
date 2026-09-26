@@ -14,6 +14,15 @@ export const GROUPS_LIST_ROUTE = '/play';
 export const NEW_GROUP_ROUTE = '/play/new-group';
 export const JOIN_GROUP_ROUTE = '/play/join';
 
+/**
+ * **Join a group, with a group's code** — what a group link opens (#520): the field filled with the
+ * link and the group found under it. The code is validated where the route reads it
+ * (`schemas/groupRouteParams`).
+ */
+export function joinGroupRouteFor(code: string) {
+  return { pathname: JOIN_GROUP_ROUTE, params: { code } } as const;
+}
+
 /** A group's page. The id is validated where the route reads it (`schemas/groupRouteParams`). */
 export function groupRoute(groupId: string) {
   return { pathname: '/play/group/[groupId]', params: { groupId } } as const;

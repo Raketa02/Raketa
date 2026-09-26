@@ -63,7 +63,8 @@ asserting it renders correctly.
   `EXPO_PUBLIC_FEATURES_URL` (the feature-flag datafiles' host, ADR-0180) and
   `EXPO_PUBLIC_ENV` are all required, validated once at launch by `src/shared/config/env.ts`.
   A missing or malformed value stops the app on a startup screen naming it — that is the
-  guardrail working, not a bug.
+  guardrail working, not a bug. `EXPO_PUBLIC_LINK_DOMAIN` is the one optional value — the web
+  domain the app's links live on, empty until a domain exists (`docs/features/links.md`).
 - `EXPO_PUBLIC_ENV` is `local | development | staging | production`, the backend's four names,
   and **only `local` runs today.** The environment fixes the URL scheme — `https://` for the
   three deployed ones, for both URLs — so a laptop URL under a deployed name fails at launch

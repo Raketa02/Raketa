@@ -143,6 +143,15 @@ review comment and a test description all use the same word.
   gate in this sense — those are routing on who the player is, not on a flag.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
+- **Incoming link** — an address the operating system opens the app with, read by
+  `+native-intent` before anything is routed. Only three are links — `join/<code>` (a **Group
+  link**), `invite/<token>` and `reset/<token>` — by the app's scheme or the **link domain**
+  (`EXPO_PUBLIC_LINK_DOMAIN`, unset today) — plus the bare `raketa://`, the existing-account
+  invitation email's button; anything else is ignored (#520). _Avoid_: deep link
+  for these three — any path is a deep link, and these are the only ones the app answers.
+- **Held link** — an incoming link not answered yet, kept in memory (one at a time) through
+  sign-in and onboarding until a place that can answer it is reached: Join a group, the
+  invitation sheet, or a sheet asking to sign out first. Dies with the process.
 - **The shell** — the five tabs a signed-in player is inside, and the **one stack** under
   them. `Now · Players · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
   `TabShell`. Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it,

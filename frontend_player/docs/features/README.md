@@ -31,6 +31,7 @@ is referenced from the other by a sentence, not copied.
 | [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore while `find_a_game` is off                             |
 | [`games.md`](games.md)                       | The result argument's eight states, the score pad, the game screen                             |
 | [`groups.md`](groups.md)                     | Play › Groups, New group, Join a group, a group's page, Friends                                |
+| [`links.md`](links.md)                       | The three links into the app, the reader, the held link, the two sign-out sheets               |
 | [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate                         |
 | [`plans.md`](plans.md)                       | The plan card, the ladder, the Now rail and its nine card states                               |
 | [`play.md`](play.md)                         | The copy deck, the three cards, the court, the four screens, `SH.whyfit`                       |

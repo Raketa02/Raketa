@@ -272,3 +272,13 @@ profile's home**, not on its You tab where the chip was pressed. The invitation'
 that does not play, and the sheet's close _Decide later_ and _OK_ once the invitation is gone, are new
 words. **Not seen on a device**: the chip in both headers, the ⇅ at 16pt, the sheet's two states, and
 the club tile on `night`.
+
+**A link answered over the area, too** (#520). The area's route layout mounts `links`' `IncomingLinks`
+beside the area — composed there because `links` reads this feature (`useSwitchProfile`,
+`useOfferInvitationsAgain`) and the area may not read it back. **An invitation's link opened by the
+account it was sent to has the invitation sheet offer that club's invitation again** even if _Not now_
+set it aside this launch — that club's only, the set-aside store's `takeBack` — and the app's bare
+address, the existing-account email's button, takes back all of them; `/users/me` is re-read either way
+(`useOfferInvitationsAgain`); **a group link switches an account that
+plays to Player**, where Join a group is, and waits for one that does not. The rest is
+[`links.md`](links.md)'s.

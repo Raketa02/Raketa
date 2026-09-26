@@ -30,6 +30,7 @@ describe('parseEnv', () => {
       apiUrl: 'http://localhost:8000',
       featuresUrl: 'http://localhost:3040',
       environment: 'local',
+      linkDomain: null,
     });
   });
 
@@ -100,7 +101,7 @@ describe('the environment names', () => {
         EXPO_PUBLIC_FEATURES_URL: featuresUrl,
         EXPO_PUBLIC_ENV: environment,
       }),
-    ).toEqual({ apiUrl, featuresUrl, environment });
+    ).toEqual({ apiUrl, featuresUrl, environment, linkDomain: null });
   });
 
   // `dev` and `prod` are the spellings the backend used to accept and no longer does;
@@ -151,6 +152,7 @@ describe('the per-environment URL scheme rule', () => {
       apiUrl: 'http://192.168.1.20:8000',
       featuresUrl: 'http://localhost:3040',
       environment: 'local',
+      linkDomain: null,
     });
   });
 
@@ -164,6 +166,7 @@ describe('the per-environment URL scheme rule', () => {
       apiUrl: 'https://sunny-otter.trycloudflare.example',
       featuresUrl: 'http://localhost:3040',
       environment: 'local',
+      linkDomain: null,
     });
   });
 
@@ -178,6 +181,7 @@ describe('the per-environment URL scheme rule', () => {
       apiUrl: 'https://api.raketa.example',
       featuresUrl: DEPLOYED_FEATURES_URL,
       environment,
+      linkDomain: null,
     });
   });
 
@@ -356,5 +360,40 @@ describe('one complaint per typo', () => {
         EXPO_PUBLIC_ENV: 'staging',
       }),
     ).toHaveLength(2);
+  });
+});
+
+/**
+ * **The web domain the app's links live on** — optional, and unset in every environment today
+ * (#520, ADR-0187 §7). The native project reads the same variable through the same function
+ * (`appLinks.ts`), so the running app and the binary agree about which links are the app's.
+ */
+describe('the link domain', () => {
+  it('is absent while nothing is set, and while it is set to nothing', () => {
+    expect(parseEnv(valid).linkDomain).toBeNull();
+    expect(parseEnv({ ...valid, EXPO_PUBLIC_LINK_DOMAIN: '' }).linkDomain).toBeNull();
+  });
+
+  it('is the host once one is set, in any environment', () => {
+    expect(parseEnv({ ...valid, EXPO_PUBLIC_LINK_DOMAIN: 'raketa.app' }).linkDomain).toBe(
+      'raketa.app',
+    );
+    expect(
+      parseEnv({ ...wellFormedFor('production'), EXPO_PUBLIC_LINK_DOMAIN: 'raketa.app' })
+        .linkDomain,
+    ).toBe('raketa.app');
+  });
+
+  it('refuses a URL where a host belongs, naming the variable and not the value', () => {
+    const typed = 'https://links.hunter2.example/join';
+
+    expect(() => parseEnv({ ...valid, EXPO_PUBLIC_LINK_DOMAIN: typed })).toThrow(
+      /EXPO_PUBLIC_LINK_DOMAIN/,
+    );
+    try {
+      parseEnv({ ...valid, EXPO_PUBLIC_LINK_DOMAIN: typed });
+    } catch (error) {
+      expect((error as ConfigError).message).not.toContain('hunter2');
+    }
   });
 });

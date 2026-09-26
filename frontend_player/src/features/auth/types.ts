@@ -61,6 +61,15 @@ export { SetYourPasswordScreen } from './components/SetYourPasswordScreen';
 export { INVITATION_ROUTES } from './components/invitationRoutes';
 
 /**
+ * **An invitation's link, read — and its words** ([#520](https://github.com/Raketa02/Raketa/issues/520)):
+ * a link opened on a phone that is signed in is read here too, before the sheet it opens is drawn,
+ * and a spent one is said in the sentence *Set your password* would have said it in.
+ */
+export type { InvitationLink, InvitationLinkState } from './domain/invitation';
+export { useInvitationLink } from './hooks/useInvitationLink';
+export { LINK_STATE_MESSAGE, invitationErrorMessage } from './components/invitationPresentation';
+
+/**
  * **Named in full** — a name and a nickname (ADR-0185 §4) — for the entry gate's first destination;
  * the naming step reads the same rule from inside this feature.
  */
@@ -121,6 +130,12 @@ export { useMarkPlayerProfileCommitted } from './hooks/useMarkPlayerProfileCommi
  * so the caller gets the hook and never the steps.
  */
 export { useSignOut } from './hooks/useAuthActions';
+/**
+ * Its button's words and its refusal's, for the one other place that offers it: a link's sheet
+ * (#520).
+ */
+export { SIGN_OUT } from './components/accountPresentation';
+export { authErrorMessage } from './components/authErrorMessage';
 
 /**
  * **Accepting a club's invitation** (#518) — for the invitation sheet, which the administrator

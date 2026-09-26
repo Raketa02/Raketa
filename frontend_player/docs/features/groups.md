@@ -329,3 +329,11 @@ name on the approver line; Info's _the administrator approves joins_; the card o
 rather than in place of the tab bar, and on Members; a button per sport, with the sports joined
 _padel and squash_ / _padel or squash_; the pass ending on the passport; and Join over a request
 left before the account ran the group. **Nothing here has been seen on a device.**
+
+**Join a group opens with a group link in its field** (#520, story 46). A link tapped in WhatsApp
+reaches the screen with its code (`/play/join?code=`, `parseJoinRouteParams` over `GroupCodeSchema` —
+eight letters and digits, read lower case, the shape the links feature reads a link's code with too), and
+the route file spells the group's link back from it (`appLinkTo`: the scheme's while no domain is set)
+for the screen's field, so the answer is exactly the group a paste would have found. **The field does not take the focus then**:
+there is nothing to type, and a keyboard over the one result would hide the button the link is for. What
+opens the screen, and when, is [`links.md`](links.md)'s.

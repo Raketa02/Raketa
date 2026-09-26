@@ -7,9 +7,10 @@
  * *runtime* resolver and cannot help here, and reaching for it would drag zod and Babel's
  * `EXPO_PUBLIC_*` substitution into a document that runs before either.
  *
- * **It contains no logic.** The one decision — what the app is called, and whether it is
- * badged — lives in `src/shared/config/appIdentity.ts`, where it is a pure table over the
- * four environments and is unit-tested without booting anything. This file is a caller.
+ * **It contains no logic.** The two decisions — what the app is called and whether it is
+ * badged, and which web domain's links are the app's — live in `src/shared/config/appIdentity.ts`
+ * and `src/shared/config/appLinks.ts`, where they are pure and unit-tested without booting
+ * anything. This file is a caller.
  *
  * **One installable variant.** One `bundleIdentifier`, one `package`, one `scheme`, and no
  * build-profile configuration: per-environment identifiers wait until a second backend
@@ -37,6 +38,7 @@ import {
   isAppEnvironment,
   IDENTIFIED_ENVIRONMENTS,
 } from './src/shared/config/appIdentity';
+import { APP_SCHEME, nativeLinkConfig, readLinkDomain } from './src/shared/config/appLinks';
 
 export default (): ExpoConfig => {
   const environment = process.env.EXPO_PUBLIC_ENV;
@@ -48,6 +50,11 @@ export default (): ExpoConfig => {
     );
   }
 
+  // The web domain's links — iOS's associated domain, Android's verified intent filter — and none
+  // while the setting is empty, which is every environment today (#520). A malformed value refuses
+  // here, naming the variable, for the reason the environment's does.
+  const links = nativeLinkConfig(readLinkDomain(process.env.EXPO_PUBLIC_LINK_DOMAIN));
+
   return {
     name: appIdentity(environment).displayName,
     slug: 'raketa-player',
@@ -55,18 +62,20 @@ export default (): ExpoConfig => {
     orientation: 'portrait',
     // One scheme, at every environment. A per-environment scheme would need
     // per-environment identifiers to be installable side by side, and those are deferred.
-    scheme: 'raketa',
+    scheme: APP_SCHEME,
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.raketa.player',
+      ...links.ios,
     },
     android: {
       package: 'com.raketa.player',
       adaptiveIcon: {
         backgroundColor: '#ffffff',
       },
+      ...links.android,
     },
     plugins: [
       'expo-router',

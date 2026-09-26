@@ -186,6 +186,16 @@ feature's `schemas/` before use**, and never let it short-circuit the guard:
 Is the session authorized?  →  Is this route allowed?  →  Are the params valid?  →  load
 ```
 
+**Before any of that, an address from outside is read, and only three are links**
+([#520](https://github.com/Raketa02/Raketa/issues/520)). expo-router hands every address the
+operating system opens the app with to `src/app/+native-intent.ts` before it routes one, and the
+links feature answers: `join/<code>`, `invite/<token>` and `reset/<token>` — by the app's scheme, or
+the web domain once one is set — are read value by value and **held** until a place that can answer
+them is reached (and so is the bare `raketa://`, the existing-account invitation email's button);
+**anything else is ignored**, so no screen in the app is reachable from outside by its path. A held link never short-circuits the guard: it waits through sign-in and onboarding, and is
+answered by the authenticated tree once the account is in it. The rules are
+[`features/links.md`](features/links.md).
+
 ---
 
 ## Part 3 — Bootstrap and the session state machine
@@ -944,8 +954,17 @@ const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
   EXPO_PUBLIC_FEATURES_URL: z.string().url(),
   EXPO_PUBLIC_ENV: z.enum(['local', 'development', 'staging', 'production']),
+  EXPO_PUBLIC_LINK_DOMAIN: z.string().optional(), // a bare host, or nothing
 });
 ```
+
+`EXPO_PUBLIC_LINK_DOMAIN` is the one **optional** value: the web domain the app's links live on
+(`raketa.app`, bare), and **empty in every environment today**
+([#520](https://github.com/Raketa02/Raketa/issues/520), ADR-0187 §7). Set, `app.config.ts` gives iOS
+an associated domain and Android a verified intent filter for the three link paths; empty, the links
+use the app's scheme alone. The native document and the runtime read it through one pure function,
+`src/shared/config/appLinks.ts`, so the binary and the running app cannot disagree about which links
+are the app's.
 
 `EXPO_PUBLIC_FEATURES_URL` is the base the feature-flag datafile is fetched from —
 `<base>/<environment>/featurevisor-player.json` — the Mac's LAN address today, a bucket later

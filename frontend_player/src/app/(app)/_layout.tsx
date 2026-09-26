@@ -44,6 +44,14 @@
  * offered here, as a sheet over the player's app, the moment the account is in it (#518) — the
  * administrator area offers it over its own screens the same way.
  *
+ * ## A link is answered once the account is in
+ *
+ * A link opened on the phone — a group link out of WhatsApp, an invitation's or a reset's button — is
+ * **held** from the moment it arrives, through sign-in, sign-up and every destination above, and
+ * answered here, where the account is in the player's app
+ * ([#520](https://github.com/Raketa02/Raketa/issues/520)): Join a group with the link filled in, or a
+ * sheet over the app. What each gets is the links feature's; this file only mounts the place.
+ *
  * ## A pass that began at the passport ends on it
  *
  * The gate's app branch is where every onboarding pass ends, and a pass has an origin
@@ -70,6 +78,7 @@ import {
   type PassOrigin,
 } from '@/features/onboarding/types';
 import { YOU_PASSPORT_ROUTE } from '@/features/player_record/types';
+import { IncomingLinks } from '@/features/links/types';
 import { SOCIAL_STEPS_ENTRY, useLocationRefresh } from '@/features/player_profile/types';
 import { openTab } from '@/features/shell/types';
 import { useSessionStatus } from '@/shared/lib/auth';
@@ -156,6 +165,9 @@ export default function AppLayout() {
           {/* A club's invitation, offered on launch over the player's app and never inside
               onboarding: it waits until the account is in (#518). */}
           <InvitationSheet worn={PLAYER_PROFILE} />
+          {/* A link held since it arrived — a group link through sign-up and onboarding, an
+              invitation through a sign-in — is answered here once the account is in (#520). */}
+          <IncomingLinks over="player" />
         </>
       );
   }

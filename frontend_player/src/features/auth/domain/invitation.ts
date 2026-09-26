@@ -38,5 +38,7 @@ export interface InvitationPassword {
 /** **What a link opens**, read before anything is set: the address *Set your password* locks to. */
 export interface InvitationLink {
   readonly email: string;
+  /** The club it is from — what a signed-in account's sheet offers again by the link (#520). */
+  readonly clubName: string;
   readonly state: InvitationLinkState;
 }

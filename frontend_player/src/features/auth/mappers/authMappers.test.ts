@@ -1,6 +1,6 @@
 import type { components } from '@/generated/schema';
 
-import { toAuthenticatedUser, toNaming, toTokens } from './authMappers';
+import { toAuthenticatedUser, toInvitationLink, toNaming, toTokens } from './authMappers';
 
 type MeResponse = components['schemas']['MeResponse'];
 
@@ -217,5 +217,23 @@ describe('toNaming', () => {
       name: 'Ada Lovelace',
       nickname: 'ada',
     });
+  });
+});
+
+/**
+ * **What an invitation's link opens** — the address *Set your password* locks to, whether it still
+ * works, and the club it is from: a link opened by the account it was sent to has the sheet offer
+ * that club's invitation again (#520). The name the club typed is not carried; nothing says it.
+ */
+describe('toInvitationLink', () => {
+  it('keeps the address, the club and the state', () => {
+    expect(
+      toInvitationLink({
+        email: 'tomek.k@example.com',
+        name: 'Tomek Kowal',
+        club_name: 'Ogrody 33',
+        state: 'valid',
+      }),
+    ).toEqual({ email: 'tomek.k@example.com', clubName: 'Ogrody 33', state: 'valid' });
   });
 });

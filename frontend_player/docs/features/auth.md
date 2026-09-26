@@ -244,3 +244,17 @@ and an account that wore a club's profile last would otherwise be sent back to t
 moment the gate took the next step.
 
 **Not seen on a device**: the two new screens, the locked email box, and the third link under Sign in.
+
+**The two email links are opened from outside the app by [`links`](links.md)** (#520). `invite/<token>`
+and `reset/<token>` stay under `(auth)`: nobody signed in lands on _Set your password_ or _Set a new
+password_ from the link itself, and a signed-in phone is handed by the guard to the gate, where the links
+feature asks first — the invitation's sheet naming the address it is for, the reset's asking to sign out.
+**The reset route lets the held link go** (`useResetLinkOpened`), so the session its password begins is
+not asked about the link it just used; the invitation route keeps it, so an existing account that signs
+in from _Set your password_ is offered the invitation. `InvitationLink` now keeps the club's name from
+`by-token`, so a link re-offers only its own club's invitation, and it is exported for that feature
+with `useInvitationLink`, `LINK_STATE_MESSAGE`, `invitationErrorMessage`, `SIGN_OUT` and
+`authErrorMessage`: a spent link opened signed in is said in the words _Set your password_ would have
+used, and the sheets' _Sign out_ is this feature's button. A malformed token no longer reaches
+either route from outside — the reader ignores the link — so their redirects to the code form and the
+email form now guard only the app's own navigation.

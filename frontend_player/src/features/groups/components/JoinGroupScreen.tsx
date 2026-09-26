@@ -13,6 +13,10 @@
  *
  * The field takes the focus as the screen opens (play 23 draws the caret in it): there is one
  * thing to do here, and it is type.
+ *
+ * **A group link opens it with the link already in the field** (#520, story 46), so the answer under
+ * it is that group — exactly as if it had been pasted. Then there is nothing to type, so the keyboard
+ * stays down and the group is in view.
  */
 
 import { router } from 'expo-router';
@@ -34,9 +38,14 @@ import { noMatchFor } from './groupsPresentation';
 
 const COPY = GROUPS_COPY.joinGroup;
 
-export function JoinGroupScreen() {
+export interface JoinGroupScreenProps {
+  /** The group link that opened the screen, spelled by the route from the code it checked. */
+  readonly link?: string;
+}
+
+export function JoinGroupScreen({ link }: JoinGroupScreenProps = {}) {
   const clipboard = useClipboard();
-  const [typed, setTyped] = useState('');
+  const [typed, setTyped] = useState(link ?? '');
   const search = useJoinSearch(typed);
 
   async function paste() {
@@ -55,7 +64,7 @@ export function JoinGroupScreen() {
           placeholder={COPY.field}
           value={typed}
           onChangeText={setTyped}
-          autoFocus
+          autoFocus={link === undefined}
           autoCorrect={false}
           autoCapitalize="none"
           returnKeyType="search"

@@ -94,10 +94,11 @@ export function toNaming(wire: NamingResponse): Naming {
 }
 
 /**
- * What an invitation's link opens: the address *Set your password* locks to, and whether it still
- * works. The name the club typed and the club's name are dropped — nothing on the screen says them,
- * since the account is not signed in and the email's own greeting already did.
+ * What an invitation's link opens: the address *Set your password* locks to, whether it still works,
+ * and the club it is from — a link opened by the account it was sent to has the sheet offer that
+ * club's invitation again (#520). The name the club typed is dropped: nothing says it, since the
+ * email's own greeting already did.
  */
 export function toInvitationLink(wire: InvitationByTokenResponse): InvitationLink {
-  return { email: wire.email, state: wire.state };
+  return { email: wire.email, clubName: wire.club_name, state: wire.state };
 }

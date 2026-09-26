@@ -27,6 +27,14 @@ export { ProfileChip } from './components/ProfileChip';
  * mounts it itself, and the player's app layout mounts it over the player's.
  */
 export { InvitationSheet } from './components/InvitationSheet';
+/**
+ * **What an incoming link asks of this feature** ([#520](https://github.com/Raketa02/Raketa/issues/520)):
+ * an invitation's link opened by the account it was sent to has the sheet offer it again, even if it
+ * was set aside this launch; a group link opened in the area switches to Player, where Join a group
+ * is — the switcher's own move.
+ */
+export { useOfferInvitationsAgain } from './hooks/useOfferInvitationsAgain';
+export { useSwitchProfile } from './components/areaNavigation';
 export {
   parseClubRouteParams,
   parseOfficialGroupRouteParams,

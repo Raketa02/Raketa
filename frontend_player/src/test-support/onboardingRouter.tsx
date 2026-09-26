@@ -12,8 +12,8 @@
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { Slot } from 'expo-router';
-import { renderRouter, waitFor } from 'expo-router/testing-library';
+import { Slot, router, type Href } from 'expo-router';
+import { act, renderRouter, waitFor } from 'expo-router/testing-library';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ReducedMotionProvider } from '@/shared/ui';
@@ -70,6 +70,7 @@ import ResetLinkRoute from '@/app/(auth)/reset/[token]';
 import InvitationCodeRoute from '@/app/(auth)/invitation/index';
 import InvitationPasswordRoute from '@/app/(auth)/invitation/password';
 import InvitationLinkRoute from '@/app/(auth)/invite/[token]';
+import * as NativeIntent from '@/app/+native-intent';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
 import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
@@ -90,7 +91,7 @@ import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { featureFlagKeys } from '@/features/feature_flags/types';
 import { NOW_COPY } from '@/features/shell/types';
-import { beginSession } from '@/shared/lib/auth';
+import { beginSession, setSessionStatus } from '@/shared/lib/auth';
 import {
   ClipboardProvider,
   HapticsProvider,
@@ -999,6 +1000,11 @@ export interface GateStub {
    */
   readonly id?: string;
   /**
+   * The address the account signs in with. Defaulted for `id`'s reason; the suites about an
+   * invitation's link state it, because whose invitation a link is is decided by it (#520).
+   */
+  readonly email?: string;
+  /**
    * The runs this player left unfinished, in the order the server sends them — sport
    * registry order. A single run is the ordinary case; two is what proves which one the
    * gate picks.
@@ -1108,6 +1114,7 @@ export function stubGate(
     runs = [],
     hasPlayerProfile = false,
     id = GATE_USER.id,
+    email = GATE_USER.email,
     name = GATE_USER.name ?? null,
     nickname = name === null ? null : (GATE_USER.nickname ?? null),
     isTester = false,
@@ -1122,6 +1129,7 @@ export function stubGate(
     json<Wire['MeResponse']>({
       ...GATE_USER,
       id,
+      email,
       name,
       nickname,
       has_player_profile: hasPlayerProfile,
@@ -1163,4 +1171,39 @@ export function runInProgress(
 export async function launchSignedIn(initialUrl = '/') {
   await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
   renderRouter(ONBOARDING_ROUTES, { initialUrl });
+}
+
+/**
+ * **The tree with the app's link reader in front of it** (#520) — `src/app/+native-intent`, which
+ * expo-router hands every address the operating system opens the app with before it routes one.
+ *
+ * Its own table rather than an entry in `ONBOARDING_ROUTES`, because the reader is the gate a link
+ * passes and nothing else: every other suite's `initialUrl` is a route the suite put the player on,
+ * and the reader would — rightly — refuse every one of them that is not one of the three links.
+ */
+export const ROUTES_WITH_LINKS = { ...ONBOARDING_ROUTES, '+native-intent': NativeIntent };
+
+/**
+ * **A cold start by a link.** The address is what expo-router hands the reader for a launch — the
+ * harness takes a path, so `/join/<code>` stands for `raketa://join/<code>`; the scheme's own
+ * spelling is walked by `openLink` and read in `incomingLinkUrl.test.ts`.
+ */
+export async function launchByLink(path: string, { signedIn }: { readonly signedIn: boolean }) {
+  if (signedIn) await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+  else setSessionStatus('unauthenticated');
+  renderRouter(ROUTES_WITH_LINKS, { initialUrl: path });
+}
+
+/**
+ * **A link opened while the app is running** — what expo-router's listener does with one: the
+ * reader's answer is navigated to, and an empty answer is no navigation at all. The full address,
+ * scheme and all, because that is what the operating system hands a running app.
+ */
+export function openLink(url: string): void {
+  act(() => {
+    const to = NativeIntent.redirectSystemPath({ path: url, initial: false });
+    // The reader answers with one of its own screens' paths, or nothing; the router's typed hrefs
+    // cannot know which path a string is.
+    if (to !== '') router.navigate(to as Href);
+  });
 }

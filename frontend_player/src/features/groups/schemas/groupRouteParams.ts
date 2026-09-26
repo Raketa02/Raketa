@@ -29,3 +29,24 @@ export function parseFriendsRouteParams(
   const parsed = FriendsRouteParams.safeParse(params);
   return parsed.success ? parsed.data : undefined;
 }
+
+/**
+ * **A group's code** — the eight letters and digits after `/join/` in its link. Read in lower case,
+ * the case every code is minted in, so a link a keyboard capitalised names the same group; whether
+ * the eight are any group's is the server's to say (ADR-0183 §4).
+ */
+export const GroupCodeSchema = z
+  .string()
+  .regex(/^[0-9A-Za-z]{8}$/)
+  .transform((code) => code.toLowerCase());
+
+const JoinRouteParams = z.object({ code: GroupCodeSchema });
+
+/**
+ * **Join a group opened by a group link** (#520): the code the link carried, or `undefined` —
+ * Join a group opened from Play, or a code that cannot be one, either way an empty field.
+ */
+export function parseJoinRouteParams(params: unknown): { readonly code: string } | undefined {
+  const parsed = JoinRouteParams.safeParse(params);
+  return parsed.success ? parsed.data : undefined;
+}

@@ -17,7 +17,16 @@ export { GroupScreen } from './components/GroupScreen';
 export { FriendsScreen } from './components/FriendsScreen';
 export { MembersScreen } from './components/MembersScreen';
 export { EditGroupScreen } from './components/EditGroupScreen';
-export { parseFriendsRouteParams, parseGroupRouteParams } from './schemas/groupRouteParams';
+export {
+  parseFriendsRouteParams,
+  parseGroupRouteParams,
+  parseJoinRouteParams,
+} from './schemas/groupRouteParams';
+/**
+ * **Join a group, opened by a group link** ([#520](https://github.com/Raketa02/Raketa/issues/520)):
+ * where the links feature sends a link it has read, with the code the screen fills its field with.
+ */
+export { joinGroupRouteFor } from './components/groupRoutes';
 
 /**
  * **What the administrator area draws with** ([#516](https://github.com/Raketa02/Raketa/issues/516),

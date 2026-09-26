@@ -14,6 +14,11 @@ interface InvitationsSetAsideState {
   /** The administrator ids offered and set aside since launch. */
   readonly setAside: readonly string[];
   readonly setAsideOne: (administratorId: string) => void;
+  /**
+   * **A link asks for them again** (#520): these ids back on offer — or every one, given none. The
+   * link is the person asking, so it outranks the *Not now* they gave earlier this launch.
+   */
+  readonly takeBack: (administratorIds: readonly string[] | undefined) => void;
   readonly reset: () => void;
 }
 
@@ -25,5 +30,12 @@ export const useInvitationsSetAside = create<InvitationsSetAsideState>((set) => 
         ? state
         : { setAside: [...state.setAside, administratorId] },
     ),
+  takeBack: (administratorIds) =>
+    set((state) => ({
+      setAside:
+        administratorIds === undefined
+          ? []
+          : state.setAside.filter((id) => !administratorIds.includes(id)),
+    })),
   reset: () => set({ setAside: [] }),
 }));
