@@ -1,0 +1,85 @@
+name: Set up a web app
+description: >-
+  pnpm, Node 22 and one web app's install from its own lockfile — frontend_club
+  or frontend_public — and, for a job that runs its Playwright suite, the one
+  browser that suite drives, restored from a cache keyed on Playwright's version.
+
+inputs:
+  app:
+    description: The app's directory, `frontend_club` or `frontend_public`.
+    required: true
+  browser:
+    description: >-
+      `true` for a job that runs the Playwright suite: installs Chromium's
+      headless shell and the system libraries it needs.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # The version both web apps' `packageManager` names, as the player app's does.
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.0
+
+    # The pnpm store is cached by setup-node, keyed on this app's lockfile. One
+    # action serves both web apps and each keeps its own store: they share no
+    # code and no dependency set (ADR-0005), so neither restores the other's.
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+        cache-dependency-path: ${{ inputs.app }}/pnpm-lock.yaml
+
+    - name: Install
+      shell: bash
+      working-directory: ${{ inputs.app }}
+      run: pnpm install --frozen-lockfile
+
+    # **The browser is Chromium's headless shell, and nothing else.** Both suites
+    # run one project, Desktop Chrome, headless, and Playwright drives headless
+    # Chromium through the shell — the full browser is only for headed runs, and
+    # leaving it out keeps about a third of what `install chromium` fetches (197
+    # of 556 MB on a laptop). Both suites were run green against a shell-only
+    # install before this was written.
+    #
+    # The cache key is the Playwright version the app's lockfile resolved, read
+    # from the installed package rather than typed here, because a browser build
+    # belongs to one Playwright release: an upgrade that kept the old key would
+    # restore a browser the new Playwright cannot find, and install nothing. Both
+    # web apps pin the same release today, so they share the entry.
+    - name: Read the Playwright version
+      id: playwright
+      if: inputs.browser == 'true'
+      shell: bash
+      working-directory: ${{ inputs.app }}
+      run: |
+        version=$(pnpm exec playwright --version | awk '{ print $2 }')
+        if [ -z "$version" ]; then
+          echo "::error title=Playwright::Could not read the Playwright version from ${{ inputs.app }}."
+          exit 1
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the browser
+      id: browser
+      if: inputs.browser == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-headless-shell
+
+    # The system libraries are apt packages outside the cache, so a restored
+    # browser still needs them installed — `install-deps` does that alone.
+    - name: Install the browser
+      if: inputs.browser == 'true' && steps.browser.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{ inputs.app }}
+      run: pnpm exec playwright install --with-deps --only-shell chromium
+
+    - name: Install the browser's system libraries
+      if: inputs.browser == 'true' && steps.browser.outputs.cache-hit == 'true'
+      shell: bash
+      working-directory: ${{ inputs.app }}
+      run: pnpm exec playwright install-deps chromium

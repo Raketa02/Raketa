@@ -1,8 +1,8 @@
 # Environments
 
 **The cross-app reference.** Four environments, named identically by the backend, the player
-app. This page is the authority on the vocabulary and the rules that follow
-from it; [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md) is the
+app, the club website and the public site. This page is the authority on the vocabulary and the
+rules that follow from it; [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md) is the
 authority on *why*, and [ADR-0029](adr/0029-seed-data-through-aggregates-never-in-production.md)
 on how fake data is made.
 
@@ -14,7 +14,7 @@ word defined three times drifts three ways.
 
 | Environment | What it is | Runs today |
 | --- | --- | --- |
-| `local` | A developer's own machine. Docker Compose, a local Postgres, an Expo dev server, `next dev`. | **Yes — the only one.** |
+| `local` | A developer's own machine. Docker Compose, a local Postgres, the mail catcher, an Expo dev server, `next dev` for each web app. | **Yes — the only one.** |
 | `development` | A shared remote deployment: the first place code runs that is not somebody's laptop. | No — defined and validated, not provisioned. |
 | `staging` | A rehearsal for production. Same configuration profile, same refusals, different data. | No — defined and validated, not provisioned. |
 | `production` | What players use. | No — does not exist yet. |
@@ -34,10 +34,13 @@ refusals is what makes it a rehearsal rather than a fourth guess.
 | --- | --- | --- |
 | `backend/` | `APP_ENV` | A strict `StrEnum`. `ENV` was renamed away because it collides with an ordinary shell variable. |
 | `frontend_player/` | `EXPO_PUBLIC_ENV` | Expo substitutes only `EXPO_PUBLIC_*` at build time, so the *name* cannot match. The **values** are identical, which is the part that matters. |
+| `frontend_club/` | `APP_ENV` | Read by the website's server when it starts, like every variable it has. None is `NEXT_PUBLIC_*`, so nothing is inlined into the browser. |
+| `frontend_public/` | `APP_ENV` | The same, for the public site. |
 
-Each app validates its own copy. There is no shared package: the three apps share no code
-([ADR-0005](adr/0005-three-app-monorepo-ownership-boundaries.md)), so the vocabulary is
-duplicated deliberately and this page is what keeps the copies honest.
+Each app validates its own copy. There is no shared package: the four apps share no code
+([ADR-0005](adr/0005-three-app-monorepo-ownership-boundaries.md),
+[ADR-0187](adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)),
+so the vocabulary is duplicated deliberately and this page is what keeps the copies honest.
 
 ## The backend's derived profile
 
@@ -75,12 +78,20 @@ a migration or a seed run — not only for a process serving HTTP.
 | backend | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway, so it cannot be mistaken for working configuration. |
 | backend | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
 | backend | **any deployed environment** with no `PUBLIC_SITE_URL`, or one that is not `https://` | Every group link is built from it and posted into a chat, where it stays after the setting is fixed. The default is `frontend_public`'s dev server on a laptop. |
+| backend | **any deployed environment** with no `CLUB_WEBSITE_URL`, or one that is not `https://` | A club's reset email links to its *Set a new password* page there. The default is `frontend_club`'s dev server on a laptop. |
+| backend | **any deployed environment** with no `SMTP_HOST` or no `MAIL_SENDER` | The defaults are the mail catcher's compose service name and a sender on the reserved `.example` domain. An environment that inherited them would queue every reset and invitation for a relay that does not exist. **This is how the production sender stays off until a domain exists**: by refusing to start, never by quietly not sending ([ADR-0186](adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §1). |
+| backend | a deployed environment with `SMTP_SECURITY=none` | Every reset and invitation email carries a code that opens an account, so the connection to the relay is encrypted: `starttls` or `tls`. |
 | backend | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
 | backend | a deployed environment with `BCRYPT_ROUNDS` below production's 12 | Nothing fails at a weak cost — every login still works — so the stored passwords would just be cheaper to crack, and nobody would notice. The default is 12 everywhere, and only a laptop may lower it; the test suite uses bcrypt's minimum, 4. |
 | player | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
 | player | a deployed `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_FEATURES_URL` that is not `https://` | The scheme rule, below. |
+| club | any of `APP_ENV`, `API_URL`, `SESSION_SECRET`, `MAP_TILE_URL` or `MAP_START` missing, blank or malformed | `src/instrumentation.ts` validates them before the server takes a request and **exits** naming each. Next alone would log the error and serve 500s. `SESSION_SECRET` is at least 32 characters, because iron-session refuses a shorter one at the first seal — a refused sign-in instead of a refused start. |
+| club | a deployed `MAP_TILE_URL` that is not `https://` | The browser fetches the tiles. The scheme rule, below. |
+| public | any of `APP_ENV`, `API_URL`, `PUBLIC_SITE_URL`, `APP_STORE_URL`, `GOOGLE_PLAY_URL`, `APP_SCHEME`, `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`, `ANDROID_PACKAGE` or `ANDROID_CERT_FINGERPRINTS` missing, blank or malformed | The same exit at start, for the same reason. The last four are what the app-link files are made from, so a malformed one would publish an association no phone accepts. |
+| public | an `APP_SCHEME` that is a web or script scheme (`http`, `https`, `javascript`, `data`, `vbscript`, `file`, `blob`) | *Open in Raketa* goes to `<APP_SCHEME>://<route>`, and from one of those it would open a page or run a script instead of the app. |
+| public | a deployed `PUBLIC_SITE_URL`, `APP_STORE_URL` or `GOOGLE_PLAY_URL` that is not `https://` | A browser or a messenger opens each. The scheme rule, below. |
 
-**Two constraints on every refusal message, in all three apps.** It **names the offending
+**Two constraints on every refusal message, in all four apps.** It **names the offending
 variable and the reason**; it **never contains the offending value**. A URL carries
 credentials and a refusal goes straight into a log aggregator or a crash report. The
 environment name may appear where it is the *reason* — it is not a secret and is already on
@@ -114,8 +125,16 @@ named here rather than quietly fixed. **Do not read the rule above as covering i
   a value — `model_fields_set`, not "differs from a sentinel". That is forced by the
   no-placeholder-hostname rule: with no domain registered there is nothing to compare a host
   against, so the only honest question is whether a human supplied one.
-- **Both clients have no defaults at all.** Every variable is required, so absence is itself
-  the refusal, naming the variable.
+- **The three clients default nothing they need.** Every variable a client cannot run without
+  is required, so absence is itself the refusal, naming the variable. A variable set to
+  nothing counts as missing in the two web apps, because `SESSION_SECRET=` is a template line
+  nobody filled in. The one optional variable is the player app's `EXPO_PUBLIC_LINK_DOMAIN`,
+  whose absence is a real state: no web domain claimed yet (below).
+
+The backend asks the same question of four more settings, each added with a web app or with
+email: the two sites every link is printed under (`PUBLIC_SITE_URL`, `CLUB_WEBSITE_URL`) and the
+mail relay and sender (`SMTP_HOST`, `MAIL_SENDER`). Each default resolves on a laptop and
+nowhere else, so a deployed environment names its own or does not start.
 
 ## The scheme rule
 
@@ -131,7 +150,13 @@ question no application can answer for its operator.
 | player | `EXPO_PUBLIC_API_URL` | a phone, over the internet | `https://` when deployed |
 | player | `EXPO_PUBLIC_FEATURES_URL` | a phone, over the internet | `https://` when deployed |
 | backend | `ALLOW_ORIGINS` entries | a browser (they *are* browser origins) | `https://` when deployed; the `*` wildcard is not an origin and is exempt |
-| backend | `PUBLIC_SITE_URL` | whoever taps a group link in a chat | `https://` when deployed |
+| backend | `PUBLIC_SITE_URL` | whoever taps a group link in a chat, or opens an invitation or a reset email | `https://` when deployed |
+| backend | `CLUB_WEBSITE_URL` | a club opening its reset email | `https://` when deployed |
+| backend | `SMTP_SECURITY` | the mail relay, over a public network | not `none` when deployed — the scheme rule's mail-shaped instance |
+| club | `MAP_TILE_URL` | the browser, fetching the map's tiles | `https://` when deployed |
+| club | `API_URL` | the website's own server | none: server to server |
+| public | `PUBLIC_SITE_URL`, `APP_STORE_URL`, `GOOGLE_PLAY_URL` | a browser, or a messenger fetching a preview | `https://` when deployed |
+| public | `API_URL` | the site's own server | none: server to server |
 
 **Why the datafile host is on the list though it serves nothing secret.** The feature-flag
 datafile is public-read by design
@@ -158,6 +183,49 @@ value**: a failed `.url()` leaves zod's result *dirty* rather than aborting it, 
 that guard `localhost:8000` produced two complaints, the second blaming the environment for a
 URL that simply has no scheme. One typo, one complaint.
 
+## The addresses links are built from
+
+**Every address is a setting, never a literal**
+([ADR-0187](adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+§7). The backend prints links into emails and group screens, and the sites they open must be
+where it says they are, so three settings have to agree across apps.
+
+| Setting | Set in | What is built from it | Locally |
+| --- | --- | --- | --- |
+| `PUBLIC_SITE_URL` | backend **and** `frontend_public`, the same value in both | every group link, `<PUBLIC_SITE_URL>/join/<code>`; the invitation link, `/invite/<token>`; a player's or an administrator's reset link, `/reset/<token>`. The public site makes its preview's image and address absolute from its own copy, so a messenger fetches from the address people reach. | `http://localhost:3001`, the public site's `pnpm dev` |
+| `CLUB_WEBSITE_URL` | backend | a club's reset link, `<CLUB_WEBSITE_URL>/reset/<token>`: the club website's own *Set a new password* page | `http://localhost:3000`, the club website's `pnpm dev` |
+| `APP_SCHEME` | backend **and** `frontend_public`, equal to the scheme `frontend_player`'s `app.config.ts` declares | the button in the email an existing account is invited by, `<APP_SCHEME>://`; the public site's *Open in Raketa*, `<APP_SCHEME>://<route>` | `raketa`, at every environment |
+
+**Changing `PUBLIC_SITE_URL` re-addresses every link served from then on, and none already
+posted.** A group link pasted into WhatsApp keeps the domain it was printed with, which is why
+the value is set once per environment. The app recognises `/join/<code>` inside any text, so a
+link printed under one environment's domain still names its group in another.
+
+Until a domain exists, a phone opens these links as the public site's pages, and reaches the
+app through the scheme. `EXPO_PUBLIC_LINK_DOMAIN` in the player app is empty for that reason: it
+is set, with a native rebuild, the day the public site answers on a real `https://` domain
+(step 7 of the checklist below).
+
+## Email in `local`: the mail catcher
+
+**No email leaves a laptop.** The dev stack (`backend/docker-compose-local.yml`) runs
+**Mailpit**, a mail catcher: the backend's SMTP adapter sends to it, and every email appears
+in its **inbox at [`http://localhost:8025`](http://localhost:8025)**. That includes the
+invitations, the resets and their codes, which a person reads there exactly as they would in a
+real mailbox ([ADR-0186](adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §1).
+
+| | Inside the compose stack | uvicorn on the host |
+| --- | --- | --- |
+| `SMTP_HOST` | `mailpit`, the default | `localhost` (`backend/.env.example`) |
+| `SMTP_PORT` | `1025` | `1025`, published by the stack |
+| `SMTP_SECURITY` | `none` — refused anywhere deployed | `none` |
+
+A use case never sends. It writes a row to the mail queue in its own transaction, and the mail
+worker sends it within a couple of seconds (`MAIL_DELIVERY_INTERVAL_SECONDS`) and then **purges
+the link and the code from the row**. So a code is read in the inbox, never in the database.
+Seeded accounts live on the reserved `.example` domain, and the catcher shows their mail as
+well.
+
 ## The rules, condensed
 
 1. **The environment may select configuration defaults; it may never select behaviour a
@@ -168,7 +236,8 @@ URL that simply has no scheme. One typo, one complaint.
 3. **A refusal names the variable and the reason, and never the value.**
 4. **A deployed environment fails loudly rather than falling back.** It is asked for its own
    host, database and ephemeral store; none of the three may be inherited from the local
-   defaults. [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md)'s rule 5
+   defaults. Nor may the two site addresses links are printed under, or the mail relay and
+   sender. [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md)'s rule 5
    stated this of *unprovisioned* environments, and its
    [2026-09-10 amendment](adr/0028-four-environment-model-and-typed-configuration.md#amendment--2026-09-10-rule-5-binds-every-deployed-environment-not-only-the-unbuilt-ones)
    restates it over every deployed one — with the three photo settings named there as still
@@ -183,12 +252,19 @@ URL that simply has no scheme. One typo, one complaint.
    lets a deep link, a query parameter or a debug menu repoint the app at another backend. A
    build that could be repointed is a build whose test results say nothing about where it will
    run. (The developer-facing environment switcher is deferred for the same reason it is
-   currently pointless — there is nothing to switch to.)
+   currently pointless — there is nothing to switch to.) **The two web apps are servers, like
+   the backend**: they read their environment when the server starts, not when it is built.
+   None of it is inlined into the browser's bundle — a page is handed only the addresses it
+   links to, such as the tile URL or a store's — and nothing a browser sends is read as
+   configuration, so no link, query parameter or form can repoint them either.
 8. **The OpenAPI documents remain the source of truth for client types, in every environment.**
-   `backend/openapi.player.json` is generated by the backend and the client generates its wire
-   types from it ([ADR-0006](adr/0006-backend-owns-api-contract.md)). No client hand-writes a DTO mirroring a
-   backend response, and **no environment is an excuse to**: a type that is "just for local" is
-   a type nothing regenerates. CI regenerates and diffs, so a contract change shipped without
+   The backend emits one document per surface, and each client generates its wire types from
+   its own: `openapi.player.json` for the player app, `openapi.club.json` for the club website,
+   `openapi.public.json` for the public site ([ADR-0006](adr/0006-backend-owns-api-contract.md),
+   [ADR-0187](adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+   §5). No client hand-writes a DTO mirroring a backend response, and **no environment is an
+   excuse to**: a type that is "just for local" is a type nothing regenerates. CI re-emits every
+   document and regenerates every client, and diffs both, so a contract change shipped without
    its client types fails the build.
 9. **External services use sandbox credentials outside production.** Payments, mail, SMS, push,
    object storage, maps — every third party gets its test/sandbox key in `local`,
@@ -257,8 +333,9 @@ Which tier runs against which environment, and the one line that is not crossed.
 | Client unit (Jest / Vitest) | Nothing. Pure functions, mocked ports. | Config parsers are pure functions from a raw record to a validated object, which is why they are tested exhaustively. |
 | Client component | A renderer, no network. | Asserts what a user can observe. |
 | Backend demands (`backend/tests/demands/`) | An in-memory SQLite database, for the one port with a real provider. | ADR-0098's consumer-driven **contract suite**, parameterised over every implementation registered in `app/bootstrap/matcher_demands.py`. Not in the *Contract* row below, and not named for it: that word means `openapi.player.json` here. |
-| Contract | `backend/openapi.player.json`. | CI regenerates the client's types and diffs. |
-| End-to-end (Playwright) | `local` today. `development` or `staging` once either is provisioned. | Each test owns its data. |
+| Contract | Every document the backend emits: `openapi.{player,dev,club,public}.json`. | Two checks. **Freshness** re-emits every document and diffs the JSON (`make contract-freshness`, proven to still fire by `make test-contract-freshness`). **Drift** regenerates one client's types from its own document and diffs them (`check-contract-drift.sh <client>`, proven by `make test-drift`). |
+| Web app pages (Playwright, `frontend_club/e2e/`, `frontend_public/e2e/`) | The built site, started with a configuration made for the suite, its server pointed at a **stub backend** typed from that app's generated contract. No real backend and no database. | One worker, because one server talks to one stub. Each app owns its stub. |
+| End-to-end | Nothing automated. **No test crosses apps** ([ADR-0187](adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md) §6). | The journey across the apps is a QA plan walked by hand in `local` ([#528](https://github.com/Raketa02/Raketa/issues/528)), and in `development` or `staging` once either is provisioned. |
 | Manual exploratory | `local`; `development` or `staging` once provisioned. | |
 
 **How the suite runs.** The merge gate runs every test of every app a push changes, never a
@@ -272,7 +349,9 @@ source tree as text. Decided by
 [ADR-0181](adr/0181-the-merge-gate-runs-every-test-and-choosing-tests-is-the-inner-loops-job.md).
 The backend's suite runs as balanced groups, one per runner and each in parallel across that
 runner's two cores, and the run fails when the groups' reports do not add up to the suite —
-a test that no group ran, or that two did (#489).
+a test that no group ran, or that two did (#489). Each web app has two jobs of its own: its
+static checks with its contract drift, and its Playwright suite, whose one browser (Chromium's
+headless shell) is cached on the Playwright version (#527).
 
 **Production is never where a destructive automated test runs.** No test suite, load
 generator, fixture teardown, database reset or seed run targets production — not gated behind a
@@ -342,7 +421,9 @@ not `make`. Accounts are named for the state they represent and addressed on the
 The day a domain is registered, this is a configuration task rather than a redesign. In order:
 
 1. **Register the domain and provision the infrastructure** — a database and a host for the
-   API. Reactivating the deployment path supersedes
+   API, and a host for each web app. **The public site answers on the domain**, since every
+   group, invitation and reset link is printed under it. The club website needs an address of
+   its own. Reactivating the deployment path supersedes
    [ADR-0010](adr/0010-local-first-development-aws-deferred.md) and needs its own ADR; the
    dormant pipeline's own reactivation steps are in the header of
    [`.github/workflows/deploy-ecs.yml`](../.github/workflows/deploy-ecs.yml) and in
@@ -350,11 +431,14 @@ The day a domain is registered, this is a configuration task rather than a redes
 2. **Issue a TLS certificate** for every public-network host. Rule 6 is not satisfiable
    without one, which is the intended ordering.
 3. **Set the backend's variables**: `APP_ENV`, and — because nothing deployed may inherit the
-   local defaults — `APP_HOST`, `WRITER_DB_URL`, `REDIS_URL` and `PUBLIC_SITE_URL` explicitly. Then
-   `JWT_SECRET_KEY` (`openssl rand -hex 32`), `PHOTO_STORAGE_SECRET_KEY`, `DB_SSL_MODE` (one of
-   `require`, `verify-ca`, `verify-full`), and `ALLOW_ORIGINS` as an explicit `https://` list
-   rather than a wildcard — or an explicit empty list, which is what it is today, because no
-   browser client exists and the mobile app sends no `Origin` header.
+   local defaults — `APP_HOST`, `WRITER_DB_URL`, `REDIS_URL`, `PUBLIC_SITE_URL`,
+   `CLUB_WEBSITE_URL`, `SMTP_HOST` and `MAIL_SENDER` explicitly. Then `JWT_SECRET_KEY`
+   (`openssl rand -hex 32`), `PHOTO_STORAGE_SECRET_KEY`, `DB_SSL_MODE` (one of `require`,
+   `verify-ca`, `verify-full`), `SMTP_SECURITY` (`starttls` or `tls`) with the relay's
+   `SMTP_PORT`, `SMTP_USERNAME` and `SMTP_PASSWORD`, and `ALLOW_ORIGINS` as an explicit
+   `https://` list rather than a wildcard — or an explicit empty list, which is what it is
+   today. No browser calls the backend: both web apps call it from their servers, and the
+   mobile app sends no `Origin` header.
 
    **Do not maintain this list by reading it.** `make taskdef` builds the settings object
    out of `backend/deploy/ecs/taskdef.json` and names whatever it does not supply — and
@@ -369,13 +453,43 @@ The day a domain is registered, this is a configuration task rather than a redes
    At this point the per-environment bundle-identifier question deferred by
    [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md) becomes live for the
    first time, because there is finally a second backend to point a second variant at.
-5. **Point every external service at its sandbox credentials**, per rule 9. Live keys go to
+5. **Set the club website's variables**: `APP_ENV`, `API_URL` (server to server, so any scheme
+   the topology needs), `SESSION_SECRET` (`openssl rand -hex 32`; changing it later signs every
+   club out), `MAP_TILE_URL` (`https://`, from the tile provider in step 7) and `MAP_START`.
+6. **Set the public site's variables**: `APP_ENV`, `API_URL`, `PUBLIC_SITE_URL` (`https://`, the
+   backend's own value), `APP_STORE_URL` and `GOOGLE_PLAY_URL` (`https://`), `APP_SCHEME` (the
+   app's), and the four the app-link files are made from: `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`,
+   `ANDROID_PACKAGE` and `ANDROID_CERT_FINGERPRINTS`. Every value in its `.env.example` that
+   names a store listing, a team or a signing key is a placeholder that is nobody's.
+7. **Bring in what nobody has chosen yet.** Each of these is configuration the day it exists,
+   and each one blocks something real until then:
+   - **A domain**, from step 1. Nothing below it works without one.
+   - **App links.** The public site serves `/.well-known/apple-app-site-association` and
+     `/.well-known/assetlinks.json`, made from the four settings in step 6. iOS and Android read
+     them only from a real `https://` domain, so tap-to-open cannot be tested before one
+     exists. The player app then claims the domain: set `EXPO_PUBLIC_LINK_DOMAIN` and rebuild
+     natively, since it becomes iOS's associated domain and Android's verified intent filter.
+     The Android fingerprints are the release key's, plus the store's re-signing key once there
+     is one.
+   - **Store URLs.** `APP_STORE_URL` and `GOOGLE_PLAY_URL` are Raketa's listings, which exist
+     only once the app is published.
+   - **A production email sender**: a relay that sends from an address on the domain, set in
+     step 3. Deliverability arrives with it: SPF, DKIM, DMARC, bounces, complaints and a
+     suppression list, none of which exists today
+     ([ADR-0186](adr/0186-email-goes-through-a-port-and-a-purged-queue.md)). `development` and
+     `staging` get a sandbox relay, per rule 9.
+   - **A map-tile provider** for `MAP_TILE_URL`. OpenStreetMap's own tile servers are for
+     development only, so production needs a provider that allows its traffic, and the map
+     keeps that provider's attribution
+     ([ADR-0187](adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+     §3).
+8. **Point every external service at its sandbox credentials**, per rule 9. Live keys go to
    `production` and nowhere else.
-6. **Seed it** — `development` and `staging` are seedable, and the accounts are the same edges
+9. **Seed it** — `development` and `staging` are seedable, and the accounts are the same edges
    a laptop gets.
-7. **Delete this list's assumptions as they stop being true.** The three "not provisioned"
-   rows in the table at the top of this page, and the sentences in each app's `.env.example`
-   saying only `local` runs, are the first things that become false.
+10. **Delete this list's assumptions as they stop being true.** The three "not provisioned"
+    rows in the table at the top of this page, and the sentences in each app's `.env.example`
+    saying only `local` runs, are the first things that become false.
 
 ## Where to look next
 
@@ -385,5 +499,7 @@ The day a domain is registered, this is a configuration task rather than a redes
 | Why seeds go through aggregates | [ADR-0029](adr/0029-seed-data-through-aggregates-never-in-production.md) |
 | The backend's settings, profile and refusals in detail | `backend/README.md`, `backend/CONTEXT.md` |
 | The player app's config, app identity and badge | `frontend_player/README.md`, `frontend_player/docs/architecture.md` Part 14 |
+| The web apps' configuration and its refusals | `frontend_club/src/server/config.ts`, `frontend_public/src/server/config.ts`, each app's `CLAUDE.md` |
+| How email is sent, queued and purged | [ADR-0186](adr/0186-email-goes-through-a-port-and-a-purged-queue.md), the `mailpit` service in `backend/docker-compose-local.yml` |
 | What each variable is, per app | each app's `.env.example` |
 | Whether the deployment artifact supplies them | `make taskdef` — [`check-taskdef.sh`](../.github/scripts/check-taskdef.sh) |

@@ -1475,14 +1475,14 @@ you change it, run the `api-contract-change` skill.
 **dev console**'s `openapi.dev.json` — one path, and no client, so nothing generates types
 from it. The third is the **club website**'s `openapi.club.json`, which `frontend_club`
 generates from; the fourth is the **public site**'s `openapi.public.json`, which
-`frontend_public` will — **no route on it takes a session**, and its password routes run the
-app's own rules and sign nobody in (#511). Until the root gates learn those two (#527),
-`tests/unit/test_club_surface.py` and `tests/unit/test_public_surface.py` are what fail a
-stale one. All are committed, and the first two are gated at the
-repository root by `make contract-freshness`: re-emit and diff, which is a different question from
-`make test-drift`'s (that one asks whether the *client's* generated types reproduce from
-the document, and has no purchase on a document with no client). Commit the regenerated
-documents with whatever moved them.
+`frontend_public` generates from — **no route on it takes a session**, and its password
+routes run the app's own rules and sign nobody in (#511). All four are committed and gated at
+the repository root by `make contract-freshness`: re-emit and diff, which is a different
+question from `make test-drift`'s (that one asks whether a *client's* generated types
+reproduce from its document, and has no purchase on a document with no client).
+`tests/unit/test_club_surface.py` and `tests/unit/test_public_surface.py` fail a stale club or
+public document inside this suite too, before the root gate runs. Commit the regenerated
+documents with whatever moved them, and hand the clients a `make gen-api` at the root.
 
 Prefer additive changes. Removing or renaming a field breaks a shipped client — a mobile
 app whose old versions stay installed on real phones for months.

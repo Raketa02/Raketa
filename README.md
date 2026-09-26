@@ -73,7 +73,7 @@ its README for the bootstrap sequence.
 ## Repo-wide commands
 
 ```bash
-make gen-api      # regenerate the client's wire types from backend/openapi.player.json
+make gen-api      # regenerate every client's wire types, each from its own document
 make check        # every app's gate
 make test-hooks   # verify the ownership guardrails still match
 ```
@@ -81,16 +81,20 @@ make test-hooks   # verify the ownership guardrails still match
 ## The API contract
 
 The backend is the **single source of truth**
-([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)). The client generates its
-TypeScript wire types from `backend/openapi.player.json` — it never hand-writes a type
-mirroring a backend response. After a contract change:
+([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)). It emits one document per
+surface, and each client generates its TypeScript wire types from its own — the player app
+from `backend/openapi.player.json`, the club website from `openapi.club.json`, the public
+site from `openapi.public.json`
+([ADR-0187](docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+§5). No client hand-writes a type mirroring a backend response. After a contract change:
 
 ```bash
-make gen-api      # emits openapi.player.json, regenerates the client
+make gen-api      # emits every document, regenerates every client
 ```
 
-Commit `backend/openapi.player.json` together with the generated file. CI regenerates and
-diffs, so a contract change shipped without its client types fails the build.
+Commit the documents that moved together with the generated files. CI re-emits every
+document and regenerates every client, and diffs both, so a contract change shipped
+without its client types fails the build.
 
 ## Working with AI agents
 

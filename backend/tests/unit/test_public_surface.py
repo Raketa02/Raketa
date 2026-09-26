@@ -8,9 +8,9 @@ the one the surface produces, it holds the public pages' operations and only
 under its prefix, **no operation on it asks for a session**, and no path is in
 two documents.
 
-The freshness gate at the repository root re-emits every document; until it
-learns this one (#527), this is what fails a test run that changed the surface
-without regenerating it.
+The freshness gate at the repository root re-emits every document, this one
+included (#527); this is what fails the backend's own test run first when the
+surface changed without regenerating it.
 """
 
 from __future__ import annotations

@@ -7,9 +7,9 @@ and **no path is in both documents** — a club route leaking into the player
 app's contract would ship in an app-store release, and a player route in the
 club's would be a surface the website could call as a club.
 
-The freshness gate at the repository root re-emits every document; until it
-learns this one (#527), this is what fails a test run that changed the surface
-without regenerating it.
+The freshness gate at the repository root re-emits every document, this one
+included (#527); this is what fails the backend's own test run first when the
+surface changed without regenerating it.
 """
 
 from __future__ import annotations
