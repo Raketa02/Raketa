@@ -83,6 +83,7 @@ function roster(
 
 const MY_RAKETA_GROUP: Wire['MyGroupSchema'] = {
   id: 'a0000000-0000-4000-8000-000000000011',
+  kind: 'PLAYER',
   name: 'my raketa group',
   monogram: { letters: 'mr', colour: 5 },
   sports: [],
@@ -92,6 +93,7 @@ const MY_RAKETA_GROUP: Wire['MyGroupSchema'] = {
 
 const KAZIMIERZ_CREW: Wire['MyGroupSchema'] = {
   id: 'a0000000-0000-4000-8000-000000000005',
+  kind: 'PLAYER',
   name: 'Kazimierz crew',
   monogram: { letters: 'Kc', colour: 1 },
   sports: ['PADEL', 'TENNIS'],

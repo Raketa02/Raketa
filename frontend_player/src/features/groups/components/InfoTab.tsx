@@ -19,21 +19,14 @@ import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import {
-  Card,
-  DarkCard,
-  DoorRow,
-  PlayerPhoto,
-  playerPhotoRadius,
-  PressableCard,
-  theme,
-} from '@/shared/ui';
+import { Card, DarkCard, DoorRow, PressableCard, theme } from '@/shared/ui';
 
 import type { Group } from '../domain/group';
 import { membersRow, readerFace } from '../domain/groupInfo';
 import { useReaderId } from '../hooks/useReaderId';
 
 import { ExitDoor } from './ExitDoor';
+import { FaceStack } from './FaceStack';
 import { GroupLinkActions } from './GroupLinkActions';
 import { groupEditRoute, groupMembersRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
@@ -43,15 +36,11 @@ import {
   linkShown,
   membersLine,
   membersRowLabel,
-  moreFaces,
 } from './groupsPresentation';
 import { SportDots } from './SportDots';
 import { WantToJoin } from './WantToJoin';
 
 const COPY = GROUPS_COPY.info;
-
-const FACE = theme.size.groupPage.stackFace;
-const RING = theme.size.groupPage.stackRing;
 
 export function InfoTab({ group }: { readonly group: Group }) {
   return (
@@ -110,24 +99,7 @@ function MembersRow({ group }: { readonly group: Group }) {
       onPress={() => router.push(groupMembersRoute(group.id))}
       style={s.membersCard}
     >
-      <View style={s.faces}>
-        <View style={s.stack}>
-          {row.faces.map((face, at) => (
-            <View
-              key={face.playerId}
-              testID={`members-row-face-${face.playerId}`}
-              style={[s.stacked, at > 0 ? s.overlap : undefined]}
-            >
-              <PlayerPhoto
-                playerId={face.playerId}
-                {...(face.photoUrl === undefined ? {} : { photoUrl: face.photoUrl })}
-                box={{ kind: 'face', size: FACE }}
-              />
-            </View>
-          ))}
-        </View>
-        {row.more > 0 ? <Text style={s.more}>{moreFaces(row.more)}</Text> : null}
-      </View>
+      <FaceStack faces={row.faces} more={row.more} testIDPrefix="members-row-face-" />
 
       <View style={s.words}>
         <Text style={s.count} numberOfLines={1}>
@@ -156,17 +128,6 @@ const s = StyleSheet.create({
   linkCard: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   link: { ...theme.num.s, color: theme.color.surface, flex: 1 },
   membersCard: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
-  faces: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
-  stack: { flexDirection: 'row' },
-  // Each face's own ring of card, so an overlapping face reads as in front rather than merged —
-  // its corner the face's own, grown by the ring, so the two curves stay one distance apart.
-  stacked: {
-    borderWidth: RING,
-    borderColor: theme.color.surface,
-    borderRadius: playerPhotoRadius(FACE) + RING,
-  },
-  overlap: { marginLeft: -theme.size.groupPage.stackOverlap },
-  more: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted },
   words: { flex: 1, gap: theme.space.xxs },
   count: { ...theme.type.cardTitle, color: theme.color.ink },
   meta: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },

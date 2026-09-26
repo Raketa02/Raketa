@@ -18,7 +18,13 @@
  * destination ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
  * §3) costs nothing more than the fourth did.
  *
- * **All three must answer before the gate does.** A launch that can read ratings but not the
+ * **Except for an account that only runs a club's groups.** Its profiles are the gate's first read
+ * (ADR-0185 §3), and they ride on the player read too — so the moment that read answers *only an
+ * administrator*, the gate answers the administrator area and waits for nothing else. The two
+ * player reads are not even asked for once the player read says so: an account that has not asked
+ * to play owes the gate no rating and no run.
+ *
+ * **Otherwise all three must answer before the gate does.** A launch that can read ratings but not the
  * player has no safe default — routing into the app is exactly the outcome the fourth branch
  * exists to prevent — so a failure on any of them is the same *unavailable* it already was
  * for the other two ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
@@ -31,7 +37,11 @@ import { useCurrentUser } from '@/features/auth/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 import type { AppError } from '@/shared/errors';
 
-import { entryDestination, type EntryDestination } from '../domain/entryDecision';
+import {
+  administratorArea,
+  entryDestination,
+  type EntryDestination,
+} from '../domain/entryDecision';
 import { useDeferredRuns } from '../store/deferredRuns.store';
 import { findRunInProgress } from '../use-cases/findRunInProgress';
 import { listRatings } from '../use-cases/listRatings';
@@ -80,11 +90,15 @@ export function useEntryDecision(): EntryDecision {
   // authenticated player, and a second query against the same route under a second key
   // would be two requests answering one question and two chances to disagree.
   const user = useCurrentUser();
+  // Read off the player once it has answered; until then nothing is known, and the two player
+  // reads go out beside it as they always have.
+  const area = user.data === undefined ? undefined : administratorArea(user.data.profiles);
+  const playerReadsEnabled = enabled && area === undefined;
 
   const ratings = useQuery({
     queryKey: onboardingKeys.ratings(),
     queryFn: ({ signal }) => listRatings({ signal }),
-    enabled,
+    enabled: playerReadsEnabled,
   });
 
   const run = useQuery({
@@ -95,7 +109,7 @@ export function useEntryDecision(): EntryDecision {
     // pending forever for the commonest player there is. `null` is the value that means
     // *asked, and there is none*.
     queryFn: ({ signal }) => findRunInProgress({ signal }).then((found) => found ?? null),
-    enabled,
+    enabled: playerReadsEnabled,
   });
 
   // **Which reads this mount set out to replace: the ones that were stale when it began.**
@@ -117,6 +131,12 @@ export function useEntryDecision(): EntryDecision {
     void refetchRun();
     void refetchUser();
   }, [refetchRatings, refetchRun, refetchUser]);
+
+  // **The profiles first** (ADR-0185 §3): an account that only runs a club's groups is routed by
+  // the player read alone, the moment it answers — unless this mount is replacing that read, for
+  // the reason `beingReplaced` below gives.
+  const userBeingReplaced = staleAtMount.user && user.isFetching && !user.isFetchedAfterMount;
+  if (area !== undefined && !userBeingReplaced) return area;
 
   const error = (ratings.error ?? run.error ?? user.error) as AppError | null;
   if (error !== null) return { kind: 'unavailable', reason: { kind: 'failed', error }, retry };
@@ -176,7 +196,7 @@ export function useEntryDecision(): EntryDecision {
   const beingReplaced =
     (staleAtMount.ratings && ratings.isFetching && !ratings.isFetchedAfterMount) ||
     (staleAtMount.run && run.isFetching && !run.isFetchedAfterMount) ||
-    (staleAtMount.user && user.isFetching && !user.isFetchedAfterMount);
+    userBeingReplaced;
   if (beingReplaced) return { kind: 'pending' };
 
   return entryDestination({
@@ -185,5 +205,6 @@ export function useEntryDecision(): EntryDecision {
     runInProgress: run.data ?? undefined,
     deferredRunIds,
     hasPlayerProfile: user.data.hasPlayerProfile,
+    profiles: user.data.profiles,
   });
 }

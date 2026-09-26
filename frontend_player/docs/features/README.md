@@ -23,6 +23,7 @@ is referenced from the other by a sentence, not copied.
 | File                                         | Records                                                                  |
 | -------------------------------------------- | ------------------------------------------------------------------------ |
 | [`_shared.md`](_shared.md)                   | The platform ports, the HTTP client's three verbs, the UI primitives     |
+| [`administrator.md`](administrator.md)       | The administrator area: Groups · You, New official group, a group's page |
 | [`auth.md`](auth.md)                         | Sign-up's attestation, the naming, the You tab, Forgot password          |
 | [`challenges.md`](challenges.md)             | The send, the challenge screen, the two answers, the fill, the withdraw  |
 | [`conversations.md`](conversations.md)       | The Chats tab, the room, the optimistic send, the live layer, typing     |

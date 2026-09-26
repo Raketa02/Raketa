@@ -18,3 +18,35 @@ export { FriendsScreen } from './components/FriendsScreen';
 export { MembersScreen } from './components/MembersScreen';
 export { EditGroupScreen } from './components/EditGroupScreen';
 export { parseFriendsRouteParams, parseGroupRouteParams } from './schemas/groupRouteParams';
+
+/**
+ * **What the administrator area draws with** ([#516](https://github.com/Raketa02/Raketa/issues/516)):
+ * an official group is a Group, so its tile, its dots, its form cards, its request row, a failed
+ * read and the words they share are this feature's, used there rather than drawn twice. The
+ * dependency points one way — `administrator` reads `groups`, never the reverse.
+ */
+export { GroupMonogram } from './components/GroupMonogram';
+export { SportDots } from './components/SportDots';
+export { GroupNameCard, WhoCanJoinCard } from './components/GroupFormCards';
+export { RequestRow } from './components/RequestRow';
+export { FaceStack } from './components/FaceStack';
+export { ReadFailure } from './components/ReadFailure';
+export { ROW_FACE } from './components/peopleRow';
+export { GROUPS_COPY } from './components/groupsCopy';
+export {
+  linkLabel,
+  linkShown,
+  membersLine,
+  personName,
+  shareMessage,
+  wantToJoin,
+} from './components/groupsPresentation';
+export { GroupNameSchema, JoinPolicySchema } from './schemas/newGroupForm';
+export {
+  GROUP_NAME_MAX,
+  type GroupPerson,
+  type JoinRequest,
+  type Monogram,
+  type SportLevel,
+} from './domain/group';
+export type { JoinPolicy } from './domain/vocabulary';

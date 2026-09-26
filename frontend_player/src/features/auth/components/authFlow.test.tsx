@@ -54,7 +54,7 @@ const TOKENS: Wire['TokenResponse'] = {
   expires_in: 900,
 };
 
-const USER: Wire['UserResponse'] = {
+const USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
   name: 'Ada Lovelace',
@@ -65,6 +65,8 @@ const USER: Wire['UserResponse'] = {
   is_tester: false,
   has_player_profile: false,
   created_at: '2026-08-13T10:00:00Z',
+  adult_attested: true,
+  profiles: { acts_as_player: true, administers: [], pending_invitations: [] },
 };
 
 let transport: Transport;
@@ -190,7 +192,8 @@ describe('signing up', () => {
   }
 
   /** The account is created **unnamed** — registration answers with no name and no handle. */
-  const UNNAMED: Wire['UserResponse'] = { ...USER, name: null, nickname: null };
+  const { adult_attested: _attested, profiles: _profiles, ...REGISTERED } = USER;
+  const UNNAMED: Wire['UserResponse'] = { ...REGISTERED, name: null, nickname: null };
 
   it('creates the account, signs in, and lands in a live session', async () => {
     setSessionStatus('unauthenticated');

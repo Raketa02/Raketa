@@ -160,3 +160,11 @@ too**. The server's `password_too_weak` says the rule itself, under the box.
 
 **Not seen on a device**: the four new screens, the `lead` line under a title, the _Forgot
 password?_ link's place between _Sign in_ and _New to Raketa?_, and sign-up's new rule line.
+
+**The signed-in player carries the account's profiles** ([#516](https://github.com/Raketa02/Raketa/issues/516),
+ADR-0185 §2). `GET /users/me` answers `MeResponse` since #508, and `me()` reads it: `AuthenticatedUser`
+gains `profiles` — `actsAsPlayer` and the clubs it `administers`, by id and name — for the entry
+gate's first read, kept for `hasPlayerProfile`'s reason. The pending invitations are not carried until
+the invitation sheet (#518) draws them. **`useSignOut` is public** for one caller outside this feature,
+the administrator area, which signs out an account its club removed; the sequence stays this
+feature's.

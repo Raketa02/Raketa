@@ -12,6 +12,7 @@ import { httpRequest } from '@/shared/lib/http';
 
 type TokenResponse = components['schemas']['TokenResponse'];
 type UserResponse = components['schemas']['UserResponse'];
+type MeResponse = components['schemas']['MeResponse'];
 type UserCreateRequest = components['schemas']['UserCreateRequest'];
 type NameRequest = components['schemas']['NameRequest'];
 type NamingResponse = components['schemas']['NamingResponse'];
@@ -82,8 +83,8 @@ export function refresh(
  * the player surface, and the server's answer is the only thing that can tell a live
  * session from a keychain entry that outlived a reinstall.
  */
-export function me({ signal }: AuthApiOptions = {}): Promise<UserResponse> {
-  return httpRequest<UserResponse>({
+export function me({ signal }: AuthApiOptions = {}): Promise<MeResponse> {
+  return httpRequest<MeResponse>({
     method: 'GET',
     path: '/api/v1/users/me',
     authenticated: true,

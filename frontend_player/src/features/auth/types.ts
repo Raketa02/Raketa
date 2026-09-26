@@ -43,6 +43,8 @@ export {
 } from './schemas/resetRouteParams';
 
 export type {
+  AccountProfiles,
+  AdministeredClub,
   AuthenticatedUser,
   Naming,
   Registration,
@@ -71,6 +73,14 @@ export { currentUserQuery, useCurrentUser } from './hooks/useCurrentUser';
  * is auth's too — see the hook.
  */
 export { useMarkPlayerProfileCommitted } from './hooks/useMarkPlayerProfileCommitted';
+
+/**
+ * **The one way out of a session**, for the one caller outside this feature that must take it
+ * without a button: the administrator area, when the club has removed an account that holds
+ * nothing else (PRD #500 story 136). The sequence is this feature's — revoke, then `endSession` —
+ * so the caller gets the hook and never the steps.
+ */
+export { useSignOut } from './hooks/useAuthActions';
 
 /**
  * The two launch steps. Exported because the bootstrap sequence needs them and

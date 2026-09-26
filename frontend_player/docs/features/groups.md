@@ -275,3 +275,16 @@ Levels in sans; they are mono, as every Level is. Members' hold is the second ge
 sheet across two people lists. All three are in design-system Part 16 for the product owner, with the
 stacked faces' sizes. Leave, Delete, Save and the two answers pause offline and resume, as join and
 create do; no act here says so beside itself yet. **Nothing here has been seen on a device.**
+
+**The administrator area draws with this feature's pieces, and they are lent from `types.ts`**
+([#516](https://github.com/Raketa02/Raketa/issues/516); [`administrator.md`](administrator.md)). An
+official group is a Group, so the tile, the dots, New group's two form cards, the request row, a
+failed read, the row face, the stacked faces and the words they share are exported for that one
+caller, and the dependency points one way. Four changes made the lending possible without changing
+what this feature draws: **the members row's faces left `InfoTab`** for `FaceStack`, which the players
+card on an official group's page draws too; **the request row left `WantToJoin`** for `RequestRow`,
+which answers nothing itself — the two taps are props, so an Owner's queue and an Administrator's each
+answer through their own routes, as #514's handover suggested; **_Who can join_ can be drawn without its _no sport to pick_ note**
+(`noSportNote`), which is false of an official group; and **the Name card takes a placeholder and an
+error**, for _Same name as the WhatsApp group_ and a refusal said on the field. The share sentence is
+the administrator's WhatsApp post too, as #513 already wrote it for.

@@ -12,7 +12,7 @@
  */
 
 /**
- * A `UserResponse` mapped into the app's vocabulary.
+ * `GET /users/me`'s answer mapped into the app's vocabulary.
  *
  * The wire's `authority`, `is_admin` and `created_at` are deliberately dropped rather
  * than carried: nothing in the player app may branch on them. A client that renders
@@ -67,6 +67,36 @@ export interface AuthenticatedUser {
    * early grants no power over anyone, which is why `is_admin` beside it is still dropped.
    */
   readonly isTester: boolean;
+  /**
+   * **Which profiles the account holds** — the entry gate's first read, ahead of every onboarding
+   * destination
+   * ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+   * §2–§3). Carried for the reason `hasPlayerProfile` is: the client is required to branch on it
+   * at launch, before any route tree exists — an account that only runs a club's groups has not
+   * asked to play, and must never be sent into onboarding.
+   */
+  readonly profiles: AccountProfiles;
+}
+
+/**
+ * **The hats one account wears** (ADR-0185 §1). *Profile* is the switcher's word, not a domain
+ * term — a **Player profile** is an aggregate, and this is not it.
+ */
+export interface AccountProfiles {
+  /**
+   * Whether the account acts as a player: it gave the Adult attestation — every sign-up did — or
+   * holds a Player profile. `false` only for an account an Invitation opened that has not started
+   * playing.
+   */
+  readonly actsAsPlayer: boolean;
+  /** One per club whose groups this account runs as its **Administrator**, in the server's order. */
+  readonly administers: readonly AdministeredClub[];
+}
+
+/** A club this account is an active Administrator of — the administrator area opens on it. */
+export interface AdministeredClub {
+  readonly clubId: string;
+  readonly clubName: string;
 }
 
 /** What a player types to sign in. Never logged, never persisted. */

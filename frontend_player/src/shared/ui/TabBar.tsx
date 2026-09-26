@@ -101,8 +101,8 @@ type FeatherGlyph = keyof typeof Feather.glyphMap;
 
 export type TabBarKey = 'now' | 'players' | 'play' | 'chats' | 'you';
 
-export interface TabBarTab {
-  readonly key: TabBarKey;
+export interface TabBarTab<Key extends string = TabBarKey> {
+  readonly key: Key;
   readonly label: string;
   readonly glyph: FeatherGlyph;
 }
@@ -166,10 +166,10 @@ export interface TabBarProps {
 }
 
 /** What every column is: one of the five, whether it is the one you are on, and the report. */
-interface ColumnProps {
-  readonly tab: TabBarTab;
+interface ColumnProps<Key extends string = TabBarKey> {
+  readonly tab: TabBarTab<Key>;
   readonly selected: boolean;
-  readonly onPress: (key: TabBarKey) => void;
+  readonly onPress: (key: Key) => void;
 }
 
 /**
@@ -209,7 +209,54 @@ export function TabBar({ active, onPress, challengesWaiting }: TabBarProps) {
   );
 }
 
-function FlankTab({ tab, selected, onPress, waiting }: ColumnProps & Badged) {
+/**
+ * **The administrator area's bar** — two columns, **Groups · You**, drawn in this bar's style
+ * (club mock 17; [#516](https://github.com/Raketa02/Raketa/issues/516)).
+ *
+ * **A second fixed inventory, not a caller's list.** ADR-0135's argument stands whole: a bar that
+ * took its tabs from a caller could grow a sixth without argument. The administrator's side of the
+ * account is a second surface with its own two places, so it gets its own inventory here, beside
+ * the five — the family inherited (Feather, one weight, selection in tone alone), nothing else.
+ * `users` is *Groups*: the crowds the administrator runs. Players draws it on the player's bar, and
+ * the two bars are never on screen together, so it names one thing wherever it is seen. `user` is
+ * *You* on both.
+ *
+ * Two flank columns and no disc, so the bar is shorter than the player's by the disc's height; the
+ * toast's clearance is the player's bar's, which clears this one too (9.2). No badge: *N waiting*
+ * is on the group's card, where it can be answered.
+ */
+export type AdministratorTabBarKey = 'groups' | 'you';
+
+export const ADMINISTRATOR_TAB_BAR_TABS = [
+  { key: 'groups', label: 'Groups', glyph: 'users' },
+  { key: 'you', label: 'You', glyph: 'user' },
+] as const satisfies readonly TabBarTab<AdministratorTabBarKey>[];
+
+export interface AdministratorTabBarProps {
+  /** Which of the two is showing. Groups stays active for every screen inside Groups. */
+  readonly active: AdministratorTabBarKey;
+  readonly onPress: (key: AdministratorTabBarKey) => void;
+}
+
+export function AdministratorTabBar({ active, onPress }: AdministratorTabBarProps) {
+  // The bottom inset is the bar's, as it is on the player's (10.1).
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[s.bar, { paddingBottom: theme.space.md + insets.bottom }]}>
+      {ADMINISTRATOR_TAB_BAR_TABS.map((tab) => (
+        <FlankTab key={tab.key} tab={tab} selected={active === tab.key} onPress={onPress} />
+      ))}
+    </View>
+  );
+}
+
+function FlankTab<Key extends string>({
+  tab,
+  selected,
+  onPress,
+  waiting,
+}: ColumnProps<Key> & Badged) {
   const tone = selected ? theme.color.ink : theme.color.muted;
 
   return (
@@ -295,14 +342,14 @@ function PlayTab({ tab, selected, onPress }: ColumnProps) {
  * the bar's padding, and every column stretches to it — so there is no `hit` entry here.
  * That is the availability cell's situation rather than the chip's.
  */
-function Column({
+function Column<Key extends string>({
   tab,
   selected,
   onPress,
   waiting,
   dimOnPress = false,
   children,
-}: ColumnProps &
+}: ColumnProps<Key> &
   Badged & {
     /** 6.6's answer for a surface with no second fill. The disc has one, so it does not dim. */
     readonly dimOnPress?: boolean;
@@ -333,7 +380,7 @@ function Column({
  * `counted()` like every other in the app, because a market with real plural rules has to have
  * one function to change rather than every sentence that counts something.
  */
-function columnLabel(tab: TabBarTab, waiting: number | undefined): string {
+function columnLabel(tab: TabBarTab<string>, waiting: number | undefined): string {
   if (waiting === undefined) return tab.label;
   return `${tab.label}, ${counted(waiting, 'challenge', 'challenges')} waiting`;
 }

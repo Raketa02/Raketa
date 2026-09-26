@@ -43,6 +43,7 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 
 const OGRODY_OPEN_PLAY: Wire['MyGroupSchema'] = {
   id: 'a0000000-0000-4000-8000-000000000002',
+  kind: 'PLAYER',
   name: 'Ogrody open play',
   monogram: { letters: 'Oo', colour: 0 },
   sports: ['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON'],
@@ -52,6 +53,7 @@ const OGRODY_OPEN_PLAY: Wire['MyGroupSchema'] = {
 
 const KAZIMIERZ_CREW: Wire['MyGroupSchema'] = {
   id: 'a0000000-0000-4000-8000-000000000005',
+  kind: 'PLAYER',
   name: 'Kazimierz crew',
   monogram: { letters: 'Kc', colour: 1 },
   sports: ['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON'],

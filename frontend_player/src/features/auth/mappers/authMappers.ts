@@ -12,7 +12,7 @@ import type { Tokens } from '@/shared/lib/auth';
 import type { AuthenticatedUser, Naming } from '../domain/AuthenticatedUser';
 
 type TokenResponse = components['schemas']['TokenResponse'];
-type UserResponse = components['schemas']['UserResponse'];
+type MeResponse = components['schemas']['MeResponse'];
 type NamingResponse = components['schemas']['NamingResponse'];
 type ClaimTicketResponse = components['schemas']['ClaimTicketResponse'];
 
@@ -29,7 +29,7 @@ export function toTokens(wire: TokenResponse): Tokens {
   };
 }
 
-export function toAuthenticatedUser(wire: UserResponse): AuthenticatedUser {
+export function toAuthenticatedUser(wire: MeResponse): AuthenticatedUser {
   // `null` on the wire is *not yet named* — the one read where it may be (ADR-0171 §2) — and
   // it is carried as absence, which is how every other shape in this app spells a name it
   // does not have. The entry gate reads the absence.
@@ -49,6 +49,17 @@ export function toAuthenticatedUser(wire: UserResponse): AuthenticatedUser {
     // Its one reader is flag evaluation, which decides which build of a screen is drawn and
     // never what anybody may do (ADR-0180 §9).
     isTester: wire.is_tester,
+    // Kept for `hasPlayerProfile`'s reason, one read earlier: the gate routes an account that
+    // only runs a club's groups to its administrator area before it asks anything about playing
+    // (ADR-0185 §3). The invitations waiting for it are the invitation sheet's, which reads them
+    // when it is built — they are not carried until something draws them.
+    profiles: {
+      actsAsPlayer: wire.profiles.acts_as_player,
+      administers: wire.profiles.administers.map((club) => ({
+        clubId: club.club_id,
+        clubName: club.club_name,
+      })),
+    },
   };
 }
 

@@ -5,7 +5,9 @@
  * own state and hands it in.
  *
  * The name field stops at 40 characters (`GROUP_NAME_MAX`) — the server trims and counts again.
- * *Who can join* is two chips, *Anyone* first, with the note that there is no sport to pick.
+ * *Who can join* is two chips, *Anyone* first, with the note that there is no sport to pick — the
+ * administrator's New official group draws both cards too, *Who can join* without that note
+ * (#516).
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -22,16 +24,23 @@ const COPY = GROUPS_COPY.newGroup;
 export function GroupNameCard({
   name,
   onName,
+  placeholder = COPY.namePlaceholder,
+  error,
 }: {
   readonly name: string;
   readonly onName: (name: string) => void;
+  /** New official group's *Same name as the WhatsApp group* (club 10); a player's form has its own. */
+  readonly placeholder?: string;
+  /** A refusal the server said about the name, on the field. */
+  readonly error?: string;
 }) {
   return (
     <Card style={s.card}>
       <TextField
         label={COPY.name}
         recessed
-        placeholder={COPY.namePlaceholder}
+        placeholder={placeholder}
+        {...(error === undefined ? {} : { error })}
         value={name}
         onChangeText={onName}
         maxLength={GROUP_NAME_MAX}
@@ -45,9 +54,16 @@ export function GroupNameCard({
 export function WhoCanJoinCard({
   joinPolicy,
   onJoinPolicy,
+  noSportNote = true,
 }: {
   readonly joinPolicy: JoinPolicy;
   readonly onJoinPolicy: (policy: JoinPolicy) => void;
+  /**
+   * The note that there is no sport to pick — true of a player group, which plays whatever its
+   * members are rated in, and **false of an official group**, which declares its sports on a card
+   * of its own (#516). So New official group draws the card without it.
+   */
+  readonly noSportNote?: boolean;
 }) {
   return (
     <Card style={s.card}>
@@ -64,7 +80,7 @@ export function WhoCanJoinCard({
           onPress={() => onJoinPolicy('PEOPLE_I_APPROVE')}
         />
       </View>
-      <Text style={s.note}>{COPY.noSportNote}</Text>
+      {noSportNote ? <Text style={s.note}>{COPY.noSportNote}</Text> : null}
     </Card>
   );
 }

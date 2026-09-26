@@ -13,12 +13,15 @@ import {
 
 const O3_CLUB: Wire['GroupAtClubSchema'] = {
   id: 'a0000000-0000-4000-8000-000000000001',
+  kind: 'PLAYER',
   name: 'Ogrody 33 Club',
   monogram: { letters: 'O3', colour: 2 },
   sports: ['PADEL', 'TENNIS'],
   member_count: 11,
   join_policy: 'PEOPLE_I_APPROVE',
   owner_name: 'Coach Andrzej',
+  administrator_name: null,
+  is_administrator: false,
   relation: 'REQUESTED',
 };
 
@@ -96,6 +99,7 @@ describe('the reader’s groups and a group’s page', () => {
       groups: [
         {
           id: 'b0000000-0000-4000-8000-000000000001',
+          kind: 'PLAYER',
           name: 'my raketa group',
           monogram: { letters: 'mr', colour: 5 },
           sports: [],
@@ -112,6 +116,7 @@ describe('the reader’s groups and a group’s page', () => {
     expect(
       toGroup({
         id: 'b0000000-0000-4000-8000-000000000001',
+        kind: 'PLAYER',
         name: 'My raketa group',
         monogram: { letters: 'Mr', colour: 3 },
         sports: ['PADEL'],
@@ -134,6 +139,7 @@ describe('the reader’s groups and a group’s page', () => {
   it('reads each sport’s count and its first faces, in joining order', () => {
     const page: Wire['GroupResponse'] = {
       id: 'b0000000-0000-4000-8000-000000000001',
+      kind: 'PLAYER',
       name: 'My raketa group',
       monogram: { letters: 'Mr', colour: 3 },
       sports: ['PADEL'],
@@ -179,6 +185,7 @@ describe('the reader’s groups and a group’s page', () => {
   it('drops a roster for a sport this build cannot name', () => {
     const page = {
       id: 'b0000000-0000-4000-8000-000000000001',
+      kind: 'PLAYER',
       name: 'My raketa group',
       monogram: { letters: 'Mr', colour: 3 },
       sports: [],
@@ -197,6 +204,7 @@ describe('the reader’s groups and a group’s page', () => {
 
 const PAGE: Wire['GroupResponse'] = {
   id: 'b0000000-0000-4000-8000-000000000001',
+  kind: 'PLAYER',
   name: 'Kazimierz crew',
   monogram: { letters: 'Kc', colour: 1 },
   sports: ['PADEL'],
@@ -233,6 +241,7 @@ describe('Members, for one sport', () => {
             level: 2.71,
             player_score: 92,
             is_owner: false,
+            is_administrator: false,
             joined_at: '2026-09-20T10:00:00Z',
           },
           {
@@ -243,6 +252,7 @@ describe('Members, for one sport', () => {
             level: 2.75,
             player_score: 93,
             is_owner: true,
+            is_administrator: false,
             joined_at: '2026-09-01T10:00:00Z',
           },
         ],
@@ -276,6 +286,7 @@ describe('Members, for one sport', () => {
           name: 'Ewa Mazur',
           level: 2.6,
           is_owner: false,
+          is_administrator: false,
           joined_at: '2026-09-10T10:00:00Z',
         },
       ],

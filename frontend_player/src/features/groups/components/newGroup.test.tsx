@@ -69,23 +69,29 @@ const BONARKA: Wire['ClubCardSchema'] = {
 
 const O3_CLUB: Wire['GroupAtClubSchema'] = {
   id: 'a0000000-0000-4000-8000-000000000001',
+  kind: 'PLAYER',
   name: 'Ogrody 33 Club',
   monogram: { letters: 'O3', colour: 2 },
   sports: ['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON'],
   member_count: 11,
   join_policy: 'PEOPLE_I_APPROVE',
   owner_name: 'Coach Andrzej',
+  administrator_name: null,
+  is_administrator: false,
   relation: 'NONE',
 };
 
 const OPEN_PLAY: Wire['GroupAtClubSchema'] = {
   id: 'a0000000-0000-4000-8000-000000000002',
+  kind: 'PLAYER',
   name: 'Ogrody open play',
   monogram: { letters: 'Oo', colour: 0 },
   sports: ['PADEL', 'TENNIS'],
   member_count: 8,
   join_policy: 'ANYONE',
   owner_name: 'Zofia Wiśniewska',
+  administrator_name: null,
+  is_administrator: false,
   relation: 'MEMBER',
 };
 
@@ -100,6 +106,7 @@ const OGRODY: Wire['ClubCardSchema'] = {
 
 const CREATED: Wire['GroupResponse'] = {
   id: 'b0000000-0000-4000-8000-000000000001',
+  kind: 'PLAYER',
   name: 'My raketa group',
   monogram: { letters: 'Mr', colour: 3 },
   sports: [],
@@ -386,6 +393,7 @@ describe('creating the group', () => {
     stubMyGroups(transport, [
       {
         id: CREATED.id,
+        kind: 'PLAYER',
         name: CREATED.name,
         monogram: CREATED.monogram,
         sports: [],

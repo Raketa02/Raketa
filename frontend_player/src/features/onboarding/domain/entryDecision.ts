@@ -7,6 +7,7 @@
  *
  * The order is deliberate and not arbitrary:
  *
+ *   only administrator profiles    -> the administrator area, before anything is asked of a player
  *   no name yet                    -> the naming step, before anything else
  *   run in progress, not set aside -> resume it, at its outstanding question
  *   no ratings at all              -> onboarding, from welcome
@@ -35,6 +36,20 @@
  * The deferral lasts one app session, so the next launch resumes exactly as it should;
  * the permanent way out is abandonment, which changes the run rather than the routing.
  *
+ * ## The profiles are read first, because not every account has asked to play
+ *
+ * An account holds **profiles** — it may act as a player, and as the Administrator of each club
+ * that named it ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §1–§3). **An account that only runs a club's groups goes to its administrator area and is never
+ * sent into onboarding**: it has not asked to play, and nothing below it — a name, a rating, a run —
+ * is a question it owes an answer to. It is read ahead of the naming because an account an
+ * Invitation opened carries the club-typed Name and no Nickname, and ADR-0185 §4 makes that *not
+ * named in full* for anybody who does play. The area opens on the first club it administers, in the
+ * server's order; which one a person with two clubs opens on is the switcher's
+ * ([#518](https://github.com/Raketa02/Raketa/issues/518)), as is the last-used profile of an account
+ * that holds both — which opens in Player until then, so it passes straight through to the player's
+ * gate below.
+ *
  * ## The fourth destination, and why it is not the flag the glossary bans
  *
  * Onboarding is two parts ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)),
@@ -55,12 +70,19 @@
  * been rated, which is the one shape the flow cannot produce.
  */
 
+import type { AccountProfiles } from '@/features/auth/types';
+
 import type { AssessmentRun } from './Assessment';
 import type { SkillRating } from './SkillRating';
 
 export type EntryDestination =
   /** The authenticated tree. Onboarding is behind them, at least for one sport. */
   | { readonly kind: 'app' }
+  /**
+   * **The administrator area** of the club named — its own screens and its own tabs, outside the
+   * player's shell. Only for an account that holds nothing but administrator profiles.
+   */
+  | { readonly kind: 'administrator'; readonly clubId: string }
   /**
    * The naming step — *How should people see you?* — which an unnamed account cannot get
    * past: it submits the naming, re-reads the player, and only then moves on.
@@ -97,6 +119,25 @@ export interface EntryInput {
    * a lagging read model would send a player back into steps they just finished.
    */
   readonly hasPlayerProfile: boolean;
+  /**
+   * **Which profiles the account holds**, served on the authenticated player beside the two facts
+   * above (ADR-0185 §2) — whether it acts as a player, and each club whose groups it runs.
+   */
+  readonly profiles: AccountProfiles;
+}
+
+/**
+ * **Where an account that only runs a club's groups belongs** — its administrator area — or
+ * nothing for every account that plays or holds no profile at all. The first step of
+ * `entryDestination`, and readable on its own: the gate's hook asks it the moment the player is
+ * read, because nothing else it waits for is a question this account owes an answer to.
+ */
+export function administratorArea(
+  profiles: EntryInput['profiles'],
+): Extract<EntryDestination, { kind: 'administrator' }> | undefined {
+  const [club] = profiles.administers;
+  if (profiles.actsAsPlayer || club === undefined) return undefined;
+  return { kind: 'administrator', clubId: club.clubId };
 }
 
 export function entryDestination({
@@ -105,7 +146,10 @@ export function entryDestination({
   runInProgress,
   deferredRunIds,
   hasPlayerProfile,
+  profiles,
 }: EntryInput): EntryDestination {
+  const area = administratorArea(profiles);
+  if (area !== undefined) return area;
   if (!hasName) return { kind: 'naming' };
   if (runInProgress !== undefined && !deferredRunIds.includes(runInProgress.assessmentId)) {
     return { kind: 'resume', run: runInProgress };

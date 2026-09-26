@@ -133,6 +133,7 @@ src/app/
 ├── _layout.tsx            root providers + bootstrap gate
 ├── (public)/              reachable without a session
 ├── (auth)/                sign-in, sign-up, recovery
+├── (administrator)/       the administrator area: one club's Groups · You, its own stack and bar
 └── (app)/                 authenticated tree
     ├── _layout.tsx        the redirect guard
     └── (tabs)/            the shell: one Stack, five tabs

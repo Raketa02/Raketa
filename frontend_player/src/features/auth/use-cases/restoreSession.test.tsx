@@ -35,7 +35,7 @@ import { authKeys } from '../hooks/authKeys';
 import { refreshTokens } from './refreshTokens';
 import { restoreSession } from './restoreSession';
 
-const USER: Wire['UserResponse'] = {
+const USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
   name: 'Ada Lovelace',
@@ -45,6 +45,8 @@ const USER: Wire['UserResponse'] = {
   is_active: true,
   is_tester: false,
   has_player_profile: false,
+  adult_attested: true,
+  profiles: { acts_as_player: true, administers: [], pending_invitations: [] },
 };
 
 let transport: Transport;
@@ -84,6 +86,7 @@ describe('relaunching', () => {
       nickname: USER.nickname,
       hasPlayerProfile: USER.has_player_profile,
       isTester: USER.is_tester,
+      profiles: { actsAsPlayer: true, administers: [] },
     });
   });
 
@@ -259,6 +262,7 @@ describe('the launch sequence', () => {
         nickname: USER.nickname,
         hasPlayerProfile: USER.has_player_profile,
         isTester: USER.is_tester,
+        profiles: { actsAsPlayer: true, administers: [] },
       }),
     );
     expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(1);

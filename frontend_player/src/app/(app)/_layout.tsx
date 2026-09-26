@@ -27,6 +27,14 @@
  * tests. This file only turns the decision into a route — which is the whole job of a
  * route file.
  *
+ * ## An account that only runs a club's groups is sent to its area
+ *
+ * The gate reads the account's **profiles** ahead of all five destinations
+ * ([ADR-0185](../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §3): an account that holds nothing but administrator profiles has not asked to play, so it is
+ * redirected to its **administrator area** — a sibling group, `(administrator)`, with its own two
+ * tabs — and never into onboarding. Which route that is belongs to the feature that owns the area.
+ *
  * ## A pass that began at the passport ends on it
  *
  * The gate's app branch is where every onboarding pass ends, and a pass has an origin
@@ -43,6 +51,7 @@
 import { Redirect, Stack, router, usePathname } from 'expo-router';
 import { useCallback } from 'react';
 
+import { administratorHome } from '@/features/administrator/types';
 import { NAMING_STEP } from '@/features/auth/types';
 import { useFeatureDatafile } from '@/features/feature_flags/types';
 import {
@@ -102,6 +111,10 @@ export default function AppLayout() {
       return null;
     case 'unavailable':
       return <EntryUnavailableScreen reason={entry.reason} onRetry={entry.retry} />;
+    case 'administrator':
+      // Ahead of everything a player is asked: this account runs a club's groups and has not asked
+      // to play (ADR-0185 §3).
+      return <Redirect href={administratorHome(entry.clubId)} />;
     case 'naming':
       // Before anything else: every destination after this one says the player's name. Which
       // route that is belongs to the feature that owns the naming, not to this file.

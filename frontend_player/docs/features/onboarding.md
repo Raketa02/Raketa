@@ -107,3 +107,16 @@ the passport and deferred is resumed on the next cold launch as a welcome pass a
 any resumed run does — ADR-0179 names that as a consequence. **Not seen on a device**: the frame
 between the gate mounting the Now tab and its effect laying the You stack down, and whether the
 passport's push animates in over the tab.
+
+**The gate reads the account's profiles first** ([#516](https://github.com/Raketa02/Raketa/issues/516),
+ADR-0185 §3). `entryDestination` has a sixth destination, **the administrator area**, ahead of the
+naming: an account that does not act as a player and administers a club goes to that club's area
+(`administratorArea`, the first club the server lists) and is never sent into onboarding — it has not
+asked to play, and a name without a nickname, no ratings and no run are no questions it owes. The hook
+answers it **from the player read alone**, the moment that read answers, without waiting on the
+ratings or the run — and once the player read says so, those two reads are not asked at all. An
+account that also plays falls through to the five destinations as before and opens in Player; the
+last-used profile is #518's. The redirect is `(app)/_layout`'s, to the route the `administrator`
+feature names (`administratorHome`). **An account with no profile at all** — an administrator-only
+account its club removed — still falls through to the player's flow; ADR-0185 §3 sends it to the
+Adult attestation first, which #517 builds.

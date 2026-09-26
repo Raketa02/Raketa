@@ -118,9 +118,13 @@ export { StatBox, StatFigure, StatRow, type StatBoxProps, type StatBoxVariant } 
 export { Switch, type SwitchProps } from './Switch';
 export { SwipeRow, type RevealedControl, type SwipeRowProps } from './SwipeRow';
 export {
+  ADMINISTRATOR_TAB_BAR_TABS,
+  AdministratorTabBar,
   TabBar,
   TAB_BAR_HEIGHT,
   TAB_BAR_TABS,
+  type AdministratorTabBarKey,
+  type AdministratorTabBarProps,
   type TabBarKey,
   type TabBarProps,
   type TabBarTab,

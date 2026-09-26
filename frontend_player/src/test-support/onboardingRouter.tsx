@@ -18,6 +18,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ReducedMotionProvider } from '@/shared/ui';
 
+import AdministratorLayout from '@/app/(administrator)/_layout';
+import AdministratorAreaLayout from '@/app/(administrator)/administrator/[clubId]/_layout';
+import AdministratorGroupsRoute from '@/app/(administrator)/administrator/[clubId]/index';
+import AdministratorYouRoute from '@/app/(administrator)/administrator/[clubId]/you';
+import NewOfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/new-group';
+import OfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/group/[groupId]';
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
@@ -173,6 +179,15 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/tags': YouTagsRoute,
   '(app)/(tabs)/you/intro': YouIntroRoute,
   '(app)/(tabs)/you/name': YouNameRoute,
+  // The administrator area (#516) — a sibling of `(app)`, one club's area per id, with its own two
+  // tabs: Groups at the root, You beside it, and New official group and a group's page pushed over
+  // Groups.
+  '(administrator)/_layout': AdministratorLayout,
+  '(administrator)/administrator/[clubId]/_layout': AdministratorAreaLayout,
+  '(administrator)/administrator/[clubId]/index': AdministratorGroupsRoute,
+  '(administrator)/administrator/[clubId]/you': AdministratorYouRoute,
+  '(administrator)/administrator/[clubId]/new-group': NewOfficialGroupRoute,
+  '(administrator)/administrator/[clubId]/group/[groupId]': OfficialGroupRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
   // Sign-up is in the tree for the one walk that starts before a session exists: an account
@@ -997,14 +1012,27 @@ export interface GateStub {
    * flag seam sends on. Defaults to **false**, which is every account until an admin marks it.
    */
   readonly isTester?: boolean;
+  /**
+   * **Which profiles the account holds** — the gate's first read (ADR-0185 §3). Defaults to a
+   * player's: every sign-up acts as a player and administers nothing. A suite about the
+   * administrator area passes `ADMINISTRATOR_ONLY` or its own.
+   */
+  readonly profiles?: Wire['AccountProfilesSchema'];
 }
+
+/** What every signed-up account holds: it acts as a player, runs no club's groups, and is invited to none. */
+export const PLAYER_ONLY: Wire['AccountProfilesSchema'] = {
+  acts_as_player: true,
+  administers: [],
+  pending_invitations: [],
+};
 
 /**
  * The signed-in player, as `GET /users/me` answers. Identity is filler; the flag is not, and
  * neither is the name: it is what every screen says about her, and its absence is where a
  * launch is sent first.
  */
-export const GATE_USER: Wire['UserResponse'] = {
+export const GATE_USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
   name: GATE_USER_NAME,
@@ -1015,6 +1043,8 @@ export const GATE_USER: Wire['UserResponse'] = {
   is_tester: false,
   has_player_profile: false,
   created_at: '2026-08-13T10:00:00Z',
+  adult_attested: true,
+  profiles: PLAYER_ONLY,
 };
 
 /**
@@ -1057,6 +1087,7 @@ export function stubGate(
     id = GATE_USER.id,
     name = GATE_USER.name ?? null,
     isTester = false,
+    profiles = PLAYER_ONLY,
   }: GateStub = {},
 ) {
   transport.on('GET', '/api/v1/ratings', () =>
@@ -1064,7 +1095,7 @@ export function stubGate(
   );
 
   transport.on('GET', '/api/v1/users/me', () =>
-    json<Wire['UserResponse']>({
+    json<Wire['MeResponse']>({
       ...GATE_USER,
       id,
       name,
@@ -1072,6 +1103,8 @@ export function stubGate(
       nickname: name === null ? null : GATE_USER.nickname,
       has_player_profile: hasPlayerProfile,
       is_tester: isTester,
+      adult_attested: profiles.acts_as_player,
+      profiles,
     }),
   );
 

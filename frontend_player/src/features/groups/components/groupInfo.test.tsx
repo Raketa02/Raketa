@@ -153,6 +153,7 @@ function crew({
 
   const group = (): Wire['GroupResponse'] => ({
     id: GROUP_ID,
+    kind: 'PLAYER',
     name: state.name,
     monogram: { letters: 'Kc', colour: 1 },
     sports: WIRE_SPORTS.filter((sport) => rated(sport).length >= 2),
@@ -178,6 +179,7 @@ function crew({
         level: who.levels[sport] ?? 0,
         ...(who.score === undefined ? {} : { player_score: who.score }),
         is_owner: who.id === state.ownerId,
+        is_administrator: false,
         joined_at: joinedAt(who),
       }));
 
@@ -192,8 +194,8 @@ function crew({
 
   const myGroups = (): Wire['MyGroupSchema'][] => {
     if (state.deleted || !has(ME)) return [];
-    const { id, name: title, monogram, sports, member_count, home_club } = group();
-    return [{ id, name: title, monogram, sports, member_count, home_club }];
+    const { id, kind, name: title, monogram, sports, member_count, home_club } = group();
+    return [{ id, kind, name: title, monogram, sports, member_count, home_club }];
   };
 
   /** Somebody leaves — the handover to whoever has been in longest is the server's. */

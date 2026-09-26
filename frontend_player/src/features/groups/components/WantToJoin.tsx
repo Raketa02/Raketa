@@ -21,24 +21,14 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { codeMessage } from '@/shared/errors';
-import { Button, Card, CloseControl, PlayerPhoto, theme } from '@/shared/ui';
+import { Card, theme } from '@/shared/ui';
 
-import type { JoinRequest } from '../domain/group';
 import { useJoinRequests } from '../hooks/useGroups';
 import { useAnswerRequest } from '../hooks/useGroupWrites';
 
-import { GROUPS_COPY } from './groupsCopy';
-import {
-  approveLabel,
-  declineLabel,
-  personName,
-  REQUEST_REFUSALS,
-  requestLabel,
-  requestLevels,
-  wantToJoin,
-} from './groupsPresentation';
-import { ROW_FACE } from './peopleRow';
+import { REQUEST_REFUSALS, wantToJoin } from './groupsPresentation';
 import { ReadFailure } from './ReadFailure';
+import { RequestRow } from './RequestRow';
 
 export function WantToJoin({ groupId }: { readonly groupId: string }) {
   const read = useJoinRequests(groupId);
@@ -72,58 +62,8 @@ export function WantToJoin({ groupId }: { readonly groupId: string }) {
   );
 }
 
-interface RequestRowProps {
-  readonly request: JoinRequest;
-  readonly divided: boolean;
-  readonly onDecline: () => void;
-  readonly onApprove: () => void;
-}
-
-function RequestRow({ request, divided, onDecline, onApprove }: RequestRowProps) {
-  return (
-    <View
-      testID={`join-request-${request.playerId}`}
-      style={[s.row, divided ? s.divided : undefined]}
-    >
-      <PlayerPhoto
-        playerId={request.playerId}
-        {...(request.photoUrl === undefined ? {} : { photoUrl: request.photoUrl })}
-        box={{ kind: 'face', size: ROW_FACE }}
-      />
-
-      <View style={s.words} accessible accessibilityLabel={requestLabel(request)}>
-        <Text style={s.name} numberOfLines={1}>
-          {personName(request.name)}
-        </Text>
-        {request.levels.length > 0 ? (
-          <Text style={s.levels}>{requestLevels(request.levels)}</Text>
-        ) : null}
-      </View>
-
-      <CloseControl onPress={onDecline} accessibilityLabel={declineLabel(request.name)} />
-      <Button
-        label={GROUPS_COPY.info.approve}
-        accessibilityLabel={approveLabel(request.name)}
-        variant="dark"
-        size="sm"
-        onPress={onApprove}
-      />
-    </View>
-  );
-}
-
 const s = StyleSheet.create({
   section: { gap: theme.space.xs },
   eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
   card: { gap: theme.space.sm },
-  row: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
-  // 5.3: `line2` folds one card into rows.
-  divided: {
-    borderTopWidth: 1,
-    borderTopColor: theme.color.line2,
-    paddingTop: theme.space.sm,
-  },
-  words: { flex: 1, gap: theme.space.xxs },
-  name: { ...theme.type.cardTitle, color: theme.color.ink },
-  levels: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted },
 });

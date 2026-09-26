@@ -245,3 +245,17 @@ answering whether the OS took the text — so a screen confirms only a copy that
 drawing — and `theme.ts` gained `size.groupPage` (the Games card's seat, 34, and the fast
 filter's bar inset, 9) and **`motion.unfold`**, 280 ms, the eighth motion (7.21). All recorded in
 design-system Part 16.
+
+**The share port opens WhatsApp** ([#516](https://github.com/Raketa02/Raketa/issues/516)).
+`SharePort` gains `openWhatsApp(message)` — `Linking.openURL('whatsapp://send?text=…')` — which
+answers **whether WhatsApp took the message**: `openURL` rejects on iOS when no app claims the scheme
+and on Android when no activity resolves it, so opening it is the test of whether it is installed and
+no native setting is needed (`canOpenURL` is what would need `LSApplicationQueriesSchemes` and
+`<queries>`). It never rejects. **The fallback to the sheet is the caller's**, so a suite can see it:
+`fakeShare()` has `whatsAppInstalled` and records `whatsApped` beside `shared`. Still one file, still
+the only importer of `Share`; no new port.
+
+**`shared/ui` has a second tab bar, the administrator area's** (`AdministratorTabBar`, club 17): **Groups
+· You**, a second fixed inventory beside the five, drawn from the same columns — Feather, one weight,
+selection in tone alone — with no disc and no badge. `TabBarTab` and the columns are generic over the
+key so the two inventories share one drawing. Recorded in design-system Part 16.
