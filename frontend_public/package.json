@@ -1,0 +1,43 @@
+{
+  "name": "@raketa/frontend-public",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Raketa's public site: the pages a link opens when the app isn't installed. Next.js, every page server-rendered, holding nothing.",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:tokens": "bash scripts/check-tokens.sh",
+    "gen:api": "openapi-typescript ../backend/openapi.public.json -o src/generated/schema.d.ts",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:tokens && pnpm test"
+  },
+  "dependencies": {
+    "@fontsource/archivo": "^5.3.0",
+    "next": "16.3.6",
+    "openapi-fetch": "^0.17.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.20.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.6",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.9.9",
+    "typescript": "~5.9.3"
+  }
+}

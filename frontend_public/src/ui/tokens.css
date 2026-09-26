@@ -1,0 +1,82 @@
+/*
+ * The public site's design tokens: the only file in this app that writes a colour or a size,
+ * besides src/ui/tokens.ts, which repeats the few a picture needs, and the favicon (app/icon.svg),
+ * which the browser draws on its own.
+ *
+ * There are no mocks for this site. It borrows the club website's look — paper, the coral square
+ * wordmark, a white card — by copying its values here, never by importing them (ADR-0187 §6). The
+ * group's tile and its sport dots are drawn as the player app draws them, so a group looks the
+ * same on this page as in the app: the sport dots sampled from play 38, the tile's eight fills
+ * copied from the app's MONOGRAM_HUES. A component reads these through var();
+ * scripts/check-tokens.sh fails on a literal anywhere else.
+ */
+
+:root {
+  /* Colour: the club website's */
+  --colour-paper: #f4f3ec; /* the page */
+  --colour-surface: #ffffff; /* the card */
+  --colour-line: #e1ded3; /* the card's and an outlined button's border */
+  --colour-rule: #eeece3; /* a rule inside the card */
+  --colour-ink: #13181b;
+  --colour-muted: #667379;
+  --colour-coral: #d34d2e; /* the square */
+  --colour-on-ink: #ffffff; /* words on a store button */
+  --colour-focus: #d34d2e66;
+
+  /* Colour: a group, as the app draws it */
+  --colour-sport-padel: #d34d2e;
+  --colour-sport-tennis: #308361;
+  --colour-sport-squash: #213e50;
+  --colour-sport-badminton: #87641a;
+  --colour-monogram-0: #308361;
+  --colour-monogram-1: #87641a;
+  --colour-monogram-2: #213e50;
+  --colour-monogram-3: #9e3c2b;
+  --colour-monogram-4: #6a4c93;
+  --colour-monogram-5: #1e6b73;
+  --colour-monogram-6: #8c3f6e;
+  --colour-monogram-7: #3d5a99;
+  --colour-on-monogram: #ffffff;
+
+  /* Type */
+  --font-sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-body: 1rem;
+  --text-control: 1.0625rem;
+  --text-wordmark: 1.25rem;
+  --text-name: 1.625rem;
+  --text-letters: 1.5rem; /* 0.37 of the tile, as the app draws it */
+  --leading-body: 1.45;
+  --leading-tight: 1.15;
+  --leading-none: 1;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+  --tracking-title: -0.01em;
+
+  /* Space: the four-point grid */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-gutter: 1rem; /* a phone's side margin */
+
+  /* Radius */
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+  --radius-mark: 0.5rem;
+  --radius-tile: 1.125rem; /* 0.27 of the tile, as the app draws it */
+  --radius-dot: 999px;
+
+  /* Size */
+  --size-screen: 100vh;
+  --size-hairline: 1px;
+  --size-focus: 3px;
+  --size-control: 3.25rem;
+  --size-mark: 2rem;
+  --size-tile: 4rem;
+  --size-dot: 0.625rem;
+  --size-card: 29.75rem;
+}

@@ -1,0 +1,9 @@
+.stores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.next {
+  color: var(--colour-muted);
+}

@@ -3,7 +3,7 @@
 A **polyglot monorepo** of **four independently deployable apps** that realize the
 **same** bounded contexts
 ([ADR-0187](docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)).
-Two ship today; the two web apps are decided and arrive with their scaffolds:
+The two web apps are the newest, each built on its own scaffold:
 
 - **`backend/`** — async FastAPI service. Clean/hexagonal, DDD, event sourcing,
   transactional outbox. Python 3.11 + Poetry. **Source of truth for the API contract.**
@@ -70,7 +70,7 @@ own **technical** vocabulary:
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation, presentation module, copy deck… |
 | **`frontend_club/CONTEXT.md`** | Club-website technical vocab only | server layer, cookie session, recovery cookie, single flight, server action, view model, stub backend… |
-| **`frontend_public/CONTEXT.md`** | Public-site technical vocab only — *arrives with [#525](https://github.com/Raketa02/Raketa/issues/525)* | preview tags, app-link files, Open in Raketa… |
+| **`frontend_public/CONTEXT.md`** | Public-site technical vocab only | dead link, untrusted route input, preview tags, preview image, tile, the way in, Open in Raketa, stub backend… |
 
 An app `CONTEXT.md` must **never redefine** a domain term — it points back to the root
 glossary. Three words collide across that line and are settled at the root: the app's
@@ -92,8 +92,8 @@ wordmark, a white card) by **copying its values into its own tokens**, never by 
 | --- | --- |
 | **`frontend_player/docs/design-system.md`** | The player app's rules: colour meanings, the primitives, the level bar, overlays, touch and accessibility. **Locked** — [ADR-0012](docs/adr/0012-player-app-design-system.md). |
 | **`frontend_player/src/shared/ui/theme.ts`** | The player app's values, as a typed object. Same rule: no literal in a component. |
-| **`frontend_club/src/ui/`** | The club website's tokens, as CSS custom properties taken from the club mocks, and its primitives. *Arrives with [#522](https://github.com/Raketa02/Raketa/issues/522).* |
-| **`frontend_public/src/ui/`** | The public site's own copy of that look, laid out for phones first. *Arrives with [#525](https://github.com/Raketa02/Raketa/issues/525).* |
+| **`frontend_club/src/ui/`** | The club website's tokens, as CSS custom properties taken from the club mocks, and its primitives. |
+| **`frontend_public/src/ui/`** | The public site's own copy of that look, laid out for phones first, plus the colours of a group's tile and sport dots, copied from the player app's; `tokens.ts` repeats the few its preview image needs. |
 
 Design-system *terms* (token, soft/ink, eyebrow, hairline, severity rail, band ink, sheet
 vs drawer) are technical vocabulary and live in that app's `CONTEXT.md`. A design system
@@ -187,7 +187,7 @@ else lives one layer down. See
 │   ├── docs/architecture.md          ← the player app's runtime contract (ADR-0013)
 │   ├── docs/design-system.md         ← the player app's LOCKED visual contract
 │   └── src/shared/ui/theme.ts        ← its values; components read the theme only
-├── frontend_club/            ← Next.js  the club website  (arrives with #522)
-├── frontend_public/          ← Next.js  the public site   (arrives with #525)
+├── frontend_club/            ← Next.js  the club website  (CLAUDE.md + CONTEXT.md + docs/architecture.md)
+├── frontend_public/          ← Next.js  the public site   (CLAUDE.md + CONTEXT.md + docs/architecture.md)
 └── tools/afk/ + .sandbuket/  ← the AFK agent execution loop and its sandbox image
 ```

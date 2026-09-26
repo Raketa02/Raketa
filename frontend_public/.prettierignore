@@ -1,0 +1,11 @@
+# `src/generated/` is openapi-typescript output, not source. The contract drift check
+# regenerates it with `pnpm gen:api` and diffs, so it has to reproduce byte for byte;
+# formatting it would put Prettier and the generator in a fight the generator wins.
+src/generated/
+
+# Build and test output — not source either.
+.next/
+next-env.d.ts
+playwright-report/
+test-results/
+pnpm-lock.yaml

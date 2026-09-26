@@ -1,0 +1,44 @@
+/* Element defaults. Every value is a token (src/ui/tokens.css). */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: var(--size-screen);
+  background: var(--colour-paper);
+  color: var(--colour-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+
+h1,
+h2,
+p,
+ul {
+  margin: 0;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: var(--size-focus) solid var(--colour-focus);
+  outline-offset: var(--size-hairline);
+}
