@@ -36,11 +36,16 @@ const features = {
   message: 'src/ui/ holds presentational primitives only; it never imports a feature.',
 };
 
-/** A feature reads through its own queries; another feature's are its route's to call. */
-const otherQueries = {
-  group: ['@/features/*/queries', '**/features/*/queries'],
+/** A feature reads and writes through its own; another feature's are its route's to call. */
+const otherFeatureCalls = {
+  group: [
+    '@/features/*/queries',
+    '**/features/*/queries',
+    '@/features/*/actions',
+    '**/features/*/actions',
+  ],
   message:
-    "A feature never calls another feature's queries. The route calls each feature's queries and hands the view models down. See docs/architecture.md.",
+    "A feature never calls another feature's queries or actions. The route calls them and hands down view models and bound actions. See docs/architecture.md.",
 };
 
 const restrict = (...patterns) => ['error', { patterns }];
@@ -78,20 +83,24 @@ export default defineConfig([
     rules: { 'no-restricted-imports': restrict(generatedTypes, otherApps, serverLayer) },
   },
   {
-    // Everything in a feature but its queries: components, copy, mappers, metadata, the preview.
+    // Everything in a feature but its queries, actions and mappers.
     files: ['src/features/**'],
-    ignores: ['src/features/*/queries.ts', 'src/features/*/mappers.ts'],
+    ignores: [
+      'src/features/*/queries.ts',
+      'src/features/*/actions.ts',
+      'src/features/*/mappers.ts',
+    ],
     rules: {
-      'no-restricted-imports': restrict(generatedTypes, otherApps, serverLayer, otherQueries),
+      'no-restricted-imports': restrict(generatedTypes, otherApps, serverLayer, otherFeatureCalls),
     },
   },
   {
-    files: ['src/features/*/queries.ts'],
-    rules: { 'no-restricted-imports': restrict(generatedTypes, otherApps, otherQueries) },
+    files: ['src/features/*/queries.ts', 'src/features/*/actions.ts'],
+    rules: { 'no-restricted-imports': restrict(generatedTypes, otherApps, otherFeatureCalls) },
   },
   {
     files: ['src/features/*/mappers.ts'],
-    rules: { 'no-restricted-imports': restrict(otherApps, serverLayer, otherQueries) },
+    rules: { 'no-restricted-imports': restrict(otherApps, serverLayer, otherFeatureCalls) },
   },
   {
     files: ['src/ui/**'],

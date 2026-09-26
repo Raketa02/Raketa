@@ -18,8 +18,16 @@
   --colour-line: #e1ded3; /* the card's and an outlined button's border */
   --colour-rule: #eeece3; /* a rule inside the card */
   --colour-ink: #13181b;
+  --colour-ink-deep: #15252c; /* labels */
   --colour-muted: #667379;
-  --colour-coral: #d34d2e; /* the square */
+  --colour-coral: #d34d2e; /* the square, and a form's one button */
+  --colour-coral-pressed: #b8401f;
+  --colour-on-coral: #ffffff;
+  --colour-disabled: #a1a8ab;
+  --colour-green: #308361;
+  --colour-green-soft: #e0f1e9;
+  --colour-red: #9e3c2b;
+  --colour-red-soft: #f8e9e5;
   --colour-on-ink: #ffffff; /* words on a store button */
   --colour-focus: #d34d2e66;
 
@@ -40,17 +48,24 @@
 
   /* Type */
   --font-sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --text-label: 0.8125rem;
+  --text-small: 0.875rem;
   --text-body: 1rem;
   --text-control: 1.0625rem;
   --text-wordmark: 1.25rem;
   --text-name: 1.625rem;
   --text-letters: 1.5rem; /* 0.37 of the tile, as the app draws it */
+  --text-code: 1.75rem; /* an invitation's code, for typing into the app */
   --leading-body: 1.45;
   --leading-tight: 1.15;
   --leading-none: 1;
+  --weight-medium: 500;
   --weight-bold: 700;
   --weight-heavy: 800;
   --tracking-title: -0.01em;
+  --tracking-label: 0.1em;
+  --tracking-code: 0.15em;
 
   /* Space: the four-point grid */
   --space-1: 0.25rem;

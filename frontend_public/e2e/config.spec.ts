@@ -117,3 +117,65 @@ test.describe('Configuration', () => {
     expect(output).not.toContain('GOOGLE_PLAY_URL');
   });
 });
+
+test.describe('The app-link files’ settings', () => {
+  test('each is required, and a malformed one is refused, without echoing it', async () => {
+    const { code, output } = await start({
+      ...SUITE_ENV,
+      APPLE_TEAM_ID: 'r4ket4',
+      IOS_BUNDLE_ID: 'raketa',
+      ANDROID_PACKAGE: '',
+      ANDROID_CERT_FINGERPRINTS: 'FA:C6:17:45, not-a-key',
+    });
+
+    expect(code).toBe(1);
+    expect(output).toContain(
+      'APPLE_TEAM_ID: must be the 10-character Apple team id, capitals and digits',
+    );
+    expect(output).toContain('IOS_BUNDLE_ID: must be a bundle id such as com.raketa.player');
+    expect(output).toContain('ANDROID_PACKAGE: is required');
+    expect(output).toContain(
+      'ANDROID_CERT_FINGERPRINTS: must be SHA-256 fingerprints (32 hex pairs, AA:BB:…), separated by commas',
+    );
+    expect(output).not.toContain('not-a-key');
+  });
+
+  test('the files are made from the running server’s settings, not the build’s', async () => {
+    const served = await serve({ ...SUITE_ENV, APPLE_TEAM_ID: 'DEPL0YTEAM' }, async (site) => {
+      const response = await fetch(`${site}/.well-known/apple-app-site-association`);
+      return (await response.json()) as { applinks: { details: { appIDs: string[] }[] } };
+    });
+
+    expect(served.applinks.details[0]?.appIDs).toEqual(['DEPL0YTEAM.com.raketa.player']);
+  });
+});
+
+/**
+ * Start the built site on its own port with `env`, run `use` against it once it answers, and stop
+ * it whatever happens.
+ */
+async function serve<T>(env: Record<string, string>, use: (site: string) => Promise<T>) {
+  const site = 'http://127.0.0.1:3202';
+  const child = spawn(NEXT, ['start', '--hostname', '127.0.0.1', '--port', '3202'], {
+    cwd: ROOT,
+    env: {
+      PATH: process.env.PATH ?? '',
+      HOME: process.env.HOME ?? '',
+      NODE_ENV: 'production',
+      ...env,
+    },
+  });
+  try {
+    for (let tries = 0; ; tries += 1) {
+      try {
+        if ((await fetch(`${site}/icon.svg`)).ok) break;
+      } catch {
+        if (tries > 100) throw new Error('The site never answered');
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return await use(site);
+  } finally {
+    child.kill('SIGKILL');
+  }
+}

@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
+import { invitation, token } from './stub/credentials';
 import { GROUP_PATH, linkedGroup } from './stub/groups';
 
 /**
@@ -49,4 +50,35 @@ test('a dead link and a failing page fit a phone', async ({ page, stub }) => {
   await page.goto('/join/k7pq2mxa');
   await expect(page.getByRole('heading', { name: 'Something went wrong' })).toBeVisible();
   await fitsSideways(page, 'a failing page');
+});
+
+test('the invitation and reset pages fit a phone, in every state, refusals and all', async ({
+  page,
+  credentials,
+}) => {
+  credentials.invite(
+    token(301),
+    invitation({
+      name: 'Małgorzata Szczepańska-Wróblewska',
+      club_name: 'Klub Sportowy Nowa Huta Arena',
+    }),
+  );
+  credentials.invite(token(302), invitation({ state: 'locked', code: null }));
+  credentials.reset(token(303));
+  credentials.reset(token(304), 'expired');
+
+  await page.goto(`/invite/${token(301)}`);
+  await page.getByLabel('Password', { exact: true }).fill('short');
+  await page.getByRole('button', { name: 'Set password' }).click();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  );
+  await fitsSideways(page, 'an invitation, refused');
+
+  for (const path of [`/invite/${token(302)}`, `/reset/${token(303)}`, `/reset/${token(304)}`]) {
+    await page.goto(path);
+    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toBeVisible();
+    await fitsSideways(page, path);
+  }
 });

@@ -17,6 +17,8 @@ export interface ApiError {
   /** `0` when the backend never answered. */
   readonly status: number;
   readonly code: string;
+  /** `details.field`, when the refusal names the control it is about: `password_too_weak`'s. */
+  readonly field?: string;
 }
 
 export type Outcome<T> =
@@ -35,7 +37,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function toApiError(status: number, body: unknown): ApiError {
   if (status === 422) return { status, code: 'request_invalid' };
-  if (isRecord(body) && typeof body.code === 'string') return { status, code: body.code };
+  if (isRecord(body) && typeof body.code === 'string') {
+    const field = isRecord(body.details) ? body.details.field : undefined;
+    return typeof field === 'string'
+      ? { status, code: body.code, field }
+      : { status, code: body.code };
+  }
   return { status, code: 'backend_failed' };
 }
 

@@ -20,3 +20,12 @@ export const SITE_COPY = {
     retry: 'Try again',
   },
 } as const;
+
+/** Sentences for the refusals every form can meet, whatever it is for. */
+export const COMMON_REFUSALS: Readonly<Record<string, string>> = {
+  backend_unreachable: "We couldn't reach the server. Try again in a moment.",
+  backend_failed: 'Something went wrong on our side. Try again in a moment.',
+  request_invalid: 'Something went wrong on our side. Try again in a moment.',
+};
+
+export const FALLBACK_REFUSAL = 'Something went wrong. Try again.';

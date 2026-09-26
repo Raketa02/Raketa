@@ -19,12 +19,12 @@ export function PageCard({ brand, children }: { brand: string; children: ReactNo
   );
 }
 
-/** A page's title and the line under it, for a page that is only words. */
-export function PageTitle({ title, lead }: { title: string; lead: string }) {
+/** A page's title, and the line under it when it has one. */
+export function PageTitle({ title, lead }: { title: string; lead?: string }) {
   return (
     <header className={styles.header}>
       <h1 className={styles.title}>{title}</h1>
-      <p className={styles.lead}>{lead}</p>
+      {lead === undefined ? null : <p className={styles.lead}>{lead}</p>}
     </header>
   );
 }

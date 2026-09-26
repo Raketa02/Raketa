@@ -14,65 +14,86 @@ src/
   app/                 routes and layouts only
     join/[code]/       the group page (#525)
     preview/[code]/    the group page's preview image, a route handler
+    invite/[token]/    the invitation page (#526)
+    reset/[token]/     the reset page, for players and administrators (#526)
+    .well-known/       the app-link files, route handlers (#526)
     not-found.tsx      Nothing at that link: every address here is reached by a link
     error.tsx          Something went wrong: the backend failed, which is not a dead link
-  instrumentation.ts   refuses to start without the configuration (§5)
+  instrumentation.ts   refuses to start without the configuration (§6)
   server/              the only code that reaches the backend or the configuration; `server-only`
-  features/<page>/     queries.ts · mappers.ts · copy.ts · metadata.ts · preview.tsx · components/
+  features/<page>/     queries.ts · actions.ts · mappers.ts · schemas.ts · copy.ts · metadata.ts ·
+                       preview.tsx · components/
   ui/                  tokens.css, tokens.ts and the primitives
   generated/           openapi-typescript output; never edited by hand
-e2e/                   the Playwright suite and its stub backend (§6)
+e2e/                   the Playwright suite and its stub backend (§7)
 ```
 
-- **Routes compose; they decide nothing.** A page reads through a feature's `queries.ts` and
-  hands a view model to a feature's component. ESLint refuses `@/server/*` everywhere but
-  `src/server/` itself and a feature's `queries.ts`, so the backend and the configuration are
-  only ever reached through a query.
-- **A feature is a page, or a part every page has**: `group-page` (the group, its preview tags and
-  its preview image) and `get-the-app` (the two stores and **Open in Raketa**, which every page
-  about a link offers, ADR-0187 §4). A dead link and the error page offer neither: there is
-  nothing there for the app to open. #526's invitation and reset pages arrive as features of their own. A feature may use
-  another feature's components, copy and mappers, never its queries (ESLint refuses them); a
-  route calls each feature's queries itself.
-- **`mappers.ts` is the only file outside `src/server/` that imports a generated type**, besides
-  the suite's stub in `e2e/`, which types its replies from the contract on purpose. It turns a
-  wire type into a view model. Sports are a `Record` over the wire's enum, and so are their names
-  and their dots, so a fifth sport fails to compile until it has both; the tile's eight fills are
-  a `Record` over its eight keys the same way.
+- **Routes compose; they decide nothing.** A page reads through a feature's `queries.ts`, binds
+  a feature's action to what it read, and hands both to a feature's component. ESLint refuses
+  `@/server/*` everywhere but `src/server/` itself and a feature's `queries.ts` and `actions.ts`,
+  so the backend and the configuration are only ever reached through a query or an action.
+- **A feature is a page, or a part several pages have**:
+  - `group-page`: the group, its preview tags and its preview image;
+  - `invitation` and `password-reset`: reading a link, and what each page says in each state;
+  - `set-password`: what both of those pages share: a link's state, the form, its checks and its
+    actions;
+  - `get-the-app`: the two stores and **Open in Raketa**, which every page about a link offers
+    (ADR-0187 §4). A dead link and the error page offer neither: there is nothing there for the
+    app to open. It also holds `APP_ROUTES`, the routes the app and this site both answer
+    (`join`, `invite`, `reset`), written once for every link, redirect and claim;
+  - `app-link-files`: Apple's association file and Android's asset links.
+
+  A feature may use another feature's components, schemas, copy and mappers, never its queries
+  or actions (ESLint refuses them); a route calls those itself.
+
+- **`mappers.ts` holds a feature's view models, and is the only file outside `src/server/` that
+  imports a generated type**, besides the suite's stub in `e2e/`, which types its replies from the
+  contract on purpose. It turns a wire type into a view model. Sports and a link's states are a
+  `Record` over the wire's enum, so a fifth fails to compile until it is mapped; a sport's name
+  and dot are a `Record` over the site's sports too, so a new one fails until it has both, and the
+  tile's eight fills are a `Record` over its keys.
+- **`schemas.ts` checks what arrives from outside** before anything is done with it: a form's
+  boxes, and a code, a token or a mark in an address.
 - **`metadata.ts` builds a page's preview tags from its view model**, purely; `preview.tsx` draws
   its preview image. Both are §4's.
 - **`src/ui/` knows nothing of any feature.** Primitives take words and values as props.
-  `src/ui/copy.ts` holds the words that belong to no feature: the brand, the dead link and the
-  error page.
+  `src/ui/copy.ts` holds the words that belong to no feature: the brand, the dead link, the error
+  page and the refusals every form can meet.
 
 ## 2. Holding nothing
 
 The public surface takes no session (ADR-0187 §4), so this site has **no sign-in, no session, no
 cookie and no secret**. `src/server/backend.ts` has one door, `fromBackend(call)`, because there
-is nobody to call as.
+is nobody to call as. Setting a password signs nobody in, here or anywhere.
 
-- **No response sets a cookie**, and the suite asserts it.
-- **No page loads a script from anywhere but this site**, and the suite asserts that too. A
-  link here can carry a code, and #526's a token; nothing may carry it off in analytics.
+- **No response sets a cookie**, setting a password included, and the suite asserts it.
+- **The browser asks nothing of any other site**: no script, no font, no picture. A link here can
+  carry a code or a token, and nothing may carry it off in analytics. The suite watches every
+  request an invitation page makes, through setting the password.
 - **Every response sends `Referrer-Policy: no-referrer`** (`next.config.ts`), so nothing an
   address carries leaves in a `Referer`. The same headers keep every page out of somebody else's
   frame.
+- **A credential's page asks never to be listed**: the invitation and reset pages send `robots`
+  `noindex, nofollow`.
 
 ## 3. Calling the backend
 
 Each call is `openapi-fetch` over the generated `paths`, with a ten-second timeout, and settles
-into an **outcome**: `{ ok: true, data }` or `{ ok: false, error: { status, code } }`.
+into an **outcome**: `{ ok: true, data }` or `{ ok: false, error: { status, code, field? } }`.
 `code` is the backend's, or one of the site's own three: `backend_unreachable` (no answer),
 `backend_failed` (an answer with no envelope) and `request_invalid` (any `422`, a bug here).
 Failures that are nobody's doing are logged by code and trace id, never with a payload.
 
-- **Decisions branch on `code`, never on `message`.** `group_not_found` is a dead link; every
-  other failure throws, and the page says _Something went wrong_ with a 500. A backend that could
-  not be reached never says _Nothing at that link_: that would send away somebody holding a live
-  link.
+- **Decisions branch on `code`, never on `message`.** `group_not_found` and `credential_not_found`
+  on a read are a dead link; every other failed read throws, and the page says _Something went
+  wrong_ with a 500. A backend that could not be reached never says _Nothing at that link_: that
+  would send away somebody holding a live link.
 - **A code or token in an address is untrusted route input** (ADR-0187 §7). A group code that is
-  not letters and digits leads nowhere without asking the backend, and nothing else is ever put
-  into a link this site draws, the preview's and **Open in Raketa**'s included.
+  not letters and digits, or a token that is not the URL-safe letters the backend mints, leads
+  nowhere without asking the backend, and nothing else is ever put into a link this site draws,
+  the preview's and **Open in Raketa**'s included.
+- **A token travels in a body**, as the contract has it, so it is in no backend access log. It is
+  in this site's own, since it is in the page's address.
 - **A page and its preview tags read once.** `generateMetadata` and the page both ask; the query
   is wrapped in React's `cache`, so the backend hears one request per page view.
 
@@ -83,7 +104,8 @@ sees (ADR-0187 §4). The suite reads the raw HTML to prove it.
 
 - **Preview tags come from `generateMetadata`**, per group: the title is the group's name, the
   description where it plays, its sports and its size, and the image its tile. Every address in
-  them is absolute and made from `PUBLIC_SITE_URL`, the address people reach the site by.
+  them is absolute and made from `PUBLIC_SITE_URL`, the address people reach the site by. The
+  invitation and reset pages have a title and no preview: a credential's page describes nobody.
 - **They are in `<head>` for every user agent.** `htmlLimitedBots: /.*/` turns off Next's
   streaming of metadata, which would put the tags in the body for any messenger missing from
   Next's list of bots once a page flushes its shell early. Today no page has a loading boundary,
@@ -104,13 +126,48 @@ sees (ADR-0187 §4). The suite reads the raw HTML to prove it.
 - **The image is cached for ten minutes, never for good.** A rename redraws the tile; next/og's
   default is `immutable` for a year.
 
-## 5. Configuration
+## 5. Setting a password by a link
 
-Six variables, all required, none with a default, none `NEXT_PUBLIC_*`: `APP_ENV`, `API_URL`,
-`PUBLIC_SITE_URL`, `APP_STORE_URL`, `GOOGLE_PLAY_URL` and `APP_SCHEME` (`.env.example` says what
-each is for). **Every address is a setting, never a literal** (ADR-0187 §7). `src/server/config.ts`
-parses them purely and names every bad one and why, never its value, and a variable set to nothing
-counts as missing.
+The invitation page and the reset page each read their link (`by-token`, which changes nothing)
+and draw what it is: **valid**, **expired**, **used** or **locked**, each with its own sentence,
+worded as the app words it. While it is valid the page offers the form.
+
+- **A server action checks what it can, then asks the backend, then answers with codes.** The
+  password rule (8 to 128 characters, a letter and a digit) and the repeat are checked here, with
+  the backend's code where it has one (`password_too_weak`), so a form the site refuses never
+  reaches the backend, and one sentence serves a refusal from either side.
+- **The token is the one the page was opened with**, bound to the action on the server and checked
+  again inside it, because a bound argument comes back from the browser.
+- **A refusal goes under the box it names, or over the form**: `sign_in_to_accept` (the email has
+  an account now, which accepts in the app), an unreachable backend. The boxes are controlled, so
+  a refusal keeps what was typed, and a box's refusal goes as soon as that box changes.
+- **A link spent while the page was open redraws the page**, which then says what the link is now.
+- **A set lands back on the page, marked `?password=set`.** The page reads the link again, finds
+  it used, and says what to do next: sign in to the app. The mark only chooses between two
+  sentences for a used link; on a link that still works it changes nothing.
+- **The form needs JavaScript.** Under `Referrer-Policy: no-referrer` a browser posts a plain form
+  with `Origin: null`, which Next refuses as a cross-site action. A browser without it is told so
+  in a `<noscript>`, and everything else on these pages reads without it.
+- **Raketa is named only where ADR-0187 names it**: _after you install, open Raketa and enter this
+  code_ (§4) and _Open Raketa and sign in with your email and password_ (§8). Everywhere else
+  these pages say _the app_, as the copy rule has it.
+- **Open in Raketa** opens the app at `invite/<token>` or `reset/<token>` while the link works
+  (#520), and at the app's start once it can't, where the person signs in.
+
+## 6. Configuration
+
+Ten variables, all required, none with a default, none `NEXT_PUBLIC_*` (`.env.example` says what
+each is for):
+
+- `APP_ENV`, one of the four names;
+- `API_URL`, `PUBLIC_SITE_URL`, `APP_STORE_URL` and `GOOGLE_PLAY_URL`;
+- `APP_SCHEME`, the app's own scheme;
+- `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`, `ANDROID_PACKAGE` and `ANDROID_CERT_FINGERPRINTS`, which the
+  app-link files name.
+
+**Every address and identifier is a setting, never a literal** (ADR-0187 §7).
+`src/server/config.ts` parses them purely and names every bad one and why, never its value, and a
+variable set to nothing counts as missing.
 
 **`src/instrumentation.ts` calls it before the server takes a request, and exits.** Next alone
 would log a failed `register()` and go on serving 500s. `APP_ENV` selects defaults only: the
@@ -119,7 +176,13 @@ site's own address and both store links must be `https://` in every deployed env
 is the app's own scheme, without `://`, and a web or script scheme is refused, so **Open in
 Raketa** can only ever open the app.
 
-## 6. The test seam
+**The app-link files** (`/.well-known/apple-app-site-association` and
+`/.well-known/assetlinks.json`) are made per request from those settings, as JSON with no
+redirect. Apple's claims `/join/*`, `/invite/*` and `/reset/*` for the app; Android's names the
+app and every key it is signed with, and the paths it takes are the app's own intent filters'
+(#520). Both go live only once a domain exists; locally nothing reads them.
+
+## 7. The test seam
 
 **A real browser in front, a stand-in backend behind**, and nothing in between replaced
 (ADR-0187 §6). `pnpm test` builds the site and starts it on port 3200 with a configuration made
@@ -132,35 +195,38 @@ the two suites can run side by side.
   the backend sends without declaring per route (`422`, `5xx`), and `drop`, which closes the
   connection unanswered. It records every request. An operation is named by its path as the
   contract writes it, `/api/v1/public/groups/{code}`.
-- **The fake group directory** installs the default handler: a test seats a group behind a code
-  (`groups.seat(code, linkedGroup({…}))`), codes are read in any case, and a code nobody has, or a
-  deleted group's, is `group_not_found`. A test about one reply overrides the operation with
+- **The fake group directory and the fake credentials** install the default handlers, keeping the
+  backend's rules: a test seats a group behind a code (`groups.seat`), and an invitation or a
+  reset behind a token (`credentials.invite`, `credentials.reset`); anything nobody seated leads
+  nowhere, and a set spends its link. A test about one reply overrides the operation with
   `stub.on`.
 - **Tests assert what a person, a messenger or the backend would see**: text on the page, the
   status, the tags in the raw HTML's `<head>`, the pixels of the preview image, the headers, and
   the requests that arrived at the stub.
 - **One worker**, because the one server talks to the one stub, which each test resets.
 - **Start-up refusal is tested at the process**: `e2e/config.spec.ts` spawns `next start` with a
-  bad configuration and reads its exit code and output.
+  bad configuration and reads its exit code and output, and starts it with a deploy's settings to
+  show the app-link files carry them.
 - **Every page is checked at 360 px** for sideways scrolling.
 
 No automated test crosses apps. The journey through the backend, the app and this site is a QA
 plan walked by hand ([#528](https://github.com/Raketa02/Raketa/issues/528)).
 
-## 7. Tokens and primitives
+## 8. Tokens and primitives
 
 `src/ui/tokens.css` is the only file that writes a colour or a size, besides `src/ui/tokens.ts`
 (§4) and the favicon, `src/app/icon.svg`, which the browser draws on its own and which can read
-no custom property. There are no mocks for this site: it **borrows the club website's look** (paper, the coral
-square wordmark, a white card) **by copying its values**, and draws a group as the app does, with
-the sport dots sampled from play 38 and the tile's eight fills copied from the app's
-`MONOGRAM_HUES`. A change to either original does not reach this copy; divergence is caught by
-eye (ADR-0187, _Consequences_). The type is Archivo, self-hosted from `@fontsource/archivo`, so
-a build fetches no font from the network. `pnpm test:tokens` fails on a literal anywhere else,
-and ESLint refuses an inline `style` everywhere but the preview image. A media query's width is
-the one literal CSS allows no variable for.
+no custom property. There are no mocks for this site: it **borrows the club website's look**
+(paper, the coral square wordmark, a white card, its boxes and its primary button) **by copying
+its values**, and draws a group as the app does, with the sport dots sampled from play 38 and the
+tile's eight fills copied from the app's `MONOGRAM_HUES`. A change to either original does not
+reach this copy; divergence is caught by eye (ADR-0187, _Consequences_). The type is Archivo, and
+IBM Plex Mono for an invitation's code, self-hosted from `@fontsource`, so a build fetches no
+font from the network. `pnpm test:tokens` fails on a literal anywhere else, and ESLint refuses an
+inline `style` everywhere but the preview image. A media query's width is the one literal CSS
+allows no variable for.
 
 **Laid out for phones first**: one white card, the full width less a gutter, that stops growing
-at a narrow column on anything wider. Every button leaves the site (for a store, or for the app),
-so it is a plain `<a>`. The stores' buttons are filled with ink, as their own badges are, and
-**Open in Raketa** is outlined: the coral square is the page's one coral mark.
+at a narrow column on anything wider. A button that leaves the site (for a store, or for the app)
+is a plain `<a>`: the stores' are filled with ink, as their own badges are, and **Open in
+Raketa** is outlined. A form's one button is coral, as the club website's is.

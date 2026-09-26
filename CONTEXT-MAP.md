@@ -70,7 +70,7 @@ own **technical** vocabulary:
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation, presentation module, copy deck… |
 | **`frontend_club/CONTEXT.md`** | Club-website technical vocab only | server layer, cookie session, recovery cookie, single flight, server action, view model, stub backend… |
-| **`frontend_public/CONTEXT.md`** | Public-site technical vocab only | dead link, untrusted route input, preview tags, preview image, tile, the way in, Open in Raketa, stub backend… |
+| **`frontend_public/CONTEXT.md`** | Public-site technical vocab only | dead link, untrusted route input, preview tags, preview image, tile, link state, setting by link, the way in, Open in Raketa, app-link files, stub backend… |
 
 An app `CONTEXT.md` must **never redefine** a domain term — it points back to the root
 glossary. Three words collide across that line and are settled at the root: the app's

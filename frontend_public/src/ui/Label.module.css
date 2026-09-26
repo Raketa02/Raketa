@@ -1,0 +1,8 @@
+/* A box's label, and any small capital heading that sits over a value (club mock 1). */
+.label {
+  color: var(--colour-ink-deep);
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}

@@ -10,7 +10,8 @@
  * credentials, and a refusal lands in a log.
  *
  * **Every address is a setting, never a literal** (ADR-0187 §7): the backend, this site's own
- * address, the two stores and the app's scheme. Server-side only: nothing here is a
+ * address, the two stores and the app's scheme; and so is every identifier the app-link files name:
+ * the Apple team and bundle, and the Android package and its signing keys. Server-side only: nothing here is a
  * `NEXT_PUBLIC_*` variable, so nothing is inlined into the browser's bundle. A page receives the
  * addresses it links to as props.
  */
@@ -62,6 +63,25 @@ const httpUrl = z
   .string({ error: required('must be an absolute http:// or https:// URL') })
   .regex(/^https?:\/\/[^\s/]+/i, { error: 'must be an absolute http:// or https:// URL' });
 
+/** A SHA-256 certificate fingerprint as Android prints one: 32 hex pairs joined by colons. */
+const FINGERPRINT = /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/i;
+
+function fingerprintsOf(value: string): string[] {
+  return value.split(',').map((part) => part.trim().toUpperCase());
+}
+
+/** A string `pattern` matches, refused with one sentence whether it is missing or malformed. */
+function matching(pattern: RegExp, otherwise: string) {
+  return z.string({ error: required(otherwise) }).regex(pattern, { error: otherwise });
+}
+
+/** An identifier in dots, such as `com.raketa.player`: `part` is what one piece may be. */
+function dotted(part: string, otherwise: string) {
+  return matching(new RegExp(`^${part}(\\.${part})+$`), otherwise);
+}
+
+const FINGERPRINTS = 'must be SHA-256 fingerprints (32 hex pairs, AA:BB:…), separated by commas';
+
 const Fields = z.object({
   APP_ENV: z.enum(ENVIRONMENTS, { error: required(`must be one of ${ENVIRONMENTS.join(', ')}`) }),
   /**
@@ -81,14 +101,35 @@ const Fields = z.object({
   GOOGLE_PLAY_URL: httpUrl,
   /**
    * The player app's own scheme, without `://`: **Open in Raketa** goes to
-   * `<APP_SCHEME>://join/<code>`. The app declares one scheme at every environment
-   * (`frontend_player`'s `app.config.ts`), and so does the backend's `APP_SCHEME`.
+   * `<APP_SCHEME>://<route>`, such as `join/<code>`. The app declares one scheme at every
+   * environment (`frontend_player`'s `app.config.ts`), and so does the backend's `APP_SCHEME`.
    */
-  APP_SCHEME: z
-    .string({ error: required('must be a URL scheme such as raketa, without ://') })
-    .regex(/^[a-z][a-z0-9+.-]*$/i, { error: 'must be a URL scheme such as raketa, without ://' })
-    .refine((scheme) => !NOT_AN_APP_SCHEME.includes(scheme.toLowerCase()), {
-      error: "must be the app's own scheme, not a web or script scheme",
+  APP_SCHEME: matching(
+    /^[a-z][a-z0-9+.-]*$/i,
+    'must be a URL scheme such as raketa, without ://',
+  ).refine((scheme) => !NOT_AN_APP_SCHEME.includes(scheme.toLowerCase()), {
+    error: "must be the app's own scheme, not a web or script scheme",
+  }),
+  /** The Apple developer team the app is signed by: Apple's association file names it. */
+  APPLE_TEAM_ID: matching(
+    /^[A-Z0-9]{10}$/,
+    'must be the 10-character Apple team id, capitals and digits',
+  ),
+  /** The iOS app's bundle id (`frontend_player`'s `ios.bundleIdentifier`). */
+  IOS_BUNDLE_ID: dotted('[A-Za-z0-9-]+', 'must be a bundle id such as com.raketa.player'),
+  /** The Android app's package (`frontend_player`'s `android.package`). */
+  ANDROID_PACKAGE: dotted(
+    '[A-Za-z][A-Za-z0-9_]*',
+    'must be an Android package name such as com.raketa.player',
+  ),
+  /**
+   * The SHA-256 fingerprints of every key the Android app is signed with, separated by commas: a
+   * release key, and a store's re-signing key once there is one.
+   */
+  ANDROID_CERT_FINGERPRINTS: z
+    .string({ error: required(FINGERPRINTS) })
+    .refine((value) => fingerprintsOf(value).every((key) => FINGERPRINT.test(key)), {
+      error: FINGERPRINTS,
     }),
 });
 
@@ -121,6 +162,11 @@ export interface Config {
   readonly appStoreUrl: string;
   readonly googlePlayUrl: string;
   readonly appScheme: string;
+  readonly appleTeamId: string;
+  readonly iosBundleId: string;
+  readonly androidPackage: string;
+  /** Upper case, as Android compares them. */
+  readonly androidCertFingerprints: readonly string[];
 }
 
 export class ConfigError extends Error {
@@ -162,6 +208,10 @@ export function parseConfig(raw: RawConfig): Config {
     appStoreUrl: data.APP_STORE_URL,
     googlePlayUrl: data.GOOGLE_PLAY_URL,
     appScheme: data.APP_SCHEME.toLowerCase(),
+    appleTeamId: data.APPLE_TEAM_ID,
+    iosBundleId: data.IOS_BUNDLE_ID,
+    androidPackage: data.ANDROID_PACKAGE,
+    androidCertFingerprints: fingerprintsOf(data.ANDROID_CERT_FINGERPRINTS),
   };
 }
 
@@ -176,6 +226,10 @@ export function loadConfig(): Config {
     APP_STORE_URL: process.env.APP_STORE_URL,
     GOOGLE_PLAY_URL: process.env.GOOGLE_PLAY_URL,
     APP_SCHEME: process.env.APP_SCHEME,
+    APPLE_TEAM_ID: process.env.APPLE_TEAM_ID,
+    IOS_BUNDLE_ID: process.env.IOS_BUNDLE_ID,
+    ANDROID_PACKAGE: process.env.ANDROID_PACKAGE,
+    ANDROID_CERT_FINGERPRINTS: process.env.ANDROID_CERT_FINGERPRINTS,
   });
   return loaded;
 }

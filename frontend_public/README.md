@@ -1,10 +1,14 @@
 # Raketa — the public site
 
-The pages a link opens when the app isn't installed. Today that is the group page: a group link,
-`/join/<code>`, shows the group's tile, name, club and district, sports and size, with the App
-Store and Google Play, what to do once signed up, and **Open in Raketa**. Its preview tags let
-WhatsApp draw a card for the link. The invitation and password pages and the app-link files arrive
-with [#526](https://github.com/Raketa02/Raketa/issues/526).
+The pages a link opens when the app isn't installed:
+
+- **A group link**, `/join/<code>`, shows the group's tile, name, club and district, sports and
+  size, with the App Store and Google Play, what to do once signed up, and **Open in Raketa**. Its
+  preview tags let WhatsApp draw a card for the link.
+- **An invitation link**, `/invite/<token>`, greets the new administrator for the club, shows the
+  code to type into the app, and lets them set their password right there.
+- **A reset link**, `/reset/<token>`, sets a new password for a player or an administrator.
+- **The app-link files**, at `/.well-known/`, let those links open the app once a domain exists.
 
 Next.js 16 with the App Router, every page server-rendered, talking to the backend's public
 surface from its own server. It holds nothing: no sign-in, no session, no cookie
@@ -19,7 +23,8 @@ pnpm dev                       # http://localhost:3001, against the backend on :
 ```
 
 The backend's dev stack must be running: `cd ../backend && make up`. Its group links are printed
-under `http://localhost:3001/join/`, so a link copied from the app opens here.
+under `http://localhost:3001/join/`, so a link copied from the app opens here, and its invitation
+and reset emails, in the local mail catcher's inbox on http://localhost:8025, link here too.
 
 ## Check it
 

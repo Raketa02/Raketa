@@ -2,6 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import { appRoute } from '@/features/get-the-app/mappers';
 import { fromBackend } from '@/server/backend';
 import { loadConfig } from '@/server/config';
 
@@ -37,7 +38,7 @@ export const readGroupByLink = cache(async (code: string): Promise<LinkedGroup |
  * {@link readGroupByLink} found a group for, which is letters and digits.
  */
 export function groupRoute(code: string): string {
-  return `join/${code}`;
+  return appRoute('group', code);
 }
 
 /**

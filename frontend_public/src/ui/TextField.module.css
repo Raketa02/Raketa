@@ -1,0 +1,33 @@
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.input {
+  width: 100%;
+  min-height: var(--size-control);
+  padding: var(--space-3) var(--space-4);
+  border: var(--size-hairline) solid var(--colour-line);
+  border-radius: var(--radius-control);
+  background: var(--colour-paper);
+  color: var(--colour-ink);
+  font: inherit;
+  font-size: var(--text-control);
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--colour-red);
+}
+
+.hint {
+  color: var(--colour-muted);
+  font-size: var(--text-small);
+}
+
+.error {
+  color: var(--colour-red);
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+}
