@@ -23,6 +23,7 @@ from sqlalchemy.sql import Executable
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.modules.clubs.domain.folding import fold
 from app.modules.groups.domain.events import (
+    AdministratorAssigned,
     GroupDeleted,
     GroupJoined,
     GroupLeft,
@@ -133,6 +134,9 @@ class EventSourcedGroupRepository:
             await self._change(event.group_id, whatsapp_size=event.whatsapp_size)
         elif isinstance(event, SportsDeclared):
             await self._change(event.group_id, declared_sports=list(event.sports))
+        elif isinstance(event, AdministratorAssigned):
+            # Only who runs it moves: the requests waiting stay on the group.
+            await self._change(event.group_id, administrator_id=event.administrator_id)
         elif isinstance(event, GroupJoined):
             self._admit(event.group_id, event.player_id, event, version)
         elif isinstance(event, JoinRequested):

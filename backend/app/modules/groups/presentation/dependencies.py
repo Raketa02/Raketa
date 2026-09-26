@@ -25,6 +25,7 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_group_administrators,
+    build_group_born_games,
     build_group_code_minter,
     build_group_directory,
     build_group_faces,
@@ -41,6 +42,11 @@ from app.modules.administrators.presentation.dependencies import (
 from app.modules.groups.application.answer_join_request import (
     ApproveJoinRequest,
     DeclineJoinRequest,
+)
+from app.modules.groups.application.club_groups import (
+    ClubGroupRows,
+    HandOverOfficialGroup,
+    ReadClubGroups,
 )
 from app.modules.groups.application.commands import Administering
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
@@ -65,6 +71,7 @@ from app.modules.groups.application.search_groups_to_join import SearchGroupsToJ
 from app.modules.groups.application.search_home_clubs import SearchHomeClubs
 from app.modules.groups.domain.ports import (
     GroupAdministrators,
+    GroupBornGames,
     GroupDirectory,
     GroupFaces,
     GroupMemberScores,
@@ -134,6 +141,13 @@ def get_group_administrators(db: DbSession) -> GroupAdministrators:
 GroupAdministratorsDep = Annotated[
     GroupAdministrators, Depends(get_group_administrators)
 ]
+
+
+def get_group_born_games() -> GroupBornGames:
+    return build_group_born_games()
+
+
+GroupBornGamesDep = Annotated[GroupBornGames, Depends(get_group_born_games)]
 
 
 def get_reader_areas(db: DbSession) -> ReaderAreas:
@@ -481,4 +495,48 @@ def get_change_official_group_settings(
 
 ChangeOfficialGroupSettingsDep = Annotated[
     ChangeOfficialGroupSettings, Depends(get_change_official_group_settings)
+]
+
+
+# --- The club surface -----------------------------------------------------------
+
+
+def get_club_group_rows(
+    administrators: GroupAdministratorsDep, games: GroupBornGamesDep
+) -> ClubGroupRows:
+    return ClubGroupRows(administrators=administrators, games=games)
+
+
+ClubGroupRowsDep = Annotated[ClubGroupRows, Depends(get_club_group_rows)]
+
+
+def get_read_club_groups(
+    directory: GroupDirectoryDep, rows: ClubGroupRowsDep
+) -> ReadClubGroups:
+    return ReadClubGroups(directory=directory, rows=rows)
+
+
+ReadClubGroupsDep = Annotated[ReadClubGroups, Depends(get_read_club_groups)]
+
+
+def get_hand_over_official_group(
+    groups: GroupRepositoryDep,
+    directory: GroupDirectoryDep,
+    administrators: GroupAdministratorsDep,
+    rows: ClubGroupRowsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> HandOverOfficialGroup:
+    return HandOverOfficialGroup(
+        groups=groups,
+        directory=directory,
+        administrators=administrators,
+        rows=rows,
+        uow=uow,
+        clock=clock,
+    )
+
+
+HandOverOfficialGroupDep = Annotated[
+    HandOverOfficialGroup, Depends(get_hand_over_official_group)
 ]

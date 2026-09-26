@@ -23,6 +23,7 @@ from app.modules.groups.domain.errors import (
     WhatsAppSizeInvalid,
 )
 from app.modules.groups.domain.events import (
+    AdministratorAssigned,
     GroupJoined,
     GroupLeft,
     GroupRenamed,
@@ -52,6 +53,9 @@ MARTA = uuid4()
 MARTA_ACCOUNT = uuid4()
 #: A colleague's administratorship at the same club.
 OLA = uuid4()
+OLA_ACCOUNT = uuid4()
+#: The club account at the desk, which hands a group over.
+DESK = uuid4()
 MICHAL = uuid4()
 KASIA = uuid4()
 
@@ -172,6 +176,25 @@ def test_the_stream_folds_back_into_the_same_group():
 @pytest.mark.parametrize("size", [2, 48, 1024])
 def test_a_whatsapp_size_is_a_whole_number_from_two_to_1024(size):
     assert WhatsAppSize(size).value == size
+
+
+@pytest.mark.parametrize(
+    ("players", "size", "percent"),
+    [
+        (11, 48, 23),
+        (38, 48, 79),
+        (8, 30, 27),
+        # A half is rounded up.
+        (1, 8, 13),
+        (0, 48, 0),
+        (48, 48, 100),
+        # Never capped: the club sees the real figure.
+        (52, 48, 108),
+        (3, 2, 150),
+    ],
+)
+def test_the_club_s_from_whatsapp_figure_is_a_whole_percent(players, size, percent):
+    assert WhatsAppSize(size).percent_arrived(players) == percent
 
 
 @pytest.mark.parametrize("size", [-1, 0, 1, 1025, True, 48.0])
@@ -430,3 +453,92 @@ def test_the_last_member_leaves_an_official_group_and_it_stays():
     assert isinstance(left, GroupLeft)
     assert group.members == {}
     assert not group.is_deleted
+
+
+# --------------------------------------------------------------------------- #
+# The handover
+# --------------------------------------------------------------------------- #
+
+
+def test_the_club_hands_it_over_and_only_who_answers_changes():
+    group = ogrody_33_club()
+    group.join(MICHAL, occurred_at=NOW)
+    group.join(KASIA, occurred_at=NOW)
+    group.approve(KASIA, occurred_at=NOW, **answered_by_marta())
+    group.join(MARTA_ACCOUNT, occurred_at=NOW, runs_it=True)
+    group.pull_events()
+
+    group.assign_administrator(OLA, by=DESK, occurred_at=LATER)
+
+    (assigned,) = group.pull_events()
+    assert assigned == AdministratorAssigned(
+        group_id=group.id, administrator_id=OLA, assigned_by=DESK, occurred_at=LATER
+    )
+    assert group.administrator_id == OLA
+    # The request waits on the group, and nobody left it.
+    assert list(group.waiting) == [MICHAL]
+    assert list(group.members) == [KASIA, MARTA_ACCOUNT]
+    assert group.code == GroupCode("ab3de7fg")
+    assert group.join_policy is JoinPolicy.PEOPLE_I_APPROVE
+    assert group.whatsapp_size == WhatsAppSize(48)
+
+
+def test_after_a_handover_the_new_administrator_answers_and_the_old_one_cannot():
+    group = ogrody_33_club()
+    group.join(MICHAL, occurred_at=NOW)
+    group.assign_administrator(OLA, by=DESK, occurred_at=LATER)
+    group.pull_events()
+
+    with pytest.raises(NotTheGroupOwner):
+        group.approve(MICHAL, occurred_at=LATER, **answered_by_marta())
+    group.approve(MICHAL, by=OLA_ACCOUNT, as_administrator=OLA, occurred_at=LATER)
+
+    (approved,) = group.pull_events()
+    assert approved == JoinRequestApproved(
+        group_id=group.id, player_id=MICHAL, approved_by=OLA_ACCOUNT, occurred_at=LATER
+    )
+
+
+def test_handing_it_to_whoever_runs_it_already_records_nothing():
+    group = ogrody_33_club()
+
+    group.assign_administrator(MARTA, by=DESK, occurred_at=LATER)
+
+    assert group.pull_events() == []
+
+
+def test_the_handover_folds_back_out_of_the_stream():
+    group = ogrody_33_club()
+    created = Group.create_official_group(
+        group_id=group.id,
+        name=GroupName("Ogrody 33 Club"),
+        club_id=CLUB,
+        join_policy=JoinPolicy.PEOPLE_I_APPROVE,
+        administrator_id=MARTA,
+        created_by=MARTA_ACCOUNT,
+        whatsapp_size=WhatsAppSize(48),
+        sports=DeclaredSports.of([Sport.PADEL]),
+        code=GroupCode("ab3de7fg"),
+        occurred_at=NOW,
+    ).pull_events()
+    group.assign_administrator(OLA, by=DESK, occurred_at=LATER)
+
+    replayed = Group.from_history([*created, *group.pull_events()])
+
+    assert replayed.administrator_id == OLA
+    assert replayed.version == 2
+
+
+def test_a_player_group_is_never_handed_over():
+    group = Group.create_player_group(
+        group_id=uuid4(),
+        name=GroupName("Kazimierz crew"),
+        home_club_id=CLUB,
+        join_policy=JoinPolicy.ANYONE,
+        owner_id=MICHAL,
+        code=GroupCode("ab3de7fg"),
+        occurred_at=NOW,
+    )
+
+    with pytest.raises(InvariantViolated):
+        group.assign_administrator(OLA, by=DESK, occurred_at=LATER)

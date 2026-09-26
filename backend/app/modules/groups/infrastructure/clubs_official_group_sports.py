@@ -22,11 +22,10 @@ class GroupsOfficialGroupSports:
         self._directory = directory
 
     async def declared_at(self, club_id: UUID) -> Sequence[DeclaringGroup]:
-        listings = (await self._directory.listings_at([club_id])).get(club_id, ())
         return [
             DeclaringGroup(
                 name=listing.name.value, sports=listing.declared_sports.sports
             )
-            for listing in listings
-            if listing.is_official and listing.declared_sports is not None
+            for listing in await self._directory.official_at(club_id)
+            if listing.declared_sports is not None
         ]

@@ -10,6 +10,7 @@ transaction (``docs/adr/0186`` §2).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 from app.application.ports import UnitOfWork
@@ -22,6 +23,7 @@ from app.modules.administrators.application.sending import (
     InvitationSender,
 )
 from app.modules.administrators.application.views import (
+    AdministratorGroup,
     AdministratorRow,
     listing_of,
     row_of,
@@ -40,6 +42,8 @@ from app.modules.administrators.domain.ports import (
     AccountHolders,
     AdministratorDirectory,
     AdministratorRepository,
+    AssignedGroup,
+    OfficialGroupAssignments,
 )
 from app.modules.auth.application.sign_out_everywhere import SignOutEverywhere
 from app.modules.users.domain.errors import EmailInvalid
@@ -118,17 +122,20 @@ class InviteAdministrator:
 
 
 class ListClubAdministrators:
-    """The club's Administrators table: everybody not removed, by name."""
+    """The club's Administrators table: everybody not removed, by name — each
+    active one with the official groups they run, by name."""
 
     def __init__(
         self,
         *,
         directory: AdministratorDirectory,
         accounts: AccountHolders,
+        groups: OfficialGroupAssignments,
         clock: Clock,
     ) -> None:
         self._directory = directory
         self._accounts = accounts
+        self._groups = groups
         self._clock = clock
 
     async def execute(self, club_id: UUID) -> list[AdministratorRow]:
@@ -137,10 +144,32 @@ class ListClubAdministrators:
             await self._directory.of_club(club_id),
             key=lambda listing: (listing.name.casefold(), listing.email, listing.id),
         )
+        assigned = _by_administrator(await self._groups.assigned_at(club_id))
         return [
-            await row_of(listing, now=now, accounts=self._accounts)
+            await row_of(
+                listing,
+                now=now,
+                accounts=self._accounts,
+                groups=assigned.get(listing.id, ()),
+            )
             for listing in listings
         ]
+
+
+def _by_administrator(
+    assigned: Sequence[AssignedGroup],
+) -> dict[UUID, list[AdministratorGroup]]:
+    """Each administratorship's groups, **by name** — a dropdown a desk scans
+    for one it knows — and by id where two share a name, which groups may."""
+
+    by_administrator: dict[UUID, list[AdministratorGroup]] = {}
+    for group in sorted(
+        assigned, key=lambda group: (group.name.casefold(), str(group.id))
+    ):
+        by_administrator.setdefault(group.administrator_id, []).append(
+            AdministratorGroup(id=group.id, name=group.name)
+        )
+    return by_administrator
 
 
 class ResendInvitation:

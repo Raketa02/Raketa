@@ -84,6 +84,7 @@ from app.modules.administrators.domain.ports import (
     AdministratorRepository,
     ClubNames,
     InvitationLinks,
+    OfficialGroupAssignments,
 )
 from app.modules.administrators.infrastructure.clubs_club_names import (
     ClubsClubNames,
@@ -151,6 +152,7 @@ from app.modules.clubs.infrastructure.sqlalchemy_club_directory import (
 from app.modules.games.application.call_off_game import CallOffGame
 from app.modules.groups.domain.ports import (
     GroupAdministrators,
+    GroupBornGames,
     GroupCodeMinter,
     GroupDirectory,
     GroupFaces,
@@ -164,6 +166,9 @@ from app.modules.groups.domain.ports import (
 from app.modules.groups.infrastructure.administrators_group_administrators import (
     AdministratorsGroupAdministrators,
 )
+from app.modules.groups.infrastructure.administrators_official_group_assignments import (  # noqa: E501
+    GroupsOfficialGroupAssignments,
+)
 from app.modules.groups.infrastructure.blocks_hidden_members import (
     BlocksHiddenMembers,
 )
@@ -174,6 +179,7 @@ from app.modules.groups.infrastructure.clubs_official_group_sports import (
 from app.modules.groups.infrastructure.event_sourced_group_repository import (
     EventSourcedGroupRepository,
 )
+from app.modules.groups.infrastructure.no_group_born_games import NoGroupBornGames
 from app.modules.groups.infrastructure.profile_group_faces import ProfileGroupFaces
 from app.modules.groups.infrastructure.profile_reader_areas import ProfileReaderAreas
 from app.modules.groups.infrastructure.published_group_member_scores import (
@@ -764,6 +770,15 @@ def build_club_names(session: AsyncSession) -> ClubNames:
     return ClubsClubNames(build_club_directory(session))
 
 
+def build_official_group_assignments(
+    session: AsyncSession,
+) -> OfficialGroupAssignments:
+    """Which official groups each Administrator was given — the Administrators
+    table's *groups* column — answered by the Groups context over its own
+    directory, so the arrow runs ``groups → administrators`` only (#510)."""
+    return GroupsOfficialGroupAssignments(build_group_directory(session))
+
+
 def build_invitation_sender(
     session: AsyncSession,
     settings: Settings,
@@ -871,6 +886,13 @@ def build_group_administrators(session: AsyncSession) -> GroupAdministrators:
     active — so a removal takes a group from its administrator on the next read
     (``docs/adr/0184`` §7)."""
     return AdministratorsGroupAdministrators(build_administrator_directory(session))
+
+
+def build_group_born_games() -> GroupBornGames:
+    """The club's *Games* figure: games born in a group, of which there are none
+    while no group picks a game (``docs/adr/0183`` §11) — so nought, and the
+    day one can, an adapter over those games is built here instead."""
+    return NoGroupBornGames()
 
 
 def build_reader_areas(

@@ -12,6 +12,7 @@ import logging
 
 from app.application.events import DeliveryContext
 from app.modules.groups.domain.events import (
+    AdministratorAssigned,
     GroupDeleted,
     GroupJoined,
     GroupLeft,
@@ -79,6 +80,21 @@ class LogSportsDeclared:
             "groups.sports.declared",
             extra={
                 "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogAdministratorAssigned:
+    async def __call__(
+        self, event: AdministratorAssigned, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "groups.administrator.assigned",
+            extra={
+                "group_id": str(event.group_id),
+                "administrator_id": str(event.administrator_id),
                 "event_id": str(context.event_id),
                 "attempt": context.attempt,
             },

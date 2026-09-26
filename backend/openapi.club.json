@@ -736,6 +736,112 @@
           }
         }
       }
+    },
+    "/api/v1/club/groups": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "The club's official groups, and how much of each WhatsApp crowd arrived",
+        "description": "*Official groups at [club]*: each one's name and monogram, who runs it \u2014 or `null`, *needs an administrator* \u2014 its players and how many are waiting, *From WhatsApp* as players of the WhatsApp group's size, and how many games it gave birth to. By name.",
+        "operationId": "club_groups_api_v1_club_groups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubGroupsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/groups/{group_id}/administrator": {
+      "put": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Hand an official group over to one of the club's administrators",
+        "description": "Any official group of the club, **one that needs an administrator included**, to any **active** Administrator. Only who answers changes: the link, who can join, the WhatsApp size, the players and **the requests waiting** all stay, and the new Administrator finds them. The previous one stops seeing it \u2014 and stays in it if they joined it as a player. Handing it to whoever runs it changes nothing. Answers the group's row as the table now reads it.",
+        "operationId": "hand_over_api_v1_club_groups__group_id__administrator_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandOverRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubGroupSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 not an official group of this club: no such group, a player group whose home club this is, or another club's. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`administrator_not_active` \u2014 the one chosen is not an active Administrator of this club: still invited, expired, removed, another club's, or nobody. Nothing was recorded; choose again from the Administrators table as it stands.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -828,7 +934,7 @@
             },
             "type": "array",
             "title": "Groups",
-            "description": "The official groups this administrator runs. Empty until official groups exist."
+            "description": "The official groups this administrator runs now, by name \u2014 the row's dropdown. **Only on an `ACTIVE` row**: empty for somebody invited, expired or put back to invited by *Reset password*, whose groups read *needs an administrator* on the Groups table meanwhile."
           },
           "can_reset_password": {
             "type": "boolean",
@@ -988,6 +1094,111 @@
         "title": "ClubDetailsResponse",
         "description": "A club as the desk sees it."
       },
+      "ClubGroupAdministratorSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "The administratorship \u2014 the `id` of their row on the Administrators table, and what a handover names."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "**The name the club gave them**, whole \u2014 the one its Administrators table prints beside the same person."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ClubGroupAdministratorSchema",
+        "description": "The Administrator running a group, as the club's own tables name them."
+      },
+      "ClubGroupSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "administrator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClubGroupAdministratorSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who runs it now. **`null` while it needs an administrator** \u2014 the club removed whoever ran it, and nobody has been handed it: players read *[club] approves joins* and its requests wait, until a handover."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "*Players*: every Group member \u2014 an Administrator who joined it as a player included. **The same number the group page shows**, whoever reads it."
+          },
+          "waiting_count": {
+            "type": "integer",
+            "title": "Waiting Count",
+            "description": "How many Join requests are waiting \u2014 the amber *N waiting*. `0` when nobody is."
+          },
+          "whatsapp_size": {
+            "type": "integer",
+            "title": "Whatsapp Size",
+            "description": "How many people the WhatsApp group it mirrors has \u2014 *of 48*."
+          },
+          "whatsapp_percent": {
+            "type": "integer",
+            "title": "Whatsapp Percent",
+            "description": "*From WhatsApp*: `member_count` over `whatsapp_size`, as a whole percent rounded half up \u2014 *11 of 48 \u00b7 23%*. **Never capped**: more players than the WhatsApp group has is the real figure, *52 of 48 \u00b7 108%*, and the bar is drawn full."
+          },
+          "games": {
+            "type": "integer",
+            "title": "Games",
+            "description": "How many games **the group gave birth to** \u2014 never a game two of its members arranged elsewhere. No group picks a game yet, so `0`; the day one can, it counts them and means the same."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "monogram",
+          "administrator",
+          "member_count",
+          "waiting_count",
+          "whatsapp_size",
+          "whatsapp_percent",
+          "games"
+        ],
+        "title": "ClubGroupSchema",
+        "description": "One row of the club's Groups table: an official group at the club."
+      },
+      "ClubGroupsResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ClubGroupSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "**Every official group at the club**, whoever runs it or nobody, by name. A player group whose home club this is is not the club's, and is never here. Empty before an Administrator makes the first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups"
+        ],
+        "title": "ClubGroupsResponse"
+      },
       "ClubSignUpRequest": {
         "properties": {
           "name": {
@@ -1115,6 +1326,22 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HandOverRequest": {
+        "properties": {
+          "administrator_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Administrator Id",
+            "description": "An **active** Administrator of the club \u2014 the `id` of an `ACTIVE` row on the Administrators table. Anybody else is `409 administrator_not_active`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "administrator_id"
+        ],
+        "title": "HandOverRequest",
+        "description": "*Hand over*: who the club chose."
+      },
       "InviteAdministratorRequest": {
         "properties": {
           "name": {
@@ -1204,6 +1431,29 @@
         ],
         "title": "MapPointSchema",
         "description": "Where the club is: the pin as the desk dropped it, never rounded."
+      },
+      "MonogramSchema": {
+        "properties": {
+          "letters": {
+            "type": "string",
+            "title": "Letters",
+            "description": "The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes \u2014 never change its case."
+          },
+          "colour": {
+            "type": "integer",
+            "exclusiveMaximum": 8.0,
+            "minimum": 0.0,
+            "title": "Colour",
+            "description": "A colour **key** from 0 to 7, fixed for the group for ever \u2014 derived from its id, so a rename keeps it. Map it to your own palette; the backend never names a colour."
+          }
+        },
+        "type": "object",
+        "required": [
+          "letters",
+          "colour"
+        ],
+        "title": "MonogramSchema",
+        "description": "The group's tile, **cut by the backend** so every client draws the same\none (``docs/adr/0183`` \u00a75)."
       },
       "NewPasswordRequest": {
         "properties": {

@@ -5,11 +5,14 @@
 and the directory that reads it back — and writes the one thing on it no event
 carries, *last used* (``docs/adr/0184`` §1).
 
-**The other two are demands on contexts it does not write.** The account an
+**The other three are demands on contexts it does not write.** The account an
 administratorship belongs to is a User, and everything done to one — opened by
 an invitation, its password set or cleared, whether it acts as a player — is
 done by ``users`` on its own stream (``AccountHolders``). A club's name is read
-off the clubs' published directory (``ClubNames``).
+off the clubs' published directory (``ClubNames``). And which official groups
+each Administrator was given is a fact about groups (``OfficialGroupAssignments``)
+— declared here and **signed in ``groups/infrastructure/``**, because ``groups``
+already reads this context and an adapter here would point the arrow back.
 """
 
 from __future__ import annotations
@@ -175,6 +178,30 @@ class ClubNames(Protocol):
 
     async def names_of(self, club_ids: Collection[UUID]) -> Mapping[UUID, str]:
         """Each of these clubs' names. A club that does not exist is absent."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class AssignedGroup:
+    """An official group at a club, and the Administrator it was last given
+    to — at its creation, or by the club's latest handover."""
+
+    id: UUID
+    name: str
+    administrator_id: UUID
+
+
+@runtime_checkable
+class OfficialGroupAssignments(Protocol):
+    """Which of a club's official groups are given to which of its
+    Administrators — the Administrators table's *groups* column (#510)."""
+
+    async def assigned_at(self, club_id: UUID) -> Sequence[AssignedGroup]:
+        """Every official group at this club and whom it names, in no
+        particular order — **one naming an administratorship that is no longer
+        active included**: whether a group is still run by whom it names is
+        this context's to decide (``docs/adr/0184`` §7), never the answer's."""
         ...
 
 

@@ -15,7 +15,9 @@ home-club search and join search both answer ``ClubCardSchema``.
 **Every row says its kind** (``docs/adr/0183`` §1), so a client never reads an
 official group as a player group with a null where its Owner would be. The
 administrator's shapes — the Groups tab, an official group's page and its
-settings — are at the end, on the administrator surface's paths.
+settings — come after the player's, on the administrator surface's paths; and
+the club's — its Groups table and the handover — are last, on the club
+surface's (#510).
 """
 
 from __future__ import annotations
@@ -27,6 +29,10 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.kernel import Sport
+from app.modules.groups.application.club_groups import (
+    ClubGroupRow,
+    ClubGroupAdministrator,
+)
 from app.modules.groups.application.official_groups import (
     AdministeredClub,
     AdministeredGroupCard,
@@ -808,3 +814,120 @@ class SavedSettingsResponse(BaseModel):
             ),
             admitted=[GroupPersonSchema.from_view(face) for face in saved.admitted],
         )
+
+
+# --------------------------------------------------------------------------- #
+# The club surface: its Groups table and the handover (#510)
+# --------------------------------------------------------------------------- #
+
+
+class ClubGroupAdministratorSchema(BaseModel):
+    """The Administrator running a group, as the club's own tables name them."""
+
+    id: UUID = Field(
+        description=(
+            "The administratorship — the `id` of their row on the Administrators "
+            "table, and what a handover names."
+        )
+    )
+    name: str = Field(
+        description=(
+            "**The name the club gave them**, whole — the one its Administrators "
+            "table prints beside the same person."
+        )
+    )
+
+    @classmethod
+    def from_view(
+        cls, runner: ClubGroupAdministrator
+    ) -> "ClubGroupAdministratorSchema":
+        return cls(id=runner.id, name=runner.name)
+
+
+class ClubGroupSchema(BaseModel):
+    """One row of the club's Groups table: an official group at the club."""
+
+    id: UUID
+    name: str
+    monogram: MonogramSchema
+    administrator: ClubGroupAdministratorSchema | None = Field(
+        description=(
+            "Who runs it now. **`null` while it needs an administrator** — the "
+            "club removed whoever ran it, and nobody has been handed it: players "
+            "read *[club] approves joins* and its requests wait, until a "
+            "handover."
+        )
+    )
+    member_count: int = Field(
+        description=(
+            "*Players*: every Group member — an Administrator who joined it as a "
+            "player included. **The same number the group page shows**, whoever "
+            "reads it."
+        )
+    )
+    waiting_count: int = Field(
+        description=(
+            "How many Join requests are waiting — the amber *N waiting*. `0` "
+            "when nobody is."
+        )
+    )
+    whatsapp_size: int = Field(
+        description="How many people the WhatsApp group it mirrors has — *of 48*."
+    )
+    whatsapp_percent: int = Field(
+        description=(
+            "*From WhatsApp*: `member_count` over `whatsapp_size`, as a whole "
+            "percent rounded half up — *11 of 48 · 23%*. **Never capped**: more "
+            "players than the WhatsApp group has is the real figure, *52 of 48 · "
+            "108%*, and the bar is drawn full."
+        )
+    )
+    games: int = Field(
+        description=(
+            "How many games **the group gave birth to** — never a game two of its "
+            "members arranged elsewhere. No group picks a game yet, so `0`; the "
+            "day one can, it counts them and means the same."
+        )
+    )
+
+    @classmethod
+    def from_view(cls, row: ClubGroupRow) -> "ClubGroupSchema":
+        return cls(
+            id=row.id,
+            name=row.name,
+            monogram=MonogramSchema(
+                letters=row.monogram.letters, colour=row.monogram.colour
+            ),
+            administrator=(
+                None
+                if row.administrator is None
+                else ClubGroupAdministratorSchema.from_view(row.administrator)
+            ),
+            member_count=row.member_count,
+            waiting_count=row.waiting_count,
+            whatsapp_size=row.whatsapp_size,
+            whatsapp_percent=row.whatsapp_percent,
+            games=row.games,
+        )
+
+
+class ClubGroupsResponse(BaseModel):
+    groups: list[ClubGroupSchema] = Field(
+        description=(
+            "**Every official group at the club**, whoever runs it or nobody, by "
+            "name. A player group whose home club this is is not the club's, and "
+            "is never here. Empty before an Administrator makes the first."
+        )
+    )
+
+
+class HandOverRequest(BaseModel):
+    """*Hand over*: who the club chose."""
+
+    administrator_id: UUID = Field(
+        description=(
+            "An **active** Administrator of the club — the `id` of an `ACTIVE` "
+            "row on the Administrators table. Anybody else is "
+            "`409 administrator_not_active`."
+        )
+    )

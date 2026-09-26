@@ -137,3 +137,15 @@ class AnswerAsAdministratorCommand:
     administering: Administering
     group_id: UUID
     player_id: UUID
+
+
+@dataclass(frozen=True)
+class HandOverCommand:
+    """The club hands one of its official groups to one of its Administrators.
+    ``club_id`` and ``assigned_by`` come from the club's session, never from
+    the body; ``administrator_id`` is who they chose."""
+
+    club_id: UUID
+    assigned_by: UUID
+    group_id: UUID
+    administrator_id: UUID

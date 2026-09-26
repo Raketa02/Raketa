@@ -1,4 +1,5 @@
 from app.modules.groups.application.handlers.log_group_events import (
+    LogAdministratorAssigned,
     LogGroupDeleted,
     LogGroupJoined,
     LogGroupLeft,
@@ -15,6 +16,7 @@ from app.modules.groups.application.handlers.log_group_events import (
 )
 
 __all__ = [
+    "LogAdministratorAssigned",
     "LogGroupDeleted",
     "LogGroupJoined",
     "LogGroupLeft",

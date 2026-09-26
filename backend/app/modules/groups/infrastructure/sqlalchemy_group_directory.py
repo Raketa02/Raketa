@@ -86,6 +86,17 @@ class SqlAlchemyGroupDirectory:
             return None
         return (await self._listed([row]))[row.id]
 
+    async def official_at(self, club_id: UUID) -> Sequence[GroupListing]:
+        rows = (
+            await self._session.scalars(
+                select(GroupORM).where(
+                    GroupORM.home_club_id == club_id,
+                    GroupORM.kind == GroupKind.OFFICIAL.value,
+                )
+            )
+        ).all()
+        return list((await self._listed(rows)).values())
+
     async def run_by(self, administrator_id: UUID) -> Sequence[GroupListing]:
         rows = (
             await self._session.scalars(

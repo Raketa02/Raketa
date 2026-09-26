@@ -100,6 +100,15 @@ class WhatsAppSize:
         ):
             raise WhatsAppSizeInvalid()
 
+    def percent_arrived(self, players: int) -> int:
+        """The club's *From WhatsApp* figure: how much of the WhatsApp group is
+        in the group, as a whole percent **rounded half up** — *11 of 48* is
+        23, *1 of 8* is 13 — and **never capped**: *52 of 48* is 108, because
+        the club sees the real figure (``docs/adr/0183`` §3). Whole-number
+        arithmetic, so no float decides which side of a half a figure lands."""
+
+        return (200 * players + self.value) // (2 * self.value)
+
 
 @dataclass(frozen=True, slots=True)
 class DeclaredSports:

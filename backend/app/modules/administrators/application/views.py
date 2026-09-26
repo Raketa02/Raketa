@@ -5,6 +5,13 @@ profile was last used, *invited* with when it expires, *expired* with when it
 did. And whether the club may reset this person's password — only for an
 account holding nothing but administrator profiles (§6) — so the website draws
 *Reset password* exactly where the backend would allow it.
+
+**The groups a row names are the ones that person runs now** (#510): the
+official groups given to them, and only while they are *active* — the rule the
+player side's *approves joins* line and the club's Groups table read by. A
+removed person has no row; one the club's reset put back to *invited* runs
+nothing until they have set their password again, and their groups read *needs
+an administrator* on the Groups table meanwhile.
 """
 
 from __future__ import annotations
@@ -29,8 +36,8 @@ from app.modules.administrators.domain.ports import (
 @final
 @dataclass(frozen=True, slots=True)
 class AdministratorGroup:
-    """An official group an administrator runs. None exist yet: official
-    groups arrive with #509, and the list names them with #510."""
+    """An official group an administrator runs — a name in the row's
+    dropdown."""
 
     id: UUID
     name: str
@@ -69,10 +76,16 @@ def listing_of(administrator: Administrator) -> AdministratorListing:
 
 
 async def row_of(
-    listing: AdministratorListing, *, now: Instant, accounts: AccountHolders
+    listing: AdministratorListing,
+    *,
+    now: Instant,
+    accounts: AccountHolders,
+    groups: Sequence[AdministratorGroup] = (),
 ) -> AdministratorRow:
     """One row, now. *Can reset* costs one read of the account per row that
-    has one — a club's staff is a handful of people."""
+    has one — a club's staff is a handful of people. ``groups`` is every
+    official group that names this administratorship, and the row names them
+    **only while it is active**."""
 
     active = listing.state is AdministratorState.ACTIVE
     return AdministratorRow(
@@ -86,4 +99,5 @@ async def row_of(
             listing.account_id is not None
             and not await accounts.acts_as_player(listing.account_id)
         ),
+        groups=tuple(groups) if active else (),
     )

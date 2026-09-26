@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.application.events import EventCatalog, EventDispatcher
 from app.modules.groups.application.handlers import (
+    LogAdministratorAssigned,
     LogGroupDeleted,
     LogGroupJoined,
     LogGroupLeft,
@@ -17,6 +18,7 @@ from app.modules.groups.application.handlers import (
     LogWhatsAppSizeSet,
 )
 from app.modules.groups.domain.events import (
+    AdministratorAssigned,
     GroupDeleted,
     GroupJoined,
     GroupLeft,
@@ -53,6 +55,9 @@ def register_group_events(catalog: EventCatalog) -> None:
     )
     catalog.register(WhatsAppSizeSet, name="groups.whatsapp_size_set", version=1)
     catalog.register(SportsDeclared, name="groups.sports_declared", version=1)
+    catalog.register(
+        AdministratorAssigned, name="groups.administrator_assigned", version=1
+    )
 
 
 def subscribe_group_handlers(dispatcher: EventDispatcher) -> None:
@@ -69,3 +74,4 @@ def subscribe_group_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(OfficialGroupCreated, LogOfficialGroupCreated())
     dispatcher.subscribe(WhatsAppSizeSet, LogWhatsAppSizeSet())
     dispatcher.subscribe(SportsDeclared, LogSportsDeclared())
+    dispatcher.subscribe(AdministratorAssigned, LogAdministratorAssigned())

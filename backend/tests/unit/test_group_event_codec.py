@@ -18,6 +18,7 @@ from app.application.events.envelope import SerializedEventEnvelope
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.groups.application.event_subscriptions import register_group_events
 from app.modules.groups.domain.events import (
+    AdministratorAssigned,
     GroupDeleted,
     GroupJoined,
     GroupLeft,
@@ -81,6 +82,9 @@ EVENTS = [
     SportsDeclared(
         group_id=GROUP, sports=("PADEL",), declared_by=OWNER, occurred_at=NOW
     ),
+    AdministratorAssigned(
+        group_id=GROUP, administrator_id=uuid4(), assigned_by=uuid4(), occurred_at=NOW
+    ),
 ]
 
 
@@ -125,4 +129,5 @@ def test_each_event_is_filed_under_its_own_name_in_the_groups_namespace():
         ("groups.official_group_created", 1),
         ("groups.whatsapp_size_set", 1),
         ("groups.sports_declared", 1),
+        ("groups.administrator_assigned", 1),
     ]

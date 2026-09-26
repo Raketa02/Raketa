@@ -168,3 +168,22 @@ class GroupHasOtherMembers(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("a group other people are in cannot be deleted")
+
+
+class AdministratorNotActive(ConflictError):
+    """The club handed a group to somebody who is not an **active**
+    Administrator of the club (``docs/adr/0183`` §8): still invited, expired,
+    removed, another club's, or nobody at all.
+
+    **One refusal for all five**, because the Hand over page offers only the
+    club's active Administrators and every one of them has one remedy — choose
+    again from the list as it stands now. Reached by a list that went stale
+    between drawing and the tap: the person was removed, or their password
+    reset, in the meantime. Nothing was recorded."""
+
+    code = "administrator_not_active"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "a group is handed only to an active administrator of the club"
+        )

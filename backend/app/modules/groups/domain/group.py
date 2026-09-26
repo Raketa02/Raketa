@@ -4,10 +4,11 @@
 membership, the join policy and its requests, both searches and the whole page,
 and two aggregates would be two copies of every shared rule. They differ in
 three places, and each rule below says which kind it binds (#509): **who
-answers** — a player group's Owner, an official group's Administrator — **where
-the sports come from** — an official group declares them — and **whether the
-one who runs it can delete or leave it** — an official group's Administrator
-can do neither, because running it is not membership (§7).
+answers** — a player group's Owner, an official group's Administrator, whom
+only the club changes (#510) — **where the sports come from** — an official
+group declares them — and **whether the one who runs it can delete or leave
+it** — an official group's Administrator can do neither, because running it is
+not membership (§7).
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ from app.modules.groups.domain.errors import (
     NotTheGroupOwner,
 )
 from app.modules.groups.domain.events import (
+    AdministratorAssigned,
     GroupDeleted,
     GroupJoined,
     GroupLeft,
@@ -459,6 +461,36 @@ class Group:
             )
         )
 
+    def assign_administrator(
+        self, administrator_id: UUID, *, by: UUID, occurred_at: datetime
+    ) -> None:
+        """The club hands an official group to one of its Administrators
+        (``docs/adr/0183`` §8) — any group, including one whose administrator
+        it removed. **Only who answers changes**: the link, the policy, the
+        size, the members and the requests waiting all stay, and the new
+        Administrator simply finds them; somebody the old one let in as a
+        player stays in. ``by`` is the Club account.
+
+        That the new Administrator is an **active** one of this group's club,
+        and that it is the club's group, are the use case's to have checked —
+        facts about administrators and the club asking. Handing it to whoever
+        runs it already records nothing. **Official groups only.**"""
+
+        invariant(
+            self.kind is GroupKind.OFFICIAL,
+            "only an official group is run by an Administrator",
+        )
+        if administrator_id == self.administrator_id:
+            return
+        self._record_that(
+            AdministratorAssigned(
+                group_id=self.id,
+                administrator_id=administrator_id,
+                assigned_by=by,
+                occurred_at=occurred_at,
+            )
+        )
+
     def delete(self, *, by: UUID, occurred_at: datetime) -> None:
         """The Owner taps *Delete the group* (``docs/adr/0183`` §7) — **only
         while they are its only member**, which undoes a group nobody joined and
@@ -528,6 +560,8 @@ class Group:
             self.whatsapp_size = WhatsAppSize(event.whatsapp_size)
         elif isinstance(event, SportsDeclared):
             self.declared_sports = DeclaredSports.from_codes(event.sports)
+        elif isinstance(event, AdministratorAssigned):
+            self.administrator_id = event.administrator_id
         elif isinstance(event, GroupJoined):
             self.members[event.player_id] = event.occurred_at
         elif isinstance(event, JoinRequested):

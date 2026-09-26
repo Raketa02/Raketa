@@ -532,6 +532,23 @@ forbidden_modules =
     app.modules.groups
 allow_indirect_imports = true
 
+# Nor does an administratorship know which groups it runs. `groups` reads
+# `administrators` — who runs an official group now, the guard every
+# administrator operation passes — and the one thing `administrators` asks back,
+# *which groups was each Administrator given* (the club's Administrators table
+# names them, #510), is a port declared in `administrators`' own words and
+# **signed in `groups/infrastructure/`**, exactly as clubs' sports question is.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:administrators-does-not-know-groups]
+name = The Administrators context does not import Groups
+type = forbidden
+source_modules =
+    app.modules.administrators
+forbidden_modules =
+    app.modules.groups
+allow_indirect_imports = true
+
 # The player record is an **assembler**: it stores nothing, and every fact on the
 # sheet it draws is somebody else's (docs/adr/0159). That makes it the one context
 # on this platform whose domain and application layers have a standing reason to

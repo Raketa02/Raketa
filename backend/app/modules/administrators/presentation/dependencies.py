@@ -27,6 +27,7 @@ from app.bootstrap.composition import (
     build_administrator_repository,
     build_club_names,
     build_invitation_sender,
+    build_official_group_assignments,
 )
 from app.modules.administrators.application.administratorship import (
     ActiveAdministratorship,
@@ -53,6 +54,7 @@ from app.modules.administrators.domain.ports import (
     AdministratorListing,
     AdministratorRepository,
     ClubNames,
+    OfficialGroupAssignments,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
 
@@ -131,10 +133,24 @@ InviteAdministratorDep = Annotated[
 ]
 
 
+def get_official_group_assignments(db: DbSession) -> OfficialGroupAssignments:
+    return build_official_group_assignments(db)
+
+
+OfficialGroupAssignmentsDep = Annotated[
+    OfficialGroupAssignments, Depends(get_official_group_assignments)
+]
+
+
 def get_list_club_administrators(
-    directory: AdministratorDirectoryDep, accounts: AccountHoldersDep, clock: ClockDep
+    directory: AdministratorDirectoryDep,
+    accounts: AccountHoldersDep,
+    groups: OfficialGroupAssignmentsDep,
+    clock: ClockDep,
 ) -> ListClubAdministrators:
-    return ListClubAdministrators(directory=directory, accounts=accounts, clock=clock)
+    return ListClubAdministrators(
+        directory=directory, accounts=accounts, groups=groups, clock=clock
+    )
 
 
 ListClubAdministratorsDep = Annotated[

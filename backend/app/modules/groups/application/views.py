@@ -254,15 +254,22 @@ async def running_administrators(
     }
 
 
+async def runner_of(
+    administrators: GroupAdministrators, administrator_id: UUID
+) -> RunningAdministrator | None:
+    """This Administrator while their administratorship is active, or
+    ``None`` once it is not."""
+
+    return (await administrators.running([administrator_id])).get(administrator_id)
+
+
 async def account_running(
     administrators: GroupAdministrators, administrator_id: UUID
 ) -> UUID | None:
     """The account behind this Administrator while their administratorship is
     active, or ``None`` once it is not."""
 
-    runner = (await administrators.running([administrator_id])).get(
-        administrator_id
-    )
+    runner = await runner_of(administrators, administrator_id)
     return None if runner is None else runner.account_id
 
 

@@ -8,8 +8,8 @@ the longest-standing member, the Owner **renames** it, **changes who can join**
 and, alone in it, **deletes** it (#506); and an Administrator **creates an
 official group**, **sets its WhatsApp size** and **declares its sports** again
 (#509) — answering, renaming and changing who can join with the events a player
-group's Owner already writes. The handover is its own event and arrives with
-the ticket that needs it (#510).
+group's Owner already writes; and the club **hands an official group over** to
+another of its Administrators (#510).
 
 **Each kind is created by its own event**, because every rule that differs by
 kind has to say so in its own words and none may be inferred from a null
@@ -23,7 +23,9 @@ appended.
 
 **Every ``*_by`` is an account** — the person who tapped, a User's id — on both
 kinds: on an official group it is the account behind its Administrator, so the
-history says who let somebody in, as it does on a player group.
+history says who let somebody in, as it does on a player group. The one
+exception is the handover's, which the club's desk taps: its ``assigned_by`` is
+a Club account's id.
 """
 
 from __future__ import annotations
@@ -106,6 +108,22 @@ class SportsDeclared:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "sports", tuple(self.sports))
+
+
+@dataclass(frozen=True)
+class AdministratorAssigned:
+    """The club handed an official group to another of its Administrators
+    (``docs/adr/0183`` §8) — any group, one whose administrator it removed
+    included. **Only who answers changes**: the link, the join policy, the
+    WhatsApp size, the members and the requests waiting all stay with the
+    group, and the new Administrator simply finds them. ``administrator_id`` is
+    the administratorship that runs it from this instant; ``assigned_by`` is
+    the Club account that tapped *Hand over*. Official groups only."""
+
+    group_id: UUID
+    administrator_id: UUID
+    assigned_by: UUID
+    occurred_at: datetime
 
 
 @dataclass(frozen=True)

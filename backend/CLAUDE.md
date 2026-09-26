@@ -1260,7 +1260,7 @@ Rules to preserve:
   kinds** (`player_group_created`, `group_joined`, the Join request's three —
   `join_requested`, `join_request_approved`, `join_request_declined` — #506's five:
   `group_left`, `ownership_passed`, `group_renamed`, `join_policy_changed`,
-  `group_deleted` — and #509's three, below); the handover arrives with #510. The
+  `group_deleted` — #509's three, below, and #510's `administrator_assigned`). The
   repository's `save` writes **three projections in the caller's transaction** —
   `groups`, with `name_folded` written from the first event (and again on a rename)
   because SQL cannot fold, `group_members`, whose `joined_version` (the
@@ -1344,8 +1344,8 @@ Rules to preserve:
   branches on `kind`, never on a null**. Four things are load-bearing. **Who runs it is
   read, never held**: `GroupAdministrators` (over the administrators' directory)
   answers the account and the club's name for them **only while the administratorship
-  is active**, so a removal takes the group away on the next read and #510's orphans
-  need no event. That account **joins directly** under *People I approve*
+  is active**, so a removal takes the group away on the next read and an orphan
+  needs no event. That account **joins directly** under *People I approve*
   (`join(runs_it=…)`), comes second on Members with `is_administrator` — the **admin**
   tag — and is `administrator_name` on the approver line: the account's Name, or the
   club's name for an account an invitation opened, never cut. An official group's dots
@@ -1364,6 +1364,28 @@ Rules to preserve:
   after the administrators: Marta's *Ogrody 33 Club* (*People I approve*, 48, padel,
   three players, one waiting) and *Ogrody open play*, run by `rated-in-every-sport`,
   who plays in it.
+  **The club watches its official groups and hands them over, on the club surface**
+  (#510, ADR-0183 §8, §11). `GET /api/v1/club/groups` is the Groups table — every
+  official group at the club, by name: who runs it (`administrator`, the name the club
+  gave them, or `null` — *needs an administrator*), `member_count` (the group's own
+  count, an Administrator who plays included), `waiting_count`, `whatsapp_size` and
+  `whatsapp_percent` (rounded half up by `WhatsAppSize.percent_arrived`, **never
+  capped**), and `games`. **`games` is read through `GroupBornGames`, whose only
+  adapter answers nought** — no group picks a game yet — so the day one can, another
+  adapter answers and the figure keeps its meaning. `PUT …/groups/{id}/administrator`
+  is the handover: one `administrator_assigned` event and nothing else moves — the
+  link, the policy, the size, the members and **the waiting requests**, which the new
+  Administrator simply finds; anything but the club's official group is
+  `group_not_found`, anybody but an **active** Administrator of the club is `409
+  administrator_not_active`, and handing it to whoever runs it records nothing.
+  Because who runs a group stays **read, never held**, two things follow and are
+  pinned: the club's *Reset password* (back to *invited*) leaves that person's groups
+  needing an administrator until they set a new password, and **somebody removed and
+  invited back runs again the groups nobody was handed meanwhile**. The Administrators
+  table's *groups* column is filled on active rows only, through
+  `OfficialGroupAssignments` — administrators' demand, **signed in
+  `groups/infrastructure/`** like clubs' sports question, and held by its own
+  `.importlinter` contract.
 - **A use case never sends email; it writes the mail queue**
   ([ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md)). The
   message is rendered whole — the copy lives with its templates in the backend

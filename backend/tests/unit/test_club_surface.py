@@ -37,6 +37,8 @@ CLUB_OPERATIONS = {
     "post /api/v1/club/administrators/{administrator_id}/invitation",
     "post /api/v1/club/administrators/{administrator_id}/password-reset",
     "delete /api/v1/club/administrators/{administrator_id}",
+    "get /api/v1/club/groups",
+    "put /api/v1/club/groups/{group_id}/administrator",
 }
 
 

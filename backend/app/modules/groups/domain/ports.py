@@ -3,11 +3,12 @@
 **Two ports are this context's own store**: the aggregate repository, whose
 ``save`` writes the groups, group-members and join-requests projections in the
 caller's transaction, and the directory that reads those projections back.
-**The other eight are demands on contexts it does not write** — clubs, rating,
+**The other nine are demands on contexts it does not write** — clubs, rating,
 users with the Player profile, the Player profile again for where the reader
-is, the Player Score, blocks, and administrators — each declared here in this
-context's vocabulary and answered by an adapter in ``infrastructure/`` over that
-provider's own port, never its table.
+is, the Player Score, blocks, administrators, and the games a group gave birth
+to — each declared here in this context's vocabulary and answered by an adapter
+in ``infrastructure/`` over that provider's own port, never its table. The last
+has no provider yet, and its one adapter says so (``GroupBornGames``).
 """
 
 from __future__ import annotations
@@ -117,6 +118,12 @@ class GroupDirectory(Protocol):
     async def with_code(self, code: GroupCode) -> GroupListing | None:
         """The group whose link carries this code, or ``None`` for a code no
         group has — a link that leads nowhere."""
+        ...
+
+    async def official_at(self, club_id: UUID) -> Sequence[GroupListing]:
+        """Every **official** group at this club, in no particular order —
+        whoever runs it or nobody. A player group whose home club it is is not
+        the club's, and is never here."""
         ...
 
     async def run_by(self, administrator_id: UUID) -> Sequence[GroupListing]:
@@ -361,15 +368,17 @@ class HiddenMembers(Protocol):
 @dataclass(frozen=True, slots=True)
 class RunningAdministrator:
     """Who runs an official group now: the account behind its Administrator,
-    and **the name the club gave them** — what the *approves joins* line says.
+    the club they act for, and **the name the club gave them**.
 
-    The club's name for them, and not the account's naming, because the line is
-    about the club's Administrator — and because an account an invitation
-    opened has a Name and no nickname yet, which the naming read does not
-    answer for; that account's Name *is* the name the club typed
-    (``docs/adr/0185`` §4)."""
+    That name is what **the club's own tables** print — its Groups table names
+    the person its Administrators table lists (#510). The player side's
+    *approves joins* line says the **account's** Name, as their admin-tagged
+    Members row does, and falls back to this one only where ``users`` cannot
+    answer: an account an invitation opened, whose Name *is* the name the club
+    typed (``docs/adr/0185`` §4)."""
 
     account_id: UUID
+    club_id: UUID
     name: str
 
 
@@ -390,6 +399,31 @@ class GroupAdministrators(Protocol):
     ) -> Mapping[UUID, RunningAdministrator]:
         """Each of these Administrators, **only while their administratorship
         is active**. A removed one is absent — nobody runs its groups until the
-        club hands them over (``docs/adr/0184`` §7). One question about the
+        club hands them over (``docs/adr/0184`` §7) — and so is one still
+        invited: nobody is handed a group before they have taken the
+        administratorship up (``docs/adr/0183`` §8). One question about the
         set."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# Games: how many a group gave birth to
+# --------------------------------------------------------------------------- #
+
+
+@runtime_checkable
+class GroupBornGames(Protocol):
+    """How many games each group **gave birth to** — the club's *Games* figure
+    (``docs/adr/0183`` §11). Only a game the group itself picked counts: a game
+    two of its members arranged elsewhere never does, because the club would
+    read it as the group's work.
+
+    **No group picks a game yet**, so the one adapter answers nought for every
+    group and the figure reads 0. The day a group can pick games, an adapter
+    over them answers instead, and *Games* never changes meaning.
+    """
+
+    async def born_in(self, group_ids: Collection[UUID]) -> Mapping[UUID, int]:
+        """How many games each of these groups gave birth to — one question
+        about the set. A group absent from the answer gave birth to none."""
         ...

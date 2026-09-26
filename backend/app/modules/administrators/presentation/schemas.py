@@ -89,8 +89,10 @@ class AdministratorSchema(BaseModel):
     )
     groups: list[AdministratorGroupSchema] = Field(
         description=(
-            "The official groups this administrator runs. Empty until official "
-            "groups exist."
+            "The official groups this administrator runs now, by name — the "
+            "row's dropdown. **Only on an `ACTIVE` row**: empty for somebody "
+            "invited, expired or put back to invited by *Reset password*, whose "
+            "groups read *needs an administrator* on the Groups table meanwhile."
         )
     )
     can_reset_password: bool = Field(

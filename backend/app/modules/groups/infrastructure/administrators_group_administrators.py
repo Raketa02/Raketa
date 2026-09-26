@@ -25,7 +25,9 @@ class AdministratorsGroupAdministrators:
         active = await self._directory.active_among(administrator_ids)
         return {
             listing.id: RunningAdministrator(
-                account_id=listing.account_id, name=listing.name
+                account_id=listing.account_id,
+                club_id=listing.club_id,
+                name=listing.name,
             )
             for listing in active
             if listing.account_id is not None
