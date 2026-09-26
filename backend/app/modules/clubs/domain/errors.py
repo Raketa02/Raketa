@@ -50,6 +50,24 @@ class ClubSportsRequired(BadRequestError):
         )
 
 
+class ClubSportDeclaredByGroup(ConflictError):
+    """The desk unticked a sport an official group at the club declares.
+
+    **Refused, and the refusal names the group** (``docs/adr/0182`` §5):
+    otherwise the group would be left playing a sport its club no longer
+    offers. ``details.sport`` is the sport, ``details.group`` the group's name —
+    the first by name, where several play it — so the website can say which
+    group to change first. Ticking it again is the other remedy."""
+
+    code = "club_sport_declared_by_group"
+
+    def __init__(self, *, sport: str, group: str) -> None:
+        super().__init__(
+            f"the official group {group!r} plays {sport.lower()}",
+            details={"field": "sports", "sport": sport, "group": group},
+        )
+
+
 class ClubPointInvalid(BadRequestError):
     code = "club_point_invalid"
 

@@ -378,12 +378,15 @@ async def test_each_row_carries_its_monogram_count_and_the_owner_s_name(client):
     assert card["groups"] == [
         {
             "id": group["id"],
+            "kind": "PLAYER",
             "name": "Ogrody 33 Club",
             "monogram": group["monogram"],
             "sports": [],
             "member_count": 1,
             "join_policy": "PEOPLE_I_APPROVE",
             "owner_name": "karol",
+            "administrator_name": None,
+            "is_administrator": False,
             "relation": "NONE",
         }
     ]

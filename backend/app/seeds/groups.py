@@ -51,6 +51,7 @@ from app.bootstrap.composition import (
     build_club_account_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_group_administrators,
     build_group_code_minter,
     build_group_directory,
     build_group_faces,
@@ -264,6 +265,7 @@ async def _join(
         directory=build_group_directory(session),
         ratings=build_rated_group_members(session),
         faces=build_group_faces(session, settings=settings),
+        administrators=build_group_administrators(session),
         uow=build_unit_of_work(session),
         clock=clock,
     ).execute(JoinGroupCommand(group_id=group_id, player_id=player_id))

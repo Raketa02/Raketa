@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from typing import Optional
 from uuid import UUID
 
@@ -44,6 +44,17 @@ class SqlAlchemyAdministratorDirectory:
             AdministratorORM.state == AdministratorState.ACTIVE.value,
         )
         return found[0] if found else None
+
+    async def active_among(
+        self, administrator_ids: Collection[UUID]
+    ) -> Sequence[AdministratorListing]:
+        wanted = set(administrator_ids)
+        if not wanted:
+            return []
+        return await self._listings(
+            AdministratorORM.id.in_(wanted),
+            AdministratorORM.state == AdministratorState.ACTIVE.value,
+        )
 
     async def invited_as(self, email: Email) -> Sequence[AdministratorListing]:
         return await self._listings(

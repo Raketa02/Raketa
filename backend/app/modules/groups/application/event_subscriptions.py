@@ -10,8 +10,11 @@ from app.modules.groups.application.handlers import (
     LogJoinRequestApproved,
     LogJoinRequestDeclined,
     LogJoinRequested,
+    LogOfficialGroupCreated,
     LogOwnershipPassed,
     LogPlayerGroupCreated,
+    LogSportsDeclared,
+    LogWhatsAppSizeSet,
 )
 from app.modules.groups.domain.events import (
     GroupDeleted,
@@ -22,8 +25,11 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    OfficialGroupCreated,
     OwnershipPassed,
     PlayerGroupCreated,
+    SportsDeclared,
+    WhatsAppSizeSet,
 )
 
 
@@ -42,6 +48,11 @@ def register_group_events(catalog: EventCatalog) -> None:
     catalog.register(GroupRenamed, name="groups.group_renamed", version=1)
     catalog.register(JoinPolicyChanged, name="groups.join_policy_changed", version=1)
     catalog.register(GroupDeleted, name="groups.group_deleted", version=1)
+    catalog.register(
+        OfficialGroupCreated, name="groups.official_group_created", version=1
+    )
+    catalog.register(WhatsAppSizeSet, name="groups.whatsapp_size_set", version=1)
+    catalog.register(SportsDeclared, name="groups.sports_declared", version=1)
 
 
 def subscribe_group_handlers(dispatcher: EventDispatcher) -> None:
@@ -55,3 +66,6 @@ def subscribe_group_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(GroupRenamed, LogGroupRenamed())
     dispatcher.subscribe(JoinPolicyChanged, LogJoinPolicyChanged())
     dispatcher.subscribe(GroupDeleted, LogGroupDeleted())
+    dispatcher.subscribe(OfficialGroupCreated, LogOfficialGroupCreated())
+    dispatcher.subscribe(WhatsAppSizeSet, LogWhatsAppSizeSet())
+    dispatcher.subscribe(SportsDeclared, LogSportsDeclared())

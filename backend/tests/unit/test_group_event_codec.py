@@ -26,8 +26,11 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    OfficialGroupCreated,
     OwnershipPassed,
     PlayerGroupCreated,
+    SportsDeclared,
+    WhatsAppSizeSet,
 )
 
 NOW = datetime(2026, 9, 25, tzinfo=timezone.utc)
@@ -62,6 +65,22 @@ EVENTS = [
         group_id=GROUP, join_policy="ANYONE", changed_by=ASKER, occurred_at=NOW
     ),
     GroupDeleted(group_id=GROUP, deleted_by=ASKER, occurred_at=NOW),
+    OfficialGroupCreated(
+        group_id=GROUP,
+        name="Ogrody 33 Club",
+        home_club_id=uuid4(),
+        join_policy="PEOPLE_I_APPROVE",
+        administrator_id=uuid4(),
+        created_by=OWNER,
+        whatsapp_size=48,
+        sports=("PADEL", "TENNIS"),
+        code="ab3de7fg",
+        occurred_at=NOW,
+    ),
+    WhatsAppSizeSet(group_id=GROUP, whatsapp_size=52, set_by=OWNER, occurred_at=NOW),
+    SportsDeclared(
+        group_id=GROUP, sports=("PADEL",), declared_by=OWNER, occurred_at=NOW
+    ),
 ]
 
 
@@ -103,4 +122,7 @@ def test_each_event_is_filed_under_its_own_name_in_the_groups_namespace():
         ("groups.group_renamed", 1),
         ("groups.join_policy_changed", 1),
         ("groups.group_deleted", 1),
+        ("groups.official_group_created", 1),
+        ("groups.whatsapp_size_set", 1),
+        ("groups.sports_declared", 1),
     ]

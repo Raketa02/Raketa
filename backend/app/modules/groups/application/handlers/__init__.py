@@ -7,8 +7,11 @@ from app.modules.groups.application.handlers.log_group_events import (
     LogJoinRequestApproved,
     LogJoinRequestDeclined,
     LogJoinRequested,
+    LogOfficialGroupCreated,
     LogOwnershipPassed,
     LogPlayerGroupCreated,
+    LogSportsDeclared,
+    LogWhatsAppSizeSet,
 )
 
 __all__ = [
@@ -20,6 +23,9 @@ __all__ = [
     "LogJoinRequestApproved",
     "LogJoinRequestDeclined",
     "LogJoinRequested",
+    "LogOfficialGroupCreated",
     "LogOwnershipPassed",
     "LogPlayerGroupCreated",
+    "LogSportsDeclared",
+    "LogWhatsAppSizeSet",
 ]

@@ -294,6 +294,7 @@ def test_the_walk_has_something_to_walk():
         "groups.py",
         "guard.py",
         "loop.py",
+        "official_groups.py",
         "pairs.py",
         "paths.py",
         "photos.py",

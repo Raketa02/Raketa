@@ -6,6 +6,10 @@ projection holds them, for home-club search, join search and anything that names
 a group's home club. A consumer reads it and never the table, and never gets an
 aggregate back.
 
+**One demand on a context it does not write**: what the official groups at a
+club declare (``OfficialGroupSports``), because the desk may not untick a sport
+one of them plays (``docs/adr/0182`` §5) and that is a fact about groups.
+
 **Each repository writes the search projection in the caller's transaction.**
 A club's projection is what home-club search and join search read, and a club
 edit must be visible to the next search rather than *eventually*
@@ -105,4 +109,29 @@ class ClubDirectory(Protocol):
         copies were folded by, so the two sides of a match cannot disagree about
         what a letter is. ``text`` is matched as typed: ``%`` and ``_`` are
         characters, not patterns. In no particular order."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# A demand on groups: what the club's official groups play
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class DeclaringGroup:
+    """An official group at a club, by its name, and the sports it declares."""
+
+    name: str
+    sports: frozenset[Sport]
+
+
+@runtime_checkable
+class OfficialGroupSports(Protocol):
+    """What the official groups at a club play — **as each declared it**
+    (``docs/adr/0183`` §3). Player groups play whatever their members are rated
+    in and declare nothing, so they are never here."""
+
+    async def declared_at(self, club_id: UUID) -> Sequence[DeclaringGroup]:
+        """Every official group at this club, in no particular order."""
         ...

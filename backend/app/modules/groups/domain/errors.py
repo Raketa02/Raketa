@@ -44,6 +44,50 @@ class HomeClubUnknown(BadRequestError):
         )
 
 
+class WhatsAppSizeInvalid(BadRequestError):
+    """An official group records how many people its WhatsApp group has: a
+    **whole number from 2 to 1024**, required (``docs/adr/0183`` §3). Two,
+    because a WhatsApp group of one is nobody's crowd; 1024, because that is as
+    many as WhatsApp lets into one."""
+
+    code = "whatsapp_size_invalid"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "a WhatsApp group size is a whole number from 2 to 1024",
+            details={"field": "whatsapp_size"},
+        )
+
+
+class GroupSportsRequired(BadRequestError):
+    """An official group **declares** what it plays, and declares at least one
+    sport (``docs/adr/0183`` §3) — its dots are what it declares, and a group
+    with none would be a crowd with nothing to play."""
+
+    code = "group_sports_required"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "an official group plays at least one sport", details={"field": "sports"}
+        )
+
+
+class SportNotOfferedByClub(BadRequestError):
+    """An official group declares a sport **its club offers**, and nothing else
+    (``docs/adr/0183`` §3): a group left playing a sport its club does not have
+    is what the club's own refusal to untick one exists to prevent
+    (``docs/adr/0182`` §5). ``details.sport`` names the first such sport, in the
+    registry's order."""
+
+    code = "sport_not_offered_by_club"
+
+    def __init__(self, sport: str) -> None:
+        super().__init__(
+            "an official group plays only sports its club offers",
+            details={"field": "sports", "sport": sport},
+        )
+
+
 class GroupNotFound(NotFoundError):
     """**One refusal for two cases**: no such group, and a group the reader is
     not a member of.
@@ -63,6 +107,11 @@ class NotTheGroupOwner(ForbiddenError):
     """A Group member who is not its Owner asked to do what only the Owner
     does: see or answer its Join requests (#505), rename it, change who can
     join, or delete it (#506).
+
+    **An official group has no Owner** (``docs/adr/0183`` §3), so every member
+    asking this of one is refused the same way — its Administrator included,
+    when they ask as a player: their group is answered and edited from the
+    administrator surface, and nobody deletes it at all (#509).
 
     **Nobody but the Owner**: a request is a person asking the one who
     answers, and the rest of the group has no business reading who asked to be

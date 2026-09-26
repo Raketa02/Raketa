@@ -77,7 +77,8 @@ class Club:
         **Saving them unchanged records nothing**, as a second ``disable`` does
         on a User: the stream records acts, and this one changed nothing. The
         refusal of a sport an official group declares is not this aggregate's to
-        know — it is a fact about groups, and it arrives with them.
+        know — it is a fact about groups, and the use case asks them
+        (``domain/untick.py``).
         """
 
         if details == self.details:

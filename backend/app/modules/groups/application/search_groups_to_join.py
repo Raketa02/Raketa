@@ -17,6 +17,7 @@ from app.modules.groups.domain.join_search import (
 )
 from app.modules.groups.domain.link import PastedLink, link_in
 from app.modules.groups.domain.ports import (
+    GroupAdministrators,
     GroupDirectory,
     GroupFaces,
     GroupListing,
@@ -41,8 +42,8 @@ class SearchGroupsToJoin:
 
     The whole match is ordered before a page is cut, because *nearest first* is
     a property of the answer and not of a page; then only the page's groups are
-    read, with their members, their dots and their Owners' names — one question
-    each about all of them.
+    read, with their members, their dots, who runs the official ones and every
+    name on an *approves joins* line — one question each about all of them.
     """
 
     def __init__(
@@ -53,12 +54,14 @@ class SearchGroupsToJoin:
         directory: GroupDirectory,
         ratings: RatedGroupMembers,
         faces: GroupFaces,
+        administrators: GroupAdministrators,
     ) -> None:
         self._clubs = clubs
         self._areas = areas
         self._directory = directory
         self._ratings = ratings
         self._faces = faces
+        self._administrators = administrators
 
     async def execute(self, command: SearchGroupsToJoinCommand) -> JoinSearchResults:
         typed = SearchText(command.text)
@@ -137,6 +140,7 @@ class SearchGroupsToJoin:
                 reader_id=command.reader_id,
                 ratings=self._ratings,
                 faces=self._faces,
+                administrators=self._administrators,
             ),
             next_page=page.next_page,
             read_as=read_as,

@@ -10,9 +10,12 @@ from app.modules.groups.application.views import (
     face_of,
     rated_among,
     row_of,
+    running_account,
+    who_runs_it,
 )
 from app.modules.groups.domain.members import members_row
 from app.modules.groups.domain.ports import (
+    GroupAdministrators,
     GroupDirectory,
     GroupFaces,
     GroupListing,
@@ -38,6 +41,10 @@ class GroupPages:
     reads them (§13, #504). The block state fails closed, so a page nobody could
     check is not served — and a reader alone has nobody to hide, so it is not
     read for them at all.
+
+    **On an official group the account running it leads the members row**, as
+    an Owner does on a player group — asked of the administrators, so it is
+    whoever runs it now.
     """
 
     def __init__(
@@ -47,20 +54,23 @@ class GroupPages:
         ratings: RatedGroupMembers,
         faces: GroupFaces,
         hidden: HiddenMembers,
+        administrators: GroupAdministrators,
     ) -> None:
         self._clubs = clubs
         self._ratings = ratings
         self._faces = faces
         self._hidden = hidden
+        self._administrators = administrators
 
     async def page(self, listing: GroupListing, *, reader_id: UUID) -> GroupPage:
         hidden = await hidden_in(self._hidden, listing, reader_id)
         rated = await rated_among(self._ratings, [listing])
         by_sport = rosters(listing.members, rated)
+        runner = await running_account(self._administrators, listing)
         on_members_row = members_row(
             listing.members,
             reader_id=reader_id,
-            owner_id=listing.owner_id,
+            run_by=who_runs_it(listing, runner),
             hidden=hidden,
         )
         faces = await self._faces.faces_of(

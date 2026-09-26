@@ -31,10 +31,14 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    OfficialGroupCreated,
     OwnershipPassed,
     PlayerGroupCreated,
+    SportsDeclared,
+    WhatsAppSizeSet,
 )
 from app.modules.groups.domain.group import Group
+from app.modules.groups.domain.value_objects import GroupKind
 from app.modules.groups.infrastructure.group_model import (
     GroupJoinRequestORM,
     GroupMemberORM,
@@ -99,13 +103,36 @@ class EventSourcedGroupRepository:
                     name_folded=fold(event.name),
                     home_club_id=event.home_club_id,
                     join_policy=event.join_policy,
+                    kind=GroupKind.PLAYER.value,
                     owner_id=event.owner_id,
                     code=event.code,
+                    created_at=event.occurred_at,
                 )
             )
             # The group's row before its first member's, which references it.
             await self._session.flush()
             self._admit(event.group_id, event.owner_id, event, version)
+        elif isinstance(event, OfficialGroupCreated):
+            # No member row: running an official group is not membership.
+            self._session.add(
+                GroupORM(
+                    id=event.group_id,
+                    name=event.name,
+                    name_folded=fold(event.name),
+                    home_club_id=event.home_club_id,
+                    join_policy=event.join_policy,
+                    kind=GroupKind.OFFICIAL.value,
+                    administrator_id=event.administrator_id,
+                    whatsapp_size=event.whatsapp_size,
+                    declared_sports=list(event.sports),
+                    code=event.code,
+                    created_at=event.occurred_at,
+                )
+            )
+        elif isinstance(event, WhatsAppSizeSet):
+            await self._change(event.group_id, whatsapp_size=event.whatsapp_size)
+        elif isinstance(event, SportsDeclared):
+            await self._change(event.group_id, declared_sports=list(event.sports))
         elif isinstance(event, GroupJoined):
             self._admit(event.group_id, event.player_id, event, version)
         elif isinstance(event, JoinRequested):

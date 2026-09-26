@@ -1,8 +1,9 @@
 """The Members list's order, and the faces on the Info tab's members row.
 
-**The reader, then the Owner, then everybody else newest joined first** (#500
-story 81): the people who matter most to the reader come first — themselves,
-and who runs the group — and after them whoever arrived last, because a crowd
+**The reader, then whoever runs the group, then everybody else newest joined
+first** (#500 story 81): the people who matter most to the reader come first —
+themselves, and who runs the group, a player group's Owner or the account
+running an official one — and after them whoever arrived last, because a crowd
 that is growing is read from its newest faces. The members row on the Info tab
 is a preview of that list, so its faces are the same order without the reader.
 
@@ -23,18 +24,18 @@ MEMBERS_ROW_FACES: Final = 5
 
 
 def in_members_order(
-    members: Sequence[UUID], *, reader_id: UUID, owner_id: UUID
+    members: Sequence[UUID], *, reader_id: UUID, run_by: UUID | None
 ) -> tuple[UUID, ...]:
     """``members``, given in joining order, as the Members list draws them.
 
-    The reader and the Owner lead only when they are among ``members`` — a
-    reader not rated in the sport asked, or an Owner a block hides, is not
-    listed first for being who they are.
+    The reader and whoever runs the group (``run_by``) lead only when they
+    are among ``members`` — a reader not rated in the sport asked, or an Owner
+    a block hides, is not listed first for being who they are; and nobody
+    leads for an official group nobody runs.
     """
 
-    leading = tuple(
-        dict.fromkeys(member for member in (reader_id, owner_id) if member in members)
-    )
+    first = (reader_id,) if run_by is None else (reader_id, run_by)
+    leading = tuple(dict.fromkeys(member for member in first if member in members))
     return leading + tuple(
         member for member in reversed(members) if member not in leading
     )
@@ -44,7 +45,7 @@ def members_row(
     members: Sequence[UUID],
     *,
     reader_id: UUID,
-    owner_id: UUID,
+    run_by: UUID | None,
     hidden: Collection[UUID],
 ) -> tuple[UUID, ...]:
     """The faces the Info tab's members row stacks: everybody the reader may
@@ -55,6 +56,6 @@ def members_row(
     shown = [
         member for member in members if member != reader_id and member not in hidden
     ]
-    return in_members_order(shown, reader_id=reader_id, owner_id=owner_id)[
+    return in_members_order(shown, reader_id=reader_id, run_by=run_by)[
         :MEMBERS_ROW_FACES
     ]

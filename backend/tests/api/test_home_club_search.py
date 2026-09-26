@@ -306,22 +306,28 @@ async def test_a_club_carries_every_group_at_it_and_the_caller_s_relation(client
     assert found["groups"] == [
         {
             "id": kubas["id"],
+            "kind": "PLAYER",
             "name": "Bonarka weekend",
             "monogram": kubas["monogram"],
             "sports": ["PADEL"],
             "member_count": 2,
             "join_policy": "ANYONE",
             "owner_name": "kuba",
+            "administrator_name": None,
+            "is_administrator": False,
             "relation": "NONE",
         },
         {
             "id": tomeks["id"],
+            "kind": "PLAYER",
             "name": "Tomek's own",
             "monogram": tomeks["monogram"],
             "sports": [],
             "member_count": 1,
             "join_policy": "PEOPLE_I_APPROVE",
             "owner_name": "tomek",
+            "administrator_name": None,
+            "is_administrator": False,
             "relation": "MEMBER",
         },
     ]

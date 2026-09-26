@@ -9,7 +9,8 @@ from app.modules.clubs.application.commands import (
     ClubDetailsInput,
 )
 from app.modules.clubs.domain.club import Club
-from app.modules.clubs.domain.ports import ClubRepository
+from app.modules.clubs.domain.ports import ClubRepository, OfficialGroupSports
+from app.modules.clubs.domain.untick import refuse_an_untick, unticked
 from app.modules.clubs.domain.value_objects import (
     City,
     ClubDetails,
@@ -63,16 +64,32 @@ class ChangeClubDetails:
     A full replacement of all five, refused field by field exactly as the
     sign-up is. Saving them unchanged records nothing. The search row moves in
     the same transaction, so the next search already reads the new name.
+
+    **Unticking a sport an official group declares is refused, naming the
+    group** (``docs/adr/0182`` §5, #509) — ``club_sport_declared_by_group``,
+    after every field has been read. The groups are asked only when a sport
+    is being unticked, since nothing else here is theirs to refuse.
     """
 
-    def __init__(self, *, clubs: ClubRepository, uow: UnitOfWork, clock: Clock) -> None:
+    def __init__(
+        self,
+        *,
+        clubs: ClubRepository,
+        groups: OfficialGroupSports,
+        uow: UnitOfWork,
+        clock: Clock,
+    ) -> None:
         self._clubs = clubs
+        self._groups = groups
         self._uow = uow
         self._clock = clock
 
     async def execute(self, command: ChangeClubDetailsCommand) -> Club:
         details = details_from(command.details)
         club = await _the_club(self._clubs, command.club_id)
+        removed = unticked(club.details.sports.sports, details.sports.sports)
+        if removed:
+            refuse_an_untick(removed, await self._groups.declared_at(club.id))
         club.change_details(details, occurred_at=self._clock.now())
         await self._clubs.save(club)
         await self._uow.commit()

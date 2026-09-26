@@ -8,12 +8,18 @@ breaks its rule is a broken caller and raises through ``invariant()``.
 
 from __future__ import annotations
 
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
-from app.kernel import invariant
-from app.modules.groups.domain.errors import GroupNameInvalid
+from app.kernel import Sport, invariant
+from app.modules.groups.domain.errors import (
+    GroupNameInvalid,
+    GroupSportsRequired,
+    SportNotOfferedByClub,
+    WhatsAppSizeInvalid,
+)
 
 #: A group's name, once trimmed: at least one character and at most forty
 #: (``docs/adr/0183`` §2). Forty because it matches the WhatsApp group a crowd
@@ -51,6 +57,97 @@ class GroupName:
         if not GROUP_NAME_SHORTEST <= len(collapsed) <= GROUP_NAME_LONGEST:
             raise GroupNameInvalid()
         object.__setattr__(self, "value", collapsed)
+
+
+class GroupKind(StrEnum):
+    """The two kinds of Group (``docs/adr/0183`` §1), and every rule that differs
+    between them says which it binds rather than reading a null.
+
+    A **player group** has an Owner who created it and plays whatever its
+    members are rated in. An **official group** belongs to a club, has **no
+    Owner** — one Administrator runs it — and **declares** its sports and the
+    size of the WhatsApp group it mirrors (§3).
+    """
+
+    PLAYER = "PLAYER"
+    OFFICIAL = "OFFICIAL"
+
+
+#: A WhatsApp group size, whole and from two to 1024 (``docs/adr/0183`` §3):
+#: two because a WhatsApp group of one is nobody's crowd, 1024 because that is
+#: as many as WhatsApp lets into one group.
+WHATSAPP_SIZE_SMALLEST: Final = 2
+WHATSAPP_SIZE_LARGEST: Final = 1024
+
+
+@dataclass(frozen=True, slots=True)
+class WhatsAppSize:
+    """How many people the WhatsApp group an official group mirrors has. **It
+    limits nothing**: it is the denominator of the club's *From WhatsApp*
+    figure, and a group may pass it (``docs/adr/0183`` §3).
+
+    A whole number and nothing that merely equals one — ``True`` is not a size
+    and neither is ``48.0`` — because a count a form sent as anything else is a
+    form that sent the wrong thing.
+    """
+
+    value: int
+
+    def __post_init__(self) -> None:
+        if (
+            type(self.value) is not int
+            or not WHATSAPP_SIZE_SMALLEST <= self.value <= WHATSAPP_SIZE_LARGEST
+        ):
+            raise WhatsAppSizeInvalid()
+
+
+@dataclass(frozen=True, slots=True)
+class DeclaredSports:
+    """What an official group plays, **as its Administrator declared it**: a
+    non-empty subset of its club's sports (``docs/adr/0183`` §3), and its sport
+    dots (§6). Held as a set — ticking a sport twice is ticking it — and read
+    out in the registry's order, as a club's offered sports are.
+    """
+
+    sports: frozenset[Sport]
+
+    def __post_init__(self) -> None:
+        if not self.sports:
+            raise GroupSportsRequired()
+
+    @classmethod
+    def of(cls, sports: Iterable[Sport]) -> "DeclaredSports":
+        return cls(frozenset(Sport(sport) for sport in sports))
+
+    @classmethod
+    def at_club(
+        cls, sports: Iterable[Sport], *, offered: Collection[Sport]
+    ) -> "DeclaredSports":
+        """The sports ticked, refused unless **every one is the club's** — the
+        first that is not named in the registry's order, so the refusal is the
+        same whichever order they were ticked in. An empty tick is *required*
+        before it is anything else."""
+
+        declared = cls.of(sports)
+        for sport in declared.in_registry_order():
+            if sport not in offered:
+                raise SportNotOfferedByClub(sport.value)
+        return declared
+
+    @classmethod
+    def from_codes(cls, codes: Iterable[str]) -> "DeclaredSports":
+        """As an event and the projection spell them: registry codes."""
+
+        return cls.of(Sport(code) for code in codes)
+
+    def in_registry_order(self) -> tuple[Sport, ...]:
+        return tuple(sport for sport in Sport if sport in self.sports)
+
+    def codes(self) -> tuple[str, ...]:
+        """Registry codes, in the registry's order — how an event and the
+        projection hold them."""
+
+        return tuple(sport.value for sport in self.in_registry_order())
 
 
 class JoinPolicy(StrEnum):

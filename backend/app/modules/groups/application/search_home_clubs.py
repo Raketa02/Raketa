@@ -4,6 +4,7 @@ from app.modules.groups.application.commands import SearchHomeClubsCommand
 from app.modules.groups.application.views import HomeClubResults, club_cards
 from app.modules.groups.domain.home_club_search import in_search_order, page_of
 from app.modules.groups.domain.ports import (
+    GroupAdministrators,
     GroupDirectory,
     GroupFaces,
     HomeClubs,
@@ -34,12 +35,14 @@ class SearchHomeClubs:
         directory: GroupDirectory,
         ratings: RatedGroupMembers,
         faces: GroupFaces,
+        administrators: GroupAdministrators,
     ) -> None:
         self._clubs = clubs
         self._areas = areas
         self._directory = directory
         self._ratings = ratings
         self._faces = faces
+        self._administrators = administrators
 
     async def execute(self, command: SearchHomeClubsCommand) -> HomeClubResults:
         typed = SearchText(command.text)
@@ -63,6 +66,7 @@ class SearchHomeClubs:
                 reader_id=command.reader_id,
                 ratings=self._ratings,
                 faces=self._faces,
+                administrators=self._administrators,
             ),
             next_page=page.next_page,
         )

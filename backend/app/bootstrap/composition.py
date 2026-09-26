@@ -137,6 +137,7 @@ from app.modules.clubs.domain.ports import (
     ClubAccountRepository,
     ClubDirectory,
     ClubRepository,
+    OfficialGroupSports,
 )
 from app.modules.clubs.infrastructure.event_sourced_club_account_repository import (
     EventSourcedClubAccountRepository,
@@ -149,6 +150,7 @@ from app.modules.clubs.infrastructure.sqlalchemy_club_directory import (
 )
 from app.modules.games.application.call_off_game import CallOffGame
 from app.modules.groups.domain.ports import (
+    GroupAdministrators,
     GroupCodeMinter,
     GroupDirectory,
     GroupFaces,
@@ -159,10 +161,16 @@ from app.modules.groups.domain.ports import (
     RatedGroupMembers,
     ReaderAreas,
 )
+from app.modules.groups.infrastructure.administrators_group_administrators import (
+    AdministratorsGroupAdministrators,
+)
 from app.modules.groups.infrastructure.blocks_hidden_members import (
     BlocksHiddenMembers,
 )
 from app.modules.groups.infrastructure.clubs_home_clubs import ClubsHomeClubs
+from app.modules.groups.infrastructure.clubs_official_group_sports import (
+    GroupsOfficialGroupSports,
+)
 from app.modules.groups.infrastructure.event_sourced_group_repository import (
     EventSourcedGroupRepository,
 )
@@ -687,6 +695,14 @@ def build_club_account_passwords(accounts: ClubAccountRepository) -> PasswordAcc
     return ClubPasswordAccounts(accounts)
 
 
+def build_official_group_sports(session: AsyncSession) -> OfficialGroupSports:
+    """What the official groups at a club declare — the one thing a details
+    edit is refused over from outside the club (``docs/adr/0182`` §5) —
+    answered by the Groups context over its own directory, so the arrow runs
+    ``groups → clubs`` only."""
+    return GroupsOfficialGroupSports(build_group_directory(session))
+
+
 def build_club_directory(session: AsyncSession) -> ClubDirectory:
     """What the Club context publishes: its clubs, read off the search
     projection (``docs/adr/0182`` §2) and never as an aggregate."""
@@ -847,6 +863,14 @@ def build_hidden_members(
     that shows one player to another consults (``docs/adr/0095`` §7), which
     fails closed."""
     return BlocksHiddenMembers(build_block_query(session, runtime=runtime))
+
+
+def build_group_administrators(session: AsyncSession) -> GroupAdministrators:
+    """Who runs each official group now: the account behind its Administrator,
+    read off the administrators' own directory while that administratorship is
+    active — so a removal takes a group from its administrator on the next read
+    (``docs/adr/0184`` §7)."""
+    return AdministratorsGroupAdministrators(build_administrator_directory(session))
 
 
 def build_reader_areas(

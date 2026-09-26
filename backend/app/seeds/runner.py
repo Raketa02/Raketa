@@ -187,6 +187,11 @@ from app.seeds.administrators import (
 )
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.groups import SeededGroups, group_lines, write_the_groups
+from app.seeds.official_groups import (
+    SeededOfficialGroups,
+    official_group_lines,
+    write_the_official_groups,
+)
 from app.seeds.cohort import (
     BAND_HISTOGRAM,
     COHORT,
@@ -1209,6 +1214,9 @@ class SeedReport:
     #: The people a club made administrators, and how each got in. ``None`` on
     #: the same callers and for the same reason.
     administrators: SeededAdministrators | None = None
+    #: The official groups those administrators run, and who is in each.
+    #: ``None`` on the same callers and for the same reason.
+    official_groups: SeededOfficialGroups | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1276,6 +1284,11 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # pool — so, like the groups, its position among the later layers is
         # free.
         administrators = await write_the_administrators(
+            session_factory, settings=settings, now=now
+        )
+        # **The official groups after the administrators who run them**, and
+        # free among the later layers for the reason the player groups are.
+        official_groups = await write_the_official_groups(
             session_factory, settings=settings, now=now
         )
         # **The played history first, and the order is load-bearing.** A game is
@@ -1358,6 +1371,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             clubs=clubs,
             groups=groups,
             administrators=administrators,
+            official_groups=official_groups,
             photographs=photographs,
         )
     finally:
@@ -1452,6 +1466,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *group_lines(run_report.groups)])
     if run_report.administrators is not None:
         lines.extend(["", *administrator_lines(run_report.administrators)])
+    if run_report.official_groups is not None:
+        lines.extend(["", *official_group_lines(run_report.official_groups)])
     if run_report.played is not None:
         lines.extend(["", *_played_lines(run_report.played)])
     if run_report.opinions is not None:

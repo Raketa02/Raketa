@@ -24,6 +24,7 @@ from app.api.dependencies import (
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
+    build_group_administrators,
     build_group_code_minter,
     build_group_directory,
     build_group_faces,
@@ -34,22 +35,36 @@ from app.bootstrap.composition import (
     build_rated_group_members,
     build_reader_areas,
 )
+from app.modules.administrators.presentation.dependencies import (
+    AdministratorAtClubDep,
+)
 from app.modules.groups.application.answer_join_request import (
     ApproveJoinRequest,
     DeclineJoinRequest,
 )
+from app.modules.groups.application.commands import Administering
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.application.delete_group import DeleteGroup
 from app.modules.groups.application.edit_group import EditGroup
 from app.modules.groups.application.join_group import JoinGroup
 from app.modules.groups.application.leave_group import LeaveGroup
+from app.modules.groups.application.official_groups import (
+    AdministeredGroupPages,
+    ApproveJoinRequestAsAdministrator,
+    ChangeOfficialGroupSettings,
+    CreateOfficialGroup,
+    DeclineJoinRequestAsAdministrator,
+    ReadAdministeredGroup,
+    ReadAdministeredGroups,
+)
 from app.modules.groups.application.read_group import GroupPages, ReadGroup
-from app.modules.groups.application.read_join_requests import ReadJoinRequests
 from app.modules.groups.application.read_group_members import ReadGroupMembers
+from app.modules.groups.application.read_join_requests import ReadJoinRequests
 from app.modules.groups.application.read_my_groups import ReadMyGroups
 from app.modules.groups.application.search_groups_to_join import SearchGroupsToJoin
 from app.modules.groups.application.search_home_clubs import SearchHomeClubs
 from app.modules.groups.domain.ports import (
+    GroupAdministrators,
     GroupDirectory,
     GroupFaces,
     GroupMemberScores,
@@ -112,6 +127,15 @@ def get_hidden_members(db: DbSession) -> HiddenMembers:
 HiddenMembersDep = Annotated[HiddenMembers, Depends(get_hidden_members)]
 
 
+def get_group_administrators(db: DbSession) -> GroupAdministrators:
+    return build_group_administrators(db)
+
+
+GroupAdministratorsDep = Annotated[
+    GroupAdministrators, Depends(get_group_administrators)
+]
+
+
 def get_reader_areas(db: DbSession) -> ReaderAreas:
     return build_reader_areas(db)
 
@@ -143,6 +167,7 @@ def get_join_group(
     directory: GroupDirectoryDep,
     ratings: RatedGroupMembersDep,
     faces: GroupFacesDep,
+    administrators: GroupAdministratorsDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> JoinGroup:
@@ -151,6 +176,7 @@ def get_join_group(
         directory=directory,
         ratings=ratings,
         faces=faces,
+        administrators=administrators,
         uow=uow,
         clock=clock,
     )
@@ -173,8 +199,15 @@ def get_group_pages(
     ratings: RatedGroupMembersDep,
     faces: GroupFacesDep,
     hidden: HiddenMembersDep,
+    administrators: GroupAdministratorsDep,
 ) -> GroupPages:
-    return GroupPages(clubs=clubs, ratings=ratings, faces=faces, hidden=hidden)
+    return GroupPages(
+        clubs=clubs,
+        ratings=ratings,
+        faces=faces,
+        hidden=hidden,
+        administrators=administrators,
+    )
 
 
 GroupPagesDep = Annotated[GroupPages, Depends(get_group_pages)]
@@ -193,9 +226,15 @@ def get_search_home_clubs(
     areas: ReaderAreasDep,
     ratings: RatedGroupMembersDep,
     faces: GroupFacesDep,
+    administrators: GroupAdministratorsDep,
 ) -> SearchHomeClubs:
     return SearchHomeClubs(
-        clubs=clubs, areas=areas, directory=directory, ratings=ratings, faces=faces
+        clubs=clubs,
+        areas=areas,
+        directory=directory,
+        ratings=ratings,
+        faces=faces,
+        administrators=administrators,
     )
 
 
@@ -208,9 +247,15 @@ def get_search_groups_to_join(
     areas: ReaderAreasDep,
     ratings: RatedGroupMembersDep,
     faces: GroupFacesDep,
+    administrators: GroupAdministratorsDep,
 ) -> SearchGroupsToJoin:
     return SearchGroupsToJoin(
-        clubs=clubs, areas=areas, directory=directory, ratings=ratings, faces=faces
+        clubs=clubs,
+        areas=areas,
+        directory=directory,
+        ratings=ratings,
+        faces=faces,
+        administrators=administrators,
     )
 
 
@@ -293,6 +338,7 @@ def get_read_group_members(
     faces: GroupFacesDep,
     scores: GroupMemberScoresDep,
     hidden: HiddenMembersDep,
+    administrators: GroupAdministratorsDep,
     clock: ClockDep,
 ) -> ReadGroupMembers:
     return ReadGroupMembers(
@@ -301,8 +347,138 @@ def get_read_group_members(
         faces=faces,
         scores=scores,
         hidden=hidden,
+        administrators=administrators,
         clock=clock,
     )
 
 
 ReadGroupMembersDep = Annotated[ReadGroupMembers, Depends(get_read_group_members)]
+
+
+# --- The administrator surface ------------------------------------------------
+
+
+def administering(administratorship: AdministratorAtClubDep) -> Administering:
+    """**The administrator guard**, in this context's words: the administratorship
+    it read as active at the club the path names, on this request, and the
+    account behind it — which an active administratorship always has."""
+
+    account_id = administratorship.account_id
+    if account_id is None:
+        raise RuntimeError(
+            f"an active administratorship with no account: {administratorship.id}"
+        )
+    return Administering(
+        club_id=administratorship.club_id,
+        administrator_id=administratorship.id,
+        account_id=account_id,
+    )
+
+
+AdministeringDep = Annotated[Administering, Depends(administering)]
+
+
+def get_create_official_group(
+    db: DbSession,
+    groups: GroupRepositoryDep,
+    clubs: HomeClubsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> CreateOfficialGroup:
+    return CreateOfficialGroup(
+        groups=groups,
+        clubs=clubs,
+        codes=build_group_code_minter(db),
+        uow=uow,
+        clock=clock,
+    )
+
+
+CreateOfficialGroupDep = Annotated[
+    CreateOfficialGroup, Depends(get_create_official_group)
+]
+
+
+def get_read_administered_groups(
+    directory: GroupDirectoryDep, clubs: HomeClubsDep
+) -> ReadAdministeredGroups:
+    return ReadAdministeredGroups(directory=directory, clubs=clubs)
+
+
+ReadAdministeredGroupsDep = Annotated[
+    ReadAdministeredGroups, Depends(get_read_administered_groups)
+]
+
+
+def get_administered_group_pages(
+    clubs: HomeClubsDep,
+    faces: GroupFacesDep,
+    ratings: RatedGroupMembersDep,
+    hidden: HiddenMembersDep,
+) -> AdministeredGroupPages:
+    return AdministeredGroupPages(
+        clubs=clubs, faces=faces, ratings=ratings, hidden=hidden
+    )
+
+
+AdministeredGroupPagesDep = Annotated[
+    AdministeredGroupPages, Depends(get_administered_group_pages)
+]
+
+
+def get_read_administered_group(
+    directory: GroupDirectoryDep, pages: AdministeredGroupPagesDep
+) -> ReadAdministeredGroup:
+    return ReadAdministeredGroup(directory=directory, pages=pages)
+
+
+ReadAdministeredGroupDep = Annotated[
+    ReadAdministeredGroup, Depends(get_read_administered_group)
+]
+
+
+def get_approve_as_administrator(
+    groups: GroupRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> ApproveJoinRequestAsAdministrator:
+    return ApproveJoinRequestAsAdministrator(groups=groups, uow=uow, clock=clock)
+
+
+ApproveAsAdministratorDep = Annotated[
+    ApproveJoinRequestAsAdministrator, Depends(get_approve_as_administrator)
+]
+
+
+def get_decline_as_administrator(
+    groups: GroupRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> DeclineJoinRequestAsAdministrator:
+    return DeclineJoinRequestAsAdministrator(groups=groups, uow=uow, clock=clock)
+
+
+DeclineAsAdministratorDep = Annotated[
+    DeclineJoinRequestAsAdministrator, Depends(get_decline_as_administrator)
+]
+
+
+def get_change_official_group_settings(
+    groups: GroupRepositoryDep,
+    clubs: HomeClubsDep,
+    directory: GroupDirectoryDep,
+    pages: AdministeredGroupPagesDep,
+    faces: GroupFacesDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangeOfficialGroupSettings:
+    return ChangeOfficialGroupSettings(
+        groups=groups,
+        clubs=clubs,
+        directory=directory,
+        pages=pages,
+        faces=faces,
+        uow=uow,
+        clock=clock,
+    )
+
+
+ChangeOfficialGroupSettingsDep = Annotated[
+    ChangeOfficialGroupSettings, Depends(get_change_official_group_settings)
+]

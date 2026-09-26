@@ -23,7 +23,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.clubs.domain.folding import fold
 from app.modules.groups.domain.ports import GroupListing
-from app.modules.groups.domain.value_objects import GroupCode, GroupName, JoinPolicy
+from app.modules.groups.domain.value_objects import (
+    DeclaredSports,
+    GroupCode,
+    GroupKind,
+    GroupName,
+    JoinPolicy,
+    WhatsAppSize,
+)
 from app.modules.groups.infrastructure.group_model import (
     GroupJoinRequestORM,
     GroupMemberORM,
@@ -78,6 +85,17 @@ class SqlAlchemyGroupDirectory:
         if row is None:
             return None
         return (await self._listed([row]))[row.id]
+
+    async def run_by(self, administrator_id: UUID) -> Sequence[GroupListing]:
+        rows = (
+            await self._session.scalars(
+                select(GroupORM)
+                .where(GroupORM.administrator_id == administrator_id)
+                .order_by(GroupORM.created_at.desc(), GroupORM.id)
+            )
+        ).all()
+        listed = await self._listed(rows)
+        return [listed[row.id] for row in rows]
 
     async def named(self, text: str) -> Mapping[UUID, frozenset[UUID]]:
         found = (
@@ -135,6 +153,18 @@ class SqlAlchemyGroupDirectory:
                 members=tuple(members[row.id]),
                 waiting=tuple(waiting[row.id]),
                 joined_at=joined_at[row.id],
+                kind=GroupKind(row.kind),
+                administrator_id=row.administrator_id,
+                whatsapp_size=(
+                    None
+                    if row.whatsapp_size is None
+                    else WhatsAppSize(row.whatsapp_size)
+                ),
+                declared_sports=(
+                    None
+                    if row.declared_sports is None
+                    else DeclaredSports.from_codes(row.declared_sports)
+                ),
             )
             for row in rows
         }

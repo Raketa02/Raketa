@@ -24,6 +24,7 @@ from app.bootstrap.composition import (
     build_club_account_repository,
     build_club_account_session_holders,
     build_club_repository,
+    build_official_group_sports,
 )
 from app.core.security import BearerCredentialsDep
 from app.modules.auth.application.forgot_password import (
@@ -92,9 +93,14 @@ ReadClubDetailsDep = Annotated[ReadClubDetails, Depends(get_read_club_details)]
 
 
 def get_change_club_details(
-    clubs: ClubRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+    db: DbSession, clubs: ClubRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
 ) -> ChangeClubDetails:
-    return ChangeClubDetails(clubs=clubs, uow=uow, clock=clock)
+    return ChangeClubDetails(
+        clubs=clubs,
+        groups=build_official_group_sports(db),
+        uow=uow,
+        clock=clock,
+    )
 
 
 ChangeClubDetailsDep = Annotated[ChangeClubDetails, Depends(get_change_club_details)]

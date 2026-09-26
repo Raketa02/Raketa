@@ -8,9 +8,19 @@ request waiting.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
@@ -28,10 +38,31 @@ class GroupORM(Base):
     group re-projected.
 
     ``code`` is unique and never changes (``docs/adr/0183`` §4).
+
+    **The kind decides which columns hold anything**, and a check constraint
+    holds the two shapes (``docs/adr/0183`` §1, §3): a player group has an
+    ``owner_id`` and nothing in the official columns; an official group has no
+    Owner, and its ``administrator_id``, ``whatsapp_size`` and
+    ``declared_sports`` — registry codes in the registry's order, as a club's
+    sports are held.
+
+    ``created_at`` is the creating event's own instant, so an Administrator's
+    groups come newest created first even when the stream was written in the
+    past, as a seed writes it.
     """
 
     __tablename__ = "groups"
-    __table_args__ = (UniqueConstraint("code", name="uq_groups_code"),)
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_groups_code"),
+        CheckConstraint(
+            "(kind = 'PLAYER' AND owner_id IS NOT NULL AND administrator_id IS NULL"
+            " AND whatsapp_size IS NULL AND declared_sports IS NULL)"
+            " OR (kind = 'OFFICIAL' AND owner_id IS NULL"
+            " AND administrator_id IS NOT NULL AND whatsapp_size IS NOT NULL"
+            " AND declared_sports IS NOT NULL)",
+            name="ck_groups_kind_shape",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
     name: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -45,7 +76,24 @@ class GroupORM(Base):
         index=True,
     )
     join_policy: Mapped[str] = mapped_column(String(32), nullable=False)
-    owner_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), nullable=False)
+    kind: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="PLAYER", server_default="PLAYER"
+    )
+    owner_id: Mapped[Optional[UUID]] = mapped_column(
+        UUIDType(binary=False), nullable=True
+    )
+    administrator_id: Mapped[Optional[UUID]] = mapped_column(
+        UUIDType(binary=False),
+        ForeignKey("administrators.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    whatsapp_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # ``none_as_null``: a player group's ``None`` is SQL ``NULL``, never the
+    # JSON ``null`` the check constraint would read as a value.
+    declared_sports: Mapped[Optional[list[str]]] = mapped_column(
+        JSON(none_as_null=True), nullable=True
+    )
     code: Mapped[str] = mapped_column(String(8), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

@@ -395,7 +395,7 @@
           "club"
         ],
         "summary": "Change the signed-in club's details",
-        "description": "A full replacement of the five details, at any time. Saving them unchanged records nothing. Answers the details as recorded \u2014 names trimmed and collapsed, sports in the registry's order.",
+        "description": "A full replacement of the five details, at any time. Saving them unchanged records nothing. **A sport an official group declares cannot be unticked**, and the refusal names the group. Answers the details as recorded \u2014 names trimmed and collapsed, sports in the registry's order.",
         "operationId": "change_details_api_v1_club_details_put",
         "requestBody": {
           "content": {
@@ -420,6 +420,16 @@
           },
           "400": {
             "description": "A field the desk has to correct, named by `details.field`: `club_name_invalid`, `club_district_invalid`, `club_city_invalid`, `club_sports_required` or `club_point_invalid`. Nothing was recorded. The website writes the sentence under that field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`club_sport_declared_by_group` \u2014 the save unticks a sport an official group at the club declares; `details.field` is `sports`, `details.sport` the sport and `details.group` the group's name (the first by name, where several play it). Nothing was recorded. The group's administrator changes its sports first, or the sport stays ticked.",
             "content": {
               "application/json": {
                 "schema": {

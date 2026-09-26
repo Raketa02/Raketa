@@ -7,9 +7,11 @@ express the answer that gets refused, or the refusal has nowhere to happen.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
+from app.kernel import Sport
 from app.modules.groups.domain.value_objects import JoinPolicy
 
 
@@ -87,3 +89,51 @@ class EditGroupCommand:
     editor_id: UUID
     name: str
     join_policy: JoinPolicy
+
+
+@dataclass(frozen=True)
+class Administering:
+    """Somebody acting as an Administrator — **the administratorship the
+    administrator guard just read as active** at the club the path names
+    (``docs/adr/0184`` §7), and the account behind it. Every field comes from
+    the guard, never from a body."""
+
+    club_id: UUID
+    administrator_id: UUID
+    account_id: UUID
+
+
+@dataclass(frozen=True)
+class CreateOfficialGroupCommand:
+    """An Administrator creates an official group for their club: its name, who
+    can join, the size of the WhatsApp group it mirrors and the sports it plays
+    (``docs/adr/0183`` §3). The home club is theirs, and not asked."""
+
+    administering: Administering
+    name: str
+    join_policy: JoinPolicy
+    whatsapp_size: int
+    sports: Sequence[Sport]
+
+
+@dataclass(frozen=True)
+class ChangeOfficialGroupSettingsCommand:
+    """Its Administrator saves an official group's settings — all four, as the
+    settings screen holds them (``docs/adr/0184`` §8)."""
+
+    administering: Administering
+    group_id: UUID
+    name: str
+    join_policy: JoinPolicy
+    whatsapp_size: int
+    sports: Sequence[Sport]
+
+
+@dataclass(frozen=True)
+class AnswerAsAdministratorCommand:
+    """An Administrator approves or declines a Join request waiting on an
+    official group they run. ``player_id`` is who asked."""
+
+    administering: Administering
+    group_id: UUID
+    player_id: UUID

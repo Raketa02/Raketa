@@ -1,17 +1,29 @@
 """The Group's stream.
 
 ``docs/adr/0183`` §1 lists the whole of what a group's stream will say. This
-build writes ten: a player group is **created**, somebody **joins** it, and on a
-*People I approve* group somebody **asks** and the Owner **approves** or
+build writes thirteen: a player group is **created**, somebody **joins** it, and
+on a *People I approve* group somebody **asks** and the Owner **approves** or
 **declines** (#505); a member **leaves**, a leaving Owner's group **passes** to
 the longest-standing member, the Owner **renames** it, **changes who can join**
-and, alone in it, **deletes** it (#506). Official groups and handovers are each
-their own event and arrive with the tickets that need them (#509, #510).
+and, alone in it, **deletes** it (#506); and an Administrator **creates an
+official group**, **sets its WhatsApp size** and **declares its sports** again
+(#509) — answering, renaming and changing who can join with the events a player
+group's Owner already writes. The handover is its own event and arrives with
+the ticket that needs it (#510).
 
 **Each kind is created by its own event**, because every rule that differs by
 kind has to say so in its own words and none may be inferred from a null
 (``docs/adr/0183`` §1): a player group names its Owner, and an official group
-will name no such person.
+names its Administrator and no Owner at all.
+
+**Declared sports travel as registry codes in the registry's order, and are
+forced to a tuple on the way in and out of storage**, as a club's are: the codec
+hands a JSON array back as a list, and an event read back must equal the one
+appended.
+
+**Every ``*_by`` is an account** — the person who tapped, a User's id — on both
+kinds: on an official group it is the account behind its Administrator, so the
+history says who let somebody in, as it does on a player group.
 """
 
 from __future__ import annotations
@@ -37,6 +49,63 @@ class PlayerGroupCreated:
     owner_id: UUID
     code: str
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class OfficialGroupCreated:
+    """An Administrator created an official group for their club
+    (``docs/adr/0183`` §3) — one per WhatsApp group they run.
+
+    **No Owner, and nobody in it**: running an official group is not
+    membership, so the Administrator is not its first member — an Administrator
+    who plays joins it like anybody, and directly (§7). ``administrator_id`` is
+    the Administrator who runs it, ``created_by`` the account that tapped
+    *Create*. ``home_club_id`` is the Administrator's club, fixed. ``sports``
+    are registry codes in the registry's order; ``whatsapp_size`` limits
+    nothing. ``code`` is the one its link will carry for ever (§4).
+    """
+
+    group_id: UUID
+    name: str
+    home_club_id: UUID
+    join_policy: str
+    administrator_id: UUID
+    created_by: UUID
+    whatsapp_size: int
+    sports: tuple[str, ...]
+    code: str
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "sports", tuple(self.sports))
+
+
+@dataclass(frozen=True)
+class WhatsAppSizeSet:
+    """Its Administrator changed how many people the WhatsApp group an official
+    group mirrors has (``docs/adr/0183`` §3) — the club's *From WhatsApp*
+    denominator, which limits nothing. Official groups only."""
+
+    group_id: UUID
+    whatsapp_size: int
+    set_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SportsDeclared:
+    """Its Administrator declared what an official group plays again — the whole
+    set, as the settings hold it, registry codes in the registry's order
+    (``docs/adr/0183`` §3). Its dots move on the next read. Official groups
+    only."""
+
+    group_id: UUID
+    sports: tuple[str, ...]
+    declared_by: UUID
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "sports", tuple(self.sports))
 
 
 @dataclass(frozen=True)

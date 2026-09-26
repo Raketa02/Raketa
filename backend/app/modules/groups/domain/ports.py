@@ -3,10 +3,10 @@
 **Two ports are this context's own store**: the aggregate repository, whose
 ``save`` writes the groups, group-members and join-requests projections in the
 caller's transaction, and the directory that reads those projections back.
-**The other seven are demands on contexts it does not write** — clubs, rating,
+**The other eight are demands on contexts it does not write** — clubs, rating,
 users with the Player profile, the Player profile again for where the reader
-is, the Player Score, and blocks — each declared here in this context's
-vocabulary and answered by an adapter in ``infrastructure/`` over that
+is, the Player Score, blocks, and administrators — each declared here in this
+context's vocabulary and answered by an adapter in ``infrastructure/`` over that
 provider's own port, never its table.
 """
 
@@ -20,7 +20,14 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport, invariant
 from app.modules.groups.domain.group import Group
-from app.modules.groups.domain.value_objects import GroupCode, GroupName, JoinPolicy
+from app.modules.groups.domain.value_objects import (
+    DeclaredSports,
+    GroupCode,
+    GroupKind,
+    GroupName,
+    JoinPolicy,
+    WhatsAppSize,
+)
 
 # --------------------------------------------------------------------------- #
 # This context's own store
@@ -48,27 +55,39 @@ class GroupListing:
     """One group as the projections hold it: what a row, a card and a page are
     drawn from.
 
-    ``members`` is every Group member **in the order they joined**, the Owner
-    first, so a count is its length and *the first to join* is a prefix.
-    ``waiting`` is everybody whose Join request waits, **in the order they
-    asked** — the Owner's *Want to join* queue, and what a reader's relation to
+    ``members`` is every Group member **in the order they joined** — a player
+    group's Owner first — so a count is its length and *the first to join* is a
+    prefix. ``waiting`` is everybody whose Join request waits, **in the order
+    they asked** — the *Want to join* queue, and what a reader's relation to
     the group is read from. ``joined_at`` is when each member joined — this
     stay, for somebody who left and came back.
+
+    **The kind decides the rest** (``docs/adr/0183`` §3): a player group has an
+    ``owner_id``; an official group has none, and its ``administrator_id``,
+    ``whatsapp_size`` and ``declared_sports``.
     """
 
     id: UUID
     name: GroupName
     home_club_id: UUID
     join_policy: JoinPolicy
-    owner_id: UUID
+    owner_id: UUID | None
     code: GroupCode
     members: tuple[UUID, ...]
     waiting: tuple[UUID, ...]
     joined_at: Mapping[UUID, datetime]
+    kind: GroupKind
+    administrator_id: UUID | None
+    whatsapp_size: WhatsAppSize | None
+    declared_sports: DeclaredSports | None
 
     @property
     def member_count(self) -> int:
         return len(self.members)
+
+    @property
+    def is_official(self) -> bool:
+        return self.kind is GroupKind.OFFICIAL
 
 
 @runtime_checkable
@@ -98,6 +117,12 @@ class GroupDirectory(Protocol):
     async def with_code(self, code: GroupCode) -> GroupListing | None:
         """The group whose link carries this code, or ``None`` for a code no
         group has — a link that leads nowhere."""
+        ...
+
+    async def run_by(self, administrator_id: UUID) -> Sequence[GroupListing]:
+        """Every official group this Administrator runs, **newest created
+        first** — the administrator's Groups tab, and the settings rows on
+        their You tab."""
         ...
 
     async def named(self, text: str) -> Mapping[UUID, frozenset[UUID]]:
@@ -324,4 +349,47 @@ class HiddenMembers(Protocol):
         read: an empty set is *nobody is hidden*, and a gate that cannot be
         evaluated excludes (``docs/adr/0095`` §5) — so the list is not served.
         """
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# Administrators: who runs an official group now
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class RunningAdministrator:
+    """Who runs an official group now: the account behind its Administrator,
+    and **the name the club gave them** — what the *approves joins* line says.
+
+    The club's name for them, and not the account's naming, because the line is
+    about the club's Administrator — and because an account an invitation
+    opened has a Name and no nickname yet, which the naming read does not
+    answer for; that account's Name *is* the name the club typed
+    (``docs/adr/0185`` §4)."""
+
+    account_id: UUID
+    name: str
+
+
+@runtime_checkable
+class GroupAdministrators(Protocol):
+    """Who runs each official group **now** (``docs/adr/0183`` §3).
+
+    A group records the Administrator who runs it, and whether that
+    administratorship is still active is a fact about administrators — so it is
+    **read and never held**: a club removing somebody takes their groups from
+    them on the next read, with nothing here to keep in step. The account is
+    what a player-side read needs — it joins directly (§7), and its Members
+    row carries the **admin** tag — and the name is the approver line's.
+    """
+
+    async def running(
+        self, administrator_ids: Collection[UUID]
+    ) -> Mapping[UUID, RunningAdministrator]:
+        """Each of these Administrators, **only while their administratorship
+        is active**. A removed one is absent — nobody runs its groups until the
+        club hands them over (``docs/adr/0184`` §7). One question about the
+        set."""
         ...

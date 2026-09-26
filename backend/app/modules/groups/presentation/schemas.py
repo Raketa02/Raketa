@@ -11,6 +11,11 @@ types: a club's id and a join policy are refused before they are read.
 dots and member count cross in one shape wherever a group is drawn, and each
 response adds only what its surface alone says. **One card, two searches**:
 home-club search and join search both answer ``ClubCardSchema``.
+
+**Every row says its kind** (``docs/adr/0183`` §1), so a client never reads an
+official group as a player group with a null where its Owner would be. The
+administrator's shapes — the Groups tab, an official group's page and its
+settings — are at the end, on the administrator surface's paths.
 """
 
 from __future__ import annotations
@@ -22,6 +27,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.kernel import Sport
+from app.modules.groups.application.official_groups import (
+    AdministeredClub,
+    AdministeredGroupCard,
+    AdministeredGroupPage,
+    AdministeredGroups,
+    SavedSettings,
+)
 from app.modules.groups.application.views import (
     ClubCard,
     EditedGroup,
@@ -39,7 +51,11 @@ from app.modules.groups.domain.join_search import ReadAs
 from app.modules.groups.domain.link import group_link
 from app.modules.groups.domain.monogram import MONOGRAM_COLOURS
 from app.modules.groups.domain.ports import GroupFace
-from app.modules.groups.domain.value_objects import GroupRelation, JoinPolicy
+from app.modules.groups.domain.value_objects import (
+    GroupKind,
+    GroupRelation,
+    JoinPolicy,
+)
 
 OMITTED: Any = None
 
@@ -126,23 +142,36 @@ class GroupRowSchema(BaseModel):
     """A group, as every list draws it."""
 
     id: UUID
+    kind: GroupKind = Field(
+        description=(
+            "`PLAYER` — a player's own group, with an Owner. `OFFICIAL` — a "
+            "club's, one per WhatsApp group, run by one of its Administrators: "
+            "**no Owner**, and its sports are the ones it declares."
+        )
+    )
     name: str
     monogram: MonogramSchema
     sports: list[Sport] = Field(
         description=(
-            "The sport dots, in the registry's order: each sport **at least two** "
-            "members hold a Skill rating in. Read when the group is read — a "
-            "rating earned or a member leaving moves them on the next read."
+            "The sport dots, in the registry's order. **A player group's**: each "
+            "sport **at least two** members hold a Skill rating in, read when the "
+            "group is read — a rating earned or a member leaving moves them on "
+            "the next read. **An official group's**: the sports it declares."
         )
     )
     member_count: int = Field(
-        description="Every Group member, the Owner included. The same for every reader."
+        description=(
+            "Every Group member — a player group's Owner, and the Administrator "
+            "who joined an official group as a player, included. The same for "
+            "every reader."
+        )
     )
 
     @staticmethod
     def fields_of(row: GroupRow) -> dict:
         return {
             "id": row.id,
+            "kind": row.kind,
             "name": row.name,
             "monogram": MonogramSchema(
                 letters=row.monogram.letters, colour=row.monogram.colour
@@ -191,7 +220,26 @@ class GroupAtClubSchema(GroupRowSchema):
             "from it, here or by a client**: a sentence naming somebody uses the "
             "whole Name (`docs/adr/0171` §4), so the line reads *Karol Nowak "
             "approves joins* and the row truncates it as it truncates any line. "
-            "`null` for an account that can no longer be named."
+            "`null` for an account that can no longer be named — and **always "
+            "`null` on an official group**, which has no Owner: its line names "
+            "`administrator_name`."
+        )
+    )
+    administrator_name: str | None = Field(
+        description=(
+            "**An official group's** *approves joins* line: the whole name the "
+            "club gave the Administrator running it now — *Administrator Marta "
+            "Wójcik approves joins* — cut by nobody, as `owner_name` is. `null` "
+            "while nobody runs it, and **always `null` on a player group**, "
+            "whose line names `owner_name`."
+        )
+    )
+    is_administrator: bool = Field(
+        description=(
+            "Whether **the reader** runs this official group. Their tap is "
+            "**Join**, never *Ask to join*: they are admitted at once whatever "
+            "`join_policy` says — they would otherwise be asking themselves. "
+            "Always `false` on a player group."
         )
     )
     relation: GroupRelation = Field(
@@ -211,6 +259,8 @@ class GroupAtClubSchema(GroupRowSchema):
             join_policy=group.join_policy,
             owner_name=group.owner_name,
             relation=group.relation,
+            administrator_name=group.administrator_name,
+            is_administrator=group.is_administrator,
         )
 
 
@@ -368,7 +418,22 @@ class GroupResponse(GroupRowSchema):
         )
     )
     join_policy: JoinPolicy
-    is_owner: bool = Field(description="Whether the reader is the group's Owner.")
+    is_owner: bool = Field(
+        description=(
+            "Whether the reader is the group's Owner. Always `false` on an "
+            "official group, which has none."
+        )
+    )
+    declared_sports: list[Sport] = Field(
+        OMITTED,
+        description=(
+            "**An official group's** declared sports, in the registry's order — "
+            "what it plays, so the sport filter narrows to the ones the reader "
+            "is rated in among these, and a reader rated in none of them is "
+            "shown what to add. **Omitted on a player group**, which plays "
+            "whatever its members are rated in."
+        ),
+    )
     rated_by_sport: list[GroupSportSchema] = Field(
         description=(
             "**Every sport**, in the registry's order — one the group has no dot "
@@ -389,8 +454,14 @@ class GroupResponse(GroupRowSchema):
 
     @classmethod
     def from_view(cls, page: GroupPage, *, public_site: str) -> "GroupResponse":
+        declared: dict = (
+            {"declared_sports": list(page.row.sports)}
+            if page.row.kind is GroupKind.OFFICIAL
+            else {}
+        )
         return cls(
             **GroupRowSchema.fields_of(page.row),
+            **declared,
             home_club=ClubNameSchema.from_view(page.home_club),
             link=group_link(public_site, page.code),
             join_policy=page.join_policy,
@@ -493,7 +564,16 @@ class GroupMemberSchema(GroupPersonSchema):
     )
     is_owner: bool = Field(
         description=(
-            "Whether they own the group — the row the **admin** tag is drawn on."
+            "Whether they own the group — the row the **admin** tag is drawn on "
+            "in a player group."
+        )
+    )
+    is_administrator: bool = Field(
+        description=(
+            "Whether they run this **official** group as its Administrator, and "
+            "joined it as a player — the row the **admin** tag is drawn on in an "
+            "official group, second after the reader as an Owner is. Always "
+            "`false` on a player group."
         )
     )
     joined_at: datetime = Field(
@@ -509,6 +589,7 @@ class GroupMemberSchema(GroupPersonSchema):
             **GroupPersonSchema.fields_of(row.face),
             "level": row.level,
             "is_owner": row.is_owner,
+            "is_administrator": row.is_administrator,
             "joined_at": row.joined_at,
         }
         if row.player_score is not None:
@@ -521,10 +602,209 @@ class GroupMembersResponse(BaseModel):
     members: list[GroupMemberSchema] = Field(
         description=(
             "**Only the members rated in `sport`**: the reader first, then the "
-            "Owner, then everybody else **newest joined first**. **A blocked "
+            "Owner — or the Administrator running an official group, once they "
+            "joined it as a player — then everybody else **newest joined "
+            "first**. **A blocked "
             "pair, either way round, is left out of each other's list** — and "
             "nothing says so: the group's `member_count` is the same for every "
             "reader, so it may be more than the rows here. Empty when nobody in "
             "the group the reader may see is rated in it."
         )
     )
+
+
+# --------------------------------------------------------------------------- #
+# The administrator surface
+# --------------------------------------------------------------------------- #
+
+
+class _OfficialGroupFields(BaseModel):
+    """The four facts an Administrator gives an official group — at creation,
+    and all four again on every settings save (``docs/adr/0183`` §3)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(
+        description=(
+            "*Same name as the WhatsApp group*: trimmed, runs of whitespace "
+            "collapsed, then 1–40 characters. Refused with `group_name_invalid`, "
+            "`details.field` `name`."
+        )
+    )
+    join_policy: JoinPolicy = Field(
+        description=(
+            "`ANYONE` or `PEOPLE_I_APPROVE`. **Switching to `ANYONE` admits "
+            "everybody waiting at once.**"
+        )
+    )
+    whatsapp_size: int = Field(
+        description=(
+            "How many people the WhatsApp group has — **required**, a whole "
+            "number from 2 to 1024. It limits nothing: more players than this "
+            "is allowed and honest. Refused with `whatsapp_size_invalid`, "
+            "`details.field` `whatsapp_size`."
+        )
+    )
+    sports: list[Sport] = Field(
+        description=(
+            "What the group plays — **required**, and **only the club's**. "
+            "Ticking one twice is ticking it. Refused with "
+            "`group_sports_required` for none, or `sport_not_offered_by_club` "
+            "with the sport in `details.sport` — `details.field` `sports` either "
+            "way."
+        )
+    )
+
+
+class CreateOfficialGroupRequest(_OfficialGroupFields):
+    """*New official group*. **The home club is not asked**: it is the club in
+    the path, fixed."""
+
+
+class OfficialGroupSettingsRequest(_OfficialGroupFields):
+    """An official group's settings, **all four as the settings screen holds
+    them**, recorded together or not at all."""
+
+
+class OfficialGroupClubSchema(BaseModel):
+    """The club an administrator acts for."""
+
+    id: UUID
+    name: str
+    sports: list[Sport] = Field(
+        description=(
+            "What the club offers, in the registry's order — **the sports an "
+            "official group may declare**, so the form offers exactly these."
+        )
+    )
+
+    @classmethod
+    def from_view(cls, club: AdministeredClub) -> "OfficialGroupClubSchema":
+        return cls(id=club.id, name=club.name, sports=list(club.sports))
+
+
+class AdministeredGroupCardSchema(GroupRowSchema):
+    """A card on the administrator's Groups tab. `sports` are the declared
+    dots; `member_count` is *N members*."""
+
+    waiting_count: int = Field(
+        description=(
+            "How many Join requests are waiting — the amber *N waiting*. `0` "
+            "when nobody is."
+        )
+    )
+    home_club: ClubNameSchema
+
+    @classmethod
+    def from_view(cls, card: AdministeredGroupCard) -> "AdministeredGroupCardSchema":
+        return cls(
+            **GroupRowSchema.fields_of(card.row),
+            waiting_count=card.waiting_count,
+            home_club=ClubNameSchema.from_view(card.home_club),
+        )
+
+
+class AdministeredGroupsResponse(BaseModel):
+    club: OfficialGroupClubSchema
+    groups: list[AdministeredGroupCardSchema] = Field(
+        description=(
+            "**The official groups this administrator runs** at this club, "
+            "newest created first — never a colleague's. Empty before the first: "
+            "*No official groups yet*."
+        )
+    )
+
+    @classmethod
+    def from_view(cls, groups: AdministeredGroups) -> "AdministeredGroupsResponse":
+        return cls(
+            club=OfficialGroupClubSchema.from_view(groups.club),
+            groups=[
+                AdministeredGroupCardSchema.from_view(card) for card in groups.groups
+            ],
+        )
+
+
+class GroupPlayerSchema(GroupPersonSchema):
+    """One player on an official group's page — rows are not tappable, and
+    nobody can be removed."""
+
+    joined_at: datetime = Field(
+        description=(
+            "When they joined — this stay. The app prints *this week* within "
+            "seven days, and the date after."
+        )
+    )
+
+
+class AdministeredGroupResponse(GroupRowSchema):
+    """An official group as the administrator running it opens it — and what
+    its settings hold. `member_count` is *N players*."""
+
+    home_club: OfficialGroupClubSchema
+    link: str = Field(
+        description=(
+            "The Group link to post into the WhatsApp group: the public site's "
+            "address, `/join/` and the group's code. **It never changes** — not "
+            "on a rename, a policy change or a handover."
+        )
+    )
+    join_policy: JoinPolicy
+    whatsapp_size: int = Field(description="How many people the WhatsApp group has.")
+    players: list[GroupPlayerSchema] = Field(
+        description=(
+            "Every player, **newest joined first** — the Administrator too, if "
+            "they joined as a player. A blocked pair, either way round, is left "
+            "out, as every Members list leaves them out; `member_count` is the "
+            "group's."
+        )
+    )
+    requests: list[JoinRequestSchema] = Field(
+        description=(
+            "*Want to join · N*: everybody waiting, in the order they asked, "
+            "each with every sport they are rated in and its Level. Empty when "
+            "nobody is."
+        )
+    )
+
+    @classmethod
+    def from_view(
+        cls, page: AdministeredGroupPage, *, public_site: str
+    ) -> "AdministeredGroupResponse":
+        return cls(
+            **GroupRowSchema.fields_of(page.row),
+            home_club=OfficialGroupClubSchema.from_view(page.home_club),
+            link=group_link(public_site, page.code),
+            join_policy=page.join_policy,
+            whatsapp_size=page.whatsapp_size,
+            players=[
+                GroupPlayerSchema(
+                    **GroupPersonSchema.fields_of(player.face),
+                    joined_at=player.joined_at,
+                )
+                for player in page.players
+            ],
+            requests=[JoinRequestSchema.from_card(card) for card in page.requests],
+        )
+
+
+class SavedSettingsResponse(BaseModel):
+    """The group as its settings left it, and who the save let in."""
+
+    group: AdministeredGroupResponse
+    admitted: list[GroupPersonSchema] = Field(
+        description=(
+            "Everybody the switch to `ANYONE` admitted, **in the order they "
+            "asked**. Empty for every other save."
+        )
+    )
+
+    @classmethod
+    def from_view(
+        cls, saved: SavedSettings, *, public_site: str
+    ) -> "SavedSettingsResponse":
+        return cls(
+            group=AdministeredGroupResponse.from_view(
+                saved.page, public_site=public_site
+            ),
+            admitted=[GroupPersonSchema.from_view(face) for face in saved.admitted],
+        )

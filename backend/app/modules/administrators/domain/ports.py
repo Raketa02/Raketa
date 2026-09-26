@@ -96,6 +96,15 @@ class AdministratorDirectory(Protocol):
         active** — the one read the administrator guard makes."""
         ...
 
+    async def active_among(
+        self, administrator_ids: Collection[UUID]
+    ) -> Sequence[AdministratorListing]:
+        """Those of these administratorships that are **active now**, in no
+        particular order — who runs a set of official groups, read in one
+        question about the set (#509). A removed or never-accepted one is
+        absent."""
+        ...
+
     async def invited_as(self, email: Email) -> Sequence[AdministratorListing]:
         """Every administratorship waiting on this address, at any club —
         expired ones included; the reader decides what is still pending."""

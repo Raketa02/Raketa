@@ -5899,6 +5899,504 @@
           }
         }
       }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups": {
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Create an official group for my club",
+        "description": "One per WhatsApp group the administrator runs. **Its home club is the club in the path**, fixed. **It has no Owner and nobody in it**: running it is not membership \u2014 an administrator who plays joins it from their player profile, directly. It gets its link, which never changes. Answers the group as its administrator's page reads it.",
+        "operationId": "create_official_group_api_v1_administrator_clubs__club_id__groups_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOfficialGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministeredGroupResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) \u2014 1\u201340 characters once trimmed; `whatsapp_size_invalid` (`whatsapp_size`) \u2014 a whole number from 2 to 1024; `group_sports_required` (`sports`) \u2014 at least one; `sport_not_offered_by_club` (`sports`, with `details.sport`) \u2014 only the club's. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "The official groups I run at my club",
+        "description": "The administrator's Groups tab: each group's monogram, name, declared sports, member count, waiting count and home club, newest created first \u2014 and the club, whose sports are what a group may declare.",
+        "operationId": "administered_groups_api_v1_administrator_clubs__club_id__groups_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministeredGroupsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups/{group_id}": {
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "An official group I run",
+        "description": "Its link to post, how many players it has, every player newest first with the day they joined, everybody waiting with every sport they are rated in and its Level \u2014 and its settings: name, who can join, WhatsApp group size and sports.",
+        "operationId": "administered_group_api_v1_administrator_clubs__club_id__groups__group_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministeredGroupResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for every group that is not theirs**: no such group, a player group, one at another club, or one a colleague runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read for the players list. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups/{group_id}/settings": {
+      "put": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Save an official group's settings",
+        "description": "All four as the settings screen holds them, recorded together or not at all; saving what the group already says records nothing. **The link never changes.** **Switching to `ANYONE` admits everybody waiting at once**, and `admitted` says who.",
+        "operationId": "save_settings_api_v1_administrator_clubs__club_id__groups__group_id__settings_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfficialGroupSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedSettingsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for every group that is not theirs**: no such group, a player group, one at another club, or one a colleague runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read for the players list. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) \u2014 1\u201340 characters once trimmed; `whatsapp_size_invalid` (`whatsapp_size`) \u2014 a whole number from 2 to 1024; `group_sports_required` (`sports`) \u2014 at least one; `sport_not_offered_by_club` (`sports`, with `details.sport`) \u2014 only the club's. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups/{group_id}/requests/{player_id}/approve": {
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Approve a Join request on an official group I run",
+        "description": "The player is a Group member **at once**. Approving somebody already in changes nothing.",
+        "operationId": "approve_join_request_api_v1_administrator_clubs__club_id__groups__group_id__requests__player_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 not a group this administrator runs. `join_request_not_found` \u2014 the player has no request waiting: it was declined, or never made, and nobody is admitted who did not ask. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups/{group_id}/requests/{player_id}/decline": {
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Decline a Join request on an official group I run",
+        "description": "The request is gone **silently**: nothing tells the player, and they may ask again. Declining a request that is not waiting changes nothing, and never removes a member.",
+        "operationId": "decline_join_request_api_v1_administrator_clubs__club_id__groups__group_id__requests__player_id__decline_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for every group that is not theirs**: no such group, a player group, one at another club, or one a colleague runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5988,6 +6486,163 @@
           "club_name"
         ],
         "title": "AdministeredClubSchema"
+      },
+      "AdministeredGroupCardSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
+          },
+          "waiting_count": {
+            "type": "integer",
+            "title": "Waiting Count",
+            "description": "How many Join requests are waiting \u2014 the amber *N waiting*. `0` when nobody is."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/ClubNameSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "waiting_count",
+          "home_club"
+        ],
+        "title": "AdministeredGroupCardSchema",
+        "description": "A card on the administrator's Groups tab. `sports` are the declared\ndots; `member_count` is *N members*."
+      },
+      "AdministeredGroupResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/OfficialGroupClubSchema"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link",
+            "description": "The Group link to post into the WhatsApp group: the public site's address, `/join/` and the group's code. **It never changes** \u2014 not on a rename, a policy change or a handover."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy"
+          },
+          "whatsapp_size": {
+            "type": "integer",
+            "title": "Whatsapp Size",
+            "description": "How many people the WhatsApp group has."
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Every player, **newest joined first** \u2014 the Administrator too, if they joined as a player. A blocked pair, either way round, is left out, as every Members list leaves them out; `member_count` is the group's."
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/JoinRequestSchema"
+            },
+            "type": "array",
+            "title": "Requests",
+            "description": "*Want to join \u00b7 N*: everybody waiting, in the order they asked, each with every sport they are rated in and its Level. Empty when nobody is."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "home_club",
+          "link",
+          "join_policy",
+          "whatsapp_size",
+          "players",
+          "requests"
+        ],
+        "title": "AdministeredGroupResponse",
+        "description": "An official group as the administrator running it opens it \u2014 and what\nits settings hold. `member_count` is *N players*."
+      },
+      "AdministeredGroupsResponse": {
+        "properties": {
+          "club": {
+            "$ref": "#/components/schemas/OfficialGroupClubSchema"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/AdministeredGroupCardSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "**The official groups this administrator runs** at this club, newest created first \u2014 never a colleague's. Empty before the first: *No official groups yet*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "club",
+          "groups"
+        ],
+        "title": "AdministeredGroupsResponse"
       },
       "AdministratorProfileResponse": {
         "properties": {
@@ -8048,6 +8703,42 @@
         ],
         "title": "CreateAssessmentRequest"
       },
+      "CreateOfficialGroupRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "*Same name as the WhatsApp group*: trimmed, runs of whitespace collapsed, then 1\u201340 characters. Refused with `group_name_invalid`, `details.field` `name`."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` or `PEOPLE_I_APPROVE`. **Switching to `ANYONE` admits everybody waiting at once.**"
+          },
+          "whatsapp_size": {
+            "type": "integer",
+            "title": "Whatsapp Size",
+            "description": "How many people the WhatsApp group has \u2014 **required**, a whole number from 2 to 1024. It limits nothing: more players than this is allowed and honest. Refused with `whatsapp_size_invalid`, `details.field` `whatsapp_size`."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "What the group plays \u2014 **required**, and **only the club's**. Ticking one twice is ticking it. Refused with `group_sports_required` for none, or `sport_not_offered_by_club` with the sport in `details.sport` \u2014 `details.field` `sports` either way."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "join_policy",
+          "whatsapp_size",
+          "sports"
+        ],
+        "title": "CreateOfficialGroupRequest",
+        "description": "*New official group*. **The home club is not asked**: it is the club in\nthe path, fixed."
+      },
       "CreatePlayerGroupRequest": {
         "properties": {
           "name": {
@@ -9060,6 +9751,10 @@
             "format": "uuid",
             "title": "Id"
           },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -9073,12 +9768,12 @@
             },
             "type": "array",
             "title": "Sports",
-            "description": "The sport dots, in the registry's order: each sport **at least two** members hold a Skill rating in. Read when the group is read \u2014 a rating earned or a member leaving moves them on the next read."
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
           },
           "member_count": {
             "type": "integer",
             "title": "Member Count",
-            "description": "Every Group member, the Owner included. The same for every reader."
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
           },
           "join_policy": {
             "$ref": "#/components/schemas/JoinPolicy",
@@ -9094,7 +9789,24 @@
               }
             ],
             "title": "Owner Name",
-            "description": "The Owner's **whole Name**, never the nickname \u2014 who answers a request, for the *approves joins* line. **No first name is cut from it, here or by a client**: a sentence naming somebody uses the whole Name (`docs/adr/0171` \u00a74), so the line reads *Karol Nowak approves joins* and the row truncates it as it truncates any line. `null` for an account that can no longer be named."
+            "description": "The Owner's **whole Name**, never the nickname \u2014 who answers a request, for the *approves joins* line. **No first name is cut from it, here or by a client**: a sentence naming somebody uses the whole Name (`docs/adr/0171` \u00a74), so the line reads *Karol Nowak approves joins* and the row truncates it as it truncates any line. `null` for an account that can no longer be named \u2014 and **always `null` on an official group**, which has no Owner: its line names `administrator_name`."
+          },
+          "administrator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administrator Name",
+            "description": "**An official group's** *approves joins* line: the whole name the club gave the Administrator running it now \u2014 *Administrator Marta W\u00f3jcik approves joins* \u2014 cut by nobody, as `owner_name` is. `null` while nobody runs it, and **always `null` on a player group**, whose line names `owner_name`."
+          },
+          "is_administrator": {
+            "type": "boolean",
+            "title": "Is Administrator",
+            "description": "Whether **the reader** runs this official group. Their tap is **Join**, never *Ask to join*: they are admitted at once whatever `join_policy` says \u2014 they would otherwise be asking themselves. Always `false` on a player group."
           },
           "relation": {
             "$ref": "#/components/schemas/GroupRelation",
@@ -9104,16 +9816,28 @@
         "type": "object",
         "required": [
           "id",
+          "kind",
           "name",
           "monogram",
           "sports",
           "member_count",
           "join_policy",
           "owner_name",
+          "administrator_name",
+          "is_administrator",
           "relation"
         ],
         "title": "GroupAtClubSchema",
         "description": "A group inside a club's card, with what it is to the reader."
+      },
+      "GroupKind": {
+        "type": "string",
+        "enum": [
+          "PLAYER",
+          "OFFICIAL"
+        ],
+        "title": "GroupKind",
+        "description": "The two kinds of Group (``docs/adr/0183`` \u00a71), and every rule that differs\nbetween them says which it binds rather than reading a null.\n\nA **player group** has an Owner who created it and plays whatever its\nmembers are rated in. An **official group** belongs to a club, has **no\nOwner** \u2014 one Administrator runs it \u2014 and **declares** its sports and the\nsize of the WhatsApp group it mirrors (\u00a73)."
       },
       "GroupMemberSchema": {
         "properties": {
@@ -9158,7 +9882,12 @@
           "is_owner": {
             "type": "boolean",
             "title": "Is Owner",
-            "description": "Whether they own the group \u2014 the row the **admin** tag is drawn on."
+            "description": "Whether they own the group \u2014 the row the **admin** tag is drawn on in a player group."
+          },
+          "is_administrator": {
+            "type": "boolean",
+            "title": "Is Administrator",
+            "description": "Whether they run this **official** group as its Administrator, and joined it as a player \u2014 the row the **admin** tag is drawn on in an official group, second after the reader as an Owner is. Always `false` on a player group."
           },
           "joined_at": {
             "type": "string",
@@ -9173,6 +9902,7 @@
           "name",
           "level",
           "is_owner",
+          "is_administrator",
           "joined_at"
         ],
         "title": "GroupMemberSchema",
@@ -9190,7 +9920,7 @@
             },
             "type": "array",
             "title": "Members",
-            "description": "**Only the members rated in `sport`**: the reader first, then the Owner, then everybody else **newest joined first**. **A blocked pair, either way round, is left out of each other's list** \u2014 and nothing says so: the group's `member_count` is the same for every reader, so it may be more than the rows here. Empty when nobody in the group the reader may see is rated in it."
+            "description": "**Only the members rated in `sport`**: the reader first, then the Owner \u2014 or the Administrator running an official group, once they joined it as a player \u2014 then everybody else **newest joined first**. **A blocked pair, either way round, is left out of each other's list** \u2014 and nothing says so: the group's `member_count` is the same for every reader, so it may be more than the rows here. Empty when nobody in the group the reader may see is rated in it."
           }
         },
         "type": "object",
@@ -9239,6 +9969,52 @@
         "title": "GroupPersonSchema",
         "description": "A member's face \u2014 **a name and a photograph, and nothing else**."
       },
+      "GroupPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 draw their initials."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**."
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At",
+            "description": "When they joined \u2014 this stay. The app prints *this week* within seven days, and the date after."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "joined_at"
+        ],
+        "title": "GroupPlayerSchema",
+        "description": "One player on an official group's page \u2014 rows are not tappable, and\nnobody can be removed."
+      },
       "GroupReason": {
         "type": "string",
         "enum": [
@@ -9268,6 +10044,10 @@
             "format": "uuid",
             "title": "Id"
           },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -9281,12 +10061,12 @@
             },
             "type": "array",
             "title": "Sports",
-            "description": "The sport dots, in the registry's order: each sport **at least two** members hold a Skill rating in. Read when the group is read \u2014 a rating earned or a member leaving moves them on the next read."
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
           },
           "member_count": {
             "type": "integer",
             "title": "Member Count",
-            "description": "Every Group member, the Owner included. The same for every reader."
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
           },
           "home_club": {
             "$ref": "#/components/schemas/ClubNameSchema"
@@ -9302,7 +10082,15 @@
           "is_owner": {
             "type": "boolean",
             "title": "Is Owner",
-            "description": "Whether the reader is the group's Owner."
+            "description": "Whether the reader is the group's Owner. Always `false` on an official group, which has none."
+          },
+          "declared_sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Declared Sports",
+            "description": "**An official group's** declared sports, in the registry's order \u2014 what it plays, so the sport filter narrows to the ones the reader is rated in among these, and a reader rated in none of them is shown what to add. **Omitted on a player group**, which plays whatever its members are rated in."
           },
           "rated_by_sport": {
             "items": {
@@ -9324,6 +10112,7 @@
         "type": "object",
         "required": [
           "id",
+          "kind",
           "name",
           "monogram",
           "sports",
@@ -10236,6 +11025,10 @@
             "format": "uuid",
             "title": "Id"
           },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -10249,12 +11042,12 @@
             },
             "type": "array",
             "title": "Sports",
-            "description": "The sport dots, in the registry's order: each sport **at least two** members hold a Skill rating in. Read when the group is read \u2014 a rating earned or a member leaving moves them on the next read."
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
           },
           "member_count": {
             "type": "integer",
             "title": "Member Count",
-            "description": "Every Group member, the Owner included. The same for every reader."
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
           },
           "home_club": {
             "$ref": "#/components/schemas/ClubNameSchema"
@@ -10263,6 +11056,7 @@
         "type": "object",
         "required": [
           "id",
+          "kind",
           "name",
           "monogram",
           "sports",
@@ -10377,6 +11171,71 @@
         ],
         "title": "NewPasswordRequest",
         "description": "The new password, and **exactly one** of what opens the way to it: the\n`token` from the email's link, or the `ticket` a claimed code returned.\n\nThe password carries no bound here, deliberately: the rule every account\nshares \u2014 8 to 128 characters with a letter and a digit \u2014 is refused as\n`password_too_weak` naming the field, not as a validation error naming none.\nSending both or neither of `token` and `ticket` is a malformed request rather\nthan a person's mistake, and is the one refusal here that is a `422`."
+      },
+      "OfficialGroupClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "What the club offers, in the registry's order \u2014 **the sports an official group may declare**, so the form offers exactly these."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "sports"
+        ],
+        "title": "OfficialGroupClubSchema",
+        "description": "The club an administrator acts for."
+      },
+      "OfficialGroupSettingsRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "*Same name as the WhatsApp group*: trimmed, runs of whitespace collapsed, then 1\u201340 characters. Refused with `group_name_invalid`, `details.field` `name`."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` or `PEOPLE_I_APPROVE`. **Switching to `ANYONE` admits everybody waiting at once.**"
+          },
+          "whatsapp_size": {
+            "type": "integer",
+            "title": "Whatsapp Size",
+            "description": "How many people the WhatsApp group has \u2014 **required**, a whole number from 2 to 1024. It limits nothing: more players than this is allowed and honest. Refused with `whatsapp_size_invalid`, `details.field` `whatsapp_size`."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "What the group plays \u2014 **required**, and **only the club's**. Ticking one twice is ticking it. Refused with `group_sports_required` for none, or `sport_not_offered_by_club` with the sport in `details.sport` \u2014 `details.field` `sports` either way."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "join_policy",
+          "whatsapp_size",
+          "sports"
+        ],
+        "title": "OfficialGroupSettingsRequest",
+        "description": "An official group's settings, **all four as the settings screen holds\nthem**, recorded together or not at all."
       },
       "OnCourtVerdict": {
         "type": "string",
@@ -12011,6 +12870,28 @@
         ],
         "title": "RungOfferSchema",
         "description": "One rung of the relaxation ladder, priced. **Offered, never applied.**\n\nThe engine computes what relaxing one of *your own* asks would be worth and\nhands you the number; it never takes the offer for you, because only you can\nsay truthfully that you are free on a Saturday.\n\n**The count is real.** It comes from re-running the whole search at this\nrung \u2014 not from an estimate, and not from the strict count plus something."
+      },
+      "SavedSettingsResponse": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/AdministeredGroupResponse"
+          },
+          "admitted": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "Admitted",
+            "description": "Everybody the switch to `ANYONE` admitted, **in the order they asked**. Empty for every other save."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "admitted"
+        ],
+        "title": "SavedSettingsResponse",
+        "description": "The group as its settings left it, and who the save let in."
       },
       "ScoreSchema": {
         "properties": {

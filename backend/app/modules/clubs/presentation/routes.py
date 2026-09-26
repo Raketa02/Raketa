@@ -100,12 +100,26 @@ async def read_details(
     "/details",
     response_model=ClubDetailsResponse,
     status_code=status.HTTP_200_OK,
-    responses=_FIELD_REFUSALS,
+    responses={
+        **_FIELD_REFUSALS,
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`club_sport_declared_by_group` — the save unticks a sport an "
+                "official group at the club declares; `details.field` is "
+                "`sports`, `details.sport` the sport and `details.group` the "
+                "group's name (the first by name, where several play it). "
+                "Nothing was recorded. The group's administrator changes its "
+                "sports first, or the sport stays ticked."
+            ),
+        },
+    },
     summary="Change the signed-in club's details",
     description=(
         "A full replacement of the five details, at any time. Saving them "
-        "unchanged records nothing. Answers the details as recorded — names "
-        "trimmed and collapsed, sports in the registry's order."
+        "unchanged records nothing. **A sport an official group declares cannot "
+        "be unticked**, and the refusal names the group. Answers the details as "
+        "recorded — names trimmed and collapsed, sports in the registry's order."
     ),
 )
 async def change_details(

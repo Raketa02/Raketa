@@ -11,6 +11,11 @@ sport's *N of M* on the page.
 cards with groups inside (``docs/adr/0183`` §9), and both build them with
 ``club_cards`` — so a group drawn in either is one shape, and the answer to a
 tap on it patches either in place.
+
+**Both kinds, one row.** An official group's dots are the sports it declares,
+and who answers its requests is the account running it now rather than an
+Owner (``docs/adr/0183`` §3, §6) — each said once, here, so no surface draws
+an official group as a player group with a null where its Owner would be.
 """
 
 from __future__ import annotations
@@ -26,16 +31,19 @@ from app.modules.groups.domain.home_club_search import ClubPage, in_card_order
 from app.modules.groups.domain.join_search import ReadAs
 from app.modules.groups.domain.monogram import Monogram, monogram_of
 from app.modules.groups.domain.ports import (
+    GroupAdministrators,
     GroupFace,
     GroupFaces,
     GroupListing,
     HomeClub,
     RatedGroupMembers,
+    RunningAdministrator,
     SportLevel,
 )
 from app.modules.groups.domain.sports import sport_dots
 from app.modules.groups.domain.value_objects import (
     GroupCode,
+    GroupKind,
     GroupRelation,
     JoinPolicy,
 )
@@ -45,9 +53,11 @@ from app.modules.groups.domain.value_objects import (
 @dataclass(frozen=True, slots=True)
 class GroupRow:
     id: UUID
+    kind: GroupKind
     name: str
     monogram: Monogram
-    #: The sport dots, in the registry's order.
+    #: The sport dots, in the registry's order — what a player group's members
+    #: play, and what an official group declares.
     sports: tuple[Sport, ...]
     member_count: int
 
@@ -75,13 +85,19 @@ class GroupAtClub:
 
     ``owner_name`` is the Owner's **Name** — who answers a Join request, for the
     *approves joins* line — or ``None`` for an account ``users`` can no longer
-    name.
+    name, and on an official group, which has no Owner. ``administrator_name``
+    is an official group's counterpart: the Name of the account running it,
+    ``None`` while nobody does. ``is_administrator``
+    is whether **the reader** runs it — and joins it directly, whatever its
+    policy (``docs/adr/0183`` §7).
     """
 
     row: GroupRow
     join_policy: JoinPolicy
     owner_name: str | None
     relation: GroupRelation
+    administrator_name: str | None
+    is_administrator: bool
 
 
 @final
@@ -129,13 +145,17 @@ class MemberRow:
     and when they joined.
 
     ``player_score`` is ``None`` for somebody the platform has watched nothing
-    of, which the row prints as no score rather than a nought."""
+    of, which the row prints as no score rather than a nought.
+    ``is_administrator`` is the account running an official group, who joined
+    it as a player — the row the **admin** tag is drawn on, as it is on a player
+    group's Owner's."""
 
     face: GroupFace
     level: float
     player_score: int | None
     is_owner: bool
     joined_at: datetime
+    is_administrator: bool
 
 
 @final
@@ -189,11 +209,83 @@ def row_of(listing: GroupListing, rated: Mapping[Sport, frozenset[UUID]]) -> Gro
 
     return GroupRow(
         id=listing.id,
+        kind=listing.kind,
         name=listing.name.value,
         monogram=monogram_of(listing.id, listing.name),
-        sports=sport_dots(listing.members, rated),
+        sports=dots_of(listing, rated),
         member_count=listing.member_count,
     )
+
+
+def dots_of(
+    listing: GroupListing, rated: Mapping[Sport, frozenset[UUID]]
+) -> tuple[Sport, ...]:
+    """The one place the two kinds' dots part (``docs/adr/0183`` §6): **an
+    official group's are the sports it declares**, and a player group's the
+    sports two of its members are rated in."""
+
+    if listing.kind is GroupKind.OFFICIAL:
+        declared = listing.declared_sports
+        if declared is None:
+            raise RuntimeError(f"official group {listing.id} declares no sports")
+        return declared.in_registry_order()
+    return sport_dots(listing.members, rated)
+
+
+async def running_administrators(
+    administrators: GroupAdministrators, listings: Sequence[GroupListing]
+) -> Mapping[UUID, RunningAdministrator]:
+    """Who runs each of these groups now, by group id — **one question about
+    the set**, asked only about the official ones, and never at all for a list
+    with none. A group nobody runs is absent."""
+
+    running = {
+        listing.id: listing.administrator_id
+        for listing in listings
+        if listing.kind is GroupKind.OFFICIAL and listing.administrator_id is not None
+    }
+    if not running:
+        return {}
+    active = await administrators.running(set(running.values()))
+    return {
+        group_id: active[administrator_id]
+        for group_id, administrator_id in running.items()
+        if administrator_id in active
+    }
+
+
+async def account_running(
+    administrators: GroupAdministrators, administrator_id: UUID
+) -> UUID | None:
+    """The account behind this Administrator while their administratorship is
+    active, or ``None`` once it is not."""
+
+    runner = (await administrators.running([administrator_id])).get(
+        administrator_id
+    )
+    return None if runner is None else runner.account_id
+
+
+async def running_account(
+    administrators: GroupAdministrators, listing: GroupListing
+) -> UUID | None:
+    """The account running this one group now — ``None`` for a player group,
+    which no Administrator runs, and for an official group nobody runs."""
+
+    if listing.kind is not GroupKind.OFFICIAL or listing.administrator_id is None:
+        return None
+    return await account_running(administrators, listing.administrator_id)
+
+
+def who_runs_it(listing: GroupListing, runner: UUID | None) -> UUID | None:
+    """Who comes after the reader on the Members list, and carries the
+    **admin** tag (#500 story 81): a player group's Owner, and the account
+    running an official group now (``runner``) — which the list reads only
+    once it has joined as a player."""
+
+    if listing.kind is GroupKind.OFFICIAL:
+        return runner
+    return listing.owner_id
 
 
 async def rated_among(
@@ -212,17 +304,35 @@ def at_club(
     rated: Mapping[Sport, frozenset[UUID]],
     reader_id: UUID,
     *,
-    owner_name: str | None,
+    names: Mapping[UUID, str],
+    runner: RunningAdministrator | None,
 ) -> GroupAtClub:
     """A group as a club's card draws it for this reader — the search's row and
     the join's answer, which must be one shape for the card to be patched in
-    place."""
+    place. ``names`` holds every Name ``users`` could answer for; ``runner`` is
+    who runs an official group now.
 
+    **An official group's approver is named as a player group's Owner is** —
+    by the account's Name, so the line and the admin-tagged Members row say
+    one name — and by the name the club gave them only where ``users`` has
+    none to answer with: an account an invitation opened, whose Name is that
+    name (``docs/adr/0185`` §4).
+    """
+
+    owner_name = (
+        names.get(listing.owner_id)
+        if listing.kind is GroupKind.PLAYER and listing.owner_id is not None
+        else None
+    )
     return GroupAtClub(
         row=row_of(listing, rated),
         join_policy=listing.join_policy,
         owner_name=owner_name,
         relation=relation_of(listing, reader_id),
+        administrator_name=(
+            None if runner is None else names.get(runner.account_id, runner.name)
+        ),
+        is_administrator=runner is not None and runner.account_id == reader_id,
     )
 
 
@@ -243,16 +353,29 @@ async def at_clubs(
     reader_id: UUID,
     ratings: RatedGroupMembers,
     faces: GroupFaces,
+    administrators: GroupAdministrators,
 ) -> dict[UUID, GroupAtClub]:
-    """Each of these groups as a club's card draws it, by id — **two reads
-    whatever the number of groups**: the ratings behind every dot, and every
-    Owner's name."""
+    """Each of these groups as a club's card draws it, by id — **three reads
+    whatever the number of groups**: the ratings behind every dot, who runs the
+    official ones, and every Owner's and runner's Name in one question."""
 
     rated = await rated_among(ratings, listings)
-    names = await faces.names_of({listing.owner_id for listing in listings})
+    runners = await running_administrators(administrators, listings)
+    names = await faces.names_of(
+        {
+            listing.owner_id
+            for listing in listings
+            if listing.kind is GroupKind.PLAYER and listing.owner_id is not None
+        }
+        | {runner.account_id for runner in runners.values()}
+    )
     return {
         listing.id: at_club(
-            listing, rated, reader_id, owner_name=names.get(listing.owner_id)
+            listing,
+            rated,
+            reader_id,
+            names=names,
+            runner=runners.get(listing.id),
         )
         for listing in listings
     }
@@ -265,6 +388,7 @@ async def club_cards(
     reader_id: UUID,
     ratings: RatedGroupMembers,
     faces: GroupFaces,
+    administrators: GroupAdministrators,
 ) -> tuple[ClubCard, ...]:
     """A page of clubs as cards, each carrying the groups ``groups_at`` gives it
     **the biggest crowd first** — every group at the club, or only the ones a
@@ -276,6 +400,7 @@ async def club_cards(
         reader_id=reader_id,
         ratings=ratings,
         faces=faces,
+        administrators=administrators,
     )
     return tuple(
         ClubCard(

@@ -132,8 +132,17 @@ async def test_a_row_is_a_face_the_level_in_that_sport_and_when_they_joined(clie
 
     # Nobody here has a record yet, so there is no Player Score to print — the
     # key is omitted, never a nought.
-    assert set(owner) == {"player_id", "name", "level", "is_owner", "joined_at"}
+    assert set(owner) == {
+        "player_id",
+        "name",
+        "level",
+        "is_owner",
+        "is_administrator",
+        "joined_at",
+    }
     assert owner["player_id"] == str(karol["id"])
+    # A player group is run by its Owner, never by an Administrator.
+    assert owner["is_administrator"] is member["is_administrator"] is False
     assert owner["level"] == karol["level"]
     assert member["level"] == zofia["level"]
     assert owner["joined_at"] < member["joined_at"]

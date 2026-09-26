@@ -1257,13 +1257,13 @@ Rules to preserve:
 - **A group is a crowd at a home club, and its link never changes**
   ([ADR-0183](../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md),
   #504, #505, #506). `app/modules/groups/` holds **one event-sourced aggregate for both
-  kinds**; this build writes the player kind only (`player_group_created`, `group_joined`,
-  the Join request's three — `join_requested`, `join_request_approved`,
-  `join_request_declined` — and #506's five: `group_left`, `ownership_passed`,
-  `group_renamed`, `join_policy_changed`, `group_deleted`), and each later event arrives
-  with its ticket (#509, #510). The repository's `save` writes **three projections in the
-  caller's transaction** — `groups`, with `name_folded` written from the first event (and
-  again on a rename) because SQL cannot fold, `group_members`, whose `joined_version` (the
+  kinds** (`player_group_created`, `group_joined`, the Join request's three —
+  `join_requested`, `join_request_approved`, `join_request_declined` — #506's five:
+  `group_left`, `ownership_passed`, `group_renamed`, `join_policy_changed`,
+  `group_deleted` — and #509's three, below); the handover arrives with #510. The
+  repository's `save` writes **three projections in the caller's transaction** —
+  `groups`, with `name_folded` written from the first event (and again on a rename)
+  because SQL cannot fold, `group_members`, whose `joined_version` (the
   admitting event's stream version) is the exact joining order, and
   `group_join_requests`, one row **while a request waits** and deleted by its answer.
   **A deletion leaves no row in any of the three** — the link then finds nothing, which is
@@ -1335,6 +1335,35 @@ Rules to preserve:
   so the dots follow the rule (no squash or badminton dot: one member rated is not a dot),
   and the protagonist's *People I approve* group, with a member she let in through
   `ApproveJoinRequest` and `rated-in-every-sport`'s request left waiting.
+  **An official group has no Owner, and an Administrator runs it from the app** (#509,
+  ADR-0183 §3, ADR-0184 §8): `official_group_created` names the `administrator_id` and
+  no member — running one is not membership — and `whatsapp_size_set` and
+  `sports_declared` are official-only; answering, renaming and the policy reuse the
+  player kind's events, every `*_by` the account that tapped. The projection's `kind`
+  and a check constraint (migration `0034`) hold the two shapes, and **every rule
+  branches on `kind`, never on a null**. Four things are load-bearing. **Who runs it is
+  read, never held**: `GroupAdministrators` (over the administrators' directory)
+  answers the account and the club's name for them **only while the administratorship
+  is active**, so a removal takes the group away on the next read and #510's orphans
+  need no event. That account **joins directly** under *People I approve*
+  (`join(runs_it=…)`), comes second on Members with `is_administrator` — the **admin**
+  tag — and is `administrator_name` on the approver line: the account's Name, or the
+  club's name for an account an invitation opened, never cut. An official group's dots
+  are what it declares, and its page carries `declared_sports`. **The administrator's
+  routes are `/administrator/clubs/{club_id}/groups`** behind `AdministratorAtClubDep`
+  — create, list, read (players newest first, a blocked pair left out), approve,
+  decline and `PUT …/settings` (all four fields; *Anyone* admits everybody waiting) —
+  and a group that administratorship does not run is `group_not_found` whatever the
+  reason. **Nothing deletes one, and its Administrator cannot stop running it**: there
+  is no such route, and the player surface's Owner acts meet `not_the_group_owner`; an
+  Administrator who joined as a player leaves as one and still runs it. And **the club
+  cannot untick a sport one declares**: `ChangeClubDetails` asks `OfficialGroupSports`,
+  clubs' demand **signed in `groups/infrastructure/`** so the arrow runs `groups →
+  clubs` only (an `.importlinter` contract), and answers `409
+  club_sport_declared_by_group` naming the group. Seeded by `app/seeds/official_groups.py`
+  after the administrators: Marta's *Ogrody 33 Club* (*People I approve*, 48, padel,
+  three players, one waiting) and *Ogrody open play*, run by `rated-in-every-sport`,
+  who plays in it.
 - **A use case never sends email; it writes the mail queue**
   ([ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md)). The
   message is rendered whole — the copy lives with its templates in the backend

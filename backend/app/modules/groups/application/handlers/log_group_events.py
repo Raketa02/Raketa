@@ -20,8 +20,11 @@ from app.modules.groups.domain.events import (
     JoinRequestApproved,
     JoinRequestDeclined,
     JoinRequested,
+    OfficialGroupCreated,
     OwnershipPassed,
     PlayerGroupCreated,
+    SportsDeclared,
+    WhatsAppSizeSet,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,6 +39,46 @@ class LogPlayerGroupCreated:
             extra={
                 "group_id": str(event.group_id),
                 "home_club_id": str(event.home_club_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogOfficialGroupCreated:
+    async def __call__(
+        self, event: OfficialGroupCreated, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "groups.official_group.created",
+            extra={
+                "group_id": str(event.group_id),
+                "home_club_id": str(event.home_club_id),
+                "administrator_id": str(event.administrator_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogWhatsAppSizeSet:
+    async def __call__(self, event: WhatsAppSizeSet, context: DeliveryContext) -> None:
+        logger.info(
+            "groups.whatsapp_size.set",
+            extra={
+                "group_id": str(event.group_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogSportsDeclared:
+    async def __call__(self, event: SportsDeclared, context: DeliveryContext) -> None:
+        logger.info(
+            "groups.sports.declared",
+            extra={
+                "group_id": str(event.group_id),
                 "event_id": str(context.event_id),
                 "attempt": context.attempt,
             },
