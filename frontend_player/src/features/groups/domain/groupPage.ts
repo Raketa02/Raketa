@@ -27,26 +27,50 @@ export type GameIntent = 'competitive' | 'forFun';
 
 /**
  * **The filter's sports** — only the ones the reader is rated in, in the registry's order
- * (padel › tennis › squash › badminton). A group's dots are not the list: a player rated in a
- * sport nobody else here plays can still open it, and a dot they are not rated in is a sport they
+ * (padel › tennis › squash › badminton). A player group's dots are not the list: a player rated in
+ * a sport nobody else here plays can still open it, and a dot they are not rated in is a sport they
  * cannot play.
+ *
+ * **An official group plays what it declares** (story 56, #519), so `declared` — its declared sports —
+ * narrows the list to the rated ones among them. `undefined` for a player group, which plays
+ * whatever its members are rated in.
  */
-export function filterSports(rated: readonly Sport[]): readonly Sport[] {
-  return SPORTS.filter((sport) => rated.includes(sport));
+export function filterSports(
+  rated: readonly Sport[],
+  declared?: readonly Sport[],
+): readonly Sport[] {
+  return SPORTS.filter(
+    (sport) => rated.includes(sport) && (declared === undefined || declared.includes(sport)),
+  );
 }
 
 /**
- * **The sport the page opens on** — the one last picked anywhere in Play, while the reader is
- * still rated in it; otherwise the first rated sport in the registry's order (ADR-0188 §2). A
- * saved value that is no longer a rated sport — or never was a sport — is the default, never an
- * error (§4). `undefined` only for a reader rated in nothing, who has no sport to open.
+ * **The sport the page opens on** — the one last picked anywhere in Play, while it is still on the
+ * filter; otherwise the filter's first sport in the registry's order (ADR-0188 §2). A saved value
+ * that is no longer a rated sport — or a sport this official group does not play, or never was a
+ * sport — is the default, never an error (§4). `undefined` only for a reader the filter lists
+ * nothing for, who has no sport to open.
  */
 export function openingSport(
   rated: readonly Sport[],
   saved: string | undefined,
+  declared?: readonly Sport[],
 ): Sport | undefined {
-  const sports = filterSports(rated);
+  const sports = filterSports(rated, declared);
   return sports.find((sport) => sport === saved) ?? sports[0];
+}
+
+/**
+ * **The sports a reader must add to see an official group's games** (story 57, #519) — every sport
+ * it plays, in the registry's order, for a reader rated in none of them; nothing once they are
+ * rated in one, and nothing for a player group, which plays whatever its members are rated in.
+ */
+export function sportsToAdd(
+  rated: readonly Sport[],
+  declared?: readonly Sport[],
+): readonly Sport[] {
+  if (declared === undefined || filterSports(rated, declared).length > 0) return [];
+  return SPORTS.filter((sport) => declared.includes(sport));
 }
 
 /** **One sport's roster** — `undefined` for a sport the group's read did not carry. */

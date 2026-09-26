@@ -1,5 +1,5 @@
 import type { GroupPerson, SportRoster } from './group';
-import { faceIn, filterSports, gamesCard, openingSport, rosterFor } from './groupPage';
+import { faceIn, filterSports, gamesCard, openingSport, rosterFor, sportsToAdd } from './groupPage';
 
 describe('the sports a group page filters by', () => {
   it('lists the sports the reader is rated in, in the order padel › tennis › squash › badminton', () => {
@@ -16,6 +16,17 @@ describe('the sports a group page filters by', () => {
 
   it('lists nothing for a reader rated in nothing', () => {
     expect(filterSports([])).toEqual([]);
+  });
+
+  // Story 56: an official group plays what it declares.
+  it('lists only the rated sports an official group plays', () => {
+    expect(
+      filterSports(['badminton', 'tennis', 'padel'], ['squash', 'padel', 'badminton']),
+    ).toEqual(['padel', 'badminton']);
+  });
+
+  it('lists nothing for a reader rated in none of an official group’s sports', () => {
+    expect(filterSports(['tennis'], ['padel'])).toEqual([]);
   });
 });
 
@@ -40,6 +51,33 @@ describe('the sport a group page opens on', () => {
 
   it('is none for a reader rated in nothing', () => {
     expect(openingSport([], 'padel')).toBeUndefined();
+  });
+
+  it('is a sport an official group plays, whatever was picked elsewhere', () => {
+    expect(openingSport(['padel', 'tennis'], 'tennis', ['padel'])).toBe('padel');
+    expect(openingSport(['padel', 'tennis', 'squash'], 'squash', ['squash', 'padel'])).toBe(
+      'squash',
+    );
+  });
+
+  it('is none for a reader rated in none of an official group’s sports', () => {
+    expect(openingSport(['tennis'], 'tennis', ['padel'])).toBeUndefined();
+  });
+});
+
+describe('the sports a reader must add to see an official group', () => {
+  // Story 57.
+  it('are every sport it plays, for a reader rated in none of them', () => {
+    expect(sportsToAdd(['tennis'], ['squash', 'padel'])).toEqual(['padel', 'squash']);
+  });
+
+  it('are none once the reader is rated in one of them', () => {
+    expect(sportsToAdd(['tennis', 'squash'], ['squash', 'padel'])).toEqual([]);
+  });
+
+  it('are none for a player group, which plays whatever its members are rated in', () => {
+    expect(sportsToAdd([], undefined)).toEqual([]);
+    expect(sportsToAdd(['tennis'], undefined)).toEqual([]);
   });
 });
 

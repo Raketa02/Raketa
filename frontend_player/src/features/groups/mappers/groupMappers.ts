@@ -61,12 +61,15 @@ export function toMyGroups(wire: Schemas['MyGroupsResponse']): readonly MyGroup[
 export function toGroupAtClub(wire: Schemas['GroupAtClubSchema']): GroupAtClub {
   return {
     id: wire.id,
+    kind: wire.kind,
     name: wire.name,
     monogram: toMonogram(wire.monogram),
     sports: toSports(wire.sports),
     memberCount: wire.member_count,
     joinPolicy: wire.join_policy,
     ownerName: wire.owner_name,
+    administratorName: wire.administrator_name,
+    isAdministrator: wire.is_administrator,
     relation: wire.relation,
   };
 }
@@ -126,9 +129,22 @@ function toRosters(wire: readonly Schemas['GroupSportSchema'][]): readonly Sport
   });
 }
 
+/**
+ * **What an official group plays**, where the build can name it. Only an official group declares
+ * its sports; a player group carries nothing here. **A declared list this build can name none of
+ * is carried as none at all** — an older build after a sport is added — so the page reads the
+ * group as it reads a player group, rather than narrowing its filter to nothing with nothing it
+ * could name for the reader to add.
+ */
+function declaredSportsOf(wire: Schemas['GroupResponse']): Pick<Group, 'declaredSports'> {
+  const declared = toSports(wire.declared_sports ?? []);
+  return declared.length === 0 ? {} : { declaredSports: declared };
+}
+
 export function toGroup(wire: Schemas['GroupResponse']): Group {
   return {
     id: wire.id,
+    kind: wire.kind,
     name: wire.name,
     monogram: toMonogram(wire.monogram),
     sports: toSports(wire.sports),
@@ -137,6 +153,7 @@ export function toGroup(wire: Schemas['GroupResponse']): Group {
     link: wire.link,
     joinPolicy: wire.join_policy,
     isOwner: wire.is_owner,
+    ...declaredSportsOf(wire),
     ratedBySport: toRosters(wire.rated_by_sport),
     memberFaces: wire.member_faces.map(toGroupPerson),
   };
@@ -155,6 +172,7 @@ export function toGroupMembers(wire: Schemas['GroupMembersResponse']): readonly 
     level: member.level,
     ...(member.player_score === undefined ? {} : { playerScore: member.player_score }),
     isOwner: member.is_owner,
+    isAdministrator: member.is_administrator,
   }));
 }
 

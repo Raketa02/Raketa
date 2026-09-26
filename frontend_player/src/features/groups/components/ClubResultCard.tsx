@@ -42,7 +42,7 @@ export function ClubResultCard({ club }: { readonly club: SearchedClub }) {
         ) : (
           club.groups.map((group) => (
             <Hairline key={group.id}>
-              <GroupAtClubRow group={group} dots />
+              <GroupAtClubRow group={group} clubName={club.name} dots />
             </Hairline>
           ))
         )}

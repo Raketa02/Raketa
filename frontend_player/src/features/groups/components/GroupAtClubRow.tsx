@@ -10,7 +10,8 @@
  *   the row there sits in a narrower strip under a club that is itself the thing being chosen.
  *
  * The name and the line are **one element**, spoken whole with the sports by name — the dots have
- * no words of their own — and the action beside it is the row's one control.
+ * no words of their own — and the action beside it is the row's one control. An official group's
+ * dots are the sports it declares, as served (#519).
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -27,28 +28,30 @@ import { SportDots } from './SportDots';
 
 export interface GroupAtClubRowProps {
   readonly group: GroupAtClub;
+  /** The club whose card the row sits in — who approves an official group that needs an administrator. */
+  readonly clubName: string;
   /** Join a group's row: dots before the count, the line on one line. */
   readonly dots: boolean;
 }
 
-function rowLabel(group: GroupAtClub): string {
+function rowLabel(group: GroupAtClub, clubName: string): string {
   const plays = group.sports.length > 0 ? [`plays ${group.sports.map(sportLabel).join(', ')}`] : [];
-  return [group.name, groupRowMeta(group), ...plays].join(', ');
+  return [group.name, groupRowMeta(group, clubName), ...plays].join(', ');
 }
 
-export function GroupAtClubRow({ group, dots }: GroupAtClubRowProps) {
+export function GroupAtClubRow({ group, clubName, dots }: GroupAtClubRowProps) {
   return (
     <View style={s.row}>
       <GroupMonogram monogram={group.monogram} size="row" />
 
-      <View style={s.words} accessible accessibilityLabel={rowLabel(group)}>
+      <View style={s.words} accessible accessibilityLabel={rowLabel(group, clubName)}>
         <Text style={s.name} numberOfLines={1}>
           {group.name}
         </Text>
         <View style={s.meta}>
           {dots ? <SportDots sports={group.sports} /> : null}
           <Text style={s.line} numberOfLines={dots ? 1 : 2}>
-            {groupRowMeta(group)}
+            {groupRowMeta(group, clubName)}
           </Text>
         </View>
       </View>

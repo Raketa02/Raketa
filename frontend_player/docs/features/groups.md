@@ -290,3 +290,42 @@ error**, for _Same name as the WhatsApp group_ and a refusal said on the field. 
 the administrator's WhatsApp post too, as #513 already wrote it for. **Edit group's _LET IN · N_ card left the
 screen** for `AdmittedCard` ([#517](https://github.com/Raketa02/Raketa/issues/517)), which an official
 group's settings draw after the same switch to Anyone.
+
+**An official group is a Group the player meets as one, told apart by what it plays and who
+answers** ([#519](https://github.com/Raketa02/Raketa/issues/519), PRD #500 stories 40, 56, 57;
+ADR-0183 §3, §6, §7). The reads carry `kind`, and nothing else about the drawing changes: **its
+dots are its declared sports**, served as `sports` on every row, card and page — the Groups list,
+both searches and Info's members row; the header draws no dots (play 40), so "the group header" in
+the ticket is the page's. **Who approves** is the row's line in both searches (`approverLine`,
+handed its club's name by the card the row sits in): _Administrator Marta Wójcik approves joins_ —
+the whole name, as the Owner's is (#505's open call, ADR-0171 §4), where the ticket writes a first
+name — _Ogrody 33 approves joins_ while the group **needs an administrator** (`administrator_name`
+null), and _anyone can join_ on an Anyone group of either kind. Info's line reads _the
+administrator approves joins_: the group's read names nobody and cannot tell a group that needs
+one, as a member reads _the owner_ on a player group.
+
+**An account that runs an official group joins it directly** (`groupAction`): the row it runs is
+**Join** whatever the policy, in both searches and New group's club rows, and the one tap admits it.
+That outranks _requested · waiting_ too — a request left before the club made them its
+administrator is admitted by their own Join (#509) — so only _you're in_ outranks it. Members'
+**admin** tag goes on a player group's Owner or an official group's Administrator who joined as a
+player (`adminTagged`); the server orders them second, as it does an Owner.
+
+**The fast filter narrows to what the group plays.** `useGroupSport` and `SportFilterPage` are
+handed the group's `declaredSports` (absent on a player group), so the filter lists the sports the
+reader is rated in **among them** and opens on one of them whatever was picked elsewhere; opening is
+not picking, so the phone keeps what the player last picked. **A member rated in none of them**
+gets `AddSportCard` — _This group plays padel_ / _Add padel to your Skill passport to see its games._
+— in place of Games, Fill in and Friends, and of Members' list, with no pill and no _+ Post a game_.
+**Info is drawn as ever**, because the way out is not a sport's: a member who cannot play a group's
+sports must still be able to leave it. Each of its buttons, one per sport the group plays, is the
+Skill passport's _Add a sport_ for that sport (`useAddASport`), so the questionnaire is onboarding's
+and the pass ends where every pass begun there does — on the passport, not back on the group. A
+declared list this build can name none of — an older build after a sport is added — is carried as
+none (`toGroup`), so the page reads the group as a player group's rather than drawing nothing.
+
+**Calls made here, open for the product owner** (design-system Part 16 has the card's): the whole
+name on the approver line; Info's _the administrator approves joins_; the card on the three tabs
+rather than in place of the tab bar, and on Members; a button per sport, with the sports joined
+_padel and squash_ / _padel or squash_; the pass ending on the passport; and Join over a request
+left before the account ran the group. **Nothing here has been seen on a device.**

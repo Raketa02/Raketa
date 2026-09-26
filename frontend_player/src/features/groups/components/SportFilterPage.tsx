@@ -17,7 +17,8 @@
  *
  * The page draws its own header and body, handed what they need: the header the pill, once there
  * is a sport to show, and the body the sport — `undefined` until the phone has answered, so
- * nothing is drawn for one sport and then another (ADR-0188 §4).
+ * nothing is drawn for one sport and then another (ADR-0188 §4) — and, for an official group the
+ * reader is rated in none of the sports of, what they would add to see it (#519).
  */
 
 import { useFocusEffect } from 'expo-router';
@@ -33,14 +34,23 @@ import { useGroupSport } from '../hooks/useGroupSport';
 import { SportBar, SportPill } from './SportFilter';
 
 export interface SportFilterPageProps {
+  /**
+   * **What the group plays**, where it says: an official group's declared sports, which the filter
+   * narrows to. `undefined` for a player group, and while the group is being read.
+   */
+  readonly declaredSports?: readonly Sport[];
   /** The page's header, with the pill for its right slot — `undefined` until there is a sport. */
   readonly header: (pill: ReactNode | undefined) => ReactNode;
-  /** Everything under the header, for the sport the page is on — `undefined` until it is known. */
-  readonly children: (sport: Sport | undefined) => ReactNode;
+  /**
+   * Everything under the header, for the sport the page is on — `undefined` until it is known —
+   * and the sports the reader would add to have one here: empty unless the group is an official
+   * one they are rated in none of the sports of.
+   */
+  readonly children: (sport: Sport | undefined, toAdd: readonly Sport[]) => ReactNode;
 }
 
-export function SportFilterPage({ header, children }: SportFilterPageProps) {
-  const { sports, sport, choose } = useGroupSport();
+export function SportFilterPage({ declaredSports, header, children }: SportFilterPageProps) {
+  const { sports, sport, toAdd, choose } = useGroupSport(declaredSports);
   const [unfolded, setUnfolded] = useState(false);
   const [headerHeight, setHeaderHeight] = useState<number>();
 
@@ -62,7 +72,7 @@ export function SportFilterPage({ header, children }: SportFilterPageProps) {
         {header(pill)}
       </View>
 
-      {children(sport)}
+      {children(sport, toAdd)}
 
       {unfolded && sports !== undefined && sport !== undefined ? (
         <>

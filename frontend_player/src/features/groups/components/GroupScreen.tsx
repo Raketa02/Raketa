@@ -13,7 +13,9 @@
  * them at once.
  *
  * **The filter's bar floats over the header and the page under it** — `SportFilterPage`'s, which
- * Members shares.
+ * Members shares. On an official group it lists only the sports the group declares (#519); a
+ * member rated in none of them gets `AddSportCard` in place of Games, Fill in and Friends, and
+ * Info as it is — the way out is not a sport's.
  *
  * **Every state has its drawing.** While the read is on its way the header has only its way back.
  * `group_not_found` is one sentence, because the server gives the same answer for *no such group*
@@ -35,6 +37,7 @@ import type { Group } from '../domain/group';
 import { GROUP_TABS, OPENING_TAB, type GroupTab } from '../domain/groupPage';
 import { useGroup } from '../hooks/useGroups';
 
+import { AddSportCard } from './AddSportCard';
 import { FillInTab, PostAGame } from './FillInTab';
 import { FriendsTab } from './FriendsTab';
 import { GamesTab } from './GamesTab';
@@ -59,6 +62,7 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <SportFilterPage
+        {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
         header={(pill) => (
           <ScreenHeader
             compact
@@ -79,7 +83,7 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
           />
         )}
       >
-        {(sport) =>
+        {(sport, toAdd) =>
           group === undefined ? (
             read.error === null ? null : (
               <View style={s.body}>
@@ -97,11 +101,13 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
                 {/* Info is about the group rather than a sport, so it never waits for the filter. */}
                 {tab === 'info' ? (
                   <InfoTab group={group} />
+                ) : toAdd.length > 0 ? (
+                  <AddSportCard sports={toAdd} />
                 ) : sport === undefined ? null : (
                   <TabBody tab={tab} group={group} sport={sport} />
                 )}
               </ScrollView>
-              {tab === 'fillIn' ? (
+              {tab === 'fillIn' && toAdd.length === 0 ? (
                 <View style={s.postAGame}>
                   <PostAGame />
                 </View>

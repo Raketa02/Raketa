@@ -9,7 +9,7 @@
  * and who a block hides are the server's; this file only reads what came.
  */
 
-import type { Group, GroupDetails, GroupPerson } from './group';
+import type { Group, GroupDetails, GroupMember, GroupPerson } from './group';
 
 /**
  * **The members row's faces, and its *+N*** (play 58–60). The faces are the group's
@@ -83,4 +83,13 @@ export function detailsUnchanged(
   group: Pick<Group, 'name' | 'joinPolicy'>,
 ): boolean {
   return details.name.trim() === group.name && details.joinPolicy === group.joinPolicy;
+}
+
+/**
+ * **Who wears Members' admin tag** (play 61; #519): a player group's Owner, and an official group's
+ * Administrator who joined it as a player — the one who answers its requests, either way. An
+ * official group has no Owner, and the Administrator who has not joined is not on the list at all.
+ */
+export function adminTagged(member: Pick<GroupMember, 'isOwner' | 'isAdministrator'>): boolean {
+  return member.isOwner || member.isAdministrator;
 }

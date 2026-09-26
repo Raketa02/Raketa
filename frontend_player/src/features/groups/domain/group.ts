@@ -16,7 +16,7 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { GroupRelation, JoinPolicy, ReadAs } from './vocabulary';
+import type { GroupKind, GroupRelation, JoinPolicy, ReadAs } from './vocabulary';
 
 /**
  * The group's tile: two letters **as typed** — never re-cased — and a colour **key** from 0 to 7
@@ -48,6 +48,7 @@ export interface MyGroup {
 /** **A group inside a club's card**, with what it is to the reader (play mocks 9, 35–37). */
 export interface GroupAtClub {
   readonly id: string;
+  readonly kind: GroupKind;
   readonly name: string;
   readonly monogram: Monogram;
   readonly sports: readonly Sport[];
@@ -55,9 +56,20 @@ export interface GroupAtClub {
   readonly joinPolicy: JoinPolicy;
   /**
    * Who answers a request — the Owner's **whole Name**, never cut to a first name (ADR-0171 §4).
-   * `null` for an account that can no longer be named.
+   * `null` for an account that can no longer be named, and always on an official group, which has
+   * no Owner.
    */
   readonly ownerName: string | null;
+  /**
+   * **An official group's** answerer — the whole name of the Administrator running it now, cut by
+   * nobody. `null` while it **needs an administrator** (ADR-0183 §3), and always on a player group.
+   */
+  readonly administratorName: string | null;
+  /**
+   * Whether **the reader** runs this official group — then their tap is *Join* whatever the policy
+   * says, because they would otherwise be asking themselves (ADR-0183 §7).
+   */
+  readonly isAdministrator: boolean;
   readonly relation: GroupRelation;
 }
 
@@ -113,6 +125,7 @@ export interface SportRoster {
 /** **A group, as one of its members opens it** — the page reads this (play mocks 14–17, 39–55). */
 export interface Group {
   readonly id: string;
+  readonly kind: GroupKind;
   readonly name: string;
   readonly monogram: Monogram;
   readonly sports: readonly Sport[];
@@ -121,7 +134,15 @@ export interface Group {
   /** The Group link — it never changes. */
   readonly link: string;
   readonly joinPolicy: JoinPolicy;
+  /** Always `false` on an official group, which has no Owner. */
   readonly isOwner: boolean;
+  /**
+   * **What an official group plays** — the sports it declares, in the registry's order: the fast
+   * filter narrows to the ones the reader is rated in among these, and a reader rated in none of
+   * them is shown what to add (#519). **Absent on a player group**, which plays whatever its
+   * members are rated in.
+   */
+  readonly declaredSports?: readonly Sport[];
   /**
    * **Every sport's roster**, the ones the group has no dot for too — the reader may be rated in
    * a sport only they play here, and open it.
@@ -139,12 +160,15 @@ export interface Group {
  * **One row of Members, for one sport** (play 61; #514) — *Padel 2,71 · score 92*. Only members
  * rated in the sport are listed, so `level` is always there; `playerScore` is **absent** for
  * somebody the platform has watched nothing of — no record is not a bad one, and never `0`.
- * `isOwner` is the row the **admin** tag is drawn on.
+ * The **admin** tag is drawn on a player group's Owner and on an official group's Administrator who
+ * joined it as a player (`adminTagged`).
  */
 export interface GroupMember extends GroupPerson {
   readonly level: number;
   readonly playerScore?: number;
   readonly isOwner: boolean;
+  /** Whether they run this official group and joined it as a player. Always `false` on a player group. */
+  readonly isAdministrator: boolean;
 }
 
 /** One sport a person is rated in, with its Level — *Padel 2,44*. */

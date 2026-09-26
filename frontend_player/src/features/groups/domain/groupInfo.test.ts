@@ -1,5 +1,12 @@
 import type { GroupPerson } from './group';
-import { countMoved, detailsUnchanged, groupExit, membersRow, readerFace } from './groupInfo';
+import {
+  adminTagged,
+  countMoved,
+  detailsUnchanged,
+  groupExit,
+  membersRow,
+  readerFace,
+} from './groupInfo';
 
 const face = (n: number): GroupPerson => ({ playerId: `p${n}`, name: `Member ${n}` });
 const READER: GroupPerson = { playerId: 'me', name: 'Tomek Kowal' };
@@ -111,5 +118,20 @@ describe('whether Edit group has anything to save', () => {
       detailsUnchanged({ name: 'Kazimierz padel', joinPolicy: 'PEOPLE_I_APPROVE' }, group),
     ).toBe(false);
     expect(detailsUnchanged({ name: 'Kazimierz crew', joinPolicy: 'ANYONE' }, group)).toBe(false);
+  });
+});
+
+describe('the admin tag on Members', () => {
+  it('goes on a player group’s Owner', () => {
+    expect(adminTagged({ isOwner: true, isAdministrator: false })).toBe(true);
+  });
+
+  // #519: an official group has no Owner; its Administrator who joined as a player is its admin.
+  it('goes on an official group’s Administrator who joined as a player', () => {
+    expect(adminTagged({ isOwner: false, isAdministrator: true })).toBe(true);
+  });
+
+  it('goes on nobody else', () => {
+    expect(adminTagged({ isOwner: false, isAdministrator: false })).toBe(false);
   });
 });

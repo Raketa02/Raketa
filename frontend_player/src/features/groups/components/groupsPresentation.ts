@@ -6,9 +6,9 @@
  * Taken from the mocks (play 1, 3–17, 23–55), with the mocks' *Rakieta* read as **Raketa**
  * (ADR-0187 §8). Two rules sit over it:
  *
- * - **A name is said whole.** The *approves joins* line carries the Owner's whole Name and the
- *   row truncates the line, as it truncates any line; no first name is cut from it here or on the
- *   server (ADR-0171 §4, #505).
+ * - **A name is said whole.** The *approves joins* line carries the Owner's or the
+ *   Administrator's whole Name and the row truncates the line, as it truncates any line; no first
+ *   name is cut from it here or on the server (ADR-0171 §4, #505, #519).
  * - **A counted phrase goes through `counted()`**, so *1 member* is never *1 members* and a market
  *   with real plural rules has one function to change.
  */
@@ -28,7 +28,7 @@ import {
   type SearchedClub,
   type SportLevel,
 } from '../domain/group';
-import type { GroupExit } from '../domain/groupInfo';
+import { adminTagged, type GroupExit } from '../domain/groupInfo';
 import type { GamesCard } from '../domain/groupPage';
 import type { GroupAction } from '../domain/groupRules';
 
@@ -64,15 +64,31 @@ export function membersAtClub(count: number, clubName: string): string {
   return `${membersLine(count)}${DOT}${clubName}`;
 }
 
-/** *anyone can join*, or *Karol Nowak approves joins* — who answers a request. */
-export function approverLine(group: Pick<GroupAtClub, 'joinPolicy' | 'ownerName'>): string {
-  if (group.joinPolicy === 'ANYONE') return 'anyone can join';
-  return `${group.ownerName ?? 'the owner'} approves joins`;
+/**
+ * **Who answers a request** (story 40) — *anyone can join* on an Anyone group; otherwise a player
+ * group's Owner (*Karol Nowak approves joins*), an official group's Administrator (*Administrator
+ * Marta Wójcik approves joins*, #519), or, while an official group **needs an administrator**, the
+ * club it belongs to (*Ogrody 33 approves joins*, ADR-0183 §3) — its requests wait for a handover.
+ * The row is drawn inside its club's card, which hands the club's name in.
+ */
+export function approverLine(
+  group: Pick<GroupAtClub, 'kind' | 'joinPolicy' | 'ownerName' | 'administratorName'>,
+  clubName: string,
+): string {
+  if (group.joinPolicy === 'ANYONE') return GROUPS_COPY.info.anyoneCanJoin;
+  switch (group.kind) {
+    case 'PLAYER':
+      return `${group.ownerName ?? 'the owner'} approves joins`;
+    case 'OFFICIAL':
+      return group.administratorName === null
+        ? `${clubName} approves joins`
+        : `Administrator ${group.administratorName} approves joins`;
+  }
 }
 
 /** *11 members · Coach Andrzej approves joins* — a group row's second line (play 9, 35). */
-export function groupRowMeta(group: GroupAtClub): string {
-  return `${membersLine(group.memberCount)}${DOT}${approverLine(group)}`;
+export function groupRowMeta(group: GroupAtClub, clubName: string): string {
+  return `${membersLine(group.memberCount)}${DOT}${approverLine(group, clubName)}`;
 }
 
 /** *Tennis, Padel* — a club's sports, in the order the club serves them. */
@@ -165,6 +181,13 @@ function sportInLine(sport: Sport): string {
   return sportLabel(sport).toLowerCase();
 }
 
+/** *padel*, *padel and squash*, *padel, tennis or badminton* — sports inside a sentence. */
+function sportsInLine(sports: readonly Sport[], conjunction: 'and' | 'or'): string {
+  const words = sports.map(sportInLine);
+  const last = words.at(-1) ?? '';
+  return words.length <= 1 ? last : `${words.slice(0, -1).join(', ')} ${conjunction} ${last}`;
+}
+
 /** The Games card's headline: *Just you so far*, *3 of 4*, or *Nothing picked right now*. */
 export function gamesHeadline(card: GamesCard): string {
   switch (card.kind) {
@@ -249,11 +272,17 @@ export function linkLabel(link: string): string {
 /**
  * *anyone can join*, *you approve joins*, *the owner approves joins* — the members row's policy
  * line. The group's read names no Owner, so a member who is not one reads *the owner*, as a row
- * whose Owner can no longer be named does.
+ * whose Owner can no longer be named does. **An official group has no Owner** and its read names
+ * no Administrator either, so it reads *the administrator approves joins* (#519).
  */
-export function infoPolicyLine(group: Pick<Group, 'joinPolicy' | 'isOwner'>): string {
+export function infoPolicyLine(group: Pick<Group, 'kind' | 'joinPolicy' | 'isOwner'>): string {
   if (group.joinPolicy === 'ANYONE') return GROUPS_COPY.info.anyoneCanJoin;
-  return group.isOwner ? GROUPS_COPY.info.youApprove : GROUPS_COPY.info.ownerApproves;
+  switch (group.kind) {
+    case 'PLAYER':
+      return group.isOwner ? GROUPS_COPY.info.youApprove : GROUPS_COPY.info.ownerApproves;
+    case 'OFFICIAL':
+      return GROUPS_COPY.info.administratorApproves;
+  }
 }
 
 /** *+2* — the members row's count of everybody it does not draw. */
@@ -263,7 +292,7 @@ export function moreFaces(count: number): string {
 
 /** *8 members, plays Padel, Tennis, anyone can join* — the members row, spoken; it opens Members. */
 export function membersRowLabel(
-  group: Pick<Group, 'memberCount' | 'sports' | 'joinPolicy' | 'isOwner'>,
+  group: Pick<Group, 'kind' | 'memberCount' | 'sports' | 'joinPolicy' | 'isOwner'>,
 ): string {
   const plays = group.sports.length > 0 ? [`plays ${sportsList(group.sports)}`] : [];
   return [membersLine(group.memberCount), ...plays, infoPolicyLine(group)].join(', ');
@@ -398,7 +427,7 @@ export function memberLine(
 /** Who a Members row is about, and whether it is the reader's own. */
 export interface MemberRowPerson extends Pick<
   GroupMember,
-  'name' | 'level' | 'playerScore' | 'isOwner'
+  'name' | 'level' | 'playerScore' | 'isOwner' | 'isAdministrator'
 > {
   readonly you: boolean;
 }
@@ -410,7 +439,7 @@ export function memberName(member: Pick<MemberRowPerson, 'name' | 'you'>): strin
 
 /** *Karol Tomczak, admin, Padel 2,75 · score 93* — a row, spoken as it is drawn. */
 export function memberRowLabel(sport: Sport, member: MemberRowPerson): string {
-  const admin = member.isOwner ? [GROUPS_COPY.members.admin] : [];
+  const admin = adminTagged(member) ? [GROUPS_COPY.members.admin] : [];
   return [memberName(member), ...admin, memberLine(sport, member)].join(', ');
 }
 
@@ -422,4 +451,23 @@ export function openRecordLabel(member: Pick<MemberRowPerson, 'name' | 'you'>): 
 /** *Let in · 2* — who a switch to Anyone admitted, on Edit group after the save. */
 export function admittedEyebrow(count: number): string {
   return `Let in${DOT}${count}`;
+}
+
+// ---------------------------------------------------------------------------
+// An official group, for a player rated in none of its sports (#519)
+// ---------------------------------------------------------------------------
+
+/** *This group plays padel* — the card's headline (story 57), every sport the group declares. */
+export function addSportHeadline(sports: readonly Sport[]): string {
+  return `This group plays ${sportsInLine(sports, 'and')}`;
+}
+
+/** *Add padel to your Skill passport to see its games.* — any one of them will do. */
+export function addSportLine(sports: readonly Sport[]): string {
+  return `Add ${sportsInLine(sports, 'or')} to your Skill passport to see its games.`;
+}
+
+/** *Add Padel* — the door into Add a sport for one of them, named as a control is. */
+export function addSportLabel(sport: Sport): string {
+  return `Add ${sportLabel(sport)}`;
 }

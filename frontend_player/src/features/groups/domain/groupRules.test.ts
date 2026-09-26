@@ -13,8 +13,9 @@ const BONARKA: SearchedClub = {
 function row(
   relation: GroupAtClub['relation'],
   joinPolicy: GroupAtClub['joinPolicy'],
-): Pick<GroupAtClub, 'relation' | 'joinPolicy'> {
-  return { relation, joinPolicy };
+  isAdministrator = false,
+): Pick<GroupAtClub, 'relation' | 'joinPolicy' | 'isAdministrator'> {
+  return { relation, joinPolicy, isAdministrator };
 }
 
 describe('what a group row offers the reader', () => {
@@ -33,6 +34,21 @@ describe('what a group row offers the reader', () => {
   it('says they are in, whatever the policy', () => {
     expect(groupAction(row('MEMBER', 'ANYONE'))).toBe('in');
     expect(groupAction(row('MEMBER', 'PEOPLE_I_APPROVE'))).toBe('in');
+  });
+
+  // ADR-0183 §7: they would otherwise be asking themselves.
+  it('offers Join on an official group the reader runs, whatever the policy', () => {
+    expect(groupAction(row('NONE', 'PEOPLE_I_APPROVE', true))).toBe('join');
+    expect(groupAction(row('NONE', 'ANYONE', true))).toBe('join');
+  });
+
+  // #509: a request left before they were made its administrator is admitted by their own Join.
+  it('offers Join over a request the reader left before they ran the group', () => {
+    expect(groupAction(row('REQUESTED', 'PEOPLE_I_APPROVE', true))).toBe('join');
+  });
+
+  it('says the administrator who joined as a player is in', () => {
+    expect(groupAction(row('MEMBER', 'PEOPLE_I_APPROVE', true))).toBe('in');
   });
 });
 

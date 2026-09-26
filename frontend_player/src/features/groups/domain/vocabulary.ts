@@ -5,6 +5,14 @@
  */
 
 /**
+ * **Which kind of group** ([ADR-0183](../../../../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
+ * §2–§3): a **Player group**, a player's own with an Owner, or an **Official group** — a club's,
+ * one per WhatsApp group, run by one of its Administrators, with no Owner and the sports it
+ * declares.
+ */
+export type GroupKind = 'PLAYER' | 'OFFICIAL';
+
+/**
  * What a group is to the person reading it
  * ([ADR-0183](../../../../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
  * §9). **A declined request reads `NONE`** — nothing tells anybody it was declined.

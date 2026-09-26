@@ -7,10 +7,11 @@
 import type { components } from '@/generated/schema';
 import type { Exact } from '@/shared/vocabulary/wireAgreement';
 
-import type { GroupRelation, JoinPolicy, ReadAs } from '../domain/vocabulary';
+import type { GroupKind, GroupRelation, JoinPolicy, ReadAs } from '../domain/vocabulary';
 
 export const GROUP_VOCABULARY_AGREES: {
+  readonly kind: Exact<GroupKind, components['schemas']['GroupKind']>;
   readonly relation: Exact<GroupRelation, components['schemas']['GroupRelation']>;
   readonly joinPolicy: Exact<JoinPolicy, components['schemas']['JoinPolicy']>;
   readonly readAs: Exact<ReadAs, components['schemas']['ReadAs']>;
-} = { relation: true, joinPolicy: true, readAs: true };
+} = { kind: true, relation: true, joinPolicy: true, readAs: true };

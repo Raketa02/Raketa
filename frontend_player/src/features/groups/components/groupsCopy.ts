@@ -117,6 +117,8 @@ export const GROUPS_COPY = {
     anyoneCanJoin: 'anyone can join',
     youApprove: 'you approve joins',
     ownerApproves: 'the owner approves joins',
+    /** An official group's read names nobody; its Administrator answers (#519). */
+    administratorApproves: 'the administrator approves joins',
     membersHint: 'Opens Members',
     approve: 'Approve',
     editGroup: 'Edit group',

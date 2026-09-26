@@ -8,7 +8,8 @@
  * picked here is the page's sport when the player goes back.
  *
  * **The list is the server's, in the server's order**: only members rated in the sport, the
- * reader first as *You*, then the Owner with the **admin** tag, then newest joined first — each
+ * reader first as *You*, then the Owner with the **admin** tag — on an official group, its
+ * Administrator who joined as a player (#519) — then newest joined first — each
  * row *Padel 2,71 · score 92*, with no score for somebody the platform has watched nothing of. A
  * blocked pair is left out either way round and nothing says so. **No friend tag**: there is no
  * friends feature (PRD #500 overrides play 61 by name). *PLAY PADEL · N* counts the rows drawn.
@@ -36,9 +37,11 @@ import { Card, PlayerPhoto, ScreenHeader, Tag, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { GroupMember } from '../domain/group';
+import { adminTagged } from '../domain/groupInfo';
 import { useGroup, useGroupMembers } from '../hooks/useGroups';
 import { useReaderId } from '../hooks/useReaderId';
 
+import { AddSportCard } from './AddSportCard';
 import { GROUPS_COPY } from './groupsCopy';
 import {
   memberLine,
@@ -61,6 +64,7 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <SportFilterPage
+        {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
         header={(pill) => (
           <ScreenHeader
             onBack={() => router.back()}
@@ -71,7 +75,7 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
           />
         )}
       >
-        {(sport) =>
+        {(sport, toAdd) =>
           group === undefined ? (
             read.error === null ? null : (
               <View style={s.body}>
@@ -82,6 +86,11 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
                 />
               </View>
             )
+          ) : toAdd.length > 0 ? (
+            // An official group the reader plays none of the sports of: no list is drawn for one.
+            <View style={s.body}>
+              <AddSportCard sports={toAdd} />
+            </View>
           ) : sport === undefined ? null : (
             <MembersList groupId={groupId} sport={sport} />
           )
@@ -194,7 +203,7 @@ function MemberRow({ member, sport, you, divided, onHold }: MemberRowProps) {
           <Text style={s.name} numberOfLines={1}>
             {memberName(person)}
           </Text>
-          {member.isOwner ? <Tag label={COPY.admin} /> : null}
+          {adminTagged(member) ? <Tag label={COPY.admin} /> : null}
         </View>
         <Text style={s.line} numberOfLines={1}>
           {memberLine(sport, member)}

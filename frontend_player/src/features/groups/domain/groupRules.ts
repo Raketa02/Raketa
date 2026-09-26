@@ -11,23 +11,30 @@ import type { ClubSearch, GroupAtClub } from './group';
  *
  * | | |
  * | --- | --- |
- * | `join` | an Anyone group they are not in — one tap and they are in |
+ * | `join` | an Anyone group they are not in — one tap and they are in — or an official group they run |
  * | `ask` | a People I approve group — the tap leaves a Join request |
  * | `requested` | they asked, and the request is waiting |
  * | `in` | they are a Group member |
  *
  * A declined request reads `NONE` on the wire, so it comes back as `ask` with nothing said.
+ *
+ * **An Administrator acting as a player always joins the groups they run directly** (ADR-0183 §7):
+ * they would otherwise be asking themselves. That holds over a request they left before the club
+ * made them its administrator too — their own *Join* admits them (#509) — so the only word that
+ * outranks it is *you're in*.
  */
 export type GroupAction = 'join' | 'ask' | 'requested' | 'in';
 
-export function groupAction(group: Pick<GroupAtClub, 'relation' | 'joinPolicy'>): GroupAction {
+export function groupAction(
+  group: Pick<GroupAtClub, 'relation' | 'joinPolicy' | 'isAdministrator'>,
+): GroupAction {
   switch (group.relation) {
     case 'MEMBER':
       return 'in';
     case 'REQUESTED':
-      return 'requested';
+      return group.isAdministrator ? 'join' : 'requested';
     case 'NONE':
-      return group.joinPolicy === 'ANYONE' ? 'join' : 'ask';
+      return group.isAdministrator || group.joinPolicy === 'ANYONE' ? 'join' : 'ask';
   }
 }
 

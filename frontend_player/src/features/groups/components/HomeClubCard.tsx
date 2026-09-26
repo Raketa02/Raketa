@@ -157,7 +157,7 @@ function ClubRow({
 
       {club.groups.map((group) => (
         <View key={group.id} style={s.strip}>
-          <GroupAtClubRow group={group} dots={false} />
+          <GroupAtClubRow group={group} clubName={club.name} dots={false} />
         </View>
       ))}
     </View>

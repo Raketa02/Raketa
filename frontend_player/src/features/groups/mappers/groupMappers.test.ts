@@ -45,15 +45,36 @@ describe('a club as a search answers it', () => {
       groups: [
         {
           id: O3_CLUB.id,
+          kind: 'PLAYER',
           name: 'Ogrody 33 Club',
           monogram: { letters: 'O3', colourKey: 2 },
           sports: ['padel', 'tennis'],
           memberCount: 11,
           joinPolicy: 'PEOPLE_I_APPROVE',
           ownerName: 'Coach Andrzej',
+          administratorName: null,
+          isAdministrator: false,
           relation: 'REQUESTED',
         },
       ],
+    });
+  });
+
+  // #519: an official group is answered for by its Administrator, and its runner joins directly.
+  it('keeps an official group’s kind, who runs it, and whether the reader does', () => {
+    const official: Wire['GroupAtClubSchema'] = {
+      ...O3_CLUB,
+      kind: 'OFFICIAL',
+      owner_name: null,
+      administrator_name: 'Marta Wójcik',
+      is_administrator: true,
+    };
+
+    expect(toClubCard({ ...OGRODY, groups: [official] }).groups[0]).toMatchObject({
+      kind: 'OFFICIAL',
+      ownerName: null,
+      administratorName: 'Marta Wójcik',
+      isAdministrator: true,
     });
   });
 
@@ -129,10 +150,43 @@ describe('the reader’s groups and a group’s page', () => {
         member_faces: [],
       }),
     ).toMatchObject({
+      kind: 'PLAYER',
       memberCount: 1,
       homeClub: { name: 'Ogrody 33' },
       link: 'https://raketa.app/join/ABCDEFGH',
       isOwner: true,
+    });
+  });
+
+  it('carries no declared sports for a player group, which plays what its members are rated in', () => {
+    expect(toGroup(PAGE)).not.toHaveProperty('declaredSports');
+  });
+
+  // #519: the filter narrows to them, and a reader rated in none is shown what to add.
+  // An older build after a sport is added: nothing it could name to add, so the page reads the
+  // group as it reads a player group rather than drawing nothing under the tabs.
+  it('carries no declared sports when this build can name none of them', () => {
+    const official = {
+      ...PAGE,
+      kind: 'OFFICIAL',
+      is_owner: false,
+      declared_sports: ['PICKLEBALL'],
+    } as unknown as Wire['GroupResponse'];
+
+    expect(toGroup(official)).not.toHaveProperty('declaredSports');
+  });
+
+  it('reads an official group’s declared sports, dropping one this build cannot name', () => {
+    const official = {
+      ...PAGE,
+      kind: 'OFFICIAL',
+      is_owner: false,
+      declared_sports: ['PADEL', 'PICKLEBALL', 'SQUASH'],
+    } as unknown as Wire['GroupResponse'];
+
+    expect(toGroup(official)).toMatchObject({
+      kind: 'OFFICIAL',
+      declaredSports: ['padel', 'squash'],
     });
   });
 
@@ -264,6 +318,7 @@ describe('Members, for one sport', () => {
         level: 2.71,
         playerScore: 92,
         isOwner: false,
+        isAdministrator: false,
       },
       {
         playerId: 'p1',
@@ -272,6 +327,7 @@ describe('Members, for one sport', () => {
         level: 2.75,
         playerScore: 93,
         isOwner: true,
+        isAdministrator: false,
       },
     ]);
   });
@@ -293,6 +349,24 @@ describe('Members, for one sport', () => {
     });
 
     expect(answer[0]).not.toHaveProperty('playerScore');
+  });
+
+  it('reads an official group’s Administrator who joined as a player', () => {
+    const [marta] = toGroupMembers({
+      sport: 'PADEL',
+      members: [
+        {
+          player_id: 'p3',
+          name: 'Marta Wójcik',
+          level: 2.6,
+          is_owner: false,
+          is_administrator: true,
+          joined_at: '2026-09-01T10:00:00Z',
+        },
+      ],
+    });
+
+    expect(marta).toMatchObject({ isOwner: false, isAdministrator: true });
   });
 });
 

@@ -3,6 +3,9 @@ import type { SearchedClub, GroupAtClub } from '../domain/group';
 import type { GamesCard } from '../domain/groupPage';
 
 import {
+  addSportHeadline,
+  addSportLabel,
+  addSportLine,
   approverLine,
   clubLine,
   exitSheetBody,
@@ -39,39 +42,66 @@ const OGRODY: SearchedClub = {
 function group(overrides: Partial<GroupAtClub> = {}): GroupAtClub {
   return {
     id: 'group-club',
+    kind: 'PLAYER',
     name: 'Ogrody 33 Club',
     monogram: { letters: 'O3', colourKey: 2 },
     sports: ['padel', 'tennis'],
     memberCount: 11,
     joinPolicy: 'PEOPLE_I_APPROVE',
     ownerName: 'Coach Andrzej',
+    administratorName: null,
+    isAdministrator: false,
     relation: 'NONE',
     ...overrides,
   };
 }
 
+function official(overrides: Partial<GroupAtClub> = {}): GroupAtClub {
+  return group({
+    kind: 'OFFICIAL',
+    ownerName: null,
+    administratorName: 'Marta Wójcik',
+    ...overrides,
+  });
+}
+
 describe('the approver line', () => {
   it('says anyone can join an Anyone group', () => {
-    expect(approverLine(group({ joinPolicy: 'ANYONE' }))).toBe('anyone can join');
+    expect(approverLine(group({ joinPolicy: 'ANYONE' }), 'Ogrody 33')).toBe('anyone can join');
+    expect(approverLine(official({ joinPolicy: 'ANYONE' }), 'Ogrody 33')).toBe('anyone can join');
   });
 
   // ADR-0171 §4: the whole Name, never a first name cut from it.
   it('names the Owner whole on a People I approve group', () => {
-    expect(approverLine(group({ ownerName: 'Karol Nowak' }))).toBe('Karol Nowak approves joins');
+    expect(approverLine(group({ ownerName: 'Karol Nowak' }), 'Ogrody 33')).toBe(
+      'Karol Nowak approves joins',
+    );
   });
 
   it('says the owner approves when the Owner can no longer be named', () => {
-    expect(approverLine(group({ ownerName: null }))).toBe('the owner approves joins');
+    expect(approverLine(group({ ownerName: null }), 'Ogrody 33')).toBe('the owner approves joins');
+  });
+
+  // #519, story 40: an official group has no Owner; its Administrator answers.
+  it('names an official group’s Administrator whole', () => {
+    expect(approverLine(official(), 'Ogrody 33')).toBe('Administrator Marta Wójcik approves joins');
+  });
+
+  // ADR-0183 §3: while it needs an administrator, it reads as the club's.
+  it('names the club while an official group needs an administrator', () => {
+    expect(approverLine(official({ administratorName: null }), 'Ogrody 33')).toBe(
+      'Ogrody 33 approves joins',
+    );
   });
 });
 
 describe('a group row’s second line', () => {
   it('is the count and who approves', () => {
-    expect(groupRowMeta(group())).toBe('11 members · Coach Andrzej approves joins');
+    expect(groupRowMeta(group(), 'Ogrody 33')).toBe('11 members · Coach Andrzej approves joins');
   });
 
   it('counts one member in the singular', () => {
-    expect(groupRowMeta(group({ memberCount: 1, joinPolicy: 'ANYONE' }))).toBe(
+    expect(groupRowMeta(group({ memberCount: 1, joinPolicy: 'ANYONE' }), 'Ogrody 33')).toBe(
       '1 member · anyone can join',
     );
   });
@@ -163,18 +193,32 @@ describe('the Info tab', () => {
   });
 
   it('says who answers a request, from where the reader stands', () => {
-    expect(infoPolicyLine({ joinPolicy: 'ANYONE', isOwner: true })).toBe('anyone can join');
-    expect(infoPolicyLine({ joinPolicy: 'PEOPLE_I_APPROVE', isOwner: true })).toBe(
+    const player = { kind: 'PLAYER' } as const;
+    expect(infoPolicyLine({ ...player, joinPolicy: 'ANYONE', isOwner: true })).toBe(
+      'anyone can join',
+    );
+    expect(infoPolicyLine({ ...player, joinPolicy: 'PEOPLE_I_APPROVE', isOwner: true })).toBe(
       'you approve joins',
     );
-    expect(infoPolicyLine({ joinPolicy: 'PEOPLE_I_APPROVE', isOwner: false })).toBe(
+    expect(infoPolicyLine({ ...player, joinPolicy: 'PEOPLE_I_APPROVE', isOwner: false })).toBe(
       'the owner approves joins',
+    );
+  });
+
+  // #519: an official group has no Owner, and its read names nobody.
+  it('says the administrator approves on an official group', () => {
+    expect(
+      infoPolicyLine({ kind: 'OFFICIAL', joinPolicy: 'PEOPLE_I_APPROVE', isOwner: false }),
+    ).toBe('the administrator approves joins');
+    expect(infoPolicyLine({ kind: 'OFFICIAL', joinPolicy: 'ANYONE', isOwner: false })).toBe(
+      'anyone can join',
     );
   });
 
   it('speaks the members row whole, the sports by name', () => {
     expect(
       membersRowLabel({
+        kind: 'PLAYER',
         memberCount: 8,
         sports: ['padel', 'tennis'],
         joinPolicy: 'ANYONE',
@@ -182,7 +226,13 @@ describe('the Info tab', () => {
       }),
     ).toBe('8 members, plays Padel, Tennis, anyone can join');
     expect(
-      membersRowLabel({ memberCount: 1, sports: [], joinPolicy: 'ANYONE', isOwner: true }),
+      membersRowLabel({
+        kind: 'PLAYER',
+        memberCount: 1,
+        sports: [],
+        joinPolicy: 'ANYONE',
+        isOwner: true,
+      }),
     ).toBe('1 member, anyone can join');
   });
 
@@ -231,16 +281,60 @@ describe('Members', () => {
         level: 2.75,
         playerScore: 93,
         isOwner: true,
+        isAdministrator: false,
         you: false,
       }),
     ).toBe('Karol Tomczak, admin, Padel 2,75 · score 93');
     expect(
-      memberRowLabel('padel', { name: 'Tomek Kowal', level: 2.71, isOwner: false, you: true }),
+      memberRowLabel('padel', {
+        name: 'Tomek Kowal',
+        level: 2.71,
+        isOwner: false,
+        isAdministrator: false,
+        you: true,
+      }),
     ).toBe('You, Padel 2,71');
+  });
+
+  it('speaks an official group’s Administrator who joined as a player with the admin tag', () => {
+    expect(
+      memberRowLabel('padel', {
+        name: 'Marta Wójcik',
+        level: 2.6,
+        isOwner: false,
+        isAdministrator: true,
+        you: false,
+      }),
+    ).toBe('Marta Wójcik, admin, Padel 2,60');
   });
 
   it('names the record a hold opens', () => {
     expect(openRecordLabel({ name: 'Zofia Bąk', you: false })).toBe('Open Zofia Bąk’s record');
     expect(openRecordLabel({ name: 'Tomek Kowal', you: true })).toBe('Open your record');
+  });
+});
+
+describe('an official group for a player rated in none of its sports', () => {
+  // Story 57: the sports in lower case mid-line, as the page's other sentences write them.
+  it('says what the group plays and what to add', () => {
+    expect(addSportHeadline(['padel'])).toBe('This group plays padel');
+    expect(addSportLine(['padel'])).toBe('Add padel to your Skill passport to see its games.');
+  });
+
+  it('names every sport it plays, and any one of them to add', () => {
+    expect(addSportHeadline(['padel', 'squash'])).toBe('This group plays padel and squash');
+    expect(addSportLine(['padel', 'squash'])).toBe(
+      'Add padel or squash to your Skill passport to see its games.',
+    );
+    expect(addSportHeadline(['padel', 'tennis', 'badminton'])).toBe(
+      'This group plays padel, tennis and badminton',
+    );
+    expect(addSportLine(['padel', 'tennis', 'badminton'])).toBe(
+      'Add padel, tennis or badminton to your Skill passport to see its games.',
+    );
+  });
+
+  it('names each sport’s button by what it adds', () => {
+    expect(addSportLabel('padel')).toBe('Add Padel');
   });
 });

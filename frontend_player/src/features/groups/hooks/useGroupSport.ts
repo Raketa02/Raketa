@@ -11,6 +11,11 @@
  * ratings every time it is read — a sport the player is no longer rated in opens on the default —
  * and is **one value for every group**: the sport last picked anywhere in Play.
  *
+ * **An official group plays what it declares** (#519, story 56): handed its sports, the filter
+ * lists only the rated ones among them and opens on one of them, whatever was picked elsewhere —
+ * and the saved value stays what the player last picked, since opening is not picking. A reader
+ * rated in none of them has no sport here, and `toAdd` names what they would add to have one.
+ *
  * The phone read is `usePlaySegment`'s posture, for its reasons: local, never waiting on the
  * network (`networkMode: 'always'`), once per account per session and kept for good, and every
  * pick written to the cache first and the phone second. **The write is not a mutation** — one key
@@ -24,7 +29,7 @@ import { useSkillRatings } from '@/features/onboarding/types';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { filterSports, openingSport } from '../domain/groupPage';
+import { filterSports, openingSport, sportsToAdd } from '../domain/groupPage';
 import { keepLastSport, readLastSport } from '../use-cases/lastSport';
 
 import { useReaderId } from './useReaderId';
@@ -34,10 +39,16 @@ export interface GroupSport {
   readonly sports: readonly Sport[] | undefined;
   /** The sport the page is filtered by — `undefined` while either read is out, or for nobody rated. */
   readonly sport: Sport | undefined;
+  /**
+   * **What the reader would add to see an official group** — every sport it plays, for a reader
+   * rated in none of them (story 57); empty otherwise, and while either read is out.
+   */
+  readonly toAdd: readonly Sport[];
   readonly choose: (sport: Sport) => void;
 }
 
-export function useGroupSport(): GroupSport {
+/** `declared` is an official group's declared sports; `undefined` for a player group, or none yet read. */
+export function useGroupSport(declared?: readonly Sport[]): GroupSport {
   const client = useQueryClient();
   const account = useReaderId();
   const ratings = useSkillRatings();
@@ -75,8 +86,13 @@ export function useGroupSport(): GroupSport {
 
   // `null` is a phone that answered *nothing saved*; `undefined` is one still being read.
   if (rated === undefined || (account !== undefined && picked === undefined)) {
-    return { sports: undefined, sport: undefined, choose };
+    return { sports: undefined, sport: undefined, toAdd: [], choose };
   }
 
-  return { sports: filterSports(rated), sport: openingSport(rated, picked ?? undefined), choose };
+  return {
+    sports: filterSports(rated, declared),
+    sport: openingSport(rated, picked ?? undefined, declared),
+    toAdd: sportsToAdd(rated, declared),
+    choose,
+  };
 }
