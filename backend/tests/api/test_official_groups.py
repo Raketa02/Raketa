@@ -709,9 +709,24 @@ async def test_a_member_s_page_reports_the_declared_sports_and_no_owner(
     assert page["sports"] == ["PADEL", "TENNIS"]
     assert page["is_owner"] is False
     assert page["member_count"] == 1
+    # The Info tab's line names who runs it, as the search row does.
+    assert page["administrator_name"] == "Marta Wójcik"
+    assert page["is_administrator"] is False
     assert [(row["kind"], row["sports"]) for row in mine] == [
         ("OFFICIAL", ["PADEL", "TENNIS"])
     ]
+
+
+async def test_the_administrator_who_joined_reads_that_they_run_it(client, ogrody):
+    tomek = await an_administrator_who_plays(client, ogrody, "tomek")
+    group = await an_official_group(client, tomek, ogrody["id"])
+    await join(client, tomek, group)
+
+    page = (await read(client, tomek, group)).json()
+
+    # *You approve joins*, and his account's own Name.
+    assert page["is_administrator"] is True
+    assert page["administrator_name"] == "tomek"
 
 
 async def test_a_player_group_s_page_declares_nothing(client):
@@ -722,6 +737,8 @@ async def test_a_player_group_s_page_declares_nothing(client):
 
     assert page["kind"] == "PLAYER"
     assert "declared_sports" not in page
+    assert page["administrator_name"] is None
+    assert page["is_administrator"] is False
 
 
 async def test_members_carry_the_administrator_who_plays_with_the_admin_tag(

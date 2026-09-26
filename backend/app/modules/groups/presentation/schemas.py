@@ -457,6 +457,23 @@ class GroupResponse(GroupRowSchema):
             "else. `member_count` is the group's, so its *+N* counts everybody."
         )
     )
+    administrator_name: str | None = Field(
+        description=(
+            "**An official group's** *approves joins* line, as a club's card "
+            "says it: the whole Name of the Administrator running it now. "
+            "**`null` while it needs an administrator** — the line then names "
+            "the home club, *Ogrody 33 approves joins*, and requests wait for a "
+            "handover — and **always `null` on a player group**, whose line "
+            "names its Owner."
+        )
+    )
+    is_administrator: bool = Field(
+        description=(
+            "Whether **the reader** runs this official group — who joined it as "
+            "a player: *you approve joins*, answered from the administrator "
+            "profile. Always `false` on a player group."
+        )
+    )
 
     @classmethod
     def from_view(cls, page: GroupPage, *, public_site: str) -> "GroupResponse":
@@ -485,6 +502,8 @@ class GroupResponse(GroupRowSchema):
             member_faces=[
                 GroupPersonSchema.from_view(face) for face in page.member_faces
             ],
+            administrator_name=page.administrator_name,
+            is_administrator=page.is_administrator,
         )
 
 

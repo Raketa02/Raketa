@@ -10107,6 +10107,23 @@
             "type": "array",
             "title": "Member Faces",
             "description": "The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order \u2014 the Owner, then newest joined first \u2014 with a blocked pair, either way round, left out, as the list it opens leaves them out. Empty for a reader alone (`member_count` 1), whose row draws their own face \u2014 and empty too, with `member_count` above 1, when a block hides everybody else. `member_count` is the group's, so its *+N* counts everybody."
+          },
+          "administrator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administrator Name",
+            "description": "**An official group's** *approves joins* line, as a club's card says it: the whole Name of the Administrator running it now. **`null` while it needs an administrator** \u2014 the line then names the home club, *Ogrody 33 approves joins*, and requests wait for a handover \u2014 and **always `null` on a player group**, whose line names its Owner."
+          },
+          "is_administrator": {
+            "type": "boolean",
+            "title": "Is Administrator",
+            "description": "Whether **the reader** runs this official group \u2014 who joined it as a player: *you approve joins*, answered from the administrator profile. Always `false` on a player group."
           }
         },
         "type": "object",
@@ -10122,7 +10139,9 @@
           "join_policy",
           "is_owner",
           "rated_by_sport",
-          "member_faces"
+          "member_faces",
+          "administrator_name",
+          "is_administrator"
         ],
         "title": "GroupResponse",
         "description": "A group, as one of its members opens it."

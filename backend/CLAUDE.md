@@ -1385,7 +1385,9 @@ Rules to preserve:
   table's *groups* column is filled on active rows only, through
   `OfficialGroupAssignments` — administrators' demand, **signed in
   `groups/infrastructure/`** like clubs' sports question, and held by its own
-  `.importlinter` contract.
+  `.importlinter` contract. And the member's page, `GET /groups/{id}`, carries the
+  card's `administrator_name` and `is_administrator` (one `approver_name` for both),
+  so the Info tab reads *[club] approves joins* for an orphan, as the search row does.
 - **A use case never sends email; it writes the mail queue**
   ([ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md)). The
   message is rendered whole — the copy lives with its templates in the backend

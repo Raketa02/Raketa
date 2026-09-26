@@ -255,10 +255,12 @@ async def test_a_player_token_is_refused_on_the_club_s_groups(client, ogrody):
 async def test_removing_marta_leaves_both_her_groups_needing_an_administrator(
     client, ogrody, marta
 ):
-    club = await an_official_group(client, marta, ogrody["id"])
+    club = await an_official_group(client, marta, ogrody["id"], join_policy="ANYONE")
     await an_official_group(
         client, marta, ogrody["id"], name="Ogrody open play", join_policy="ANYONE"
     )
+    (ewa,) = await players_join(client, club, ["ewa"])
+    await save(client, marta, ogrody["id"], club)
     kasia = await a_player(client, "kasia")
     await join(client, kasia, club)
 
@@ -274,6 +276,9 @@ async def test_removing_marta_leaves_both_her_groups_needing_an_administrator(
     assert seen["administrator_name"] is None
     assert seen["relation"] == "REQUESTED"
     assert rows[0]["waiting_count"] == 1
+    # A member's Info tab reads it too.
+    page = (await read(client, ewa, club)).json()
+    assert (page["administrator_name"], page["is_administrator"]) == (None, False)
 
 
 # --------------------------------------------------------------------------- #
@@ -308,7 +313,7 @@ async def test_the_desk_hands_an_orphan_to_tomek_and_the_waiting_request_is_his(
     assert his_page["link"] == before["link"]
     assert his_page["join_policy"] == before["join_policy"] == "PEOPLE_I_APPROVE"
     assert his_page["whatsapp_size"] == before["whatsapp_size"] == 48
-    # Players read his name on the line now.
+    # Players read his name on the line now, on the card and on the page.
     seen = row_in(await search(client, kasia, "ogrody"), club)
     assert seen["administrator_name"] == "tomek"
 
@@ -317,6 +322,7 @@ async def test_the_desk_hands_an_orphan_to_tomek_and_the_waiting_request_is_his(
     assert approved.status_code == 204, approved.text
     (row,) = await the_club_s_groups(client, ogrody)
     assert (row["member_count"], row["waiting_count"]) == (1, 0)
+    assert (await read(client, kasia, club)).json()["administrator_name"] == "tomek"
 
 
 async def test_the_old_administrator_stops_seeing_it_and_stays_in_it_as_a_player(

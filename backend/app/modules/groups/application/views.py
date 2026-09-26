@@ -183,6 +183,11 @@ class GroupPage:
     #: The Info tab's members row: everybody the reader may see but the
     #: reader, in the Members list's order, at most five (``domain/members.py``).
     member_faces: tuple[GroupFace, ...]
+    #: An official group's *approves joins* line, as a club's card says it
+    #: (``approver_name``) — ``None`` while nobody runs it, and on a player
+    #: group. ``is_administrator`` is whether the reader runs it (#510).
+    administrator_name: str | None
+    is_administrator: bool
 
 
 @final
@@ -273,15 +278,25 @@ async def account_running(
     return None if runner is None else runner.account_id
 
 
+async def running_it(
+    administrators: GroupAdministrators, listing: GroupListing
+) -> RunningAdministrator | None:
+    """Who runs this one group now — ``None`` for a player group, which no
+    Administrator runs, and for an official group nobody runs."""
+
+    if listing.kind is not GroupKind.OFFICIAL or listing.administrator_id is None:
+        return None
+    return await runner_of(administrators, listing.administrator_id)
+
+
 async def running_account(
     administrators: GroupAdministrators, listing: GroupListing
 ) -> UUID | None:
     """The account running this one group now — ``None`` for a player group,
     which no Administrator runs, and for an official group nobody runs."""
 
-    if listing.kind is not GroupKind.OFFICIAL or listing.administrator_id is None:
-        return None
-    return await account_running(administrators, listing.administrator_id)
+    runner = await running_it(administrators, listing)
+    return None if runner is None else runner.account_id
 
 
 def who_runs_it(listing: GroupListing, runner: UUID | None) -> UUID | None:
@@ -336,11 +351,21 @@ def at_club(
         join_policy=listing.join_policy,
         owner_name=owner_name,
         relation=relation_of(listing, reader_id),
-        administrator_name=(
-            None if runner is None else names.get(runner.account_id, runner.name)
-        ),
+        administrator_name=approver_name(runner, names),
         is_administrator=runner is not None and runner.account_id == reader_id,
     )
+
+
+def approver_name(
+    runner: RunningAdministrator | None, names: Mapping[UUID, str]
+) -> str | None:
+    """Who an official group's *approves joins* line names: the account
+    running it by **its** Name — the one its admin-tagged Members row says —
+    and by the name the club gave them only where ``users`` has none to answer
+    with (``docs/adr/0185`` §4). ``None`` while nobody runs it: the line then
+    names the club (``docs/adr/0183`` §3)."""
+
+    return None if runner is None else names.get(runner.account_id, runner.name)
 
 
 def relation_of(listing: GroupListing, reader_id: UUID) -> GroupRelation:

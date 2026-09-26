@@ -7,10 +7,11 @@ from app.modules.groups.application.views import (
     GroupPage,
     NamedClub,
     SportFaces,
+    approver_name,
     face_of,
     rated_among,
     row_of,
-    running_account,
+    running_it,
     who_runs_it,
 )
 from app.modules.groups.domain.members import members_row
@@ -44,7 +45,9 @@ class GroupPages:
 
     **On an official group the account running it leads the members row**, as
     an Owner does on a player group — asked of the administrators, so it is
-    whoever runs it now.
+    whoever runs it now — and the Info tab's *approves joins* line names them
+    as a club's card does, or nobody while the group needs an administrator
+    (#510).
     """
 
     def __init__(
@@ -66,13 +69,15 @@ class GroupPages:
         hidden = await hidden_in(self._hidden, listing, reader_id)
         rated = await rated_among(self._ratings, [listing])
         by_sport = rosters(listing.members, rated)
-        runner = await running_account(self._administrators, listing)
+        runner = await running_it(self._administrators, listing)
+        running = None if runner is None else runner.account_id
         on_members_row = members_row(
             listing.members,
             reader_id=reader_id,
-            run_by=who_runs_it(listing, runner),
+            run_by=who_runs_it(listing, running),
             hidden=hidden,
         )
+        names = {} if running is None else await self._faces.names_of([running])
         faces = await self._faces.faces_of(
             {player_id for roster in by_sport for player_id in roster.first_rated}
             | set(on_members_row)
@@ -97,6 +102,8 @@ class GroupPages:
             member_faces=tuple(
                 face_of(faces, player_id) for player_id in on_members_row
             ),
+            administrator_name=approver_name(runner, names),
+            is_administrator=running is not None and running == reader_id,
         )
 
 
