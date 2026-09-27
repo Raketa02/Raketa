@@ -387,6 +387,8 @@ function pageOf(
       { sport: 'BADMINTON', rated_count: 0, first_rated: [] },
     ],
     member_faces: [MARTA],
+    administrator_name: O3_CLUB.administrator_name,
+    is_administrator: false,
     ...overrides,
   };
 }

@@ -5137,6 +5137,16 @@ export interface components {
              * @description The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order — the Owner, then newest joined first — with a blocked pair, either way round, left out, as the list it opens leaves them out. Empty for a reader alone (`member_count` 1), whose row draws their own face — and empty too, with `member_count` above 1, when a block hides everybody else. `member_count` is the group's, so its *+N* counts everybody.
              */
             member_faces: components["schemas"]["GroupPersonSchema"][];
+            /**
+             * Administrator Name
+             * @description **An official group's** *approves joins* line, as a club's card says it: the whole Name of the Administrator running it now. **`null` while it needs an administrator** — the line then names the home club, *Ogrody 33 approves joins*, and requests wait for a handover — and **always `null` on a player group**, whose line names its Owner.
+             */
+            administrator_name: string | null;
+            /**
+             * Is Administrator
+             * @description Whether **the reader** runs this official group — who joined it as a player: *you approve joins*, answered from the administrator profile. Always `false` on a player group.
+             */
+            is_administrator: boolean;
         };
         /**
          * GroupSportSchema

@@ -120,6 +120,8 @@ function pageOf(
     is_owner: true,
     rated_by_sport: JUST_TOMEK,
     member_faces: [],
+    administrator_name: null,
+    is_administrator: false,
     ...overrides,
   };
 }

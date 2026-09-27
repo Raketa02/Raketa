@@ -148,6 +148,8 @@ describe('the reader’s groups and a group’s page', () => {
         is_owner: true,
         rated_by_sport: [],
         member_faces: [],
+        administrator_name: null,
+        is_administrator: false,
       }),
     ).toMatchObject({
       kind: 'PLAYER',
@@ -202,6 +204,8 @@ describe('the reader’s groups and a group’s page', () => {
       link: 'https://raketa.app/join/ABCDEFGH',
       join_policy: 'ANYONE',
       is_owner: true,
+      administrator_name: null,
+      is_administrator: false,
       rated_by_sport: [
         {
           sport: 'PADEL',
@@ -267,6 +271,8 @@ const PAGE: Wire['GroupResponse'] = {
   link: 'https://raketa.app/join/ABCDEFGH',
   join_policy: 'PEOPLE_I_APPROVE',
   is_owner: true,
+  administrator_name: null,
+  is_administrator: false,
   rated_by_sport: [],
   member_faces: [
     { player_id: 'p1', name: 'Karol Tomczak', photo_id: 'f1', photo_url: 'https://photos.test/f1' },

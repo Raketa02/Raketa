@@ -162,6 +162,8 @@ function crew({
     link: LINK,
     join_policy: state.policy,
     is_owner: state.ownerId === ME.id,
+    administrator_name: null,
+    is_administrator: false,
     rated_by_sport: WIRE_SPORTS.map((sport) => ({
       sport,
       rated_count: rated(sport).length,

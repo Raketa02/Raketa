@@ -117,6 +117,8 @@ const CREATED: Wire['GroupResponse'] = {
   is_owner: true,
   rated_by_sport: [],
   member_faces: [],
+  administrator_name: null,
+  is_administrator: false,
 };
 
 const HOME_CLUBS = '/api/v1/home-clubs';
