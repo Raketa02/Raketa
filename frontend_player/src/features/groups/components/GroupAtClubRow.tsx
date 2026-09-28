@@ -1,13 +1,14 @@
 /**
- * **A group inside a club's card** — its tile, its name, its size and who approves, and what the
- * reader can do about it (play 9, 10, 24, 35–37).
+ * **A group on a club card's band** — its tile, its name with an **official** tag on an official
+ * group, its sport dots and size, and what the reader can do about it (play 9, 10, 24, 35–37; the
+ * 2026-09-27 mocks).
  *
- * Drawn in two places that differ in one thing each, as the mocks draw them:
+ * Drawn in two places that differ in one thing, the line after the count:
  *
- * - **Join a group** draws the sport dots before the count, and keeps the second line to one line,
- *   truncated — *11 members · Coach Andrzej a…* (play 35).
- * - **New group's home-club search** draws no dots and lets the line wrap to a second (play 9):
- *   the row there sits in a narrower strip under a club that is itself the thing being chosen.
+ * - **Join a group** names who approves, on one line, truncated — *11 members · Coach Andrzej a…*
+ *   (play 35): the reader is deciding whether to ask, and that is who answers.
+ * - **New group's home-club search** stops at the count: the row sits under a club that is itself
+ *   the thing being chosen, so it says only enough to recognise the group.
  *
  * The name and the line are **one element**, spoken whole with the sports by name — the dots have
  * no words of their own — and the action beside it is the row's one control. An official group's
@@ -17,41 +18,56 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
-import { theme } from '@/shared/ui';
+import { Tag, theme } from '@/shared/ui';
 
 import type { GroupAtClub } from '../domain/group';
 
 import { GroupActionControl } from './GroupActionControl';
 import { GroupMonogram } from './GroupMonogram';
-import { groupRowMeta } from './groupsPresentation';
+import { GROUPS_COPY } from './groupsCopy';
+import { groupRowMeta, membersLine } from './groupsPresentation';
 import { SportDots } from './SportDots';
+
+/** Which screen's row: Join a group's, or New group's home-club search's. */
+export type GroupAtClubRowVariant = 'join' | 'homeClub';
 
 export interface GroupAtClubRowProps {
   readonly group: GroupAtClub;
   /** The club whose card the row sits in — who approves an official group that needs an administrator. */
   readonly clubName: string;
-  /** Join a group's row: dots before the count, the line on one line. */
-  readonly dots: boolean;
+  readonly variant: GroupAtClubRowVariant;
 }
 
-function rowLabel(group: GroupAtClub, clubName: string): string {
+/** The second line: Join a group's names who approves; home-club search's stops at the count. */
+function rowLine(group: GroupAtClub, clubName: string, variant: GroupAtClubRowVariant): string {
+  return variant === 'join' ? groupRowMeta(group, clubName) : membersLine(group.memberCount);
+}
+
+function rowLabel(group: GroupAtClub, line: string, official: boolean): string {
+  const tagged = official ? [GROUPS_COPY.official] : [];
   const plays = group.sports.length > 0 ? [`plays ${group.sports.map(sportLabel).join(', ')}`] : [];
-  return [group.name, groupRowMeta(group, clubName), ...plays].join(', ');
+  return [group.name, ...tagged, line, ...plays].join(', ');
 }
 
-export function GroupAtClubRow({ group, clubName, dots }: GroupAtClubRowProps) {
+export function GroupAtClubRow({ group, clubName, variant }: GroupAtClubRowProps) {
+  const line = rowLine(group, clubName, variant);
+  const official = group.kind === 'OFFICIAL';
+
   return (
     <View style={s.row}>
       <GroupMonogram monogram={group.monogram} size="row" />
 
-      <View style={s.words} accessible accessibilityLabel={rowLabel(group, clubName)}>
-        <Text style={s.name} numberOfLines={1}>
-          {group.name}
-        </Text>
+      <View style={s.words} accessible accessibilityLabel={rowLabel(group, line, official)}>
+        <View style={s.nameRow}>
+          <Text style={s.name} numberOfLines={1}>
+            {group.name}
+          </Text>
+          {official ? <Tag label={GROUPS_COPY.official} variant="ok" /> : null}
+        </View>
         <View style={s.meta}>
-          {dots ? <SportDots sports={group.sports} /> : null}
-          <Text style={s.line} numberOfLines={dots ? 1 : 2}>
-            {groupRowMeta(group, clubName)}
+          <SportDots sports={group.sports} />
+          <Text style={s.line} numberOfLines={1}>
+            {line}
           </Text>
         </View>
       </View>
@@ -64,7 +80,9 @@ export function GroupAtClubRow({ group, clubName, dots }: GroupAtClubRowProps) {
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   words: { flex: 1, gap: theme.space.xxs },
-  name: { ...theme.type.cardTitle, color: theme.color.ink },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
+  name: { ...theme.type.cardTitle, color: theme.color.ink, flexShrink: 1 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
-  line: { ...theme.type.tiny, color: theme.color.muted, flexShrink: 1 },
+  // The row is only ever drawn on a club card's tray, where `muted` falls short of 4,5.
+  line: { ...theme.type.tiny, color: theme.color.muted2, flexShrink: 1 },
 });

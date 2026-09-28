@@ -24,15 +24,9 @@ export const GROUPS_COPY = {
     name: 'Name',
     namePlaceholder: 'Give it any name…',
     homeClub: 'Home club',
-    required: 'required',
     homeClubPlaceholder: 'Search clubs by name…',
-    homeClubHint: 'Start typing a club’s name. Every club in Raketa is here.',
-    /** Under the field until a club is chosen (play 6–10). */
-    homeClubConsequence:
-      'Every group lives at a club: its courts are where the app looks first for this group’s games.',
     noClubNote: 'Only clubs in Raketa can be a home club.',
-    setAsHome: 'Set as home ›',
-    groupAlreadyHere: 'group already here',
+    setAsHome: 'Set as home',
     change: 'Change',
     changeLabel: 'Change the home club',
     whoCanJoin: 'Who can join',
@@ -42,8 +36,6 @@ export const GROUPS_COPY = {
       'No sport to pick: the group plays whatever its members are rated in. Everybody sees the sports they play.',
     create: 'Create the group',
     creating: 'Creating the group',
-    createNote:
-      'You get a link to send to the WhatsApp crowd. When they finish getting rated, they land here.',
     created: 'Group created',
   },
   joinGroup: {
@@ -158,6 +150,8 @@ export const GROUPS_COPY = {
     saved: 'Saved',
     admittedLine: 'Everybody who was waiting is in the group now.',
   },
+  /** The tag beside an official group's name on a club card, in both searches (2026-09-27 mocks). */
+  official: 'official',
   action: {
     join: 'Join',
     ask: 'Ask to join',

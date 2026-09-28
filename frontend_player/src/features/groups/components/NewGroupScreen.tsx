@@ -2,10 +2,11 @@
  * **New group** — full screen, with a back arrow that discards the form (play 4–13; PRD #500
  * stories 11–27; #512).
  *
- * Three cards and a button: the **name** (up to 40 characters, no suggestions — it can be the
- * WhatsApp group's), the **home club** (`HomeClubCard`, required), and **who can join**, *Anyone*
- * by default or *People I approve*, with the note that there is no sport to pick. **Create the
- * group** is pressable only once the form's one schema answers a group (`newGroupFrom`), is busy while the
+ * Three labelled sections on the page and a button, and nothing else — the 2026-09-27 mocks took
+ * the form out of its cards and its explanations off the page: the **name** (up to 40 characters,
+ * no suggestions — it can be the WhatsApp group's), the **home club** (`HomeClubPicker`,
+ * required), and **who can join**, *Anyone* by default or *People I approve*. **Create the group**
+ * is pressable only once the form's one schema answers a group (`newGroupFrom`), is busy while the
  * create is in flight — two creates are two groups, so it takes no second press — and on success
  * **replaces** this screen with the group's page and says *Group created* over it.
  *
@@ -21,7 +22,7 @@
 
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { codeMessage } from '@/shared/errors';
@@ -35,11 +36,12 @@ import { useHomeClubSearch } from '../hooks/useClubSearch';
 import { useCreateGroup } from '../hooks/useGroupWrites';
 import { newGroupFrom } from '../schemas/newGroupForm';
 
-import { GroupNameCard, WhoCanJoinCard } from './GroupFormCards';
+import { FormSection } from './FormSection';
+import { GroupNameField, WhoCanJoinChips } from './GroupFormCards';
 import { groupRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
 import { CREATE_REFUSALS } from './groupsPresentation';
-import { HomeClubCard } from './HomeClubCard';
+import { HomeClubPicker } from './HomeClubPicker';
 import { nearTheEnd, SCROLL_EVENT_EVERY_MS } from './pageEnd';
 
 const COPY = GROUPS_COPY.newGroup;
@@ -81,9 +83,11 @@ export function NewGroupScreen() {
             if (homeClub === undefined && nearTheEnd(event.nativeEvent)) search.loadMore();
           }}
         >
-          <GroupNameCard name={name} onName={setName} />
+          <FormSection label={COPY.name}>
+            <GroupNameField name={name} onName={setName} />
+          </FormSection>
 
-          <HomeClubCard
+          <HomeClubPicker
             typed={typed}
             onType={setTyped}
             search={search}
@@ -92,7 +96,9 @@ export function NewGroupScreen() {
             onChange={() => setHomeClub(undefined)}
           />
 
-          <WhoCanJoinCard joinPolicy={joinPolicy} onJoinPolicy={setJoinPolicy} />
+          <FormSection label={COPY.whoCanJoin}>
+            <WhoCanJoinChips joinPolicy={joinPolicy} onJoinPolicy={setJoinPolicy} />
+          </FormSection>
 
           <Button
             label={COPY.create}
@@ -108,8 +114,6 @@ export function NewGroupScreen() {
               {codeMessage(CREATE_REFUSALS, create.error)}
             </Note>
           ) : null}
-
-          <Text style={s.footnote}>{COPY.createNote}</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -119,10 +123,10 @@ export function NewGroupScreen() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   body: { flex: 1 },
+  // The sections stand apart by space alone, now that no card bounds them.
   content: {
     paddingHorizontal: theme.size.gutter,
     paddingBottom: theme.space.lg,
-    gap: theme.space.sm,
+    gap: theme.space.xl,
   },
-  footnote: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
 });

@@ -60,20 +60,40 @@ keystroke, and a cancelled `GET` records nothing. A blank text asks nothing. **T
 page, more on scroll**: an infinite query over `next_page`, and each screen's scroller asks for
 the next page within half a screen of its end. The results sit **inside the page's own scroller**
 on New group rather than in a list of their own, because a list inside a form is two scrollers
-under one thumb.
+under one thumb. **An answer lives only while it is on screen** (`gcTime: 0`, `staleTime: 0`,
+[#529](https://github.com/Raketa02/Raketa/issues/529) D6): it carries the reader's relation to
+every group in it, and that changes on another phone — an Owner lets them in, or declines. Kept by
+text, the answer to _og_ read before an approval was drawn again the next time _og_ was typed, so
+the row flipped between _requested · waiting_ and _you're in_ letter by letter. A text typed again
+is asked again; what bridges the letters is only the answer on screen.
+
+**The Groups list is re-read each time the player comes back to it** (`useGroupsList`, #529).
+New group, Join a group and a group's page are pushed over it and the stack keeps it mounted, so
+_back_ is neither a mount nor a foreground (`useOnReturn`): a reader let in while still on Join a
+group came back to the list read before they left, without the group, until a switch to Explore
+and back remounted it. The return marks it stale, as the Chats list's does.
 
 **New group is the screen's own state and dies with it** (stories 11–27). Every open is empty and
 the back arrow discards it. The name field stops at 40 characters (`GROUP_NAME_MAX`); the server
-trims and counts again. The home club card (`HomeClubCard`) holds no state and draws five:
-**empty** (the hint, and what a home club is for), **searching** (rows of name · district · sports
-and _Set as home ›_, the whole row the tap, **no distance** — #512 overrides play 7), **no match**
-(_No club called "…"_ and that only clubs in Raketa can be one), **a club with groups** (tinted
-`amberSoft` to the card's edges, tagged _group already here_, a white strip per group with its
-action — the player can join from inside the form, and can still choose the club, because a second
-group at one club is allowed), and **chosen** (the field replaced by the club on `mintSoft` with
-its distance and **Change**, and the line under it now saying what the choice means). _Who can
-join_ is two chips, _Anyone_ first and chosen, with the note that there is no sport to pick.
-**Create the group** is disabled until the schema answers a group, busy while the create is in flight — two
+trims and counts again. **The form is three labelled sections on the page and a button, and
+nothing else** (the product owner's mocks of 2026-09-27): no card around a section, white fields
+on paper, each label over its control at one distance (`FormSection`), and none of the sentences
+that explained the form — what a home club is for, the hint under the empty field, the note that
+there is no sport to pick, the footnote about the link, and the home club's _· required_, which
+the disabled **Create the group** already says. The home club (`HomeClubPicker`) holds no
+state and draws five: **empty** (the field alone), **searching** (**a raised card per club** —
+name over district · distance · sports and a _Set as home_ pill, the whole head the tap; the
+distance is back, the mocks overriding #512, and absent as ever for a reader with no Location
+area), **no match** (_No club called "…"_ and that only clubs in Raketa can be one), **a club with
+groups** (the same card, its groups on a recessed `paper3` band to the card's edges, each with its
+dots, its count, an _official_ tag on an official group, and its action — the player can join from
+inside the form, and can still choose the club, because a second group at one club is allowed),
+and **chosen** (the field replaced by the club on `mintSoft` with its distance and **Change**, and
+nothing under it — the sentence about which courts a game starts with went in the same review). **Each club is its own card with its own shadow** (`shadow.clubResult`, design-system
+4.3's one card that casts one) because a club and its groups are one object in a long list, and
+dividers between rows could not say where one club's groups ended and the next club began. The
+group rows there draw **no approver** — Join a group's still do — and speak what they draw.
+_Who can join_ is two chips, _Anyone_ first and chosen. **Create the group** is disabled until the schema answers a group, busy while the create is in flight — two
 creates are two groups, and the create is never retried — and on success it seeds the page's read
 with the answer, replaces the form with the page and raises _Group created_ in `ok`. A refusal the
 form can name (`group_name_invalid`, `home_club_unknown`) is said under the button in the form's
@@ -82,12 +102,16 @@ words.
 **Join a group is one field and nothing else** (stories 29–44). The field takes the focus as the
 screen opens; **Paste** — a chip inside the field, through the new clipboard port — drops a link
 from WhatsApp into it, and becomes **✕** while there is text, which clears the text and the
-answer. A club's card header is **context, not a choice**: one spoken element with no button role,
-name over _district · distance · sports_. Each group row draws its dots, count and approver on one
-truncated line with the action beside it; the approver is the Owner's **whole Name** (ADR-0171 §4,
+answer. **Each club is New group's club card** (`ClubCard`, the owner's ask of 2026-09-28): raised
+off the page, its head on white, its groups on the `paper3` band under it, and an _official_ tag
+beside an official group's name, as New group's rows have. The head is **context, not a choice**:
+one spoken element with no button role, name over _district · distance · sports_, and no _Set as
+home_ pill. Each group row draws its dots, count and approver on one truncated line with the action
+beside it — the one thing its row keeps that New group's drops, because it is who answers the
+reader's request; the approver is the Owner's **whole Name** (ADR-0171 §4,
 #505 — the row truncates it, nobody cuts a first name from it), _anyone can join_ for an Anyone
 group, and _the owner approves joins_ for an Owner who can no longer be named. The three ways of
-there being nothing are three sentences: _No groups here yet_ on a club's card, _Nothing at that
+there being nothing are three sentences: _No groups here yet_ on a club's band, _Nothing at that
 link_, _No match for "…"_.
 
 **Every failed read is one block** — `ReadFailure`: why, in the caller's words where it can name
@@ -104,10 +128,10 @@ Play; `group_not_found` — one code for _no such group_ and _not one of yours_ 
 dots on a card with **no sport name beside them**, which design-system 2.3's premise says a dot
 always has: they are drawn as the mocks draw them, and **every element they sit in speaks the
 sports by name** (_…, plays Padel, Tennis_), so a listener gets the words — a reader who cannot
-tell the four hues apart still gets them only from the group's page. And the home-club field's
-focus ring is **coral**, as the ticket asks (_live, coral focus ring_), which is a seventh coral
-beside 1.2's closed list; both are recorded in design-system Part 16 for the product owner to rule
-on. **Nothing here has been seen on a device.**
+tell the four hues apart still gets them only from the group's page. Recorded in design-system
+Part 16 for the product owner to rule on. The home-club field's focus ring was **coral**, as #512
+asked, until the 2026-09-27 mocks drew it `ink` like every other field. **Nothing here has been
+seen on a device.**
 
 **The page is filtered by one sport, and the phone remembers which**
 ([#513](https://github.com/Raketa02/Raketa/issues/513), stories 51–58, ADR-0188). The fast
@@ -203,6 +227,17 @@ spoken whole (_Share the link_, _Copy link_), the same two doors as every other 
 **Want to join · N**, the Owner's; **the members row**; **Edit group**, the Owner's; and the way out.
 Info never waits for the filter's sport, because nothing on it is drawn for one.
 
+**The Info tab counts the requests waiting on an Owner, and Info re-reads on a pull**
+([#529](https://github.com/Raketa02/Raketa/issues/529) D6). The count is the Chats badge at the
+segment's size (`Segment`'s `badge`, `size.segmentBadge`) over the tab's top-right corner, drawn from
+every tab and spoken with the tab's name (_Info, 2 requests waiting_), so an Owner on Games knows
+somebody is asking. It reads the Owner's requests under the same key as _Want to join_, so the page
+now asks for them as it opens rather than when Info is opened, and an answer that takes a row takes
+it off the count in the same frame. Nobody but the Owner reads the requests, so nobody else's tab
+carries a count. **A pull on Info** re-reads the group and everything read under it that is on
+screen — who is waiting, the members row, the count — and the other three tabs, which are drawn for
+a sport, keep no pull.
+
 **The members row is the server's faces and the phone's arithmetic** (`domain/groupInfo.ts`'
 `membersRow`). The group's read serves up to five faces of everybody but the reader in Members' order
 — the Owner, then newest joined first — with a blocked pair left out; the row stacks them, each ringed
@@ -228,7 +263,7 @@ each, which would draw a row answered a moment ago back in. An approval re-reads
 Members and the Groups list: every count moves by one. The refusal's words are handed into the hook
 by the section rather than said by the row, because the row is gone by the time a refusal lands.
 
-**Edit group is New group's two cards and the You tab's Save**
+**Edit group is New group's Name and Who can join, in cards, and the You tab's Save**
 (`EditGroupScreen`, pushed at `/play/group/[groupId]/edit`). _Name_ and _Who can join_ are
 `GroupFormCards`, drawn for both forms, and the name is one Zod rule for both (`GroupNameSchema`).
 **Save** reads _Saved_, settled, while the form says what the group says (`detailsUnchanged`), so a
@@ -278,7 +313,7 @@ create do; no act here says so beside itself yet. **Nothing here has been seen o
 
 **The administrator area draws with this feature's pieces, and they are lent from `types.ts`**
 ([#516](https://github.com/Raketa02/Raketa/issues/516); [`administrator.md`](administrator.md)). An
-official group is a Group, so the tile, the dots, New group's two form cards, the request row, a
+official group is a Group, so the tile, the dots, the group forms' two cards, the request row, a
 failed read, the row face, the stacked faces and the words they share are exported for that one
 caller, and the dependency points one way. Four changes made the lending possible without changing
 what this feature draws: **the members row's faces left `InfoTab`** for `FaceStack`, which the players

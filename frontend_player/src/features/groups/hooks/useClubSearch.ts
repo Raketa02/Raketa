@@ -14,6 +14,14 @@
  *
  * **A blank text asks nothing** — the server would answer nothing, and the screens draw their
  * empty state without a round trip.
+ *
+ * **An answer lives only while it is on screen** (`gcTime: 0`, `staleTime: 0`). A search answer
+ * carries the reader's relation to every group in it, and that relation changes on another phone:
+ * an Owner lets them in, or declines. Kept by text, the answer to `og` read before the approval was
+ * drawn again the next time `og` was typed — so as the reader typed, the row flipped between
+ * *requested · waiting* and *you're in*, letter by letter (#529 D6). So a text that is typed again
+ * is asked again, and what bridges the letters is only the answer on screen (`keepPreviousData`),
+ * never one kept from before.
  */
 
 import { keepPreviousData, useInfiniteQuery, type InfiniteData } from '@tanstack/react-query';
@@ -63,6 +71,8 @@ function useClubSearch(
     getNextPageParam: (last) => last.nextPage ?? undefined,
     enabled: asking,
     placeholderData: keepPreviousData,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   // The last answer stays on screen while the next text is asked — **but never across a blank

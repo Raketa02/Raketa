@@ -221,18 +221,25 @@ async function homeClubSearch(text = 'ogrody') {
 // ---------------------------------------------------------------------------
 
 describe('an official group in Join a group', () => {
-  it('draws its declared sports as its dots', async () => {
-    await joinSearch();
+  it('is tagged official and draws its declared sports as its dots', async () => {
+    const card = await joinSearch();
 
+    // Two official groups and Karol's: the tag is an official group's alone.
+    expect(within(card).getAllByText(COPY.official)).toHaveLength(2);
     // The dots have no words of their own; the row speaks the sports by name.
     expect(
       screen.getByLabelText(
-        'Ogrody 33 Club, 11 members · Administrator Marta Wójcik approves joins, plays Padel',
+        'Ogrody 33 Club, official, 11 members · Administrator Marta Wójcik approves joins, plays Padel',
       ),
     ).toBeTruthy();
     expect(
       screen.getByLabelText(
-        'Ogrody open play, 8 members · Ogrody 33 approves joins, plays Padel, Tennis',
+        'Ogrody open play, official, 8 members · Ogrody 33 approves joins, plays Padel, Tennis',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        'Ogrody wieczorem, 5 members · Karol Nowak approves joins, plays Tennis',
       ),
     ).toBeTruthy();
   });
@@ -259,23 +266,22 @@ describe('an official group in Join a group', () => {
 });
 
 describe('an official group in New group’s home-club search', () => {
-  it('names who approves on each group row under the club', async () => {
+  // The 2026-09-27 mocks: the count alone under the name, and the tag on an official group only.
+  it('is tagged official, and each row under the club says its count', async () => {
     await homeClubSearch();
 
-    expect(screen.getByText('11 members · Administrator Marta Wójcik approves joins')).toBeTruthy();
-    expect(screen.getByText('8 members · Ogrody 33 approves joins')).toBeTruthy();
-    expect(screen.getByText('5 members · Karol Nowak approves joins')).toBeTruthy();
+    expect(screen.getAllByText(COPY.official)).toHaveLength(2);
+    expect(screen.getByText('11 members')).toBeTruthy();
+    expect(screen.getByText('8 members')).toBeTruthy();
+    expect(screen.getByText('5 members')).toBeTruthy();
   });
 
-  // Play 9 draws no dots on these rows (#512); the row speaks its sports, the declared ones.
-  it('speaks its declared sports', async () => {
+  // The dots have no words of their own; the row speaks its sports, the declared ones.
+  it('speaks its tag and its declared sports', async () => {
     await homeClubSearch();
 
-    expect(
-      screen.getByLabelText(
-        'Ogrody 33 Club, 11 members · Administrator Marta Wójcik approves joins, plays Padel',
-      ),
-    ).toBeTruthy();
+    expect(screen.getByLabelText('Ogrody 33 Club, official, 11 members, plays Padel')).toBeTruthy();
+    expect(screen.getByLabelText('Ogrody wieczorem, 5 members, plays Tennis')).toBeTruthy();
   });
 });
 
@@ -318,7 +324,7 @@ describe('an account that runs an official group', () => {
     fireEvent.press(await screen.findByRole('button', { name: 'Join Ogrody open play' }));
 
     expect(await screen.findByText(COPY.action.in)).toBeTruthy();
-    expect(screen.getByText('9 members · Administrator Tomek Kowal approves joins')).toBeTruthy();
+    expect(screen.getByText('9 members')).toBeTruthy();
   });
 
   // #509: a request left before he was made its administrator is admitted by his own Join.

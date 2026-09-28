@@ -179,7 +179,7 @@ Reaching the area again from the player side is the switcher's
 ([#518](https://github.com/Raketa02/Raketa/issues/518)).
 
 **What `groups` lends, and why it is lent rather than drawn again.** An official group is a Group, so
-its tile (`GroupMonogram`), its dots, New group's two form cards, the request row, a failed read, the
+its tile (`GroupMonogram`), its dots, the group forms' two cards, the request row, a failed read, the
 row face and the shared words (_N members_, _Want to join · N_, the share sentence, the link as drawn)
 and the stacked faces (`FaceStack`) are `groups`' own, exported from its `types.ts` for this caller
 ([`groups.md`](groups.md)). The answer hook stays this feature's: it writes the group's own read, not

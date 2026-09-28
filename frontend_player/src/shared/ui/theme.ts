@@ -36,6 +36,7 @@ const color = {
   // --- Surfaces and structure ---
   paper: '#F4F2ED', // app background — warm off-white, never pure white
   paper2: '#EDEAE3', // recessed: the situation header, the popover close
+  paper3: '#E2DED3', // the club card's tray — 1.21 on paper, where paper2 is 1.07 (#529)
   surface: '#FFFFFF', // cards, sheets, popovers, raised controls
 
   ink: '#101B20', // body text — 15.65 on paper, 17.50 on surface
@@ -44,6 +45,7 @@ const color = {
   /** (!) was #6E7F85 — `tiny` at 11pt was 3.73:1 on paper, the audit's own
    *  headline failure. Now 4.83 paper / 5.40 surface / 4.62 line2. */
   muted: '#5C6D73',
+  muted2: '#4E5E64', // secondary text on paper3 — 5.02, where muted there is 4.02
 
   line: '#E5E1D8', // BOUNDS a thing: card borders, chip borders
   line2: '#F0EDE6', // a FOLD inside one thing: hairlines, tag backgrounds, tracks
@@ -588,6 +590,13 @@ const size = {
   chip: 27,
   chipSm: 25,
   seg: 25,
+  /** A segment's count — the Chats badge (`tabBar.badge`) at the segment's size (#529): the
+   *  group page's Info tab, counting the requests waiting on an Owner. **16, and it is
+   *  `num.tiny`'s own line box**, the digit role one step under the tab bar's `num.xs` — the
+   *  segment's label is 10,5 where the tab bar's is 12, so the mark comes down with it rather
+   *  than standing a size above the word it sits on. The fill, the white digit, the pill and the
+   *  missing cap are the Chats badge's; only the size is the segment's. */
+  segmentBadge: 16,
   tag: 19,
   /** The fit pill — 7.10. **26, which is the height every call site drew.** The prototype's
    *  class defaulted to 23 and was overridden inline at all five sites; UI §G1 records that
@@ -1131,10 +1140,12 @@ const hit = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Elevation — five shadows in the whole system, all for things that genuinely float, plus
-// one TEXT shadow, which is a different mechanism and not an elevation at all.
+// Elevation — six shadows in the whole system, five for things that genuinely float and one
+// for the club results of the two group searches, plus one TEXT shadow, which is a different mechanism and not
+// an elevation at all.
 // CARDS NEVER HAVE ONE: depth on paper comes from the surface change and the 1pt border.
-// The deck card is here because it is not a card, not because the rule bent.
+// The deck card is here because it is not a card, not because the rule bent; the club result
+// is the one amendment to the rule, and it is named rather than absorbed (4.3, Part 16).
 //
 // RN cannot express CSS spread, so these are calibrated approximations: the blur halves,
 // the offset shrinks toward the negative spread, and the opacity comes down with it.
@@ -1196,6 +1207,21 @@ const shadow = {
     shadowOpacity: 0.4,
     shadowRadius: 7,
     elevation: 6,
+  },
+  /** THE CLUB RESULT — the sixth, and the only card-shaped surface that casts one: one drawing
+   *  (`ClubCard`), in New group's home-club search and in Join a group's.
+   *
+   *  The product owner's mocks (2026-09-27) lift every club a search answers off the page, because a club and the groups under it were one list with nothing to say where
+   *  one club ended: on paper, a 1pt border between two white cards nine points apart is not
+   *  enough to read a club and its groups as one object. It is the faintest and the tightest
+   *  of the six — the result sits on the page it lifts from, it is not over anything — and its
+   *  `elevation` is the lowest, below the ⚡Play disc, because the bar passes over it. */
+  clubResult: {
+    shadowColor: '#0B2B33',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   /** TEXT ON GENERATED MEDIA — a textShadow, not an elevation, and the only one in the app.
    *

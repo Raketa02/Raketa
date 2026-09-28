@@ -11,6 +11,7 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { RefreshControl } from 'react-native';
 
 import { OWN_RECORD_TITLE, RECORD_TITLE } from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -310,8 +311,12 @@ afterEach(async () => {
 
 const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone]);
 
+/** A tab by its name — the start of it: Info adds how many are waiting to join (#529). */
 const tab = (name: string, selected?: boolean) =>
-  screen.findByRole('button', { name, ...(selected === undefined ? {} : { selected }) });
+  screen.findByRole('button', {
+    name: new RegExp(`^${name}`),
+    ...(selected === undefined ? {} : { selected }),
+  });
 
 /** Serve the group, land on its page and open Info. */
 async function openInfo(setup: CrewSetup) {
@@ -509,6 +514,74 @@ describe('Want to join', () => {
       expect(toasts()).toEqual([['Only the group’s owner answers requests.', 'bad']]),
     );
     expect(await screen.findByLabelText(/^Michał Rogalski,/)).toBeTruthy();
+  });
+});
+
+describe('the Info tab’s count', () => {
+  const OWNED = [ME, KAROL, EWA, ZOFIA, ANIA, KUBA, OLA, MAREK];
+  const infoTab = () => screen.findByRole('button', { name: /^Info/ });
+
+  // #529 D6: the Owner could not tell from the page that anybody was waiting.
+  it('says how many are waiting to join, for the Owner, from any tab', async () => {
+    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL, TOMASZ] });
+    fireEvent.press(await tab('Games'));
+
+    expect(await screen.findByRole('button', { name: 'Info, 2 requests waiting' })).toBeTruthy();
+    expect(within(await infoTab()).getByText('2', { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it('counts down as the Owner answers, and goes when nobody is waiting', async () => {
+    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL, TOMASZ] });
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Approve Michał Rogalski' }));
+    expect(await screen.findByRole('button', { name: 'Info, 1 request waiting' })).toBeTruthy();
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Decline Tomasz Król' }));
+    expect(await screen.findByRole('button', { name: 'Info' })).toBeTruthy();
+  });
+
+  it('is nobody’s but the Owner’s', async () => {
+    await openInfo({ members: KAZIMIERZ, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL] });
+
+    await membersRow(/^8 members/);
+    expect(screen.getByRole('button', { name: 'Info' })).toBeTruthy();
+  });
+});
+
+describe('pulling Info', () => {
+  const OWNED = [ME, KAROL, EWA, ZOFIA, ANIA, KUBA, OLA, MAREK];
+  const pull = () => fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+
+  // #529: a request that arrived while the page was open reached it only by leaving and coming back.
+  it('re-reads the group and who is waiting', async () => {
+    const server = await openInfo({
+      members: OWNED,
+      policy: 'PEOPLE_I_APPROVE',
+      requests: [MICHAL],
+    });
+    expect(await screen.findByRole('header', { name: 'Want to join · 1' })).toBeTruthy();
+
+    // Tomasz asks on his phone, and Karol leaves on his.
+    server.state.waiting.push(TOMASZ);
+    server.leave(KAROL);
+    await act(async () => {
+      pull();
+    });
+
+    expect(await screen.findByRole('header', { name: 'Want to join · 2' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Info, 2 requests waiting' })).toBeTruthy();
+    expect(await membersRow(/^7 members,/)).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.UNSAFE_getByType(RefreshControl).props.refreshing).toBe(false),
+    );
+  });
+
+  it('is Info’s alone', async () => {
+    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
+    fireEvent.press(await tab('Games'));
+    await tab('Games', true);
+
+    expect(screen.UNSAFE_queryByType(RefreshControl)).toBeNull();
   });
 });
 

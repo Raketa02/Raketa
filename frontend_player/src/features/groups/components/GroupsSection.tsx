@@ -19,7 +19,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, theme } from '@/shared/ui';
 
-import { useMyGroups } from '../hooks/useGroups';
+import { useGroupsList } from '../hooks/useGroups';
 
 import { GroupCard } from './GroupCard';
 import { JOIN_GROUP_ROUTE, NEW_GROUP_ROUTE } from './groupRoutes';
@@ -29,7 +29,7 @@ import { ReadFailure } from './ReadFailure';
 const COPY = GROUPS_COPY.list;
 
 export function GroupsSection() {
-  const groups = useMyGroups();
+  const groups = useGroupsList();
 
   return (
     <ScrollView contentContainerStyle={s.content}>

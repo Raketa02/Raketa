@@ -127,18 +127,11 @@ export interface TextFieldProps extends Omit<
    */
   readonly trailing?: ReactNode;
   /**
-   * **The field inside a card**, on `paper` rather than `surface` — New group's three fields
-   * (play 5–7), where a white box on a white card would have only its border to be seen by.
+   * **The field inside a card**, on `paper` rather than `surface` — the group forms' Name card
+   * (play 5), where a white box on a white card would have only its border to be seen by.
    * The recess is the page's own ground, the step `paper2` takes for a header on paper.
    */
   readonly recessed?: boolean;
-  /**
-   * **The focus border's colour.** `ink` everywhere, as 6.13 draws it; `coral` on New group's
-   * home-club field while it searches (#512's *live, coral focus ring*), where the field is the
-   * one control on the form that answers as it is typed into. Part 16 records it beside 1.2's
-   * closed coral list.
-   */
-  readonly focusRing?: 'ink' | 'coral';
 }
 
 export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
@@ -151,7 +144,6 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
     disabled = false,
     trailing,
     recessed = false,
-    focusRing = 'ink',
     ...inputProps
   },
   ref,
@@ -214,7 +206,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
           s.box,
           recessed ? s.boxRecessed : undefined,
           grows ? s.boxGrown : undefined,
-          focused && (focusRing === 'coral' ? s.boxFocusedCoral : s.boxFocused),
+          focused && s.boxFocused,
           error !== undefined && s.boxError,
         ]}
       >
@@ -314,9 +306,6 @@ const s = StyleSheet.create({
   },
   boxFocused: {
     borderColor: theme.color.ink,
-  },
-  boxFocusedCoral: {
-    borderColor: theme.color.coral,
   },
   boxRecessed: {
     backgroundColor: theme.color.paper,

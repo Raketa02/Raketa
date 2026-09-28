@@ -49,11 +49,6 @@ export function noMatchFor(text: string): string {
   return `No match for “${text}”`;
 }
 
-/** *Games picked for this group start with courts at Bonarka Arena…* — once a club is chosen (play 11). */
-export function chosenClubConsequence(clubName: string): string {
-  return `Games picked for this group start with courts at ${clubName}. When their courts are booked, courts from other clubs are offered.`;
-}
-
 /** *8 members* */
 export function membersLine(count: number): string {
   return counted(count, 'member', 'members');
@@ -97,15 +92,15 @@ function sportsList(sports: SearchedClub['sports']): string {
 }
 
 /**
- * *Grzegórzki · 2,4 km · Tennis, Padel* — a club's line under its name.
+ * *Grzegórzki · 2,4 km · Tennis, Padel* — a club's line under its name, wherever a club is drawn.
  *
- * The distance is drawn only where the row draws one — Join a group's club cards and the chosen
- * home club do, home-club search's rows do not (#512) — and **never for a reader with no Location
- * area**, whose clubs come A–Z with `null` for a distance (story 28).
+ * The distance is **never drawn for a reader with no Location area**, whose clubs come A–Z with
+ * `null` for a distance (story 28). Home-club search's rows draw it too since the 2026-09-27
+ * mocks, which overrode #512's *no distance in these rows*.
  */
-export function clubLine(club: SearchedClub, { distance }: { readonly distance: boolean }): string {
+export function clubLine(club: SearchedClub): string {
   const parts = [club.district];
-  if (distance && club.distanceKm !== null) parts.push(formatDistanceKm(club.distanceKm));
+  if (club.distanceKm !== null) parts.push(formatDistanceKm(club.distanceKm));
   if (club.sports.length > 0) parts.push(sportsList(club.sports));
   return parts.join(DOT);
 }
@@ -148,20 +143,27 @@ export function groupCardLabel(group: {
   return [group.name, membersLine(group.memberCount), ...plays, group.homeClub.name].join(', ');
 }
 
-/** A home-club search row, spoken — the whole row is the one tap, and the amber is said in words. */
+/** *Info, 2 requests waiting* — the group page's Info tab, spoken with its count (#529). */
+export function infoTabLabel(waiting: number): string {
+  return `${GROUPS_COPY.group.tabs.info}, ${counted(waiting, 'request', 'requests')} waiting`;
+}
+
+/**
+ * A home-club search result's head, spoken — the whole head is the one tap. The groups drawn under
+ * it are rows of their own and speak for themselves.
+ */
 export function setAsHomeLabel(club: SearchedClub): string {
-  const here = club.groups.length > 0 ? [GROUPS_COPY.newGroup.groupAlreadyHere] : [];
-  return [`Set ${club.name} as home club`, clubLine(club, { distance: false }), ...here].join(', ');
+  return `Set ${club.name} as home club, ${clubLine(club)}`;
 }
 
 /** A club's card header in Join a group, spoken — context, not a button (story 39). */
 export function clubCardLabel(club: SearchedClub): string {
-  return `${club.name}, ${clubLine(club, { distance: true })}`;
+  return `${club.name}, ${clubLine(club)}`;
 }
 
 /** The chosen home club's card, spoken. */
 export function chosenClubLabel(club: SearchedClub): string {
-  return `Home club: ${club.name}, ${clubLine(club, { distance: true })}`;
+  return `Home club: ${club.name}, ${clubLine(club)}`;
 }
 
 // ---------------------------------------------------------------------------

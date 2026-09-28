@@ -384,3 +384,60 @@ describe('joining', () => {
     expect(await screen.findByRole('button', { name: 'Join Ogrody open play' })).toBeTruthy();
   });
 });
+
+describe('a relation that changed on another phone', () => {
+  const waiting = { ...O3_CLUB, relation: 'REQUESTED' as const };
+  const member = { ...O3_CLUB, relation: 'MEMBER' as const };
+  const answers = (row: Wire['GroupAtClubSchema']) => ({
+    og: text([{ ...OGRODY, groups: [row] }]),
+    ogr: text([ATLANTIC, { ...OGRODY, groups: [row] }]),
+  });
+
+  // #529 D6: approved on the Owner's phone, the row flipped between requested · waiting and you're
+  // in as the reader typed — every text drew the answer it had been given before, then asked again.
+  it('is never drawn from an answer read before it changed', async () => {
+    stubJoinSearch(answers(waiting));
+    await openJoin();
+    type('og');
+    expect(await screen.findByText(GROUPS_COPY.action.requested)).toBeTruthy();
+    type('ogr');
+    await clubCard(ATLANTIC);
+
+    // The Owner lets them in.
+    stubJoinSearch(answers(member));
+    type('og');
+    expect(await screen.findByText(GROUPS_COPY.action.in)).toBeTruthy();
+    type('ogr');
+
+    expect(screen.queryByText(GROUPS_COPY.action.requested)).toBeNull();
+    await clubCard(ATLANTIC);
+    expect(screen.queryByText(GROUPS_COPY.action.requested)).toBeNull();
+    expect(screen.getByText(GROUPS_COPY.action.in)).toBeTruthy();
+  });
+});
+
+describe('going back to the Groups list', () => {
+  const MINE: Wire['MyGroupSchema'] = {
+    id: O3_CLUB.id,
+    kind: 'PLAYER',
+    name: O3_CLUB.name,
+    monogram: O3_CLUB.monogram,
+    sports: O3_CLUB.sports,
+    member_count: 12,
+    home_club: { id: OGRODY.id, name: OGRODY.name },
+  };
+
+  // #529: asked from here, let in by the Owner while still here — and back on Groups the list was
+  // the one read before, without the group, until a switch to Explore and back remounted it.
+  it('re-reads it, so a group the reader was let into meanwhile is on it', async () => {
+    stubMyGroups(transport, []);
+    await openJoin();
+
+    // The Owner approves on their phone.
+    stubMyGroups(transport, [MINE]);
+    fireEvent.press(screen.getByRole('button', { name: COPY.back }));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+
+    expect(await screen.findByRole('button', { name: /^Ogrody 33 Club,/ })).toBeTruthy();
+  });
+});

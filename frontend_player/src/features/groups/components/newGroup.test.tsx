@@ -27,12 +27,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import {
-  CREATE_REFUSALS,
-  GROUPS_COPY,
-  chosenClubConsequence,
-  noClubCalled,
-} from './groupsPresentation';
+import { CREATE_REFUSALS, GROUPS_COPY, noClubCalled } from './groupsPresentation';
 import { NEW_GROUP_PAGE_TEST_ID } from './NewGroupScreen';
 
 const COPY = GROUPS_COPY.newGroup;
@@ -181,12 +176,13 @@ function searchFor(text: string) {
 }
 
 describe('opening New group', () => {
-  it('opens a full-screen form with the empty home club and Create disabled', async () => {
+  it('opens a full-screen form with an empty name and home club and Create disabled', async () => {
     await openNewGroup();
 
     expect(screen.getByLabelText(COPY.name).props.value ?? '').toBe('');
-    expect(screen.getByText(COPY.homeClubHint)).toBeTruthy();
-    expect(screen.getByText(COPY.homeClubConsequence)).toBeTruthy();
+    expect(screen.getByLabelText(COPY.homeClub).props.value ?? '').toBe('');
+    // Required, and not labelled so: the disabled Create says it.
+    expect(screen.queryByText(/required/)).toBeNull();
     expect(isDisabled(createButton())).toBe(true);
   });
 
@@ -211,15 +207,19 @@ describe('opening New group', () => {
 });
 
 describe('searching for the home club', () => {
-  it('lists clubs as the player types, with no distance in the rows', async () => {
+  it('lists clubs as the player types, each with its distance and Set as home', async () => {
     await openNewGroup();
 
     searchFor('b');
 
     expect(await screen.findByText('Centrum Ruchu')).toBeTruthy();
-    expect(screen.getByText('Dębniki · Squash, Padel')).toBeTruthy();
-    expect(screen.getByText('Bonarka · Padel, Badminton')).toBeTruthy();
-    expect(screen.queryByText(/km/)).toBeNull();
+    expect(screen.getByText('Dębniki · 2,0 km · Squash, Padel')).toBeTruthy();
+    expect(screen.getByText('Bonarka · 3,1 km · Padel, Badminton')).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: 'Set Centrum Ruchu as home club, Dębniki · 2,0 km · Squash, Padel',
+      }),
+    ).toBeTruthy();
     expect(screen.getAllByText(COPY.setAsHome)).toHaveLength(2);
     expect(queryOf(transport.requestsTo('GET', HOME_CLUBS).at(-1)!)).toEqual({ q: 'b', page: 1 });
   });
@@ -259,16 +259,20 @@ describe('searching for the home club', () => {
 });
 
 describe('a club that already has groups', () => {
-  it('is tagged, with a strip for each of its groups', async () => {
+  it('draws each of its groups under it, with its count and what the reader can do', async () => {
     await openNewGroup();
 
     searchFor('o');
 
-    expect(await screen.findByText(COPY.groupAlreadyHere)).toBeTruthy();
-    expect(screen.getByText('Ogrody 33 Club')).toBeTruthy();
-    expect(screen.getByText('11 members · Coach Andrzej approves joins')).toBeTruthy();
+    expect(await screen.findByText('Ogrody 33 Club')).toBeTruthy();
+    expect(screen.getByText('11 members')).toBeTruthy();
+    expect(
+      screen.getByLabelText('Ogrody 33 Club, 11 members, plays Padel, Tennis, Squash, Badminton'),
+    ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Ask to join Ogrody 33 Club' })).toBeTruthy();
     expect(screen.getByText(GROUPS_COPY.action.in)).toBeTruthy();
+    // Player groups, both: the tag is an official group's.
+    expect(screen.queryByText(GROUPS_COPY.official)).toBeNull();
   });
 
   it('turns Ask to join into requested · waiting', async () => {
@@ -297,7 +301,7 @@ describe('a club that already has groups', () => {
     fireEvent.press(await screen.findByRole('button', { name: 'Join Ogrody open play' }));
 
     expect(await screen.findByText(GROUPS_COPY.action.in)).toBeTruthy();
-    expect(screen.getByText('9 members · anyone can join')).toBeTruthy();
+    expect(screen.getByText('9 members')).toBeTruthy();
     expect(screen).toHavePathname('/play/new-group');
   });
 
@@ -308,21 +312,22 @@ describe('a club that already has groups', () => {
 
     fireEvent.press(await screen.findByRole('button', { name: /^Set Ogrody 33 as home club/ }));
 
-    expect(await screen.findByText(chosenClubConsequence('Ogrody 33'))).toBeTruthy();
+    expect(await screen.findByLabelText(/^Home club: Ogrody 33,/)).toBeTruthy();
   });
 });
 
 describe('the chosen home club', () => {
-  it('replaces the field with the club, its distance and Change', async () => {
+  // The 2026-09-27 review: nothing under the chosen club — Create the group says the rest.
+  it('replaces the field with the club, its distance and Change, and nothing under it', async () => {
     await openNewGroup();
     searchFor('bonarka');
 
     fireEvent.press(await screen.findByRole('button', { name: /^Set Bonarka Arena as home club/ }));
 
     expect(await screen.findByText('Bonarka · 3,1 km · Padel, Badminton')).toBeTruthy();
-    expect(screen.getByText(chosenClubConsequence('Bonarka Arena'))).toBeTruthy();
+    expect(screen.getByRole('button', { name: COPY.changeLabel })).toBeTruthy();
+    expect(screen.queryByText(/Games picked for this group/)).toBeNull();
     expect(screen.queryByLabelText(COPY.homeClub)).toBeNull();
-    expect(screen.queryByText(COPY.homeClubConsequence)).toBeNull();
   });
 
   it('goes back to the search on Change', async () => {
@@ -333,7 +338,7 @@ describe('the chosen home club', () => {
     fireEvent.press(await screen.findByRole('button', { name: COPY.changeLabel }));
 
     expect(await screen.findByLabelText(COPY.homeClub)).toBeTruthy();
-    expect(screen.queryByText(chosenClubConsequence('Bonarka Arena'))).toBeNull();
+    expect(screen.queryByLabelText(/^Home club: Bonarka Arena,/)).toBeNull();
   });
 
   // Story 28: nothing pretends to know where a player with no Location area is.
@@ -350,12 +355,13 @@ describe('the chosen home club', () => {
 });
 
 describe('who can join', () => {
-  it('offers Anyone, chosen, and People I approve, with the note that there is no sport', async () => {
+  // The 2026-09-27 mocks draw the two chips alone; Edit group's card keeps the note.
+  it('offers Anyone, chosen, and People I approve, and nothing under them', async () => {
     await openNewGroup();
 
     expect(screen.getByRole('button', { name: COPY.anyone, selected: true })).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.peopleIApprove, selected: false })).toBeTruthy();
-    expect(screen.getByText(COPY.noSportNote)).toBeTruthy();
+    expect(screen.queryByText(COPY.noSportNote)).toBeNull();
 
     fireEvent.press(screen.getByRole('button', { name: COPY.peopleIApprove }));
 
@@ -369,7 +375,7 @@ describe('creating the group', () => {
     fireEvent.changeText(screen.getByLabelText(COPY.name), name);
     searchFor('bonarka');
     fireEvent.press(await screen.findByRole('button', { name: /^Set Bonarka Arena as home club/ }));
-    await screen.findByText(chosenClubConsequence('Bonarka Arena'));
+    await screen.findByLabelText(/^Home club: Bonarka Arena,/);
   }
 
   it('stays disabled with a name and no home club, and with a home club and no name', async () => {

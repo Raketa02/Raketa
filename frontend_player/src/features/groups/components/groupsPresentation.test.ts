@@ -121,19 +121,12 @@ describe('the members line', () => {
 
 describe('a club’s line', () => {
   it('is the district, the distance and the sports', () => {
-    expect(clubLine(OGRODY, { distance: true })).toBe('Grzegórzki · 2,4 km · Tennis, Padel');
+    expect(clubLine(OGRODY)).toBe('Grzegórzki · 2,4 km · Tennis, Padel');
   });
 
   // Story 28: nothing pretends to know where a player with no Location area is.
   it('leaves the distance out when the reader’s location is unknown', () => {
-    expect(clubLine({ ...OGRODY, distanceKm: null }, { distance: true })).toBe(
-      'Grzegórzki · Tennis, Padel',
-    );
-  });
-
-  // Home-club search rows draw no distance (#512), whatever the server knows.
-  it('leaves the distance out where the row does not draw one', () => {
-    expect(clubLine(OGRODY, { distance: false })).toBe('Grzegórzki · Tennis, Padel');
+    expect(clubLine({ ...OGRODY, distanceKm: null })).toBe('Grzegórzki · Tennis, Padel');
   });
 });
 

@@ -34,9 +34,18 @@
  *
  * The label is a string the caller composes rather than a name plus a count slot: a label that
  * carries more than a name is copy, and copy lives with the feature that has something to say.
- * Play drew `Match me · 3` here and no longer does — a number in a segment reads as *how many
- * are waiting* — which is a decision this primitive neither made nor needs to know about, and
- * exactly why the slot was never built into it.
+ * Play drew `Match me · 3` here and no longer does — a number **in the label** reads as part of
+ * the view's name.
+ *
+ * ## The badge — how many are waiting, over the segment's corner
+ *
+ * A number that means *how many are waiting* is the Chats badge's job, and `badge` draws it: the
+ * same `coralInk` pill with a white tabular digit, at the segment's own size
+ * (`size.segmentBadge`), overlapping the segment's top-right corner so it belongs to that view
+ * rather than sitting beside it (#529 — the group page's Info tab, counting the requests an Owner
+ * has to answer). Out of the layout, so a count arriving moves nothing. **It announces nothing**:
+ * the caller puts the count in the option's `accessibilityLabel`, as the tab bar puts it on the
+ * column's, and a badge that spoke too would be one number read twice.
  */
 
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -49,6 +58,11 @@ export interface SegmentOption<K extends string> {
   readonly label: string;
   /** Defaults to `label`. Set it where the visible words are cryptic out of context. */
   readonly accessibilityLabel?: string;
+  /**
+   * How many are waiting on this view, drawn over the segment's corner — see the module note.
+   * Absent, or 0, draws nothing. The caller says the count in `accessibilityLabel`.
+   */
+  readonly badge?: number;
 }
 
 export interface SegmentProps<K extends string> {
@@ -131,9 +145,29 @@ export function Segment<K extends string>({
             >
               {option.label}
             </Text>
+            {option.badge === undefined || option.badge <= 0 ? null : (
+              <Badge count={option.badge} />
+            )}
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/** The Chats badge at the segment's size, over its top-right corner. */
+function Badge({ count }: { readonly count: number }) {
+  return (
+    <View
+      style={s.badge}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {/* The tab bar's cap on the OS text size, because this is the tab bar's mark: past it the
+          digit would outgrow a box whose height is fixed so the segment never moves. */}
+      <Text style={s.badgeCount} maxFontSizeMultiplier={theme.size.tabBar.labelMaxScale}>
+        {count}
+      </Text>
     </View>
   );
 }
@@ -145,6 +179,8 @@ const s = StyleSheet.create({
     padding: theme.space.xxs,
     borderRadius: theme.radius.seg,
     backgroundColor: theme.color.line2,
+    // A segment's badge stands above the track's top edge too; Android would clip it.
+    overflow: 'visible',
   },
   segment: {
     flex: 1,
@@ -156,6 +192,29 @@ const s = StyleSheet.create({
     borderRadius: theme.radius.segThumb,
     alignItems: 'center',
     justifyContent: 'center',
+    // Android clips a child drawn outside its parent, and the badge overhangs the corner.
+    overflow: 'visible',
+  },
+  // Up by the smallest steps on the grid, so it overlaps the segment's corner and the track's
+  // padding rather than floating off the control.
+  badge: {
+    position: 'absolute',
+    top: -theme.space.xs,
+    right: -theme.space.xxs,
+    height: theme.size.segmentBadge,
+    minWidth: theme.size.segmentBadge,
+    paddingHorizontal: theme.space.xxs,
+    borderRadius: theme.radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // The Chats badge's fill: white on `coralInk` is 5.89, where white on `coral` is 3.89.
+    backgroundColor: theme.color.coralInk,
+  },
+  badgeCount: {
+    ...theme.num.tiny,
+    ...theme.tabular,
+    color: theme.color.surface,
+    lineHeight: theme.size.segmentBadge,
   },
   trackOnDark: { backgroundColor: theme.color.onDarkTag },
   selected: { backgroundColor: theme.color.surface },
