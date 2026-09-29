@@ -73,13 +73,13 @@ Dark card, top to bottom:
 | Part | What it shows | Rules |
 | --- | --- | --- |
 | **Ribbon** | *Picked for you* (dark teal) · *Kuba challenged you* / *The group challenged you* (dark teal) · *Seat open · court booked* (**coral**) | No *· friendly* — the segment already says it. On the right, **⏱ 21 h 00** only when the deadline is under 24 h (book-by; for a rescue the cut-off, then the start); *45 min* under an hour, coral. At the deadline the card leaves silently. |
-| **Tiles** | 2 × 2 for doubles, 1 × 2 for singles (mock 10): photo or generated poster, **first name + initial**, level | **IN** tag (green outline) on a player who said yes. **FRIEND** (volt) only once a friends feature exists (Q68). No other tag. On a rescue each player reads *2,75 · paid*. |
+| **Tiles** | 2 × 2 for doubles, 1 × 2 for singles (mock 10): photo or generated poster, the player's **Name** (cut short visually, never an invented first name — ADR-0171; the mocks' *Karol T.* is mock data), level | **IN** tag (green outline) on a player who said yes. **FRIEND** (volt) only once a friends feature exists (Q68). No other tag. On a rescue each player reads *2,75 · paid*. |
 | **Your tile** | *You*, your level | When your yes would fill the game: **You complete it** in volt (mocks 3, 7). On a rescue your seat is the **dashed** tile: *You complete it · 27 zł · court booked* (mock 2), or *You? · 27 zł* when more than one seat is open. |
 | **vs line** | *KAROL + YOU VS ANIA + KUBA* | The top row is one side, the bottom row the other (Q70). |
 | **Balance forecast** | percentage (green / amber / red by today's tones) + the bar | The bar names **the same sides as the rows, your side on the left** (light half). Computed for this version. Existing `BalanceBar`, `onDark`. |
 | **Overlap grid** | *High / Good / Slim overlap* over 7 day columns × 3 range rows | Ranges **Morning 07–12 · Afternoon 12–17 · Evening 17–23**. Bright volt = everyone on the card free for at least one whole hour in the range; dim olive = all but one; dark = fewer. The game's range is ringed in coral. Today's column letter is white. Label colours: volt for High and Good, amber for Slim. |
-| **Court block** | state tag · share (volt, mono) · *Saturday 16:00 · Ogrody 33* (+ *· Court 6* once booked) | Tag: **Court available** (grey — your yes is a free vote; dashed block border), **Book it now** (green — your yes fills it and charges everyone after the undo; solid green border), **Booked** (volt — a rescue; solid border). *Tomorrow* / *Today* for near days. **no free cancellation** in amber after the club's cut-off (mock 6). |
-| **Stamps** | **I'M IN** (right) / **NOT THIS TIME** (left), fading in while dragging | **I'M IN · 32 zł** whenever the yes charges at once: *Book it now* or a rescue (Q72). |
+| **Court block** | state tag · share (volt, mono) · *Saturday 16:00 · Ogrody 33* (+ *· Court 6* once booked) | Tag: **Court available** (grey — your yes is a free vote; dashed block border), **Book it now** (green — your yes fills it and charges everyone after the undo, or at an On request club once the club confirms; solid green border), **Booked** (volt — a rescue; solid border). *Tomorrow* / *Today* for near days. **no free cancellation** in amber after the club's cut-off (mock 6). |
+| **Stamps** | **I'M IN** (right) / **NOT THIS TIME** (left), fading in while dragging | **I'M IN · 32 zł** whenever the yes charges at once: *Book it now* or a rescue (Q72). At an On request club the charge waits for the club, so its *Book it now* stamp carries no price. |
 
 **Per type:**
 
@@ -92,12 +92,16 @@ Dark card, top to bottom:
 
 **Singles** (mock 10) follow the same rules with two tall tiles and no *vs* line.
 
+**A game dealt in versions** ([the mechanics §7](the-mechanics.md#7-one-game-several-versions))
+is not a card type: the card is the same, plus one line under the tiles — *4 people are In on
+this game* — counting the yeses on every version.
+
 ### A2.4 What happens when you swipe
 
 | You swipe… | On… | What happens |
 | --- | --- | --- |
 | right | a card that won't fill | Your tile gains IN for the others; the card leaves your deck; the yes appears in **Fill in › You're In**. Nothing charged. |
-| right | *Book it now* | Toast **"Booking in 10 s · Undo"** with a draining ring. At zero: everyone charged together → **It's a game!** |
+| right | *Book it now* | Toast **"Booking in 10 s · Undo"** with a draining ring. At zero: everyone charged together → **It's a game!** At an On request club, at zero the game goes to the club (*waiting for the club*); the charge and **It's a game!** follow when it confirms ([the mechanics §11](the-mechanics.md#11-the-moment-a-game-fills)). |
 | right | a rescue | The same toast; at zero your share is charged → **It's a game!**; the game is in **Home**. |
 | right | without a saved method | The **payment setup** ([A7.3](#a73-payments)) opens as a sheet; the yes lands when it finishes, or is dropped if you close it. |
 | right | at your live-yes cap (10 per sport) | The card springs back; a toast says why. |
@@ -118,13 +122,13 @@ floats bottom-right, always.
 Coral 1.5 pt border.
 
 - **Title** — *Padel · Saturday 16:00* (+ *· friendly* for For fun). Tap the upper block → the
-  rescue's details (non-member view, [A4.3](#a43-a-rescue-seen-from-outside)).
+  rescue's details (non-member view, [A4.3](#a43-a-rescue-seen-from-outside-q96)).
 - **Subtitle** — *Ogrody 33 · **fills by Fri 16:00*** before the cut-off; *Ogrody 33 · **offered
   until the start*** after it. Switches by itself at the cut-off.
 - **Squares** — the booked players' small posters, then one dashed **?** per open seat. Long-press
   a poster → record.
-- **I'm in · 27 zł** (volt) — takes the seat, the 10-second undo, pays, goes to Home. Lost race →
-  toast *"Someone just took it"*.
+- **I'm in · 27 zł** (volt) — takes the seat: the 10-second undo, the charge, **It's a game!**,
+  and the game is in Home. Lost race → toast *"Someone just took it"*.
 
 ### A3.2 YOU'RE IN · N — your row (mock 13)
 
@@ -144,7 +148,7 @@ One screen (details 5–10, from Part 1), three readers.
 ### A4.1 A booked game you're in (details 5–10)
 
 - **Top bar** (details 7) — back · the other players' faces overlapping (up to three) · their
-  first names as the title · *Padel · booked* · **Chat · 2** on the right (volt when unread) while
+  names as the title · *Padel · booked* · **Chat · 2** on the right (volt when unread) while
   the game isn't over.
 - **The game card** (details 8) — status tag (dot + word), tiles with *paid*, the *vs* line, then
   the court facts on an accent line in the status colour: **WHERE** *Bonarka Arena · Court 2 ·
@@ -164,7 +168,8 @@ WHERE shows the club and distance, no court number; the money row reads *30 zł 
 by Sat 13:00*; the **overlap grid** follows the forecast; then one plain paragraph: *"Your yes
 costs nothing until everybody is in. When the last yes lands, everyone's share is charged together
 and the court is booked."* Actions at the bottom: **I'm in** / **Not this time** if you haven't
-answered, **Withdraw** if you're In. No Chat.
+answered, **Withdraw** if you're In — while *waiting for the club*, **Leave the game** with its
+sheet ([the mechanics §13](the-mechanics.md#13-leaving-a-game)). No Chat.
 
 ### A4.3 A rescue seen from outside (Q96)
 
@@ -174,7 +179,7 @@ The booked layout with the dashed *You?* tile, the court number, *Paid* players,
 ### A4.4 The chat
 
 Today's conversation screen without the plan card and without the Details button; the back
-chevron returns to the details. Opens when the game fills; members are the current line-up;
+chevron returns to the details. Opens when the game is booked; members are the current line-up;
 system lines *"Kuba left — the seat is open"* and *"Ola took the seat"*.
 
 ## A5. Post a game (mock 15)
@@ -225,7 +230,7 @@ A bottom sheet (on `ModalStage`, never a React Native `Modal`):
 - **Title** — *Saturday evening*.
 - **Headline** — a mint count badge + *"5 of your best fits free then"* · *"only 2 fit · may not
   fill"* · *"Nobody who fits is free then"* (+ *· outside your hours*).
-- **The fits** — horizontal cards (poster, level, first name, *2,75 · 93*); tap → record.
+- **The fits** — horizontal cards (poster, level, name, *2,75 · 93*); tap → record.
 - **FREE COURTS · HOME CLUB FIRST** — one row per free court hour: the hour (mono), the club,
   *2,4 km · 27 zł if it fills · book by Saturday 15:00*, its own *"4 free"* (Q77), and *27 zł
   each*. Tap → picks it (ring + ✓ on the cell); a new pick replaces the old.
@@ -311,7 +316,8 @@ rest grey. **The order is changed from the mocks** (Q82):
 - **LIVE YESES · 3** — *up to 10 per sport* under the header; rows *Padel · Saturday 15:00 ·
   Bonarka Arena* with the share in grey; tap → the game's details. Hidden when empty.
 - **RECEIPTS** — newest first; ✓ grey circle for a charge (*−28 zł*, dark), ↩ mint circle for a
-  refund (*+26,40 zł*, mint); the **club's name** as the title, *Padel · Today · 16:00* under it.
+  refund (*+26,58 zł*, mint — the 28 zł less its 1,42 zł card fee); the **club's name** as the
+  title, *Padel · Today · 16:00* under it.
   Empty: *"Nothing yet — charges and refunds land here, with the club named as the seller."*
   Footer when there are rows: *"Refunds: BLIK within hours · cards up to two weeks."*
 
@@ -320,8 +326,10 @@ rest grey. **The order is changed from the mocks** (Q82):
 Today's Now rail of game cards, renamed **Home**, showing the statuses of
 [the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses): **Waiting for the club**
 (amber), **Booked** (mint), **Seat open** (amber), the result statuses as today, **Called off**
-(red) — each with its money line. **Open game** → [A4.1](#a41-a-booked-game-you-re-in); the chat
-bubble → the chat. Games that filled since you last looked are marked *new*.
+(red) — each with its money line. **Open game** → [A4.1](#a41-a-booked-game-youre-in-details-510),
+where the chat is reached — a Home card has no chat door
+([the mechanics §14.3](the-mechanics.md#143-the-chat)). Games that filled since you last looked
+are marked *new*.
 
 ## A9. Notifications delivery
 
@@ -474,7 +482,8 @@ The shape is ADR-0189 §5. What each app needs from it:
   `NoSaid`, `ProposalFilled` (the people and sides), `ProposalExpired`, `ProposalWithdrawn`,
   `CourtHourLost` (the last court at that club and hour went; the people In are re-dealt first).
 - **Booking** (Bookings, per filled proposal): `BookingRequested` (On request) /
-  `BookingAccepted` / `BookingRefused` / `BookingTimedOut`, `BookingConfirmed` (court number,
+  `BookingAccepted` / `BookingRefused` / `BookingTimedOut` / `RequestWithdrawn` (a player left
+  while it waited), `BookingConfirmed` (court number,
   seats, cut-off), `CourtMoved`, `SeatLeft`, `SeatRescued`, `CalledOffAtCutOff`,
   `CancelledByClub`, `PlayerCheckedIn`, `BookingPlayed`. It opens the ordinary **Game** on
   confirmation, as a completed line-up does today; the no-show report lives on the Game.

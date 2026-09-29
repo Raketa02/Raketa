@@ -13,8 +13,8 @@
 > has to be built.
 >
 > **What it is:** the base document for building the **Games** tab and the **Fill in** tab
-> of a group page. It says what happens, not how the screens look — the UI designs come in
-> a separate document. It is written so it can be read without knowing the code; the
+> of a group page. It says what happens, not how the screens look — the UI designs are in
+> its companion. It is written so it can be read without knowing the code; the
 > appendices hold what developers need on top.
 >
 > **What it replaces:** the two PDFs *"Rakieta — the deck: every card, and what a yes
@@ -40,8 +40,10 @@
 5. **Free to leave until the club's cut-off.** Leave before it and you are refunded at once
    (minus the card fee); your seat becomes a **rescue** that others can take. Leave after it
    and you are refunded only when someone takes your seat.
-6. **A game plays full or not at all.** If a seat is still empty at the club's cut-off, the
-   game is called off and everyone still in gets all their money back.
+6. **A game is full at the cut-off, or it is off.** If a seat is still empty at the club's
+   cut-off, the game is called off and everyone still in gets all their money back. Nobody ever
+   pays more for an empty seat; a seat left after the cut-off may stay empty, and the game goes
+   ahead short ([§14.1](#141-home-and-the-statuses)).
 7. **Fill in is the rescue board.** It holds the seats of booked games that lost a player,
    and a list of your own yeses that have not become games yet.
 8. **Members can post a game.** They pick the hour and the court; the app deals it to their
@@ -67,7 +69,7 @@
 | **Yes / No** | Swipe right / swipe left on a card. |
 | **In** | A player who said yes to a game that has not filled yet. |
 | **Momentum** | How many players are In on a game. |
-| **Fills** | The moment the last seat says yes. The game is then **Booked**. |
+| **Fills** | The moment the last seat says yes. The game is then **Booked** — or, at an On request club, *waiting for the club* until it confirms ([§11](#11-the-moment-a-game-fills)). |
 | **Book-by** | The latest moment a card can still fill ([§5.4](#54-the-only-deadline-the-courts-book-by)). |
 | **Cut-off** | The club's free-cancellation deadline, for example 24 hours before the game. A club setting. |
 | **Rescue** | An open seat in a booked game that lost a player. |
@@ -252,7 +254,7 @@ message:
 **Every action that moves money** — the yes that fills a game, and **every** rescue join, not
 only the last seat (Q74) — shows a toast *"Booking in 10 s · Undo"* with a draining ring; the
 money moves only when the ten seconds are up. Any other yes is only a vote, and you can withdraw
-it at any time, free, from **Fill in › You're In**.
+it free from **Fill in › You're In** until its game fills.
 
 ### 6.6 Limits
 
@@ -315,10 +317,12 @@ games nothing books; as one game, Marek + B + C + E is four, and it books the mo
 
 Every card shows, top to bottom (the full anatomy is in [the-screens.md](the-screens.md)):
 
-- **The tiles** — photo or generated poster, first name, level. The **IN** tag on a player who
-  said yes is the only momentum signal: a player who hasn't answered simply has no tag (Q69,
-  Q91). On a rescue the players read **paid** and the open seat is a dashed **You?** tile with
-  your share. A **FRIEND** tag appears only once a friends feature exists (Q68).
+- **The tiles** — photo or generated poster, the player's **Name** (a tile may cut it short
+  visually, never invent a first name — ADR-0171), level. The **IN** tag on a player who said
+  yes is the only tag that signals momentum: a player who hasn't answered simply has no tag (Q69,
+  Q91). A game dealt in versions adds its one line ([§7](#7-one-game-several-versions)). On a
+  rescue the players read **paid** and the open seat is a dashed **You?** tile with your share.
+  A **FRIEND** tag appears only once a friends feature exists (Q68).
 - **The sides** — the two rows are the two sides; the *vs* line names them, and the balance bar
   names the same sides with **your side on the left** (Q70). On a rescue you take the leaver's
   seat and side.
@@ -333,7 +337,8 @@ Every card shows, top to bottom (the full anatomy is in [the-screens.md](the-scr
 - **The ribbon countdown** — only when the deadline is under 24 h: *21 h 00*, then *45 min*,
   coral under an hour (Q72).
 - **The stamps** — I'M IN / NOT THIS TIME while dragging; **I'M IN · 32 zł** whenever the yes
-  charges at once (Book it now, or a rescue).
+  charges at once (Book it now, or a rescue). At an On request club the charge waits for the
+  club ([§11](#11-the-moment-a-game-fills)), so its *Book it now* stamp carries no price.
 
 ### 8.2 The order
 
@@ -407,7 +412,8 @@ The **Post a game** button in Fill in walks through:
 - Posting **is your yes**. Nothing is charged until the game fills.
 - The engine builds **versions** from your best fits free at that hour: one per full set of
   them, **up to 3** (for doubles: 9 or more fits → 3 versions, 6–8 → 2, 3–5 → 1; fewer than 3 →
-  one version with open seats). They see it in their decks as **Challenge · Marek**.
+  one version with open seats). They see it in their decks as a **Challenge** — *Marek challenged
+  you*.
 - A **Challenges for you** alert tells them ([§17.2](#172-notifications)).
 - Until book-by, the engine keeps dealing it to anyone who **becomes** a fit (a new member,
   someone changing their hours, someone newly rated), and every left swipe deals it to the next
@@ -433,7 +439,7 @@ The **Post a game** button in Fill in walks through:
 
 ### 10.1 Seats to fill — the rescue board
 
-Fill in holds **only rescues**: the open seats of **booked** games that lost players — one
+Seats to fill holds **only rescues**: the open seats of **booked** games that lost players — one
 seat in singles, one to three in doubles — **before or after the cut-off**.
 
 - Shown to every member who **fits** (level, kind, gender preference, not blocked) and is
@@ -441,14 +447,15 @@ seat in singles, one to three in doubles — **before or after the cut-off**.
 - The same seat is also dealt as a **Seat open** card to the best fits' decks, and announced to
   people who switched on **Fill in alerts** ([§17.2](#172-notifications)).
 - **I'm in · 30 zł** takes the seat and pays at once, because the game already exists; every
-  rescue join gets the 10-second undo ([§6.5](#65-undo)) and then goes straight to **Home**.
+  rescue join gets the 10-second undo ([§6.5](#65-undo)), then **It's a game!**, and the game goes
+  straight to **Home**.
 - Two people go for the same seat at once: the first wins; the second is told immediately.
 - **How long a seat stays:** until the cut-off, whatever the number of open seats (a doubles
   that lost three keeps all three open, because the leavers' refunds depend on them being
   taken). After the cut-off, until the start.
 
-Games that are still filling are **never** in Fill in — they live only in decks. Otherwise
-nobody would need to swipe.
+Games that are still filling are **never offered** in Fill in — they are offered only in decks,
+and *You're In* lists only your own yeses. Otherwise nobody would need to swipe.
 
 ### 10.2 You're In
 
@@ -456,7 +463,9 @@ Your yeses in this group that have not filled yet — **picks, challenges and yo
 only**; a rescue join goes straight to Home, because that game is booked (Q76). Each row shows
 the club, the book-by (or *waiting for the club*), who is In as filled squares and the open
 seats as dashed ones, and **Withdraw** (hidden while waiting for the club — leaving then happens
-from the game details). The moment a game fills, it leaves this list and appears in **Home**.
+from the game details). The moment a game fills, it appears in **Home** and leaves this list —
+except at an On request club, where it also stays here, marked *waiting for the club*, until the
+club answers.
 
 ---
 
@@ -466,8 +475,8 @@ When the last yes lands (after the 10-second undo, when it applies):
 
 1. **Everyone pays together, or nobody pays** ([§12.2](#122-when-a-game-fills)).
 2. The court is booked with the club and gets its number. At an **On request** club, the game
-   first waits for the club to confirm (up to 30 minutes, club setting); nobody pays until it
-   does ([§16.3](#163-three-ways-to-work-with-raketa)).
+   first waits for the club to confirm (within the club's time to confirm, 30 minutes by
+   default); nobody pays until it does ([§16.3](#163-three-ways-to-work-with-raketa)).
 3. The player whose yes filled it sees a full screen **It's a game!** — the faces and one word,
    with **Open game** and **Later**.
 4. Everyone else gets **It's a game! · you paid 30 zł** and the game appears in their **Home**,
@@ -576,7 +585,7 @@ is on its way"*, never *"the club is paid"*.
 | --- | --- |
 | Before the cut-off | *"You'll be refunded 38,40 zł now (the 1,60 zł card fee isn't returned). Your seat is offered to others. On your record only if the game is then called off."* |
 | After the cut-off | *"Your seat is offered to others. You'll be refunded 38,40 zł when someone takes it; if nobody does, you won't be. On your record if nobody takes it."* |
-| Waiting for the club | *"Nobody has paid yet. Leaving withdraws your yes."* The request to the club is cancelled and the game goes back to the decks. |
+| Waiting for the club | *"Nobody has paid yet. Leaving withdraws your yes."* The request to the club is cancelled, the booking is called off with nobody paid, and the others are dealt the same court hour again first, your seat open — as when a club refuses. |
 | After the start | No button. |
 
 The others in the game are told *"Kuba left — the seat is open"*, in the chat and by
@@ -597,7 +606,7 @@ on, Needs a player** and **Held** are gone: the booking *is* the plan.
 | **Booked** | Full and booked | Before the cut-off: *Paid · 30 zł · free to leave until Sat 17:00*. After: *Paid · 30 zł* |
 | **Seat open** | Someone left | Before the cut-off: *1 seat open · fills by Sat 17:00 or the game is off and everyone is refunded*. After: *1 seat open · offered to others · the game goes ahead* |
 | **Needs result · Confirm the result · Counted · Uncounted · Never played** | Unchanged from today | — |
-| **Called off** | A seat was empty at the cut-off, the club cancelled, or the club refused a request | The reason, and *refunded 30 zł* or *nobody paid* |
+| **Called off** | A seat was empty at the cut-off, the club cancelled, the club refused a request or didn't answer it, or a player left while it waited for the club | The reason, and *refunded 30 zł* or *nobody paid* |
 
 A game that **starts with a seat still open** (someone left after the cut-off and nobody took
 it) cannot take a result. It ends **Uncounted · a seat was empty**: no levels move, and nothing
@@ -605,9 +614,9 @@ goes on the record of the players who stayed.
 
 ### 14.2 The game details
 
-From the mocks (`5`–`10` in `rkta_dev/…/2-games_fill_in/1-pre_development/`), locked:
+From the mocks (details 5–10, in [`mocks/game-details/`](mocks/game-details/)), locked:
 
-- **Top bar:** back; the other players' faces (up to three); their first names as the title;
+- **Top bar:** back; the other players' faces (up to three); their names as the title;
   the sport and status as the subtitle; **Chat · 2** on the right while you are in the game and
   it is not over, lit volt when something is unread.
 - **The game card:** status row (dot + status); player tiles — two rows for doubles, one for
@@ -624,15 +633,16 @@ The same screen serves two more readers (Q75, Q96):
   reads *Filling · 2 of 4 in* or *Waiting for the club*; WHERE names the club with no court
   number; the money row reads *"30 zł if it fills · book by Sat 13:00"*; the overlap grid and one
   plain paragraph on what a yes means follow; the actions are **I'm in / Not this time**, or
-  **Withdraw** if you are In. No Chat.
+  **Withdraw** if you are In — while waiting for the club, **Leave the game** with its sheet
+  ([§13](#13-leaving-a-game)). No Chat.
 - **A rescue, seen by a member who is not in it** (a Seat open card or a Seats to fill row):
   the paid tiles, the dashed *You?* tile, the court number, and **I'm in · 27 zł**. No Chat, no
   Leave.
 
 ### 14.3 The chat
 
-- **One chat per game.** It opens **when the game fills** — there is nothing to talk about
-  before, and yeses are silent.
+- **One chat per game.** It opens **when the game is booked** — at an On request club, when the
+  club confirms — because there is nothing to talk about before, and yeses are silent.
 - **Members are whoever is in the game now.** A leaver drops out with a line *"Kuba left — the
   seat is open"*; a joiner comes in and sees the history.
 - Reached **only from the game details**. The chat room is only the conversation: no plan card,
@@ -805,7 +815,8 @@ The statuses the club sees:
 | **Called off** | With the reason: short at the cut-off, cancelled by the club, refused, or no answer. Everyone was refunded or nobody paid; the hour is free again |
 | **Played** | The hour has passed |
 
-Filters: today · this week · waiting for you · seat open ◇.
+Filters: all · waiting for you · seat open · called off
+([the-screens.md B4](the-screens.md#b4-bookings)) ◇.
 
 ### 16.8 Answering a request (On request)
 
@@ -990,7 +1001,7 @@ No notification is ever sent for a single swipe.
 | Live yeses | 10 per sport |
 | Games per week | 1–7, default 2, Monday to Sunday |
 | Live posts | 2 |
-| Undo | 10 seconds, only on the yes that fills a game |
+| Undo | 10 seconds, on every action that moves money: the yes that fills a game and every rescue join |
 | Book-by | release time (Only Raketa) or start − minimum notice |
 | Club defaults | release 3 days · cut-off 24 h · minimum notice 2 h · confirm 30 min · other clubs 10 km |
 | Player group reach | home club + 10 km |
@@ -1034,7 +1045,7 @@ No notification is ever sent for a single swipe.
 
 ## 20. Out of scope
 
-- The UI design (a separate document follows).
+- The UI design, which is [the-screens.md](the-screens.md)'s.
 - Relaxing the level filter beyond what the engine allows.
 - Any Raketa revenue: no fee, no subscription. (Playtomic charges Polish players a 20 %
   service fee capped at 1.24–3.99 zł per seat; Raketa's absence of one is an advantage.)
@@ -1096,7 +1107,9 @@ claim by claim, and each record carries a note pointing at it:
 - **ADR-0145** — "the hour is the agreement, and there will never be a booking".
 - **ADR-0182 §8** — "a club isn't a court".
 - **ADR-0183 §13** — a group "doesn't pick games, post games, offer or book courts, or handle
-  money. It has no chat"; the disabled *Post a game*.
+  money. It has no chat"; the disabled *Post a game*. **§11**'s *Games* figure now counts the
+  games booked in each official group.
+- **ADR-0179 §9** — the You tab gains an *Account* group.
 - **ADR-0169** — the deck lives on Players (now behind "Classic play").
 - **ADR-0144, ADR-0164** — the plan (where · day · hour) belonging to a challenge.
 - **ADR-0150** — "the fill" completing a challenge from Chats (the word *Fill in* now has one
@@ -1107,8 +1120,9 @@ claim by claim, and each record carries a note pointing at it:
 - **ADR-0120, ADR-0102** — the availability term and grid, now hours per day.
 - The glossary (`CONTEXT.md`): *Challenge, Game* ("nothing about when, where, money"), *Plan,
   Where, the Hour* ("nothing on this platform will ever hold a booking"), *Chats, Conversation,
-  Departure, Call off*; new entries: *Court hour, Share, Book-by, Cut-off, Version, In, Rescue,
-  Fill in, Post, Home*.
+  Departure, Call off*; new entries, in its **Part 2 — Decided, not yet built**: *Pool, Court,
+  Court hour, Share, Book-by, Cut-off, Proposal, Post, Version, In, Booking, Rescue, Fill in, Seat
+  charge, Weekly hours, Home, Classic play…*
 - `docs/specs/the-loop/the-loop-screens.md` — the states it refused by name (*Booked, Being
   booked, Cancelled…*) and the Now states *Planning, Game on, Needs a player*.
 
@@ -1250,7 +1264,7 @@ Aug–Sep 2026).
 | 11 | The only deadline is the court's book-by; no clocks. |
 | 12 | Three ways to work with Raketa, a per-club setting in the club website. |
 | 13 | A live-yes cap plus games per week; never two games at one hour; a list of your yeses. |
-| 14 | A game plays full or not at all; nobody pays more for an empty seat. |
+| 14 | A game plays full or not at all; nobody pays more for an empty seat. → read at the cut-off since Q58 |
 | 15 | Relaxing the level filter: out of scope. |
 | 16 | No lightweight engine, no toggle; distance stands down inside groups. |
 | 17 | Weekly hours per day, to the hour, asked in onboarding and editable in You; no "not this week". |
@@ -1300,7 +1314,7 @@ Aug–Sep 2026).
 | 62 | No-shows reported in the result, 24 h to dispute; optional QR check-in that never gates money. |
 | 63 | Price fixed on the card; club cancellations; leaving a group; blocks; the empty deck. |
 | 64 | This document goes in the repo, the illustrated HTML on the Desktop; then the ADR, then the UI document, then building. |
-| 65 | A 10-second undo, only on the yes that fills a game. |
+| 65 | A 10-second undo, only on the yes that fills a game. → amended by Q74 |
 | 66 | The club website's bookings and check-in pages. |
 | 67 | After the session, on request: a dedicated club-website section ([§16](#16-the-club-website)). Its **◇** items were filled in while writing, not grilled. |
 | 68 | FRIEND shows only once a friends feature exists. |

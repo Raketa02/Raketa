@@ -30,8 +30,8 @@ ports & adapters), DDD, and event sourcing.
 
 ## Part 1 — Implemented bounded contexts
 
-These are the authority for their terms. There is no Part 2: after the reset, no term is
-committed ahead of *a decision*, and a speculative list of context names is not one. A
+These are the authority for their terms. After the reset, no term is committed ahead of *a
+decision*, and a speculative list of context names is not one. A
 context that does not appear below has no vocabulary yet — resolve its terms into this file
 before writing it, which is what every section from **Player profile** down was: settled in an
 accepted ADR and written here first, then built. Their terms are here because that is the order
@@ -1417,7 +1417,7 @@ where, money, results or the conversation itself belongs here.
 
 ### Games (`backend/app/modules/games/`)
 
-> **Grows with [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: a **Booking** (Part 2) opens an ordinary Game when its proposal fills, exactly as a completed line-up does; the result, the stars and the record follow unchanged. *Nothing about where or money* stays true of this context — the Booking holds both.
+> **Grows with [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: a **Booking** (Part 2) opens an ordinary Game when it reaches *booked*, exactly as a completed line-up does; the result, the stars and the record follow unchanged. *Nothing about where or money* stays true of this context — the Booking holds both.
 
 Settled by [ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) on
 [#303](https://github.com/Raketa02/Raketa/issues/303). **The context that knows a game was
@@ -1538,6 +1538,8 @@ anything about how good anybody is — that is the rating context reading this o
   [ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md).
 
 ### Conversation (`backend/app/modules/conversations/`)
+
+> **Grows with [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: a game made in a group has **one chat**, opened when the game is booked rather than by a first acceptance, whose members are whoever is in the game now; it is reached only from the game's details, and the Chats tab is **Classic play**'s (Part 2).
 
 Settled by [ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) on
 [#332](https://github.com/Raketa02/Raketa/issues/332), with its lifetime from
@@ -2017,7 +2019,8 @@ the Handover — which completes the backend half.
 
 **The crowd that already plays together, brought into the app.** Clubs keep WhatsApp groups, one
 per sport; a group is where that crowd lands when somebody taps its link. It picks no games yet,
-posts none, and has no chat.
+posts none, and its games have no chat — [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
+decides how they will (Part 2, and the note under **Conversation**).
 
 - **Group** — an **event-sourced aggregate** of two kinds, **Player group** and **Official group**,
   sharing the **Group link**, the **Join policy**, **Join requests**, the searches and the page. A
@@ -2137,7 +2140,8 @@ yet**; when a term is built, it moves into Part 1 under its context.
   posts belong to a pool, never to a group by name. _Avoid_: audience (that is an Official
   group's).
 - **Court** — one physical court at a Club, with a name the club uses (*Court 2*), **one sport**,
-  and indoor or outdoor. Players never pick one: a court's **number** is given at booking.
+  and indoor or outdoor. Players never pick its **number**: a card or a post names a court hour at
+  a club, and the number is given at booking.
 - **Court hour** — one court at one club for **one hour**. Every game lasts exactly one hour.
   The hours a club can sell are **derived** from its weekly pattern, its exceptions and its
   bookings, never stored hour by hour.
@@ -2148,8 +2152,8 @@ yet**; when a term is built, it moves into Part 1 under its context.
 - **Cut-off** — the club's free-cancellation deadline, a club setting (default 24 h before). Leaving
   before it is free; a game still short at it is called off.
 - **Book-by** — the latest moment a proposal can still fill: the release time (Only Raketa) or the
-  start minus the club's **minimum notice** (Instant, On request). Derived, never chosen. There is
-  no other clock.
+  start minus the club's **minimum notice** (Instant, On request). Derived, never chosen. No other
+  clock runs on a proposal.
 - **Share** — the court hour's price divided by the seats, fixed on the card and never changed by
   a later price.
 
@@ -2166,14 +2170,16 @@ yet**; when a term is built, it moves into Part 1 under its context.
 - **Yes** — a swipe right, or *I'm in*: *"if everybody is in, book it and charge my share."*
   Silent, free, holds nothing. A **No** is a swipe left, equally silent.
 - **In** — a player who said yes to a proposal that has not filled. The **IN** tag on a tile is
-  the only momentum signal.
+  the only tag that signals momentum; a card dealt in versions also says how many are In on the
+  whole proposal.
 - **Group deck** — the group's Games tab: cards addressed to you, ordered by how few seats would
   be open after your yes. Distinct from the Players deck of **Classic play**.
 - **Picked for you card · Challenge card · Seat open card** — the three card types: a pick, a
   **Post** dealt to you as a best fit (its ribbon reads *"Kuba challenged you"*), and a **Rescue**.
   A *Challenge card* is a label, never Part 1's **Challenge**.
-- **Fills** — the moment the last needed yes lands: every seat is charged together, all or
-  nothing, and a **Booking** opens.
+- **Fills** — the moment the last needed yes lands and a **Booking** opens. Every seat is then
+  charged together, all or nothing — at an On request club only once the club confirms, the
+  booking *waiting for the club* until it does.
 
 ### Bookings
 
@@ -2183,10 +2189,10 @@ yet**; when a term is built, it moves into Part 1 under its context.
 - **Rescue** — an open seat in a **booked** game that lost a player. Shown in **Fill in** and dealt
   to the best fits as a Seat open card; taking it pays at once.
 - **Fill in** — the group's rescue board (**Seats to fill**) plus **You're In**, your own yeses
-  that have not filled. Proposals that are still filling are never on it. (Classic play's *fill*,
-  completing a challenge, is a different thing.)
+  that have not filled or are *waiting for the club*. It never offers a proposal that is still
+  filling. (Classic play's *fill*, completing a challenge, is a different thing.)
 - **Leaver** — a player who left a booking. Before the cut-off, refunded at once minus the card
-  fee; after it, refunded only when the seat is taken.
+  fee; after it, refunded (minus the fee) only when the seat is taken.
 - **Check-in** — a club scanning a player's code on the day. Evidence that the player was there,
   never a condition for money.
 - **No-show report** — the players who came marking one who didn't, with 24 hours to dispute. Held
@@ -2210,7 +2216,7 @@ yet**; when a term is built, it moves into Part 1 under its context.
 - **Home** — the first tab of the bottom bar: your games from the moment they fill (Part 1's *Now*).
 - **Classic play** — one feature flag, off by default, behind which the Players deck, the Chats
   tab, Challenges with their Plan, and Find a game stay as they are.
-- **It's a game!** — the screen the player whose yes filled the game sees.
+- **It's a game!** — the screen the player whose yes filled the game, or who took a rescue, sees.
 
 ## Cross-cutting concepts
 

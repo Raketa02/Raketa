@@ -3,8 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-09-29
 - **Specified by** [`docs/specs/games-and-fill-in/the-mechanics.md`](../specs/games-and-fill-in/the-mechanics.md)
-  (the rules, Q1–Q67) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
-  (the locked player designs, the club website and the inferred backend, Q68–Q96). Where this
+  (the rules, and the decision log Q1–Q96) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
+  (the locked player designs, the club website and the inferred backend). Where this
   record and those documents disagree on a detail, the documents win; this record holds the
   shape.
 - **Supersedes** [ADR-0182](0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md) §8
@@ -83,8 +83,8 @@ game, card, yes and post belongs to a pool, and the group is one kind of it.
   ten-second undo. Every action that moves money gets that undo.
 - There is **no clock of Raketa's own**. A card lives until its court's **book-by** (the
   club's release time, or the start minus its minimum notice) and then disappears; nobody paid.
-- **Fill in holds only rescues**: open seats of *booked* games. Games still filling live only
-  in decks.
+- **Fill in offers only rescues**: open seats of *booked* games. Games still filling are offered
+  only in decks; Fill in lists your own yeses on them, under *You're In*.
 
 ### 3. A club has courts, hours and prices, and chooses how it works with Raketa
 
@@ -106,8 +106,8 @@ Every game is **one hour**.
   account for each charge.
 - **Leaving before the club's cut-off** refunds at once, minus the card fee. **At the cut-off**
   a game still short is called off and everyone still in is refunded in full. **After the
-  cut-off** a leaver is refunded only when someone takes the seat. A game plays full or not at
-  all.
+  cut-off** a leaver is refunded only when someone takes the seat, and a seat nobody takes stays
+  empty. Nobody ever pays more for an empty seat.
 - **Payments sit behind one port** with two adapters: Stripe (test mode now, live later) and an
   in-process fake for local runs, seeds and tests. Launch methods are cards and wallets; BLIK
   waits on Stripe confirming a saved BLIK can pay a club.
@@ -141,7 +141,7 @@ offline gates are regenerated with it.
 - The bottom bar is **Home · ⚡ Play · You**. Home holds your games from the moment they fill.
 - **Classic play** — the Players deck, the Chats tab, challenges with the where · day · hour
   plan, and Find a game — moves behind **one feature flag, off by default**, untouched.
-- Every chat belongs to one game, opens when it fills, and is reached from that game's details;
+- Every chat belongs to one game, opens when it is booked, and is reached from that game's details;
   **Leave the game** returns to the game details.
 - The You tab gains an **Account** group: *Games & money*, *Payments*, *Notifications*.
 - Push notifications are built (Expo push; iPhone push needs the Apple Developer membership),
@@ -185,7 +185,7 @@ waiting for its answer.
   plainly during setup.
 - **Clubs on Instant can double-sell**, because Raketa cannot see their desk. The remedy is a
   cancellation with full refunds, which players will feel. On request trades that risk for a
-  wait of up to half an hour.
+  wait the club sets (half an hour by default).
 - **Open items outside the code:** BLIK with the club as seller (Stripe copies cards only),
   holding club payouts until after the game, the consent wording, Apple Pay for one-off
   charges, and the club's fiscal receipts. Each is listed in the mechanics §21 and blocks the

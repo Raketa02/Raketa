@@ -5,7 +5,7 @@
   ([#440](https://github.com/Raketa02/Raketa/issues/440)): a durable, event-free row per
   press, the fifth of the matchmaking module's ledgers.
 - **Date:** 2026-09-14
-- **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the Players tab and its deck move behind the *Classic play* feature flag, off by default, untouched. The group's Games deck is a different deck, of games with courts.
+- **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: the Players tab and its deck move behind the *Classic play* feature flag, off by default, untouched. The group's Games deck is a different deck, of games with courts.
 - **§1's *Play opens on Find a game* amended 2026-09-25 by [ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md) §12**: Play opens on a **Groups | Explore** switch, with Find a game behind `find_a_game`. The deck on Players, *Match me*'s retirement and the five-tab bar stand.
 - **Supersedes, by named sentence:**
   - [#231](https://github.com/Raketa02/Raketa/issues/231) §3's *"Decided: buttons only"* and its

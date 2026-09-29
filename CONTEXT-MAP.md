@@ -189,6 +189,8 @@ else lives one layer down. See
 │   │                            the conversation, Now, and the one state-detail surface
 │   ├── specs/play-groups/    ← Play › Groups, the club website and the Administrator:
 │   │                            the product owner's mocks and which area each one draws
+│   ├── specs/games-and-fill-in/ ← a group's Games deck and Fill in, courts and money (ADR-0189):
+│   │                            the mechanics, the screens and the mocks — decided, not built
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)
