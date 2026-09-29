@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-26
+- **Amended 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the grid becomes hours per weekday (07:00–23:00). A blank week is still absent, never zero, and onboarding still needs at least one hour.
 
 ## Context
 

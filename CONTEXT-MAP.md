@@ -47,6 +47,14 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > this day. `frontend_public/` is new and gets a fence of its own
 > ([#502](https://github.com/Raketa02/Raketa/issues/502)).
 
+> **Courts, bookings and money are decided again, without a new app**
+> ([ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md), not yet built).
+> The backend grows new contexts — Proposals, Bookings, Payments, Notifications, and courts in
+> Clubs — the player app gets the group deck, Fill in and an Account group on You, and the club
+> website gets Bookings, Check in, Courts & prices, Money and Raketa settings. Stripe is an
+> outside service behind a port, not a deployable. The terms are in `CONTEXT.md` Part 2; the
+> spec set is `docs/specs/games-and-fill-in/`.
+
 > **The matchmaking engine did not add an app, and that was a decision rather than an
 > omission** — the two web apps above arrived later, for a different reason: they are new
 > surfaces with their own users, not a slice of the backend's own work. Its input document
@@ -66,7 +74,7 @@ own **technical** vocabulary:
 
 | File | Scope | Owns |
 | --- | --- | --- |
-| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Player, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Audience, Signing out everywhere, Player profile, Social tag, Availability grid, Search radius, Proposals opt-in, Challenge, Seat, Standing, Game, Result, Score, Counted game, Ghost game, Player Score, Strand, Player card, Record block, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Club, Club account, Home club, Group, Player group, Official group, Owner, Group member, Join policy, Join request, Group link, WhatsApp group size, Handover, Administrator, Invitation, Tester, Feature flag… |
+| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Player, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Audience, Signing out everywhere, Player profile, Social tag, Availability grid, Search radius, Proposals opt-in, Challenge, Seat, Standing, Game, Result, Score, Counted game, Ghost game, Player Score, Strand, Player card, Record block, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Club, Club account, Home club, Group, Player group, Official group, Owner, Group member, Join policy, Join request, Group link, WhatsApp group size, Handover, Administrator, Invitation, Tester, Feature flag, and — decided, not yet built (Part 2) — Pool, Court, Court hour, Way of working, Cut-off, Book-by, Share, Proposal, Post, Version, Booking, Rescue, Fill in, Seat charge, Weekly hours, Home, Classic play… |
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation, presentation module, copy deck… |
 | **`frontend_club/CONTEXT.md`** | Club-website technical vocab only | server layer, cookie session, recovery cookie, single flight, server action, view model, stub backend… |

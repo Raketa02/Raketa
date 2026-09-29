@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-25
+- **§8's *a club isn't a court* superseded 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: a club lists courts, hours and prices and sells them through Raketa in one of three ways of working. A plan's *where* in the Classic play loop is unchanged.
 - **Answers [ADR-0002](0002-event-sourced-user-aggregate.md)'s per-context question for Clubs:**
   *event-sourced*, with a synchronous search projection.
 - **Narrows [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)'s** *"there

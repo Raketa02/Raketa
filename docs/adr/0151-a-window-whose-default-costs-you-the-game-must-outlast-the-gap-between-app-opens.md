@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-07
+- **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: a game made in a group has no answer window; a card lives until its court's book-by.
 - **Amends `challenges.domain.answer_window.ANSWER_WINDOW`**, which was
   [#217](https://github.com/Raketa02/Raketa/issues/217)'s adopted number and is the first
   clock in this repository to be argued for rather than inherited.

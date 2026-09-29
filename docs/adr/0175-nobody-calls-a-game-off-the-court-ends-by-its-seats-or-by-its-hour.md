@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-16
+- **§4 narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: a game made in a group is left from its game details, with *Leave the game*.
 - **Supersedes, by named sentence:**
   [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
   §5 whole — *"Call it off is any player's"* — the press exists for nobody (§1); and §3's

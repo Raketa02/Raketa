@@ -4,6 +4,7 @@
   [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4–§5**: nobody ends a court somebody else has joined, and *Call it off* is any player's.
   *Any live member may complete the line-up* stands.
 - **Date:** 2026-09-07
+- **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: in a group, *Fill in* is the rescue board for booked games that lost a player, and the word has that one meaning there.
 - **Extends [ADR-0142](0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)**,
   which fixed the pair rule's predicate as *a pair is held while the challenge is
   `AWAITING_ANSWERS` or `LINE_UP_INCOMPLETE`*. That predicate is what makes this decision

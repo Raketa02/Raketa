@@ -19,7 +19,10 @@ each with its own CI lane.
 > the unwritten Clubs / Courts / Matches / Money / Now contexts were all removed, along with
 > the ADRs and specs that decided only them. If you remember a term or a file from one of
 > those, it is gone on purpose — see the
-> [ADR index](docs/adr/README.md#the-2026-08-25-reset--why-the-sequence-has-gaps).
+> [ADR index](docs/adr/README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). Courts,
+> bookings and money are **decided again** by
+> [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) — the group's Games
+> deck and Fill in, specified in `docs/specs/games-and-fill-in/` — and are not built yet.
 
 ## Start the session inside the app you are changing
 

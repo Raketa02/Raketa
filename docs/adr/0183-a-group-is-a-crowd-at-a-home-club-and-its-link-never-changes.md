@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-25
+- **§13 superseded 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**, except *no friends list* and *no removing members*, which stand: a group picks games, members post them, courts are booked, money is handled, and each game has a chat. **§11's *Games* amended by the same record**: it counts the games actually booked in each official group.
 - **Answers [ADR-0002](0002-event-sourced-user-aggregate.md)'s per-context question for Groups:**
   *event-sourced*, with synchronous projections for groups, group members and join requests.
 - **Amends [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1's** *"Play

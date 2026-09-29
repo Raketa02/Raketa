@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-13
+- **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: a game made in a group has no plan, and its chat opens when it fills.
 - **Supersedes, by named sentence:**
   [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md) §*A plan is the game's*'s
   *"We will make a Plan the plan of one game, identified by that game's id"* — it is the plan of
