@@ -14,7 +14,10 @@ whether a player has a method their share could be charged to (payments) — and
 for the deck (#539), what a card draws of a person (users, the Player profile,
 rating), how even a card's game is forecast (the matcher's engine over rating),
 which kinds of game a player wants (their Play intent), which games they have
-booked (bookings, #541), and a club's cut-off and way of working (clubs).
+booked (bookings, #541), and a club's cut-off and way of working (clubs) — and,
+for the proposer (#540), where a pool may play (groups and clubs), every hour a
+club sells (clubs), and each member's Level and week (rating, the Player
+profile).
 """
 
 from __future__ import annotations
@@ -25,12 +28,14 @@ from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
+from app.engines.matchfit.scorable import LevelReading
 from app.kernel import Instant, Sport, invariant
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.deck import CardForecast, SellingTerms, Sides
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.proposal import Proposal
+from app.modules.proposals.domain.proposer import CourtHourOnSale, PoolClubs
 
 # --------------------------------------------------------------------------- #
 # This context's own store
@@ -130,6 +135,34 @@ class Pools(Protocol):
         """Which of these players are in the pool now."""
         ...
 
+    async def every(self) -> Sequence[Pool]:
+        """Every pool there is — a group's for every group, whether or not a
+        game was proposed in it — **oldest first**. What the proposer walks."""
+        ...
+
+    async def members_of(self, pool: Pool) -> tuple[UUID, ...]:
+        """Everybody in the pool now, **in the order they joined** — the order
+        a tie between two equally even games is broken in."""
+        ...
+
+    async def of_player(self, player_id: UUID) -> Sequence[Pool]:
+        """Every pool this player is in now."""
+        ...
+
+
+@runtime_checkable
+class WherePoolsPlay(Protocol):
+    """Where a pool may play (the mechanics §4.3) — a group's home club, and
+    the clubs its games may also use."""
+
+    async def of(self, pool: Pool, *, now: Instant) -> PoolClubs | None:
+        """The clubs the pool plays at, at ``now``: a player group's home club
+        and the clubs within ten kilometres of it, nearest first; an official
+        group's own club, and — while the club offers its groups other clubs'
+        courts — the clubs within the distance it set. ``None`` for a pool that
+        no longer exists."""
+        ...
+
 
 # --------------------------------------------------------------------------- #
 # Demands on contexts this one does not write
@@ -161,6 +194,33 @@ class CourtHours(Protocol):
         sale then **and the club is taking new cards** — ``None`` for a club
         that is not live or is paused, and for an hour it does not sell or
         whose book-by has passed at ``now``."""
+        ...
+
+    async def on_sale(
+        self,
+        club_ids: Collection[UUID],
+        *,
+        start: Instant,
+        end: Instant,
+        now: Instant,
+    ) -> Sequence[CourtHourOnSale]:
+        """Every hour these clubs sell from ``start`` until ``end``, one per
+        club, sport and hour, with **how many courts** of the sport are free
+        then — a paused club's too, marked as taking no new cards, since its
+        cards keep their court. A club that is not live sells nothing, and an
+        hour past its book-by at ``now`` is not for sale. In no particular
+        order."""
+        ...
+
+    async def held(
+        self, club_ids: Collection[UUID], *, start: Instant, end: Instant
+    ) -> Collection[tuple[UUID, Sport, Instant]]:
+        """Every club, sport and hour from ``start`` until ``end`` at which these
+        clubs still have a court for Raketa — **whatever deadline their settings
+        now give it**, since a card keeps the book-by it was made with. What a
+        card loses its court hour by: an hour booked, closed or no longer
+        offered is absent, and so is every hour of a club that is not live; a
+        paused club's hours are held."""
         ...
 
 
@@ -284,6 +344,30 @@ class BookedGames(Protocol):
     ) -> Sequence[Instant]:
         """When each of this player's booked games starts, from ``start`` until
         ``end``, in no particular order."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class InPlay:
+    """What the proposer reads of one member for one sport: their Level and
+    Uncertainty — ``None`` while unrated there — and their week."""
+
+    level: LevelReading | None
+    #: Blank for somebody with no Player profile: free for nothing.
+    week: WeeklyHours
+
+
+@runtime_checkable
+class PlayersInPlay(Protocol):
+    """Each member's Level and week, for the proposer (#540) — **the engine's
+    currency**, rating's estimates, as ``PlayerFit`` and the forecasts read."""
+
+    async def of(
+        self, player_ids: Collection[UUID], *, sport: Sport
+    ) -> Mapping[UUID, InPlay]:
+        """Each of these players, in one read per provider. Everybody asked
+        about is answered."""
         ...
 
 

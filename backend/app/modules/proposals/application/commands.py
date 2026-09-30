@@ -22,7 +22,9 @@ class MakeProposalCommand:
 
     ``poster_id`` is the member who posted it, and ``None`` for a pick.
     ``versions`` are the names for the open seats, one tuple per version —
-    none at all is a proposal nobody has been dealt yet."""
+    none at all is a proposal nobody has been dealt yet. ``proposal_id`` is the
+    stream to make it in — the proposer's ``pick_id``, so two processes cannot
+    make one game twice — and a fresh one when ``None``."""
 
     pool_id: UUID
     origin: Origin
@@ -32,6 +34,7 @@ class MakeProposalCommand:
     club_id: UUID
     start: Instant
     versions: Sequence[Sequence[UUID]] = ()
+    proposal_id: UUID | None = None
 
 
 @dataclass(frozen=True)

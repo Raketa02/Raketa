@@ -7,12 +7,13 @@ answered off it.
 
 Who is in a group's pool is read off ``GroupDirectory`` — the groups context's
 own read of its members projection — and never by joining its table: **the
-members now**, so somebody who left the group has left its pool.
+members now**, so somebody who left the group has left its pool. **Every group
+is a pool**, so the pools there are are the groups there are.
 """
 
 from __future__ import annotations
 
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from typing import final
 from uuid import UUID
 
@@ -49,3 +50,23 @@ class GroupPools:
                 return frozenset(listing.members) & frozenset(player_ids)
             case _:
                 exhaustive(pool.kind)
+
+    async def every(self) -> Sequence[Pool]:
+        return [
+            Pool(id=group_id, kind=PoolKind.GROUP)
+            for group_id in await self._groups.every()
+        ]
+
+    async def members_of(self, pool: Pool) -> tuple[UUID, ...]:
+        match pool.kind:
+            case PoolKind.GROUP:
+                listing = (await self._groups.listings([pool.id])).get(pool.id)
+                return () if listing is None else listing.members
+            case _:
+                exhaustive(pool.kind)
+
+    async def of_player(self, player_id: UUID) -> Sequence[Pool]:
+        return [
+            Pool(id=group_id, kind=PoolKind.GROUP)
+            for group_id in await self._groups.groups_of(player_id)
+        ]

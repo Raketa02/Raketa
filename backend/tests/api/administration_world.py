@@ -50,9 +50,15 @@ def profile_at(club_id: str) -> str:
 
 
 async def club_signs_up(
-    client, *, name: str = "Ogrody 33", email: str = DESK, sports=("PADEL", "TENNIS")
+    client,
+    *,
+    name: str = "Ogrody 33",
+    email: str = DESK,
+    sports=("PADEL", "TENNIS"),
+    point: tuple[float, float] = (50.06, 19.95),
 ) -> tuple[str, dict]:
-    """The club's id, and a club-audience session for its desk."""
+    """The club's id, and a club-audience session for its desk — in Kraków's
+    centre unless told otherwise."""
 
     signed_up = await client.post(
         CLUB_SIGN_UP,
@@ -61,7 +67,7 @@ async def club_signs_up(
             "district": "Grzegórzki",
             "city": "Kraków",
             "sports": list(sports),
-            "point": {"latitude": 50.06, "longitude": 19.95},
+            "point": {"latitude": point[0], "longitude": point[1]},
             "email": email,
             "password": DESK_PASSWORD,
         },

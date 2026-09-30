@@ -1,12 +1,15 @@
-"""The games still filling: four picks for the protagonist, with nought, one,
-two and three of the other three In (#538; the screens Part D).
+"""The games still filling: **the proposer deals them**, and four of the
+protagonist's picks are answered to nought, one, two and three of the other
+three In (#538, #540; the screens Part D).
 
-**Through the use cases a game is made and answered by** (``docs/adr/0029``):
-each pick is made by ``MakeProposal`` — the use case the engine will drive
-(#540), which reads the court hour's share and book-by off the club and refuses
-a version whose people do not fit — and each yes is said by ``SayYes``, the
-use case the phone's swipe runs, so a seeded yes needed a saved card and a live
-yes to spare exactly as a real one does. Nothing here opens a table.
+**The seed runs the proposer for its pools** — every group the layers above
+wrote, through ``ProposeGames``, the engine's own use case, over the run's own
+clock — so what a developer's decks hold is what the engine deals: the most even
+four at every hour a club sells and its members are free for, dealt at their
+best hour. Nothing here chooses who is on a card. Each yes is then said by
+``SayYes``, the use case the phone's swipe runs, so a seeded yes needed a saved
+card and a live yes to spare exactly as a real one does. Nothing here opens a
+table.
 
 **Its own group, because none of the others can seat a four.** Every Play
 group above is drawn from the named accounts (``groups.py``), and the
@@ -14,22 +17,22 @@ protagonist's own padel group holds two accounts with no Player profile — who
 fit nobody, since a gate that cannot be evaluated excludes. So this layer
 gathers a crowd the way a group does: she creates *Padel po pracy* at Bonarka
 Arena, which sells padel on her evenings and her Saturday, and **the cohort
-members who fit her and each other** join it — chosen by the real pair rule
-(``PlayerFit``), in the cohort's own order, so the group is a clique and any
-three of it make a four with her.
+members who want competitive padel, as she does, and fit her and each other**
+join it — chosen by the real pair rule (``PlayerFit``), in the cohort's own
+order, so the group is a clique the proposer can seat.
 
-**Each pick is at an hour she is free and the club sells**, one a day from two
-days out, so a card outlives a day of developing against it; and each names
-the members free for that whole hour, the ones no earlier pick named first, so
-the four cards show different faces where the crowd allows.
+**Her four answered picks** are the first pick she is on each day from two days
+out, so a card outlives a day of developing against it; the other three named on
+each say yes, nought to three of them.
 
 **Written at the run's own now**, since a proposal is about an hour ahead; and
-**re-running makes no pick twice** — a pick already filling in the group at an
-hour is found and left as the developer left it. A later run on a later day
-chooses later hours, and the earlier picks expire at their own book-by.
+**re-running makes no pick twice** — the proposer deals nothing a court hour
+already holds, and a pick's id is its game, so a pick already filling is found
+and left as the developer left it. A later run on a later day deals later hours,
+and the earlier picks expire at their own book-by.
 
-**The run fails by name** when the crowd cannot seat a pick with three In, rather
-than seeding a deck that cannot show *Book it now*.
+**The run fails by name** when the proposer deals her fewer answered picks than
+this layer promises, rather than seeding a deck that cannot show *Book it now*.
 """
 
 from __future__ import annotations
@@ -49,31 +52,26 @@ from app.bootstrap.composition import (
     build_group_code_minter,
     build_group_directory,
     build_home_clubs,
-    build_make_proposal,
     build_player_fit,
-    build_player_profile_repository,
+    build_propose_games,
     build_proposal_directory,
     build_proposal_guards,
     build_proposal_repository,
-    build_sellable_court_hours,
     build_unit_of_work,
     build_user_repository,
+    build_wanted_kinds,
 )
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport
-from app.modules.clubs.domain.court_hours import CLUB_ZONE
+from app.modules.clubs.domain.court_hours import CLUB_ZONE, local_day
 from app.modules.groups.application.commands import CreatePlayerGroupCommand
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.domain.value_objects import GroupName, JoinPolicy
-from app.modules.player_profile.domain.ports import PlayerProfileRepository
-from app.modules.player_profile.domain.weekly_hours import free_for_the_hour
 from app.modules.proposals.application.answers import SayYes
-from app.modules.proposals.application.commands import (
-    AnswerProposalCommand,
-    MakeProposalCommand,
-)
-from app.modules.proposals.domain.proposal import Origin
+from app.modules.proposals.application.commands import AnswerProposalCommand
+from app.modules.proposals.application.propose_games import Proposed
+from app.modules.proposals.domain.proposal import Origin, Proposal
 from app.modules.users.domain.value_objects import Email
 from app.seeds.catalog import THE_POPULATED_PLAYER
 from app.seeds.clock import FixedClock
@@ -87,15 +85,15 @@ GAMES_SPORT: Final = Sport.PADEL
 #: Her padel intent, so her deck's segment is the one these are dealt in.
 GAMES_KIND: Final = SearchMode.COMPETITIVE
 
-#: How many of the cohort the group gathers besides her: enough for four picks
-#: of three different people each.
+#: How many of the cohort the group gathers besides her: three disjoint fours
+#: at an hour Bonarka's courts can hold.
 CROWD: Final = 12
-#: The picks, by how many of the other three are In. The last is *Book it now*.
+#: Her answered picks, by how many of the other three are In. The last is
+#: *Book it now*.
 IN_ON_EACH: Final = (0, 1, 2, 3)
-#: How far ahead the first pick is, so a card outlives a day of developing.
+#: How far ahead the first answered pick is, so a card outlives a day of
+#: developing.
 LEAD: Final = timedelta(days=2)
-#: How far ahead a deck looks (the mechanics §4.3).
-HORIZON: Final = timedelta(days=14)
 
 # Refused on import, through the domain's own value object, as ``groups.py``'s
 # names are: a name the New group form would refuse fails here rather than half
@@ -123,7 +121,10 @@ class SeededProposals:
     created_group: bool
     #: How many of the cohort fit her and each other and are in the group.
     crowd: int
+    #: Her answered picks.
     picks: tuple[SeededPick, ...]
+    #: What the proposer did over every pool this run.
+    proposed: Proposed
 
 
 class NotEnoughToDeal(RuntimeError):
@@ -137,13 +138,13 @@ async def write_the_proposals(
     now: Instant,
     cohort: Sequence[tuple[str, UUID]],
 ) -> SeededProposals:
-    """Gather the group, then make every pick not already filling in it and
-    say its yeses.
+    """Gather the group, run the proposer over every pool, then answer four of
+    her picks.
 
-    **After the accounts, the cohort, their cards and the clubs' courts**, which
-    it reads and never writes, and after every layer that writes a block — the
-    fit is read live, so a block written later could leave a four that no
-    longer fits."""
+    **After the accounts, the cohort, their cards, the clubs' courts and every
+    group**, which it reads and never writes, and after every layer that writes a
+    block — the fit is read live, so a block written later could leave a four
+    that no longer fits."""
 
     clock = FixedClock(at=now)
     async with session_factory() as session:
@@ -153,47 +154,41 @@ async def write_the_proposals(
         group_id, created = await _the_group(
             session, settings, her, club_id, crowd, now
         )
-        free = await _free_at(session, her, crowd, club_id, now)
-        starts = tuple(free)[: len(IN_ON_EACH)]
-        if len(starts) < len(IN_ON_EACH):
+        before = set(
+            await build_proposal_directory(session).filling_in(group_id, now=now)
+        )
+        proposer = build_propose_games(session, clock=clock)
+        proposed = Proposed()
+        for pool_id in await proposer.every_pool():
+            proposed += await proposer.execute(pool_id)
+        mine = await _her_picks(session, her, group_id, now)
+        if len(mine) < len(IN_ON_EACH):
             raise NotEnoughToDeal(
-                f"{GAMES_GROUP} cannot deal {len(IN_ON_EACH)} picks: {len(crowd)} of "
-                f"the cohort fit her and each other, and only {len(starts)} days of "
-                f"the fortnight have an hour {GAMES_CLUB.name} sells that she and "
-                f"three of them are free for"
+                f"{GAMES_GROUP} cannot answer {len(IN_ON_EACH)} picks: {len(crowd)} of "
+                f"the cohort want competitive padel and fit her and each other, and "
+                f"the proposer dealt her a pick on only {len(mine)} days of the "
+                f"fortnight from {LEAD.days} days out at {GAMES_CLUB.name}"
             )
-        filling = await _filling_at(session, her, group_id, now)
         picks: list[SeededPick] = []
-        used: set[UUID] = set()
-        for start, in_count in zip(starts, IN_ON_EACH, strict=True):
-            if start in filling:
-                proposal_id, named, said = filling[start]
-                picks.append(SeededPick(proposal_id, start, named, said, made=False))
-                used.update(named)
-                continue
-            named = tuple(
-                sorted(free[start], key=lambda member: member in used)[
-                    : max(IN_ON_EACH)
-                ]
-            )
-            used.update(named)
-            proposal_id = await build_make_proposal(session, clock=clock).execute(
-                MakeProposalCommand(
-                    pool_id=group_id,
-                    origin=Origin.PICK,
-                    poster_id=None,
-                    sport=GAMES_SPORT,
-                    kind=GAMES_KIND,
-                    club_id=club_id,
-                    start=start,
-                    versions=[(her, *named)],
+        for (proposal, named), in_count in zip(mine, IN_ON_EACH, strict=True):
+            for player in named[:in_count]:
+                if player not in proposal.yeses:
+                    await _says_yes(session, clock, proposal.proposal_id, player)
+            picks.append(
+                SeededPick(
+                    proposal.proposal_id,
+                    proposal.start,
+                    named,
+                    in_count,
+                    made=proposal.proposal_id not in before,
                 )
             )
-            for player in named[:in_count]:
-                await _says_yes(session, clock, proposal_id, player)
-            picks.append(SeededPick(proposal_id, start, named, in_count, made=True))
     return SeededProposals(
-        group_id=group_id, created_group=created, crowd=len(crowd), picks=tuple(picks)
+        group_id=group_id,
+        created_group=created,
+        crowd=len(crowd),
+        picks=tuple(picks),
+        proposed=proposed,
     )
 
 
@@ -218,17 +213,24 @@ async def _club_id(session: AsyncSession) -> UUID:
 async def _the_crowd(
     session: AsyncSession, her: UUID, cohort: Sequence[UUID], now: Instant
 ) -> tuple[UUID, ...]:
-    """The cohort members who fit her and each other, in the cohort's order —
-    greedily, so each one taken fits everybody taken before."""
+    """The cohort members who want the kind she plays and fit her and each
+    other, in the cohort's order — greedily, so each one taken fits everybody
+    taken before. The proposer deals nobody a kind they do not want."""
 
     unfit = await build_player_fit(session).unfit_pairs(
         [her, *cohort], sport=GAMES_SPORT, kind=GAMES_KIND, at=now
     )
+    wanted = build_wanted_kinds(session)
     taken = [her]
     for member in cohort:
         if len(taken) > CROWD:
             break
-        if all(frozenset((member, other)) not in unfit for other in taken):
+        kinds = await wanted.of(member, sport=GAMES_SPORT)
+        if (
+            kinds is not None
+            and GAMES_KIND in kinds
+            and all(frozenset((member, other)) not in unfit for other in taken)
+        ):
             taken.append(member)
     return tuple(taken[1:])
 
@@ -292,78 +294,46 @@ async def her_games_group(session: AsyncSession) -> tuple[UUID, UUID] | None:
     return None if group_id is None else (her, group_id)
 
 
-async def _free_at(
-    session: AsyncSession,
-    her: UUID,
-    crowd: Sequence[UUID],
-    club_id: UUID,
-    now: Instant,
-) -> dict[Instant, tuple[UUID, ...]]:
-    """The first hour on each day from ``LEAD`` out that the club sells padel,
-    **she is free for the whole of, and so are three of the crowd** — and who
-    of the crowd is, in the crowd's order. *Free* is the mechanics §4.2's: the
-    weekly hours cover the whole game, never merely its start."""
-
-    offer = (
-        await build_sellable_court_hours(session).between(
-            [club_id], start=now + LEAD, end=now + HORIZON, now=now
-        )
-    ).get(club_id)
-    profiles = _profiles(session)
-    weeks = {
-        player: profile.weekly_hours
-        for player in (her, *crowd)
-        if (profile := await profiles.load(player)) is not None
-    }
-    if offer is None or her not in weeks:
-        return {}
-    days: dict[date, Instant] = {}
-    free: dict[Instant, tuple[UUID, ...]] = {}
-    for hour in offer.hours:
-        day = hour.start.astimezone(offer.zone).date()
-        if hour.sport is not GAMES_SPORT or day in days:
-            continue
-        if not free_for_the_hour(weeks[her], start=hour.start, zone=offer.zone):
-            continue
-        members = tuple(
-            member
-            for member in crowd
-            if member in weeks
-            and free_for_the_hour(weeks[member], start=hour.start, zone=offer.zone)
-        )
-        if len(members) >= max(IN_ON_EACH):
-            days[day] = hour.start
-            free[hour.start] = members
-    return free
-
-
-async def _filling_at(
+async def _her_picks(
     session: AsyncSession, her: UUID, group_id: UUID, now: Instant
-) -> dict[Instant, tuple[UUID, tuple[UUID, ...], int]]:
-    """The picks already filling in the group, by hour: each one's id, the
-    three named beside her, and how many of them are In."""
+) -> list[tuple[Proposal, tuple[UUID, ...]]]:
+    """The first pick she was dealt on each day from ``LEAD`` out, soonest
+    first, the first ``IN_ON_EACH``'s worth — each with the three named beside
+    her on her version, in the order they were dealt."""
 
     proposals = build_proposal_repository(
         session,
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
-    found: dict[Instant, tuple[UUID, tuple[UUID, ...], int]] = {}
+    days: set[date] = set()
+    mine: list[tuple[Proposal, tuple[UUID, ...]]] = []
     for proposal_id in await build_proposal_directory(session).filling_in(
         group_id, now=now
     ):
         proposal = await proposals.load(proposal_id)
-        if proposal is None or proposal.origin is not Origin.PICK:
+        if (
+            proposal is None
+            or proposal.origin is not Origin.PICK
+            or proposal.sport is not GAMES_SPORT
+            or proposal.kind is not GAMES_KIND
+            or proposal.start < now + LEAD
+        ):
             continue
-        named = tuple(
-            player
-            for version in proposal.versions
-            for player in version.players
-            if player != her
-        )
-        said = sum(1 for player in named if player in proposal.yeses)
-        found.setdefault(proposal.start, (proposal_id, named, said))
-    return found
+        version = proposal.version_of(her)
+        day = local_day(proposal.start)
+        if version is None or day in days:
+            continue
+        # Dealt with the three beside her — never a version widened to her
+        # later, which names only the seats that were open.
+        named = tuple(player for player in version.players if player != her)
+        if len(named) < len(IN_ON_EACH) - 1:
+            continue
+        days.add(day)
+        mine.append((proposal, named[: len(IN_ON_EACH) - 1]))
+        if len(mine) == len(IN_ON_EACH):
+            break
+    return mine
 
 
 async def _says_yes(
@@ -381,20 +351,18 @@ async def _says_yes(
     ).execute(AnswerProposalCommand(proposal_id=proposal_id, player_id=player))
 
 
-def _profiles(session: AsyncSession) -> PlayerProfileRepository:
-    return build_player_profile_repository(
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    )
-
-
 def proposal_lines(seeded: SeededProposals) -> list[str]:
     """The report's section: the group, and each pick with who is In."""
 
+    done = seeded.proposed
     lines = [
-        f"Games still filling — {GAMES_GROUP} at {GAMES_CLUB.name}, "
+        f"Games still filling — the proposer over {done.pools} pool(s): "
+        f"{done.made} picked, {done.dealt} dealt on, {done.lost} lost, "
+        f"{done.refused} refused",
+        f"  {GAMES_GROUP} at {GAMES_CLUB.name}, "
         f"{'created' if seeded.created_group else 'already there'}, "
-        f"{seeded.crowd} of the cohort fit {THE_POPULATED_PLAYER.email}:"
+        f"{seeded.crowd} of the cohort fit {THE_POPULATED_PLAYER.email}; "
+        f"her answered picks:",
     ]
     for pick in seeded.picks:
         state = "made" if pick.made else "already filling"

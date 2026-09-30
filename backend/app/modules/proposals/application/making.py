@@ -77,7 +77,7 @@ class MakeProposal:
         if offered is None:
             raise CourtHourNotForSale()
         proposal = Proposal.make(
-            proposal_id=new_uuid(),
+            proposal_id=command.proposal_id or new_uuid(),
             pool=pool,
             origin=command.origin,
             poster_id=poster,

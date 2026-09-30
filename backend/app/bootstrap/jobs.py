@@ -28,12 +28,15 @@ port that would fix it is not built yet.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from typing import Any
+from uuid import UUID
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
+    build_propose_games,
     build_candidate_index_tail,
     build_challenge_repository,
     build_clock,
@@ -95,6 +98,11 @@ from app.modules.player_profile.application.review_unreviewed_photos import (
 )
 from app.modules.player_profile.application.sweep_uncommitted_photos import (
     SweepUncommittedPhotos,
+)
+from app.modules.proposals.application.propose_games import (
+    DueForProposing,
+    ProposeGames,
+    Proposed,
 )
 
 logger = logging.getLogger(__name__)
@@ -178,6 +186,16 @@ CONVERSATION_SWEEP_JOB = "conversation-sweep"
 #: nothing a player reads waits on it.
 PROPOSAL_EXPIRY_JOB = "proposal-expiry"
 
+#: The proposer (#540) — **the engine that builds games**, and the second job
+#: on this list correctness depends on: nothing else deals a pick, re-deals a
+#: seat a no left or widens a pick at half In. It writes through the dealer's
+#: own acts, one transaction each, and a pick's id is its game, so N processes
+#: running it at once make each game once and count the rest as refused.
+PROPOSER_JOB = "proposer"
+#: Its short tick: the pools a change this process delivered made due. **Best
+#: effort** — a restart forgets what was due, and the sweep above sees it.
+PROPOSER_ON_CHANGES_JOB = "proposer-on-changes"
+
 #: The mail worker (``docs/adr/0186`` §2). A queue drain written as a job, like
 #: the outbox: it sends what a use case left in the mail queue and purges the
 #: body — **the purge is the control** on a live secret sitting in the database,
@@ -192,6 +210,7 @@ def build_scheduled_jobs(
     candidate_source: DatabaseCandidateSource | None = None,
     redis_client: Redis | None = None,
     meter: ScoringMeter | None = None,
+    proposer_due: DueForProposing | None = None,
 ) -> list[PeriodicJob]:
     """Every job this process should run, in the order they were registered.
 
@@ -232,6 +251,7 @@ def build_scheduled_jobs(
         or settings.CONVERSATION_SWEEP_ENABLED
         or settings.MAIL_DELIVERY_ENABLED
         or settings.PROPOSAL_EXPIRY_ENABLED
+        or settings.PROPOSER_ENABLED
     ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
@@ -304,6 +324,20 @@ def build_scheduled_jobs(
                     session_factory=session_factory, settings=settings
                 )
             )
+        if settings.PROPOSER_ENABLED:
+            jobs.append(
+                build_proposer_job(session_factory=session_factory, settings=settings)
+            )
+            # The short tick only where a delivery tells it something: with no
+            # outbox drain in this process, nothing would ever be due.
+            if proposer_due is not None:
+                jobs.append(
+                    build_proposer_on_changes_job(
+                        session_factory=session_factory,
+                        settings=settings,
+                        due=proposer_due,
+                    )
+                )
     if settings.PHOTO_REVIEW_BACKFILL_ENABLED:
         # Outside the block above, because this is the second job here that
         # reads no database at all: its whole input is the object store and its
@@ -520,6 +554,101 @@ def build_proposal_expiry_job(
         interval_seconds=settings.PROPOSAL_EXPIRY_INTERVAL_SECONDS,
         run=run,
     )
+
+
+def build_proposer_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Walk every pool and deal what its free court hours and free, fitting
+    members make — the sweep that guarantees a change is dealt from.
+
+    **Idempotent and safe beside itself with no lock**: a batch deals nothing a
+    game already holds, a pick's id is its game so a second process making it
+    collides on the stream, and a deal the world moved past is refused by the
+    dealer's own act and counted. **One pool failing is logged and passed
+    over**, so a pool nobody can deal to never stops the others being dealt.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            proposer = build_propose_games(session, clock=clock)
+            done = await _propose_over(
+                session, proposer, await proposer.every_pool(), job=PROPOSER_JOB
+            )
+        _log_proposed(PROPOSER_JOB, done)
+
+    return PeriodicJob(
+        name=PROPOSER_JOB,
+        interval_seconds=settings.PROPOSER_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_proposer_on_changes_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+    due: DueForProposing,
+) -> PeriodicJob:
+    """Deal in the pools a change delivered in this process made due, seconds
+    after it — the same batch as the sweep's, over fewer pools. A tick with
+    nothing due opens no session."""
+
+    clock = build_clock()
+
+    async def run() -> None:
+        changed = due.take()
+        if not changed.anything:
+            return
+        async with session_factory() as session:
+            proposer = build_propose_games(session, clock=clock)
+            done = await _propose_over(
+                session,
+                proposer,
+                await proposer.pools_due(changed),
+                job=PROPOSER_ON_CHANGES_JOB,
+            )
+        _log_proposed(PROPOSER_ON_CHANGES_JOB, done)
+
+    return PeriodicJob(
+        name=PROPOSER_ON_CHANGES_JOB,
+        interval_seconds=settings.PROPOSER_ON_CHANGES_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+async def _propose_over(
+    session: AsyncSession, proposer: ProposeGames, pools: Sequence[UUID], *, job: str
+) -> Proposed:
+    done = Proposed()
+    for pool_id in pools:
+        try:
+            done += await proposer.execute(pool_id)
+        except Exception:
+            await session.rollback()
+            logger.exception(
+                "proposer failed on a pool", extra={"job": job, "pool_id": str(pool_id)}
+            )
+    return done
+
+
+def _log_proposed(job: str, done: Proposed) -> None:
+    if done.anything:
+        logger.info(
+            "proposer finished",
+            extra={
+                "job": job,
+                "pools": done.pools,
+                "made": done.made,
+                "dealt": done.dealt,
+                "lost": done.lost,
+                "refused": done.refused,
+            },
+        )
 
 
 def build_interest_expiry_job(

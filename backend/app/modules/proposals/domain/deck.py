@@ -62,8 +62,8 @@ from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
 #: How far ahead the engine deals, and so how far ahead a deck can hold a card
 #: (the mechanics §4.3).
 DECK_HORIZON: Final = timedelta(days=14)
-#: Every game is one hour (the mechanics §2).
-_A_GAME: Final = timedelta(hours=1)
+#: Every game is one hour, for every sport (the mechanics §2).
+GAME_LENGTH: Final = timedelta(hours=1)
 _A_WEEK: Final = timedelta(days=7)
 
 
@@ -428,7 +428,7 @@ def capped_weeks(
 def hour_taken(start: Instant, booked: Iterable[Instant]) -> bool:
     """Whether the hour from ``start`` overlaps a game the player already has."""
 
-    return any(abs(start - game) < _A_GAME for game in booked)
+    return any(abs(start - game) < GAME_LENGTH for game in booked)
 
 
 def cut_off_passed(start: Instant, *, cut_off_hours: int, now: Instant) -> bool:

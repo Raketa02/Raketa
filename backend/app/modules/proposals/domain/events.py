@@ -129,6 +129,23 @@ class ProposalExpired:
 
 
 @dataclass(frozen=True)
+class CourtHourLost:
+    """The last court at the card's club and hour went — booked by another card,
+    withdrawn by the club, or the club stopped selling — so the game can no
+    longer be played where and when it promised (the mechanics §5.2, §19).
+    Nobody paid, and the yeses lapse with it; **the people who were In are dealt
+    a new card first** (#540). Recorded by the proposer, which is who reads the
+    club's hours.
+
+    Only the **last** court: while any court of the sport is free at that club
+    and hour, the card still has one — its number is given at booking — and
+    nobody's yes changes."""
+
+    proposal_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class GamesAndMoneySet:
     """A player changed their **Games & money** (the mechanics §6.6, §17.1): how
     many games a week they will play, and the most one may cost them. The only

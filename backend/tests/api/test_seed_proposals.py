@@ -1,18 +1,21 @@
-"""The seeded games still filling, read back the way a player reads them (#538).
+"""The seeded games still filling, read back the way a player reads them
+(#538, #540).
 
-``app/seeds/proposals.py`` makes four picks for the protagonist **through the use
-cases the engine and the swipe run**, so each is asserted by signing in as the
-people on it: those it says are In find it among their live yeses, and the
-protagonist's own yes on the pick three are In on leaves it with no seat open —
-*Book it now*.
+``app/seeds/proposals.py`` **runs the proposer for its pools** and answers four
+of the protagonist's picks through the use case the swipe runs, so each is
+asserted by signing in as the people on it: those it says are In find it among
+their live yeses, and the protagonist's own yes on the pick three are In on
+leaves it with no seat open — *Book it now*.
 
 The layers under it are run as the runner runs them — the named accounts, the
 clubs and their courts, the cards — with a small crowd standing in for the
-cohort: players at the protagonist's own padel Level, free on her evenings.
+cohort: players at the protagonist's own padel Level, free on her evenings, who
+want competitive padel as she does.
 """
 
 from __future__ import annotations
 
+import re
 from uuid import UUID
 
 import pytest
@@ -73,6 +76,9 @@ async def a_crowd(client, session_factory, payments, size: int, *, mu: float):
         player_id, token = await world.register(client, name)
         await world.commit_profile(client, token, weekly_hours=HER_WEEK)
         await world.rate_in(session_factory, player_id, Sport.PADEL, mu=mu)
+        await world.declare_intent(
+            client, token, intent="COMPETITIVE", sport=Sport.PADEL
+        )
         headers[player_id] = world.auth(token)
         await saves_a_card(client, payments, headers[player_id])
         crowd.append((name, player_id))
@@ -115,8 +121,10 @@ async def test_the_protagonist_is_dealt_picks_with_nought_to_three_in(
                 client, {"headers": headers[player]}
             )
             assert said is (index < pick.in_count)
-    # Four picks, twelve different faces: the crowd is big enough.
-    assert len({player for pick in seeded.picks for player in pick.named}) == 12
+    # The proposer deals the same people once in a batch: four picks, four
+    # different fours.
+    assert len({frozenset(pick.named) for pick in seeded.picks}) == len(IN_ON_EACH)
+    assert seeded.proposed.made >= len(IN_ON_EACH)
     three_in = seeded.picks[-1]
     completed = await says_yes(client, her, three_in.proposal_id)
     assert completed.status_code == 200, completed.text
@@ -149,7 +157,10 @@ async def test_her_group_deck_deals_every_pick_and_an_empty_one_fails_the_run(
         session_factory, settings=get_settings(), now=now
     )
 
-    assert "Padel po pracy · padel competitive: 4 card(s), 3 with somebody In" in line
+    # Every pick the proposer dealt her, three of them with somebody In.
+    assert re.search(
+        r"Padel po pracy · padel competitive: \d+ card\(s\), 3 with ", line
+    )
     assert line.endswith("the first 0 seat(s) from filling")
 
     # Her padel intent moves to *for fun*: the competitive segment is not hers.
@@ -199,7 +210,7 @@ async def test_a_crowd_that_does_not_fit_her_fails_the_run_by_name(
 ):
     crowd, _ = await a_crowd(client, session_factory, payments, 3, mu=6.5)
 
-    with pytest.raises(NotEnoughToDeal, match="0 of the cohort fit her"):
+    with pytest.raises(NotEnoughToDeal, match="0 of the cohort want competitive"):
         await write_the_proposals(
             session_factory, settings=get_settings(), now=now, cohort=crowd
         )

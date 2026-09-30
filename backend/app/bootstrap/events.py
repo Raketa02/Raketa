@@ -70,10 +70,12 @@ from app.modules.plans.application.event_subscriptions import (
     register_plan_events,
     subscribe_plan_handlers,
 )
+from app.modules.proposals.application.propose_games import DueForProposing
 from app.modules.proposals.application.event_subscriptions import (
     register_proposal_events,
     subscribe_proposal_handlers,
     subscribe_the_pool_leaver,
+    subscribe_the_proposer_on_changes,
 )
 from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
@@ -122,6 +124,7 @@ class EventRuntime:
         batch_size: int,
         nudges: NudgePublisher,
         payments: PaymentProvider,
+        proposer_due: DueForProposing | None = None,
     ) -> EventBatch:
         """One batch of the outbox, over this session.
 
@@ -139,6 +142,11 @@ class EventRuntime:
         API's delivery holds the provider its requests hold, a seed run's holds
         the fake it saved its cards through, and a default here would be a
         release sent somewhere nobody chose.
+
+        **``proposer_due`` is the one that may be absent**: it is where this
+        process's proposer is told what changed (#540), and a seed run or a
+        command-line drain has no proposer listening. Absent is a real answer —
+        the proposer's sweep sees every change anyway — so it defaults to it.
         """
 
         # See ``_dispatcher_over`` for why the composition root is reached at
@@ -150,7 +158,7 @@ class EventRuntime:
             outbox=SqlAlchemyOutboxRepository(session),
             codec=self.codec,
             dispatcher=self._dispatcher_over(
-                session, nudges=nudges, payments=payments
+                session, nudges=nudges, payments=payments, proposer_due=proposer_due
             ),
             uow=build_unit_of_work(session),
             clock=clock,
@@ -163,6 +171,7 @@ class EventRuntime:
         *,
         nudges: NudgePublisher,
         payments: PaymentProvider,
+        proposer_due: DueForProposing | None = None,
     ) -> EventDispatcher:
         """The process's subscriptions, plus the ones that need this batch's session.
 
@@ -198,6 +207,9 @@ class EventRuntime:
         subscribe_the_pool_leaver(
             dispatcher, build_withdraw_a_leavers_yeses(session, runtime=self)
         )
+        # And what changed, for this process's proposer, when one is listening.
+        if proposer_due is not None:
+            subscribe_the_proposer_on_changes(dispatcher, proposer_due)
         return dispatcher
 
 
@@ -271,12 +283,14 @@ def build_event_delivery_worker(
     nudges: NudgePublisher,
     payments: PaymentProvider,
     clock: Clock | None = None,
+    proposer_due: DueForProposing | None = None,
 ) -> EventWorker:
     """The embedded outbox drain. **This is the delivery that is live.**
 
     It runs inside the API process, beside the streams, so the system lines it
     writes reach open conversations without anybody refreshing — which is what
-    ``nudges`` is, and why it has no default here either.
+    ``nudges`` is, and why it has no default here either. ``proposer_due`` is
+    this process's proposer, told what the delivery changed.
     """
 
     processing_clock = clock or SystemClock()
@@ -288,6 +302,7 @@ def build_event_delivery_worker(
             batch_size=settings.EVENT_DELIVERY_BATCH_SIZE,
             nudges=nudges,
             payments=payments,
+            proposer_due=proposer_due,
         ),
         poll_interval_seconds=settings.EVENT_DELIVERY_POLL_INTERVAL_SECONDS,
     )

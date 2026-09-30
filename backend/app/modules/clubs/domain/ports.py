@@ -131,6 +131,20 @@ class ClubDirectory(Protocol):
         """Each of these clubs. A club that does not exist is absent."""
         ...
 
+    async def inside(
+        self,
+        *,
+        south: float,
+        north: float,
+        west: float,
+        east: float,
+    ) -> Sequence[ClubListing]:
+        """Every club whose point lies in this box of latitudes and longitudes,
+        edges included — **a rectangle, never a radius**: the caller measures
+        the ring inside it. ``west`` past ``east`` never wraps. In no particular
+        order."""
+        ...
+
     async def matching(self, text: str) -> Sequence[ClubListing]:
         """Every club whose name or district contains ``text`` anywhere, **both
         folded by** ``clubs/domain/folding.py`` — the one function the stored

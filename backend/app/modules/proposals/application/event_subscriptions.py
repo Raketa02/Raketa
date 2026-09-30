@@ -5,10 +5,19 @@ from app.modules.groups.domain.events import GroupDeleted, GroupLeft
 from app.modules.proposals.application.handlers import (
     LogGamesAndMoneySet,
     LogProposalEvent,
+    MarkDueForProposing,
     WithdrawYesesOnLeaving,
 )
+from app.modules.proposals.application.handlers.mark_due_for_proposing import (
+    CLUB_EVENTS,
+    PLAYER_EVENTS,
+    POOL_EVENTS,
+    SWIPE_EVENTS,
+)
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
+from app.modules.proposals.application.propose_games import DueForProposing
 from app.modules.proposals.domain.events import (
+    CourtHourLost,
     GamesAndMoneySet,
     NoSaid,
     ProposalExpired,
@@ -27,6 +36,7 @@ _EVENTS = (
     (YesWithdrawn, "proposals.yes_withdrawn"),
     (ProposalWithdrawn, "proposals.proposal_withdrawn"),
     (ProposalExpired, "proposals.proposal_expired"),
+    (CourtHourLost, "proposals.court_hour_lost"),
     (GamesAndMoneySet, "proposals.games_and_money_set"),
 )
 
@@ -44,6 +54,7 @@ def subscribe_proposal_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(YesWithdrawn, LogProposalEvent())
     dispatcher.subscribe(ProposalWithdrawn, LogProposalEvent())
     dispatcher.subscribe(ProposalExpired, LogProposalEvent())
+    dispatcher.subscribe(CourtHourLost, LogProposalEvent())
     dispatcher.subscribe(GamesAndMoneySet, LogGamesAndMoneySet())
 
 
@@ -57,3 +68,16 @@ def subscribe_the_pool_leaver(
     leaver = WithdrawYesesOnLeaving(withdraw)
     dispatcher.subscribe(GroupLeft, leaver)
     dispatcher.subscribe(GroupDeleted, leaver)
+
+
+def subscribe_the_proposer_on_changes(
+    dispatcher: EventDispatcher, due: DueForProposing
+) -> None:
+    """The subscriber that notes what changed for the proposer's short tick —
+    added per delivery run, beside the room teller, because *which* process's
+    proposer is told is a fact about the delivery: the API's is, and a seed's
+    or a command-line drain's has no proposer listening."""
+
+    marker = MarkDueForProposing(due)
+    for event_class in (*POOL_EVENTS, *PLAYER_EVENTS, *SWIPE_EVENTS, *CLUB_EVENTS):
+        dispatcher.subscribe(event_class, marker)

@@ -8,6 +8,13 @@ absent from the offer, and a **paused** one is answered with
 ``taking_new_cards=False`` — no new card is built on its courts (the mechanics
 §16.15), which is the answer here.
 
+**Every hour a club sells, counted in courts**, is read off the same offer for
+the proposer: one per sport and hour, with how many courts are free then — a
+paused club's too, since its cards keep their court while it deals no new one.
+And **every hour it still holds a court for**, read off the offer as it stood
+before any deadline in the window: a card keeps the book-by it was made with,
+so a club that lengthens its notice has not taken a card's court away.
+
 **A club's terms are read off the same offer**, so *which clubs sell* has one
 answer for a card and for the hour it was made at: a live club is answered,
 paused or not, with the cut-off its settings hold now and its way of working — a
@@ -18,19 +25,26 @@ hours, since a card's hour was read when the card was made.
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 from datetime import timedelta
 from typing import final
 from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.clubs.domain.ports import ClubDirectory, SellableCourtHours
-from app.modules.clubs.domain.raketa_terms import WayOfWorking
+from app.modules.clubs.domain.raketa_terms import RELEASE_LEAD_DAYS, WayOfWorking
+from app.modules.clubs.domain.sellable import SellableCourtHour
 from app.modules.proposals.domain.deck import SellingTerms
 from app.modules.proposals.domain.ports import OfferedCourtHour
+from app.modules.proposals.domain.proposer import CourtHourOnSale
 
 #: Every game is one hour, for every sport (the mechanics §2).
 _A_GAME = timedelta(hours=1)
+
+#: Longer than any book-by can be ahead of its hour — the longest release lead,
+#: and a day — so an offer read this far before a window holds every hour in
+#: it whatever its deadline.
+_BEFORE_ANY_DEADLINE = timedelta(days=RELEASE_LEAD_DAYS[1] + 1)
 
 
 @final
@@ -65,6 +79,58 @@ class ClubCourtHours:
             share_grosze=hour.share_grosze,
             book_by=hour.book_by,
         )
+
+    async def on_sale(
+        self,
+        club_ids: Collection[UUID],
+        *,
+        start: Instant,
+        end: Instant,
+        now: Instant,
+    ) -> Sequence[CourtHourOnSale]:
+        offers = await self._sellable.between(
+            list(dict.fromkeys(club_ids)), start=start, end=end, now=now
+        )
+        on_sale: list[CourtHourOnSale] = []
+        for club_id, offer in offers.items():
+            # One court per sellable hour: counted per sport and start, since a
+            # card promises a court at a club at an hour and never a number.
+            courts: dict[tuple[Sport, Instant], list[SellableCourtHour]] = {}
+            for hour in offer.hours:
+                courts.setdefault((hour.sport, hour.start), []).append(hour)
+            for (sport, at), free in courts.items():
+                on_sale.append(
+                    CourtHourOnSale(
+                        club_id=club_id,
+                        sport=sport,
+                        start=at,
+                        courts=len(free),
+                        # Every court of a sport at an hour is priced alike,
+                        # and its book-by is the club's.
+                        share_grosze=free[0].share_grosze,
+                        book_by=free[0].book_by,
+                        taking_new_cards=offer.taking_new_cards,
+                    )
+                )
+        return on_sale
+
+    async def held(
+        self, club_ids: Collection[UUID], *, start: Instant, end: Instant
+    ) -> Collection[tuple[UUID, Sport, Instant]]:
+        # The offer as it stood before any hour in the window could have closed:
+        # what the club still has, bookings, exceptions and hours taken off it,
+        # and no deadline — a card's own book-by is the card's.
+        offers = await self._sellable.between(
+            list(dict.fromkeys(club_ids)),
+            start=start,
+            end=end,
+            now=start - _BEFORE_ANY_DEADLINE,
+        )
+        return {
+            (club_id, hour.sport, hour.start)
+            for club_id, offer in offers.items()
+            for hour in offer.hours
+        }
 
 
 @final

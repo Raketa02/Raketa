@@ -117,6 +117,7 @@ from app.modules.proposals.application.group_deck import ReadGroupDeck
 from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.making import DealVersion, MakeProposal
+from app.modules.proposals.application.propose_games import ProposeGames
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
     BookedGames,
@@ -126,6 +127,8 @@ from app.modules.proposals.domain.ports import (
     DeckPeople,
     GamesAndMoneyRepository,
     PlayerFit,
+    PlayersInPlay,
+    WherePoolsPlay,
     Pools,
     ProposalDirectory,
     ProposalRepository,
@@ -154,6 +157,10 @@ from app.modules.proposals.infrastructure.event_sourced_proposal_repository impo
     EventSourcedProposalRepository,
 )
 from app.modules.proposals.infrastructure.group_pools import GroupPools
+from app.modules.proposals.infrastructure.group_clubs import GroupClubs
+from app.modules.proposals.infrastructure.profile_players_in_play import (
+    ProfilePlayersInPlay,
+)
 from app.modules.proposals.infrastructure.matcher_player_fit import MatcherPlayerFit
 from app.modules.proposals.infrastructure.payments import (
     LiveYesCommitments,
@@ -1184,6 +1191,71 @@ def build_read_group_deck(
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
         clock=clock,
+    )
+
+
+def build_where_pools_play(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> WherePoolsPlay:
+    """Where a pool may play: a group's home club, and the clubs within ten
+    kilometres of it — measured between the clubs' own points — or, for an
+    official group, what its club's settings allow."""
+    return GroupClubs(
+        groups=build_group_directory(session),
+        clubs=build_club_directory(session),
+        sellable=build_sellable_court_hours(session, runtime=runtime),
+    )
+
+
+def build_players_in_play(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> PlayersInPlay:
+    """Each member's Level off rating's estimates and week off their profile —
+    what the proposer deals from."""
+    return ProfilePlayersInPlay(
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        ratings=build_rated_player_query(session, runtime=runtime),
+    )
+
+
+def build_propose_games(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ProposeGames:
+    """The proposer over this session and clock — the job's, a seed's and a
+    test's (#540). It deals through the dealer's own acts, built here beside
+    it, and weighs a game's evenness by the live ruleset's balance rules.
+    ``booked`` is the one port a caller may hand in, as the deck's is, while
+    nothing can be booked yet."""
+    return ProposeGames(
+        pools=build_pools(session),
+        where=build_where_pools_play(session, runtime=runtime),
+        court_hours=build_court_hours(session, runtime=runtime),
+        players=build_players_in_play(session, runtime=runtime),
+        wanted=build_wanted_kinds(session, runtime=runtime),
+        settings=build_games_and_money_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        booked=booked if booked is not None else build_booked_games(),
+        directory=build_proposal_directory(session),
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        fit=build_player_fit(session, runtime=runtime),
+        make=build_make_proposal(session, clock=clock, runtime=runtime),
+        deal=build_deal_version(session, clock=clock, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+        balance=build_ruleset().balance,
     )
 
 

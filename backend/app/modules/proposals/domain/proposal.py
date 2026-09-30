@@ -28,7 +28,9 @@ withdrawing, never by a no.
 is *expired* from its book-by on whether or not anything has recorded it, so
 every act asks ``standing_at`` with the caller's instant; ``expire`` writes the
 record for whoever sweeps. A post whose poster withdrew with nobody else In is
-*withdrawn*. *Filled* arrives with the fill (#541).
+*withdrawn*. A card whose last court at its club and hour went has *lost its
+court hour* — read off the club, not the clock, so it is recorded by the
+proposer that reads the club (#540). *Filled* arrives with the fill (#541).
 """
 
 from __future__ import annotations
@@ -47,6 +49,7 @@ from app.modules.proposals.domain.errors import (
     ProposalNotFound,
 )
 from app.modules.proposals.domain.events import (
+    CourtHourLost,
     NoSaid,
     ProposalExpired,
     ProposalMade,
@@ -78,6 +81,7 @@ class Ending(StrEnum):
 
     EXPIRED = "EXPIRED"
     WITHDRAWN = "WITHDRAWN"
+    COURT_HOUR_LOST = "COURT_HOUR_LOST"
 
 
 class Standing(StrEnum):
@@ -86,15 +90,19 @@ class Standing(StrEnum):
     FILLING = "FILLING"
     EXPIRED = "EXPIRED"
     WITHDRAWN = "WITHDRAWN"
+    COURT_HOUR_LOST = "COURT_HOUR_LOST"
 
 
 @dataclass(frozen=True, slots=True)
 class DealtVersion:
     """One view of the game: the people named on it for the seats that were
-    open when it was dealt."""
+    open when it was dealt, then the next best fits dealt into it for the seats
+    its noes left — ``players[:first_named]`` and the rest."""
 
     number: int
     players: tuple[UUID, ...]
+    #: How many it named when it was dealt — the seats it was dealt for.
+    first_named: int
 
 
 @dataclass
@@ -381,6 +389,20 @@ class Proposal:
         )
         return True
 
+    def lose_court_hour(self, *, at: Instant) -> bool:
+        """Record that the last court at the card's club and hour went. Answers
+        whether anything was recorded: nothing on a proposal no longer filling
+        at ``at`` — one past its book-by has expired, whether or not the sweep
+        noticed. **The people In stay on the record**: they are who the
+        proposer deals a new card first (the mechanics §5.2)."""
+
+        if self.standing_at(at) is not Standing.FILLING:
+            return False
+        self._record_that(
+            CourtHourLost(proposal_id=self.proposal_id, occurred_at=at)
+        )
+        return True
+
     # ------------------------------------------------------------------- fold
 
     def _refuse_a_stranger(self, player_id: UUID) -> None:
@@ -404,6 +426,7 @@ class Proposal:
                     DealtVersion(
                         number=version.number,
                         players=(*version.players, *event.player_ids),
+                        first_named=version.first_named,
                     )
                     if version is dealt_into
                     else version
@@ -412,7 +435,11 @@ class Proposal:
             else:
                 self.versions = (
                     *self.versions,
-                    DealtVersion(number=event.number, players=tuple(event.player_ids)),
+                    DealtVersion(
+                        number=event.number,
+                        players=tuple(event.player_ids),
+                        first_named=len(event.player_ids),
+                    ),
                 )
         elif isinstance(event, YesSaid):
             self.yeses = (*self.yeses, event.player_id)
@@ -433,6 +460,8 @@ class Proposal:
             self.ending = Ending.WITHDRAWN
         elif isinstance(event, ProposalExpired):
             self.ending = Ending.EXPIRED
+        elif isinstance(event, CourtHourLost):
+            self.ending = Ending.COURT_HOUR_LOST
         else:
             raise TypeError(f"Unsupported proposal event {event!r}")
         self.version += 1

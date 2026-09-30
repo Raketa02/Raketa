@@ -34,6 +34,24 @@ class SqlAlchemyClubDirectory:
         ).all()
         return {row.id: _listing(row) for row in rows}
 
+    async def inside(
+        self,
+        *,
+        south: float,
+        north: float,
+        west: float,
+        east: float,
+    ) -> Sequence[ClubListing]:
+        rows = (
+            await self._session.scalars(
+                select(ClubORM).where(
+                    ClubORM.latitude.between(south, north),
+                    ClubORM.longitude.between(west, east),
+                )
+            )
+        ).all()
+        return [_listing(row) for row in rows]
+
     async def matching(self, text: str) -> Sequence[ClubListing]:
         folded = fold(text)
         rows = (

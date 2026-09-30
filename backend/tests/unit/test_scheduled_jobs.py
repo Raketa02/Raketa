@@ -36,6 +36,8 @@ from app.bootstrap.jobs import (
     PHOTO_REVIEW_BACKFILL_JOB,
     PHOTO_SWEEP_JOB,
     PROPOSAL_EXPIRY_JOB,
+    PROPOSER_JOB,
+    PROPOSER_ON_CHANGES_JOB,
     SCALE_PRESSURE_JOB,
     build_scheduled_jobs,
 )
@@ -182,6 +184,7 @@ def _nothing_but(**overrides):
             "CONVERSATION_SWEEP_ENABLED": False,
             "MAIL_DELIVERY_ENABLED": False,
             "PROPOSAL_EXPIRY_ENABLED": False,
+            "PROPOSER_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }
@@ -1068,3 +1071,68 @@ async def test_the_book_by_sweep_runs_end_to_end_through_the_real_wiring(
     assert not any(
         record.message == "proposal expiry finished" for record in caplog.records
     )
+
+
+def test_the_proposer_is_registered_with_its_short_tick_and_their_cadences():
+    """How often the proposer looks is a setting; what it deals is domain
+    (``proposals/domain/proposer.py``). The short tick needs what the process's
+    delivery tells it, so it is registered only where there is one."""
+
+    from app.modules.proposals.application.propose_games import DueForProposing
+
+    settings = _nothing_but(
+        PROPOSER_ENABLED=True,
+        PROPOSER_INTERVAL_SECONDS=120.0,
+        PROPOSER_ON_CHANGES_INTERVAL_SECONDS=3.0,
+    )
+
+    told = build_scheduled_jobs(
+        session_factory=UNUSED_SESSIONS,
+        settings=settings,
+        proposer_due=DueForProposing(),
+    )
+    untold = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [(job.name, job.interval_seconds) for job in told] == [
+        (PROPOSER_JOB, 120.0),
+        (PROPOSER_ON_CHANGES_JOB, 3.0),
+    ]
+    assert [job.name for job in untold] == [PROPOSER_JOB]
+
+
+def test_the_proposer_without_a_session_factory_refuses_to_be_registered():
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(
+            session_factory=None, settings=_nothing_but(PROPOSER_ENABLED=True)
+        )
+
+
+async def test_the_proposer_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """A sweep over no pools deals nothing and says nothing; a tick with
+    nothing due does not open a session at all."""
+
+    from app.modules.proposals.application.propose_games import DueForProposing
+
+    sweep, tick = build_scheduled_jobs(
+        session_factory=session_factory,
+        settings=_nothing_but(PROPOSER_ENABLED=True),
+        proposer_due=DueForProposing(),
+    )
+    (idle,) = [
+        job
+        for job in build_scheduled_jobs(
+            session_factory=UNUSED_SESSIONS,
+            settings=_nothing_but(PROPOSER_ENABLED=True),
+            proposer_due=DueForProposing(),
+        )
+        if job.name == PROPOSER_ON_CHANGES_JOB
+    ]
+
+    with caplog.at_level(logging.INFO):
+        await sweep.run_once()
+        await tick.run_once()
+        await idle.run_once()
+
+    assert not any(record.message == "proposer finished" for record in caplog.records)

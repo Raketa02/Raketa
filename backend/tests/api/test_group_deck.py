@@ -56,9 +56,9 @@ from tests.api.proposals_world import (
     SATURDAY_FIVE,
     a_club_selling,
     a_group,
+    a_member,
     every_hour_of_the_week,
     makes,
-    saves_a_card,
     says_no,
     says_yes,
     warsaw,
@@ -68,11 +68,6 @@ from tests.unit.candidate_index_fixtures import append
 from tests.unit.fake_clock import MovableClock
 
 GAMES_AND_MONEY = "/api/v1/players/me/games-and-money"
-EVERY_HOUR = [
-    {"day": day, "hour": hour} for day in range(1, 8) for hour in range(7, 23)
-]
-
-
 @pytest.fixture
 def clock(app):
     """Monday 5 October 2026, 08:00 in Kraków."""
@@ -85,32 +80,6 @@ def clock(app):
 @pytest.fixture
 async def club(client) -> str:
     return await a_club_selling(client)
-
-
-async def a_member(
-    client,
-    session_factory,
-    payments,
-    name: str,
-    *,
-    mu: float = 2.5,
-    sports: tuple[Sport, ...] = (Sport.PADEL,),
-    intent: str | None = "COMPETITIVE",
-    week: list[dict] = EVERY_HOUR,
-    gender: str = "WOMAN",
-) -> dict:
-    """A member rated at ``mu`` in ``sports``, free every hour of the week
-    unless told otherwise, with a declared intent and a saved card."""
-
-    player_id, token = await world.register(client, name)
-    await world.commit_profile(client, token, weekly_hours=week, gender=gender)
-    for sport in sports:
-        await world.rate_in(session_factory, player_id, sport, mu=mu)
-        if intent is not None:
-            await world.declare_intent(client, token, intent=intent, sport=sport)
-    headers = world.auth(token)
-    await saves_a_card(client, payments, headers)
-    return {"id": player_id, "token": token, "headers": headers, "name": name}
 
 
 @pytest.fixture

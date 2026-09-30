@@ -37,6 +37,7 @@ from app.modules.proposals.domain.errors import (
     ProposalNotFound,
 )
 from app.modules.proposals.domain.events import (
+    CourtHourLost,
     NoSaid,
     ProposalExpired,
     ProposalMade,
@@ -445,6 +446,43 @@ def test_a_withdrawn_post_does_not_expire_as_well():
 
 
 # --------------------------------------------------------------------------- #
+# The court hour
+# --------------------------------------------------------------------------- #
+
+
+def test_a_card_whose_court_hour_went_is_over_and_takes_no_more_answers():
+    proposal = dealt(a_pick(), (B, C, D, E))
+    proposal.say_yes(B, at=LATER)
+    proposal.pull_events()
+
+    assert proposal.lose_court_hour(at=LATER) is True
+
+    assert proposal.pull_events() == [
+        CourtHourLost(proposal_id=proposal.proposal_id, occurred_at=LATER)
+    ]
+    assert proposal.standing_at(LATER) is Standing.COURT_HOUR_LOST
+    # Still the record of who was In: they are dealt a new card first.
+    assert proposal.yeses == (B,)
+    for answer in (proposal.say_yes, proposal.say_no, proposal.withdraw_yes):
+        with pytest.raises(ProposalIsOver) as over:
+            answer(C, at=LATER)
+        assert over.value.details == {"standing": "COURT_HOUR_LOST"}
+
+
+def test_a_court_hour_is_lost_once_and_never_by_a_card_already_over():
+    lost = dealt(a_pick(), (B, C, D, E))
+    lost.lose_court_hour(at=LATER)
+    lost.pull_events()
+    expired = dealt(a_pick(), (B, C, D, E))
+    expired.pull_events()
+
+    assert lost.lose_court_hour(at=LATER) is False
+    assert lost.expire(now=BOOK_BY) is False
+    assert expired.lose_court_hour(at=BOOK_BY) is False
+    assert lost.pull_events() == expired.pull_events() == []
+
+
+# --------------------------------------------------------------------------- #
 # The stream
 # --------------------------------------------------------------------------- #
 
@@ -459,6 +497,11 @@ def test_the_stream_folds_back_into_the_proposal_it_recorded():
     history = proposal.pull_events()
 
     folded = Proposal.from_history(history)
+    lost = Proposal.from_history(
+        [*history, CourtHourLost(proposal_id=proposal.proposal_id, occurred_at=LATER)]
+    )
+
+    assert lost.standing_at(LATER) is Standing.COURT_HOUR_LOST
 
     assert folded.yeses == proposal.yeses == (MAREK,)
     assert folded.versions == proposal.versions

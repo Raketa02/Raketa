@@ -15,7 +15,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Fourteen jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Sixteen jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -103,3 +103,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   because every read compares the book-by with its clock, so what it appends —
   `ProposalExpired`, silently — is what a poster will be told from. The book-by is the club's
   (`clubs/domain/raketa_terms.py`); only the cadence is a setting.
+  The fifteenth and sixteenth are **the proposer** (`proposer`, #540) and **its short tick**
+  (`proposer-on-changes`), and **correctness depends on them**: nothing else deals a pick,
+  hands a seat a no left to the next best fits or widens a pick at half In. The sweep walks
+  every pool; the tick walks the pools a change this process delivered made due, and is
+  registered only where an outbox drain runs beside it (the lifespan builds one
+  `DueForProposing` per process for both). Safe beside itself with no lock: it writes
+  through the dealer's own acts, one transaction each, a pick's id is its game so a second
+  process collides on the stream, and whatever the world moved past is refused and counted.
+  One pool failing is logged and passed over. What is dealt is domain
+  (`proposals/domain/proposer.py`); only the two cadences are settings.

@@ -64,7 +64,8 @@ _NOT_FOUND: dict[int | str, dict[str, Any]] = {
 _OVER = (
     "`proposal_is_over` — the game is no longer filling, named by "
     "`details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its "
-    "poster took the post back with nobody else In). The card leaves."
+    "poster took the post back with nobody else In, `COURT_HOUR_LOST` once the "
+    "last court at its club and hour went). The card leaves."
 )
 
 

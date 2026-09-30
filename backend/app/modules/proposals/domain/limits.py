@@ -19,3 +19,8 @@ NEXT_BEST_FITS_PER_SEAT: Final = 3
 #: How many yeses a player may have on games that have not filled, **per sport**.
 #: A post counts as one: posting is the poster's yes.
 LIVE_YESES_PER_SPORT: Final = 10
+
+#: How far from a player group's home club the other clubs whose courts it may
+#: use lie, in kilometres (the mechanics §4.3, §18). An official group's is its
+#: club's own setting.
+PLAYER_GROUP_CLUBS_WITHIN_KM: Final = 10

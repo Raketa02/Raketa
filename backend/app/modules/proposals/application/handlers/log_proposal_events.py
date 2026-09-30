@@ -12,6 +12,7 @@ import logging
 
 from app.application.events import DeliveryContext
 from app.modules.proposals.domain.events import (
+    CourtHourLost,
     GamesAndMoneySet,
     NoSaid,
     ProposalExpired,
@@ -32,6 +33,7 @@ ProposalEvent = (
     | YesWithdrawn
     | ProposalWithdrawn
     | ProposalExpired
+    | CourtHourLost
 )
 
 _LINES: dict[type, str] = {
@@ -42,6 +44,7 @@ _LINES: dict[type, str] = {
     YesWithdrawn: "proposals.yes.withdrawn",
     ProposalWithdrawn: "proposals.proposal.withdrawn",
     ProposalExpired: "proposals.proposal.expired",
+    CourtHourLost: "proposals.court_hour.lost",
 }
 
 

@@ -907,7 +907,12 @@ async def forecast(
 
 
 async def deliver_the_outbox(
-    session_factory, *, rounds: int = 6, live_channel=None, payments=None
+    session_factory,
+    *,
+    rounds: int = 6,
+    live_channel=None,
+    payments=None,
+    proposer_due=None,
 ) -> int:
     """Run the transactional outbox to exhaustion, the way the worker does.
 
@@ -937,6 +942,10 @@ async def deliver_the_outbox(
     **``payments`` is the provider a replaced or removed card is released at** —
     the ``payments`` fixture, when a test reads what was released; otherwise a
     fake nobody reads, which is the seed run's answer too.
+
+    **``proposer_due`` is the proposer listening** — a ``DueForProposing`` the
+    delivery notes what changed in, as the API process's does (#540); left out,
+    nobody is.
     """
 
     runtime = build_event_runtime()
@@ -955,6 +964,7 @@ async def deliver_the_outbox(
                 batch_size=100,
                 nudges=nudges,
                 payments=provider,
+                proposer_due=proposer_due,
             )
             delivered = await batch.execute(worker_id="tests")
         published += delivered

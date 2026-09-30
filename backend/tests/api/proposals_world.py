@@ -66,25 +66,35 @@ def every_hour_of_the_week() -> list[tuple[int, int]]:
     return [(day, hour) for day in range(1, 8) for hour in range(7, 23)]
 
 
-async def a_club_selling(
+async def a_club_selling(client, **kwargs) -> str:
+    """A live club selling one padel and one tennis court at every hour of the
+    week — padel at 120 zł (30 zł a seat) unless told otherwise, tennis at 80 zł
+    (40 zł a seat). Its id."""
+
+    club_id, _ = await a_club_and_its_desk(client, **kwargs)
+    return club_id
+
+
+async def a_club_and_its_desk(
     client,
     *,
     name: str = "Bonarka Arena",
     way: str = "INSTANT",
+    point: tuple[float, float] = (50.06, 19.95),
     paused: bool = False,
     hours: list[tuple[int, int]] | None = None,
     padel_grosze: int = 120_00,
     **settings,
-) -> str:
-    """A live club selling one padel and one tennis court at every hour of the
-    week — padel at 120 zł (30 zł a seat) unless told otherwise, tennis at 80 zł
-    (40 zł a seat). Its id."""
+) -> tuple[str, dict]:
+    """``a_club_selling``'s club, and its desk's session — for a test that
+    changes what the club sells afterwards."""
 
     club_id, desk = await a_desk(
         client,
         name=name,
         email=f"desk@{name.split()[0].lower()}.pl",
         sports=("PADEL", "TENNIS"),
+        point=point,
     )
     await chooses(client, desk, way)
     padel = await adds_a_court(client, desk, name="Court 1", sport="PADEL")
@@ -104,7 +114,7 @@ async def a_club_selling(
         ],
     )
     await confirms_settings(client, desk, paused=paused, **settings)
-    return club_id
+    return club_id, desk
 
 
 async def saves_a_card(client, payments, headers: dict) -> None:
@@ -148,6 +158,37 @@ async def a_player(
     if card:
         await saves_a_card(client, payments, headers)
     return {"id": player_id, "token": token, "headers": headers}
+
+
+EVERY_HOUR = [
+    {"day": day, "hour": hour} for day in range(1, 8) for hour in range(7, 23)
+]
+
+
+async def a_member(
+    client,
+    session_factory,
+    payments,
+    name: str,
+    *,
+    mu: float = 2.5,
+    sports: tuple[Sport, ...] = (Sport.PADEL,),
+    intent: str | None = "COMPETITIVE",
+    week: list[dict] = EVERY_HOUR,
+    gender: str = "WOMAN",
+) -> dict:
+    """A member rated at ``mu`` in ``sports``, free every hour of the week
+    unless told otherwise, with a declared intent and a saved card."""
+
+    player_id, token = await world.register(client, name)
+    await world.commit_profile(client, token, weekly_hours=week, gender=gender)
+    for sport in sports:
+        await world.rate_in(session_factory, player_id, sport, mu=mu)
+        if intent is not None:
+            await world.declare_intent(client, token, intent=intent, sport=sport)
+    headers = world.auth(token)
+    await saves_a_card(client, payments, headers)
+    return {"id": player_id, "token": token, "headers": headers, "name": name}
 
 
 async def a_group(client, owner: dict, club_id: str, *members: dict) -> UUID:

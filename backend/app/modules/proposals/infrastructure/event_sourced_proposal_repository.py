@@ -23,6 +23,7 @@ from sqlalchemy.sql import Executable
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.modules.proposals.domain.events import (
+    CourtHourLost,
     NoSaid,
     ProposalExpired,
     ProposalMade,
@@ -149,6 +150,8 @@ class EventSourcedProposalRepository:
             await self._end(event.proposal_id, Ending.WITHDRAWN)
         elif isinstance(event, ProposalExpired):
             await self._end(event.proposal_id, Ending.EXPIRED)
+        elif isinstance(event, CourtHourLost):
+            await self._end(event.proposal_id, Ending.COURT_HOUR_LOST)
         else:
             raise TypeError(f"Unsupported proposal event {event!r}")
 

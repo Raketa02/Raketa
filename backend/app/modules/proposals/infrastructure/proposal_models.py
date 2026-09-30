@@ -57,7 +57,7 @@ class ProposalORM(Base):
     __tablename__ = "proposals"
     __table_args__ = (
         CheckConstraint(
-            "ended IS NULL OR ended IN ('EXPIRED', 'WITHDRAWN')",
+            "ended IS NULL OR ended IN ('EXPIRED', 'WITHDRAWN', 'COURT_HOUR_LOST')",
             name="ck_proposals_ended",
         ),
         # The sweep's read: unrecorded endings, by book-by.

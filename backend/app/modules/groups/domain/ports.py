@@ -109,6 +109,11 @@ class GroupDirectory(Protocol):
         """Every group this player belongs to, **newest joined first**."""
         ...
 
+    async def every(self) -> Sequence[UUID]:
+        """Every group there is, **oldest created first** — what the proposer
+        walks, since every group is a pool (``docs/adr/0189`` §1)."""
+        ...
+
     async def listings_at(
         self, club_ids: Collection[UUID]
     ) -> Mapping[UUID, Sequence[GroupListing]]:

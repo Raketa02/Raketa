@@ -30,9 +30,9 @@ class ProposalNotFound(NotFoundError):
 
 
 class ProposalIsOver(ConflictError):
-    """The game is no longer filling — its book-by passed, or its poster
-    withdrew it — named by ``details.standing``. The card leaves; nothing was
-    recorded."""
+    """The game is no longer filling — its book-by passed, its poster withdrew
+    it, or the last court at its club and hour went — named by
+    ``details.standing``. The card leaves; nothing was recorded."""
 
     code = "proposal_is_over"
 

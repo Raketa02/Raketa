@@ -61,6 +61,7 @@ from app.infrastructure.database.engine import (
     init_engine,
 )
 from app.infrastructure.jobs import BackgroundTask
+from app.modules.proposals.application.propose_games import DueForProposing
 from app.infrastructure.redis_client import (
     close_redis,
     close_redis_subscriber,
@@ -123,6 +124,16 @@ def build_lifespan(settings: Settings):
         # `PubSub` off this one, so it may not depend on any toggle either.
         app.state.redis_subscriber = get_redis_subscriber()
 
+        # **One per process, and this is where the one lives**: what the outbox
+        # this process delivers tells the proposer's short tick (#540). Only
+        # where both run — a proposer with no drain beside it is told nothing,
+        # and a drain with no proposer tells nobody.
+        proposer_due = (
+            DueForProposing()
+            if settings.PROPOSER_ENABLED and settings.EVENT_DELIVERY_WORKER_ENABLED
+            else None
+        )
+
         session_factory = None
         if (
             settings.EVENT_DELIVERY_WORKER_ENABLED
@@ -135,6 +146,7 @@ def build_lifespan(settings: Settings):
             or settings.CONVERSATION_SWEEP_ENABLED
             or settings.MAIL_DELIVERY_ENABLED
             or settings.PROPOSAL_EXPIRY_ENABLED
+            or settings.PROPOSER_ENABLED
         ):
             session_factory = build_background_session_factory(get_engine())
 
@@ -154,6 +166,7 @@ def build_lifespan(settings: Settings):
                     # through, so a card a request replaced or removed is
                     # released at the provider that saved it.
                     payments=build_payment_provider(settings),
+                    proposer_due=proposer_due,
                 )
                 # Kept on the application because the delivery worker's identity
                 # is the lease its batches claim outbox rows under, and a test or
@@ -172,6 +185,7 @@ def build_lifespan(settings: Settings):
             candidate_source=app.state.candidate_source,
             redis_client=app.state.redis,
             meter=app.state.scoring_meter,
+            proposer_due=proposer_due,
         )
         # Only the scheduled jobs, not the outbox drain beside them: this
         # attribute is what somebody reads to answer *which jobs is this process

@@ -426,6 +426,23 @@ class Settings(BaseSettings):
     PROPOSAL_EXPIRY_ENABLED: bool = True
     PROPOSAL_EXPIRY_INTERVAL_SECONDS: float = 60
 
+    # --- the proposer (#540, the mechanics §5, §6.2–§6.3)
+    #
+    # **The engine that builds games, and correctness depends on it**: nothing
+    # else deals a *Picked for you* card, hands a seat a no left to the next
+    # best fits, or widens a pick at half In. Two loops over one use case: the
+    # **sweep** walks every pool on this cadence, and the **short tick** walks
+    # the pools a change delivered in this process made due (somebody joined,
+    # set their week, a club changed what it sells, somebody swiped) — so a
+    # change is dealt from in seconds, and the sweep is what guarantees it.
+    #
+    # **What is dealt is domain and emphatically not here**: the most even
+    # four, the three next best fits, the three versions, the fourteen days and
+    # the ten kilometres are `proposals/domain/`'s. Only how often is a setting.
+    PROPOSER_ENABLED: bool = True
+    PROPOSER_INTERVAL_SECONDS: float = 300
+    PROPOSER_ON_CHANGES_INTERVAL_SECONDS: float = 5
+
     # --- scheduled jobs (docs/adr/0092)
     #
     # **How often the sweep runs is configuration; how old a photo must be before it

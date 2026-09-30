@@ -20,6 +20,7 @@ from app.modules.proposals.application.event_subscriptions import (
     register_proposal_events,
 )
 from app.modules.proposals.domain.events import (
+    CourtHourLost,
     GamesAndMoneySet,
     NoSaid,
     ProposalExpired,
@@ -57,6 +58,7 @@ EVENTS = [
     YesWithdrawn(proposal_id=PROPOSAL, player_id=PLAYER, occurred_at=NOW),
     ProposalWithdrawn(proposal_id=PROPOSAL, withdrawn_by=PLAYER, occurred_at=NOW),
     ProposalExpired(proposal_id=PROPOSAL, occurred_at=NOW),
+    CourtHourLost(proposal_id=PROPOSAL, occurred_at=NOW),
     GamesAndMoneySet(
         player_id=PLAYER, games_per_week=4, most_ill_pay_grosze=45_00, occurred_at=NOW
     ),
@@ -99,6 +101,7 @@ def test_each_event_is_filed_under_its_own_name_in_the_proposals_namespace():
         "proposals.yes_withdrawn",
         "proposals.proposal_withdrawn",
         "proposals.proposal_expired",
+        "proposals.court_hour_lost",
         "proposals.games_and_money_set",
         "proposals.games_and_money_set",
     ]
