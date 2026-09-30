@@ -22,8 +22,8 @@ from app.kernel import Sport
 from app.modules.blocks.domain.errors import BlockStateUnavailable
 from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.domain.ports import CourtOrigin
-from app.modules.player_profile.domain.availability import Window
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
+from app.modules.player_profile.domain.weekly_hours import Window
 
 
 @dataclass

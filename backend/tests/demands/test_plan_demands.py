@@ -55,7 +55,7 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.windows import entry_closes_at
 from app.modules.plans.domain.ports import AccountHoldQuery, PlannableCourts
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 
 

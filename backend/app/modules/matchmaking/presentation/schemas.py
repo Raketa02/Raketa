@@ -74,8 +74,8 @@ from app.modules.matchmaking.presentation.evidence import Evidence
 # **The same cell shape the profile route takes**, deliberately reused rather
 # than restated: asking for a week in two shapes is how availability data goes
 # stale, and one client grid editor should be able to post to either route.
-from app.modules.player_profile.presentation.schemas import AvailabilitySlotResource
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.presentation.schemas import WeeklyHourResource
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.modules.player_profile.domain.intro import INTRO_MAX_CHARACTERS
 from app.modules.player_profile.domain.photos import PhotoReviewDecision
 
@@ -192,7 +192,7 @@ class RunSearchRequest(BaseModel):
             "and nothing else. Two values, where a Play intent has three."
         ),
     )
-    availability_override: list[AvailabilitySlotResource] = Field(
+    availability_override: list[WeeklyHourResource] = Field(
         OMITTED,
         description=(
             "The week to run **this one search** against, when the player "
@@ -251,7 +251,7 @@ class DealDeckRequest(BaseModel):
     """
 
     sport: Sport = Field(..., description="Which sport this deal is for")
-    availability_override: list[AvailabilitySlotResource] = Field(
+    availability_override: list[WeeklyHourResource] = Field(
         OMITTED,
         description=(
             "The week to run **this one deal** against, when the player edited "
@@ -485,13 +485,13 @@ class RungOfferSchema(BaseModel):
             "offered no radius rung at all."
         ),
     )
-    slot: AvailabilitySlotResource = Field(
+    slot: WeeklyHourResource = Field(
         OMITTED,
         description=(
-            "The one cell this rung would add to your week, on a `TIMES` rung, "
+            "The one hour this rung would add to your week, on a `TIMES` rung, "
             "and **for this search only**. The same two named fields every "
-            "other slot crosses in, because this one is drawn on the same "
-            "seven-by-three grid the player just filled in — ticked there as "
+            "other hour crosses in, because this one is drawn on the same "
+            "seven-by-sixteen grid the player just filled in — ticked there as "
             "belonging to this search and to no later one."
         ),
     )
@@ -511,14 +511,14 @@ class PromptSchema(BaseModel):
     radius_km: int = Field(
         OMITTED, ge=1, description="The widening you keep taking"
     )
-    slots: list[AvailabilitySlotResource] = Field(
+    slots: list[WeeklyHourResource] = Field(
         OMITTED,
         description=(
             "The week this search actually ran on, in the same two named fields "
             "every other week on the wire crosses in — because the sheet **draws** "
-            "this one on the seven-by-three grid beside the profile's own and "
+            "this one on the seven-by-sixteen grid beside the profile's own and "
             "quotes its count off the same list. **An empty list is a cleared "
-            "week** — the player unticked every cell, which is a legal edit and a "
+            "week** — the player unticked every hour, which is a legal edit and a "
             "legal thing to be offered — where the field being absent means this "
             "is not the times prompt at all."
         ),
@@ -1264,7 +1264,8 @@ class RunLineupRequest(BaseModel):
                 "and its mode"
             )
         return _a_court_that_could_exist(self, self.sport, self.locked_seats)
-    availability_override: list[AvailabilitySlotResource] = Field(
+
+    availability_override: list[WeeklyHourResource] = Field(
         OMITTED,
         description=(
             "The week to run **this one line-up** against. Omit to use the grid "

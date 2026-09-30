@@ -28,8 +28,8 @@ from app.modules.matchmaking.domain.relaxation import (
 )
 from app.modules.matchmaking.domain.shortlist import run
 from app.modules.matchmaking.domain.widening import cleared_floor, ladder_for
-from app.modules.player_profile.domain.availability import Window
 from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
+from app.modules.player_profile.domain.weekly_hours import Window
 from tests.unit.matchmaking_builders import (
     CENTRE,
     SEARCHER_SLOTS,
@@ -47,7 +47,7 @@ SOCIABLE = ("HERE_FOR_THE_SOCIAL", "PLAYS_FOR_FUN")
 
 #: A cell the searcher has not ticked, and the only one anybody in these fixtures
 #: holds outside their grid. Rung A's whole choice.
-UNTICKED = "2:EVENING"
+UNTICKED = "2:19"
 
 
 def ladder(ctx):
@@ -188,13 +188,13 @@ def test_a_times_rung_moves_the_window_when_the_grid_it_adds_to_does():
 
     ctx = context(
         (row(1, mu=3.22, slots=(UNTICKED,)), row(2, mu=3.22, slots=(UNTICKED,))),
-        facts=searcher(slots=("3:EVENING",)),
+        facts=searcher(slots=("3:19",)),
     )
     _, offered = ladder(ctx)
     times = next(rung for rung in offered.rungs if rung.rung is Rung.A)
 
     # One ticked day, lightly, is that day; two days is simply this week.
-    assert ctx.searcher.grid.slots[0].code == "3:EVENING"
+    assert ctx.searcher.grid.hours[0].code == "3:19"
     assert times.offer.window is Window.THIS_WEEK
     assert times.offer.slot == UNTICKED
 
@@ -292,9 +292,7 @@ def test_a_thin_city_offers_every_rung_and_admits_nobody():
     # wants a different evening out of it. **No rung reaches them.** A wider ring
     # is worth nothing to somebody already inside 70% of the current one, and
     # there is no evening to add that they hold and the searcher does not.
-    ctx = context(
-        (row(1, mu=3.30, tags=SOCIABLE, slots=("1:EVENING", "3:EVENING")),)
-    )
+    ctx = context((row(1, mu=3.30, tags=SOCIABLE, slots=("1:19", "3:19")),))
     strict, offered = ladder(ctx)
 
     assert strict.returned == ()

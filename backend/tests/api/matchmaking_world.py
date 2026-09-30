@@ -92,8 +92,8 @@ SPORT = Sport.PADEL
 COMPETITIVE_TAGS = ("PLAYS_TO_WIN", "HERE_TO_IMPROVE")
 SOCIABLE_TAGS = ("HERE_FOR_THE_SOCIAL", "PLAYS_FOR_FUN")
 
-#: A grid that overlaps the searcher's on two cells of the twenty-one.
-SHARED_SLOTS = ("2:EVENING", "6:MORNING")
+#: A week that overlaps the searcher's on two of its 112 hours.
+SHARED_SLOTS = ("2:19", "6:10")
 
 
 async def register(client, name: str) -> tuple[UUID, str]:
@@ -141,9 +141,9 @@ async def commit_profile(client, token: str, **overrides) -> None:
     body = {
         "social_tag_ids": list(COMPETITIVE_TAGS),
         "photo_ids": [],
-        "availability": [
-            {"day": 2, "part": "EVENING"},
-            {"day": 6, "part": "MORNING"},
+        "weekly_hours": [
+            {"day": 2, "hour": 19},
+            {"day": 6, "hour": 10},
         ],
         "location": {"latitude": CENTRE[0], "longitude": CENTRE[1]},
         "search_radius_km": 10,
@@ -289,7 +289,7 @@ async def a_signed_in_candidate(
             player_id=player_id,
             social_tags=tags,
             photo_ids=tuple(str(photo_id) for photo_id in photo_ids),
-            availability=availability,
+            weekly_hours=availability,
             latitude=latitude,
             longitude=longitude,
             search_radius_km=radius_km,
@@ -845,7 +845,7 @@ async def saved_radius_km(session_factory, player_id: UUID) -> int:
 async def saved_grid(session_factory, player_id: UUID) -> tuple[str, ...]:
     profile = await _profile(session_factory, player_id)
     assert profile is not None
-    return profile.availability.codes
+    return profile.weekly_hours.codes
 
 
 async def lineup(

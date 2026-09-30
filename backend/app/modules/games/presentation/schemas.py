@@ -46,7 +46,7 @@ from app.modules.games.domain.results import (
     Outcome,
 )
 from app.modules.games.domain.standing import GameStanding
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 
 
 class SetScoreSchema(BaseModel):

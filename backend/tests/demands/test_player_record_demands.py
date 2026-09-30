@@ -75,7 +75,7 @@ from app.modules.matchmaking.domain.searches import (
     SearchSurface,
     StagedCounts,
 )
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
@@ -902,7 +902,7 @@ def _a_search(searcher: UUID, shown: UUID) -> SearchRecord:
             players_in_range=1,
             window=Window.THIS_WEEK,
         ),
-        searcher_grid=("2:EVENING",),
+        searcher_grid=("2:19",),
         searcher_slot_count=1,
         searcher_area_code="A+05151-000013",
         radius_clamp_bit=False,

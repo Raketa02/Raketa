@@ -218,24 +218,24 @@ async def test_a_line_up_asks_about_the_week_it_was_given(
             session_factory,
             name,
             mu=searcher["mu"] + delta,
-            availability=("4:EVENING",),
+            availability=("4:19",),
         )
     await world.fold_the_log(session_factory, candidate_source)
 
     built = await world.lineup(
         client,
         searcher["token"],
-        availability_override=[{"day": 4, "part": "EVENING"}],
+        availability_override=[{"day": 4, "hour": 19}],
     )
 
     assert built.status_code == 200, built.text
     prompts = {
         prompt["prompt"]: prompt for prompt in built.json()["search"]["prompts"]
     }
-    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": 4, "part": "EVENING"}]
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": 4, "hour": 19}]
     assert await world.saved_grid(session_factory, searcher["id"]) == (
-        "2:EVENING",
-        "6:MORNING",
+        "2:19",
+        "6:10",
     ), "the profile is untouched"
 
 
@@ -422,7 +422,7 @@ async def test_a_pool_nobody_clears_reads_as_the_floor_and_never_as_an_empty_cit
             name,
             mu=searcher["mu"] + 0.35,
             tags=world.SOCIABLE_TAGS,
-            availability=("4:MORNING",),
+            availability=("4:10",),
             intent="FOR_FUN",
         )
     await world.fold_the_log(session_factory, candidate_source)
@@ -487,9 +487,9 @@ async def test_a_four_with_no_hour_in_common_is_docked_and_nobody_leaves_the_cou
     """
 
     for name, slots in (
-        ("ana", ("2:EVENING",)),
-        ("bo", ("6:MORNING",)),
-        ("cy", ("2:EVENING",)),
+        ("ana", ("2:19",)),
+        ("bo", ("6:10",)),
+        ("cy", ("2:19",)),
     ):
         await world.a_candidate(
             client,
@@ -530,7 +530,7 @@ async def test_a_seat_is_never_filled_below_the_floor_to_complete_a_four(
         mu=searcher["mu"] + 0.4,
         latitude=51.60,
         tags=world.SOCIABLE_TAGS,
-        availability=("4:MORNING",),
+        availability=("4:10",),
         intent="FOR_FUN",
     )
     await world.fold_the_log(session_factory, candidate_source)

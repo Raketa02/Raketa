@@ -43,9 +43,9 @@ class CommitPlayerProfileCommand:
     """Every answer from onboarding's second part, in one command.
 
     **Primitives from the boundary, not domain value objects**
-    (``backend/CONTEXT.md`` — *Command*). Availability arrives as
-    ``(iso weekday, part of day)`` pairs and the domain is what turns them into
-    slots, so nothing in ``presentation/`` builds a value object. The one enum is
+    (``backend/CONTEXT.md`` — *Command*). Weekly hours arrive as
+    ``(iso weekday, hour)`` pairs and the domain is what turns them into
+    hours, so nothing in ``presentation/`` builds a value object. The one enum is
     ``ConsentSurface``, which is a closed set the boundary *selects from* rather
     than constructs — the same shape ``CreateAssessmentCommand`` carries
     ``Sport`` in.
@@ -91,8 +91,8 @@ class CommitPlayerProfileCommand:
     idempotency_key: str
     social_tag_ids: Sequence[str]
     photo_ids: Sequence[UUID]
-    #: ``(iso weekday 1–7, part of day)`` — one pair per cell the player ticked.
-    availability: Sequence[tuple[int, str]]
+    #: ``(iso weekday 1–7, hour 7–22)`` — one pair per hour the player ticked.
+    weekly_hours: Sequence[tuple[int, int]]
     latitude: float
     longitude: float
     search_radius_km: int
@@ -106,20 +106,20 @@ class CommitPlayerProfileCommand:
 
 
 @dataclass(frozen=True, slots=True)
-class ChangeAvailabilityCommand:
-    """A player's week, replaced whole.
+class SetWeeklyHoursCommand:
+    """A player's weekly hours, replaced whole.
 
     **Primitives from the boundary**, exactly as the commit carries them, so the
-    two write paths hand the domain the same shape and the grid is built in one
+    two write paths hand the domain the same shape and the week is built in one
     place. There is no *clear my week* flag: an empty sequence **is** a cleared
     week, and it is a legal value here where it is refused at the commit — the
     floor binds the answer a player is asked for rather than every later edit of
-    it (``domain/availability.py``).
+    it (``domain/weekly_hours.py``).
     """
 
     player_id: UUID
-    #: ``(iso weekday 1–7, part of day)`` — one pair per cell still ticked.
-    availability: Sequence[tuple[int, str]]
+    #: ``(iso weekday 1–7, hour 7–22)`` — one pair per hour still ticked.
+    weekly_hours: Sequence[tuple[int, int]]
 
 
 @dataclass(frozen=True, slots=True)

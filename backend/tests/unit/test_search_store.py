@@ -47,14 +47,14 @@ from app.modules.matchmaking.infrastructure.search_model import (
 from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
 )
-from app.modules.player_profile.domain.availability import Window
 from app.modules.player_profile.domain.photos import PhotoReviewDecision
+from app.modules.player_profile.domain.weekly_hours import Window
 
 AT = datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc)
 #: The week the search ran on. Four cells across four days, which ``window_of``
 #: reads as ``THIS_WEEK`` — the same window the pool description carries, because
 #: the read-back **re-derives** it from this grid rather than reading the label.
-GRID = ("1:EVENING", "3:EVENING", "5:EVENING", "6:MORNING")
+GRID = ("1:19", "3:19", "5:19", "6:10")
 #: The searcher's own coarse area, as ``area_code_of`` spells one. Recorded
 #: beside the grid and read back the same way: it is the second half of the one
 #: comparison a card is licensed to make.
@@ -169,7 +169,7 @@ def _record(searcher_id: UUID = SEARCHER) -> SearchRecord:
                 ask=RelaxationAsk.TIMES,
                 candidates_above_floor=3,
                 window=Window.ANY,
-                slot="2:EVENING",
+                slot="2:19",
             ),
             RungOffer(
                 rung=Rung.B,

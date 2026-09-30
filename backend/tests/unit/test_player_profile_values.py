@@ -10,11 +10,6 @@ from __future__ import annotations
 import pytest
 
 from app.kernel import InvariantViolated, iso_weekday
-from app.modules.player_profile.domain.availability import (
-    AvailabilityGrid,
-    AvailabilitySlot,
-    DayPart,
-)
 from app.modules.player_profile.domain.consent import (
     MAX_COPY_VERSION_LENGTH,
     ConsentSurface,
@@ -22,11 +17,11 @@ from app.modules.player_profile.domain.consent import (
     answerable_copy_version,
 )
 from app.modules.player_profile.domain.errors import (
-    AvailabilityGridEmpty,
     DuplicateSocialTag,
     SearchRadiusOutOfBounds,
     SocialTagSelectionOutOfBounds,
     UnknownSocialTag,
+    WeeklyHoursEmpty,
 )
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.search_radius import (
@@ -39,11 +34,19 @@ from app.modules.player_profile.domain.social_tags import (
     SocialTag,
     SocialTagSelection,
 )
+from app.modules.player_profile.domain.weekly_hours import (
+    DAY_RANGES,
+    FIRST_HOUR,
+    HOURS_OF_THE_DAY,
+    LAST_HOUR,
+    WeeklyHour,
+    WeeklyHours,
+)
 from tests.unit.fake_event_store import utc
 
 
-def slot(day: int, part: DayPart) -> AvailabilitySlot:
-    return AvailabilitySlot(day=iso_weekday(day), part=part)
+def hour(day: int, at: int) -> WeeklyHour:
+    return WeeklyHour(day=iso_weekday(day), hour=at)
 
 
 # ---------------------------------------------------------------------------
@@ -170,103 +173,120 @@ def test_a_radius_already_on_a_stream_is_not_re_checked():
 
 
 # ---------------------------------------------------------------------------
-# Availability
+# Weekly hours
 # ---------------------------------------------------------------------------
 
 
 def test_the_write_path_refuses_a_week_with_nothing_ticked():
-    """The floor ADR-0102 put on the grid: at least one of the twenty-one.
+    """The floor ADR-0102 put on the week: at least one hour of the 112.
 
     ``of_cells`` is the command path's entry point, so this is the one place a
     player's own answer is counted — and a commit that ticked nothing is refused
     with a code of its own rather than recorded as a measured zero.
     """
 
-    with pytest.raises(AvailabilityGridEmpty):
-        AvailabilityGrid.of_cells(())
+    with pytest.raises(WeeklyHoursEmpty):
+        WeeklyHours.of_cells(())
 
 
-def test_one_ticked_cell_is_enough():
+def test_one_ticked_hour_is_enough():
     """The minimum is exactly one, and one tick is a real answer: a player who
-    only ever plays Saturday mornings must be able to say precisely that."""
+    only ever plays at ten on a Saturday must be able to say precisely that."""
 
-    grid = AvailabilityGrid.of_cells([(6, "MORNING")])
+    week = WeeklyHours.of_cells([(6, 10)])
 
-    assert grid.codes == ("6:MORNING",)
+    assert week.codes == ("6:10",)
 
 
-def test_the_fold_still_accepts_a_blank_grid():
+def test_the_fold_still_accepts_a_blank_week():
     """**The write path refuses; the fold accepts** — ``social_tags``' split,
     verbatim.
 
-    A profile committed before the floor existed keeps its blank grid, and a
-    player may clear their week afterwards. Neither is a stream a replay may
-    refuse to rehydrate, so ``blank``, ``of`` and ``from_codes`` are unchanged:
-    a blank grid met anyway is *absent*, never zero (ADR-0102 part 3).
+    A player may clear their week after committing, and that is not a stream a
+    replay may refuse to rehydrate, so ``blank``, ``of`` and ``from_codes`` take
+    an empty week: a blank week met anyway is *absent*, never zero (ADR-0102
+    part 3, amended by ADR-0189).
     """
 
-    assert len(AvailabilityGrid.blank()) == 0
-    assert AvailabilityGrid.blank().codes == ()
-    assert AvailabilityGrid.of(()).codes == ()
-    assert AvailabilityGrid.from_codes(()).codes == ()
+    assert len(WeeklyHours.blank()) == 0
+    assert WeeklyHours.blank().codes == ()
+    assert WeeklyHours.of(()).codes == ()
+    assert WeeklyHours.from_codes(()).codes == ()
 
 
 def test_a_later_edit_of_the_week_may_clear_it():
     """``edited`` is the floor's named exit, and it takes the same primitives.
 
-    ``SearchRadius.chosen`` / ``recorded``'s discipline, applied to the grid:
+    ``SearchRadius.chosen`` / ``recorded``'s discipline, applied to the week:
     two named constructors, so every call site says which of the two it is. The
     commit path refuses a blank week; a player clearing theirs afterwards is a
     later edit, and the minimum binds the answer they were asked for rather
     than every edit of it.
     """
 
-    assert AvailabilityGrid.edited(()).codes == ()
-    assert AvailabilityGrid.edited([(6, "MORNING")]).codes == ("6:MORNING",)
+    assert WeeklyHours.edited(()).codes == ()
+    assert WeeklyHours.edited([(6, 10)]).codes == ("6:10",)
 
 
-def test_an_edited_grid_is_folded_exactly_as_a_committed_one_is():
+def test_an_edited_week_is_folded_exactly_as_a_committed_one_is():
     """Same fold, same order, same refusals — the floor is the only difference,
-    so an edit cannot quietly hold a grid a commit could not."""
+    so an edit cannot quietly hold a week a commit could not."""
 
-    grid = AvailabilityGrid.edited([(3, "MORNING"), (1, "EVENING"), (3, "MORNING")])
+    week = WeeklyHours.edited([(3, 8), (1, 19), (3, 8)])
 
-    assert grid.codes == ("1:EVENING", "3:MORNING")
+    assert week.codes == ("1:19", "3:8")
     with pytest.raises(InvariantViolated):
-        AvailabilityGrid.edited([(1, "NIGHT")])
+        WeeklyHours.edited([(1, 23)])
 
 
-def test_a_repeated_cell_is_collapsed_rather_than_refused():
-    """The opposite of a repeated tag, and deliberately: a grid is a set of
-    cells, and a cell ticked twice is ticked."""
+def test_the_week_runs_from_seven_in_the_morning_to_eleven_at_night():
+    """Sixteen one-hour cells a day: the first starts at 07:00 and the last at
+    22:00, so the grid ends at 23:00 (the mechanics §4.2)."""
 
-    grid = AvailabilityGrid.of(
-        [slot(2, DayPart.MORNING), slot(2, DayPart.MORNING)]
-    )
-
-    assert len(grid) == 1
-
-
-def test_a_grid_is_held_in_reading_order_whatever_order_it_arrived_in():
-    """Day first, then part of day — and *morning* before *afternoon*, which is
-    not what comparing the two enum values as text would give."""
-
-    grid = AvailabilityGrid.of(
-        [
-            slot(3, DayPart.MORNING),
-            slot(1, DayPart.EVENING),
-            slot(1, DayPart.AFTERNOON),
-            slot(1, DayPart.MORNING),
-        ]
-    )
-
-    assert grid.codes == ("1:MORNING", "1:AFTERNOON", "1:EVENING", "3:MORNING")
+    assert (FIRST_HOUR, LAST_HOUR) == (7, 22)
+    assert len(HOURS_OF_THE_DAY) == 16
+    assert hour(1, 7).code == "1:7"
+    assert hour(7, 22).code == "7:22"
+    for outside in (6, 23, 0):
+        with pytest.raises(InvariantViolated):
+            hour(1, outside)
 
 
-def test_a_grid_round_trips_through_the_codes_a_stream_stores():
-    grid = AvailabilityGrid.of([slot(7, DayPart.EVENING), slot(1, DayPart.MORNING)])
+def test_the_day_is_summarised_in_three_ranges_that_share_no_hour():
+    """Morning 07–12, Afternoon 12–17, Evening 17–23 (the mechanics §9.1, Q71):
+    every hour of the day in exactly one of them, in the order a day runs."""
 
-    assert AvailabilityGrid.from_codes(grid.codes) == grid
+    assert {name: (hours[0], hours[-1] + 1) for name, hours in DAY_RANGES.items()} == {
+        "MORNING": (7, 12),
+        "AFTERNOON": (12, 17),
+        "EVENING": (17, 23),
+    }
+    every = [hour for hours in DAY_RANGES.values() for hour in hours]
+    assert every == list(HOURS_OF_THE_DAY)
+
+
+def test_a_repeated_hour_is_collapsed_rather_than_refused():
+    """The opposite of a repeated tag, and deliberately: a week is a set of
+    hours, and an hour ticked twice is ticked."""
+
+    week = WeeklyHours.of([hour(2, 9), hour(2, 9)])
+
+    assert len(week) == 1
+
+
+def test_a_week_is_held_in_reading_order_whatever_order_it_arrived_in():
+    """Day first, then hour — and nine before ten, which is not what comparing
+    the two codes as text would give."""
+
+    week = WeeklyHours.of([hour(3, 7), hour(1, 10), hour(1, 9), hour(1, 22)])
+
+    assert week.codes == ("1:9", "1:10", "1:22", "3:7")
+
+
+def test_a_week_round_trips_through_the_codes_a_stream_stores():
+    week = WeeklyHours.of([hour(7, 21), hour(1, 7)])
+
+    assert WeeklyHours.from_codes(week.codes) == week
 
 
 def test_a_day_outside_the_week_is_a_broken_precondition():
@@ -274,12 +294,17 @@ def test_a_day_outside_the_week_is_a_broken_precondition():
     they are refused anywhere else a weekday is built."""
 
     with pytest.raises(InvariantViolated):
-        AvailabilitySlot(day=iso_weekday(8), part=DayPart.MORNING)
+        WeeklyHour(day=iso_weekday(8), hour=10)
 
 
-def test_a_slot_code_that_did_not_come_from_a_slot_is_refused():
+@pytest.mark.parametrize("code", ["1:NIGHT", "1:EVENING", "1:23", "9:10", "1-10"])
+def test_a_code_that_did_not_come_from_an_hour_is_refused(code):
+    """A stored part of the day from before the week became hours is one of
+    them: nothing is in production, so it is a corrupt stream and not a value to
+    translate (ADR-0189 §5)."""
+
     with pytest.raises(InvariantViolated):
-        AvailabilityGrid.from_codes(["1:NIGHT"])
+        WeeklyHours.from_codes([code])
 
 
 # ---------------------------------------------------------------------------

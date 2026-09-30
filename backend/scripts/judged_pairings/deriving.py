@@ -48,7 +48,6 @@ from app.engines.matchfit.v1 import renormalised_weights, score
 from app.engines.racketskill.core import combine_sigma, confidence_percent
 from app.kernel import IsoWeekday, iso_weekday
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
-from app.modules.player_profile.domain.availability import DayPart
 
 #: The repository root, from this file's own place in it. Derived rather than
 #: passed in: a generator that can be pointed at a different tree is one that can
@@ -109,10 +108,6 @@ VERDICTS: Mapping[str, Verdict] = {
     "not_shown": Verdict(printed="**Not shown**", plain="NOT SHOWN", shown=False),
 }
 
-#: The parts of a day, in the order the platform lays them out — the one
-#: vocabulary fact the engine is told rather than allowed to know.
-DAY_PARTS = tuple(part.value for part in DayPart)
-
 #: The days, in ISO order, to check the fixture's clock against its own
 #: parenthesised name. Spelled out rather than taken from ``strftime("%A")``,
 #: which answers in the runner's locale and would fail this fixture on a machine
@@ -127,16 +122,18 @@ WEEKDAYS = (
     "Sunday",
 )
 
-#: The searcher's week, as four concrete cells. The fixture says only *four of
-#: twenty-one*, and that is not an omission: availability reads
-#: ``|shared| / |mine|`` and **no constant at all**, so which four they are moves
-#: no value in any case. The identity is needed anyway, because the term's
-#: evidence names the next cell the two of them share.
-WEEK: tuple[tuple[int, DayPart], ...] = (
-    (1, DayPart.EVENING),
-    (3, DayPart.EVENING),
-    (5, DayPart.EVENING),
-    (6, DayPart.MORNING),
+#: The searcher's week, as four concrete hours — ``(weekday, the hour the cell
+#: starts at)``. The fixture says only *four of 112*, and that is not an
+#: omission: availability reads ``|shared| / |mine|`` and **no constant at
+#: all**, so which four they are moves no value in any case — which is also why
+#: the week becoming hours (``docs/adr/0189`` §5) moved nothing in the tables.
+#: The identity is needed anyway, because the term's evidence names the next
+#: hour the two of them share.
+WEEK: tuple[tuple[int, int], ...] = (
+    (1, 19),
+    (3, 19),
+    (5, 19),
+    (6, 10),
 )
 
 #: A cell the searcher did **not** tick. It is what makes *they share none of
@@ -144,7 +141,7 @@ WEEK: tuple[tuple[int, DayPart], ...] = (
 #: at all reads *we do not know when they play*, which stands the term down and
 #: renormalises its weight onto the other six. Case 2's whole assertion is about
 #: what zero overlap costs, so the two readings must not be spelled the same way.
-UNSHARED = (7, DayPart.AFTERNOON)
+UNSHARED = (7, 15)
 
 
 class Unreadable(Exception):
@@ -222,8 +219,8 @@ def read_fixture(path: Path = FIXTURE) -> dict[str, Any]:
     return loaded
 
 
-def cells(*specs: tuple[int, DayPart]) -> tuple[GridCell, ...]:
-    return tuple(GridCell(day=iso_weekday(day), part=part.value) for day, part in specs)
+def cells(*specs: tuple[int, int]) -> tuple[GridCell, ...]:
+    return tuple(GridCell(day=iso_weekday(day), hour=hour) for day, hour in specs)
 
 
 def weekday(clock: str) -> IsoWeekday:
@@ -266,7 +263,6 @@ def build_searcher(fixture: Mapping[str, Any], mode: SearchMode) -> Searcher:
         grid=cells(*WEEK[:ticked]),
         radius_km=float(facts["radius_km"]),
         today=weekday(str(fixture["clock"])),
-        day_parts=DAY_PARTS,
     )
 
 

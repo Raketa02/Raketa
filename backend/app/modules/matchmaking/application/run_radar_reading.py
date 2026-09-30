@@ -77,7 +77,7 @@ from app.modules.matchmaking.domain.searches import (
 )
 from app.modules.matchmaking.domain.shortlist import generate
 from app.modules.matchmaking.domain.sorting import of_scored, sorts_available
-from app.modules.player_profile.domain.availability import window_of
+from app.modules.player_profile.domain.weekly_hours import window_of
 from app.shared.ids import new_uuid
 
 

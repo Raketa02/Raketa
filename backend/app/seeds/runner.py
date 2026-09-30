@@ -111,19 +111,17 @@ from app.bootstrap.composition import (
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.engine import create_engine
 from app.kernel import Clock, Instant, Sport, exhaustive
-from app.modules.player_profile.application.change_availability import (
-    ChangeAvailability,
-)
 from app.modules.player_profile.application.commands import (
-    ChangeAvailabilityCommand,
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
+    SetWeeklyHoursCommand,
 )
 from app.modules.player_profile.application.commit_player_profile import (
     CommitPlayerProfile,
 )
 from app.modules.player_profile.application.declare_play_intent import DeclarePlayIntent
 from app.modules.player_profile.application.commands import UploadPhotoCommand
+from app.modules.player_profile.application.set_weekly_hours import SetWeeklyHours
 from app.modules.player_profile.application.upload_photo import UploadPhoto
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
@@ -320,7 +318,7 @@ class _UseCases:
     complete: CompleteAssessment
     abandon: AbandonAssessment
     commit_profile: CommitPlayerProfile
-    change_availability: ChangeAvailability
+    set_weekly_hours: SetWeeklyHours
     declare_intent: DeclarePlayIntent
 
 
@@ -400,9 +398,7 @@ def _build(
             uow=uow,
             clock=clock,
         ),
-        change_availability=ChangeAvailability(
-            profiles=profiles, uow=uow, clock=clock
-        ),
+        set_weekly_hours=SetWeeklyHours(profiles=profiles, uow=uow, clock=clock),
         declare_intent=DeclarePlayIntent(
             declarations=declarations, uow=uow, clock=clock
         ),
@@ -580,8 +576,8 @@ async def _ensure_profile(
     above make.
 
     **A cleared week is a commit followed by an edit**, and it has to be: the
-    commit refuses an empty grid because the floor binds the answer a player is
-    *asked* for, while ``ChangeAvailability`` accepts one because clearing a week
+    commit refuses an empty week because the floor binds the answer a player is
+    *asked* for, while ``SetWeeklyHours`` accepts one because clearing a week
     afterwards is a legal edit. Reaching a blank week any other way would be
     reaching it by a path no player has.
     """
@@ -595,7 +591,7 @@ async def _ensure_profile(
             idempotency_key=f"seed-profile-{player_id}",
             social_tag_ids=list(profile.social_tag_ids),
             photo_ids=list(profile.photo_ids),
-            availability=list(profile.availability),
+            weekly_hours=list(profile.weekly_hours),
             latitude=profile.latitude,
             longitude=profile.longitude,
             search_radius_km=profile.search_radius_km,
@@ -616,9 +612,9 @@ async def _ensure_profile(
                 surface=profile.intent_surface,
             )
         )
-    if profile.clear_the_week and result.profile.availability.slots:
-        await use_cases.change_availability.execute(
-            ChangeAvailabilityCommand(player_id=player_id, availability=[])
+    if profile.clear_the_week and result.profile.weekly_hours.hours:
+        await use_cases.set_weekly_hours.execute(
+            SetWeeklyHoursCommand(player_id=player_id, weekly_hours=[])
         )
     return result.created
 
@@ -1011,7 +1007,7 @@ def _profile_of(
     """
 
     return SeedProfile(
-        availability=member.availability,
+        weekly_hours=member.weekly_hours,
         photo_ids=photographs,
         social_tag_ids=member.tags,
         search_radius_km=member.radius_km,

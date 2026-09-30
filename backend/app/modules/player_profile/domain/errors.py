@@ -3,13 +3,13 @@
 Each carries its own wire code, because they arrive on the same status from the
 same endpoint and ask the client for different recoveries: pick a different file,
 pick a smaller file, the file is broken, the photo you asked for is not there —
-and, for the commit, re-read the vocabulary, drop a tag, move the slider, tick a
-slot of the week, ask the consent question you skipped, or rewrite your line.
+and, for the commit, re-read the vocabulary, drop a tag, move the slider, tick an
+hour of the week, ask the consent question you skipped, or rewrite your line.
 
 **The commit's refusals are 400s, and every one of them is something a client
 already had the information to prevent.** The tag vocabulary, the floor and the
 ceiling and the radius bounds are all served at `GET /player-profile/options`;
-the availability floor is not served but is *fixed* — exactly one slot, by
+the weekly-hours floor is not served but is *fixed* — exactly one hour, by
 ``docs/adr/0102`` — so a client holds it as a constant and knows it just as
 surely. Either way a picker built from what it has cannot produce any of these.
 They are refused here anyway, because a disabled button is not a validation
@@ -154,18 +154,19 @@ class SearchRadiusOutOfBounds(BadRequestError):
         super().__init__("This is not a Search radius a player may hold.")
 
 
-class AvailabilityGridEmpty(BadRequestError):
-    """The commit arrived with nothing ticked on the 7 × 3 availability grid.
+class WeeklyHoursEmpty(BadRequestError):
+    """The commit arrived with nothing ticked on the 7 × 16 week of hours.
 
-    **At least one slot of the twenty-one** (``docs/adr/0102``). This is a sport
-    application; when a player usually plays is not optional information, and the
-    minimum is exactly one because one tick is a real answer — a player who only
-    ever plays Saturday mornings must be able to say precisely that.
+    **At least one hour of the 112** (``docs/adr/0102``, amended by
+    ``docs/adr/0189``). This is a sport application; when a player usually plays
+    is not optional information, and the minimum is exactly one because one tick
+    is a real answer — a player who only ever plays at ten on a Saturday must be
+    able to say precisely that.
 
     Its own code rather than a shapeless 422, for the reason every other commit
     refusal has one: ``code`` is the only half a client may branch on, and the
     recovery here is specific and is not any other refusal's — go back to the
-    week and tick a cell.
+    week and tick an hour.
 
     **The number is not served.** Unlike the tag floor it is fixed by the record
     rather than by product, so both sides hold it as a constant, the way the
@@ -173,15 +174,14 @@ class AvailabilityGridEmpty(BadRequestError):
     reached this has a picker that should not have let it.
 
     This refuses a *commit*, and only a commit. A player may still clear their week
-    afterwards through ``change_availability``, and a profile committed before this
-    floor existed keeps its blank grid — a blank grid encountered anyway is
+    afterwards through ``set_weekly_hours`` — a blank week encountered anyway is
     **absent**, never zero (ADR-0102 part 3).
     """
 
-    code = "availability_grid_empty"
+    code = "weekly_hours_empty"
 
     def __init__(self) -> None:
-        super().__init__("The availability grid has no slots ticked.")
+        super().__init__("The week has no hours ticked.")
 
 
 class IntroRefusal(StrEnum):

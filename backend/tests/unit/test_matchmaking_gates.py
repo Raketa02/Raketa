@@ -223,7 +223,7 @@ def test_newness_tightens_the_gate_on_both_sides_of_the_pairing():
     assert _gate(wider, facts=a_new_searcher) is GateCode.LEVEL
 
 
-def test_a_blank_availability_grid_is_not_a_gate_and_never_was():
+def test_a_blank_week_is_not_a_gate_and_never_was():
     """It means *we do not know*, and the availability term stands down. A
     player who cleared their week did not say they are never free."""
 

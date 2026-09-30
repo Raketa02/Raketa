@@ -60,7 +60,7 @@
             "kind": "availability_overlap",
             "next_slot": {
               "day": 3,
-              "part": "EVENING"
+              "hour": 19
             },
             "shared_count": 4
           },
@@ -187,7 +187,7 @@
             "kind": "availability_overlap",
             "next_slot": {
               "day": 3,
-              "part": "EVENING"
+              "hour": 19
             },
             "shared_count": 4
           },

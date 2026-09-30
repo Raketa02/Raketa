@@ -34,13 +34,13 @@ from app.modules.matchmaking.domain.errors import (
     GateDataUnavailable,
     PlayerProfileNotCommitted,
 )
-from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.profile import PlayerProfile
 from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from tests.unit import matchmaking_builders as build
 
 READER = build.SEARCHER_ID
@@ -135,7 +135,7 @@ def a_profile(
         player_id=READER,
         social_tags=SocialTagSelection.from_ids(build.TAGS),
         photo_ids=[],
-        availability=AvailabilityGrid.from_codes(build.SEARCHER_SLOTS),
+        weekly_hours=WeeklyHours.from_codes(build.SEARCHER_SLOTS),
         location=LocationArea.around(build.CENTRE.latitude, build.CENTRE.longitude),
         search_radius=SearchRadius.chosen(10),
         gender=gender,

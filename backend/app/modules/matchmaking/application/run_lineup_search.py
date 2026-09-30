@@ -117,8 +117,8 @@ from app.modules.matchmaking.domain.prompts import (
 )
 from app.modules.matchmaking.domain.shortlist import Scored
 from app.modules.matchmaking.domain.sorting import sorts_available
-from app.modules.player_profile.domain.availability import window_of
 from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.domain.weekly_hours import window_of
 from app.shared.ids import new_uuid
 
 

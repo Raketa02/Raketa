@@ -42,7 +42,7 @@ from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.ports import SeatChange
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.games.domain.standing import GameStanding
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 
 ANA, BO, CY, DEE, EVE = (new_uuid() for _ in range(5))

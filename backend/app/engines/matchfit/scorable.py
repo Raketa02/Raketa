@@ -37,12 +37,13 @@ and a weekday arrives as the kernel's ``IsoWeekday``, exactly as
 ``docs/adr/0100``'s ``window_of(grid, today)`` takes one.
 
 **Vocabularies the platform owns cross as the machine codes they already are** —
-Social tag ids, parts of the day, Play intent declarations. An engine may not
-import the module that owns a vocabulary, and retyping one here would be a second
-spelling of a closed set, which is how two halves of one system begin disagreeing
-about the same word (``core``). What the engine is told instead is the *shape* it
-needs: ``day_parts`` says where each part sits inside a day, so the soonest
-shared slot can be found without the engine ever learning what a morning is.
+Social tag ids, Play intent declarations. An engine may not import the module
+that owns a vocabulary, and retyping one here would be a second spelling of a
+closed set, which is how two halves of one system begin disagreeing about the
+same word (``core``). **An hour of the week is not a vocabulary**: it crosses as
+a weekday and an hour of the day, two integers that order themselves, so the
+engine is told nothing about the week's edges — 07:00 and 23:00 are the Player
+profile's, and a cell outside them never reaches here.
 
 **A player id is a string and not a ``UUID``.** ``uuid`` is ambience and is
 forbidden to the engines beside ``random``, ``secrets`` and ``time``: an id the
@@ -81,20 +82,25 @@ class LevelReading:
 @final
 @dataclass(frozen=True, slots=True)
 class GridCell:
-    """One cell of the ordinary week both players may have ticked.
+    """One hour of the ordinary week both players may have ticked.
 
     The day is the kernel's ``IsoWeekday`` because Monday-first is already what
-    ISO means. The part is **the platform's own machine code**, opaque here: the
-    engine compares parts for equality and orders them by ``Searcher.day_parts``,
-    and never learns that one of them is called a morning.
+    ISO means. The hour is the one the cell **starts at**, wall clock, and the
+    engine only compares hours for equality and orders them — so it checks that
+    this is an hour of a day and nothing narrower: which hours a player may tick
+    is the Player profile's rule (``docs/adr/0189`` §5), not a fact the engine
+    holds a second copy of.
     """
 
     day: IsoWeekday
-    part: str
+    hour: int
 
     def __post_init__(self) -> None:
         invariant(1 <= int(self.day) <= 7, f"a grid cell outside the week: {self.day}")
-        invariant(bool(self.part), "a grid cell with no part of the day")
+        invariant(
+            not isinstance(self.hour, bool) and 0 <= self.hour <= 23,
+            f"a grid cell outside the day: {self.hour!r}",
+        )
 
 
 @final
@@ -265,8 +271,8 @@ class Searcher:
     week does this person cover* — which is what makes that reading asymmetric
     and a fact about the pair rather than about either person.
 
-    ``today`` and ``day_parts`` are the two things a pure process cannot work out
-    for itself: which day it is, and which part of a day comes first.
+    ``today`` is the one thing a pure process cannot work out for itself: which
+    day it is.
     """
 
     level: LevelReading
@@ -275,29 +281,13 @@ class Searcher:
     grid: tuple[GridCell, ...]
     radius_km: float
     today: IsoWeekday
-    #: The parts of a day in the order the platform lays them out. One vocabulary
-    #: fact, supplied once per search: it is the whole of what the engine needs to
-    #: say *the soonest cell you both ticked* without holding a second copy of a
-    #: closed vocabulary it may not import.
-    day_parts: tuple[str, ...]
 
     def __post_init__(self) -> None:
         invariant(self.radius_km > 0.0, f"a search radius of {self.radius_km} km")
         invariant(
             1 <= int(self.today) <= 7, f"a weekday outside the week: {self.today}"
         )
-        invariant(bool(self.day_parts), "a week with no parts of the day in it")
-        invariant(
-            len(set(self.day_parts)) == len(self.day_parts),
-            f"a part of the day listed twice: {self.day_parts}",
-        )
         _no_repeated_cell(self.grid)
-        for cell in self.grid:
-            invariant(
-                cell.part in self.day_parts,
-                "a grid cell in a part of the day this search cannot order: "
-                f"{cell.part}",
-            )
 
 
 @final
@@ -363,7 +353,7 @@ def _no_repeated_cell(grid: tuple[GridCell, ...]) -> None:
 
     invariant(
         len(set(grid)) == len(grid),
-        f"a grid with a cell ticked twice: {[(int(c.day), c.part) for c in grid]}",
+        f"a grid with a cell ticked twice: {[(int(c.day), c.hour) for c in grid]}",
     )
 
 

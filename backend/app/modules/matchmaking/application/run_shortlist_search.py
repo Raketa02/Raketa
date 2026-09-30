@@ -85,8 +85,8 @@ from app.modules.matchmaking.domain.widening import (
     ladder_for,
     nothing_priced,
 )
-from app.modules.player_profile.domain.availability import (
-    AvailabilityGrid,
+from app.modules.player_profile.domain.weekly_hours import (
+    WeeklyHours,
     window_of,
 )
 from app.shared.ids import new_uuid
@@ -344,7 +344,7 @@ class RunShortlistSearch:
         command: RunShortlistSearchCommand,
         asked: AskedFor,
         *,
-        profile_grid: AvailabilityGrid,
+        profile_grid: WeeklyHours,
     ) -> tuple[RaisedPrompt, ...]:
         """Every question this search raises. **None of them changes a value.**
 

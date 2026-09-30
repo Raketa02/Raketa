@@ -17,8 +17,8 @@ class LogPlayerProfileEvent:
     trail; real handlers follow the same shape.
 
     **Nothing here logs a payload**, which matters more in this context than in
-    the others: an availability grid is classified as data nobody may see as a
-    calendar, and a location is a place a person goes. The event name, the
+    the others: a player's weekly hours are classified as data nobody may see as
+    a calendar, and a location is a place a person goes. The event name, the
     moment and the delivery ids are all that is written.
     """
 

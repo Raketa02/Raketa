@@ -2,7 +2,7 @@
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a tag as its ``str`` id, a photo as its ``str``
-uuid, an availability slot as its code, a location as two floats, a gender and an
+uuid, an hour of the week as its code, a location as two floats, a gender and an
 intent as their machine codes. Nothing here holds a value object, and nothing
 here holds display text.
 
@@ -18,7 +18,7 @@ table beside the stream to keep in step with it. The key is evidence about a
 *write*, not about the player, and it is on the creating event only.
 
 **Seven preference changes**, for the profile screen that edits the same values
-later: tags, photos, availability, location, radius, gender and gender
+later: tags, photos, weekly hours, location, radius, gender and gender
 preference. Each carries the whole new value rather than a delta, because a
 preference is small, replay stays a fold, and *what was it before* is answered by
 the event before it.
@@ -57,8 +57,19 @@ existing rows must keep decoding, which is what the version is for.
 profiles existed, and both are declared last, with defaults, so a row written
 before the question existed still decodes into this class — the pattern
 ``UserRegistered.adult_attested`` and ``AssessmentCompleted`` already follow. The
-durable name stays ``player_profile.created`` / v1. The two are not symmetrical
-about what their absence *means*, and each says so on its own field.
+two are not symmetrical about what their absence *means*, and each says so on its
+own field.
+
+**Changing what a field holds does, and ``player_profile.created`` is at version
+2 for it.** Version 1 carried ``availability``, a week of mornings, afternoons and
+evenings; ``docs/adr/0189`` §5 made the week hours, and the field became
+``weekly_hours`` — a change to the wire shape, versioned as one rather than
+reinterpreted. Version 1 is not readable, deliberately, on the Plan's own
+argument (``plans/application/event_subscriptions.py``): no environment but
+``local`` has ever run, its database is disposable, and a row written under the
+old shape is a decoding error rather than a week folded wrongly. The two appended
+fields keep their defaults, and what their absence would mean, though no version
+2 row lacks them.
 """
 
 from __future__ import annotations
@@ -85,9 +96,10 @@ class PlayerProfileCreated:
     player_id: UUID
     social_tags: tuple[str, ...]
     photo_ids: tuple[str, ...]
-    #: Availability slots as ``AvailabilitySlot.code`` writes them. Empty is a
-    #: real answer — *no preference* — and never an absent one.
-    availability: tuple[str, ...]
+    #: The hours of the week as ``WeeklyHour.code`` writes them — ``"2:19"``.
+    #: Never empty on a commit written today: the floor refuses it
+    #: (``docs/adr/0102``), and a blank week met anyway is *absent*.
+    weekly_hours: tuple[str, ...]
     latitude: float
     longitude: float
     search_radius_km: int
@@ -115,7 +127,7 @@ class PlayerProfileCreated:
     gender_preference: str = DEFAULT_GENDER_PREFERENCE.value
 
     def __post_init__(self) -> None:
-        _retuple(self, "social_tags", "photo_ids", "availability")
+        _retuple(self, "social_tags", "photo_ids", "weekly_hours")
 
 
 @dataclass(frozen=True)
@@ -145,13 +157,22 @@ class PhotosChanged:
 
 
 @dataclass(frozen=True)
-class AvailabilityChanged:
+class WeeklyHoursSet:
+    """The whole week, as it now stands — the You tab's *Save your week*.
+
+    ``WeeklyHoursSet`` rather than ``…Changed`` because the mechanics name it so
+    (``docs/specs/games-and-fill-in/the-screens.md`` C1); it replaced
+    ``player_profile.availability_changed``, whose week was mornings, afternoons
+    and evenings. Empty is a legal value here and only here: a player may clear
+    their week after committing, and it then reads as *absent* (ADR-0102).
+    """
+
     player_id: UUID
-    availability: tuple[str, ...]
+    weekly_hours: tuple[str, ...]
     occurred_at: datetime
 
     def __post_init__(self) -> None:
-        _retuple(self, "availability")
+        _retuple(self, "weekly_hours")
 
 
 @dataclass(frozen=True)

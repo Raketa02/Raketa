@@ -48,7 +48,6 @@ from typing import Final, Iterable, Sequence
 from uuid import UUID
 
 from app.kernel import Instant, instant
-from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.consent import (
     ConsentSurface,
     ProposalsOptIn,
@@ -59,7 +58,6 @@ from app.modules.player_profile.domain.errors import (
     TooManyPhotos,
 )
 from app.modules.player_profile.domain.events import (
-    AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
     IntroChanged,
@@ -70,6 +68,7 @@ from app.modules.player_profile.domain.events import (
     ProposalsOptInAnswered,
     SearchRadiusChanged,
     SocialTagsChanged,
+    WeeklyHoursSet,
 )
 from app.modules.player_profile.domain.gender import (
     DEFAULT_GENDER_PREFERENCE,
@@ -80,6 +79,7 @@ from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
 
@@ -94,7 +94,7 @@ def photo_order(photo_ids: Iterable[UUID]) -> tuple[UUID, ...]:
 
     **Order is preserved, never sorted.** The first photo is the one a player
     card shows, so the sequence the client sent *is* the answer — which is the
-    opposite of how a tag selection and an availability grid are treated, and
+    opposite of how a tag selection and a week of hours are treated, and
     the reason is that neither of those has a first element that means anything.
     """
 
@@ -118,7 +118,7 @@ class PlayerProfile:
     player_id: UUID
     social_tags: SocialTagSelection
     photo_ids: tuple[UUID, ...]
-    availability: AvailabilityGrid
+    weekly_hours: WeeklyHours
     location: LocationArea
     search_radius: SearchRadius
     #: The player's own answer to the gender question (``docs/adr/0096``).
@@ -185,7 +185,7 @@ class PlayerProfile:
         player_id: UUID,
         social_tags: SocialTagSelection,
         photo_ids: Sequence[UUID],
-        availability: AvailabilityGrid,
+        weekly_hours: WeeklyHours,
         location: LocationArea,
         search_radius: SearchRadius,
         gender: Gender,
@@ -232,7 +232,7 @@ class PlayerProfile:
                 player_id=player_id,
                 social_tags=social_tags.ids,
                 photo_ids=tuple(str(photo_id) for photo_id in ordered_photos),
-                availability=availability.codes,
+                weekly_hours=weekly_hours.codes,
                 latitude=location.latitude,
                 longitude=location.longitude,
                 search_radius_km=search_radius.kilometres,
@@ -295,15 +295,13 @@ class PlayerProfile:
             )
         )
 
-    def change_availability(
-        self, grid: AvailabilityGrid, *, occurred_at: Instant
-    ) -> None:
-        if grid == self.availability:
+    def set_weekly_hours(self, week: WeeklyHours, *, occurred_at: Instant) -> None:
+        if week == self.weekly_hours:
             return
         self._record_that(
-            AvailabilityChanged(
+            WeeklyHoursSet(
                 player_id=self.player_id,
-                availability=grid.codes,
+                weekly_hours=week.codes,
                 occurred_at=occurred_at,
             )
         )
@@ -442,7 +440,7 @@ class PlayerProfile:
             self.player_id = event.player_id
             self.social_tags = SocialTagSelection.recorded(event.social_tags)
             self.photo_ids = tuple(UUID(value) for value in event.photo_ids)
-            self.availability = AvailabilityGrid.from_codes(event.availability)
+            self.weekly_hours = WeeklyHours.from_codes(event.weekly_hours)
             self.location = LocationArea(
                 latitude=event.latitude, longitude=event.longitude
             )
@@ -464,8 +462,8 @@ class PlayerProfile:
             self.photo_ids = tuple(UUID(value) for value in event.photo_ids)
             self._touch(event.occurred_at)
             return
-        if isinstance(event, AvailabilityChanged):
-            self.availability = AvailabilityGrid.from_codes(event.availability)
+        if isinstance(event, WeeklyHoursSet):
+            self.weekly_hours = WeeklyHours.from_codes(event.weekly_hours)
             self._touch(event.occurred_at)
             return
         if isinstance(event, LocationChanged):

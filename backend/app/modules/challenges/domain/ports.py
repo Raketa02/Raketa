@@ -97,7 +97,7 @@ from app.kernel import Instant, Sport, invariant
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.origins import ChallengeOrigin
 from app.modules.challenges.domain.seats import SeatAnswer
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 
 
 @runtime_checkable

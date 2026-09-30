@@ -77,8 +77,8 @@ from app.modules.matchmaking.presentation.schemas import (
     WireInclusionReason,
     WithheldRowSchema,
 )
-from app.modules.player_profile.domain.availability import AvailabilitySlot
-from app.modules.player_profile.presentation.schemas import AvailabilitySlotResource
+from app.modules.player_profile.domain.weekly_hours import WeeklyHour
+from app.modules.player_profile.presentation.schemas import WeeklyHourResource
 
 
 #: The links minted for this response, by player. **Not part of the record**:
@@ -481,8 +481,8 @@ def _offer(offer: RungOffer) -> RungOfferSchema:
     not sent as null: a radius rung has no slot, rather than a slot of nothing.
 
     **The cell is read out of its code**, by ``_cell`` below. A times rung's slot
-    is drawn on the client's own grid beside twenty other cells, and no client
-    ever splits ``"4:EVENING"`` for itself
+    is drawn on the client's own grid beside the week's other hours, and no
+    client ever splits ``"4:19"`` for itself
     (`#283 <https://github.com/Raketa02/Raketa/issues/283>`_).
     """
 
@@ -499,20 +499,20 @@ def _offer(offer: RungOffer) -> RungOfferSchema:
     return RungOfferSchema.model_validate(fields)
 
 
-def _cell(code: str) -> AvailabilitySlotResource:
+def _cell(code: str) -> WeeklyHourResource:
     """One stored code, as the two named fields a grid is drawn from.
 
     **The only place this side reads our own slot encoding**, and it is one
     function rather than two identical expressions because the rule it enforces
     is that there is no second answer — a cell that gets drawn crosses in these
-    two fields, whether the player ticked it (``availability``), was offered it
+    two fields, whether the player ticked it (``weekly_hours``), was offered it
     (``RungOfferSchema.slot``, #283) or is being asked to keep it
-    (``PromptSchema.slots``, #286). ``AvailabilitySlotResource``'s own docstring
+    (``PromptSchema.slots``, #286). ``WeeklyHourResource``'s own docstring
     carries the argument; this carries the arithmetic.
     """
 
-    cell = AvailabilitySlot.from_code(code)
-    return AvailabilitySlotResource(day=int(cell.day), part=cell.part)
+    cell = WeeklyHour.from_code(code)
+    return WeeklyHourResource(day=int(cell.day), hour=cell.hour)
 
 
 def _prompt(raised: RaisedPrompt) -> PromptSchema:

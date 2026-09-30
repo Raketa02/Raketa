@@ -27,7 +27,7 @@ from app.modules.games.application.commands import OpenPlannedGameCommand
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, LineUp, Seating, GameSide
 from app.modules.games.domain.ports import GameRepository
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 
 

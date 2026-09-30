@@ -40,9 +40,9 @@ from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.geography import BoundingBox, Point, bounding_box
 from app.modules.matchmaking.domain.ports import PairwiseCounterpart, PlayerScoreReading
 from app.modules.matchmaking.domain.searches import SearchInitiation, SearchSurface
-from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 
 #: The terms the deck declines to read, for every pairing (``docs/adr/0169``
 #: §2). One today: under one ruler for everybody, a candidate who declared
@@ -123,7 +123,7 @@ class SearcherFacts:
     mu: float
     sigma: float
     tags: tuple[str, ...]
-    grid: AvailabilityGrid
+    grid: WeeklyHours
     radius_km: int
     area: Point
     #: ``None`` is **not** an answer and is never read as ``PREFER_NOT_TO_SAY``

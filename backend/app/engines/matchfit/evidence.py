@@ -49,10 +49,11 @@ from app.engines.matchfit.core import (
 @final
 @dataclass(frozen=True, slots=True)
 class SharedSlot:
-    """The next cell of the week both players ticked.
+    """The next hour of the week both players ticked — a day, and the hour its
+    cell starts at.
 
     **The grid is never rendered to anybody as a calendar.** Only the count of
-    shared slots and the name of the next shared one are ever shown, because
+    shared hours and the name of the next shared one are ever shown, because
     overlap is a fact about a pair where a calendar is a fact about a person.
 
     ``days_away`` is deliberately **not** here: it is derivable from the cell,
@@ -61,7 +62,7 @@ class SharedSlot:
     """
 
     day: int
-    part: str
+    hour: int
 
 
 @final

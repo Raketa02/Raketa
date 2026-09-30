@@ -59,7 +59,6 @@ from app.modules.challenges.domain.origins import (
     SentFromSearch as WrittenFromSearch,
 )
 from app.modules.challenges.domain.seats import SeatPlan, court_sides
-from app.modules.player_profile.domain.availability import Window
 from app.modules.matchmaking.domain.errors import GateDataUnavailable
 from app.modules.matchmaking.domain.ports import (
     FAIL_POSTURE,
@@ -90,6 +89,7 @@ from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.games.domain.windows import entry_closes_at
 from app.modules.matchmaking.application.outward_reads import read_demand
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.domain.skill_rating import SkillRating
 from app.modules.users.domain.events import UserRegistered

@@ -66,7 +66,7 @@ from app.modules.matchmaking.domain.searches import (
 from app.modules.matchmaking.infrastructure.absent_providers import NoHoldsExist
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.consent import ConsentSurface
-from app.modules.player_profile.domain.availability import AvailabilityGrid
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.play_intent import (
@@ -440,7 +440,7 @@ def a_profile(*, committed_at: datetime = build.SETTLED) -> PlayerProfile:
         player_id=SEARCHER,
         social_tags=SocialTagSelection.from_ids(build.TAGS),
         photo_ids=[],
-        availability=AvailabilityGrid.from_codes(build.SEARCHER_SLOTS),
+        weekly_hours=WeeklyHours.from_codes(build.SEARCHER_SLOTS),
         location=LocationArea.around(
             build.CENTRE.latitude, build.CENTRE.longitude
         ),
@@ -685,12 +685,12 @@ async def test_a_times_rung_ends_the_ladder_exactly_as_a_radius_rung_does():
     distance takes the radius rung and is not made to spend the climb on times.
     """
 
-    week = ((3, "EVENING"),)
+    week = ((3, 19),)
     store = Store()
     search = use_case(
         rows=(
-            build.row(1, mu=3.22, slots=("2:EVENING",)),
-            build.row(2, mu=3.22, slots=("2:EVENING",)),
+            build.row(1, mu=3.22, slots=("2:19",)),
+            build.row(2, mu=3.22, slots=("2:19",)),
         ),
         store=store,
     )
@@ -698,7 +698,7 @@ async def test_a_times_rung_ends_the_ladder_exactly_as_a_radius_rung_does():
     times = [
         offer for offer in offered.record.rung_offers or () if offer.rung is Rung.A
     ]
-    assert times and times[0].slot == "2:EVENING", "no times rung; this proves nothing"
+    assert times and times[0].slot == "2:19", "no times rung; this proves nothing"
 
     climbed = await search.execute(
         a_command(

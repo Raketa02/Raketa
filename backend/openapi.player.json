@@ -922,7 +922,7 @@
           "player-profile"
         ],
         "summary": "Commit every answer from onboarding's second part",
-        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.\n\n**`intro` is optional and fenced at the write.** One line about yourself, at most a hundred characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.",
+        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**`weekly_hours` are required**, at least one hour of the 7 \u00d7 16 week (07:00 to 23:00). Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.\n\n**`intro` is optional and fenced at the write.** One line about yourself, at most a hundred characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.",
         "operationId": "commit_player_profile_api_v1_players_me_profile_post",
         "security": [
           {
@@ -976,7 +976,7 @@
             }
           },
           "400": {
-            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`availability_grid_empty` \u2014 nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.",
+            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`weekly_hours_empty` \u2014 nothing ticked on the week. At least one of its 112 hours; the minimum is exactly one and is not served.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1032,7 +1032,7 @@
           "player-profile"
         ],
         "summary": "Every fact this player declared \u2014 what the Play screens and You read",
-        "description": "One read for everything a player declared, across the two aggregates that own it: the week, the radius and the per-sport Play intent the Play screens edit, and \u2014 since the *You* tab \u2014 the tags, the photos with their verdicts, the intro, the standing proposals answer, and the owner's own gender and preference. The one fact a search screen still needs from elsewhere \u2014 **which sports am I rated in** \u2014 is `GET /api/v1/ratings` and is not re-served here.\n\n**`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial **before** a search is refused with `play_intent_not_declared` rather than after.\n\n**An empty `availability` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*. **An empty `photos` list is one too**: a profile may hold none.\n\n**Absent means omitted, never `null`.** `intro` is omitted where no line was written; a photo's `review` is omitted where nobody looked \u2014 which is not `allowed`; `gender` is omitted on a profile committed before the question existed \u2014 which is not `PREFER_NOT_TO_SAY`.\n\n## Who is told what\n\n**`gender` and `gender_preference` are withheld from everybody but their owner.** No response that describes one player to another carries either \u2014 not a card, not a record, not a seat \u2014 and that walk is asserted over the whole emitted contract. This route is the one shape that carries them, to the person who set them, so the screen that asks *who should we match you with* can open on the answer already given (`docs/adr/0179` \u00a74).\n\n**The location area is not served, and neither is a flag for it.** A profile cannot be committed without an area, so `has_location` could never be false; the tab branches on the phone's permission state, which is the device's.",
+        "description": "One read for everything a player declared, across the two aggregates that own it: the week, the radius and the per-sport Play intent the Play screens edit, and \u2014 since the *You* tab \u2014 the tags, the photos with their verdicts, the intro, the standing proposals answer, and the owner's own gender and preference. The one fact a search screen still needs from elsewhere \u2014 **which sports am I rated in** \u2014 is `GET /api/v1/ratings` and is not re-served here.\n\n**`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial **before** a search is refused with `play_intent_not_declared` rather than after.\n\n**An empty `weekly_hours` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*. **An empty `photos` list is one too**: a profile may hold none.\n\n**Absent means omitted, never `null`.** `intro` is omitted where no line was written; a photo's `review` is omitted where nobody looked \u2014 which is not `allowed`; `gender` is omitted on a profile committed before the question existed \u2014 which is not `PREFER_NOT_TO_SAY`.\n\n## Who is told what\n\n**`gender` and `gender_preference` are withheld from everybody but their owner.** No response that describes one player to another carries either \u2014 not a card, not a record, not a seat \u2014 and that walk is asserted over the whole emitted contract. This route is the one shape that carries them, to the person who set them, so the screen that asks *who should we match you with* can open on the answer already given (`docs/adr/0179` \u00a74).\n\n**The location area is not served, and neither is a flag for it.** A profile cannot be committed without an area, so `has_location` could never be false; the tab branches on the phone's permission state, which is the device's.",
         "operationId": "read_player_profile_api_v1_players_me_profile_get",
         "security": [
           {
@@ -1063,19 +1063,19 @@
         }
       }
     },
-    "/api/v1/players/me/availability": {
+    "/api/v1/players/me/weekly-hours": {
       "put": {
         "tags": [
           "player-profile"
         ],
-        "summary": "Replace this player's week",
-        "description": "The whole week, every time \u2014 the list **is** the grid, and what is absent from it is unticked. Unkeyed and safe to send twice: the same week twice lands the same state, and a transition that changes nothing records nothing.\n\n**An empty list is a legal value and clears the week.** The floor of one ticked cell binds the *commit*, which is the answer a player is asked for at the end of onboarding, and not every later edit of it. A cleared week is read as *absent* by the matcher, never as a zero \u2014 silence is never scored (`docs/adr/0102`).\n\n**This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine notices that a search ran on a week the profile does not hold and asks; nothing in the matcher writes a profile, so a *yes* is this request. Declining writes nothing anywhere.\n\nRepeated cells are collapsed and the response carries the grid as stored, in the platform's reading order \u2014 so a client can see what the profile now holds rather than assuming it kept what was sent.",
-        "operationId": "change_availability_api_v1_players_me_availability_put",
+        "summary": "Replace this player's weekly hours \u2014 Save your week",
+        "description": "The whole week, every time \u2014 the list **is** the week, and what is absent from it is unticked. An hour is a day and the hour its cell starts at, 7 to 22: the week runs 07:00 to 23:00. Unkeyed and safe to send twice: the same week twice lands the same state, and a transition that changes nothing records nothing.\n\n**An empty list is a legal value and clears the week.** The floor of one ticked hour binds the *commit*, which is the answer a player is asked for at the end of onboarding, and not every later edit of it. A cleared week is read as *absent* by the matcher, never as a zero \u2014 silence is never scored (`docs/adr/0102`).\n\n**This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine notices that a search ran on a week the profile does not hold and asks; nothing in the matcher writes a profile, so a *yes* is this request. Declining writes nothing anywhere.\n\nRepeated hours are collapsed and the response carries the week as stored, in the platform's reading order \u2014 so a client can see what the profile now holds rather than assuming it kept what was sent.\n\nIt replaced `PUT /players/me/availability`, whose week was mornings, afternoons and evenings (`docs/adr/0189` \u00a75).",
+        "operationId": "set_weekly_hours_api_v1_players_me_weekly_hours_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ChangeAvailabilityRequest"
+                "$ref": "#/components/schemas/SetWeeklyHoursRequest"
               }
             }
           },
@@ -1087,7 +1087,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AvailabilityResponse"
+                  "$ref": "#/components/schemas/WeeklyHoursResponse"
                 }
               }
             }
@@ -6894,7 +6894,7 @@
             "type": "integer",
             "minimum": 0.0,
             "title": "Shared Count",
-            "description": "Cells both of them ticked"
+            "description": "Hours of the week both of them ticked"
           },
           "next_slot": {
             "anyOf": [
@@ -6905,7 +6905,7 @@
                 "type": "null"
               }
             ],
-            "description": "The soonest cell both ticked, or null when there is none"
+            "description": "The soonest hour both ticked, or null when there is none"
           }
         },
         "type": "object",
@@ -6915,45 +6915,6 @@
         ],
         "title": "AvailabilityOverlapEvidence",
         "description": "How much of the searcher's week the candidate is free in.\n\nThe term is ``|shared| / |mine|`` and has **no constants at all** \u2014 the\ndenominator is the searcher's own ticked cells, which is what makes the\nreading asymmetric and what makes it a fact about the pair.\n\nOverlap is evidence a game can be *arranged*, never a proposed time, which is\nwhy a candidate sharing no slot at all is still shown: the times rung exists\nfor exactly that pairing."
-      },
-      "AvailabilityResponse": {
-        "properties": {
-          "availability": {
-            "items": {
-              "$ref": "#/components/schemas/AvailabilitySlotResource"
-            },
-            "type": "array",
-            "title": "Availability"
-          }
-        },
-        "type": "object",
-        "required": [
-          "availability"
-        ],
-        "title": "AvailabilityResponse",
-        "description": "The week as the profile now holds it.\n\nA body rather than a ``204`` because the value stored is not always the\nvalue sent: repeated cells are collapsed and the order is the platform's\nreading order, so a client that kept what it sent would hold a week the\nprofile does not."
-      },
-      "AvailabilitySlotResource": {
-        "properties": {
-          "day": {
-            "type": "integer",
-            "maximum": 7.0,
-            "minimum": 1.0,
-            "title": "Day",
-            "description": "ISO weekday \u2014 1 is Monday, 7 is Sunday. The grid is Monday-first."
-          },
-          "part": {
-            "$ref": "#/components/schemas/DayPart",
-            "description": "Which part of that day"
-          }
-        },
-        "type": "object",
-        "required": [
-          "day",
-          "part"
-        ],
-        "title": "AvailabilitySlotResource",
-        "description": "One ticked cell of the availability grid.\n\nTwo named fields rather than the single joined code the event stream stores.\nThe stream's code is a *storage* encoding chosen so a replay folds strings;\nthis is a contract a client renders a grid from, and a client that had to\nsplit ``\"3:EVENING\"`` would be parsing our persistence format.\n\n**Every cell, and there is no exception.** The rule was twice read as\ncovering only the cells a player *chose* \u2014 the one a times rung offers\n(#283), and the week a raised ``KEEP_THESE_TIMES`` quotes back (#286) \u2014 on\nthe argument that a payload handed back is not a resource. Both crossed as\ncodes, and in both cases a client ended up splitting one. What decides this\nis not whose value it is but **what is done with it**: a cell that gets\ndrawn on the seven-by-three grid crosses in these two fields, and the engine\nholding it as a code is a fact about the engine. This side of the boundary\nowns the encoding, so this side is where it is read."
       },
       "BandResponse": {
         "properties": {
@@ -7352,24 +7313,6 @@
         "title": "ChallengeSchema",
         "description": "One challenge, with its whole court and what it is right now."
       },
-      "ChangeAvailabilityRequest": {
-        "properties": {
-          "availability": {
-            "items": {
-              "$ref": "#/components/schemas/AvailabilitySlotResource"
-            },
-            "type": "array",
-            "title": "Availability",
-            "description": "Every cell still ticked. **The list is the week** \u2014 what is absent is unticked \u2014 and an empty list clears it, which is a legal value rather than a refusal."
-          }
-        },
-        "type": "object",
-        "required": [
-          "availability"
-        ],
-        "title": "ChangeAvailabilityRequest",
-        "description": "The week, replaced whole.\n\n**No floor, and that is the difference from the commit.** An empty list is a\ncleared week and is recorded; ``availability_grid_empty`` refuses the answer\na player is *asked for* at the end of onboarding, not every later edit of it.\n\nRepeated cells are collapsed rather than refused, and the response carries\nthe grid as it was stored \u2014 so a client that sent the same cell twice, or\nsent the week in its own order, can see what the profile now holds."
-      },
       "ChangeGenderPreferenceRequest": {
         "properties": {
           "gender_preference": {
@@ -7657,13 +7600,13 @@
             "title": "Photo Ids",
             "description": "Ids returned by `POST /photos`, in the order the player arranged them \u2014 the first is the one a player card shows. At most 3; an empty list is valid. Every id is checked to exist and to belong to this player."
           },
-          "availability": {
+          "weekly_hours": {
             "items": {
-              "$ref": "#/components/schemas/AvailabilitySlotResource"
+              "$ref": "#/components/schemas/WeeklyHourResource"
             },
             "type": "array",
-            "title": "Availability",
-            "description": "The cells of the week this player ticked. **At least one of the twenty-one** \u2014 an empty list is refused with `availability_grid_empty`. The minimum is exactly one and is not served: it is fixed, so a client holds it as a constant. Repeated cells are collapsed, and the floor is counted after that."
+            "title": "Weekly Hours",
+            "description": "The hours of the week this player ticked. **At least one of the 112** \u2014 an empty list is refused with `weekly_hours_empty`. The minimum is exactly one and is not served: it is fixed, so a client holds it as a constant. Repeated hours are collapsed, and the floor is counted after that."
           },
           "location": {
             "$ref": "#/components/schemas/LocationAreaResource"
@@ -7701,14 +7644,14 @@
         "type": "object",
         "required": [
           "social_tag_ids",
-          "availability",
+          "weekly_hours",
           "location",
           "search_radius_km",
           "proposals_opt_in",
           "gender"
         ],
         "title": "CommitPlayerProfileRequest",
-        "description": "Every answer from onboarding's second part, in one body.\n\n**Photos and the intro are the fields with a default**, because holding no\nphotograph is a legitimate answer to *add some photos* and writing nothing\nis a legitimate answer to *say it in your own words* (``docs/adr/0170``).\nEverything else is something this request must actually carry \u2014 a\nlocation, a radius, a tag selection, an answer to the proposals question,\nand **a week with something ticked in it** (``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``availability_grid_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
+        "description": "Every answer from onboarding's second part, in one body.\n\n**Photos and the intro are the fields with a default**, because holding no\nphotograph is a legitimate answer to *add some photos* and writing nothing\nis a legitimate answer to *say it in your own words* (``docs/adr/0170``).\nEverything else is something this request must actually carry \u2014 a\nlocation, a radius, a tag selection, an answer to the proposals question,\nand **a week with something ticked in it** (``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``weekly_hours_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
       },
       "ConcernSchema": {
         "properties": {
@@ -8059,7 +8002,7 @@
             "type": "integer",
             "minimum": 0.0,
             "title": "Shared Count",
-            "description": "Cells both of them ticked"
+            "description": "Hours of the week both of them ticked"
           },
           "next_slot": {
             "anyOf": [
@@ -8070,7 +8013,7 @@
                 "type": "null"
               }
             ],
-            "description": "The soonest cell both ticked, or null when there is none"
+            "description": "The soonest hour both ticked, or null when there is none"
           }
         },
         "type": "object",
@@ -8593,18 +8536,21 @@
             "title": "Day",
             "description": "ISO weekday \u2014 1 is Monday, 7 is Sunday. The grid is Monday-first."
           },
-          "part": {
-            "$ref": "#/components/schemas/DayPart",
-            "description": "Which part of that day"
+          "hour": {
+            "type": "integer",
+            "maximum": 22.0,
+            "minimum": 7.0,
+            "title": "Hour",
+            "description": "The hour that cell starts at, wall clock \u2014 19 is 19:00 to 20:00"
           }
         },
         "type": "object",
         "required": [
           "day",
-          "part"
+          "hour"
         ],
         "title": "CourtSharedSlot",
-        "description": "The next cell of the week both players ticked.\n\n**The grid is never rendered to anybody as a calendar.** Only the count of\nshared slots and the name of the next shared one are ever shown, because\noverlap is a fact about a pair where a calendar is a fact about a person."
+        "description": "The next hour of the week both players ticked.\n\n**The grid is never rendered to anybody as a calendar.** Only the count of\nshared hours and the name of the next shared one are ever shown, because\noverlap is a fact about a pair where a calendar is a fact about a person."
       },
       "CourtSocialVibeEvidence": {
         "properties": {
@@ -8767,16 +8713,6 @@
         "title": "CreatePlayerGroupRequest",
         "description": "A player creates a group. **No sport is asked for**: the group plays\nwhatever its members are rated in (``docs/adr/0183`` \u00a76)."
       },
-      "DayPart": {
-        "type": "string",
-        "enum": [
-          "MORNING",
-          "AFTERNOON",
-          "EVENING"
-        ],
-        "title": "DayPart",
-        "description": "The three parts of a day a player may tick.\n\nClosed, and deliberately coarse. The product asks *when do you usually play*,\nand an answer finer than this would be a schedule \u2014 which is the thing a\npreference is explicitly not.\n\nDeclared in rendering order, so ``tuple(DayPart)`` is the order a grid is\nlaid out in and no caller sorts."
-      },
       "DealDeckRequest": {
         "properties": {
           "sport": {
@@ -8785,7 +8721,7 @@
           },
           "availability_override": {
             "items": {
-              "$ref": "#/components/schemas/AvailabilitySlotResource"
+              "$ref": "#/components/schemas/WeeklyHourResource"
             },
             "type": "array",
             "title": "Availability Override",
@@ -11784,13 +11720,13 @@
       },
       "PlayerProfileReadResponse": {
         "properties": {
-          "availability": {
+          "weekly_hours": {
             "items": {
-              "$ref": "#/components/schemas/AvailabilitySlotResource"
+              "$ref": "#/components/schemas/WeeklyHourResource"
             },
             "type": "array",
-            "title": "Availability",
-            "description": "The cells of the week this player has ticked, in the platform's own reading order. **An empty list is a real answer** \u2014 a player may clear their week \u2014 and it means *we do not know when they play*, never *never*."
+            "title": "Weekly Hours",
+            "description": "The hours of the week this player has ticked, in the platform's own reading order \u2014 day, then hour. **An empty list is a real answer** \u2014 a player may clear their week \u2014 and it means *we do not know when they play*, never *never*."
           },
           "search_radius_km": {
             "type": "integer",
@@ -11844,7 +11780,7 @@
         },
         "type": "object",
         "required": [
-          "availability",
+          "weekly_hours",
           "search_radius_km",
           "play_intents",
           "social_tags",
@@ -11853,7 +11789,7 @@
           "gender_preference"
         ],
         "title": "PlayerProfileReadResponse",
-        "description": "Every fact a player declared, in one round trip \u2014 what the Play screens\nread and, since ``docs/adr/0179``, what the You tab draws its rows from.\n\n**The gender and the preference are served here, and on no other shape.**\nADR-0096 \u00a76's *no response shape carries a gender value out* is about\nresponses that describe one player to another, and its walk still refuses\nboth words on every one of those. A player reading their own answer on a\nroute scoped to ``me`` is not what that rule protects, and a screen that\nasks *who should we match you with* with nothing pre-selected is a screen a\nplayer cannot trust (``docs/adr/0179`` \u00a74). ``gender`` is **omitted** on a\nprofile committed before the question existed \u2014 never ``PREFER_NOT_TO_SAY``,\nwhich is an answer a player gives.\n\n**The one thing still withheld is the location area**, and nothing stands\nin for it: a profile cannot be committed without an area, so a\n``has_location`` could never be false, and a branch nobody can take is a\nbranch nobody tests.\n\nAbsence has one spelling here and it is **omission** (``OMITTED``): an intro\nnever written, a photograph nobody looked at, a gender never asked. The one\nabsence that is served rather than omitted is **an empty ``photos`` list**,\nbecause a profile may legally hold none and that is a real answer.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would say nothing. ``GET /users/me`` is\nwhere an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
+        "description": "Every fact a player declared, in one round trip \u2014 what the Play screens\nread and, since ``docs/adr/0179``, what the You tab draws its rows from.\n\n**The gender and the preference are served here, and on no other shape.**\nADR-0096 \u00a76's *no response shape carries a gender value out* is about\nresponses that describe one player to another, and its walk still refuses\nboth words on every one of those. A player reading their own answer on a\nroute scoped to ``me`` is not what that rule protects, and a screen that\nasks *who should we match you with* with nothing pre-selected is a screen a\nplayer cannot trust (``docs/adr/0179`` \u00a74). ``gender`` is **omitted** on a\nprofile committed before the question existed \u2014 never ``PREFER_NOT_TO_SAY``,\nwhich is an answer a player gives.\n\n**The one thing still withheld is the location area**, and nothing stands\nin for it: a profile cannot be committed without an area, so a\n``has_location`` could never be false, and a branch nobody can take is a\nbranch nobody tests.\n\nAbsence has one spelling here and it is **omission** (``OMITTED``): an intro\nnever written, a photograph nobody looked at, a gender never asked. The one\nabsence that is served rather than omitted is **an empty ``photos`` list**,\nbecause a profile may legally hold none and that is a real answer.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would say nothing. ``GET /users/me`` is\nwhere an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built. ``weekly_hours`` is the one replacement,\nof the part-of-day ``availability`` it succeeded (``docs/adr/0189`` \u00a75), made\nwhile no build had shipped anywhere but ``local``."
       },
       "PlayerProfileResponse": {
         "properties": {
@@ -11877,12 +11813,12 @@
             "type": "array",
             "title": "Photo Ids"
           },
-          "availability": {
+          "weekly_hours": {
             "items": {
-              "$ref": "#/components/schemas/AvailabilitySlotResource"
+              "$ref": "#/components/schemas/WeeklyHourResource"
             },
             "type": "array",
-            "title": "Availability"
+            "title": "Weekly Hours"
           },
           "location": {
             "$ref": "#/components/schemas/LocationAreaResource"
@@ -11910,7 +11846,7 @@
           "player_id",
           "social_tag_ids",
           "photo_ids",
-          "availability",
+          "weekly_hours",
           "location",
           "search_radius_km",
           "proposals_opt_in",
@@ -11918,7 +11854,7 @@
           "updated_at"
         ],
         "title": "PlayerProfileResponse",
-        "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out of this body**, and that is a rule rather\nthan an oversight (``docs/adr/0096`` \u00a76): a preference crosses the wire\n*in*, on a search; no response that describes one player to another carries\na gender out and no card renders one. This body is only ever the caller's\nown profile, so nothing here would leak a third party's answer \u2014 the field\nis left off anyway, because *which* shapes may carry it is a line rather\nthan a judgement made per endpoint, and the line is **exactly one shape**:\nthe owner's own read, ``PlayerProfileReadResponse`` (``docs/adr/0179`` \u00a74).\nThe profile editor that reads it back is the You tab, and it reads that\nroute; the commit's answer stays what it was.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
+        "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out of this body**, and that is a rule rather\nthan an oversight (``docs/adr/0096`` \u00a76): a preference crosses the wire\n*in*, on a search; no response that describes one player to another carries\na gender out and no card renders one. This body is only ever the caller's\nown profile, so nothing here would leak a third party's answer \u2014 the field\nis left off anyway, because *which* shapes may carry it is a line rather\nthan a judgement made per endpoint, and the line is **exactly one shape**:\nthe owner's own read, ``PlayerProfileReadResponse`` (``docs/adr/0179`` \u00a74).\nThe profile editor that reads it back is the You tab, and it reads that\nroute; the commit's answer stays what it was.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built. ``weekly_hours`` is the one replacement,\nof the part-of-day ``availability`` it succeeded (``docs/adr/0189`` \u00a75), made\nwhile no build had shipped anywhere but ``local``."
       },
       "PlayerRecordResponse": {
         "properties": {
@@ -12189,11 +12125,11 @@
           },
           "slots": {
             "items": {
-              "$ref": "#/components/schemas/AvailabilitySlotResource"
+              "$ref": "#/components/schemas/WeeklyHourResource"
             },
             "type": "array",
             "title": "Slots",
-            "description": "The week this search actually ran on, in the same two named fields every other week on the wire crosses in \u2014 because the sheet **draws** this one on the seven-by-three grid beside the profile's own and quotes its count off the same list. **An empty list is a cleared week** \u2014 the player unticked every cell, which is a legal edit and a legal thing to be offered \u2014 where the field being absent means this is not the times prompt at all."
+            "description": "The week this search actually ran on, in the same two named fields every other week on the wire crosses in \u2014 because the sheet **draws** this one on the seven-by-sixteen grid beside the profile's own and quotes its count off the same list. **An empty list is a cleared week** \u2014 the player unticked every hour, which is a legal edit and a legal thing to be offered \u2014 where the field being absent means this is not the times prompt at all."
           },
           "mode": {
             "$ref": "#/components/schemas/SearchMode",
@@ -12781,7 +12717,7 @@
           },
           "availability_override": {
             "items": {
-              "$ref": "#/components/schemas/AvailabilitySlotResource"
+              "$ref": "#/components/schemas/WeeklyHourResource"
             },
             "type": "array",
             "title": "Availability Override",
@@ -12814,7 +12750,7 @@
           },
           "availability_override": {
             "items": {
-              "$ref": "#/components/schemas/AvailabilitySlotResource"
+              "$ref": "#/components/schemas/WeeklyHourResource"
             },
             "type": "array",
             "title": "Availability Override",
@@ -12876,8 +12812,8 @@
             "description": "The widened radius, on a `RADIUS` rung. Always inside the same 1-50 km your own slider holds: a relaxation never offers a radius you could not have set yourself, so a searcher already at 50 km is offered no radius rung at all."
           },
           "slot": {
-            "$ref": "#/components/schemas/AvailabilitySlotResource",
-            "description": "The one cell this rung would add to your week, on a `TIMES` rung, and **for this search only**. The same two named fields every other slot crosses in, because this one is drawn on the same seven-by-three grid the player just filled in \u2014 ticked there as belonging to this search and to no later one."
+            "$ref": "#/components/schemas/WeeklyHourResource",
+            "description": "The one hour this rung would add to your week, on a `TIMES` rung, and **for this search only**. The same two named fields every other hour crosses in, because this one is drawn on the same seven-by-sixteen grid the player just filled in \u2014 ticked there as belonging to this search and to no later one."
           }
         },
         "type": "object",
@@ -13473,6 +13409,24 @@
         "title": "SetScoreSchema",
         "description": "One set, **absolute**: what side A took, and what side B took.\n\nNever relative to the reader. A score stored from one point of view has to be\nflipped by whoever reads it next, and the first reader to forget publishes a\nloss as a win."
       },
+      "SetWeeklyHoursRequest": {
+        "properties": {
+          "weekly_hours": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyHourResource"
+            },
+            "type": "array",
+            "title": "Weekly Hours",
+            "description": "Every hour still ticked. **The list is the week** \u2014 what is absent is unticked \u2014 and an empty list clears it, which is a legal value rather than a refusal."
+          }
+        },
+        "type": "object",
+        "required": [
+          "weekly_hours"
+        ],
+        "title": "SetWeeklyHoursRequest",
+        "description": "The weekly hours, replaced whole \u2014 *Save your week*.\n\n**No floor, and that is the difference from the commit.** An empty list is a\ncleared week and is recorded; ``weekly_hours_empty`` refuses the answer a\nplayer is *asked for* at the end of onboarding, not every later edit of it.\n\nRepeated hours are collapsed rather than refused, and the response carries\nthe week as it was stored \u2014 so a client that sent the same hour twice, or\nsent the week in its own order, can see what the profile now holds."
+      },
       "SharedSlot": {
         "properties": {
           "day": {
@@ -13482,18 +13436,21 @@
             "title": "Day",
             "description": "ISO weekday \u2014 1 is Monday, 7 is Sunday. The grid is Monday-first."
           },
-          "part": {
-            "$ref": "#/components/schemas/DayPart",
-            "description": "Which part of that day"
+          "hour": {
+            "type": "integer",
+            "maximum": 22.0,
+            "minimum": 7.0,
+            "title": "Hour",
+            "description": "The hour that cell starts at, wall clock \u2014 19 is 19:00 to 20:00"
           }
         },
         "type": "object",
         "required": [
           "day",
-          "part"
+          "hour"
         ],
         "title": "SharedSlot",
-        "description": "The next cell of the week both players ticked.\n\n**The grid is never rendered to anybody as a calendar.** Only the count of\nshared slots and the name of the next shared one are ever shown, because\noverlap is a fact about a pair where a calendar is a fact about a person."
+        "description": "The next hour of the week both players ticked.\n\n**The grid is never rendered to anybody as a calendar.** Only the count of\nshared hours and the name of the next shared one are ever shown, because\noverlap is a fact about a pair where a calendar is a fact about a person."
       },
       "ShortlistResponse": {
         "properties": {
@@ -14416,6 +14373,48 @@
         ],
         "title": "ValidationError"
       },
+      "WeeklyHourResource": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Day",
+            "description": "ISO weekday \u2014 1 is Monday, 7 is Sunday. The grid is Monday-first."
+          },
+          "hour": {
+            "type": "integer",
+            "maximum": 22.0,
+            "minimum": 7.0,
+            "title": "Hour",
+            "description": "The hour the cell starts at, wall clock \u2014 19 is 19:00 to 20:00. The week runs 07:00 to 23:00, so the first cell is 7 and the last is 22."
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "hour"
+        ],
+        "title": "WeeklyHourResource",
+        "description": "One ticked hour of the week \u2014 a day, and the hour its cell starts at.\n\nTwo named fields rather than the single joined code the event stream stores.\nThe stream's code is a *storage* encoding chosen so a replay folds strings;\nthis is a contract a client renders a grid from, and a client that had to\nsplit ``\"3:19\"`` would be parsing our persistence format.\n\n**Every cell, and there is no exception.** The rule was twice read as\ncovering only the cells a player *chose* \u2014 the one a times rung offers\n(#283), and the week a raised ``KEEP_THESE_TIMES`` quotes back (#286) \u2014 on\nthe argument that a payload handed back is not a resource. Both crossed as\ncodes, and in both cases a client ended up splitting one. What decides this\nis not whose value it is but **what is done with it**: a cell that gets\ndrawn on the seven-by-sixteen grid crosses in these two fields, and the engine\nholding it as a code is a fact about the engine. This side of the boundary\nowns the encoding, so this side is where it is read."
+      },
+      "WeeklyHoursResponse": {
+        "properties": {
+          "weekly_hours": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyHourResource"
+            },
+            "type": "array",
+            "title": "Weekly Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weekly_hours"
+        ],
+        "title": "WeeklyHoursResponse",
+        "description": "The weekly hours as the profile now holds them.\n\nA body rather than a ``204`` because the value stored is not always the\nvalue sent: repeated hours are collapsed and the order is the platform's\nreading order, so a client that kept what it sent would hold a week the\nprofile does not."
+      },
       "Window": {
         "type": "string",
         "enum": [
@@ -14426,7 +14425,7 @@
           "ANY"
         ],
         "title": "Window",
-        "description": "When a game found on a grid would plausibly be played. **A code, never a\nsentence** \u2014 *\"tonight\"* is the client's word (``docs/adr/0022``).\n\n**Derived, never chosen** (``docs/adr/0100``). There is no window picker\nanywhere: a player changes their window by changing their grid, which is the\nsame act that changes their matches. One control, one meaning.\n\nIt is a **label on the search**, not a proposed time \u2014 the grid is still\nnever rendered to anybody as a calendar, and this says only how soon the week\nit ran on comes round."
+        "description": "When a game found on a week would plausibly be played. **A code, never a\nsentence** \u2014 *\"tonight\"* is the client's word (``docs/adr/0022``).\n\n**Derived, never chosen** (``docs/adr/0100``). There is no window picker\nanywhere: a player changes their window by changing their week, which is the\nsame act that changes their matches. One control, one meaning.\n\nIt is a **label on the search**, not a proposed time \u2014 the week is still\nnever rendered to anybody as a calendar, and this says only how soon the week\nit ran on comes round."
       },
       "WireInclusionReason": {
         "type": "string",

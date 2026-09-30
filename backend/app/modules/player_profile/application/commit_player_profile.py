@@ -48,7 +48,6 @@ from app.modules.player_profile.application.commands import (
 from app.modules.player_profile.application.owned_photos import (
     check_photos_are_the_callers,
 )
-from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.errors import (
     PlayerProfileAlreadyExists,
     ProposalsOptInNotAnswered,
@@ -62,6 +61,7 @@ from app.modules.player_profile.domain.ports import (
 from app.modules.player_profile.domain.profile import PlayerProfile, photo_order
 from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,7 +114,7 @@ class CommitPlayerProfile:
         selection = SocialTagSelection.from_ids(command.social_tag_ids)
         radius = SearchRadius.chosen(command.search_radius_km)
         area = LocationArea.around(command.latitude, command.longitude)
-        grid = AvailabilityGrid.of_cells(command.availability)
+        week = WeeklyHours.of_cells(command.weekly_hours)
         # The one free-text answer, and the fence is here with the other pure
         # refusals: a line carrying contact is refused before anything is
         # stored and before the object store is asked anything
@@ -136,7 +136,7 @@ class CommitPlayerProfile:
             player_id=command.player_id,
             social_tags=selection,
             photo_ids=photo_ids,
-            availability=grid,
+            weekly_hours=week,
             location=area,
             search_radius=radius,
             gender=command.gender,

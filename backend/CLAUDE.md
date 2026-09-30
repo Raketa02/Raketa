@@ -954,7 +954,7 @@ Rules to preserve:
   one thing it still asks of the Plan, `AgreedMoment`, is keyed by the challenge the game was
   opened from. And
   **one platform zone**, `Europe/Warsaw`, recorded as a locale assumption in the shape
-  `availability.py`'s `_WEEKEND` already uses, with its falsifier named: the first shard
+  `weekly_hours.py`'s `_WEEKEND` already uses, with its falsifier named: the first shard
   whose players are somewhere else. The conversion goes through the kernel's `slot_start`
   and nowhere else — **a dead function comes alive**, since it was written for the booking
   grid the 2026-08-25 reset deleted and had no caller in `app/` until now.

@@ -28,7 +28,6 @@ from app.modules.player_profile.application.sweep_uncommitted_photos import (
     SweepUncommittedPhotos,
 )
 from app.modules.player_profile.domain.consent import ConsentSurface
-from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.gender import Gender
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.photos import (
@@ -39,6 +38,7 @@ from app.modules.player_profile.domain.photos import (
 from app.modules.player_profile.domain.profile import PlayerProfile
 from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
     EventSourcedPlayerProfileRepository,
 )
@@ -129,7 +129,7 @@ class Harness:
                 ("PLAYS_TO_WIN", "HERE_TO_IMPROVE")
             ),
             photo_ids=[ref.photo_id for ref in refs],
-            availability=AvailabilityGrid.of_cells([(6, "MORNING")]),
+            weekly_hours=WeeklyHours.of_cells([(6, 10)]),
             location=LocationArea.around(52.23, 21.01),
             search_radius=SearchRadius.chosen(10),
             gender=Gender.PREFER_NOT_TO_SAY,

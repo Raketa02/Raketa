@@ -46,9 +46,9 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, invariant
 from app.modules.matchmaking.domain.ports import AtStake
 from app.modules.matchmaking.domain.relaxation import Rung, RungOffer
-from app.modules.player_profile.domain.availability import Window
 from app.modules.player_profile.domain.photos import PhotoReviewDecision
 from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.domain.weekly_hours import Window
 
 
 class SearchSurface(str, Enum):
@@ -644,7 +644,7 @@ class SearchRecord:
     #: a stale window ships the day ``window_of`` changes, and a derivation from
     #: this grid and this row's own ``at`` reproduces the answer that was given.
     searcher_grid: tuple[str, ...]
-    #: How many of the twenty-one grid cells the searcher had ticked. The
+    #: How many of the week's 112 hours the searcher had ticked. The
     #: availability term's **denominator**, per search rather than per candidate.
     searcher_slot_count: int
     #: The searcher's **own** coarse area, as the code the wire spells areas in,

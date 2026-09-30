@@ -47,7 +47,7 @@ from app.infrastructure.events.event_store_model import EventStoreORM
 from app.infrastructure.events.sqlalchemy_domain_event_store import (
     SqlAlchemyEventStore,
 )
-from app.kernel import Sport
+from app.kernel import Sport, Zone, instant
 from app.modules.player_profile.domain.events import (
     PlayerProfileCreated,
     ProposalsOptInAnswered,
@@ -64,9 +64,11 @@ from app.modules.player_profile.domain.photos import (
     verdict_when_unreviewable,
 )
 from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
+from app.modules.player_profile.domain.weekly_hours import free_for_the_hour
 
 PROFILE_URL = "/api/v1/players/me/profile"
-AVAILABILITY_URL = "/api/v1/players/me/availability"
+WEEKLY_HOURS_URL = "/api/v1/players/me/weekly-hours"
+WARSAW = Zone("Europe/Warsaw")
 RADIUS_URL = "/api/v1/players/me/search-radius"
 LOCATION_URL = "/api/v1/players/me/location"
 TAGS_URL = "/api/v1/players/me/social-tags"
@@ -118,9 +120,9 @@ async def a_committed_profile(
     body = {
         "social_tag_ids": ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
         "photo_ids": [],
-        "availability": [
-            {"day": 2, "part": "EVENING"},
-            {"day": 6, "part": "MORNING"},
+        "weekly_hours": [
+            {"day": 2, "hour": 19},
+            {"day": 6, "hour": 10},
         ],
         "location": HOME_FIX,
         "search_radius_km": SEARCH_RADIUS_BOUNDS.default_km,
@@ -202,9 +204,9 @@ async def test_the_read_carries_the_week_the_radius_and_the_declaration(client):
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["availability"] == [
-        {"day": 2, "part": "EVENING"},
-        {"day": 6, "part": "MORNING"},
+    assert body["weekly_hours"] == [
+        {"day": 2, "hour": 19},
+        {"day": 6, "hour": 10},
     ]
     assert body["search_radius_km"] == SEARCH_RADIUS_BOUNDS.default_km
     assert body["play_intents"] == {"PADEL": "COMPETITIVE"}
@@ -345,7 +347,7 @@ async def test_a_profile_from_before_the_gender_question_omits_the_answer(
                     player_id=player_id,
                     social_tags=("PLAYS_TO_WIN", "HERE_TO_IMPROVE"),
                     photo_ids=(),
-                    availability=("2:EVENING",),
+                    weekly_hours=("2:19",),
                     latitude=51.51,
                     longitude=-0.13,
                     search_radius_km=SEARCH_RADIUS_BOUNDS.default_km,
@@ -407,56 +409,135 @@ async def test_the_week_is_replaced_whole(client):
     _, headers = await a_player(client)
 
     response = await client.put(
-        AVAILABILITY_URL,
-        json={"availability": [{"day": 1, "part": "MORNING"}]},
+        WEEKLY_HOURS_URL,
+        json={"weekly_hours": [{"day": 1, "hour": 10}]},
         headers=headers,
     )
 
     assert response.status_code == 200, response.text
-    assert response.json()["availability"] == [{"day": 1, "part": "MORNING"}]
+    assert response.json()["weekly_hours"] == [{"day": 1, "hour": 10}]
     read = (await client.get(PROFILE_URL, headers=headers)).json()
-    assert read["availability"] == [{"day": 1, "part": "MORNING"}]
+    assert read["weekly_hours"] == [{"day": 1, "hour": 10}]
+
+
+async def test_the_week_saved_is_the_week_a_court_hour_is_read_against(
+    client, session_factory
+):
+    """*Free for the whole hour*, read off the week this route stored.
+
+    The rule is one function in the Player profile's domain that the proposer,
+    posting and the rescue board will each ask (ADR-0189 §5); what this pins is
+    that the week it reads is the week a player saved here. Tuesday 19:00 and
+    20:00 cover 19:00–20:00 and 19:30–20:30 — never 18:30, whose first half is
+    unticked, nor 20:30, whose second half is.
+    """
+
+    from app.bootstrap.composition import (
+        build_domain_event_store,
+        build_event_publisher,
+        build_player_profile_repository,
+    )
+
+    player_id, headers = await a_player(client)
+    saved = await client.put(
+        WEEKLY_HOURS_URL,
+        json={"weekly_hours": [{"day": 2, "hour": 19}, {"day": 2, "hour": 20}]},
+        headers=headers,
+    )
+    assert saved.status_code == 200, saved.text
+    async with session_factory() as session:
+        profile = await build_player_profile_repository(
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        ).load(player_id)
+    assert profile is not None
+
+    def free_from(utc: str) -> bool:
+        # 2026-09-29 is a Tuesday, and Warsaw is two hours ahead of UTC then.
+        start = instant(datetime.fromisoformat(utc).replace(tzinfo=timezone.utc))
+        return free_for_the_hour(profile.weekly_hours, start=start, zone=WARSAW)
+
+    assert free_from("2026-09-29T17:00:00")
+    assert free_from("2026-09-29T17:30:00")
+    assert not free_from("2026-09-29T16:30:00")
+    assert not free_from("2026-09-29T18:30:00")
 
 
 async def test_a_cleared_week_is_a_legal_value_on_the_write(client):
     """The floor binds the commit and not every later edit, and this is the
-    route that finally says so: `AvailabilityGrid.edited` is what the boundary
+    route that finally says so: `WeeklyHours.edited` is what the boundary
     builds through, so nothing ticked is recorded rather than refused."""
 
     _, headers = await a_player(client)
 
     response = await client.put(
-        AVAILABILITY_URL, json={"availability": []}, headers=headers
+        WEEKLY_HOURS_URL, json={"weekly_hours": []}, headers=headers
     )
 
     assert response.status_code == 200, response.text
-    assert response.json()["availability"] == []
-    assert (await client.get(PROFILE_URL, headers=headers)).json()["availability"] == []
+    assert response.json()["weekly_hours"] == []
+    assert (await client.get(PROFILE_URL, headers=headers)).json()["weekly_hours"] == []
 
 
 async def test_the_week_comes_back_folded_and_in_reading_order(client):
-    """Why the write answers with the grid rather than with no content: a
-    repeated cell is collapsed and the order is the platform's, so a client that
-    kept what it sent would hold a week the profile does not."""
+    """Why the write answers with the week rather than with no content: a
+    repeated hour is collapsed and the order is the platform's — day, then hour,
+    nine before ten — so a client that kept what it sent would hold a week the
+    profile does not."""
 
     _, headers = await a_player(client)
 
     response = await client.put(
-        AVAILABILITY_URL,
+        WEEKLY_HOURS_URL,
         json={
-            "availability": [
-                {"day": 3, "part": "EVENING"},
-                {"day": 1, "part": "MORNING"},
-                {"day": 3, "part": "EVENING"},
+            "weekly_hours": [
+                {"day": 3, "hour": 19},
+                {"day": 1, "hour": 10},
+                {"day": 3, "hour": 19},
+                {"day": 1, "hour": 9},
             ]
         },
         headers=headers,
     )
 
-    assert response.json()["availability"] == [
-        {"day": 1, "part": "MORNING"},
-        {"day": 3, "part": "EVENING"},
+    assert response.json()["weekly_hours"] == [
+        {"day": 1, "hour": 9},
+        {"day": 1, "hour": 10},
+        {"day": 3, "hour": 19},
     ]
+
+
+@pytest.mark.parametrize(
+    "cell",
+    [{"day": 1, "hour": 6}, {"day": 1, "hour": 23}, {"day": 1, "part": "MORNING"}],
+    ids=["before-seven", "the-hour-after-the-grid", "a-part-of-the-day"],
+)
+async def test_a_cell_that_is_not_an_hour_of_the_week_is_refused(client, cell):
+    """Sixteen cells a day, 07:00 to 23:00 — and a part of the day is not a cell
+    any more (ADR-0189 §5)."""
+
+    _, headers = await a_player(client)
+
+    response = await client.put(
+        WEEKLY_HOURS_URL, json={"weekly_hours": [cell]}, headers=headers
+    )
+
+    assert response.status_code == 422, response.text
+
+
+async def test_the_old_part_of_day_write_is_gone(client):
+    """``PUT /players/me/availability`` was replaced, not kept beside it: two
+    writes for one week would be two answers to *which one is the week*."""
+
+    _, headers = await a_player(client)
+
+    response = await client.put(
+        "/api/v1/players/me/availability",
+        json={"availability": [{"day": 1, "part": "MORNING"}]},
+        headers=headers,
+    )
+
+    assert response.status_code in (404, 405)
 
 
 async def test_the_same_week_twice_lands_the_same_state(client, session_factory):
@@ -465,25 +546,25 @@ async def test_the_same_week_twice_lands_the_same_state(client, session_factory)
     no-op rule means it appends nothing."""
 
     player_id, headers = await a_player(client)
-    week = {"availability": [{"day": 4, "part": "AFTERNOON"}]}
+    week = {"weekly_hours": [{"day": 4, "hour": 15}]}
 
-    first = await client.put(AVAILABILITY_URL, json=week, headers=headers)
+    first = await client.put(WEEKLY_HOURS_URL, json=week, headers=headers)
     after_first = await stream_length(session_factory, player_id)
-    second = await client.put(AVAILABILITY_URL, json=week, headers=headers)
+    second = await client.put(WEEKLY_HOURS_URL, json=week, headers=headers)
 
     assert first.json() == second.json()
     assert await stream_length(session_factory, player_id) == after_first
 
 
 async def test_there_is_no_patch_for_the_week(client):
-    """`null` versus absent is fatal on this field specifically: a blank grid is
-    a legal value, so `{"availability": null}` would mean both *leave it alone*
+    """`null` versus absent is fatal on this field specifically: a blank week is
+    a legal value, so `{"weekly_hours": null}` would mean both *leave it alone*
     and *clear my week*."""
 
     _, headers = await a_player(client)
 
     response = await client.patch(
-        AVAILABILITY_URL, json={"availability": []}, headers=headers
+        WEEKLY_HOURS_URL, json={"weekly_hours": []}, headers=headers
     )
 
     assert response.status_code == 405
@@ -493,7 +574,7 @@ async def test_the_week_cannot_be_written_without_a_profile(client):
     headers = await a_signed_in_player(client, "weekless")
 
     response = await client.put(
-        AVAILABILITY_URL, json={"availability": []}, headers=headers
+        WEEKLY_HOURS_URL, json={"weekly_hours": []}, headers=headers
     )
 
     assert response.status_code == 404
@@ -1184,7 +1265,7 @@ def test_the_surface_is_a_read_and_the_nine_writes_and_nothing_else():
 
     assert {(route.path, tuple(sorted(route.methods))) for route in router.routes} == {
         ("/players/me/profile", ("GET",)),
-        ("/players/me/availability", ("PUT",)),
+        ("/players/me/weekly-hours", ("PUT",)),
         ("/players/me/search-radius", ("PUT",)),
         ("/players/me/location", ("PUT",)),
         ("/players/me/social-tags", ("PUT",)),

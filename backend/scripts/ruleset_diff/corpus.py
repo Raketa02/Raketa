@@ -61,9 +61,9 @@ from app.modules.matchmaking.domain.ports import (
     PairwiseCounterpart,
     PairwiseOutcome,
 )
-from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from scripts.ruleset_diff.population import (
     EVERY_NTH_RUNS_EVERY_SURFACE,
     NOW,
@@ -270,7 +270,7 @@ def _searcher(member: Member, mode: SearchMode) -> SearcherFacts:
         mu=member.mu,
         sigma=member.sigma,
         tags=member.tags,
-        grid=AvailabilityGrid.from_codes(member.slots),
+        grid=WeeklyHours.from_codes(member.slots),
         radius_km=member.radius_km,
         area=Point(latitude=member.latitude, longitude=member.longitude),
         gender=Gender(member.gender),

@@ -35,11 +35,6 @@ from app.kernel import Sport, invariant
 from app.modules.player_profile.application.read_player_profile import (
     PlayerProfileSurface,
 )
-from app.modules.player_profile.domain.availability import (
-    DAYS_IN_THE_GRID,
-    AvailabilityGrid,
-    DayPart,
-)
 from app.modules.player_profile.domain.consent import (
     MAX_COPY_VERSION_LENGTH,
     ConsentSurface,
@@ -79,6 +74,12 @@ from app.modules.player_profile.domain.social_tags import (
     SocialTag,
     SocialTagGroup,
     SocialTagSelectionBounds,
+)
+from app.modules.player_profile.domain.weekly_hours import (
+    DAYS_IN_THE_GRID,
+    FIRST_HOUR,
+    LAST_HOUR,
+    WeeklyHours,
 )
 
 #: The default that spells **omitted** — the same sentinel the shortlist's and
@@ -308,13 +309,13 @@ class PhotoResponse(BaseModel):
         )
 
 
-class AvailabilitySlotResource(BaseModel):
-    """One ticked cell of the availability grid.
+class WeeklyHourResource(BaseModel):
+    """One ticked hour of the week — a day, and the hour its cell starts at.
 
     Two named fields rather than the single joined code the event stream stores.
     The stream's code is a *storage* encoding chosen so a replay folds strings;
     this is a contract a client renders a grid from, and a client that had to
-    split ``"3:EVENING"`` would be parsing our persistence format.
+    split ``"3:19"`` would be parsing our persistence format.
 
     **Every cell, and there is no exception.** The rule was twice read as
     covering only the cells a player *chose* — the one a times rung offers
@@ -322,7 +323,7 @@ class AvailabilitySlotResource(BaseModel):
     the argument that a payload handed back is not a resource. Both crossed as
     codes, and in both cases a client ended up splitting one. What decides this
     is not whose value it is but **what is done with it**: a cell that gets
-    drawn on the seven-by-three grid crosses in these two fields, and the engine
+    drawn on the seven-by-sixteen grid crosses in these two fields, and the engine
     holding it as a code is a fact about the engine. This side of the boundary
     owns the encoding, so this side is where it is read.
     """
@@ -333,18 +334,26 @@ class AvailabilitySlotResource(BaseModel):
         le=DAYS_IN_THE_GRID,
         description="ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.",
     )
-    part: DayPart = Field(..., description="Which part of that day")
+    hour: int = Field(
+        ...,
+        ge=FIRST_HOUR,
+        le=LAST_HOUR,
+        description=(
+            "The hour the cell starts at, wall clock — 19 is 19:00 to 20:00. The "
+            "week runs 07:00 to 23:00, so the first cell is 7 and the last is 22."
+        ),
+    )
 
-    def as_cell(self) -> tuple[int, str]:
+    def as_cell(self) -> tuple[int, int]:
         """The pair a command carries. **Not a domain value object** — building
         one is the domain's job, not the boundary's (``backend/CONTEXT.md``)."""
 
-        return self.day, self.part.value
+        return self.day, self.hour
 
     @classmethod
-    def from_cell(cls, cell: tuple[int, str]) -> "AvailabilitySlotResource":
-        day, part = cell
-        return cls(day=day, part=DayPart(part))
+    def from_cell(cls, cell: tuple[int, int]) -> "WeeklyHourResource":
+        day, hour = cell
+        return cls(day=day, hour=hour)
 
 
 class LocationAreaResource(BaseModel):
@@ -421,7 +430,7 @@ class CommitPlayerProfileRequest(BaseModel):
 
     The week's *floor* is not spelled here, and that is the same decision the tag
     selection's is: an empty list passes this schema and is refused by the domain
-    with ``availability_grid_empty``, so the client gets a code it can branch on
+    with ``weekly_hours_empty``, so the client gets a code it can branch on
     and a recovery it can offer, rather than a 422 that can only say some field
     somewhere was wrong.
     """
@@ -444,14 +453,14 @@ class CommitPlayerProfileRequest(BaseModel):
             f"to exist and to belong to this player."
         ),
     )
-    availability: list[AvailabilitySlotResource] = Field(
+    weekly_hours: list[WeeklyHourResource] = Field(
         ...,
         description=(
-            "The cells of the week this player ticked. **At least one of the "
-            "twenty-one** — an empty list is refused with "
-            "`availability_grid_empty`. The minimum is exactly one and is not "
-            "served: it is fixed, so a client holds it as a constant. Repeated "
-            "cells are collapsed, and the floor is counted after that."
+            "The hours of the week this player ticked. **At least one of the "
+            "112** — an empty list is refused with `weekly_hours_empty`. The "
+            "minimum is exactly one and is not served: it is fixed, so a client "
+            "holds it as a constant. Repeated hours are collapsed, and the floor "
+            "is counted after that."
         ),
     )
     location: LocationAreaResource
@@ -511,8 +520,8 @@ class CommitPlayerProfileRequest(BaseModel):
         ),
     )
 
-    def availability_cells(self) -> list[tuple[int, str]]:
-        return [slot.as_cell() for slot in self.availability]
+    def weekly_hours_cells(self) -> list[tuple[int, int]]:
+        return [hour.as_cell() for hour in self.weekly_hours]
 
 
 class ProposalsOptInResponse(BaseModel):
@@ -574,13 +583,15 @@ class PlayerProfileResponse(BaseModel):
     route; the commit's answer stays what it was.
 
     **Fields are only ever added.** A shipped mobile app parses this document for
-    months after it stops being built.
+    months after it stops being built. ``weekly_hours`` is the one replacement,
+    of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), made
+    while no build had shipped anywhere but ``local``.
     """
 
     player_id: UUID
     social_tag_ids: list[SocialTag]
     photo_ids: list[UUID]
-    availability: list[AvailabilitySlotResource]
+    weekly_hours: list[WeeklyHourResource]
     location: LocationAreaResource
     search_radius_km: int
     proposals_opt_in: ProposalsOptInResponse
@@ -593,7 +604,7 @@ class PlayerProfileResponse(BaseModel):
             player_id=profile.player_id,
             social_tag_ids=list(profile.social_tags.tags),
             photo_ids=list(profile.photo_ids),
-            availability=_grid_resource(profile.availability),
+            weekly_hours=_weekly_hours_resource(profile.weekly_hours),
             location=LocationAreaResource.from_domain(profile.location),
             search_radius_km=profile.search_radius.kilometres,
             proposals_opt_in=ProposalsOptInResponse.standing_on(profile),
@@ -602,8 +613,8 @@ class PlayerProfileResponse(BaseModel):
         )
 
 
-def _grid_resource(grid: AvailabilityGrid) -> list[AvailabilitySlotResource]:
-    return [AvailabilitySlotResource.from_cell(cell) for cell in grid.cells]
+def _weekly_hours_resource(week: WeeklyHours) -> list[WeeklyHourResource]:
+    return [WeeklyHourResource.from_cell(cell) for cell in week.cells]
 
 
 class ProfilePhotoResource(BaseModel):
@@ -678,16 +689,18 @@ class PlayerProfileReadResponse(BaseModel):
     where an id comes from.
 
     **Fields are only ever added.** A shipped mobile app parses this document for
-    months after it stops being built.
+    months after it stops being built. ``weekly_hours`` is the one replacement,
+    of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), made
+    while no build had shipped anywhere but ``local``.
     """
 
-    availability: list[AvailabilitySlotResource] = Field(
+    weekly_hours: list[WeeklyHourResource] = Field(
         ...,
         description=(
-            "The cells of the week this player has ticked, in the platform's "
-            "own reading order. **An empty list is a real answer** — a player "
-            "may clear their week — and it means *we do not know when they "
-            "play*, never *never*."
+            "The hours of the week this player has ticked, in the platform's "
+            "own reading order — day, then hour. **An empty list is a real "
+            "answer** — a player may clear their week — and it means *we do not "
+            "know when they play*, never *never*."
         ),
     )
     search_radius_km: int = Field(
@@ -770,7 +783,7 @@ class PlayerProfileReadResponse(BaseModel):
     def from_domain(cls, surface: PlayerProfileSurface) -> "PlayerProfileReadResponse":
         profile = surface.profile
         fields: dict[str, Any] = {
-            "availability": _grid_resource(profile.availability),
+            "weekly_hours": _weekly_hours_resource(profile.weekly_hours),
             "search_radius_km": profile.search_radius.kilometres,
             "play_intents": dict(surface.play_intents),
             "social_tags": list(profile.social_tags.tags),
@@ -802,45 +815,45 @@ def _profile_photo(
     return ProfilePhotoResource.model_validate(fields)
 
 
-class ChangeAvailabilityRequest(BaseModel):
-    """The week, replaced whole.
+class SetWeeklyHoursRequest(BaseModel):
+    """The weekly hours, replaced whole — *Save your week*.
 
     **No floor, and that is the difference from the commit.** An empty list is a
-    cleared week and is recorded; ``availability_grid_empty`` refuses the answer
-    a player is *asked for* at the end of onboarding, not every later edit of it.
+    cleared week and is recorded; ``weekly_hours_empty`` refuses the answer a
+    player is *asked for* at the end of onboarding, not every later edit of it.
 
-    Repeated cells are collapsed rather than refused, and the response carries
-    the grid as it was stored — so a client that sent the same cell twice, or
+    Repeated hours are collapsed rather than refused, and the response carries
+    the week as it was stored — so a client that sent the same hour twice, or
     sent the week in its own order, can see what the profile now holds.
     """
 
-    availability: list[AvailabilitySlotResource] = Field(
+    weekly_hours: list[WeeklyHourResource] = Field(
         ...,
         description=(
-            "Every cell still ticked. **The list is the week** — what is absent "
+            "Every hour still ticked. **The list is the week** — what is absent "
             "is unticked — and an empty list clears it, which is a legal value "
             "rather than a refusal."
         ),
     )
 
-    def availability_cells(self) -> list[tuple[int, str]]:
-        return [slot.as_cell() for slot in self.availability]
+    def weekly_hours_cells(self) -> list[tuple[int, int]]:
+        return [hour.as_cell() for hour in self.weekly_hours]
 
 
-class AvailabilityResponse(BaseModel):
-    """The week as the profile now holds it.
+class WeeklyHoursResponse(BaseModel):
+    """The weekly hours as the profile now holds them.
 
     A body rather than a ``204`` because the value stored is not always the
-    value sent: repeated cells are collapsed and the order is the platform's
+    value sent: repeated hours are collapsed and the order is the platform's
     reading order, so a client that kept what it sent would hold a week the
     profile does not.
     """
 
-    availability: list[AvailabilitySlotResource]
+    weekly_hours: list[WeeklyHourResource]
 
     @classmethod
-    def from_domain(cls, profile: PlayerProfile) -> "AvailabilityResponse":
-        return cls(availability=_grid_resource(profile.availability))
+    def from_domain(cls, profile: PlayerProfile) -> "WeeklyHoursResponse":
+        return cls(weekly_hours=_weekly_hours_resource(profile.weekly_hours))
 
 
 class ChangeSearchRadiusRequest(BaseModel):

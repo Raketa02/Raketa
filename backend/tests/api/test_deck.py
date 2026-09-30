@@ -34,7 +34,7 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.matchmaking.domain.searches import SearchSurface
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 from tests.api import matchmaking_world as world
 
@@ -97,24 +97,24 @@ async def test_a_deal_runs_on_the_week_the_player_just_edited(
     """
 
     dealt = await world.deck(
-        client, searcher["token"], availability_override=[{"day": 4, "part": "EVENING"}]
+        client, searcher["token"], availability_override=[{"day": 4, "hour": 19}]
     )
 
     assert dealt.status_code == 200, dealt.text
     prompts = {
         prompt["prompt"]: prompt for prompt in dealt.json()["search"]["prompts"]
     }
-    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": 4, "part": "EVENING"}]
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": 4, "hour": 19}]
 
     recorded = (await world.recorded_searches(session_factory))[-1]
-    assert list(recorded.searcher_grid) == ["4:EVENING"]
+    assert list(recorded.searcher_grid) == ["4:19"]
     # The area is recorded beside the week and on the same terms — a deal is a
     # search, and its envelope carries both halves of the card's one comparison.
     assert recorded.searcher_area_code
     assert dealt.json()["search"]["my_area_code"] == recorded.searcher_area_code
     assert await world.saved_grid(session_factory, searcher["id"]) == (
-        "2:EVENING",
-        "6:MORNING",
+        "2:19",
+        "6:10",
     ), "the profile is untouched"
 
 

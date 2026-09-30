@@ -43,7 +43,7 @@ from app.modules.player_score.domain.strands import (
     out_of_a_hundred,
 )
 from app.modules.matchmaking.presentation.dependencies import get_candidate_source
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.modules.rating.domain.events import RatingInitialised
 from app.modules.sportsmanship.domain.card import (
     SettledCourt,

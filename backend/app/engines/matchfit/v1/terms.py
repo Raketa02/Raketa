@@ -342,8 +342,11 @@ def availability_overlap(
 ) -> TermOutcome:
     """``|shared| / |mine|`` — the glossary's ratio, and **no constants at all**.
 
-    The denominator is the **searcher's** ticked cells, because the question it
-    answers is *how much of my week does this person cover*. That is what makes
+    The denominator is the **searcher's** ticked hours, because the question it
+    answers is *how much of my week does this person cover*. Since
+    ``docs/adr/0189`` a cell is an hour of the week rather than a third of a
+    day, and nothing here moved with it: the term reads the pair's cells and
+    counts them (``docs/adr/0120``, amended). That is what makes
     the reading asymmetric and a fact about the pair rather than about either
     person; the reverse direction flips the denominator and nothing else.
 
@@ -356,7 +359,7 @@ def availability_overlap(
     Significance, staleness and proximity are all struck and none of them
     returns as a hidden constant here: none of the three reads the pair.
     Proximity keeps its two honest jobs — it orders the times rung's offers, and
-    it names the next shared cell below, which is evidence a game can be
+    it names the next shared hour below, which is evidence a game can be
     *arranged* and never a proposed time.
     """
 
@@ -780,28 +783,22 @@ def _strand_value(observation: StrandObservation) -> float:
 
 
 def _next_shared(shared: tuple[GridCell, ...], searcher: Searcher) -> SharedSlot | None:
-    """The soonest cell both of them ticked, or ``None`` — a measured nothing.
+    """The soonest hour both of them ticked, or ``None`` — a measured nothing.
 
     Day resolution, and the caller resolves *today* — no date, no timezone, the
-    same signature the challenge window's derivation takes. A cell on today's
-    weekday is nought days away whatever the hour is now, because the grid is a
-    preference and not a promise, and the product's finest time precision is a
-    third of a day.
-
-    Ordering inside a day comes from ``Searcher.day_parts``: the engine is told
-    where each part sits and never learns what one is called.
+    same signature the challenge window's derivation takes. An hour on today's
+    weekday is nought days away whatever the time is now, because the week is a
+    preference and not a promise and the engine is told the day, never the
+    clock. Inside a day the earlier hour comes first.
     """
 
     if not shared:
         return None
     soonest = min(
         shared,
-        key=lambda cell: (
-            (int(cell.day) - int(searcher.today)) % 7,
-            searcher.day_parts.index(cell.part),
-        ),
+        key=lambda cell: ((int(cell.day) - int(searcher.today)) % 7, cell.hour),
     )
-    return SharedSlot(day=int(soonest.day), part=soonest.part)
+    return SharedSlot(day=int(soonest.day), hour=soonest.hour)
 
 
 #: Every evidence kind these terms can produce. Read by the tests that hold this

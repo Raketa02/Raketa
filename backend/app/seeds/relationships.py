@@ -317,7 +317,7 @@ def _account(slug: str, description: str, *, sports: Sequence[Sport]) -> SeedAcc
             for sport in sports
         ),
         profile=SeedProfile(
-            availability=PROTAGONIST_WEEK,
+            weekly_hours=PROTAGONIST_WEEK,
             social_tag_ids=PROTAGONIST_TAGS,
             search_radius_km=PROTAGONIST_RADIUS_KM,
             gender=Gender.WOMAN,

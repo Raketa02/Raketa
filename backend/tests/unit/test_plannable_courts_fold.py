@@ -33,7 +33,7 @@ from app.modules.games.domain.standing import GameStanding
 from app.modules.games.domain.windows import entry_closes_at
 from app.modules.plans.domain.ports import PlannableCourt
 from app.modules.plans.infrastructure.plannable_courts import plannable_court_of
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 
 ORGANISER, ANA, BO, CY, STRANGER = (new_uuid() for _ in range(5))

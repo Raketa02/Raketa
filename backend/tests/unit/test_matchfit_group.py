@@ -57,7 +57,6 @@ from app.engines.matchfit.v1.terms import forecast_pct
 from app.engines.racketskill.core import combine_sigma
 from app.modules.matchmaking.domain.fence import combine_group_sigma
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
-from app.modules.player_profile.domain.availability import DayPart
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.social_tags import SocialTag
 from tests.unit.matchfit_builders import cells, searcher, seated
@@ -390,23 +389,21 @@ def test_the_seat_delta_never_re_scores_a_fit() -> None:
 def test_group_availability_is_the_intersection_over_the_smallest_grid() -> None:
     """Among four people there is no *mine*, so the denominator is the least."""
 
-    monday = cells((1, DayPart.EVENING))
-    two = cells((1, DayPart.EVENING), (3, DayPart.EVENING))
-    three = cells((1, DayPart.EVENING), (3, DayPart.EVENING), (5, DayPart.EVENING))
+    monday = cells((1, 19))
+    two = cells((1, 19), (3, 19))
+    three = cells((1, 19), (3, 19), (5, 19))
 
     assert group_availability((three, three, two, monday)) == pytest.approx(1.0)
     assert group_availability((three, three, three, two)) == pytest.approx(1.0)
-    assert group_availability((three, two, two, cells((3, DayPart.EVENING)))) == (
-        pytest.approx(1.0)
-    )
+    assert group_availability((three, two, two, cells((3, 19)))) == (pytest.approx(1.0))
 
 
 def test_three_good_pairwise_overlaps_do_not_imply_a_four_way_one() -> None:
     """The failure no Fit can see, and the whole argument for the term."""
 
-    monday = cells((1, DayPart.EVENING))
-    tuesday = cells((2, DayPart.EVENING))
-    both = cells((1, DayPart.EVENING), (2, DayPart.EVENING))
+    monday = cells((1, 19))
+    tuesday = cells((2, 19))
+    both = cells((1, 19), (2, 19))
 
     assert group_availability((both, monday, tuesday, monday)) == 0.0
 
@@ -414,11 +411,11 @@ def test_three_good_pairwise_overlaps_do_not_imply_a_four_way_one() -> None:
 def test_group_availability_is_a_term_and_never_a_gate() -> None:
     """An empty intersection docks the four; it never removes it."""
 
-    viewer = searcher(grid=cells((1, DayPart.EVENING)))
+    viewer = searcher(grid=cells((1, 19)))
     three = (
-        seated(player_id="a", grid=cells((2, DayPart.EVENING))),
-        seated(player_id="b", grid=cells((1, DayPart.EVENING))),
-        seated(player_id="c", grid=cells((1, DayPart.EVENING))),
+        seated(player_id="a", grid=cells((2, 19))),
+        seated(player_id="b", grid=cells((1, 19))),
+        seated(player_id="c", grid=cells((1, 19))),
     )
     scored = objective(viewer, Arrangement.all_of(three)[0], LIVE_RULESET, COMBINE)
 
@@ -433,7 +430,7 @@ def test_group_availability_is_a_term_and_never_a_gate() -> None:
 def test_a_blank_grid_stands_the_term_down_rather_than_reading_zero() -> None:
     """*Blank means we do not know* is not *you four never overlap*."""
 
-    assert group_availability((cells((1, DayPart.EVENING)), (), (), ())) is None
+    assert group_availability((cells((1, 19)), (), (), ())) is None
 
     viewer = searcher()
     three = (
@@ -999,7 +996,7 @@ def test_the_deciding_reason_names_the_largest_winner_to_runner_up_margin() -> N
     runner_up = arrange(
         viewer,
         (
-            seated(player_id="a", fit=70.0, grid=cells((7, DayPart.MORNING))),
+            seated(player_id="a", fit=70.0, grid=cells((7, 10))),
             seated(player_id="b", fit=70.0),
             seated(player_id="c", fit=70.0),
         ),

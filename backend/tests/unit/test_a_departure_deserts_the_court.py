@@ -28,7 +28,7 @@ from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seatable_game import LineUpChange
 from app.modules.challenges.domain.seats import SeatPlan, Side
 from app.modules.challenges.domain.standing import Standing
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 from tests.unit.challenge_world import a_safe_court
 from tests.unit.fake_event_store import CountingUnitOfWork, FrozenClock

@@ -42,7 +42,7 @@ from app.engines.matchfit.evidence import (
     SharedSlot,
     SocialVibeEvidence,
 )
-from app.engines.matchfit.scorable import GridCell, LevelReading, Searcher
+from app.engines.matchfit.scorable import GridCell
 from app.engines.matchfit.scoring import StoodDown
 from app.engines.matchfit.v1.terms import (
     TermReading,
@@ -58,9 +58,9 @@ from app.engines.matchfit.v1.terms import (
 )
 from app.kernel import InvariantViolated, iso_weekday
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
-from app.modules.player_profile.domain.availability import DayPart
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.social_tags import SocialTag
+from app.modules.player_profile.domain.weekly_hours import HOURS_OF_THE_DAY
 from tests.unit.matchfit_builders import candidate, cells, record, searcher
 
 COMP = LIVE_RULESET.modes[SearchMode.COMPETITIVE]
@@ -471,20 +471,20 @@ def test_the_evidence_carries_the_published_score_and_not_the_blend() -> None:
 def test_the_denominator_is_the_searchers_own_slots() -> None:
     """*How much of my week does this person cover* — the glossary, verbatim.
 
-    A candidate free all week covers all of a two-cell searcher's week and half
-    of a four-cell one's. The asymmetry is the point, and it is what makes the
-    reading a fact about the pair.
+    A candidate free all week covers all of a two-hour searcher's week, and a
+    candidate free six hours covers six of a whole week's 112. The asymmetry is
+    the point, and it is what makes the reading a fact about the pair.
     """
 
-    week = cells(*[(day, part) for day in range(1, 8) for part in DayPart])
+    week = cells(*[(day, hour) for day in range(1, 8) for hour in HOURS_OF_THE_DAY])
     narrow = availability_overlap(
-        searcher(grid=cells((1, DayPart.EVENING), (3, DayPart.EVENING))),
+        searcher(grid=cells((1, 19), (3, 19))),
         candidate(grid=week),
     )
     wide = availability_overlap(searcher(grid=week), candidate(grid=week[:6]))
     assert narrow is not None and wide is not None
     assert narrow.value == 1.0
-    assert wide.value == pytest.approx(6 / 21)
+    assert wide.value == pytest.approx(6 / 112)
 
 
 @pytest.mark.parametrize(
@@ -535,8 +535,8 @@ def test_no_shared_cell_scores_the_measured_zero_instead() -> None:
     """Both weeks were read and they do not meet — which is a measurement."""
 
     reading = availability_overlap(
-        searcher(grid=cells((1, DayPart.EVENING))),
-        candidate(grid=cells((2, DayPart.MORNING))),
+        searcher(grid=cells((1, 19))),
+        candidate(grid=cells((2, 10))),
     )
     assert reading is not None
     assert reading.value == 0.0
@@ -548,16 +548,15 @@ def test_no_shared_cell_scores_the_measured_zero_instead() -> None:
 def test_the_next_shared_slot_wraps_the_week_and_orders_inside_a_day() -> None:
     """Day resolution, and **the caller resolves today** — no date, no timezone.
 
-    A cell on today's weekday is nought days away whatever the hour is now: the
-    grid is a preference and not a promise, and the product's finest time
-    precision is a third of a day. Ordering inside a day comes from the parts the
-    search was told about, so the engine never learns what a morning is.
+    An hour on today's weekday is nought days away whatever the time is now: the
+    week is a preference and not a promise, and the engine is told the day and
+    never the clock. Inside a day the earlier hour comes first.
     """
 
     week = cells(
-        (2, DayPart.EVENING),
-        (3, DayPart.EVENING),
-        (3, DayPart.MORNING),
+        (2, 19),
+        (3, 19),
+        (3, 10),
     )
     wednesday = availability_overlap(
         searcher(grid=week, today=iso_weekday(3)), candidate(grid=week)
@@ -568,10 +567,10 @@ def test_the_next_shared_slot_wraps_the_week_and_orders_inside_a_day() -> None:
     assert wednesday is not None and thursday is not None
     assert isinstance(wednesday.evidence, AvailabilityOverlapEvidence)
     assert isinstance(thursday.evidence, AvailabilityOverlapEvidence)
-    # Today, and the morning before the evening.
-    assert wednesday.evidence.next_slot == SharedSlot(day=3, part=DayPart.MORNING.value)
+    # Today, and ten before seven in the evening.
+    assert wednesday.evidence.next_slot == SharedSlot(day=3, hour=10)
     # Tomorrow is nothing; the next is Tuesday, six days on.
-    assert thursday.evidence.next_slot == SharedSlot(day=2, part=DayPart.EVENING.value)
+    assert thursday.evidence.next_slot == SharedSlot(day=2, hour=19)
 
 
 def test_the_availability_term_reads_no_constant_at_all() -> None:
@@ -582,12 +581,12 @@ def test_the_availability_term_reads_no_constant_at_all() -> None:
     ever read four distinct values. Anything smuggled back in would break that.
     """
 
-    grid = cells((1, DayPart.EVENING), (3, DayPart.EVENING), (5, DayPart.EVENING))
+    grid = cells((1, 19), (3, 19), (5, 19))
     readings = []
     for shared in range(len(grid) + 1):
         reading = availability_overlap(
             searcher(grid=grid),
-            candidate(grid=grid[:shared] + cells((7, DayPart.MORNING))),
+            candidate(grid=grid[:shared] + cells((7, 10))),
         )
         assert reading is not None
         readings.append(reading.value)
@@ -924,21 +923,16 @@ def test_a_grid_cell_ticked_twice_is_refused_rather_than_folded() -> None:
     than the pair has, which is a wrong answer rather than a loud one.
     """
 
-    twice = cells((1, DayPart.EVENING)) * 2
+    twice = cells((1, 19)) * 2
     with pytest.raises(InvariantViolated, match="ticked twice"):
         searcher(grid=twice)
 
 
-def test_a_search_cannot_order_a_part_of_the_day_it_was_not_told_about() -> None:
-    """The engine holds parts as opaque codes and is told where each one sits."""
+@pytest.mark.parametrize("hour", [-1, 24, True])
+def test_a_grid_cell_outside_the_day_is_a_broken_precondition(hour) -> None:
+    """The engine checks an hour is an hour of a day and nothing narrower: which
+    hours a player may tick is the Player profile's rule, not a second copy of it
+    held here."""
 
-    with pytest.raises(InvariantViolated, match="cannot order"):
-        Searcher(
-            level=LevelReading(mu=2.8, sigma=0.34),
-            mode=SearchMode.COMPETITIVE,
-            tags=(),
-            grid=(GridCell(day=iso_weekday(1), part="MIDNIGHT"),),
-            radius_km=10.0,
-            today=iso_weekday(3),
-            day_parts=(DayPart.MORNING.value,),
-        )
+    with pytest.raises(InvariantViolated, match="outside the day"):
+        GridCell(day=iso_weekday(1), hour=hour)

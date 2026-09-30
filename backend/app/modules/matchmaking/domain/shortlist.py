@@ -70,10 +70,10 @@ from app.modules.matchmaking.domain.candidate_index import CandidateRow
 from app.modules.matchmaking.domain.fence import (
     area_of,
     candidate_of,
+    hours_of,
     liveness_facts_of,
     modifier_facts_of,
     searcher_of,
-    slots_of,
 )
 from app.modules.matchmaking.domain.gates import GATE_ROSTER, gate_of
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
@@ -94,7 +94,7 @@ from app.modules.matchmaking.domain.searches import (
     StagedCounts,
     WithheldReason,
 )
-from app.modules.player_profile.domain.availability import AvailabilitySlot
+from app.modules.player_profile.domain.weekly_hours import WeeklyHour
 
 
 @final
@@ -293,7 +293,7 @@ def admitted_of(
     *,
     distance_km: float,
     viewer: Point,
-    searcher_slots: tuple[AvailabilitySlot, ...],
+    searcher_hours: tuple[WeeklyHour, ...],
     today: IsoWeekday,
 ) -> Generated:
     """One row past the gates, measured — **the one constructor of ``Generated``.**
@@ -313,7 +313,7 @@ def admitted_of(
         drawn_distance_km=measure_distance(
             viewer, drawn_spot(player_uuid, area_of(row))
         ),
-        overlap=overlap_of(searcher_slots, slots_of(row), today),
+        overlap=overlap_of(searcher_hours, hours_of(row), today),
         player_uuid=player_uuid,
     )
 
@@ -336,7 +336,7 @@ def generate(context: SearchContext) -> Generation:
     box = context.box
     centre = context.searcher.area
     viewer = viewer_spot_of(context)
-    searcher_slots = context.searcher.grid.slots
+    searcher_hours = context.searcher.grid.hours
     today = iso_weekday(context.now.isoweekday())
     me = str(context.searcher.player_id)
 
@@ -360,7 +360,7 @@ def generate(context: SearchContext) -> Generation:
                 row,
                 distance_km=distance,
                 viewer=viewer,
-                searcher_slots=searcher_slots,
+                searcher_hours=searcher_hours,
                 today=today,
             )
         )
@@ -546,7 +546,6 @@ def _reciprocal(
         grid=row.fenced.grid,
         radius_km=row.fenced.radius_km,
         today=searcher.today,
-        day_parts=searcher.day_parts,
     )
     reverse = engine.score(
         searcher=them,

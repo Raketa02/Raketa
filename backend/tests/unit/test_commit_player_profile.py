@@ -21,7 +21,7 @@ from app.modules.player_profile.application.commit_player_profile import (
 from app.modules.player_profile.application.has_player_profile import HasPlayerProfile
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.errors import (
-    AvailabilityGridEmpty,
+    WeeklyHoursEmpty,
     IntroNotAdmitted,
     IntroRefusal,
     PhotoNotFound,
@@ -106,7 +106,7 @@ def a_command(**overrides) -> CommitPlayerProfileCommand:
         idempotency_key="commit-1",
         social_tag_ids=["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
         photo_ids=[],
-        availability=[(2, "EVENING")],
+        weekly_hours=[(2, 19)],
         latitude=51.5073509,
         longitude=-0.1277583,
         search_radius_km=10,
@@ -151,27 +151,27 @@ async def test_the_precise_fix_never_reaches_the_stream(harness: Harness):
     assert (created.latitude, created.longitude) == (51.51, -0.13)
 
 
-async def test_a_commit_with_no_availability_slots_is_refused(harness: Harness):
-    """The grid has a floor of one (ADR-0102), and this is where it binds.
+async def test_a_commit_with_no_hours_ticked_is_refused(harness: Harness):
+    """The week has a floor of one hour (ADR-0102), and this is where it binds.
 
     Blank is not read as *no preference* any more, and it is not read as a
     measured zero either — it is refused, so the question is answered rather
     than guessed at.
     """
 
-    with pytest.raises(AvailabilityGridEmpty):
-        await harness.commit().execute(a_command(availability=[]))
+    with pytest.raises(WeeklyHoursEmpty):
+        await harness.commit().execute(a_command(weekly_hours=[]))
 
     assert harness.uow.commits == 0, "a refused commit records nothing"
 
 
-async def test_one_ticked_slot_is_enough_to_commit(harness: Harness):
-    """The minimum is exactly one — a player who only plays Saturday mornings
+async def test_one_ticked_hour_is_enough_to_commit(harness: Harness):
+    """The minimum is exactly one — a player who only plays at ten on a Saturday
     must be able to say precisely that."""
 
-    committed = await harness.commit().execute(a_command(availability=[(6, "MORNING")]))
+    committed = await harness.commit().execute(a_command(weekly_hours=[(6, 10)]))
 
-    assert committed.profile.availability.codes == ("6:MORNING",)
+    assert committed.profile.weekly_hours.codes == ("6:10",)
 
 
 async def test_committed_photos_are_the_ones_the_player_uploaded(harness: Harness):

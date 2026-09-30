@@ -431,7 +431,7 @@ def _bench_shaped_row() -> CandidateRow:
         availability=tuple(
             uninterned_copy(f"{day}:{part}")
             for day in range(1, 3)
-            for part in ("MORNING", "AFTERNOON", "EVENING")
+            for part in (10, 15, 19)
         ),
         grid_updated_at=when,
         areas=(IndexedArea(latitude=52.23, longitude=21.01),),
@@ -514,7 +514,7 @@ def _row(*, range_low: float = 2.37, range_high: float = 3.05) -> CandidateRow:
         social_tags=("competitive_edge",),
         tags_updated_at=when,
         intro=None,
-        availability=("1:MORNING",),
+        availability=("1:10",),
         grid_updated_at=when,
         areas=(IndexedArea(latitude=52.23, longitude=21.01),),
         search_radius_km=12,

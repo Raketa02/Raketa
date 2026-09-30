@@ -59,9 +59,9 @@ def a_body(**overrides) -> dict:
     body = {
         "social_tag_ids": ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
         "photo_ids": [],
-        "availability": [
-            {"day": 2, "part": "EVENING"},
-            {"day": 6, "part": "MORNING"},
+        "weekly_hours": [
+            {"day": 2, "hour": 19},
+            {"day": 6, "hour": 10},
         ],
         "location": {"latitude": 51.5073509, "longitude": -0.1277583},
         "search_radius_km": SEARCH_RADIUS_BOUNDS.default_km,
@@ -104,9 +104,9 @@ async def test_a_commit_returns_the_profile_it_created(client):
     body = response.json()
     assert body["social_tag_ids"] == ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"]
     assert body["search_radius_km"] == SEARCH_RADIUS_BOUNDS.default_km
-    assert body["availability"] == [
-        {"day": 2, "part": "EVENING"},
-        {"day": 6, "part": "MORNING"},
+    assert body["weekly_hours"] == [
+        {"day": 2, "hour": 19},
+        {"day": 6, "hour": 10},
     ]
     assert body["proposals_opt_in"] == {
         "accepted": True,
@@ -128,20 +128,68 @@ async def test_the_location_that_comes_back_is_coarser_than_the_one_sent(client)
     assert body["location"] == {"latitude": 51.51, "longitude": -0.13}
 
 
-async def test_a_commit_with_no_availability_slots_is_refused(client):
-    """The floor of one, on the wire, with a code of its own (ADR-0102).
+async def test_a_commit_with_no_hours_ticked_is_refused(client):
+    """The floor of one hour, on the wire, with a code of its own (ADR-0102,
+    amended by ADR-0189).
 
-    A 400 with ``availability_grid_empty`` rather than a shapeless 422: `code` is
-    the only half a client may branch on, and *go back and tick a cell* is not
+    A 400 with ``weekly_hours_empty`` rather than a shapeless 422: `code` is
+    the only half a client may branch on, and *go back and tick an hour* is not
     any other refusal's recovery.
     """
 
     headers = await auth_headers(client)
 
-    response = await commit(client, headers, a_body(availability=[]))
+    response = await commit(client, headers, a_body(weekly_hours=[]))
 
     assert response.status_code == 400, response.text
-    assert response.json()["code"] == "availability_grid_empty"
+    assert response.json()["code"] == "weekly_hours_empty"
+
+
+async def test_one_hour_is_enough_to_commit_and_the_week_comes_back_in_order(client):
+    """One tick is a real answer. Repeated hours collapse and the week comes back
+    in the platform's reading order — day, then hour, nine before ten."""
+
+    headers = await auth_headers(client)
+
+    response = await commit(
+        client,
+        headers,
+        a_body(
+            weekly_hours=[
+                {"day": 6, "hour": 10},
+                {"day": 6, "hour": 9},
+                {"day": 6, "hour": 10},
+            ]
+        ),
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["weekly_hours"] == [
+        {"day": 6, "hour": 9},
+        {"day": 6, "hour": 10},
+    ]
+
+
+@pytest.mark.parametrize(
+    "cell",
+    [
+        {"day": 2, "hour": 6},
+        {"day": 2, "hour": 23},
+        {"day": 8, "hour": 19},
+        {"day": 2, "part": "EVENING"},
+    ],
+    ids=["before-seven", "the-hour-after-the-grid", "no-such-day", "a-part-of-the-day"],
+)
+async def test_a_cell_that_is_not_an_hour_of_the_week_is_refused(client, cell):
+    """The week runs 07:00–23:00, so its cells start at 7 through 22 — and a part
+    of the day is not a cell at all any more (ADR-0189 §5). A shape refusal: a
+    client drawing the served grid cannot produce one."""
+
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(weekly_hours=[cell]))
+
+    assert response.status_code == 422, response.text
 
 
 async def test_photo_ids_are_committed_in_the_order_they_were_arranged(client):
@@ -372,7 +420,7 @@ async def test_one_players_profile_does_not_answer_for_another(client):
 async def test_a_commit_without_a_gender_answer_is_refused(client):
     """Required, and refused as a *shape* rather than with a code.
 
-    That is the opposite of the availability floor and the opt-in beside it, and
+    That is the opposite of the weekly-hours floor and the opt-in beside it, and
     the difference is that this question has no unanswered state to model:
     ``PREFER_NOT_TO_SAY`` is a real answer a player can choose, so a body with
     no `gender` at all is a client that does not implement the contract, not a

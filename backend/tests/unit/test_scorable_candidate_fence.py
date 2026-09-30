@@ -214,7 +214,7 @@ def test_the_walk_reaches_the_fields_it_claims_to_guard() -> None:
         "LevelReading.mu",
         # Two hops in, through `reliability` and into the record's own strands.
         "ReliabilityRecord.published_score",
-        "GridCell.part",
+        "GridCell.hour",
         # Stage 4's own root, and the pair fact one hop inside it.
         "ModifierFacts.calibration_elevated",
         "SharedHistory.games_played_together",
@@ -291,7 +291,7 @@ class ScorableCandidate:
 
 @pytest.mark.parametrize(
     "field",
-    ["area_code", "player_id", "distance_km", "day_parts", "radius_km"],
+    ["area_code", "player_id", "distance_km", "hour", "radius_km"],
 )
 def test_the_walk_does_not_refuse_what_the_scorer_legitimately_reads(
     field: str,

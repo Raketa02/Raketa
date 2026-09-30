@@ -408,20 +408,24 @@ of the code because this file asks for them in that order.
   *why they are here*. A player holds **2 to 6**. Never free text, never player-authored,
   never imported from another platform, and never about the person rather than the game —
   age, looks, body and "looking for" are a different product's vocabulary.
-- **Availability grid** — a player's ordinary week as **7 days × 3 parts of the day**,
-  Monday-first. *Becomes **Weekly hours** — hours per weekday, 07:00–23:00 — with
-  [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) (Part 2).* It is the *only* way time preference is ever expressed, and it is a
-  **preference, not a promise** — a ticked slot is never a commitment, a hold, or a bookable
-  time.
-- **Availability slot** — one cell of the grid: a day and one of **morning**, **afternoon**,
-  **evening**. The finest precision the platform holds about when a player wants to play.
+- **Weekly hours** — a player's ordinary week as **hours per weekday, 07:00–23:00**: a grid of
+  7 days × 16 one-hour cells, Monday-first. It replaced the 7 days × 3 parts of the day with
+  [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, because a court
+  is booked by the hour. It is the *only* way time preference is ever expressed, and it is a
+  **preference, not a promise** — a ticked hour is never a commitment or a hold. What it now
+  also is, is the thing a court hour is read against: a player counts as **free for a game only
+  when its whole hour is inside their weekly hours**, never merely its start — one rule, in one
+  function, that every context asks. _Avoid_: availability grid, availability slot, part of the
+  day.
+- **Weekly hour** — one cell: a day and the hour it starts at, wall clock — Tuesday 19:00 is
+  19:00–20:00. The finest precision the platform holds about when a player wants to play.
 - **Availability overlap** — how much of a player's own declared week another player covers.
-  Deliberately **asymmetric**: the denominator is *your* slots, because the question it
+  Deliberately **asymmetric**: the denominator is *your* hours, because the question it
   answers is *how much of my week does this person cover*.
 - **Window** — the coarse shape of a searcher's declared week, as one of `TODAY`, `TOMORROW`,
   `WEEKEND`, `THIS_WEEK`, `ANY`. **Derived from the grid, never chosen** — there is no picker,
   because a picked window is a second availability declaration free to contradict the one the
-  whole engine just matched on. It is derived from *the grid the search actually ran on*, so a
+  whole engine just matched on. It is derived from *the week the search actually ran on*, so a
   widened search can carry a different window from the profile. It is what the person answering
   a challenge is told they are agreeing to; it is **not a proposed time**, and the players agree
   the hour themselves ([ADR-0100](docs/adr/0100-challenge-window-derived-never-chosen.md)).
@@ -503,15 +507,19 @@ of the code because this file asks for them in that order.
   by a client-supplied **idempotency key**, which the creating event carries so a retry is
   recognised from the stream itself rather than from a table beside it.
 - **Player profile events** (durable name / version):
-  - **PlayerProfileCreated** — `player_profile.created` / v1 — the commit, carrying every
+  - **PlayerProfileCreated** — `player_profile.created` / **v2** — the commit, carrying every
     preference and the idempotency key. **Not the opt-in.** It gained `gender` and
-    `gender_preference` after profiles existed and **stayed v1**: both are appended with
-    defaults so rows written before the question decode unchanged, and an absent `gender`
-    means *committed before anybody was asked* — never a quieter `PREFER_NOT_TO_SAY`, which
-    is an answer somebody chose. Nothing is backfilled.
+    `gender_preference` while it was v1, appended with defaults so the rows then in the store
+    decoded unchanged, and an absent `gender` means *committed before anybody was asked* —
+    never a quieter `PREFER_NOT_TO_SAY`, which is an answer somebody chose. Nothing is
+    backfilled. **v2 is the week becoming hours** (`weekly_hours`, [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
+    §5); v1, whose week was parts of the day, is deliberately unreadable — only `local` ever
+    ran, and a row of the old shape is a decoding error rather than a week folded wrongly.
   - **SocialTagsChanged** — `player_profile.social_tags_changed` / v1.
   - **PhotosChanged** — `player_profile.photos_changed` / v1.
-  - **AvailabilityChanged** — `player_profile.availability_changed` / v1.
+  - **WeeklyHoursSet** — `player_profile.weekly_hours_set` / v1 — the whole week, as the You
+    tab's *Save your week* leaves it; empty is a cleared week. It replaced
+    `player_profile.availability_changed`, which nothing reads.
   - **LocationChanged** — `player_profile.location_changed` / v1.
   - **SearchRadiusChanged** — `player_profile.search_radius_changed` / v1.
   - **GenderChanged** — `player_profile.gender_changed` / v1 — gender is self-declared and
@@ -529,16 +537,16 @@ of the code because this file asks for them in that order.
 **Invariants**
 - **A tag id is permanent.** Ids are persisted on accounts, so retiring a tag means hiding
   it from the picker while continuing to honour it — never reusing or renaming it.
-- **At least one slot, and blank is absent rather than zero.** The availability grid is
-  **required** at profile commit — one ticked cell of the twenty-one is a real answer, none is
-  not an answer at all. Where a blank grid is nevertheless met — cleared afterwards, or
-  committed before the rule — it means *we do not know*, and the availability term stands down;
+- **At least one hour, and blank is absent rather than zero.** Weekly hours are **required** at
+  profile commit — one ticked hour of the 112 is a real answer, none is not an answer at all.
+  Where a blank week is nevertheless met — cleared afterwards — it means *we do not know*, the
+  availability term stands down, and the player is free for no court hour;
   it is never scored as no overlap and never as any time
   ([ADR-0102](docs/adr/0102-silence-is-never-scored.md)). **An unanswered field is never a
   negative filter**, and requiring the field is how that invariant is kept rather than
   weighed.
 - **The grid is never shown to anybody as a calendar.** Not to matched players, not as
-  free/busy, not exported. Only the *count* of shared slots and the name of the next shared
+  free/busy, not exported. Only the *count* of shared hours and the name of the next shared
   one are ever rendered — overlap is a fact about a pair, a calendar is a fact about a
   person.
 - **Skipping is not consent.** The proposals opt-in is never pre-answered, and no other act
@@ -1116,16 +1124,16 @@ appears here.
   gate ships live and true-over-empty. Nobody has failed to turn up, because nobody has ever
   been due to — so a reliability strand of zero would be invented, and the term stands down
   instead ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)).
-- **Relaxation may only relax what the searcher asked for.** Radius and their own availability
-  grid are asks, and an ask may be widened — by the player, on offer. A term, a weight, a
+- **Relaxation may only relax what the searcher asked for.** Radius and their own weekly
+  hours are asks, and an ask may be widened — by the player, on offer. A term, a weight, a
   measurement and the quality floor are the engine's judgement about what makes a good game, and
   scarcity is never a reason to move one. Raising scores until candidates clear a fixed bar is
   lowering the bar, whatever the config file calls it
   ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)).
 - **Availability overlap is evidence that a game can be arranged; it is never a proposed time.**
   The matcher matches players and stops. No court is booked and nobody can promise a slot before
-  one exists, so the soonest shared slot is a reason on a card — *"you both play Saturday
-  mornings"* — and never a booking. Who plays when is agreed by the players themselves.
+  one exists, so the soonest shared hour is a reason on a card — *"you're both free Saturday
+  at ten"* — and never a booking. Who plays when is agreed by the players themselves.
 - **A seat is never filled below the quality floor to complete a line-up.** The group is the
   objective, so one bad seat is a bad evening for all four. A partial line-up, and what is
   missing, is the honest answer.
@@ -2211,8 +2219,6 @@ yet**; when a term is built, it moves into Part 1 under its context.
 
 ### The player's side
 
-- **Weekly hours** — a player's availability as hours per weekday, 07:00–23:00; replaces the
-  Availability grid. You count as free for a game only if its whole hour is in your hours.
 - **Home** — the first tab of the bottom bar: your games from the moment they fill (Part 1's *Now*).
 - **Classic play** — one feature flag, off by default, behind which the Players deck, the Chats
   tab, Challenges with their Plan, and Find a game stay as they are.

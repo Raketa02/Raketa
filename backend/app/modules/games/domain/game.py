@@ -99,7 +99,7 @@ from app.modules.games.domain.standing import (
     standing_of,
 )
 from app.modules.games.domain.windows import entry_closes_at
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
 

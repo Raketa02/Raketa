@@ -101,9 +101,9 @@ IdempotencyKeyDep = Annotated[
                 "`duplicate_social_tag` — the same tag id arrived twice.\n\n"
                 "`search_radius_out_of_bounds` — outside the served range, or "
                 "off its step.\n\n"
-                "`availability_grid_empty` — nothing ticked on the week. At "
-                "least one of the twenty-one cells; the minimum is exactly one "
-                "and is not served.\n\n"
+                "`weekly_hours_empty` — nothing ticked on the week. At least "
+                "one of its 112 hours; the minimum is exactly one and is not "
+                "served.\n\n"
                 "`proposals_opt_in_not_answered` — the answer was `null`. Ask "
                 "the question; do not send `false` on the player's behalf.\n\n"
                 "`too_many_photos` / `duplicate_photo` — the photo list is not "
@@ -147,11 +147,11 @@ IdempotencyKeyDep = Annotated[
         "that cannot produce an illegal value — and a disabled button is not a "
         "validation. Photo ids are checked to exist *and* to belong to the "
         "caller.\n\n"
-        "**The availability grid is required**, at least one of its twenty-one "
-        "cells. Silence about when a player usually plays is never scored as a "
-        "zero, so it is asked for rather than guessed at. The minimum is "
-        "exactly one and is not served — it is fixed, and a client holds it as "
-        "a constant.\n\n"
+        "**`weekly_hours` are required**, at least one hour of the 7 × 16 week "
+        "(07:00 to 23:00). Silence about when a player usually plays is never "
+        "scored as a zero, so it is asked for rather than guessed at. The "
+        "minimum is exactly one and is not served — it is fixed, and a client "
+        "holds it as a constant.\n\n"
         "**The proposals opt-in has no default.** Send the player's actual "
         "answer; `null` is refused rather than treated as a no. The answer is "
         "recorded with the moment, the copy version shown and the surface, "
@@ -184,7 +184,7 @@ async def commit_player_profile(
             idempotency_key=idempotency_key,
             social_tag_ids=payload.social_tag_ids,
             photo_ids=payload.photo_ids,
-            availability=payload.availability_cells(),
+            weekly_hours=payload.weekly_hours_cells(),
             latitude=payload.location.latitude,
             longitude=payload.location.longitude,
             search_radius_km=payload.search_radius_km,

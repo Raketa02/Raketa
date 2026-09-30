@@ -58,7 +58,7 @@ from app.kernel import Sport, instant
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.presentation.dependencies import get_court_pairing
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 from tests.api import matchmaking_world as world
 

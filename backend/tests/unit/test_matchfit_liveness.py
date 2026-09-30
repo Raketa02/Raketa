@@ -42,7 +42,7 @@ from app.engines.matchfit.v1.liveness import SignalReading
 from app.kernel import InvariantViolated
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.play_intent import PlayIntent
-from app.modules.player_profile.domain.availability import DayPart
+from app.modules.player_profile.domain.weekly_hours import HOURS_OF_THE_DAY
 from tests.unit.matchfit_builders import (
     candidate,
     capped_at,
@@ -558,8 +558,8 @@ def test_a_declared_evening_selects_that_modes_vector(
 #: and distance, against *the searcher's* ring; everything else is symmetric. So
 #: this is the whole of the asymmetry the reciprocal dock exists to price, and
 #: for fun is the mode that prices it hardest (17.6 of 100 on availability).
-WHOLE_WEEK = cells(*[(day, part) for day in range(1, 8) for part in DayPart])
-ONE_EVENING = cells((3, DayPart.EVENING))
+WHOLE_WEEK = cells(*[(day, hour) for day in range(1, 8) for hour in HOURS_OF_THE_DAY])
+ONE_EVENING = cells((3, 19))
 
 
 def test_the_reverse_fit_the_module_assembles_produces_a_real_dock() -> None:
@@ -572,10 +572,11 @@ def test_the_reverse_fit_the_module_assembles_produces_a_real_dock() -> None:
     the vector :func:`reverse_mode` picks, and the shortfall past the tolerance is
     priced by :func:`reciprocal_asymmetry`.
 
-    The candidate is free all week and the searcher one evening, so the pairing
-    reads 94.45 forwards and 62.82 back: a shortfall of 19.63 past the twelve-point
-    head start, docked at half a point each — **−10, and not the −12 bound**, which
-    is what makes this a test of the slope rather than of the saturation beside it.
+    The candidate is free all week — all 112 hours — and the searcher one hour of
+    one evening, so the pairing reads 94.45 forwards and 61.42 back: a shortfall
+    of 21.03 past the twelve-point head start, docked at half a point each —
+    **−11, and not the −12 bound**, which is what makes this a test of the slope
+    rather than of the saturation beside it.
     """
 
     lonely = searcher(mode=SearchMode.FOR_FUN, grid=ONE_EVENING, radius_km=10.0)
@@ -600,11 +601,11 @@ def test_the_reverse_fit_the_module_assembles_produces_a_real_dock() -> None:
         fit_ab=forwards.points, fit_ba=backwards.points, mode=inherited
     )
     shortfall = forwards.points - backwards.points - RULES.asymmetry_tolerance
-    assert shortfall == pytest.approx(19.63, abs=0.01)
+    assert shortfall == pytest.approx(21.03, abs=0.01)
     assert reciprocal_asymmetry(reciprocal, RULES) == SignalReading(
-        signal=LivenessSignal.RECIPROCAL_ASYMMETRY, points=-10
+        signal=LivenessSignal.RECIPROCAL_ASYMMETRY, points=-11
     )
-    assert -10 > bound(LivenessSignal.RECIPROCAL_ASYMMETRY)[0]
+    assert -11 > bound(LivenessSignal.RECIPROCAL_ASYMMETRY)[0]
 
 
 def test_the_reverse_direction_is_what_makes_the_shortfall() -> None:

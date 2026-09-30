@@ -91,7 +91,7 @@ async def test_a_full_onboarding_becomes_one_row_and_one_set_of_facts(
         facts = await session.get(CandidatePlayerFactsORM, player)
     assert facts is not None
     assert facts.social_tags == ["competitive_edge"]
-    assert facts.availability == ["1:MORNING"]
+    assert facts.availability == ["1:10"]
     assert (facts.area_latitude, facts.area_longitude) == (52.23, 21.01)
     assert facts.search_radius_km == 12
     assert facts.proposals_opt_in is True

@@ -41,7 +41,7 @@ from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.games.domain.standing import PLAYED, SETTLED, GameStanding
 from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 from tests.unit.fake_event_store import CountingUnitOfWork, FrozenClock
 

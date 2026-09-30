@@ -201,7 +201,7 @@ def test_everyone_inside_the_reach_is_drawn_with_a_fit_floor_or_no_floor():
 
     with_a_court = build.row(1)
     level_far = build.row(2, mu=build.SEARCHER_MU + 2.0)
-    poor = build.row(3, tags=(), slots=("2:MORNING",))
+    poor = build.row(3, tags=(), slots=("2:10",))
 
     reading = a_reading(
         (with_a_court, level_far, poor),

@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 - **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: a game made in a group names its hour, so no window is derived for it.
+- **Amended 2026-09-30 by #534**, which carried out [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5's grid of hours: §6's two constants are counted in hours — `WINDOW_SINGLE_DAY_MAX_HOURS = 10` and `WINDOW_ANY_MIN_HOURS = 64`, the same share of a day's sixteen hours and of the week's 112 that *two cells of a day's three* and *twelve of twenty-one* were, rounded down. They stay starting positions with §6's falsifier; nothing else here moves.
 
 ## Context
 

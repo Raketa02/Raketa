@@ -202,7 +202,7 @@ def test_somebody_who_said_yes_is_still_admitted_below_the_floor():
 
     # Inside the level gate and under the floor: a Level apart, no tags, one
     # ticked cell the searcher never ticks.
-    poor = build.row(1, mu=build.SEARCHER_MU + 0.4, tags=(), slots=("2:MORNING",))
+    poor = build.row(1, mu=build.SEARCHER_MU + 0.4, tags=(), slots=("2:10",))
 
     alone = a_deal((poor,))
     said_yes = a_deal((poor,), interest_days_ago={build.player(1): 2})

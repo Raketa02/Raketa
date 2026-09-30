@@ -46,16 +46,16 @@ from app.modules.matchmaking.domain.searches import (
     StagedCounts,
     WithheldReason,
 )
-from app.modules.player_profile.domain.availability import (
-    AvailabilityGrid,
-    Window,
-    window_of,
-)
 from app.modules.player_profile.domain.photos import PhotoReviewDecision
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
     SearchORM,
+)
+from app.modules.player_profile.domain.weekly_hours import (
+    WeeklyHours,
+    Window,
+    window_of,
 )
 
 
@@ -442,7 +442,7 @@ def _search_record(
             # ``searcher_grid`` is what makes it payable the day it does, and it
             # is recorded now because it is search-time and has no backfill.
             window=window_of(
-                AvailabilityGrid.from_codes(row.searcher_grid),
+                WeeklyHours.from_codes(row.searcher_grid),
                 iso_weekday(_utc(row.at).isoweekday()),
             ),
             post_gate=pool["post_gate"],

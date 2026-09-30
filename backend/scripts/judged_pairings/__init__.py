@@ -38,7 +38,6 @@ Run it from ``backend/``::
 
 from scripts.judged_pairings.deriving import (
     COLUMNS,
-    DAY_PARTS,
     FIXTURE,
     JUDGED_DOC,
     MODES,
@@ -81,7 +80,6 @@ from scripts.judged_pairings.tables import (
 __all__ = [
     "BEGIN",
     "COLUMNS",
-    "DAY_PARTS",
     "END",
     "FIXTURE",
     "FloorBound",
