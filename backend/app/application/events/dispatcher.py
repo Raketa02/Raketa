@@ -41,6 +41,14 @@ class EventDispatcher:
     def subscribe(self, event_cls: Type[E], handler: EventHandler[E]) -> None:
         self._handlers.setdefault(event_cls, []).append(handler)
 
+    def subscribers_of(
+        self, event_cls: Type[DomainEvent]
+    ) -> tuple[EventHandler[Any], ...]:
+        """The handlers a delivered ``event_cls`` reaches, in subscription order.
+        None is a failed delivery (``dispatch``)."""
+
+        return tuple(self._handlers.get(event_cls, ()))
+
     def copy(self) -> "EventDispatcher":
         """These subscriptions, in a dispatcher further ones do not reach back into.
 

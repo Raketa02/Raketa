@@ -4,6 +4,7 @@ from app.application.events import EventCatalog, EventDispatcher
 from app.modules.clubs.application.handlers import (
     LogClubAccountOpened,
     LogClubAccountPasswordChanged,
+    LogClubCourtsEvent,
     LogClubDetailsChanged,
     LogClubRegistered,
 )
@@ -62,3 +63,18 @@ def subscribe_club_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(ClubDetailsChanged, LogClubDetailsChanged())
     dispatcher.subscribe(ClubAccountOpened, LogClubAccountOpened())
     dispatcher.subscribe(ClubAccountPasswordChanged, LogClubAccountPasswordChanged())
+    # Club courts (#535). Nothing reacts to them yet, and an event with no
+    # subscriber is an outbox row that never stops failing.
+    dispatcher.subscribe(CourtAdded, LogClubCourtsEvent())
+    dispatcher.subscribe(CourtChanged, LogClubCourtsEvent())
+    dispatcher.subscribe(CourtSwitchedOff, LogClubCourtsEvent())
+    dispatcher.subscribe(CourtSwitchedOn, LogClubCourtsEvent())
+    dispatcher.subscribe(CourtRemoved, LogClubCourtsEvent())
+    dispatcher.subscribe(RaketaHoursSet, LogClubCourtsEvent())
+    dispatcher.subscribe(ExceptionAdded, LogClubCourtsEvent())
+    dispatcher.subscribe(ExceptionRemoved, LogClubCourtsEvent())
+    dispatcher.subscribe(PricesSet, LogClubCourtsEvent())
+    dispatcher.subscribe(WayOfWorkingChosen, LogClubCourtsEvent())
+    dispatcher.subscribe(RaketaSettingsChanged, LogClubCourtsEvent())
+    dispatcher.subscribe(RaketaPaused, LogClubCourtsEvent())
+    dispatcher.subscribe(RaketaResumed, LogClubCourtsEvent())
