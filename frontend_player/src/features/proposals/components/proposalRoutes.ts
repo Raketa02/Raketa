@@ -18,3 +18,9 @@ export function gameRoute(groupId: string, proposalId: string, sport: Sport, kin
     params: { groupId, proposalId, sport, kind },
   } as const;
 }
+
+/**
+ * Where the Games & money row leads — a screen pushed over the You tab, under the tab's own first
+ * segment so the You column stays lit (`paymentRoutes`' reason, #554).
+ */
+export const YOU_GAMES_AND_MONEY_ROUTE = '/you/games-and-money';

@@ -29,13 +29,16 @@
  * the terms were accepted for a brand (the mechanics §12.5). The card says so, shows the terms, and
  * one press accepts them — there is no setup and nothing for the bank to confirm.
  *
- * ## Live yeses and receipts are not here yet
+ * ## Live yeses are handed in
  *
- * State B's other two sections (mocks 48, 49) are #554's and #555's.
+ * State B's *LIVE YESES* (mock 48, #554) are the proposals feature's — the deck's answers, whose
+ * details are the deck's screen — so the route file composes them and this screen only places
+ * them, under the method. They are drawn in state B alone: a yes needs a saved method, and a
+ * method is not removed while a yes needs it. *RECEIPTS* (mock 49) are #555's.
  */
 
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ShellScreen, YOU_COPY } from '@/features/shell/types';
@@ -61,7 +64,12 @@ import {
 } from './paymentsCopy';
 import { SetupChecklist } from './SetupChecklist';
 
-export function PaymentsScreen() {
+export interface PaymentsScreenProps {
+  /** State B's *LIVE YESES* section, drawn under the method — see the module note. */
+  readonly liveYeses?: ReactNode;
+}
+
+export function PaymentsScreen({ liveYeses }: PaymentsScreenProps) {
   const router = useRouter();
   const read = usePaymentMethod();
   /** *Change* pressed on state B: the checklist over the method still on file. */
@@ -86,11 +94,14 @@ export function PaymentsScreen() {
           <TextLink label={PAYMENTS_COPY.method.keep} onPress={() => setChanging(false)} />
         </View>
       ) : (
-        <Saved
-          method={standing.method}
-          termsNeeded={standing.termsNeeded}
-          onChange={() => setChanging(true)}
-        />
+        <>
+          <Saved
+            method={standing.method}
+            termsNeeded={standing.termsNeeded}
+            onChange={() => setChanging(true)}
+          />
+          {liveYeses}
+        </>
       )}
     </ShellScreen>
   );

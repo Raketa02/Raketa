@@ -87,3 +87,58 @@ border — the tag's own — and _Booked_ keeps `voltStroke`. The game card's th
 in the design system's §1.2 as meanings it already had (a stroke is _where_, a `coralInk` fill is
 attention). **Owed to the backend**: a distance for the details' WHERE (A4.1 draws _3,1 km_; a deck
 card carries none).
+
+**Games & money and the live yeses are this feature's** ([#554](https://github.com/Raketa02/Raketa/issues/554);
+the screens A7.1, A7.3; mocks 37–39, 48). Both are the backend's Proposals context — Games & money is
+its second aggregate (#539), and a live yes is a yes on a game still filling — and the deck is what
+both bound: games per week decides which weeks a deck deals into, and the ceiling which cards it
+deals at all. So the feature holds the two reads (`useGamesAndMoney`, `useLiveYeses`) beside the
+deck's, one key factory (`proposalKeys`, renamed from `deckKeys` as it stopped being the deck's
+alone), and the one write. The shell composes `GamesAndMoneyRow` first in the You tab's ACCOUNT
+group, above _Payments_; its screen is `/you/games-and-money`.
+
+**Every tap is a save, and the saves go one at a time.** No _Save_ button (A7.1): a tap writes the
+pair into the read at once and `PUT`s both limits. Optimistic, against `architecture.md` Part 7's
+list: nothing is charged or held — the ceiling is a preference about money, not a payment — the
+answer is this player's pair alone, a refusal is rare and its rollback deterministic (the saved pair
+read again), and nothing reaches another person. A read begun after a tap and answering late with
+the old pair cannot undo the last save: the last answer cancels the reads before writing itself in. The saves share a TanStack `scope`, so they run
+in the order tapped; only the last one in flight writes its answer into the read, a refusal with
+nothing behind it re-reads the saved pair (and says why under the bound, where a note appearing does
+not move the control under the finger), and once the last one settles **every group's decks are
+marked stale** (`proposalKeys.decks()`). A tap steps from **the pair the last tap left**, held in a
+ref until the saves settle, because the value a tap writes is drawn a tick later and two taps inside
+that tick would both step from the same number; a tap that lands on that pair sends nothing. The
+stepper's range and the ceilings beside _Off_ are the read's, never the client's: a key at an end
+of the range is shut, and the server can offer more without a release.
+
+**The bound is the games times the ceiling.** The row's line — _At most 4 games a week_, with _· up to
+180 zł_ once a ceiling is set — and the bound under the cards — _Your bound: at most **4 games** · up
+to **180 zł** a week._ — are one rule (`weeklyBoundGrosze`), and the games line turns singular at one.
+The copy lives in `gamesAndMoneyCopy.ts`, import-light, because the shell composes the row at module
+load and `deckPresentation`'s imports reach back into features that reach the shell.
+
+**LIVE YESES is this feature's section, placed on Payments by its route file.** The yeses are the
+deck's answers and their details are the deck's screen, and the deck will open the payment setup as
+a sheet (A2.4) — so `payments` importing this feature would point the edge the wrong way.
+`PaymentsScreen` takes a `liveYeses` slot and draws it in state B only (a yes needs a saved method,
+and a method is not removed while a yes needs it), so state A never asks for the list. The head
+counts every yes across sports with _up to 10 per sport_ under it — the server's `cap_per_sport` —
+where mock 48 drew _1 OF 10_, a fraction of two different wholes (Part 16). A row is _Padel ·
+Saturday 15:00_ in the court block's day words, the club under it, the share in grey mono; it opens
+the game's details for the group, sport and kind the yes was said in. **Hidden when empty and while
+the first read is on its way**; a read that failed says so under the section's name with the retry,
+because a missing list would read as _nothing live_. A yes and a withdraw, wherever said, mark the
+list stale (`useAnswerCard`, `useWithdrawYes`); a no never touched a yes.
+
+**A game you are already In on is drawn from your yes.** The deck never deals a game the reader is
+In on, and there is no read of one proposal until #542 — so a live yes's row would have opened on
+_This game isn't dealt to you any more_. When the deck has answered without the card, the details
+read the live yeses and, finding the game there, draw what the yes knows: the club as the title,
+_Filling_, WHERE · DAY · TIME · YOUR SHARE and _Withdraw_ — no tiles, forecast or grid, since who else
+is In is not on the yes. A withdraw puts the answers back, and the deck, read again, deals the game
+with everything on it. The yes found is kept while the screen is open, as the card is. **Owed**: when
+#542 serves a proposal's details, this view gives way to the full card. **Calls open for the product
+owner**, each a Part 16 row: the live yeses' head, the yes's details, and the bound's limits in sans
+700 (a sentence's figures, where 1.4 sets display figures in mono). **Nothing here has been seen on a
+device.**

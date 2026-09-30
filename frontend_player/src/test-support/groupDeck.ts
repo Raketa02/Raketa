@@ -120,6 +120,28 @@ export function deckCard(extra: Partial<Wire['DeckCardSchema']> = {}): Wire['Dec
   };
 }
 
+let said = 0;
+
+/**
+ * **A live yes** — mock 48's row: padel on Saturday at 15:00 at Bonarka Arena, a 28 zł share, its
+ * book-by a day off — a yes said in the group whose id is `pool_id`.
+ */
+export function liveYes(extra: Partial<Wire['LiveYesSchema']> = {}): Wire['LiveYesSchema'] {
+  said += 1;
+  return {
+    proposal_id: `f0000000-0000-4000-8000-${String(said).padStart(12, '0')}`,
+    pool_id: 'a0000000-0000-4000-8000-000000000005',
+    sport: 'PADEL',
+    kind: 'COMPETITIVE',
+    // Saturday 3 October, 15:00 in Warsaw.
+    starts_at: '2026-10-03T13:00:00Z',
+    club: { id: 'b0000000-0000-4000-8000-000000000001', name: 'Bonarka Arena' },
+    share_grosze: 2800,
+    book_by: hoursAfterRead(24),
+    ...extra,
+  };
+}
+
 /** A deck with both segments, nothing dealt, nothing capped — the tab's quietest answer. */
 export function groupDeck(
   extra: Partial<Wire['GroupDeckResponse']> = {},

@@ -1,7 +1,8 @@
 /**
- * **The group deck's read and a player's three answers** — one of the two layers allowed to read
- * generated types, and the only place these paths are written down
- * ([#553](https://github.com/Raketa02/Raketa/issues/553), #538, #539).
+ * **The group deck's read, a player's three answers, and their own two reads** — one of the two
+ * layers allowed to read generated types, and the only place these paths are written down
+ * ([#553](https://github.com/Raketa02/Raketa/issues/553), [#554](https://github.com/Raketa02/Raketa/issues/554);
+ * #538, #539).
  *
  * | | |
  * | --- | --- |
@@ -9,6 +10,9 @@
  * | `postYes` | `POST /proposals/{id}/yes` — *I'm in*, silent and free |
  * | `postNo` | `POST /proposals/{id}/no` — *Not this time*, silent and final |
  * | `deleteYes` | `DELETE /proposals/{id}/yes` — withdraw a yes before the game fills |
+ * | `getLiveYeses` | `GET /players/me/live-yeses` — every yes on a game still filling, across groups |
+ * | `getGamesAndMoney` | `GET /players/me/games-and-money` — the two limits, and what the form offers |
+ * | `putGamesAndMoney` | `PUT /players/me/games-and-money` — both limits, on every tap |
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -77,6 +81,35 @@ export function deleteYes(proposalId: string): Promise<void> {
     path: `${proposalPath(proposalId)}/yes`,
     authenticated: true,
   });
+}
+
+/** The reader's live yeses, soonest game first, with the cap per sport. */
+export function getLiveYeses({ signal }: Cancellable = {}): Promise<Schemas['LiveYesesResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: '/api/v1/players/me/live-yeses',
+    authenticated: true,
+    signal,
+  });
+}
+
+const GAMES_AND_MONEY_PATH = '/api/v1/players/me/games-and-money';
+
+export function getGamesAndMoney({ signal }: Cancellable = {}): Promise<
+  Schemas['GamesAndMoneyResponse']
+> {
+  return httpRequest({ method: 'GET', path: GAMES_AND_MONEY_PATH, authenticated: true, signal });
+}
+
+/**
+ * Save both limits. `games_per_week_out_of_range` and `most_ill_pay_not_offered` (400) for a value
+ * the form does not offer — nothing saved. The same answer twice records nothing, so a tap that
+ * lands twice is harmless; it is not retried all the same.
+ */
+export function putGamesAndMoney(
+  body: Schemas['GamesAndMoneyRequest'],
+): Promise<Schemas['GamesAndMoneyResponse']> {
+  return httpRequest({ method: 'PUT', path: GAMES_AND_MONEY_PATH, authenticated: true, body });
 }
 
 function proposalPath(proposalId: string): string {

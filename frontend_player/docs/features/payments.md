@@ -6,7 +6,8 @@ Games & Fill in screens (A7, A7.3; mocks 40–47), the mechanics (§12.4, §12.5
 [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) /
 [ADR-0190](../../../docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md). The
 shell composes `PaymentsRow` into the You tab's **ACCOUNT** group; the screen is
-`/you/payments`. State B's _Live yeses_ and _Receipts_ (mocks 48, 49) are #554's and #555's.
+`/you/payments`. State B's _Live yeses_ (mock 48) are handed in by the route file (#554, below);
+_Receipts_ (mock 49) are #555's.
 
 **One read decides the screen.** `GET …/payment-methods/current` behind the row and the screen alike:
 nothing saved is **state A**, the numbered checklist; a saved method is **state B**, the dark method
@@ -95,3 +96,9 @@ alternative, `CardForm`, draws a country and postcode Raketa does not need. Part
 device**: the Stripe SDK needs a development build rebuilt with it (`pnpm ios` / `pnpm android`), and
 no Stripe test key exists yet (O7, #533) — against a laptop's fake provider the card path is walkable
 and saves the fake's Visa 4242 whatever is typed.
+
+**State B places the live yeses; it does not read them** ([#554](https://github.com/Raketa02/Raketa/issues/554)).
+_LIVE YESES_ is the proposals feature's section — the deck's answers, whose details are the deck's
+screen — and the deck will open this feature's setup as a sheet (A2.4), so the edge points from
+there to here. `PaymentsScreen` takes a `liveYeses` slot, drawn under the method in state B only,
+and the route file `you/payments.tsx` composes it. See [`proposals.md`](proposals.md).

@@ -28,12 +28,13 @@
  * ## An answer re-reads the group's decks when the server has it
  *
  * Every answer invalidates the group's root — every sport, both kinds — on settling: a yes moves
- * the badge across segments, and a refusal that returns a card is the server putting it back. The
+ * the badge across segments, and a refusal that returns a card is the server putting it back. A yes
+ * and a withdraw re-read the player's live yeses too, which You › Payments lists (#554). The
  * card itself leaves the read the moment it has **flown** (`useDropCard`), not the moment the
  * answer is sent, because the stage holds the card in flight until then (`GamesDeck`).
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
 import type { AppError } from '@/shared/errors';
@@ -44,11 +45,11 @@ import type { GameKind } from '../domain/vocabulary';
 import { answerCard, withdrawYes, type AnswerToCard } from '../use-cases/answers';
 import { readGroupDeck } from '../use-cases/deckReads';
 
-import { deckKeys } from './deckKeys';
+import { proposalKeys } from './proposalKeys';
 
 function deckQuery(groupId: string, sport: Sport, kind: GameKind, enabled = true) {
   return {
-    queryKey: deckKeys.deck(groupId, sport, kind),
+    queryKey: proposalKeys.deck(groupId, sport, kind),
     queryFn: ({ signal }: { signal: AbortSignal }) =>
       readGroupDeck(groupId, sport, kind, { signal }),
     enabled,
@@ -76,7 +77,7 @@ export function useGamesBadge(groupId: string, sport: Sport, chosen: GameKind): 
 export function useDropCard(groupId: string, sport: Sport, kind: GameKind) {
   const client = useQueryClient();
   return (proposalId: string) => {
-    client.setQueryData<GroupDeck>(deckKeys.deck(groupId, sport, kind), (held) =>
+    client.setQueryData<GroupDeck>(proposalKeys.deck(groupId, sport, kind), (held) =>
       held === undefined ? held : withoutCard(held, proposalId),
     );
   };
@@ -85,7 +86,7 @@ export function useDropCard(groupId: string, sport: Sport, kind: GameKind) {
 /** Mark every deck read for this group stale, so the one on screen is read again. */
 export function useRereadDeck(groupId: string) {
   const client = useQueryClient();
-  return () => client.invalidateQueries({ queryKey: deckKeys.group(groupId) });
+  return () => client.invalidateQueries({ queryKey: proposalKeys.group(groupId) });
 }
 
 /** What a caller is told of a refused write — the refusal, and which answer it refused. */
@@ -118,7 +119,7 @@ export function useAnswerCard(groupId: string, onRefused?: OnRefused<AnswerToCar
   return useMutation<void, AppError, AnswerToCard>({
     mutationFn: answerCard,
     onError: refused,
-    onSettled: () => client.invalidateQueries({ queryKey: deckKeys.group(groupId) }),
+    onSettled: (_nothing, _error, { said }) => reread(client, groupId, { yeses: said === 'yes' }),
   });
 }
 
@@ -130,6 +131,19 @@ export function useWithdrawYes(groupId: string, onRefused?: OnRefused<string>) {
   return useMutation<void, AppError, string>({
     mutationFn: withdrawYes,
     onError: refused,
-    onSettled: () => client.invalidateQueries({ queryKey: deckKeys.group(groupId) }),
+    onSettled: () => reread(client, groupId, { yeses: true }),
   });
+}
+
+/**
+ * What an answer settling re-reads: the group's decks, always, and the player's live yeses when the
+ * answer could have moved them — a yes adds one and a withdraw takes one away (You › Payments,
+ * #554); a no never touched a yes. Awaited, so the answer is pending until the deck on screen has
+ * been read again.
+ */
+function reread(client: QueryClient, groupId: string, { yeses }: { readonly yeses: boolean }) {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: proposalKeys.group(groupId) }),
+    ...(yeses ? [client.invalidateQueries({ queryKey: proposalKeys.liveYeses() })] : []),
+  ]);
 }

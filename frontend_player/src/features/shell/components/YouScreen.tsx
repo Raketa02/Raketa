@@ -9,7 +9,7 @@
  * FINDING PLAYERS   Your week · How far to look · Where you play · Who you play with ·
  *                   Game suggestions
  * ON YOUR CARD      How others see you · Photos · Tags · Intro · Name
- * ACCOUNT           Payments
+ * ACCOUNT           Games & money · Payments
  * Sign out
  * ```
  *
@@ -23,9 +23,9 @@
  * has the platform concluded about me, what does the matcher read when it looks for a game, what
  * does a stranger read about me, and **how do I pay for a game**. That fourth one was not asked on
  * this tab until money was (ADR-0179 §9, amended by ADR-0189; the screens A7): **ACCOUNT** sits
- * after *On your card* and before *Sign out*, and holds *Payments* today — *Games & money* (#554)
- * and *Notifications* (#559) join it around that row. *Sign out* stays at the foot as the account
- * panel draws it.
+ * after *On your card* and before *Sign out*, and holds *Games & money* (#554) and *Payments*
+ * (#552) — *Notifications* (#559) joins them under *Payments*. *Sign out* stays at the foot as the
+ * account panel draws it.
  *
  * ## The switcher chip
  *
@@ -66,6 +66,7 @@ import {
   YourWeekRow,
 } from '@/features/player_profile/types';
 import { PaymentsRow } from '@/features/payments/types';
+import { GamesAndMoneyRow } from '@/features/proposals/types';
 import {
   HowOthersSeeYouRow,
   OwnRecordSheet,
@@ -124,7 +125,8 @@ export function YouScreen({ headerRight }: YouScreenProps) {
           </YouGroup>
 
           <YouGroup title={YOU_COPY.groups.account}>
-            <PaymentsRow />
+            <GamesAndMoneyRow />
+            <PaymentsRow divided />
           </YouGroup>
 
           <AccountPanel />

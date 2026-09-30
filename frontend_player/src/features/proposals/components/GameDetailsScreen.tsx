@@ -32,11 +32,22 @@
  * **Withdraw follows *you are In*** (`youAreIn`) on the card as drawn, so it is there whenever the
  * reader's tile carries IN — after a yes here, or on a card the read ever deals with them In.
  *
- * **A game this screen never found** — a link into a card the deck no longer deals, a read that
- * forgot it — says so in one sentence rather than drawing a game it cannot vouch for. Before that is
- * known the screen waits with the muted spinner, says the read resumes while offline, and says why
- * a read failed with the retry. An answer given offline is held and sent on reconnect, and the
- * amber note says so.
+ * ## A game you are already In on is drawn from your yes
+ *
+ * You › Payments' *LIVE YESES* open this screen too (#554), for games the deck **never** deals —
+ * every one of them is a yes of yours. There is no read of one proposal yet (#542 serves it), so
+ * when the deck has answered without the card the screen reads your live yeses and, finding the
+ * game there, draws what the yes knows: the club as the title, *Filling*, WHERE · DAY · TIME · YOUR
+ * SHARE, and *Withdraw*. No tiles, no forecast and no grid — who else is In is not on the yes, and
+ * the screen draws nothing it cannot vouch for. A withdraw puts the answers back, and the deck,
+ * read again, deals the game with everything on it. The yes found is kept while the screen is open,
+ * as the card is.
+ *
+ * **A game this screen never found** — a link into a card the deck no longer deals and no yes of
+ * yours names, a read that forgot it — says so in one sentence rather than drawing a game it cannot
+ * vouch for. Before that is known the screen waits with the muted spinner, says the read resumes
+ * while offline, and says why a read failed with the retry. An answer given offline is held and
+ * sent on reconnect, and the amber note says so.
  *
  * ## Answers
  *
@@ -86,9 +97,11 @@ import {
   type DeckCard,
   type DeckPerson,
 } from '../domain/deck';
+import type { LiveYes } from '../domain/liveYes';
 import type { GameKind } from '../domain/vocabulary';
 import { gameDayOf, weekdayAt, type GameDay } from '../domain/when';
 import { useAnswerCard, useGroupDeck, useWithdrawYes } from '../hooks/useGroupDeck';
+import { useLiveYeses } from '../hooks/useLiveYeses';
 
 import {
   barLabels,
@@ -131,6 +144,14 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
   if (found !== undefined && found !== last) setLast(found);
   const dealt = found ?? last;
 
+  // Your own yes, for a game the deck does not deal because you are In on it — asked only once
+  // the deck has answered without the card, and kept as the card is. See the module note.
+  const yeses = useLiveYeses({ enabled: read.data !== undefined && dealt === undefined });
+  const foundYes = yeses.data?.yeses.find((yes) => yes.proposalId === proposalId);
+  const [lastYes, setLastYes] = useState<LiveYes | undefined>(foundYes);
+  if (foundYes !== undefined && foundYes !== lastYes) setLastYes(foundYes);
+  const yours = dealt === undefined ? (foundYes ?? lastYes) : undefined;
+
   /**
    * What you did here — a yes, or a yes taken back. The card as it stands after a yes is
    * `withYourYes`, because the deck stops dealing it; a withdraw is the read's again.
@@ -153,6 +174,82 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
         ? withYourYes(dealt)
         : dealt;
 
+  const busy = answer.isPending || withdraw.isPending;
+  const paused = answer.isPaused || withdraw.isPaused;
+
+  const sayYes = () =>
+    answer.mutate({ proposalId, said: 'yes' }, { onSuccess: () => setAnswered('yes') });
+  const sayNo = () => answer.mutate({ proposalId, said: 'no' }, { onSuccess: () => router.back() });
+  const takeBack = () => withdraw.mutate(proposalId, { onSuccess: () => setAnswered('withdrawn') });
+
+  /** *Withdraw* while you are In, the two answers otherwise — and the note while one is held. */
+  const answers = (inNow: boolean) => (
+    <>
+      {/* Held while offline, and sent when the connection returns. */}
+      {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+
+      {inNow ? (
+        <Button
+          label={COPY.game.withdraw}
+          variant="secondary"
+          size="lg"
+          busy={withdraw.isPending}
+          disabled={busy && !withdraw.isPending}
+          onPress={takeBack}
+        />
+      ) : (
+        <View style={s.answers}>
+          <Button
+            label={COPY.yes}
+            size="lg"
+            busy={answer.isPending && answer.variables?.said === 'yes'}
+            disabled={busy && answer.variables?.said !== 'yes'}
+            onPress={sayYes}
+          />
+          <Button
+            label={COPY.no}
+            variant="secondary"
+            size="lg"
+            busy={answer.isPending && answer.variables?.said === 'no'}
+            disabled={busy && answer.variables?.said !== 'no'}
+            onPress={sayNo}
+          />
+        </View>
+      )}
+    </>
+  );
+
+  if (card === undefined && yours !== undefined) {
+    return (
+      <SafeAreaView style={s.screen} edges={['top']}>
+        <ScreenHeader
+          compact
+          onBack={() => router.back()}
+          backLabel={COPY.game.back}
+          title={clubName(yours)}
+          subline={detailsSubline(sport)}
+        />
+        <ScrollView contentContainerStyle={s.body}>
+          <View style={s.game}>
+            <GameGround />
+            <View accessible accessibilityRole="header">
+              <CardTag label={COPY.game.filling} tone="grey" dot={theme.color.arranging} />
+            </View>
+            <Facts
+              card={yours}
+              day={gameDayOf(yours.startsAt, yeses.dataUpdatedAt)}
+              deadlineDay={weekdayAt(yours.deadline)}
+            />
+          </View>
+
+          <Text style={s.meaning}>{COPY.game.whatAYesMeans}</Text>
+
+          {answers(answered !== 'withdrawn')}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   const header = (
     <ScreenHeader
       compact
@@ -169,14 +266,16 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
       <SafeAreaView style={s.screen} edges={['top']}>
         {header}
         <View style={s.body}>
-          {read.fetchStatus === 'paused' ? (
+          {read.fetchStatus === 'paused' || yeses.fetchStatus === 'paused' ? (
             <Note variant="amber">{offlineMessage('resumes')}</Note>
-          ) : read.isPending ? (
+          ) : read.isPending || yeses.fetchStatus === 'fetching' ? (
             <ActivityIndicator accessibilityLabel={COPY.reading} color={theme.color.muted} />
           ) : read.error !== null && read.data === undefined ? (
             <ReadFailed error={read.error} onRetry={() => void read.refetch()} />
+          ) : yeses.error !== null && yeses.data === undefined ? (
+            <ReadFailed error={yeses.error} onRetry={() => void yeses.refetch()} />
           ) : (
-            // Read, and not among the cards: a game this screen cannot vouch for.
+            // Read, and neither among the cards nor your yeses: a game this screen cannot vouch for.
             <Note>{COPY.game.gone}</Note>
           )}
         </View>
@@ -187,13 +286,6 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
   const seats = courtSeatCount(sport);
   const { top, bottom } = rowsOf(card, seats / 2);
   const day = gameDayOf(card.startsAt, readAt);
-  const busy = answer.isPending || withdraw.isPending;
-  const paused = answer.isPaused || withdraw.isPaused;
-
-  const sayYes = () =>
-    answer.mutate({ proposalId, said: 'yes' }, { onSuccess: () => setAnswered('yes') });
-  const sayNo = () => answer.mutate({ proposalId, said: 'no' }, { onSuccess: () => router.back() });
-  const takeBack = () => withdraw.mutate(proposalId, { onSuccess: () => setAnswered('withdrawn') });
 
   return (
     <>
@@ -238,37 +330,7 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
 
           <Text style={s.meaning}>{COPY.game.whatAYesMeans}</Text>
 
-          {/* Held while offline, and sent when the connection returns. */}
-          {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
-
-          {youAreIn(card) ? (
-            <Button
-              label={COPY.game.withdraw}
-              variant="secondary"
-              size="lg"
-              busy={withdraw.isPending}
-              disabled={busy && !withdraw.isPending}
-              onPress={takeBack}
-            />
-          ) : (
-            <View style={s.answers}>
-              <Button
-                label={COPY.yes}
-                size="lg"
-                busy={answer.isPending && answer.variables?.said === 'yes'}
-                disabled={busy && answer.variables?.said !== 'yes'}
-                onPress={sayYes}
-              />
-              <Button
-                label={COPY.no}
-                variant="secondary"
-                size="lg"
-                busy={answer.isPending && answer.variables?.said === 'no'}
-                disabled={busy && answer.variables?.said !== 'no'}
-                onPress={sayNo}
-              />
-            </View>
-          )}
+          {answers(youAreIn(card))}
         </ScrollView>
       </SafeAreaView>
 
@@ -314,7 +376,8 @@ function Facts({
   day,
   deadlineDay,
 }: {
-  readonly card: DeckCard;
+  /** A dealt card, or your own yes on a game the deck no longer deals. */
+  readonly card: Pick<DeckCard, 'club' | 'startsAt' | 'shareGrosze' | 'deadline'>;
   readonly day: GameDay | undefined;
   readonly deadlineDay: Weekday | undefined;
 }) {

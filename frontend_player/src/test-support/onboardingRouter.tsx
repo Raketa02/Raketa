@@ -50,6 +50,7 @@ import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
 import YouGameSuggestionsRoute from '@/app/(app)/(tabs)/you/game-suggestions';
+import YouGamesAndMoneyRoute from '@/app/(app)/(tabs)/you/games-and-money';
 import YouIntroRoute from '@/app/(app)/(tabs)/you/intro';
 import YouKindOfGameRoute from '@/app/(app)/(tabs)/you/kind-of-game';
 import YouNameRoute from '@/app/(app)/(tabs)/you/name';
@@ -192,6 +193,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/tags': YouTagsRoute,
   '(app)/(tabs)/you/intro': YouIntroRoute,
   '(app)/(tabs)/you/name': YouNameRoute,
+  '(app)/(tabs)/you/games-and-money': YouGamesAndMoneyRoute,
   '(app)/(tabs)/you/payments': YouPaymentsRoute,
   // The administrator area (#516) — a sibling of `(app)`, one club's area per id, with its own two
   // tabs: Groups at the root, You beside it, New official group and a group's page pushed over
@@ -1189,9 +1191,53 @@ export function stubGate(
   stubDatafile(transport);
   stubMyGroups(transport);
   stubPaymentMethod(transport);
+  stubGamesAndMoney(transport);
+  stubLiveYeses(transport);
 }
 
 export const PAYMENT_METHOD_PATH = '/api/v1/players/me/payment-methods/current';
+
+export const GAMES_AND_MONEY_PATH = '/api/v1/players/me/games-and-money';
+
+/** The two limits a suite may set — the rest of the answer is the form's offer. */
+export type LimitsStub = Partial<
+  Pick<Wire['GamesAndMoneyResponse'], 'games_per_week' | 'most_ill_pay_grosze'>
+>;
+
+/**
+ * Games & money, as `GET …/games-and-money` answers — **two games a week and no ceiling**, the
+ * backend's own defaults, unless the suite says otherwise. The gate stubs it, because the You tab's
+ * *Games & money* row reads it on every visit to the tab (#554).
+ */
+export function stubGamesAndMoney(transport: Transport, limits: LimitsStub = {}) {
+  transport.on('GET', GAMES_AND_MONEY_PATH, () =>
+    json<Wire['GamesAndMoneyResponse']>(gamesAndMoney(limits)),
+  );
+}
+
+/** The whole answer, the form's offer included — the backend's range and ceilings. */
+export function gamesAndMoney(limits: LimitsStub = {}): Wire['GamesAndMoneyResponse'] {
+  return {
+    games_per_week: 2,
+    most_ill_pay_grosze: null,
+    games_per_week_range: { least: 1, most: 7 },
+    most_ill_pay_choices_grosze: [3500, 4500, 6000],
+    ...limits,
+  };
+}
+
+export const LIVE_YESES_PATH = '/api/v1/players/me/live-yeses';
+
+/**
+ * The live yeses, as `GET …/live-yeses` answers — **none** unless the suite says otherwise. The gate
+ * stubs it, because Payments' state B reads it whenever a method is saved, and a game's details
+ * read it when the deck no longer deals the game (#554).
+ */
+export function stubLiveYeses(transport: Transport, yeses: readonly Wire['LiveYesSchema'][] = []) {
+  transport.on('GET', LIVE_YESES_PATH, () =>
+    json<Wire['LiveYesesResponse']>({ yeses: [...yeses], cap_per_sport: 10 }),
+  );
+}
 
 /** The version of the payment terms the backend holds in force (#536). */
 export const PAYMENT_TERMS_IN_FORCE = '2026-09-29';

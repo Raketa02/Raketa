@@ -39,6 +39,18 @@ export function toWireKind(kind: GameKind): Schemas['SearchMode'] {
   return WIRE_BY_KIND[kind];
 }
 
+export function toKind(wire: Schemas['SearchMode']): GameKind {
+  return KIND_BY_WIRE[wire];
+}
+
+/** A card's club — the name left off for a club that no longer exists. A live yes's too. */
+export function toClub(wire: {
+  readonly id: string;
+  readonly name: string | null;
+}): DeckCard['club'] {
+  return { id: wire.id, ...(wire.name === null ? {} : { name: wire.name }) };
+}
+
 function toWeekday(day: number): Weekday | undefined {
   return WEEKDAYS.find((weekday) => weekday === day);
 }
@@ -80,7 +92,7 @@ export function toDeckCard(wire: Schemas['DeckCardSchema']): DeckCard | undefine
           },
         }),
     startsAt: wire.starts_at,
-    club: { id: wire.club.id, ...(wire.club.name === null ? {} : { name: wire.club.name }) },
+    club: toClub(wire.club),
     shareGrosze: wire.share_grosze,
     deadline: wire.deadline,
     inCount: wire.in_count,

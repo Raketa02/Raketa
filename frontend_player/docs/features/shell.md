@@ -202,3 +202,10 @@ cached, refused and arriving mid-session) and `theShell.test.tsx`'s _Home's badg
 suite launches through `launchIntoClassicPlay`. **Not seen on a device**: the three-column bar,
 Home's badge, and the bar growing to five a moment after launch for a tester, when the saved
 datafile is read.
+
+**The You tab asks the fourth question since money arrived** — _how do I pay for a game_ — in an
+**ACCOUNT** group after _On your card_ and before _Sign out_ (ADR-0189 amending ADR-0179 §9; the
+screens A7), which the paragraph above predates. It holds _Games & money_ (`proposals`,
+[#554](https://github.com/Raketa02/Raketa/issues/554)) then _Payments_ (`payments`, #552);
+_Notifications_ (#559) joins under them. Both screens are pushed under `you/` and listed in
+`TabShell`'s `YOU_SCREENS`, so they take the push transition and keep the You column lit.

@@ -35,7 +35,7 @@ is referenced from the other by a sentence, not copied.
 | [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate                         |
 | [`payments.md`](payments.md)                 | You › Payments: the four-step setup, the method card, Change and Remove, the Stripe port       |
 | [`plans.md`](plans.md)                       | The plan card, the ladder, the Now rail and its nine card states                               |
-| [`proposals.md`](proposals.md)               | A group's Games deck, the game card, a game's details, the answers                             |
+| [`proposals.md`](proposals.md)               | A group's Games deck, the game card, a game's details, the answers; Games & money, live yeses  |
 | [`play.md`](play.md)                         | The copy deck, the three cards, the court, the four screens, `SH.whyfit`                       |
 | [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step, the consent copy, the commit                               |
 | [`player_record.md`](player_record.md)       | The record sheet a face opens, the metered rows, what opponents said                           |

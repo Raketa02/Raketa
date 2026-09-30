@@ -9,4 +9,4 @@
  */
 
 export { PaymentsRow, type PaymentsRowProps } from './components/PaymentsRow';
-export { PaymentsScreen } from './components/PaymentsScreen';
+export { PaymentsScreen, type PaymentsScreenProps } from './components/PaymentsScreen';
