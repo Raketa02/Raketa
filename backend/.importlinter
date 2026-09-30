@@ -538,6 +538,40 @@ forbidden_modules =
     app.modules.groups
 allow_indirect_imports = true
 
+# Payments does not know a yes exists. `proposals` reads `payments` — whether a
+# player has a method their share could be charged to — and the one thing
+# `payments` asks back, *could anything still be charged to this method* (a
+# method with a live yes on it may not be removed, the mechanics §12.4), is a
+# port declared in `payments`' own words and **signed in
+# `proposals/infrastructure/`**, as clubs' sports question is signed in `groups`
+# (#538).
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:payments-does-not-know-proposals]
+name = The Payments context does not import Proposals
+type = forbidden
+source_modules =
+    app.modules.payments
+forbidden_modules =
+    app.modules.proposals
+allow_indirect_imports = true
+
+# Nor does a group or a club know a game was proposed to it. A group is the first
+# kind of pool and a club sells the court hour, and `proposals` reads both
+# through ports of its own; neither reads back, so a pool can become a city
+# without either of them changing (docs/adr/0189 §1).
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:groups-and-clubs-do-not-know-proposals]
+name = Neither Groups nor Clubs imports Proposals
+type = forbidden
+source_modules =
+    app.modules.groups
+    app.modules.clubs
+forbidden_modules =
+    app.modules.proposals
+allow_indirect_imports = true
+
 # Nor does an administratorship know which groups it runs. `groups` reads
 # `administrators` — who runs an official group now, the guard every
 # administrator operation passes — and the one thing `administrators` asks back,
@@ -599,15 +633,20 @@ source_modules =
     app.modules.player_record.domain
     app.modules.player_record.application
 forbidden_modules =
+    app.modules.administrators
     app.modules.auth
     app.modules.blocks
     app.modules.challenges
+    app.modules.clubs
     app.modules.conversations
     app.modules.games
+    app.modules.groups
     app.modules.matchmaking
+    app.modules.payments
     app.modules.plans
     app.modules.player_profile
     app.modules.player_score
+    app.modules.proposals
     app.modules.rating
     app.modules.sportsmanship
     app.modules.users

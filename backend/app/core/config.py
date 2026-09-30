@@ -408,6 +408,24 @@ class Settings(BaseSettings):
     MAIL_DELIVERY_INTERVAL_SECONDS: float = 2.0
     MAIL_DELIVERY_BATCH_SIZE: int = 20
 
+    # --- the book-by sweep (#538, the mechanics §5.4)
+    #
+    # **It buys the record, not correctness.** A proposal past its book-by is
+    # over at every instant, swept or not: a yes on it is refused, it is off
+    # every live list and no yes on it counts against a cap, because every read
+    # compares the book-by with the clock. What the sweep writes is the
+    # `ProposalExpired` a poster will be told from, and a projection whose live
+    # reads stay narrow as it grows.
+    #
+    # **The book-by itself is emphatically not here**: it is the club's, derived
+    # from its way of working in `clubs/domain/raketa_terms.py`, and an
+    # environment that could move it would decide when a player's yes lapses.
+    #
+    # Every minute, chosen against the record's lag rather than a backlog: the
+    # read is one indexed range of unrecorded endings.
+    PROPOSAL_EXPIRY_ENABLED: bool = True
+    PROPOSAL_EXPIRY_INTERVAL_SECONDS: float = 60
+
     # --- scheduled jobs (docs/adr/0092)
     #
     # **How often the sweep runs is configuration; how old a photo must be before it

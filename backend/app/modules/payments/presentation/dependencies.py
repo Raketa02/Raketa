@@ -71,8 +71,8 @@ PaymentMethodRepositoryDep = Annotated[
 ]
 
 
-def get_payment_commitments() -> PaymentCommitments:
-    return build_payment_commitments()
+def get_payment_commitments(db: DbSession) -> PaymentCommitments:
+    return build_payment_commitments(db)
 
 
 PaymentCommitmentsDep = Annotated[PaymentCommitments, Depends(get_payment_commitments)]

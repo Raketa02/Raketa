@@ -2240,6 +2240,57 @@ for each one.
   - **PaymentMethodUpdated** — `payments.method_updated` / v1 — the bank updated the card: a new
     number, or a new brand — as read from the provider, never off its notice.
 
+### Proposals
+
+Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §1–§2, §5
+and built by [#538](https://github.com/Raketa02/Raketa/issues/538). The engine that builds
+proposals (#540), posting (#546) and the fill that books one (#541) are still to come.
+
+**How a game fills: dealt to a pool, answered with a silent yes.**
+
+- **Pool** — the players who may be dealt a game plus the clubs whose courts they may use. A
+  **Group** is the first kind of pool; a city (Explore) will be the next. Every proposal carries
+  its pool, and nothing names a group where it means a pool. A group's pool is filed under the
+  group's own id, and its players are the group's members **now** — somebody who left the group
+  has left its pool. _Avoid_: audience (that is an Official group's).
+- **Proposal** — a game that is still filling: a pool, a sport, a **kind** (competitive, or for
+  fun), a **court hour** at a club (never a court number, which is given at booking), the
+  **share** fixed on it, the versions it was dealt in, the yeses, and the **book-by** — read off
+  what the club sells at that hour, never chosen. **Picked for you** when the engine built it; a
+  **Post** when a member did, which is born with its poster In. An **event-sourced aggregate, one
+  stream per proposed game**. It is *filling*, then *expired* from its book-by on — read off the
+  clock, whether or not anything has recorded it — or *withdrawn*, when a poster takes their
+  post back with nobody else In; *filled* arrives with the Booking. _Avoid_: challenge (Part
+  1's aggregate), open game.
+- **Version** — one of **up to three** views of the same proposal, each dealt to different people:
+  the people In, and the names dealt for the seats still open. **Each person is dealt one.** A
+  seat a **No** left is dealt again into the same version, to at most three next best fits.
+- **Yes** — a swipe right, or *I'm in*: *"if everybody is in, book it and charge my share."*
+  Silent, free, holds nothing. **Yeses are the game's, never a version's**: a yes on any version
+  counts toward the one game. A yes needs a saved **Payment method**, and a **live yes** to
+  spare. A **No** is a swipe left, equally silent, and **final**: the card never comes back.
+  _Avoid_: vote, like.
+- **In** — a player who said yes to a proposal that has not filled. **Everybody In fits everybody
+  else In**: a version is dealt only to people who fit the people In and each other, and a yes
+  lands only from somebody who fits everybody In — *fits* being today's pair rule for one
+  court (no block either way, mutual gender preference, Levels within the kind's window).
+- **Withdraw** — taking a yes back before the game fills: free and silent, and the seat is open
+  again. Unlike a **No** it is no verdict on the card: the player may say yes again while the
+  game fills.
+- **Live yes** — a yes on a game that has not filled. At most **ten per sport**, across pools; a
+  post counts as one.
+- **Proposal events** (durable name / version) — none of them is told to anybody:
+  - **ProposalMade** — `proposals.proposal_made` / v1 — the pool and its kind, the origin and
+    poster, the sport and kind, the club and start, the share and the book-by.
+  - **VersionDealt** — `proposals.version_dealt` / v1 — its number and the people named.
+  - **YesSaid** — `proposals.yes_said` / v1.
+  - **NoSaid** — `proposals.no_said` / v1.
+  - **YesWithdrawn** — `proposals.yes_withdrawn` / v1.
+  - **ProposalWithdrawn** — `proposals.proposal_withdrawn` / v1 — a post whose poster withdrew
+    with nobody else In.
+  - **ProposalExpired** — `proposals.proposal_expired` / v1 — the record, written by the book-by
+    sweep, of an expiry that was already true.
+
 ## Part 2 — Decided, not yet built: Games and Fill in
 
 Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) and
@@ -2249,10 +2300,8 @@ yet**; when a term is built, it moves into Part 1 under its context.
 
 ### The pool and the court
 
-- **Pool** — the players who may be dealt a game plus the clubs whose courts they may use. A
-  **Group** is the first kind of pool; a city (Explore) will be the next. Proposals, yeses and
-  posts belong to a pool, never to a group by name. _Avoid_: audience (that is an Official
-  group's).
+**Pool** is built, and moved to **Proposals** in Part 1 with
+[#538](https://github.com/Raketa02/Raketa/issues/538).
 
 **Court**, **Court hour**, **Way of working**, **Cut-off**, **Book-by** and **Share** are built, and
 moved to **Club** in Part 1 with [#535](https://github.com/Raketa02/Raketa/issues/535), beside the
@@ -2260,19 +2309,13 @@ moved to **Club** in Part 1 with [#535](https://github.com/Raketa02/Raketa/issue
 
 ### Proposals and the deck
 
-- **Proposal** — a game that is still filling: a pool, a sport, a **kind**, a court hour at a club
-  (no number), the share and the yeses. **Picked for you** when the engine built it; a **Post**
-  when a member did. Ends *filled* (a Booking), *expired* (book-by passed; nobody paid) or
-  *withdrawn*. _Avoid_: challenge (Part 1's aggregate), open game.
+**Proposal**, **Version**, **Yes**, **In**, **Withdraw** and **Live yes** are built, and moved to
+**Proposals** in Part 1 with [#538](https://github.com/Raketa02/Raketa/issues/538).
+
 - **Post** — a proposal a member created by picking the hour and the court. Posting is the
   poster's yes. At most two live per player.
-- **Version** — one of **up to three** views of the same proposal, each dealt to different people.
-  **All versions share their yeses**; each person is dealt one.
-- **Yes** — a swipe right, or *I'm in*: *"if everybody is in, book it and charge my share."*
-  Silent, free, holds nothing. A **No** is a swipe left, equally silent.
-- **In** — a player who said yes to a proposal that has not filled. The **IN** tag on a tile is
-  the only tag that signals momentum; a card dealt in versions also says how many are In on the
-  whole proposal.
+- **IN tag** — the tag on the tile of a player who is **In**: the only tag that signals momentum.
+  A card dealt in versions also says how many are In on the whole proposal.
 - **Group deck** — the group's Games tab: cards addressed to you, ordered by how few seats would
   be open after your yes. Distinct from the Players deck of **Classic play**.
 - **Picked for you card · Challenge card · Seat open card** — the three card types: a pick, a

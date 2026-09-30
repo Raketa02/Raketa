@@ -1,0 +1,53 @@
+"""What a caller asks the Proposals context for, in the primitives it asked in.
+
+Plain values rather than value objects, for the reason ``RegisterUserCommand``
+gives: a command is what a caller *asked for*, and the boundary must be able to
+express the answer that gets refused.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from uuid import UUID
+
+from app.engines.matchfit.core import SearchMode
+from app.kernel import Instant, Sport
+from app.modules.proposals.domain.proposal import Origin
+
+
+@dataclass(frozen=True)
+class MakeProposalCommand:
+    """A game proposed at a court hour, and the versions it is dealt in.
+
+    ``poster_id`` is the member who posted it, and ``None`` for a pick.
+    ``versions`` are the names for the open seats, one tuple per version —
+    none at all is a proposal nobody has been dealt yet."""
+
+    pool_id: UUID
+    origin: Origin
+    poster_id: UUID | None
+    sport: Sport
+    kind: SearchMode
+    club_id: UUID
+    start: Instant
+    versions: Sequence[Sequence[UUID]] = ()
+
+
+@dataclass(frozen=True)
+class DealVersionCommand:
+    """One more version, or — ``into_version`` — the next best fits for the
+    seats a no left on an existing one."""
+
+    proposal_id: UUID
+    player_ids: Sequence[UUID]
+    into_version: int | None = None
+
+
+@dataclass(frozen=True)
+class AnswerProposalCommand:
+    """A yes, a no, or a yes taken back. ``player_id`` comes from the session,
+    never from the body."""
+
+    proposal_id: UUID
+    player_id: UUID

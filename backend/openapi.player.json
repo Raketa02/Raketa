@@ -6633,6 +6633,234 @@
           }
         ]
       }
+    },
+    "/api/v1/proposals/{proposal_id}/yes": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Say yes to a game",
+        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing**: no money moves, no court is held, nobody is told (the others see the player In on the card). Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.",
+        "operationId": "say_yes_api_v1_proposals__proposal_id__yes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YesAnswerResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them, or (for a yes) they are no longer in its group. One code for all three.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In). The card leaves. `proposal_already_answered` \u2014 this player said no: the card does not come back. `proposal_is_full` \u2014 every seat is In. `payment_method_required` \u2014 no saved payment method: save one, then say yes. `live_yeses_exhausted` \u2014 `details.cap` live yeses in `details.sport` already. `no_longer_fits` \u2014 somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether this player fits the people In could not be read. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Withdraw a yes",
+        "description": "*Withdraw* on a You're In row: free and silent until the game fills. The seat is open again, and the player may say yes again while it fills. Withdrawing a yes never said records nothing. **A poster withdrawing with nobody else In takes the post with them**; with others In, the game carries on without them.",
+        "operationId": "withdraw_yes_api_v1_proposals__proposal_id__yes_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposal Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them, or (for a yes) they are no longer in its group. One code for all three.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In). The card leaves.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/proposals/{proposal_id}/no": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Say no to a game",
+        "description": "A swipe left: **silent, final, and never on the player's record.** The card does not come back. A second no records nothing.",
+        "operationId": "say_no_api_v1_proposals__proposal_id__no_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposal Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them, or (for a yes) they are no longer in its group. One code for all three.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In). The card leaves. `proposal_already_answered` \u2014 this player is In: they leave by withdrawing their yes, never by a no.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/me/live-yeses": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "My live yeses",
+        "description": "Every yes of the reader's on a game that has not filled, **across groups**, soonest game first, each with the share it would charge \u2014 You \u203a Payments' *LIVE YESES*. A game past its book-by is not here, whether or not its expiry has been recorded.",
+        "operationId": "read_live_yeses_api_v1_players_me_live_yeses_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveYesesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -10928,6 +11156,111 @@
         "title": "LiveTypingSchema",
         "description": "**Somebody is typing**, and it is the second frame on the wire.\n\n``docs/adr/0156``. It arrives when the answer changes and not on a tick, so a\nroom where nobody is typing produces nothing at all.\n\n**It carries no `last_seq` and moves no sequence.** A typing frame is not an\nentry: nothing was appended, nothing was locked, and the gapless allocator\nbehind `seq` was never asked for a number. A client must not advance any\ncursor on one, and there is nothing here it could advance it to.\n\n**It carries no name.** Fill names from the membership you are already\nholding, exactly as every system line does \u2014 which is why a corrected\nname fixes the indicator without a frame being re-sent.\n\n**An empty list is the clear**, and it is the only clear there is: nobody\nsends *stopped*, and the server reports whoever's heartbeat has not expired.\nA room whose last typist's app was killed reports nobody within seconds,\nthrough the same field and with nothing special about it."
       },
+      "LiveYesClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The club's name; `null` for a club that no longer exists."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "LiveYesClubSchema"
+      },
+      "LiveYesSchema": {
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id"
+          },
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id",
+            "description": "The pool the game was dealt in \u2014 a group's id."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Competitive, or for fun (a friendly)."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start. Every game is one hour."
+          },
+          "club": {
+            "$ref": "#/components/schemas/LiveYesClubSchema"
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "What this player is charged if the game fills, in grosze."
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By",
+            "description": "The latest moment the game can fill; past it the yes lapses."
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "pool_id",
+          "sport",
+          "kind",
+          "starts_at",
+          "club",
+          "share_grosze",
+          "book_by"
+        ],
+        "title": "LiveYesSchema",
+        "description": "One yes on a game that has not filled."
+      },
+      "LiveYesesResponse": {
+        "properties": {
+          "yeses": {
+            "items": {
+              "$ref": "#/components/schemas/LiveYesSchema"
+            },
+            "type": "array",
+            "title": "Yeses"
+          },
+          "cap_per_sport": {
+            "type": "integer",
+            "title": "Cap Per Sport",
+            "description": "How many live yeses a player may have in one sport."
+          }
+        },
+        "type": "object",
+        "required": [
+          "yeses",
+          "cap_per_sport"
+        ],
+        "title": "LiveYesesResponse",
+        "description": "You \u203a Payments' **LIVE YESES**: every yes of the reader's on a game that\nhas not filled, across groups, soonest game first."
+      },
       "LivenessReason": {
         "type": "string",
         "enum": [
@@ -14823,6 +15156,27 @@
         ],
         "title": "WithheldRowSchema",
         "description": "A row that was recorded, and that the live gates no longer admit.\n\n**Stated, never vanished.** A read-back that quietly returned nineteen rows\nwhere twenty were recorded is the same class of lie as a breakdown that\nquietly stops adding up, and worse for being invisible \u2014 so the row keeps its\nplace in the list and says what happened to it.\n\n**It names no gate, and it carries no person.** The four fail-closed gates\nare a block either way, a hold, an account that may not be shown, and the\nmutual gender preference; naming which one fired would tell a searcher that a\nparticular person blocked them, was suspended, or changed a safety setting.\n``docs/adr/0095`` is explicit that *neither party is ever notified and the\nother side sees no trace anywhere in any response*, and that rule does not\nweaken because the surface has a longer memory. So this shape has one field,\nand there is nowhere on it for a reason, an id, a card or a breakdown to be\nwritten.\n\nThe searcher loses nothing they are owed: they saw this row when they ran the\nsearch, and what has changed since is only that the product will no longer\nshow it to them."
+      },
+      "YesAnswerResponse": {
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id"
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats",
+            "description": "Seats nobody is In on yet, this player's yes counted. Nought is a game every seat said yes to."
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "open_seats"
+        ],
+        "title": "YesAnswerResponse",
+        "description": "What a yes left on the game."
       },
       "app__modules__challenges__domain__seats__Side": {
         "type": "string",

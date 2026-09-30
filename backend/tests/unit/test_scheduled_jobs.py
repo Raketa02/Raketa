@@ -35,6 +35,7 @@ from app.bootstrap.jobs import (
     INTENT_DRIFT_JOB,
     PHOTO_REVIEW_BACKFILL_JOB,
     PHOTO_SWEEP_JOB,
+    PROPOSAL_EXPIRY_JOB,
     SCALE_PRESSURE_JOB,
     build_scheduled_jobs,
 )
@@ -180,6 +181,7 @@ def _nothing_but(**overrides):
             "RATING_CATCH_UP_ENABLED": False,
             "CONVERSATION_SWEEP_ENABLED": False,
             "MAIL_DELIVERY_ENABLED": False,
+            "PROPOSAL_EXPIRY_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }
@@ -1026,4 +1028,43 @@ async def test_the_mail_worker_sends_through_the_configured_mailer(
     assert any(
         record.message == "mail delivery run finished" and record.sent == 1
         for record in caplog.records
+    )
+
+
+def test_the_book_by_sweep_is_registered_and_carries_the_configured_cadence():
+    """How often an expiry is recorded is a setting; when a proposal expires is
+    the club's book-by, and never configuration."""
+
+    settings = _nothing_but(
+        PROPOSAL_EXPIRY_ENABLED=True, PROPOSAL_EXPIRY_INTERVAL_SECONDS=30.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [job.name for job in jobs] == [PROPOSAL_EXPIRY_JOB]
+    assert jobs[0].interval_seconds == 30.0
+
+
+def test_the_book_by_sweep_without_a_session_factory_refuses_to_be_registered():
+    settings = _nothing_but(PROPOSAL_EXPIRY_ENABLED=True)
+
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(session_factory=None, settings=settings)
+
+
+async def test_the_book_by_sweep_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """A sweep with nothing past its book-by writes nothing and says nothing."""
+
+    (sweep,) = build_scheduled_jobs(
+        session_factory=session_factory,
+        settings=_nothing_but(PROPOSAL_EXPIRY_ENABLED=True),
+    )
+
+    with caplog.at_level(logging.INFO):
+        await sweep.run_once()
+
+    assert not any(
+        record.message == "proposal expiry finished" for record in caplog.records
     )

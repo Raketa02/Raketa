@@ -41,6 +41,7 @@ from app.bootstrap.composition import (
     build_destroy_ended_conversations,
     build_domain_event_store,
     build_event_publisher,
+    build_expire_proposals,
     build_exposure_ledger,
     build_image_transcoder,
     build_interest_ledger,
@@ -171,6 +172,12 @@ RATING_CATCH_UP_JOB = "rating-catch-up"
 #: end — but unlike it, what it removes is a stream rather than a row.
 CONVERSATION_SWEEP_JOB = "conversation-sweep"
 
+#: The book-by sweep (#538). It appends a ``ProposalExpired`` to every proposal
+#: whose book-by passed unfilled — **the record, not the fact**: a proposal is
+#: over from its book-by on whether or not this has run, so nobody is told and
+#: nothing a player reads waits on it.
+PROPOSAL_EXPIRY_JOB = "proposal-expiry"
+
 #: The mail worker (``docs/adr/0186`` §2). A queue drain written as a job, like
 #: the outbox: it sends what a use case left in the mail queue and purges the
 #: body — **the purge is the control** on a live secret sitting in the database,
@@ -224,6 +231,7 @@ def build_scheduled_jobs(
         or settings.RATING_CATCH_UP_ENABLED
         or settings.CONVERSATION_SWEEP_ENABLED
         or settings.MAIL_DELIVERY_ENABLED
+        or settings.PROPOSAL_EXPIRY_ENABLED
     ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
@@ -287,6 +295,12 @@ def build_scheduled_jobs(
         if settings.MAIL_DELIVERY_ENABLED:
             jobs.append(
                 build_mail_delivery_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.PROPOSAL_EXPIRY_ENABLED:
+            jobs.append(
+                build_proposal_expiry_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -465,6 +479,45 @@ def build_mail_delivery_job(
     return PeriodicJob(
         name=MAIL_DELIVERY_JOB,
         interval_seconds=settings.MAIL_DELIVERY_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_proposal_expiry_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Record every proposal whose book-by passed unfilled.
+
+    **Idempotent and safe beside itself with no lock**, on the lapse loop's
+    terms: the aggregate records nothing on a proposal already ended, a genuine
+    race is caught by the stream version, and the loser steps over that one
+    proposal and keeps going.
+
+    **Correctness does not depend on it running**: a proposal is over from its
+    book-by on at every read. What it buys is the record — silently, since the
+    mechanics §5.4 tells nobody when a card simply disappears.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            expired = await build_expire_proposals(session, clock=clock).execute()
+        if expired.proposals or expired.conflicts:
+            logger.info(
+                "proposal expiry finished",
+                extra={
+                    "job": PROPOSAL_EXPIRY_JOB,
+                    "proposals": expired.proposals,
+                    "conflicts": expired.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=PROPOSAL_EXPIRY_JOB,
+        interval_seconds=settings.PROPOSAL_EXPIRY_INTERVAL_SECONDS,
         run=run,
     )
 

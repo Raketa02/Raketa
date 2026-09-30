@@ -325,7 +325,7 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Thirteen jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Fourteen jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -408,6 +408,11 @@ Rules to preserve:
   receives a reset until it runs, and the purge that clears a link and a code off the mail
   queue is its to do. It claims one message per transaction `FOR UPDATE SKIP LOCKED`, so it is
   safe beside itself; a process dying between a send and its commit sends that message again.
+  The fourteenth is the **book-by sweep** (`proposal-expiry`, #538), and like the lapse loop
+  it **buys the record, not correctness**: a proposal past its book-by is over at every read,
+  because every read compares the book-by with its clock, so what it appends —
+  `ProposalExpired`, silently — is what a poster will be told from. The book-by is the club's
+  (`clubs/domain/raketa_terms.py`); only the cadence is a setting.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -1318,10 +1323,46 @@ Rules to preserve:
   as a prompt — the card or setup it names is **read from the provider as it stands**, because
   notices arrive out of order; a notice finds its player through `payment_customers`, a
   projection the repository writes. *Remove* asks
-  `PaymentCommitments`, which answers nought (`NoCommitmentsYet`) until proposals and bookings
-  exist. Seeded by `app/seeds/payments.py`: every named account and cohort member saves a fake
+  `PaymentCommitments`, answered by `proposals` with the player's live yeses (an adapter
+  signed in `proposals/infrastructure/`, so the arrow runs `proposals → payments`); booked
+  games are nought until bookings exist (#541). Seeded by `app/seeds/payments.py`: every named account and cohort member saves a fake
   card through the three use cases — the protagonist the mock's Visa •••• 4312, two through the
   wallets — and `brand-new-player` has none.
+- **A proposal is a game still filling, and its yeses are the game's**
+  ([ADR-0189](../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §2, §5,
+  #538). `app/modules/proposals/` holds the **Proposal** — event-sourced, one stream per
+  proposed game, `proposals.*` v1 — with the **pools**, **proposals** and **proposal people**
+  projections written by the repository's `save` in the caller's transaction. Five things are
+  load-bearing. **The pool is first-class and a group is its first kind**: every proposal
+  carries a `pool_id` referencing `pools`, a group's pool is filed under the group's own id
+  and its row written by the first proposal made in it, and who is in it is asked of
+  `GroupDirectory` through `Pools` — nothing joins through a group; a leaver has left the pool,
+  and **their yeses there are withdrawn** by an outbox subscriber to `GroupLeft` and
+  `GroupDeleted`, added per delivery run over its session like the room teller. **Yeses are
+  the game's, never a version's**: a version (at most three, each person in one, never more
+  names than open seats — the dealer's `invariant`s) is only who was shown it, a seat a no
+  left is dealt again *into* its version (at most three next best fits per open seat), and a
+  yes on any version counts toward the one game. **The In set stays pairwise fit**: a version must fit everybody
+  In and each other, and so must a yes (`no_longer_fits`, naming nobody), judged by
+  `PlayerFit` — the matcher's own line-up mask (blocks, mutual gender preference, the kind's
+  `level_tolerance`, narrowed for a newcomer) over live profiles and rating's published read,
+  failing closed on a missing fact and raising on an unreadable block. **The court hour is
+  read, never supplied**: the share and the book-by come off `SellableCourtHours`
+  (`CourtHours`), so a paused or unlive club, an unsold hour or one past its book-by is
+  `court_hour_not_for_sale`. **Expired is read off the clock**: `standing_at` compares the
+  book-by with the caller's instant, so every act and every live read refuses an expired
+  proposal before the sweep records it. The player surface is `POST /proposals/{id}/yes`
+  (answers `open_seats`), `POST …/no` and `DELETE …/yes` (withdraw) — silent, a repeated tap
+  recording nothing, a no final and a withdrawn yes free to be said again, a post withdrawn by
+  its poster with nobody else In ending it (`ProposalWithdrawn`) — and
+  `GET /players/me/live-yeses`, across
+  pools, soonest first, with `cap_per_sport`. A yes needs a saved method
+  (`payment_method_required`) and a live yes to spare (`live_yeses_exhausted`, ten per sport).
+  **No route makes a proposal**: `MakeProposal` and `DealVersion` are the dealer's, built by
+  the composition root for the engine (#540), seeds and tests; the fill (#541) is where a
+  yes that leaves `open_seats` at nought books. Seeded by `app/seeds/proposals.py`: the
+  protagonist's *Padel po pracy* at Bonarka Arena, gathered from the cohort members who fit
+  her and each other, with four picks at her hours — nought, one, two and three In.
 - **A group is a crowd at a home club, and its link never changes**
   ([ADR-0183](../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md),
   #504, #505, #506). `app/modules/groups/` holds **one event-sourced aggregate for both
@@ -1680,7 +1721,7 @@ tests.
   `PHOTO_SWEEP_ENABLED`, `PHOTO_REVIEW_BACKFILL_ENABLED`, `CANDIDATE_INDEX_ENABLED`,
   `EXPOSURE_ROLL_ENABLED`, `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`,
   `INTEREST_EXPIRY_ENABLED`, `SCALE_PRESSURE_ENABLED`, `CHALLENGE_LAPSE_ENABLED`,
-  `RATING_CATCH_UP_ENABLED`, `MAIL_DELIVERY_ENABLED` — and **every
+  `RATING_CATCH_UP_ENABLED`, `MAIL_DELIVERY_ENABLED`, `PROPOSAL_EXPIRY_ENABLED` — and **every
   job's first run is at startup**, not after its first interval, so a six-hourly job is
   observable on a laptop.
 

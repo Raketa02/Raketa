@@ -190,6 +190,11 @@ from app.seeds.club_courts import (
 )
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.groups import SeededGroups, group_lines, write_the_groups
+from app.seeds.proposals import (
+    SeededProposals,
+    proposal_lines,
+    write_the_proposals,
+)
 from app.seeds.payments import (
     SeededPaymentMethods,
     payment_method_lines,
@@ -1229,6 +1234,9 @@ class SeedReport:
     #: The card every seeded player but one has saved. ``None`` on the same
     #: callers and for the same reason.
     payment_methods: SeededPaymentMethods | None = None
+    #: The games still filling in the protagonist's games group — picks with
+    #: nought to three In. ``None`` on the same callers and for the same reason.
+    proposals: SeededProposals | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1356,6 +1364,17 @@ async def run(settings: Settings | None = None) -> SeedReport:
         written = await write_the_loop(
             session_factory, settings=settings, now=now
         )
+        # **The games still filling, after every layer that writes anything a
+        # fit reads.** A pick is made through the real pair rule, which reads
+        # blocks live, so it comes after the relationships wrote theirs; and its
+        # yeses are real ones, so it comes after the cards were saved. Nothing
+        # below reads a proposal, and its events are delivered with the rest.
+        proposals = await write_the_proposals(
+            session_factory,
+            settings=settings,
+            now=now,
+            cohort=[(member.member.handle, member.player_id) for member in members],
+        )
         # **After every layer that writes and before the screens.** A room is
         # *told* through the outbox by contexts that do not know it exists
         # (``docs/adr/0146`` §5), so nothing above this line opened one — the
@@ -1401,6 +1420,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             administrators=administrators,
             official_groups=official_groups,
             payment_methods=payment_methods,
+            proposals=proposals,
             photographs=photographs,
         )
     finally:
@@ -1491,6 +1511,8 @@ def report(run_report: SeedReport) -> list[str]:
     lines.extend(["", *_cohort_lines(run_report.members)])
     if run_report.payment_methods is not None:
         lines.extend(["", *payment_method_lines(run_report.payment_methods)])
+    if run_report.proposals is not None:
+        lines.extend(["", *proposal_lines(run_report.proposals)])
     if run_report.clubs is not None:
         lines.extend(["", *club_lines(run_report.clubs)])
     if run_report.club_courts is not None:

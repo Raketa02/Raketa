@@ -1,0 +1,142 @@
+"""The Proposals context's refusals.
+
+**A player meets four of them from a card** — the game is over, the answer was
+already given, every seat is In, or the people In now include somebody they do
+not fit — and three from what their own account is missing: a payment method,
+a live yes to spare. None of them names another person: *somebody you do not
+fit* is said without saying who, as a withheld row is (``docs/adr/0130``).
+
+The last four are **the dealer's**, met by whoever makes and deals proposals —
+the engine (#540), a seed, a test — and by no player, since no route makes one.
+"""
+
+from __future__ import annotations
+
+from app.shared.domain import ConflictError, NotFoundError
+
+
+class ProposalNotFound(NotFoundError):
+    """No such proposal **for this player**: it does not exist, it was never
+    dealt to them, or they are not in its pool. One code for all three, so a
+    proposal id is not a way to learn what somebody else was dealt."""
+
+    code = "proposal_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("no such proposal")
+
+
+class ProposalIsOver(ConflictError):
+    """The game is no longer filling — its book-by passed, or its poster
+    withdrew it — named by ``details.standing``. The card leaves; nothing was
+    recorded."""
+
+    code = "proposal_is_over"
+
+    def __init__(self, *, standing: str) -> None:
+        super().__init__(
+            "this game is no longer filling", details={"standing": standing}
+        )
+
+
+class ProposalAlreadyAnswered(ConflictError):
+    """This player already said no, and a card swiped left never comes back
+    (the mechanics §5.3) — or, asked of a no, they are In: somebody In leaves
+    by withdrawing their yes, never by a no."""
+
+    code = "proposal_already_answered"
+
+    def __init__(self) -> None:
+        super().__init__("this card was already answered")
+
+
+class ProposalIsFull(ConflictError):
+    """Every seat is already In. Nothing was recorded."""
+
+    code = "proposal_is_full"
+
+    def __init__(self) -> None:
+        super().__init__("every seat on this game is already in")
+
+
+class NoLongerFits(ConflictError):
+    """Somebody who said yes since this card was dealt is somebody this player
+    does not fit, and a replacement must fit everybody already In — every pair
+    (the mechanics §6.1). The card has gone; **who** is not said."""
+
+    code = "no_longer_fits"
+
+    def __init__(self) -> None:
+        super().__init__("the people in on this game no longer fit this player")
+
+
+class LiveYesesExhausted(ConflictError):
+    """``details.cap`` live yeses in ``details.sport`` already — yeses on games
+    that have not filled (the mechanics §6.6). The card springs back; one of
+    them has to fill, expire or be withdrawn first."""
+
+    code = "live_yeses_exhausted"
+
+    def __init__(self, *, cap: int, sport: str) -> None:
+        super().__init__(
+            f"{cap} live yeses in this sport already",
+            details={"cap": cap, "sport": sport},
+        )
+
+
+class PaymentMethodRequired(ConflictError):
+    """A yes is *charge my share if it fills*, and there is nothing to charge:
+    the player has no saved payment method. Save one, then say yes (the
+    mechanics §6.1, §12.5)."""
+
+    code = "payment_method_required"
+
+    def __init__(self) -> None:
+        super().__init__("a payment method must be saved before a yes")
+
+
+# --------------------------------------------------------------------------- #
+# The dealer's
+# --------------------------------------------------------------------------- #
+
+
+class PoolNotFound(NotFoundError):
+    """No such pool: not one that exists, and not a group a pool could be
+    opened for."""
+
+    code = "pool_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("no such pool")
+
+
+class NotInThePool(ConflictError):
+    """Somebody named on a version, or posting, is not a player of the pool —
+    nobody is dealt a game from a pool they are not in."""
+
+    code = "not_in_the_pool"
+
+    def __init__(self) -> None:
+        super().__init__("somebody named is not a player of this pool")
+
+
+class VersionDoesNotFit(ConflictError):
+    """A version names somebody who does not fit everybody else on it — the
+    people already In and the rest of its own names, every pair (the mechanics
+    §6.1, §7). Nothing was dealt."""
+
+    code = "version_does_not_fit"
+
+    def __init__(self) -> None:
+        super().__init__("somebody on this version does not fit everybody else on it")
+
+
+class CourtHourNotForSale(ConflictError):
+    """The club sells no court of this sport at this hour through Raketa — it
+    is not live, it is paused, the hour is not in its pattern or is closed, or
+    the hour's book-by has passed. Nothing was proposed."""
+
+    code = "court_hour_not_for_sale"
+
+    def __init__(self) -> None:
+        super().__init__("no court of this sport is for sale at this club and hour")

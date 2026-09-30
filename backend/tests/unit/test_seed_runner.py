@@ -140,6 +140,7 @@ WRITTEN_CONTEXTS = frozenset(
         "conversations",
         "plans",
         "payments",
+        "proposals",
     }
 )
 
@@ -196,6 +197,10 @@ AGGREGATE_WRITERS = {
     # A group, created by its Owner and joined by its members — the two use
     # cases a request runs, over the one repository both take.
     "build_group_repository": "groups",
+    # The games still filling: a pick made by `MakeProposal` — the use case the
+    # engine will drive (#540) — and its yeses said by `SayYes`, the swipe's own
+    # use case, over the one repository both take (#538).
+    "build_proposal_repository": "proposals",
     # An Administrator, invited by its club and let in the way that person
     # would get in — `InviteAdministrator`, then `SetInvitationPassword` or
     # `AcceptInvitation` — over the one repository all three take.
@@ -310,6 +315,7 @@ def test_the_walk_has_something_to_walk():
         "photos.py",
         "plans.py",
         "pool_history.py",
+        "proposals.py",
         "relationships.py",
         "rooms.py",
         "runner.py",

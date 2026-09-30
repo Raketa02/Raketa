@@ -50,9 +50,10 @@ class Commitments:
 @runtime_checkable
 class PaymentCommitments(Protocol):
     """**A demand of the contexts that make games**, answered by them: a player's
-    live yeses (proposals, #540) and booked games still ahead (bookings, #541).
-    Neither exists yet, so one adapter answers nothing (``NoCommitmentsYet``) —
-    and *remove* is refused from the day either does, with no change here."""
+    live yeses (proposals, #538) and booked games still ahead (bookings, #541).
+    The yeses are answered by an adapter signed in ``proposals/infrastructure/``,
+    so the arrow runs ``proposals → payments``; booked games are nought until a
+    booking can hold one."""
 
     async def of(self, player_id: UUID, *, at: Instant) -> Commitments: ...
 

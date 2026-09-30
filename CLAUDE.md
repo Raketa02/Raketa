@@ -25,7 +25,8 @@ each with its own CI lane.
 > deck and Fill in, specified in `docs/specs/games-and-fill-in/`. A club's courts, Raketa hours,
 > prices and way of working are built (#535), and so is a player's saved payment method behind
 > the payments port ([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md),
-> #536); bookings and charges are not yet.
+> #536), and so are proposals — a game still filling in a pool, answered with a silent yes
+> (#538); bookings and charges are not yet.
 
 ## Start the session inside the app you are changing
 

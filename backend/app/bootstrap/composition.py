@@ -112,7 +112,35 @@ from app.modules.payments.infrastructure.event_sourced_payment_method_repository
 )
 from app.modules.payments.domain.entered_cards import A_CARD
 from app.modules.payments.infrastructure.fake_payments import FakePayments
-from app.modules.payments.infrastructure.no_commitments_yet import NoCommitmentsYet
+from app.modules.proposals.application.expire_proposals import ExpireProposals
+from app.modules.proposals.application.guards import Guards
+from app.modules.proposals.application.leaving import WithdrawALeaversYeses
+from app.modules.proposals.application.making import DealVersion, MakeProposal
+from app.modules.proposals.domain.ports import (
+    ClubNames as ProposalClubNames,
+    CourtHours,
+    PlayerFit,
+    Pools,
+    ProposalDirectory,
+    ProposalRepository,
+    SavedMethods,
+)
+from app.modules.proposals.infrastructure.club_court_hours import (
+    ClubCourtHours,
+    DirectoryClubNames,
+)
+from app.modules.proposals.infrastructure.event_sourced_proposal_repository import (  # noqa: E501
+    EventSourcedProposalRepository,
+)
+from app.modules.proposals.infrastructure.group_pools import GroupPools
+from app.modules.proposals.infrastructure.matcher_player_fit import MatcherPlayerFit
+from app.modules.proposals.infrastructure.payments import (
+    LiveYesCommitments,
+    PaymentsSavedMethods,
+)
+from app.modules.proposals.infrastructure.sqlalchemy_proposal_directory import (
+    SqlAlchemyProposalDirectory,
+)
 from app.modules.payments.infrastructure.sqlalchemy_notice_inbox import (
     SqlAlchemyNoticeInbox,
 )
@@ -871,16 +899,171 @@ def build_payment_method_repository(
     )
 
 
-def build_payment_commitments() -> PaymentCommitments:
-    """What could still be charged to a method: nothing, while no proposal takes
-    a yes (#540) and no booking holds a game (#541) — so nought, and the day
-    either exists an adapter over it is built here instead."""
+def build_payment_commitments(session: AsyncSession) -> PaymentCommitments:
+    """What could still be charged to a method: the player's live yeses,
+    answered by the Proposals context over its own directory so the arrow runs
+    ``proposals → payments`` only. Booked games ahead are nought until a
+    booking can hold one (#541), and then its adapter joins this one."""
 
-    return NoCommitmentsYet()
+    return LiveYesCommitments(build_proposal_directory(session))
 
 
 def build_notice_inbox(session: AsyncSession) -> NoticeInbox:
     return SqlAlchemyNoticeInbox(session)
+
+
+# --------------------------------------------------------------------------
+# Proposals (docs/adr/0189 §2, §5)
+# --------------------------------------------------------------------------
+
+
+def build_proposal_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> ProposalRepository:
+    """One stream per proposed game. **It takes the session as well as the
+    store**, because its ``save`` writes the proposals and proposal-people
+    projections in the same transaction, as a group's does."""
+    return EventSourcedProposalRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_proposal_directory(session: AsyncSession) -> ProposalDirectory:
+    return SqlAlchemyProposalDirectory(session)
+
+
+def build_pools(session: AsyncSession) -> Pools:
+    """The pools, and who is in each: a group's pool is filed under the group's
+    id, and its players are the group's members now — read off the groups' own
+    directory, never its table."""
+    return GroupPools(session=session, groups=build_group_directory(session))
+
+
+def build_player_fit(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> PlayerFit:
+    """Whether two people may be on one game, by the matcher's own pair rule
+    under the live ruleset: blocks off the log, genders and preferences off
+    each profile, Levels off rating's published read."""
+    return MatcherPlayerFit(
+        blocks=build_block_query(session, runtime=runtime),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        ratings=build_rated_player_query(session, runtime=runtime),
+        ruleset=build_ruleset(),
+    )
+
+
+def build_court_hours(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> CourtHours:
+    """What a club sells at an hour, with its share and book-by, off the hours
+    the Club context publishes (``docs/adr/0189`` §5)."""
+    return ClubCourtHours(build_sellable_court_hours(session, runtime=runtime))
+
+
+def build_proposal_club_names(session: AsyncSession) -> ProposalClubNames:
+    return DirectoryClubNames(build_club_directory(session))
+
+
+def build_saved_methods(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> SavedMethods:
+    """Whether a player has a method to charge, off their Payment method stream
+    — the one fact a yes needs from payments."""
+    return PaymentsSavedMethods(
+        build_payment_method_repository(session, event_store=event_store, events=events)
+    )
+
+
+def build_proposal_guards(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> Guards:
+    """The checks a version and a yes are held to outside the aggregate: the
+    pool, the fit, a method to charge and a live yes to spare."""
+    return Guards(
+        pools=build_pools(session),
+        fit=build_player_fit(session, runtime=runtime),
+        methods=build_saved_methods(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        directory=build_proposal_directory(session),
+    )
+
+
+def build_make_proposal(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> MakeProposal:
+    """The dealer's first act — the engine's (#540), a seed's or a test's; no
+    route makes a proposal. Built here so each of them gets the wiring a
+    request would, over the session and the clock it holds."""
+    return MakeProposal(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        pools=build_pools(session),
+        court_hours=build_court_hours(session, runtime=runtime),
+        guards=build_proposal_guards(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_deal_version(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> DealVersion:
+    """The dealer's second act: one more version of a game still filling."""
+    return DealVersion(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        guards=build_proposal_guards(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_withdraw_a_leavers_yeses(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> WithdrawALeaversYeses:
+    """What leaving a group does to the leaver's yeses in its pool — built per
+    delivery run, over the session the delivery commits in."""
+    return WithdrawALeaversYeses(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        directory=build_proposal_directory(session),
+    )
+
+
+def build_expire_proposals(session: AsyncSession, *, clock: Clock) -> ExpireProposals:
+    """One book-by sweep over this session — the job's, and a test's."""
+    return ExpireProposals(
+        clock=clock,
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        ),
+        directory=build_proposal_directory(session),
+        unit_of_work=build_unit_of_work(session),
+    )
 
 
 # --------------------------------------------------------------------------

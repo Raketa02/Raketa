@@ -70,6 +70,11 @@ from app.modules.plans.application.event_subscriptions import (
     register_plan_events,
     subscribe_plan_handlers,
 )
+from app.modules.proposals.application.event_subscriptions import (
+    register_proposal_events,
+    subscribe_proposal_handlers,
+    subscribe_the_pool_leaver,
+)
 from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
     subscribe_player_profile_handlers,
@@ -178,13 +183,21 @@ class EventRuntime:
         depends on.
         """
 
-        from app.bootstrap.composition import build_tell_the_room
+        from app.bootstrap.composition import (
+            build_tell_the_room,
+            build_withdraw_a_leavers_yeses,
+        )
 
         dispatcher = self.dispatcher.copy()
         subscribe_the_room_teller(
             dispatcher, build_tell_the_room(session, nudges=nudges)
         )
         subscribe_the_method_releaser(dispatcher, payments)
+        # A leaver's yeses are withdrawn in the transaction that delivers the
+        # leaving, so this one needs the batch's session too.
+        subscribe_the_pool_leaver(
+            dispatcher, build_withdraw_a_leavers_yeses(session, runtime=self)
+        )
         return dispatcher
 
 
@@ -203,6 +216,7 @@ def build_event_runtime() -> EventRuntime:
     register_group_events(catalog)
     register_administrator_events(catalog)
     register_payment_events(catalog)
+    register_proposal_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
@@ -218,6 +232,7 @@ def build_event_runtime() -> EventRuntime:
     subscribe_group_handlers(dispatcher)
     subscribe_administrator_handlers(dispatcher)
     subscribe_payment_handlers(dispatcher)
+    subscribe_proposal_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),

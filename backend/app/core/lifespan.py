@@ -134,6 +134,7 @@ def build_lifespan(settings: Settings):
             or settings.RATING_CATCH_UP_ENABLED
             or settings.CONVERSATION_SWEEP_ENABLED
             or settings.MAIL_DELIVERY_ENABLED
+            or settings.PROPOSAL_EXPIRY_ENABLED
         ):
             session_factory = build_background_session_factory(get_engine())
 

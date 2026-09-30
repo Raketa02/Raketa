@@ -36,6 +36,11 @@ from app.modules.sportsmanship.infrastructure.card_model import (
     SportsmanshipCardORM,
     SportsmanshipRatingORM,
 )
+from app.modules.proposals.infrastructure.proposal_models import (
+    PoolORM,
+    ProposalORM,
+    ProposalPersonORM,
+)
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
@@ -56,6 +61,9 @@ __all__ = [
     "OneTimeCredentialORM",
     "PaymentCustomerORM",
     "PaymentNoticeORM",
+    "PoolORM",
+    "ProposalORM",
+    "ProposalPersonORM",
     "RefreshTokenORM",
     "SearchCandidateORM",
     "SearchORM",
