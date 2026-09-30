@@ -127,7 +127,7 @@ describe('Play’s segments', () => {
     fireEvent.press(await segment(PLAY_COPY.segment.explore, false));
     await expectExplore();
 
-    fireEvent.press(screen.getByLabelText('Now'));
+    fireEvent.press(screen.getByLabelText('Home'));
     await waitFor(() => expect(screen).toHavePathname('/'));
     await pressPlay();
 

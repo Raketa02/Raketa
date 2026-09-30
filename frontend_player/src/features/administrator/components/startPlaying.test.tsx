@@ -18,7 +18,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import {
   GATE_USER,
   launchSignedIn,
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   resetLocation,
   SPORTS_SERVED,
   stubGate,
@@ -408,7 +408,7 @@ describe('Start playing, from start to end', () => {
     fireEvent.press(screen.getByLabelText('Start playing'));
 
     // In the app, as a player.
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     expect(held.state).toEqual({
       attested: true,

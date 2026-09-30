@@ -8,7 +8,7 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
-/** **The Groups list** — Play's root while `find_a_game` is off; where leaving a group lands. */
+/** **The Groups list** — Play's root while `classic_play` is off; where leaving a group lands. */
 export const GROUPS_LIST_ROUTE = '/play';
 
 export const NEW_GROUP_ROUTE = '/play/new-group';

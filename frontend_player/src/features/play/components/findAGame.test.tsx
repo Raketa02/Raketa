@@ -20,7 +20,7 @@ import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
-  launchIntoFindAGame,
+  launchIntoClassicPlay,
   PROFILE_SURFACE_PATH,
   profileSurface,
   stubGate,
@@ -125,7 +125,7 @@ afterEach(async () => {
 async function reachPlay(surface?: Wire['PlayerProfileReadResponse']) {
   if (surface !== undefined) stubProfileSurface(transport, surface);
 
-  await launchIntoFindAGame(transport);
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await waitFor(() => expect(screen).toHavePathname('/play'));
 }
@@ -876,7 +876,7 @@ describe('a sport nobody has declared in', () => {
 
     // Out of Play, and the declaration arrives from somewhere that is not this screen — as
     // *for fun*, so a segment re-derived from it would be seen moving off the player's own.
-    fireEvent.press(screen.getByLabelText('Now'));
+    fireEvent.press(screen.getByLabelText('Home'));
     await waitFor(() => expect(screen).toHavePathname('/'));
     stubProfileSurface(transport, {
       ...UNDECLARED,

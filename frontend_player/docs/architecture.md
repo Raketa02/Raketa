@@ -1372,7 +1372,8 @@ when the code that needs them is written — not preemptively:
 > ([ADR-0147](../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
 > §4, [the live surface](#the-live-surface)). And so has a feature-flag service —
 > Featurevisor, pinned exactly, with AsyncStorage for its saved datafile — with the first gate,
-> `find_a_game` ([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)). The rule it
+> `find_a_game` ([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)),
+> folded into `classic_play` by [#550](https://github.com/Raketa02/Raketa/issues/550). The rule it
 > carried here still stands, whole: build-time config and runtime product flags stay separate,
 > no `if (env === 'production')` is a rollout mechanism, and every flag has an owner, purpose,
 > default, rollout strategy and a removal condition — the first three and the last beside its key

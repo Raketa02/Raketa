@@ -13,9 +13,15 @@ const datafile = (revision: string): Datafile => ({
 });
 
 describe('the code defaults', () => {
-  // The app as it ships since #512: a first launch with no network gets Play › Groups.
-  it('has Find a game off', () => {
-    expect(FEATURE_DEFAULTS.find_a_game).toBe(false);
+  // The app as it ships since #550: Home · Play · You, and Play › Groups — the old loop is one
+  // datafile away and nothing without one.
+  it('has Classic play off', () => {
+    expect(FEATURE_DEFAULTS.classic_play).toBe(false);
+  });
+
+  // ADR-0189 §6: one flag brings the old loop back whole, so Find a game has no key of its own.
+  it('gates the old loop with one key, and Find a game is not a second one', () => {
+    expect(Object.keys(FEATURE_DEFAULTS)).toEqual(['classic_play']);
   });
 });
 

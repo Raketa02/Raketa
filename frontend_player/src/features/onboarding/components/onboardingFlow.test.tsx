@@ -27,7 +27,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import { refreshTokens } from '@/features/auth/types';
 import {
   launchSignedIn,
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   ONBOARDING_ROUTES,
   runInProgress,
   RUNS_IN_PROGRESS_PATH,
@@ -146,7 +146,7 @@ describe('where a launch lands', () => {
     // what the gate reads now: a rating says the first part is behind them, and a committed
     // Player profile says the second one is — so this is also the proof that neither part
     // is re-offered to someone who has already been through it.
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     // Which player the gate let through. The landing is the Now tab now that the shell
     // ships, and the account it let through is one tab along.
@@ -165,7 +165,7 @@ describe('where a launch lands', () => {
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(screen.queryByText(NOW_TAB_LINE)).toBeNull();
+    expect(screen.queryByText(HOME_TAB_LINE)).toBeNull();
     // And **not** into the second part, which this player has no rating to have earned.
     // They have no Player profile either, so the two branches are both live here and the
     // order between them is what decides — ratings first, always.
@@ -184,7 +184,7 @@ describe('where a launch lands', () => {
     expect(screen.getByText('Setting up · Step 1 of 8')).toBeTruthy();
     // The first step, never the one they were on. The draft is client-held and died with
     // the process, so there is no middle of the part to be resumed to.
-    expect(screen.queryByText(NOW_TAB_LINE)).toBeNull();
+    expect(screen.queryByText(HOME_TAB_LINE)).toBeNull();
   });
 
   it('resumes an unfinished run ahead of the social steps, not after them', async () => {
@@ -249,7 +249,7 @@ describe('where a launch lands', () => {
 
     answerRatings();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 
@@ -296,7 +296,7 @@ describe('where a launch lands', () => {
 
     answerRatings();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 

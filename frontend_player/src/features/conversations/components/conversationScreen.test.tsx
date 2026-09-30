@@ -20,9 +20,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
-  GATE_USER,
   conversationPath,
-  launchSignedIn,
+  GATE_USER,
+  launchIntoClassicPlay,
   stubConversation,
   stubConversations,
   stubEntries,
@@ -206,7 +206,7 @@ async function openTheRoom(answer: Wire['ConversationResponse'] = room(), row = 
   stubConversation(transport, answer);
   stubEntries(transport, ROOM);
 
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -288,7 +288,7 @@ describe('the header', () => {
     stubConversation(transport, room({ members: [member(ME, 'me_')] }));
     stubEntries(transport, ROOM);
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
@@ -690,7 +690,7 @@ describe('a refused send', () => {
     transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
     stubEntries(transport, ROOM);
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -845,7 +845,7 @@ describe('the frame', () => {
     transport.on('GET', conversationPath(ROOM), () => new Promise(() => {}));
     stubEntries(transport, ROOM);
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     fireEvent.press(await screen.findByLabelText(/^tomek\.p/));

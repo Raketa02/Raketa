@@ -164,6 +164,14 @@ export { worthLine } from './components/gamePresentation';
 export type { EntryLead } from './domain/resultArgument';
 
 /**
+ * **Whether a score is waiting on this player's agreement** — the *result to confirm* Home's badge
+ * counts ([#550](https://github.com/Raketa02/Raketa/issues/550)). `features/plans` counts the cards,
+ * and *Confirm the result* is the one card whose name cannot say whether it waits on the reader —
+ * so what crosses is this answer, read off the acts the screen would offer, and never the argument.
+ */
+export { awaitsYourAgreement } from './domain/resultArgument';
+
+/**
  * What a game is, for the feature that draws a plan beside one — and the two readings of its
  * seats that feature keys on: which are open, and who is in the rest. `seatedOthers` is what the
  * fill is told about the court it completes ([#419](https://github.com/Raketa02/Raketa/issues/419)):

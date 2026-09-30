@@ -87,3 +87,22 @@ would pass with the cache broken. `isFeatureEnabled`'s _nothing to say_ walks ra
 on for their length (`jest.replaceProperty`), for the same reason — the SDK's own `false` and an
 off default would otherwise agree. The flags repo's local datafile is the other half of PRD #500's
 ruling and is [#521](https://github.com/Raketa02/Raketa/issues/521)'s, a human ticket.
+
+**`classic_play` replaced `find_a_game`, and the bar follows it**
+([#550](https://github.com/Raketa02/Raketa/issues/550),
+[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6). The
+grilling ruled **one flag for the old loop** (Q42) — the Players deck, the Chats tab, challenges
+with their plan and Find a game come back together — so `find_a_game` is gone from
+`FEATURE_DEFAULTS` rather than kept beside it, and `classic_play` is the only key, **off by
+default**. Play's three routes read it where they read `find_a_game`, unchanged in shape. The new
+reader is the tab bar, and it could not be a gate: it mounts with the signed-in app before either
+datafile has been read and stays up for the session, so a read at mount would answer the code
+default every launch. **`useFeature` answers again whenever a datafile lands** — two disabled
+observers on the reads `useFeatureDatafile` owns, so it adds no request and no refetch on focus, and
+the player read from the cache as the gate reads it (`flagContextOf` is shared). That is still §7's
+_next cold start or foreground_; what changes is chrome, never the screen under it, and a screen
+still uses `useFeatureOnMount`. The walks moved to `components/theClassicPlayGate.test.tsx`, which
+adds the bar's side of every case, and `launchIntoFindAGame` is `launchIntoClassicPlay`. **The flags
+repo is [#532](https://github.com/Raketa02/Raketa/issues/532)'s** (a human ticket): until it
+declares `classic_play`, every environment gets the code default — off — and its `find_a_game`
+definition is read by nothing and can be retired there.

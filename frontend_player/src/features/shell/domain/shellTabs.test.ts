@@ -15,11 +15,11 @@ describe('the five routes', () => {
     expect(Object.keys(SHELL_TAB_ROOT).sort()).toEqual(TAB_BAR_TABS.map((tab) => tab.key).sort());
   });
 
-  it('opens the app at the shell root rather than at a second spelling of Now', () => {
-    expect(SHELL_TAB_ROOT.now).toBe('/');
+  it('opens the app at the shell root rather than at a second spelling of Home', () => {
+    expect(SHELL_TAB_ROOT.home).toBe('/');
   });
 
-  it('enters Play with Now underneath it, which is where back goes', () => {
+  it('enters Play with Home underneath it, which is where back goes', () => {
     expect(PLAY_STACK).toEqual(['/', '/play']);
   });
 });
@@ -49,19 +49,19 @@ describe('which tab a route is inside', () => {
   });
 
   /**
-   * The Now tab's root is `/`, so a screen pushed over it cannot share its segment the way the
+   * The Home tab's root is `/`, so a screen pushed over it cannot share its segment the way the
    * builder shares Play's — it is a sibling at the top level. Falling through to the default
    * would give the right answer for the wrong reason, and the day a second tab grows depth the
    * two would be indistinguishable.
    */
-  it('keeps Now lit on a game, which is inside it without being under it', () => {
-    expect(tabForPathname('/games/8f14e45f-ceea-467a-9dd1-4bd9c39d4a58')).toBe('now');
+  it('keeps Home lit on a game, which is inside it without being under it', () => {
+    expect(tabForPathname('/games/8f14e45f-ceea-467a-9dd1-4bd9c39d4a58')).toBe('home');
   });
 
   it('answers the root for a path the shell does not own', () => {
     // Nothing outside `(tabs)` draws a bar at all, so this is the answer to a question
-    // that is never asked rather than a claim that /sign-in is the Now tab.
-    expect(tabForPathname('/sign-in')).toBe('now');
+    // that is never asked rather than a claim that /sign-in is the Home tab.
+    expect(tabForPathname('/sign-in')).toBe('home');
   });
 });
 
@@ -94,7 +94,7 @@ describe('where the bar stands down', () => {
     ['the challenge screen', '/chats/challenge/aaaaaaaa-0000-4000-8000-000000000001'],
     ['the builder under a challenge', '/chats/challenge/aaaaaaaa-0000-4000-8000-000000000001/fill'],
     ['the game screen behind the room’s own Details door', `${ROOM}/details`],
-    ['a game over Now', '/games/8f14e45f-ceea-467a-9dd1-4bd9c39d4a58'],
+    ['a game over Home', '/games/8f14e45f-ceea-467a-9dd1-4bd9c39d4a58'],
     ['the shell root', '/'],
     ['a path the shell does not own', '/sign-in'],
   ])('is not %s', (_, pathname) => {

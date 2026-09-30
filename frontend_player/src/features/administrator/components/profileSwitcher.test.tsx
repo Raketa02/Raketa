@@ -26,7 +26,7 @@ import {
 } from '@/test-support/officialGroupsServer';
 import {
   GATE_USER,
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   PLAYER_ONLY,
   launchSignedIn,
   stubGate,
@@ -116,7 +116,7 @@ const row = (name: string, selected?: boolean) =>
   screen.findByRole('button', { name, ...(selected === undefined ? {} : { selected }) });
 
 async function expectPlayerApp() {
-  expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+  expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
   expect(screen).toHavePathname('/');
 }
 

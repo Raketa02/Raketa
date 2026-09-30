@@ -1,5 +1,6 @@
 /**
- * The five-tab shell: one stack, and the bar under it.
+ * The shell: one stack, and the bar under it — **Home · ⚡Play · You**, and five columns with
+ * Classic play.
  *
  * **A `Stack`, not `<Tabs>`, and that is the ticket's one new decision.** `<Tabs>` keeps a
  * separate history per tab and restores it when you come back — which is what it is for, and
@@ -42,7 +43,7 @@
  * ## The transition says which of the two moves happened
  *
  * A `Stack`'s default is the push transition, and the shell's ordinary move is a **replace** —
- * so out of the box, going from Now to Players slides in from the right and reads as going
+ * so out of the box, going from Home to You slides in from the right and reads as going
  * *deeper* on the one gesture whose whole meaning is that nothing was kept. The shell's
  * default is therefore `none`, and the Play screens take the push back, because entering
  * Find a game and pushing the builder over it genuinely are ones: what they arrive on stays
@@ -73,6 +74,8 @@ import { Stack, usePathname } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { useChallengesWaiting } from '@/features/challenges/types';
+import { useFeature } from '@/features/feature_flags/types';
+import { useGamesNeedingYou } from '@/features/plans/types';
 import { TabBar, theme } from '@/shared/ui';
 
 import { barStandsDown, tabForPathname } from '../domain/shellTabs';
@@ -101,11 +104,16 @@ const YOU_SCREENS = [
 
 export function TabShell() {
   const pathname = usePathname();
+  // Followed rather than read once: the bar mounts before any datafile has been read and stays up
+  // for the session, so a read at mount would be the code default on every launch
+  // ([#550](https://github.com/Raketa02/Raketa/issues/550)). The screens under it still read once.
+  const classicPlay = useFeature('classic_play');
+  const gamesNeedingYou = useGamesNeedingYou();
   const challengesWaiting = useChallengesWaiting();
 
   return (
     <View style={s.shell}>
-      {/* `initialRouteName` is the shell's root stated outright — `SHELL_TAB_ROOT.now`, whose
+      {/* `initialRouteName` is the shell's root stated outright — `SHELL_TAB_ROOT.home`, whose
           route is `index` — and it is not the default. expo-router orders a navigator's routes
           with the `Stack.Screen` children below **first**, so without it the first route this
           stack holds is `play/index`, named first for its transition, and a stack rebuilt from
@@ -134,7 +142,7 @@ export function TabShell() {
         <Stack.Screen name="play/group/[groupId]/friends" options={{ animation: 'default' }} />
         <Stack.Screen name="play/group/[groupId]/members" options={{ animation: 'default' }} />
         <Stack.Screen name="play/group/[groupId]/edit" options={{ animation: 'default' }} />
-        {/* And so is a game: it is pushed over the Now tab's list, the list stays underneath,
+        {/* And so is a game: it is pushed over the Home tab's list, the list stays underneath,
             and backing out returns to the row it was tapped from
             ([#314](https://github.com/Raketa02/Raketa/issues/314)). It is the first exception
             outside Play, which is why `shellTabs` had to say which tab it is inside. */}
@@ -189,6 +197,8 @@ export function TabShell() {
         <TabBar
           active={tabForPathname(pathname)}
           onPress={(tab) => openTab(tab, pathname)}
+          classicPlay={classicPlay}
+          gamesNeedingYou={gamesNeedingYou}
           challengesWaiting={challengesWaiting}
         />
       )}

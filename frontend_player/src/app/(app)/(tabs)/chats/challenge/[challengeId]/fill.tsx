@@ -15,7 +15,7 @@ import { parseChallengeRouteParams } from '@/features/challenges/types';
  * Being under `/chats` is what lights the Chats column, for free.
  *
  * **It is a plain push, and nothing here resets the shell stack.** That reset dismisses the stack
- * and ends the Play session, and `landOnNow`'s *"there is nothing left to be behind: the court is
+ * and ends the Play session, and `landOnHome`'s *"there is nothing left to be behind: the court is
  * gone"* is false here — the thing behind is the challenge being completed, and it is the surface
  * the send pops back to.
  *

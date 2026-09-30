@@ -1,22 +1,28 @@
 /**
- * **The first gate, walked** — Find a game behind `find_a_game`, through the real route tree, the
+ * **Classic play, walked** — the old loop behind `classic_play`, through the real route tree, the
  * real shell and the real Featurevisor SDK, with the datafile stubbed at the socket exactly as
- * every API response is ([#479](https://github.com/Raketa02/Raketa/issues/479),
+ * every API response is ([#550](https://github.com/Raketa02/Raketa/issues/550),
+ * [ADR-0189](../../../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6,
  * [ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)).
  *
- * **Off is the code default since [#512](https://github.com/Raketa02/Raketa/issues/512)**, and off
- * is Play › Groups where the empty placeholder used to be. So every walk that proves a *cached* or
- * *refused* datafile is still in use now saves **on** and expects Find a game: with the default
- * off, a walk that saved off would pass with the cache broken.
+ * It was the first gate's suite — Find a game behind `find_a_game` (#479) — and the flag grew into
+ * the one that brings the whole old loop back: the bar's Players and Chats columns and Play's Find
+ * a game, together. So there are two things to watch, read two ways. **The bar follows the flag**:
+ * it is mounted before any datafile has been read and stays mounted, so it changes when one lands.
+ * **Play's root reads it once, when it mounts**, and changes at the next entry to the tab.
  *
- * What is asserted is what a player could see: which screen the Play tab draws, and where a route
- * under it lands. How the SDK was called is not, and neither is which players a rule reaches — the
- * flags repo's specs own that. The one rule here that names a player is the tester walk, and it is
- * about the app sending the mark, not about the rule.
+ * **Off is the code default**, and off is Home · Play · You over Play › Groups. So every walk that
+ * proves a *cached* or *refused* datafile is still in use saves **on** and expects the old loop:
+ * with the default off, a walk that saved off would pass with the cache broken.
  *
- * Every walk waits on the datafile before it mounts the screen it asks about. A gate reads its flag
- * once, when it mounts, so a datafile still in flight at that moment is — correctly — the next rung
- * down, and a walk that raced it would be asserting the race.
+ * What is asserted is what a player could see: which columns the bar draws, which screen the Play
+ * tab draws, and where a route under it lands. How the SDK was called is not, and neither is which
+ * players a rule reaches — the flags repo's specs own that. The one rule here that names a player
+ * is the tester walk, and it is about the app sending the mark, not about the rule.
+ *
+ * Every walk about Play waits on the datafile before it mounts the screen it asks about. A gate
+ * reads its flag once, when it mounts, so a datafile still in flight at that moment is — correctly
+ * — the next rung down, and a walk that raced it would be asserting the race.
  */
 
 import { focusManager } from '@tanstack/react-query';
@@ -46,8 +52,12 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-const ON = datafileFor({ find_a_game: 'on' });
-const OFF = datafileFor({ find_a_game: 'off' });
+const ON = datafileFor({ classic_play: 'on' });
+const OFF = datafileFor({ classic_play: 'off' });
+
+/** The bar as it ships, and the bar with the old loop back. */
+const SHIPPED_BAR = ['Home', 'Play', 'You'];
+const CLASSIC_BAR = ['Home', 'Players', 'Play', 'Chats', 'You'];
 
 /** A search id that survives the builder's and the pool's param checks, and that nobody ran. */
 const SOME_SEARCH = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
@@ -102,6 +112,20 @@ async function relaunch(datafiles: number) {
   await launch(datafiles);
 }
 
+/** The app comes back to the front, which is when a running app fetches the datafile again. */
+async function foreground(datafiles: number) {
+  act(() => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+  await datafileSettled(transport, datafiles);
+}
+
+/** Every column the bar draws, by the name it speaks. */
+function bar(): string[] {
+  return screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel);
+}
+
 async function pressPlay() {
   fireEvent.press(await screen.findByLabelText('Play'));
   await waitFor(() => expect(screen).toHavePathname('/play'));
@@ -112,7 +136,7 @@ async function expectFindAGame() {
   expect(screen.queryByRole('button', { name: PLAY_COPY.segment.groups })).toBeNull();
 }
 
-/** Play › Groups — what the tab opens on with the feature off (#512). */
+/** Play › Groups — what the tab opens on with Classic play off (#512). */
 async function expectGroups() {
   expect(
     await screen.findByRole('button', { name: PLAY_COPY.segment.groups, selected: true }),
@@ -120,8 +144,74 @@ async function expectGroups() {
   expect(screen.queryByText(FIND_A_GAME_TITLE)).toBeNull();
 }
 
+describe('the bar, by what the datafile says', () => {
+  // A first launch with the flags host unreachable and nothing saved: the app as it ships.
+  it('is Home, Play and You when there is no datafile and nothing cached', async () => {
+    await launch();
+
+    expect(bar()).toEqual(SHIPPED_BAR);
+  });
+
+  it('is Home, Play and You when Classic play is off', async () => {
+    stubDatafile(transport, OFF);
+    await launch();
+
+    expect(bar()).toEqual(SHIPPED_BAR);
+  });
+
+  it('brings Players and Chats back, in their places, when Classic play is on', async () => {
+    stubDatafile(transport, ON);
+    await launch();
+
+    await waitFor(() => expect(bar()).toEqual(CLASSIC_BAR));
+  });
+
+  it('opens the deck and the inbox from the two columns it brings back', async () => {
+    stubDatafile(transport, ON);
+    transport.on('POST', '/api/v1/deck', () => json(NOBODY_DEALT));
+    await launch();
+
+    fireEvent.press(await screen.findByLabelText('Players'));
+    await waitFor(() => expect(screen).toHavePathname('/players'));
+
+    fireEvent.press(screen.getByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    expect(screen.getByRole('tab', { name: 'Chats', selected: true })).toBeTruthy();
+  });
+
+  /**
+   * **The bar is chrome, not a gated screen, and it follows the flag.** Nothing is pulled out from
+   * under the player — Find a game stays on screen, read when it mounted — and the columns change
+   * the moment the datafile reaches the app, which is ADR-0180's *next cold start or foreground*.
+   */
+  it('follows a change that arrives while the app is open, and leaves the screen alone', async () => {
+    stubDatafile(transport, ON);
+    await launch();
+    await pressPlay();
+    await expectFindAGame();
+    expect(bar()).toEqual(CLASSIC_BAR);
+
+    stubDatafile(transport, OFF);
+    await foreground(2);
+
+    await waitFor(() => expect(bar()).toEqual(SHIPPED_BAR));
+    await expectFindAGame();
+  });
+
+  it('keeps the old loop’s columns from the cached datafile when the fetch fails', async () => {
+    stubDatafile(transport, ON);
+    await launch();
+    await waitFor(() => expect(bar()).toEqual(CLASSIC_BAR));
+
+    transport.on('GET', DATAFILE_PATH, networkFailure());
+    await relaunch(2);
+
+    await waitFor(() => expect(bar()).toEqual(CLASSIC_BAR));
+  });
+});
+
 describe('the Play tab, by what the datafile says', () => {
-  it('shows Find a game when the feature is on', async () => {
+  it('shows Find a game when Classic play is on', async () => {
     stubDatafile(transport, ON);
     await launch();
 
@@ -130,8 +220,6 @@ describe('the Play tab, by what the datafile says', () => {
     await expectFindAGame();
   });
 
-  // A first launch with the flags host unreachable and nothing saved: the app as it ships, which
-  // since #512 is Play › Groups.
   it('shows Groups when there is no datafile and nothing cached', async () => {
     await launch();
 
@@ -140,16 +228,15 @@ describe('the Play tab, by what the datafile says', () => {
     await expectGroups();
   });
 
-  it('shows Groups when the feature is off, and keeps the tab bar', async () => {
+  it('shows Groups when Classic play is off, and keeps the tab bar', async () => {
     stubDatafile(transport, OFF);
     await launch();
 
     await pressPlay();
 
     await expectGroups();
-    // Every column is still there to leave by.
-    expect(screen.getByLabelText('Play')).toBeTruthy();
-    expect(screen.getByLabelText(/^Chats/)).toBeTruthy();
+    // Every column the bar draws is still there to leave by.
+    expect(bar()).toEqual(SHIPPED_BAR);
   });
 
   /**
@@ -168,7 +255,7 @@ describe('the Play tab, by what the datafile says', () => {
             testers: { conditions: [{ attribute: 'isTester', operator: 'equals', value: true }] },
           },
           features: {
-            find_a_game: {
+            classic_play: {
               bucketBy: 'playerId',
               traffic: [
                 { key: 'testers', segments: 'testers', percentage: 0 },
@@ -184,15 +271,16 @@ describe('the Play tab, by what the datafile says', () => {
     await pressPlay();
 
     await expectGroups();
+    expect(bar()).toEqual(SHIPPED_BAR);
   });
 });
 
 /**
  * A link to the builder or the pool with **no search behind it** — nothing on the Play tab could
- * have started one while the feature is off. A search the player already ran is let through, and
+ * have started one while Classic play is off. A search the player already ran is let through, and
  * `play/components/pool.test.tsx` walks that half: the toggle arriving mid-search.
  */
-describe('the routes under Play while the feature is off', () => {
+describe('the routes under Play while Classic play is off', () => {
   beforeEach(() => stubDatafile(transport, OFF));
 
   it('sends a link to the builder back to Play', async () => {
@@ -220,22 +308,18 @@ describe('a change that arrives while Play is on screen', () => {
    * the next time they open the tab. The toggle arrives the way it does on a device — the app
    * comes back to the front and fetches again.
    */
-  it('takes effect at the next mount, not before', async () => {
+  it('takes effect on Play at the next mount, not before', async () => {
     stubDatafile(transport, ON);
     await launch();
     await pressPlay();
     await expectFindAGame();
 
     stubDatafile(transport, OFF);
-    act(() => {
-      focusManager.setFocused(false);
-      focusManager.setFocused(true);
-    });
-    await datafileSettled(transport, 2);
+    await foreground(2);
 
     await expectFindAGame();
 
-    fireEvent.press(screen.getByLabelText('Now'));
+    fireEvent.press(screen.getByLabelText('Home'));
     await waitFor(() => expect(screen).toHavePathname('/'));
     await pressPlay();
 
@@ -244,7 +328,7 @@ describe('a change that arrives while Play is on screen', () => {
 });
 
 /**
- * Each of these saves **on**, because on is now the one answer only a datafile can give: with the
+ * Each of these saves **on**, because on is the one answer only a datafile can give: with the
  * code default off, a walk that saved off would pass with the cache broken.
  */
 describe('when the fresh datafile cannot be used', () => {
@@ -267,15 +351,16 @@ describe('when the fresh datafile cannot be used', () => {
   });
 
   // ADR-0180 §10: a format this build does not read is refused, and the last good one stays. Were
-  // it read, this one would turn Find a game off.
+  // it read, this one would turn Classic play off.
   it('falls back to the cache when the schema version is unknown', async () => {
     await aLaunchThatSavedOn();
 
-    stubDatafile(transport, datafileFor({ find_a_game: 'off' }, { schemaVersion: '3' }));
+    stubDatafile(transport, datafileFor({ classic_play: 'off' }, { schemaVersion: '3' }));
     await relaunch(2);
     await pressPlay();
 
     await expectFindAGame();
+    expect(bar()).toEqual(CLASSIC_BAR);
   });
 
   it('keeps the datafile fetched earlier when a later one is refused mid-session', async () => {
@@ -283,15 +368,38 @@ describe('when the fresh datafile cannot be used', () => {
     await launch();
 
     transport.on('GET', DATAFILE_PATH, () =>
-      json(datafileFor({ find_a_game: 'off' }, { schemaVersion: '3' })),
+      json(datafileFor({ classic_play: 'off' }, { schemaVersion: '3' })),
     );
-    act(() => {
-      focusManager.setFocused(false);
-      focusManager.setFocused(true);
-    });
-    await datafileSettled(transport, 2);
+    await foreground(2);
     await pressPlay();
 
     await expectFindAGame();
+    expect(bar()).toEqual(CLASSIC_BAR);
   });
 });
+
+/** An empty deal with nobody in range: Players draws its ending, and this suite is not about it. */
+const NOBODY_DEALT: Wire['ShortlistResponse'] = {
+  search: {
+    search_id: 'd0d1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b',
+    at: '2026-09-01T18:00:00Z',
+    surface: 'DECK',
+    mode: null,
+    ruleset_version: 'ruleset-v1',
+    engine_version: 'matchfit-v1',
+    optimised_for: 'SEARCHER',
+    index_stale: false,
+    pool: {
+      sport: 'PADEL',
+      radius_km_used: 12,
+      players_in_range: 0,
+      window: 'THIS_WEEK',
+      post_gate: true,
+    },
+    radius_clamp: false,
+    sorts_available: [],
+    rung_offers: null,
+    prompts: [],
+  },
+  candidates: [],
+};

@@ -175,3 +175,30 @@ file — whose job is composition — composes it. What it draws, its sheet and 
 feature's ([`administrator.md`](administrator.md)). **It draws
 nothing for an account that only plays**, so the tab most people see is unchanged. **Not seen on a
 device.**
+
+**The bar is Home · ⚡Play · You, and Players and Chats are Classic play's**
+([#550](https://github.com/Raketa02/Raketa/issues/550),
+[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6, the
+Games & Fill in screens A1). **Now is Home**, renamed whole — key `home`, label _Home_,
+`HomeScreen`, `HOME_COPY` (title only; its two lines are still true of the tab), `landOnHome`, and
+the harness's `HOME_TAB_LINE` — on the same route, `/`. `TabBar` takes **`classicPlay`**, a switch
+rather than a tab list, so ADR-0135's _no caller passes tabs_ stands: without it the bar draws
+Home · Play · You, with it the five as they were. `TabShell` reads `classic_play` with
+**`useFeature`, which follows the flag** rather than reading it once: the bar mounts with the
+signed-in app, before either datafile has been read — the saved one answers a tick later — and a
+read at mount would be the code default on every launch, so a tester's Classic play would never
+reach the bar. It changes when a datafile lands (launch, foreground) and never swaps the screen
+under it; Play's root still reads once, on mount. **The route table keeps all five**: with the flag
+off `/players` and `/chats/…` stay routes — a Home card's chat door still leads into the room — and
+a route whose column is not drawn lights no column rather than a neighbour. **Home carries a badge**
+— the games that need you (a seat open, a result to enter, a score waiting on your agreement), read
+by `useGamesNeedingYou` from `features/plans` and handed to the bar as `gamesNeedingYou`; Chats'
+badge is drawn only with its column. The price is stated, as #326 stated the Chats badge's: **the
+shell now holds `GET /games` and `GET /plans` for the whole session**, so an act that invalidates
+either re-reads it at once rather than marking it for Home's next visit — four old-loop suites that
+asserted the mark now count the re-read, each proven red without the invalidation. The walks are
+`feature_flags/components/theClassicPlayGate.test.tsx` (the bar and Play with the flag off, on,
+cached, refused and arriving mid-session) and `theShell.test.tsx`'s _Home's badge_; every old-loop
+suite launches through `launchIntoClassicPlay`. **Not seen on a device**: the three-column bar,
+Home's badge, and the bar growing to five a moment after launch for a tester, when the saved
+datafile is read.

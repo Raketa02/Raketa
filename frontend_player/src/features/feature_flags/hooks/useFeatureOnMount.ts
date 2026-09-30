@@ -46,8 +46,9 @@ export function useFeatureOnMount(feature: FeatureKey): boolean {
 
 /**
  * The attributes, as the flags repo spells them (§8): who, whether they carry the tester mark, and
- * which build on which platform.
+ * which build on which platform. Shared with `useFeature`, so the gate and the bar ask about the
+ * same player in the same words.
  */
-function flagContextOf(player: AuthenticatedUser): FlagContext {
+export function flagContextOf(player: AuthenticatedUser): FlagContext {
   return { playerId: player.id, isTester: player.isTester, ...appBuild() };
 }

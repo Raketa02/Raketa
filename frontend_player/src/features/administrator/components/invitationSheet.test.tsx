@@ -15,7 +15,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { CLUB, CLUB_ID, club, O3_CLUB_GROUP, rating } from '@/test-support/officialGroupsServer';
 import {
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   launchSignedIn,
   stubGate,
   stubInterest,
@@ -113,7 +113,7 @@ async function expectTheSheet() {
 }
 
 async function expectNoSheet() {
-  expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+  expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
   expect(theSheet()).toBeNull();
 }
 
@@ -199,7 +199,7 @@ describe('Not now', () => {
     // Nothing was accepted, and moving about the app does not bring it back.
     fireEvent.press(screen.getByLabelText('You'));
     await waitFor(() => expect(screen).toHavePathname('/you'));
-    fireEvent.press(screen.getByLabelText('Now'));
+    fireEvent.press(screen.getByLabelText('Home'));
     await waitFor(() => expect(screen).toHavePathname('/'));
     expect(theSheet()).toBeNull();
     expect(transport.requestsTo('POST', ACCEPT_PATH)).toHaveLength(0);

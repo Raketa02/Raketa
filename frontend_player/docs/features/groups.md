@@ -372,3 +372,7 @@ the route file spells the group's link back from it (`appLinkTo`: the scheme's w
 for the screen's field, so the answer is exactly the group a paste would have found. **The field does not take the focus then**:
 there is nothing to type, and a keyboard over the one result would hide the button the link is for. What
 opens the screen, and when, is [`links.md`](links.md)'s.
+
+**`find_a_game` became `classic_play`** ([#550](https://github.com/Raketa02/Raketa/issues/550)).
+Nothing here changed: Play opens on Groups whenever the old loop's one flag is off, which is the
+default.

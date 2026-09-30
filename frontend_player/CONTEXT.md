@@ -152,12 +152,22 @@ review comment and a test description all use the same word.
 - **Held link** — an incoming link not answered yet, kept in memory (one at a time) through
   sign-in and onboarding until a place that can answer it is reached: Join a group, the
   invitation sheet, or a sheet asking to sign out first. Dies with the process.
-- **The shell** — the five tabs a signed-in player is inside, and the **one stack** under
-  them. `Now · Players · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
-  `TabShell`. Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it,
-  which is the whole of what
-  [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. _Avoid_: "the tab
-  navigator" — there isn't one.
+- **The shell** — the tabs a signed-in player is inside, and the **one stack** under them.
+  `Home · ⚡Play · You` as the app ships, and `Home · Players · ⚡Play · Chats · You` with
+  **Classic play** (`classic_play`, #550), drawn by `TabBar` and mounted once by `TabShell`.
+  Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it, which is the
+  whole of what [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. _Avoid_: "the
+  tab navigator" — there isn't one.
+- **Home** — the first tab, route `/`: today's games rail under the tab's own words. It was
+  **Now** until [#550](https://github.com/Raketa02/Raketa/issues/550), and the rename is whole
+  — key `home`, label _Home_, `HomeScreen`, `HOME_COPY`, `landOnHome`. **Home's badge** counts the
+  games that need you — a seat open, a result to enter, a score waiting on your agreement
+  (`useGamesNeedingYou`, over `needsYou` and games' `awaitsYourAgreement`); the shell reads it on
+  every screen, so it holds `GET /games` and `GET /plans` for the session. _Avoid_: "Now" for the
+  tab — it survives only as the history of the rail's section below.
+- **A followed flag** — `useFeature`, the one flag read that answers again whenever a datafile
+  lands, for chrome mounted before any datafile is read and kept for the session: the bar's
+  Classic play columns. A **gated screen** still reads once, on mount (`useFeatureOnMount`).
 - **Players** — the second tab, and **the deck is the whole of it**
   ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1):
   key `players`, label _Players_, Feather `users`, route `/players`, a single-screen root like
@@ -390,7 +400,7 @@ profile editor that later edits the same values.
 ### The Play tab
 
 - **Play segment** — _Groups_ or _Explore_, the two pages the Play tab opens on while
-  `find_a_game` is off (#512): Groups is the player's groups, Explore the empty screen the rebuilt
+  `classic_play` is off (#512, #550): Groups is the player's groups, Explore the empty screen the rebuilt
   Find a game grows in. The shell's, remembered per account by the phone-preferences store, and
   **Groups** whenever nothing — or nothing this build recognises — was saved. _Avoid_: "tab" —
   Play is the tab and these are its segments.
@@ -1037,7 +1047,8 @@ follows is only what this client had to invent to let a room fill one in
 
 ### Now
 
-Eight client-only concepts, all of them in `features/plans/` — the rail and its card are this
+The rail's own section, under the name the tab had when it was written — the tab is **Home** since
+#550, and nothing below changed with the name. Eight client-only concepts, all of them in `features/plans/` — the rail and its card are this
 feature's because a card needs a **plan** beside a **game** and ADR-0149 §1's arrow runs one way
 ([`the-loop-components.md`](../docs/specs/the-loop/the-loop-components.md) §3.4). What follows is
 only what this client had to invent to draw what is happening today and next

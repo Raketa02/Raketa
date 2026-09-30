@@ -9,7 +9,14 @@
 
 import type { Game } from '@/features/games/types';
 
-import { GAME_CARD_NAMES, belongsOnTheRail, doorOf, entryLeadOf, gameCardName } from './gameCard';
+import {
+  GAME_CARD_NAMES,
+  belongsOnTheRail,
+  doorOf,
+  entryLeadOf,
+  gameCardName,
+  needsYou,
+} from './gameCard';
 import type { Plan } from './slots';
 
 const GAME_ID = '11111111-0000-4000-8000-000000000001';
@@ -91,6 +98,35 @@ describe('which card a game draws', () => {
     const { standing: _dropped, ...rest } = game();
 
     expect(gameCardName(rest, plan({ day: '2026-09-12' }))).toBe('unreadable');
+  });
+});
+
+/**
+ * **Which cards are the games that need you** — Home's badge
+ * ([#550](https://github.com/Raketa02/Raketa/issues/550),
+ * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)):
+ * a seat open in your game, a result to enter, a result to confirm. *A payment to confirm* is the
+ * booked game's, and arrives with it. Every other card is somewhere a game is, not something it
+ * asks of you.
+ */
+describe('which cards need you', () => {
+  it('is a seat open in your game, and a result to enter', () => {
+    expect(needsYou('needs-a-player', false)).toBe(true);
+    expect(needsYou('needs-result', false)).toBe(true);
+  });
+
+  it('is a result to confirm only when a score is waiting on your agreement', () => {
+    expect(needsYou('confirm', true)).toBe(true);
+    // Your own score waiting on the other side, or an agreement running out its grace.
+    expect(needsYou('confirm', false)).toBe(false);
+  });
+
+  it('is none of the others — a game being planned, on, or over asks nothing of you', () => {
+    const asking = ['needs-a-player', 'needs-result', 'confirm'];
+
+    for (const name of GAME_CARD_NAMES.filter((one) => !asking.includes(one))) {
+      expect(needsYou(name, true)).toBe(false);
+    }
   });
 });
 

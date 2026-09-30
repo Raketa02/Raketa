@@ -49,9 +49,9 @@ import { useToastQueue } from '@/shared/store/toast.store';
 import {
   CHALLENGES_PATH,
   GATE_USER,
-  PROFILE_SURFACE_SERVED,
-  launchSignedIn,
+  launchIntoClassicPlay,
   outgoingYes,
+  PROFILE_SURFACE_SERVED,
   resetHaptics,
   stubChallenges,
   stubConversations,
@@ -440,7 +440,7 @@ function layOut() {
 
 /** A signed-in player on the Radar pane, with the reading landed and the field laid out. */
 async function openRadar() {
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Players'));
   await waitFor(() => expect(screen).toHavePathname('/players'));
   fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.radar }));
@@ -1104,7 +1104,7 @@ describe('the footer', () => {
 
   it('says the empty reading with the reach and the sport, and still draws you and the rings', async () => {
     transport.on('POST', RADAR, () => json(reading({ candidates: [] })));
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText('Players'));
     await waitFor(() => expect(screen).toHavePathname('/players'));
     fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.radar }));
@@ -1124,7 +1124,7 @@ describe('the footer', () => {
   it('says Looking around… over the privacy line while the reading is on its way', async () => {
     let answer: ((response: Response) => void) | undefined;
     transport.on('POST', RADAR, () => new Promise<Response>((resolve) => (answer = resolve)));
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText('Players'));
     await waitFor(() => expect(screen).toHavePathname('/players'));
     fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.radar }));
@@ -1143,7 +1143,7 @@ describe('the footer', () => {
 
   it('says the failure and offers Try again, which reads again', async () => {
     transport.on('POST', RADAR, () => errorResponse(503, 'matchmaking_unavailable'));
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText('Players'));
     await waitFor(() => expect(screen).toHavePathname('/players'));
     fireEvent.press(screen.getByRole('button', { name: PANE_LABEL.radar }));

@@ -1195,3 +1195,14 @@ fill minted — so the special case for a challenge it replaced is gone. `pool.t
 toggle arriving mid-search; `theFindAGameGate.test.tsx` walks the bare links. `findAGame.test.tsx`
 and the other Play suites are untouched: `stubGate` serves no datafile, which is every flag at its
 code default.
+
+**Find a game is behind `classic_play` now, with the rest of the old loop**
+([#550](https://github.com/Raketa02/Raketa/issues/550),
+[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6). The three
+route files read `classic_play` where they read `find_a_game`, and nothing else about the gate
+moved: on, Play's root is Find a game and the builder and pool open as before; off — the default —
+the root is Groups and a bare link to either lands there, while a search already under way and
+fill-the-seat still go through. The Players deck is this feature's too, and it is behind the same
+flag by way of the bar: the shell draws its column only with Classic play on
+([`shell.md`](shell.md)). Every suite that walks the deck, the radar or Find a game launches through
+`launchIntoClassicPlay`.

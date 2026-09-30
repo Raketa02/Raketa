@@ -28,7 +28,7 @@ import {
   CHALLENGES_PATH,
   CONVERSATIONS_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoClassicPlay,
   stubChallenges,
   stubConversation,
   stubConversations,
@@ -210,7 +210,7 @@ async function openTheChallenge(
   stubChallenges(transport, [listedRow], READ_AT);
   transport.on('GET', DETAIL_PATH, () => json(answer));
 
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -570,7 +570,7 @@ describe('Open the chat', () => {
     // tab over, has the game with the rail's word on it.
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/chats'));
-    fireEvent.press(screen.getByLabelText('Now'));
+    fireEvent.press(screen.getByLabelText('Home'));
     await waitFor(() => expect(screen).toHavePathname('/'));
     expect(await screen.findByText('Planning')).toBeTruthy();
     expect(screen.getAllByText('Not agreed yet')).toHaveLength(3);
@@ -665,7 +665,7 @@ describe('a mutual’s yes, reached cold', () => {
     stubChallenges(transport, [row({ standing: 'ON', seats: accepted(SINGLES) })], READ_AT);
     stubConversations(transport, []);
 
-    await launchSignedIn(`${YES_SCREEN}?which=mutual`);
+    await launchIntoClassicPlay(transport, `${YES_SCREEN}?which=mutual`);
     await waitFor(() => expect(screen).toHavePathname(YES_SCREEN));
     await screen.findByTestId('yes-screen');
     expect(screen).toHaveSearchParams(expect.objectContaining({ which: 'mutual' }));

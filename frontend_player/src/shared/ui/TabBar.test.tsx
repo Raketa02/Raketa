@@ -1,7 +1,7 @@
 /**
  * The bar, asserted through what a player, a finger and a screen reader can each observe.
  *
- * Five tabs with names and states are ordinary queries, and the first two suites stay there.
+ * Tabs with names and states are ordinary queries, and the first two suites stay there.
  * **The rest are the declared exception the ring and the navigator already declare**: the
  * ring, the disc, the shadow and the pressed fills are drawings with no accessible name, and
  * they are exactly the rules this bar loses silently — a ring that changed the bar's height
@@ -16,7 +16,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
-import { TabBar, TAB_BAR_TABS, type TabBarKey } from './TabBar';
+import { TabBar, TAB_BAR_TABS, type TabBarKey, type TabBarProps } from './TabBar';
 import { theme } from './theme';
 
 /**
@@ -28,12 +28,30 @@ const METRICS: Metrics = {
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
 
-function renderBar(active: TabBarKey, onPress = jest.fn(), challengesWaiting?: number) {
+/**
+ * The bar as it ships — **Home · Play · You** — unless a walk says Classic play is on, which is
+ * the only thing that brings Players and Chats back.
+ */
+function renderBar(active: TabBarKey, props: Partial<Omit<TabBarProps, 'active'>> = {}) {
   return render(
     <SafeAreaProvider initialMetrics={METRICS}>
-      <TabBar active={active} onPress={onPress} challengesWaiting={challengesWaiting} />
+      <TabBar active={active} onPress={jest.fn()} classicPlay={false} {...props} />
     </SafeAreaProvider>,
   );
+}
+
+/** Every column the bar drew, by the name it speaks. */
+function columns(): string[] {
+  return screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel);
+}
+
+/** A column's `Pressable`, found by the name it speaks rather than by where it sits. */
+function column(name: string) {
+  const found = screen
+    .UNSAFE_getAllByType(Pressable)
+    .find((node) => node.props.accessibilityLabel === name);
+  if (!found) throw new Error(`the bar drew no ${name} column`);
+  return found;
 }
 
 /** Every drawn View's resolved style, in tree order. */
@@ -74,44 +92,58 @@ function disc(): ViewStyle {
  * style callback rather than firing an event at the host.
  */
 function pressedPlayColumn(): ViewStyle[] {
-  const column = screen.UNSAFE_getAllByType(Pressable)[2];
-  const children = column.props.children as (state: { pressed: boolean }) => ReactNode;
+  const children = column('Play').props.children as (state: { pressed: boolean }) => ReactNode;
   const under = render(<>{children({ pressed: true })}</>);
   return under.UNSAFE_queryAllByType(View).map((n) => StyleSheet.flatten(n.props.style));
 }
 
-/** A flank column's style callback, at rest or under a finger. */
-function flankColumn(index: number, pressed: boolean): ViewStyle {
-  return StyleSheet.flatten(screen.UNSAFE_getAllByType(Pressable)[index].props.style({ pressed }));
+/** A column's style callback, at rest or under a finger. */
+function columnStyle(name: string, pressed: boolean): ViewStyle {
+  return StyleSheet.flatten(column(name).props.style({ pressed }));
 }
 
+/**
+ * **Home · ⚡Play · You as it ships, and the five with Classic play**
+ * ([ADR-0189](../../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6).
+ * Players and Chats are the old loop's two columns: they come back together, where they were,
+ * and nothing else about the bar changes with them.
+ */
 describe('what the bar offers', () => {
-  it('is five tabs, named, in the order the map fixed', () => {
-    renderBar('now');
+  it('is Home, Play and You as it ships, in that order', () => {
+    renderBar('home');
 
-    expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
-      'Now',
-      'Players',
-      'Play',
-      'Chats',
-      'You',
-    ]);
+    expect(columns()).toEqual(['Home', 'Play', 'You']);
+  });
+
+  it('is five tabs with Classic play, Players and Chats back where they were', () => {
+    renderBar('home', { classicPlay: true });
+
+    expect(columns()).toEqual(['Home', 'Players', 'Play', 'Chats', 'You']);
   });
 
   it('reports which one was pressed', () => {
     const onPress = jest.fn();
-    renderBar('now', onPress);
+    renderBar('home', { onPress, classicPlay: true });
 
     fireEvent.press(screen.getByRole('tab', { name: 'Chats' }));
 
     expect(onPress).toHaveBeenCalledWith('chats');
   });
 
+  it('reports Home by its own key', () => {
+    const onPress = jest.fn();
+    renderBar('you', { onPress });
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+
+    expect(onPress).toHaveBeenCalledWith('home');
+  });
+
   it('reports a press on the tab that is already active — it decides nothing itself', () => {
     // ⚡Play always opens Find a game, whichever Play screen was last used, so a bar that
     // swallowed the press of the active tab would take that rule away from the shell.
     const onPress = jest.fn();
-    renderBar('play', onPress);
+    renderBar('play', { onPress });
 
     fireEvent.press(screen.getByRole('tab', { name: 'Play' }));
 
@@ -121,21 +153,35 @@ describe('what the bar offers', () => {
 
 describe('what the bar announces', () => {
   it('announces the active tab as selected', () => {
-    renderBar('players');
+    renderBar('players', { classicPlay: true });
 
     expect(screen.getByRole('tab', { name: 'Players', selected: true })).toBeTruthy();
   });
 
   it('announces the other four as not selected, rather than as silence', () => {
-    renderBar('players');
+    renderBar('players', { classicPlay: true });
 
-    for (const name of ['Now', 'Play', 'Chats', 'You']) {
+    for (const name of ['Home', 'Play', 'Chats', 'You']) {
       expect(screen.getByRole('tab', { name, selected: false })).toBeTruthy();
     }
   });
 
+  /**
+   * Without Classic play the bar has no Players or Chats column, and a player can still stand on
+   * either route — a Home card's chat door leads into Chats. The bar lights nothing it does not
+   * draw rather than lighting a neighbour that is not where they are.
+   */
+  it('lights no column when the player is on one it does not draw', () => {
+    renderBar('chats');
+
+    for (const name of ['Home', 'Play', 'You']) {
+      expect(screen.getByRole('tab', { name, selected: false })).toBeTruthy();
+    }
+    expect(ring()).toBeUndefined();
+  });
+
   it('hides every glyph from the reader — the visible label already names the tab', () => {
-    renderBar('now');
+    renderBar('home', { classicPlay: true });
 
     for (const glyph of screen.UNSAFE_queryAllByType(Feather)) {
       expect(glyph.props.accessibilityElementsHidden).toBe(true);
@@ -143,11 +189,10 @@ describe('what the bar announces', () => {
     }
   });
 
-  it('carries no badge — nothing on the bar is a count', () => {
-    // The one counter this product has belongs to the segmented control inside Play: it is
-    // not sport-filtered while the deck it labels is, and an unfiltered number on permanent
-    // chrome would be a claim nobody can act on from here.
-    renderBar('play');
+  it('draws no count when it is handed none', () => {
+    // Play's outstanding yeses are filtered by the sport on screen and this bar has no sport, so
+    // no count is drawn that a caller did not hand it — and nothing is handed here.
+    renderBar('play', { classicPlay: true });
 
     for (const text of screen.UNSAFE_queryAllByType(Text)) {
       expect(String(text.props.children)).not.toMatch(/\d/);
@@ -180,12 +225,12 @@ describe('the family', () => {
   });
 
   it('carries selection in tone alone — the same glyph in both states', () => {
-    renderBar('now');
+    renderBar('home', { classicPlay: true });
     const resting = screen.UNSAFE_queryAllByType(Feather).map((g) => g.props.name);
     const tones = screen.UNSAFE_queryAllByType(Feather).map((g) => g.props.color);
 
     expect(resting).toEqual(TAB_BAR_TABS.map((t) => t.glyph));
-    // Now is `ink` against four `muted`, and the bolt stays white on its own fill.
+    // Home is `ink` against four `muted`, and the bolt stays white on its own fill.
     expect(tones[0]).toBe(theme.color.ink);
     expect(tones[1]).toBe(theme.color.muted);
   });
@@ -193,7 +238,7 @@ describe('the family', () => {
 
 describe('the disc, and the ring that says you are in Play', () => {
   it('is 6.1 `primary` in a squircle, and floats on the fifth shadow', () => {
-    renderBar('now');
+    renderBar('home');
 
     expect(disc()).toMatchObject({
       width: theme.size.fab,
@@ -206,7 +251,7 @@ describe('the disc, and the ring that says you are in Play', () => {
   });
 
   it('brightens to `coral` under a finger, exactly as the primary button does', () => {
-    renderBar('now');
+    renderBar('home');
 
     const pressed = pressedPlayColumn().find((s) => s.borderRadius === theme.radius.fab);
 
@@ -227,7 +272,7 @@ describe('the disc, and the ring that says you are in Play', () => {
   });
 
   it('draws no ring on any other tab', () => {
-    renderBar('chats');
+    renderBar('you');
 
     expect(ring()).toBeUndefined();
   });
@@ -236,7 +281,7 @@ describe('the disc, and the ring that says you are in Play', () => {
     // A bar that grew 8pt on arriving in Play would move the four things that did not change
     // in order to announce the one that did. Everything the layout can see is identical; the
     // ring is the only difference, and it is absolute.
-    renderBar('chats');
+    renderBar('you');
     const elsewhere = drawn().filter((s) => s.position !== 'absolute');
 
     renderBar('play');
@@ -248,7 +293,7 @@ describe('the disc, and the ring that says you are in Play', () => {
 
 describe('the geometry a finger meets', () => {
   it('gives the bar 10.2 paddings and the bottom inset', () => {
-    renderBar('now');
+    renderBar('home');
 
     // The bar is the outermost drawn View: the columns are inside it.
     const [bar] = drawn();
@@ -259,13 +304,13 @@ describe('the geometry a finger meets', () => {
   });
 
   it('dims a flank column under a finger, and never the Play column', () => {
-    renderBar('now');
+    renderBar('home');
 
     // 6.6's answer for a surface with no second fill — and the disc has one, so dimming it
     // as well would be two channels for one press.
-    expect(flankColumn(0, true).opacity).toBe(0.7);
-    expect(flankColumn(0, false).opacity).toBeUndefined();
-    expect(flankColumn(2, true).opacity).toBeUndefined();
+    expect(columnStyle('Home', true).opacity).toBe(0.7);
+    expect(columnStyle('Home', false).opacity).toBeUndefined();
+    expect(columnStyle('Play', true).opacity).toBeUndefined();
   });
 
   it('reaches the touch minimum by its own geometry, with no hit-slop to arrange', () => {
@@ -289,7 +334,7 @@ describe('Dynamic Type', () => {
   });
 
   it('scales every label, bounded, and freezes none of them', () => {
-    renderBar('now');
+    renderBar('home', { classicPlay: true });
 
     const labels = screen.UNSAFE_queryAllByType(Text).filter((t) => t.props.numberOfLines === 1);
 
@@ -303,7 +348,7 @@ describe('Dynamic Type', () => {
   });
 
   it('draws the label as `tag` — a name, not a tracked eyebrow', () => {
-    renderBar('now');
+    renderBar('home', { classicPlay: true });
 
     const label = screen.getByText('Players');
     expect(StyleSheet.flatten(label.props.style)).toMatchObject({
@@ -314,20 +359,20 @@ describe('Dynamic Type', () => {
 });
 
 /**
- * The badge is a **change to the label at least as much as to the drawing**, so both halves are
- * asserted — and the three states that draw nothing are asserted to draw nothing, because a
- * count that flickered onto permanent chrome would say something is waiting when nothing is.
+ * A badge is a **change to the label at least as much as to the drawing**, so both halves are
+ * asserted — and the states that draw nothing are asserted to draw nothing, because a count that
+ * flickered onto permanent chrome would say something is waiting when nothing is.
  */
-describe('the Chats badge', () => {
+describe('the Chats badge, with Classic play', () => {
   it('draws nothing at all when the bar is handed no count', () => {
-    renderBar('now');
+    renderBar('home', { classicPlay: true });
 
     expect(badge()).toBeUndefined();
     expect(screen.getByLabelText('Chats')).toBeTruthy();
   });
 
   it('draws a coralInk mark on Chats, and speaks the count in that column’s own name', () => {
-    renderBar('now', jest.fn(), 3);
+    renderBar('home', { classicPlay: true, challengesWaiting: 3 });
 
     expect(badge()).toMatchObject({
       position: 'absolute',
@@ -340,13 +385,13 @@ describe('the Chats badge', () => {
   });
 
   it('hardcodes no plural', () => {
-    renderBar('now', jest.fn(), 1);
+    renderBar('home', { classicPlay: true, challengesWaiting: 1 });
 
     expect(screen.getByLabelText('Chats, 1 challenge waiting')).toBeTruthy();
   });
 
   it('prints the digit in white, which is 5.89 on that fill and not 3.89 on coral', () => {
-    renderBar('now', jest.fn(), 2);
+    renderBar('home', { classicPlay: true, challengesWaiting: 2 });
 
     // Queried through the tree rather than by text: the mark is hidden from the accessibility
     // tree on purpose — the count is on the column's own name — so it is not a text node a
@@ -356,8 +401,8 @@ describe('the Chats badge', () => {
     expect(StyleSheet.flatten(mark?.props.style).color).toBe(theme.color.surface);
   });
 
-  it('badges no other column, whatever it is handed', () => {
-    renderBar('now', jest.fn(), 4);
+  it('badges no other column with it', () => {
+    renderBar('home', { classicPlay: true, challengesWaiting: 4 });
 
     for (const tab of TAB_BAR_TABS) {
       if (tab.key === 'chats') continue;
@@ -365,9 +410,59 @@ describe('the Chats badge', () => {
     }
   });
 
+  it('is not drawn without Classic play, whatever it is handed', () => {
+    // The count is the old loop's — challenges addressed to you — and it goes with its column.
+    renderBar('home', { challengesWaiting: 4 });
+
+    expect(badge()).toBeUndefined();
+    expect(columns()).toEqual(['Home', 'Play', 'You']);
+  });
+
   it('leaves the bar’s height alone, because the mark is out of the layout', () => {
-    renderBar('now', jest.fn(), 9);
+    renderBar('home', { classicPlay: true, challengesWaiting: 9 });
 
     expect(badge()?.position).toBe('absolute');
+  });
+});
+
+/**
+ * **Home's badge counts the games that need you** — a result to enter or confirm, a seat open in
+ * your game ([the mechanics §3](../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)).
+ * The bar draws the number it is handed; which games need you is the caller's fold.
+ */
+describe('the Home badge', () => {
+  it('draws nothing at all when the bar is handed no count', () => {
+    renderBar('you');
+
+    expect(badge()).toBeUndefined();
+    expect(screen.getByLabelText('Home')).toBeTruthy();
+  });
+
+  it('draws the same coralInk mark on Home, and speaks the count in Home’s own name', () => {
+    renderBar('you', { gamesNeedingYou: 2 });
+
+    expect(badge()).toMatchObject({
+      position: 'absolute',
+      backgroundColor: theme.color.coralInk,
+      height: theme.size.tabBar.badge,
+      minWidth: theme.size.tabBar.badge,
+    });
+    expect(screen.getByLabelText('Home, 2 games waiting on you')).toBeTruthy();
+  });
+
+  it('hardcodes no plural', () => {
+    renderBar('you', { gamesNeedingYou: 1 });
+
+    expect(screen.getByLabelText('Home, 1 game waiting on you')).toBeTruthy();
+  });
+
+  it('is drawn with Classic play too, beside the Chats one, each on its own column', () => {
+    renderBar('you', { classicPlay: true, gamesNeedingYou: 1, challengesWaiting: 3 });
+
+    expect(screen.getByLabelText('Home, 1 game waiting on you')).toBeTruthy();
+    expect(screen.getByLabelText('Chats, 3 challenges waiting')).toBeTruthy();
+    for (const name of ['Players', 'Play', 'You']) {
+      expect(screen.getByLabelText(name)).toBeTruthy();
+    }
   });
 });

@@ -1,5 +1,5 @@
-import { NowScreen } from '@/features/shell/types';
+import { HomeScreen } from '@/features/shell/types';
 
-export default function NowRoute() {
-  return <NowScreen />;
+export default function HomeRoute() {
+  return <HomeScreen />;
 }

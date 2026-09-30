@@ -3,7 +3,7 @@
  * of them a placeholder.
  *
  * Named components rather than one taking a `tab` prop: a route file's whole job is to say
- * which screen a path is, and `<NowScreen />` says it where `<TabScreen tab="now" />` makes
+ * which screen a path is, and `<HomeScreen />` says it where `<TabScreen tab="now" />` makes
  * the route file hold the answer as data.
  *
  * **Every tab has left the placeholder table.** Play's stub was an entry until
@@ -23,11 +23,13 @@
 import { GamesRail } from '@/features/plans/types';
 
 import { ShellScreen } from './ShellScreen';
-import { NOW_COPY } from './shellCopy';
+import { HOME_COPY } from './shellCopy';
 
 /**
- * **The landing, after onboarding and after a send — and it stopped being a placeholder here**
- * ([#367](https://github.com/Raketa02/Raketa/issues/367)).
+ * **Home — the landing, after onboarding and after a send — and it stopped being a placeholder
+ * here** ([#367](https://github.com/Raketa02/Raketa/issues/367)). It was **Now** until
+ * [#550](https://github.com/Raketa02/Raketa/issues/550) renamed the tab whole — key, label, copy
+ * and this component — with the route staying `/`: your games from the moment they fill.
  *
  * The games list arrived under a citation first ([#314](https://github.com/Raketa02/Raketa/issues/314));
  * what replaces both is `GamesRail`, which is *what is happening today and next* drawn rather than
@@ -38,10 +40,10 @@ import { NOW_COPY } from './shellCopy';
  * **It still never says nothing is happening.** The line says what the tab **is** and the one under
  * it names the act, which is true whether or not a game is on screen.
  */
-export function NowScreen() {
+export function HomeScreen() {
   return (
-    <ShellScreen title={NOW_COPY.title}>
-      <GamesRail empty={NOW_COPY.empty} />
+    <ShellScreen title={HOME_COPY.title}>
+      <GamesRail empty={HOME_COPY.empty} />
     </ShellScreen>
   );
 }

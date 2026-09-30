@@ -27,7 +27,7 @@ import {
 } from '@/test-support/officialGroupsServer';
 import {
   GATE_USER,
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   SPORTS_SERVED,
   launchByLink,
   launchSignedIn,
@@ -161,7 +161,7 @@ describe('a group link, on a phone that is signed in', () => {
   it('opens it from a link tapped while the app is open, keeping nothing but the code', async () => {
     serve(KUBA);
     await launchSignedIn();
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
 
     openLink(`${LINK}?utm_source=whatsapp&api=https://evil.example`);
 
@@ -181,7 +181,7 @@ describe('a link the app cannot read', () => {
 
     await launchByLink('/join/k7pq', { signedIn: true });
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     expect(searched()).toEqual([]);
   });
@@ -191,12 +191,12 @@ describe('a link the app cannot read', () => {
     async (url) => {
       serve(KUBA);
       await launchSignedIn();
-      expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+      expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
 
       openLink(url);
 
       expect(screen).toHavePathname('/');
-      expect(screen.getByText(NOW_TAB_LINE)).toBeTruthy();
+      expect(screen.getByText(HOME_TAB_LINE)).toBeTruthy();
       expect(searched()).toEqual([]);
     },
   );

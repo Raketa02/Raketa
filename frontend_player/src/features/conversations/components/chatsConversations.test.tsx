@@ -21,7 +21,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import {
   CONVERSATIONS_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoClassicPlay,
   stubChallenges,
   stubConversation,
   stubConversations,
@@ -118,7 +118,7 @@ afterEach(async () => {
 /** Land in the app with these rooms, and open the Chats tab. */
 async function openChats(rooms: readonly Wire['ConversationRowSchema'][] = []) {
   stubConversations(transport, rooms);
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
 
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
@@ -395,7 +395,7 @@ describe('what the section says when it holds nothing', () => {
   /** A section that vanished on a read failure is indistinguishable from having no rooms. */
   it('says a read failed rather than drawing the emptiness it cannot tell apart', async () => {
     transport.on('GET', CONVERSATIONS_PATH, () => errorResponse(500, 'boom'));
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
 
     fireEvent.press(await screen.findByLabelText(/^Chats/));
 

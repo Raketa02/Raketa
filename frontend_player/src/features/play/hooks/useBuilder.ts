@@ -186,7 +186,7 @@ export function useSearchRecord(searchId: string | undefined) {
  * builder or pool opened on one is the next step of a journey already under way: Find a game's,
  * or fill-the-seat's. One opened on an id with no record behind it is a link, not a journey.
  *
- * The `find_a_game` gate asks it
+ * The `classic_play` gate asks it
  * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §7): while the flag is off, the builder and the pool close to a link and
  * stay open to a journey, so a toggle that lands mid-search never pulls a screen out from under
  * the player (PRD #476 story 21), and fill-the-seat — which pushes the same `/play/pool` — is

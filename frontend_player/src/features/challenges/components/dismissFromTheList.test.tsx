@@ -24,12 +24,12 @@ import { onlineManager } from '@tanstack/react-query';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
-import { gameKeys } from '@/features/games/types';
+import { gameKeys, type Game } from '@/features/games/types';
 import {
   CHALLENGES_PATH,
   GAMES_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoClassicPlay,
   stubChallenges,
   stubConversations,
   stubGames,
@@ -207,7 +207,7 @@ async function openChats(
   rows: readonly Wire['ChallengeSchema'][] = [LEFT_ALONE_ROW, PRESSED_ROW, LAPSED_ROW],
 ) {
   stubChallenges(transport, rows, READ_AT);
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
 
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
@@ -316,6 +316,25 @@ describe('the swipe', () => {
   });
 });
 
+/**
+ * A game as the games list holds it once mapped — whole, because Home's badge in the bar reads
+ * every game in that list on every screen (#550), and a half-built one is not a game it can fold.
+ * Two called-off courts; which one the reply drops is what the walk below is about.
+ */
+function cachedGame(gameId: string, challengeId: string): Game {
+  return {
+    gameId,
+    challengeId,
+    sport: 'padel',
+    standing: 'CALLED_OFF',
+    seats: [{ side: 'A', playerId: ME, name: 'me_' }, { side: 'B' }],
+    plannedAt: READ_AT,
+    calledOffAt: READ_AT,
+    proposals: [],
+    readAt: READ_AT,
+  };
+}
+
 describe('the dismissal', () => {
   /**
    * **Gone without a refetch, and no sheet.** The reply says the court is cleared for me, and
@@ -327,8 +346,8 @@ describe('the dismissal', () => {
     await openChats();
     transport.on('POST', DISMISSAL_PATH, () => noContent());
     queryClient.setQueryData(gameKeys.list(), [
-      { gameId: GAME, challengeId: LEFT_ALONE },
-      { gameId: OTHER_GAME, challengeId: PRESSED },
+      cachedGame(GAME, LEFT_ALONE),
+      cachedGame(OTHER_GAME, PRESSED),
     ]);
     const held = new Promise<Response>(() => undefined);
     transport.on('GET', CHALLENGES_PATH, () => held);
@@ -341,24 +360,30 @@ describe('the dismissal', () => {
     expect(lapsed()).toBeTruthy();
     expect(screen.queryByText(/before you|are you sure/i)).toBeNull();
     expect(transport.requestsTo('POST', DISMISSAL_PATH)).toHaveLength(1);
-    expect(queryClient.getQueryData(gameKeys.list())).toEqual([
-      { gameId: OTHER_GAME, challengeId: PRESSED },
-    ]);
+    expect(queryClient.getQueryData(gameKeys.list())).toEqual([cachedGame(OTHER_GAME, PRESSED)]);
   });
 
-  /** And then both lists a called-off court is drawn on are re-read, and the row is not back. */
-  it('re-reads the challenges, and marks the games stale', async () => {
+  /**
+   * And then both lists a called-off court is drawn on are re-read, and the row is not back. The
+   * games list is held on every screen by Home's badge in the bar (#550), so it is counted as a
+   * read like the challenges.
+   */
+  it('re-reads the challenges and the games', async () => {
     await openChats();
     dismissalAnswers();
-    queryClient.setQueryData(gameKeys.list(), []);
-    const challenges = transport.requestsTo('GET', CHALLENGES_PATH).length;
+    const before = {
+      challenges: transport.requestsTo('GET', CHALLENGES_PATH).length,
+      games: transport.requestsTo('GET', GAMES_PATH).length,
+    };
 
     await revealAndPress();
 
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', CHALLENGES_PATH).length).toBeGreaterThan(challenges),
-    );
-    expect(queryClient.getQueryState(gameKeys.list())?.isInvalidated).toBe(true);
+    await waitFor(() => {
+      expect(transport.requestsTo('GET', CHALLENGES_PATH).length).toBeGreaterThan(
+        before.challenges,
+      );
+      expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(before.games);
+    });
     expect(leftAloneIfListed()).toBeNull();
     expect(screen.queryByText(CALLED_OFF_TAG)).toBeTruthy(); // Ola's court still wears its tag.
   });
@@ -395,15 +420,19 @@ describe('a refused dismissal', () => {
   it('re-reads both lists and says nothing, and the row stays', async () => {
     await openChats();
     transport.on('POST', DISMISSAL_PATH, () => errorResponse(409, 'game_is_not_called_off'));
-    queryClient.setQueryData(gameKeys.list(), []);
-    const challenges = transport.requestsTo('GET', CHALLENGES_PATH).length;
+    const before = {
+      challenges: transport.requestsTo('GET', CHALLENGES_PATH).length,
+      games: transport.requestsTo('GET', GAMES_PATH).length,
+    };
 
     await revealAndPress();
 
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', CHALLENGES_PATH).length).toBeGreaterThan(challenges),
-    );
-    expect(queryClient.getQueryState(gameKeys.list())?.isInvalidated).toBe(true);
+    await waitFor(() => {
+      expect(transport.requestsTo('GET', CHALLENGES_PATH).length).toBeGreaterThan(
+        before.challenges,
+      );
+      expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(before.games);
+    });
     expect(leftAlone()).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });

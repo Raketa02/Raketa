@@ -293,7 +293,7 @@ export function pairingAbsenceLine(absence: PairingAbsence, sportName: string): 
  * refuses to tell an invitee and this line does not touch it, because Ania saying yes to Karol
  * on Players is a fact she already holds. Client-side, off the same `GET /interest` the deck
  * reads; no code crosses for it. The handle is whole (ADR-0107), and *Players* is the tab's own
- * drawn name, as `NOW_COPY` points at *Play* by its word.
+ * drawn name, as `HOME_COPY` points at *Play* by its word.
  */
 export function saidYesOnPlayersLine(organiserName: string): string {
   return `You said yes to ${organiserName} on Players`;

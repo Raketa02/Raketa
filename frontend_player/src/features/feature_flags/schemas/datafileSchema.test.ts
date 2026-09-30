@@ -7,7 +7,7 @@ const BUILT = {
   revision: '1',
   segments: {},
   features: {
-    find_a_game: {
+    classic_play: {
       bucketBy: 'playerId',
       traffic: [{ key: 'everyone', segments: '*', percentage: 100000 }],
     },

@@ -11,7 +11,7 @@
  * is checked. A link that does not survive that has no list to draw and no seat to fill, which
  * is not a pool but Play's own start.
  *
- * **Closed to a bare link while `find_a_game` is off, never to a search under way**
+ * **Closed to a bare link while `classic_play` is off, never to a search under way**
  * ([ADR-0180](../../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
  * §7) — the builder's rule, for the builder's reasons. It matters twice over here, because this
  * one route serves two journeys: Find a game's builder pushes it, and so does the builder under a
@@ -28,11 +28,11 @@ import { PoolScreen, parsePoolRouteParams, useSearchWasRun } from '@/features/pl
 
 export default function PoolRoute() {
   const params = parsePoolRouteParams(useLocalSearchParams());
-  const findAGame = useFeatureOnMount('find_a_game');
+  const classicPlay = useFeatureOnMount('classic_play');
   const searchWasRun = useSearchWasRun(params?.search);
 
   if (params === undefined) return <Redirect href="/play" />;
-  if (!findAGame && !searchWasRun) return <Redirect href="/play" />;
+  if (!classicPlay && !searchWasRun) return <Redirect href="/play" />;
 
   return <PoolScreen arrivalSearchId={params.search} arrivalSeat={params.seat} />;
 }

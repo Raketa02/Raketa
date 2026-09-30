@@ -33,7 +33,7 @@ import {
   rating,
 } from '@/test-support/officialGroupsServer';
 import {
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   ONBOARDING_ROUTES,
   launchByLink,
   launchSignedIn,
@@ -337,7 +337,7 @@ describe('an account the invitation was sent to', () => {
     await waitFor(() =>
       expect(toasts()).toEqual(['That link has expired. Ask the club to send a new one.']),
     );
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen.queryByRole('header', { name: SHEET_TITLE })).toBeNull();
   });
 
@@ -364,7 +364,7 @@ describe('a phone signed in as somebody else', () => {
     expect(screen.getByText(new RegExp(`You’re signed in as ${KUBA_EMAIL}`))).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
     // Kuba's own app is under it, and nothing was accepted.
-    expect(screen.getByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(screen.getByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen.queryByRole('header', { name: SHEET_TITLE })).toBeNull();
   });
 
@@ -423,7 +423,7 @@ describe('a phone signed in as somebody else', () => {
     await waitFor(() => expect(screen).toHavePathname('/sign-in'));
     await signInAs(KUBA_EMAIL);
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen.queryByRole('header', { name: FOR_TOMEK })).toBeNull();
     expect(transport.requestsTo('POST', BY_TOKEN_PATH)).toHaveLength(2);
   });
@@ -438,7 +438,7 @@ describe('a phone signed in as somebody else', () => {
 
     await waitFor(() => expect(screen.queryByRole('header', { name: FOR_TOMEK })).toBeNull());
     expect(getSessionStatus()).toBe('authenticated');
-    expect(screen.getByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(screen.getByText(HOME_TAB_LINE)).toBeTruthy();
   });
 
   /** A link that no longer works is said, not signed out for. */

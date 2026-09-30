@@ -90,7 +90,7 @@ import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { featureFlagKeys } from '@/features/feature_flags/types';
-import { NOW_COPY } from '@/features/shell/types';
+import { HOME_COPY } from '@/features/shell/types';
 import { beginSession, setSessionStatus } from '@/shared/lib/auth';
 import {
   ClipboardProvider,
@@ -124,7 +124,7 @@ import { errorResponse, json, type Transport, type Wire } from './transport';
  * because `stubGate` stubs the games list to nothing and a launch that arrives with no games is
  * the state they are all asserting.
  */
-export const NOW_TAB_LINE = NOW_COPY.empty.line;
+export const HOME_TAB_LINE = HOME_COPY.empty.line;
 
 export const ONBOARDING_ROUTES = {
   _layout: TestRoot,
@@ -902,17 +902,19 @@ export async function datafileSettled(transport: Transport, count = 1) {
 }
 
 /**
- * **Find a game, switched on** — for every suite about it, since
- * [#512](https://github.com/Raketa02/Raketa/issues/512) turned `find_a_game`'s code default off and
- * the Play tab opens on Groups without a datafile.
+ * **Classic play, switched on** — for every suite about the old loop: Find a game, the Players
+ * deck, Chats. Since [#512](https://github.com/Raketa02/Raketa/issues/512) the Play tab opens on
+ * Groups without a datafile, and since [#550](https://github.com/Raketa02/Raketa/issues/550) the
+ * bar is Home · Play · You without one; `classic_play` brings all of it back at once.
  *
  * Served, launched, and **waited on before anything presses Play**: a gate reads its flag once, when
  * its screen mounts, so a Play press that raced the datafile would land on Groups — correctly, and
- * not what the suite is about. Call it where the suite would have called `launchSignedIn`, after
+ * not what the suite is about. The bar follows the flag, so once the datafile has settled Players
+ * and Chats are there to press. Call it where the suite would have called `launchSignedIn`, after
  * `stubGate` (which serves no datafile).
  */
-export async function launchIntoFindAGame(transport: Transport, initialUrl = '/') {
-  stubDatafile(transport, datafileFor({ find_a_game: 'on' }));
+export async function launchIntoClassicPlay(transport: Transport, initialUrl = '/') {
+  stubDatafile(transport, datafileFor({ classic_play: 'on' }));
   await launchSignedIn(initialUrl);
   await datafileSettled(transport);
 }

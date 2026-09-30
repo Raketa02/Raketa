@@ -130,3 +130,10 @@ export type { LineUp } from './domain/lock';
  */
 export { useGameCardName } from './hooks/useGameCardName';
 export { cardStateWord } from './components/nowPresentation';
+
+/**
+ * **How many of your games need you** — the count on Home's column, which the shell reads for the
+ * bar ([#550](https://github.com/Raketa02/Raketa/issues/550)). The rail's own cards, counted by
+ * `needsYou`: a seat open, a result to enter, a score waiting on your agreement.
+ */
+export { useGamesNeedingYou } from './hooks/useGamesNeedingYou';

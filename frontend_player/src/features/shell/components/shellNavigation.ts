@@ -11,7 +11,7 @@
  * ## One function, and all three of its callers
  *
  * `resetShellStack` is the whole mechanism, and what calls it are the three halves of the rule:
- * a flanking tab lays down one screen, ⚡Play lays down two, and **the send lays down `[Now]`**,
+ * a flanking tab lays down one screen, ⚡Play lays down two, and **the send lays down `[Home]`**,
  * which is *a sent game is gone for good* ([#274](https://github.com/Raketa02/Raketa/issues/274)).
  * There was a fourth for as long as the deck lived under Play — the *Find a game* segment
  * re-entered the tab from inside it ([#268](https://github.com/Raketa02/Raketa/issues/268)),
@@ -125,7 +125,7 @@ function startOf(tab: TabBarKey): string {
 }
 
 /**
- * Play's entry: **Find a game, whichever Play screen was last open**, with Now behind it.
+ * Play's entry: **Play's root, whichever Play screen was last open**, with Home behind it.
  *
  * Once the half of the shell another feature called — the segmented control's *Find a game*
  * was the same operation as pressing ⚡, which is why a player on the deck who tapped it did
@@ -138,10 +138,10 @@ export function enterPlay(): void {
 }
 
 /**
- * **Where a sent challenge lands: `[Now]`, and the Play session is over.**
+ * **Where a sent challenge lands: `[Home]`, and the Play session is over.**
  *
  * The fourth caller of the reset, and the one the module docblock has been naming since the
- * shell was built. It is `[Now]` rather than `[Now, …]` because there is nothing left to be
+ * shell was built. It is `[Home]` rather than `[Home, …]` because there is nothing left to be
  * behind: the court the challenge was built on is gone, the line-up with it, and a stack that
  * kept the builder underneath would let back walk into a court whose people have already been
  * asked.
@@ -153,6 +153,6 @@ export function enterPlay(): void {
  * placeholder, which is exactly why that sentence is the whole confirmation and why it is the
  * one announcement in the app that interrupts.
  */
-export function landOnNow(): void {
-  resetShellStack([SHELL_TAB_ROOT.now]);
+export function landOnHome(): void {
+  resetShellStack([SHELL_TAB_ROOT.home]);
 }

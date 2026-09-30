@@ -164,6 +164,40 @@ export function mayBeCleared(name: GameCardName): boolean {
 }
 
 /**
+ * **Whether this card is one of the games that need you** — what Home's badge counts
+ * ([#550](https://github.com/Raketa02/Raketa/issues/550),
+ * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)):
+ * *a result to enter or confirm, a payment to confirm, a seat open in your game.* Three of those are
+ * cards this rail already draws; *a payment to confirm* is the booked game's, and arrives with it.
+ *
+ * A `Record` over the union, so a new card name is a decision here rather than a fall-through.
+ * **`confirm` is the one that cannot be read off the name**: the card is the same in all four
+ * `AWAITING_ANSWER` arms, and only two of them wait on you — so the caller hands in whether a
+ * score is waiting on your agreement, which is `features/games`' fold (`awaitsYourAgreement`) and
+ * crosses as an answer rather than an import, keeping this module the pure TypeScript it is.
+ */
+const NEEDS_YOU: Readonly<Record<GameCardName, boolean>> = {
+  planning: false,
+  'game-on': false,
+  // A seat open in your game — the fill is yours as much as anybody's on the court.
+  'needs-a-player': true,
+  // A result to enter: the agreed point is behind the fold.
+  'needs-result': true,
+  // A result to confirm — narrowed by the caller's answer, below.
+  confirm: true,
+  counted: false,
+  uncounted: false,
+  'never-played': false,
+  'called-off': false,
+  unreadable: false,
+};
+
+export function needsYou(name: GameCardName, scoreAwaitsYourAgreement: boolean): boolean {
+  if (name === 'confirm') return scoreAwaitsYourAgreement;
+  return NEEDS_YOU[name];
+}
+
+/**
  * **What the game screen's entry arm leads with** — the card's own door, read as a landing.
  *
  * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.2 lands

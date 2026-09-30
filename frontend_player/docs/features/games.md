@@ -276,3 +276,12 @@ screen draws one act**: `GameScreen`'s `courtActs` slot became `fill`, drawn dir
 card on the plan lead and stood down with the doors while the grid is open; `OpenTheChat` is
 gone from the screen, and with it this feature's reach into `features/conversations` — the
 seam ADR-0149 §3 named is back to its one importer.
+
+**`awaitsYourAgreement` — a score waiting on you**
+([#550](https://github.com/Raketa02/Raketa/issues/550)). Home's badge counts _a result to confirm_,
+and `features/plans`, which counts the cards, cannot tell from _Confirm the result_ whether the arm
+waits on the reader. So this feature answers it, beside `resultArgument`: a score waits on your
+agreement exactly when agreeing is an act the screen would offer you — the other side's score up and
+unanswered, or two scores standing with nobody agreed. Your own score waiting on them does not, and
+neither does an agreement running out its grace. Read off `actsOffered`, so the badge and the screen
+cannot disagree about a state; what crosses is the boolean, never the argument.

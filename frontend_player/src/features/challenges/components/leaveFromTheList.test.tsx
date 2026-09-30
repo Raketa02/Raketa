@@ -22,13 +22,13 @@ import { AppError, offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
-import { gameKeys } from '@/features/games/types';
-import { planKeys } from '@/features/plans/types';
 import {
   CHALLENGES_PATH,
   CONVERSATIONS_PATH,
+  GAMES_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoClassicPlay,
+  PLANS_PATH,
   stubChallenges,
   stubConversations,
   stubGames,
@@ -169,7 +169,7 @@ afterEach(async () => {
 async function openChats() {
   stubConversations(transport, [PADEL_ROOM, SQUASH_ROOM]);
   stubChallenges(transport, [PADEL_CHALLENGE], READ_AT);
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
 
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
@@ -345,7 +345,7 @@ describe('what the sheet says the leaving does', () => {
   async function openChatsWith(court: Wire['ChallengeSchema']) {
     stubConversations(transport, [{ ...PADEL_ROOM, game_id: court.game_id ?? null }, SQUASH_ROOM]);
     stubChallenges(transport, [court], READ_AT);
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
 
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
@@ -415,18 +415,19 @@ describe('the leave', () => {
 
   /**
    * And then every list the seat touched is re-read, as the game screen's departure re-reads
-   * them. The two lists this tab holds are refetched and counted; the games and the plans are not
-   * mounted here, so they are seeded and asserted **stale** — an inactive query is marked and not
-   * refetched, and the mark is the whole of the promise on a tab that does not read them.
+   * them. The two lists this tab holds are refetched and counted, and so are the games and the
+   * plans: they were seeded and asserted **stale** while nothing on this tab read them, and Home's
+   * badge in the bar reads both on every screen now (#550), so the mark is a read and is counted
+   * like the others.
    */
-  it('re-reads the conversations and the challenges, and marks the games and the plans stale', async () => {
+  it('re-reads the conversations, the challenges, the games and the plans', async () => {
     await openChats();
     departureAnswers();
-    queryClient.setQueryData(gameKeys.list(), []);
-    queryClient.setQueryData(planKeys.list(), []);
     const before = {
       rooms: transport.requestsTo('GET', CONVERSATIONS_PATH).length,
       challenges: transport.requestsTo('GET', CHALLENGES_PATH).length,
+      games: transport.requestsTo('GET', GAMES_PATH).length,
+      plans: transport.requestsTo('GET', PLANS_PATH).length,
     };
 
     await revealAndPress();
@@ -437,9 +438,9 @@ describe('the leave', () => {
       expect(transport.requestsTo('GET', CHALLENGES_PATH).length).toBeGreaterThan(
         before.challenges,
       );
+      expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(before.games);
+      expect(transport.requestsTo('GET', PLANS_PATH).length).toBeGreaterThan(before.plans);
     });
-    expect(queryClient.getQueryState(gameKeys.list())?.isInvalidated).toBe(true);
-    expect(queryClient.getQueryState(planKeys.list())?.isInvalidated).toBe(true);
   });
 
   /** Pending, never optimistic: the sheet stays up and its act goes busy until the reply lands. */

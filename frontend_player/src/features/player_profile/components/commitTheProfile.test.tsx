@@ -22,7 +22,7 @@ import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/sh
 import { queryClient } from '@/shared/lib/query-client';
 import {
   launchSignedIn,
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   resetLocation,
   SPORTS_SERVED,
   stubGate as stubGateWith,
@@ -501,7 +501,7 @@ describe('a failed commit', () => {
     // had been written at all.
     expect(screen).toHavePathname('/opt-in');
     expect(screen.getByLabelText(YES).props.accessibilityState?.selected).toBe(true);
-    expect(screen.queryByText(NOW_TAB_LINE)).toBeNull();
+    expect(screen.queryByText(HOME_TAB_LINE)).toBeNull();
 
     // And the retry is the control that failed, open rather than stuck busy.
     expect(finish().props.accessibilityState?.disabled).toBe(false);
@@ -631,7 +631,7 @@ describe('once the commit has landed', () => {
     expect(screen.getByText('What we keep from setting up')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Start playing'));
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 
@@ -644,7 +644,7 @@ describe('once the commit has landed', () => {
 
     fireEvent.press(screen.getByLabelText('Start playing'));
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     // The gate's fourth branch is answered now, so the way it used to turn this player round
     // into the steps is closed.
     expect(screen).toHavePathname('/');
@@ -661,7 +661,7 @@ describe('once the commit has landed', () => {
 
     await launchSignedIn();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     // And no second commit was made on the way: nothing about launching writes anything.
     expect(commits()).toHaveLength(1);

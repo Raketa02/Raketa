@@ -35,15 +35,16 @@ import { PICK_PLAYERS_LABEL, endPlaySession, optimisedForLine } from '@/features
 import { PROPOSE_SHEET_TITLE, SEND_CHALLENGE_LABEL } from '../types';
 import {
   CHALLENGES_PATH,
-  GATE_USER,
   datafileFor,
   datafileSettled,
+  GATE_USER,
+  launchIntoClassicPlay,
   launchSignedIn,
   stubChallenges,
   stubConversations,
+  stubDatafile,
   stubGames,
   stubGate,
-  stubDatafile,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
@@ -237,18 +238,33 @@ afterEach(async () => {
 });
 
 /** Land in the app, open Chats, and tap the one row — every assertion starts here. */
+/**
+ * Into the Chats inbox — by its column, with Classic play on, which is how the old loop is reached;
+ * or with it **off**, by the inbox's route, because then the bar draws no Chats column and the
+ * fill's point is that nothing on its path reads the flag (#550).
+ */
+async function launchIntoTheInbox(classicPlay: boolean) {
+  if (classicPlay) {
+    await launchIntoClassicPlay(transport);
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+  } else {
+    await launchSignedIn('/chats');
+    await datafileSettled(transport);
+  }
+  await waitFor(() => expect(screen).toHavePathname('/chats'));
+}
+
 async function openTheChallenge(
   answer: Wire['ChallengeDetailResponse'] = detail(),
   listed: Wire['ChallengeSchema'] = row(),
   rooms: readonly Wire['ConversationRowSchema'][] = [],
+  classicPlay = true,
 ) {
   stubChallenges(transport, [listed], READ_AT);
   stubConversations(transport, rooms);
   transport.on('GET', DETAIL_PATH, () => json(answer));
 
-  await launchSignedIn();
-  fireEvent.press(await screen.findByLabelText(/^Chats/));
-  await waitFor(() => expect(screen).toHavePathname('/chats'));
+  await launchIntoTheInbox(classicPlay);
 
   // A challenge row's name is `who, sport, line` and a conversation row's is `who, sport` — so
   // the trailing separator is what tells the two sections' rows apart when both hold this pair.
@@ -270,9 +286,7 @@ async function openTheChallengeByRoute(
   stubConversations(transport, rooms);
   transport.on('GET', DETAIL_PATH, () => json(answer));
 
-  await launchSignedIn();
-  fireEvent.press(await screen.findByLabelText(/^Chats/));
-  await waitFor(() => expect(screen).toHavePathname('/chats'));
+  await launchIntoTheInbox(true);
 
   act(() => router.push(`/chats/challenge/${CHALLENGE_ID}`));
   await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
@@ -503,19 +517,19 @@ describe('⚡ fill the seats', () => {
 });
 
 /**
- * **Fill-the-seat is not behind `find_a_game`**
+ * **Fill-the-seat is not closed by `classic_play`**
  * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
- * §7, [#479](https://github.com/Raketa02/Raketa/issues/479)). The flag closes Find a game and
- * the builder and pool under Play with it; a challenge already sent still has to be fillable, and
- * this journey reaches the builder at its own route and the pool at Play's — which the gate lets
- * through because it is opened on a search the fill already ran, like any search under way.
+ * §7, [#479](https://github.com/Raketa02/Raketa/issues/479), [#550](https://github.com/Raketa02/Raketa/issues/550)).
+ * The flag closes Find a game and the builder and pool under Play with it; a challenge already
+ * sent still has to be fillable, and this journey reaches the builder at its own route and the
+ * pool at Play's — which the gate lets through because it is opened on a search the fill already
+ * ran, like any search under way.
  */
-describe('with Find a game switched off', () => {
-  beforeEach(() => stubDatafile(transport, datafileFor({ find_a_game: 'off' })));
+describe('with Classic play switched off', () => {
+  beforeEach(() => stubDatafile(transport, datafileFor({ classic_play: 'off' })));
 
   it('still pushes the builder under the challenge', async () => {
-    await openTheChallenge();
-    await datafileSettled(transport);
+    await openTheChallenge(detail(), row(), [], false);
 
     await fillTheSeats();
 
@@ -523,8 +537,7 @@ describe('with Find a game switched off', () => {
   });
 
   it('still opens the pool against a seat the fill took', async () => {
-    await openTheChallenge();
-    await datafileSettled(transport);
+    await openTheChallenge(detail(), row(), [], false);
     await fillTheSeats();
 
     // Take the fill's pick back out of the seat, then fill the hole from the pool — the one way
@@ -623,7 +636,7 @@ describe('the send', () => {
   /**
    * **It pops back to the challenge screen**, which is the surface that draws the result — the
    * new seats, their fresh deadlines, and a standing that may now be awaiting answers again.
-   * Nothing here resets the shell stack: `landOnNow`'s *there is nothing left to be behind* is
+   * Nothing here resets the shell stack: `landOnHome`'s *there is nothing left to be behind* is
    * false when the thing behind is the challenge you were completing.
    */
   it('pops back to the challenge rather than landing on Now', async () => {

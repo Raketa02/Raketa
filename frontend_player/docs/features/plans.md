@@ -417,3 +417,16 @@ court: `CallOff` and `LeaveGame` are deleted from `features/challenges`, so the 
 never imports them, and `mayLeave` became `momentAhead`, the fill's half of its rule. Past the
 moment the screen draws nothing for the court, and the hour calls it off. The trash on the
 called-off card is unchanged; the row it clears on Chats is ADR-0173's.
+
+**Home's badge is this feature's count** ([#550](https://github.com/Raketa02/Raketa/issues/550),
+[the mechanics §3](../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)).
+`needsYou` in `domain/gameCard.ts` names the cards that are _games that need you_ — **Needs a
+player** (a seat open in your game), **Needs result** (a result to enter) and **Confirm the result**
+only when a score waits on the reader's agreement — as a `Record` over every card name, so a new
+card is a decision there. _Confirm the result_ is one card over four arms and only two of them wait
+on you, so that answer comes from `features/games` (`awaitsYourAgreement`) and crosses as a boolean,
+keeping `domain/` free of that feature at runtime. `useGamesNeedingYou` counts the rail's own rows —
+the same two reads, the same join by challenge, the same shelf — so the badge cannot count a card
+Home does not draw, and answers `undefined` for zero, in flight or failed, as the Chats badge does.
+The shell mounts it for the session, which makes both lists live everywhere (see
+[`shell.md`](shell.md)). _A payment to confirm_ joins when the booked game does (#555, #556).

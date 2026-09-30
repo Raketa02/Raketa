@@ -37,7 +37,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
   datafileFor,
   datafileSettled,
-  launchIntoFindAGame,
+  launchIntoClassicPlay,
   launchSignedIn,
   PROFILE_SURFACE_SERVED,
   stubDatafile,
@@ -249,7 +249,7 @@ afterEach(async () => {
 
 /** Search, spend the latch, land on the court, and open the pool against its first hole. */
 async function openThePool() {
-  await launchIntoFindAGame(transport);
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 
@@ -268,24 +268,24 @@ async function openThePool() {
 }
 
 /**
- * **A search started while Find a game was on is finished, whatever the flag says afterwards**
+ * **A search started while Classic play was on is finished, whatever the flag says afterwards**
  * ([#479](https://github.com/Raketa02/Raketa/issues/479), ADR-0180 §7, PRD #476 story 21).
  *
  * The toggle arrives the way it does on a device — the app comes back to the front with Find a
  * game on screen and fetches the datafile again — and the player then does what they were about
  * to do. The builder and the pool read the flag when they mount and find it off; what lets them
  * through is that the search they are opened on is one this player already ran. A link with no
- * search behind it still lands on Play (`feature_flags/components/theFindAGameGate.test.tsx`).
+ * search behind it still lands on Play (`feature_flags/components/theClassicPlayGate.test.tsx`).
  */
-describe('Find a game switched off in the middle of a search', () => {
+describe('Classic play switched off in the middle of a search', () => {
   it('still takes the search to the builder and on to the pool', async () => {
-    stubDatafile(transport, datafileFor({ find_a_game: 'on' }));
+    stubDatafile(transport, datafileFor({ classic_play: 'on' }));
     await launchSignedIn();
     await datafileSettled(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
     await screen.findByLabelText('Tuesday evening');
 
-    stubDatafile(transport, datafileFor({ find_a_game: 'off' }));
+    stubDatafile(transport, datafileFor({ classic_play: 'off' }));
     act(() => {
       focusManager.setFocused(false);
       focusManager.setFocused(true);
@@ -339,7 +339,7 @@ async function openTheSinglesPool(
     json(singles() as Wire['ShortlistResponse']),
   );
 
-  await launchIntoFindAGame(transport);
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 
@@ -1068,7 +1068,7 @@ describe('the ladder', () => {
 
   it('is drawn on no other Play screen', async () => {
     offerRungs();
-    await launchIntoFindAGame(transport);
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
     await screen.findByLabelText('Tuesday evening');
 

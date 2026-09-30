@@ -24,3 +24,7 @@ and **Explore is this screen**, drawn under the segment rather than as the whole
 where the rebuilt Find a game grows (play 2, background only), so the empty feature that was waiting
 for it sits under the name it will have. Still no copy, for the reason above, and still
 `FIND_A_GAME_NEXT_TEST_ID` — the walks in `shell/components/playSegment.test.tsx` find Explore by it.
+
+**Behind `classic_play` now** ([#550](https://github.com/Raketa02/Raketa/issues/550)). The flag
+that decides whether Play › Explore draws this screen or the old Find a game is the old loop's one
+flag; nothing about the screen changed.
