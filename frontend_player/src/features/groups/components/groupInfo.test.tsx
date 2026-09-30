@@ -37,6 +37,7 @@ import {
   type FakeClipboard,
   type FakeShare,
 } from '@/test-support/platform';
+import { stubGroupDeck } from '@/test-support/groupDeck';
 import {
   errorResponse,
   installTransport,
@@ -220,6 +221,7 @@ function crew({
       transport.on('GET', GROUP_PATH, () =>
         state.deleted || !has(ME) ? errorResponse(404, 'group_not_found') : json(group()),
       );
+      stubGroupDeck(transport, GROUP_ID);
       transport.on('GET', `${GROUP_PATH}/members`, (request) => {
         const sport = (new URLSearchParams(request.path.split('?')[1]).get('sport') ??
           'PADEL') as Wire['Sport'];

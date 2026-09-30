@@ -376,3 +376,17 @@ opens the screen, and when, is [`links.md`](links.md)'s.
 **`find_a_game` became `classic_play`** ([#550](https://github.com/Raketa02/Raketa/issues/550)).
 Nothing here changed: Play opens on Groups whenever the old loop's one flag is off, which is the
 default.
+
+**Games is the deck** ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A1–A2).
+`GamesTab` hands `proposals`' `GamesDeck` the kind the page's switch stands on — the game-intent
+store, which Friends' switch shares, so one choice is one choice on both tabs — and the starting card
+to draw while the segment deals nothing. **The starting card is unchanged** (_Just you so far_, _3 of
+4_, _Nothing picked right now_), and _Nothing picked right now_ gains a third door under the link's
+two, _Post a game_, drawn and disabled until posting ships (#558) — Fill in's own `PostAGame`, now in
+`LinkCard`'s `foot`. **The tab bar counts Games** — the cards somebody is already In on with you, off
+the same deck read the tab draws (`useGamesBadge`), in the Info badge's mark and spoken _Games, 4 with
+somebody In_; the Fill in count waits for the rescue board (#545, #557). **Games lays itself out**:
+the deck fills the page between its switch and its three buttons, so `GroupScreen` draws it outside
+the page's scroller, and the deck scrolls itself in the states that are not a deck. Every suite that
+opens a group's page stubs the deck (`test-support/groupDeck`'s quiet deck); the tab's own walk is
+`groupGames.test.tsx`. The record of the deck itself is [`proposals.md`](proposals.md).

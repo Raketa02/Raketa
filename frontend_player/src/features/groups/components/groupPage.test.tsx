@@ -37,6 +37,7 @@ import {
   type FakeClipboard,
   type FakeShare,
 } from '@/test-support/platform';
+import { stubGroupDeck } from '@/test-support/groupDeck';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { useGameIntent } from '../store/gameIntent.store';
@@ -168,6 +169,7 @@ async function openGroups(
   );
   for (const [group, page] of pages) {
     transport.on('GET', `/api/v1/groups/${group.id}`, () => json(page));
+    stubGroupDeck(transport, group.id);
   }
   await launchSignedIn();
   fireEvent.press(await screen.findByLabelText('Play'));

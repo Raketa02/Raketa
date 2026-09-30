@@ -34,6 +34,7 @@ is referenced from the other by a sentence, not copied.
 | [`links.md`](links.md)                       | The three links into the app, the reader, the held link, the two sign-out sheets               |
 | [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate                         |
 | [`plans.md`](plans.md)                       | The plan card, the ladder, the Now rail and its nine card states                               |
+| [`proposals.md`](proposals.md)               | A group's Games deck, the game card, a game's details, the answers                             |
 | [`play.md`](play.md)                         | The copy deck, the three cards, the court, the four screens, `SH.whyfit`                       |
 | [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step, the consent copy, the commit                               |
 | [`player_record.md`](player_record.md)       | The record sheet a face opens, the metered rows, what opponents said                           |

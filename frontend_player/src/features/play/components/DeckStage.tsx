@@ -50,8 +50,9 @@
  *
  * ## Two real cards behind, and the stack is the stage's height
  *
- * The cards behind are the hand's next two people drawn as real cards, offset down and scaled
- * back, and only when that many remain — never a placeholder (§3). They are absolutely laid
+ * The cards behind are the hand's next two people drawn as real cards, offset down, scaled
+ * back and **faded** — 0,7 and 0,4, since #553 (Q90 of the Games grilling) — and only when that
+ * many remain — never a placeholder (§3). They are absolutely laid
  * over the stage and the stage takes `flex: 1`, so all three cards are one size: the height the
  * phone gives the deck, not the height a card's own content happens to want. They are hidden
  * from assistive technology, because the top card is the one element and a listener does not
@@ -85,9 +86,19 @@
  * is the court's own and belongs beside the animation it drives"*. The flight is the same case
  * — one surface, one pair of animations, numbers that mean nothing anywhere else — and the
  * settle borrows `motion.settle`, because a card coming to rest under a lifted finger is the
- * swipe row's own beat. The arrival borrows `motion.rise` for its length only: it is a **move
- * and never a fade**, because the card arriving was on the stage already, behind the one that
- * left, and a fade would take away the very card the release is meant to reveal.
+ * swipe row's own beat. The arrival borrows `motion.rise` for its length only: it is a **move,
+ * and never a fade in from nothing**, because the card arriving was on the stage already, behind
+ * the one that left, and a fade from nought would take away the very card the release is meant to
+ * reveal. It brightens from the opacity it stood behind at, which is the same move read in light.
+ *
+ * ## Two decks stand on it, and the stamps are each deck's words
+ *
+ * Players' *Let's play* / *Not today* and a group's Games deck's *I'm in* / *Not this time*
+ * ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A2.2) are one stage with two
+ * pairs of words, so the words are the caller's — `stamps` — and the drawing is this file's. A
+ * Games yes that charges at once carries its price beside the words (*I'M IN · 32 zł*, Q72): the
+ * words are uppercased by the stamp's style and the figure is not, because a figure is mono and
+ * `zł` is not a word to shout.
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -96,12 +107,13 @@ import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
 import { useHaptics } from '@/shared/lib/platform';
 import { theme, useCollapsedPresentation } from '@/shared/ui';
 
-import { STAMP_WORDS } from './deckPresentation';
+import { STAMP_JOIN } from './deckPresentation';
 import {
   claimsTheDrag,
   committed,
   crossedThreshold,
   stackLift,
+  stackOpacity,
   stackScale,
   stampOpacity,
   tilt,
@@ -137,6 +149,15 @@ const STAMP = { stroke: 3, tilt: 12, inset: theme.space.xl, top: 90 } as const;
 /** What the screen answers when a drag commits — whether the card may fly. */
 export type DragVerdict = 'taken' | 'withheld';
 
+/**
+ * What one stamp says — the answer's words, uppercased by the stamp, and a figure after them that
+ * is not: *I'M IN · 32 zł*.
+ */
+export interface StampWords {
+  readonly words: string;
+  readonly figure?: string;
+}
+
 export interface DeckStageProps {
   /**
    * The answer this card was given and is leaving on, or `undefined` while it is still being
@@ -165,6 +186,8 @@ export interface DeckStageProps {
    * element, and what gives each card its own motion.
    */
   readonly cards: readonly StagedCard[];
+  /** What the two stamps say, for the card on top — see the module note. */
+  readonly stamps: Readonly<Record<DeckExit, StampWords>>;
 }
 
 /** One card on the stage, and what tells it from every other across renders. */
@@ -184,7 +207,7 @@ interface Motion {
   gone: boolean;
 }
 
-export function DeckStage({ leaving, onAnswer, onLeft, cards }: DeckStageProps) {
+export function DeckStage({ leaving, onAnswer, onLeft, cards, stamps }: DeckStageProps) {
   const collapsed = useCollapsedPresentation();
   const haptics = useHaptics();
   /**
@@ -331,11 +354,12 @@ export function DeckStage({ leaving, onAnswer, onLeft, cards }: DeckStageProps) 
         const depth = cards.length - 1 - fromTheBack;
         const lift = motion.arrival.interpolate(stackLift(depth));
         const scale = motion.arrival.interpolate(stackScale(depth));
+        const opacity = motion.arrival.interpolate(stackOpacity(depth));
         if (depth > 0) {
           return (
             <Animated.View
               key={key}
-              style={[s.card, { transform: [{ translateY: lift }, { scale }] }]}
+              style={[s.card, { opacity, transform: [{ translateY: lift }, { scale }] }]}
               pointerEvents="none"
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
@@ -351,6 +375,7 @@ export function DeckStage({ leaving, onAnswer, onLeft, cards }: DeckStageProps) 
             style={[
               s.card,
               {
+                opacity,
                 transform: [
                   { translateX: motion.drag.x },
                   { translateY: Animated.add(motion.drag.y, lift) },
@@ -365,8 +390,16 @@ export function DeckStage({ leaving, onAnswer, onLeft, cards }: DeckStageProps) 
             {/* The two stamps: feedback, never controls. Invisible at rest, full at the
                 threshold, and hidden from assistive technology because a listener answers with
                 the buttons. */}
-            <Stamp said="yes" opacity={motion.drag.x.interpolate(stampOpacity('yes'))} />
-            <Stamp said="no" opacity={motion.drag.x.interpolate(stampOpacity('no'))} />
+            <Stamp
+              said="yes"
+              stamp={stamps.yes}
+              opacity={motion.drag.x.interpolate(stampOpacity('yes'))}
+            />
+            <Stamp
+              said="no"
+              stamp={stamps.no}
+              opacity={motion.drag.x.interpolate(stampOpacity('no'))}
+            />
           </Animated.View>
         );
       })}
@@ -379,13 +412,16 @@ export function DeckStage({ leaving, onAnswer, onLeft, cards }: DeckStageProps) 
  * and **white** for *Not today* (ADR-0169 §7). Top-left for a yes and top-right for a pass, so
  * each sits on the side the card is being dragged towards' opposite corner — where the mocks
  * draw them, and clear of the Level and the mark either way. The outline and the tilt are the
- * drawing's own; the words are the two answers' (`STAMP_WORDS`), uppercased by this style.
+ * drawing's own; the words are the caller's (`stamps`), uppercased by this style, and a figure
+ * after them is drawn in mono and left as it is written.
  */
 function Stamp({
   said,
+  stamp,
   opacity,
 }: {
   readonly said: DeckExit;
+  readonly stamp: StampWords;
   readonly opacity: Animated.AnimatedInterpolation<number>;
 }) {
   const colour = said === 'yes' ? theme.color.volt : theme.color.surface;
@@ -402,7 +438,15 @@ function Stamp({
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Text style={[s.stampWords, { color: colour }]}>{STAMP_WORDS[said]}</Text>
+      <Text style={[s.stampWords, { color: colour }]}>
+        {stamp.words}
+        {stamp.figure === undefined ? null : (
+          <Text style={s.stampFigure}>
+            {STAMP_JOIN}
+            {stamp.figure}
+          </Text>
+        )}
+      </Text>
     </Animated.View>
   );
 }
@@ -426,4 +470,6 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
     ...theme.shadow.textOnMedia,
   },
+  // The price after the words: mono, as every figure is, and never uppercased — `zł` is a unit.
+  stampFigure: { ...theme.num.xl, ...theme.tabular, textTransform: 'none' },
 });

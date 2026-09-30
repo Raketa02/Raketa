@@ -22,6 +22,16 @@
  * knows somebody is asking without opening Info. Nobody else's page reads the requests, so nobody
  * else's tab carries a count.
  *
+ * **The Games tab counts the cards where somebody is already In with you** (#553, the screens A1,
+ * mock 1's *Games 4*): the same badge, off the deck's own read — the one the tab draws, for the
+ * sport the page is on and the kind its switch stands on, so the two never disagree and the count
+ * costs no second request. The *Fill in* tab's count is the rescue board's, which is not read yet
+ * (#545, #557).
+ *
+ * **Games lays itself out** (#553): the deck fills the page between the switch and its three
+ * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
+ * not a deck — the question, the starting card.
+ *
  * **Info re-reads on a pull** (#529) — the group, who is waiting and the members row with it.
  * Only Info: the other three tabs are drawn for a sport and read their own rows.
  *
@@ -37,6 +47,7 @@ import { useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useGamesBadge } from '@/features/proposals/types';
 import { codeMessage } from '@/shared/errors';
 import { ScreenHeader, Segment, theme, type SegmentOption } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -44,6 +55,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import type { Group } from '../domain/group';
 import { GROUP_TABS, OPENING_TAB, type GroupTab } from '../domain/groupPage';
 import { useGroup, useGroupReread, useJoinRequests } from '../hooks/useGroups';
+import { useGameIntent } from '../store/gameIntent.store';
 
 import { AddSportCard } from './AddSportCard';
 import { FillInTab, PostAGame } from './FillInTab';
@@ -51,7 +63,7 @@ import { FriendsTab } from './FriendsTab';
 import { GamesTab } from './GamesTab';
 import { GroupMonogram } from './GroupMonogram';
 import { GROUPS_COPY } from './groupsCopy';
-import { infoTabLabel, membersAtClub } from './groupsPresentation';
+import { gamesTabLabel, infoTabLabel, membersAtClub } from './groupsPresentation';
 import { InfoTab } from './InfoTab';
 import { ReadFailure } from './ReadFailure';
 import { SportFilterPage } from './SportFilterPage';
@@ -73,6 +85,40 @@ function useGroupTabs(groupId: string, isOwner: boolean): readonly SegmentOption
       ? option
       : { ...option, badge: waiting, accessibilityLabel: infoTabLabel(waiting) },
   );
+}
+
+interface GroupTabsProps {
+  readonly groupId: string;
+  readonly isOwner: boolean;
+  readonly selected: GroupTab;
+  readonly onSelect: (tab: GroupTab) => void;
+}
+
+/** The tab bar — with Games' count once there is a sport to read a deck for. */
+function GroupTabs({ sport, ...props }: GroupTabsProps & { readonly sport: Sport | undefined }) {
+  const tabs = useGroupTabs(props.groupId, props.isOwner);
+  return sport === undefined ? (
+    <Segment options={tabs} selected={props.selected} onSelect={props.onSelect} style={s.tabs} />
+  ) : (
+    <TabsCountingGames {...props} tabs={tabs} sport={sport} />
+  );
+}
+
+function TabsCountingGames({
+  groupId,
+  selected,
+  onSelect,
+  tabs,
+  sport,
+}: GroupTabsProps & { readonly tabs: readonly SegmentOption<GroupTab>[]; readonly sport: Sport }) {
+  const chosen = useGameIntent((state) => state.intent);
+  const games = useGamesBadge(groupId, sport, chosen);
+  const counted = tabs.map((option) =>
+    option.key !== 'games' || games === 0
+      ? option
+      : { ...option, badge: games, accessibilityLabel: gamesTabLabel(games) },
+  );
+  return <Segment options={counted} selected={selected} onSelect={onSelect} style={s.tabs} />;
 }
 
 /** A pull's spinner: on from the pull until the re-read has settled, and one pull at a time. */
@@ -102,7 +148,6 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
   const group = read.data;
 
   const [tab, setTab] = useState<GroupTab>(OPENING_TAB);
-  const tabs = useGroupTabs(groupId, group?.isOwner === true);
   const { refreshing, pull } = usePull(useGroupReread(groupId));
 
   return (
@@ -129,8 +174,10 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
           />
         )}
       >
-        {(sport, toAdd) =>
-          group === undefined ? (
+        {(sport, toAdd) => {
+          // The sport the three sport tabs are drawn for — none while the reader must add one.
+          const playing = toAdd.length === 0 ? sport : undefined;
+          return group === undefined ? (
             read.error === null ? null : (
               <View style={s.body}>
                 <ReadFailure
@@ -142,45 +189,58 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
             )
           ) : (
             <>
-              <Segment options={tabs} selected={tab} onSelect={setTab} style={s.tabs} />
-              <ScrollView
-                contentContainerStyle={s.body}
-                refreshControl={
-                  tab === 'info' ? (
-                    // The Shell's control, drawn as the Shell draws it.
-                    <RefreshControl
-                      refreshing={refreshing}
-                      onRefresh={pull}
-                      tintColor={theme.color.muted}
-                      colors={[theme.color.muted]}
-                      progressBackgroundColor={theme.color.paper}
-                    />
-                  ) : undefined
-                }
-              >
-                {/* Info is about the group rather than a sport, so it never waits for the filter. */}
-                {tab === 'info' ? (
-                  <InfoTab group={group} />
-                ) : toAdd.length > 0 ? (
-                  <AddSportCard sports={toAdd} />
-                ) : sport === undefined ? null : (
-                  <TabBody tab={tab} group={group} sport={sport} />
-                )}
-              </ScrollView>
+              <GroupTabs
+                groupId={groupId}
+                isOwner={group.isOwner}
+                sport={playing}
+                selected={tab}
+                onSelect={setTab}
+              />
+              {tab === 'games' && playing !== undefined ? (
+                // The deck lays itself out — see the module note.
+                <View style={s.fill}>
+                  <GamesTab group={group} sport={playing} />
+                </View>
+              ) : (
+                <ScrollView
+                  contentContainerStyle={s.body}
+                  refreshControl={
+                    tab === 'info' ? (
+                      // The Shell's control, drawn as the Shell draws it.
+                      <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={pull}
+                        tintColor={theme.color.muted}
+                        colors={[theme.color.muted]}
+                        progressBackgroundColor={theme.color.paper}
+                      />
+                    ) : undefined
+                  }
+                >
+                  {/* Info is about the group rather than a sport, so it never waits for the filter. */}
+                  {tab === 'info' ? (
+                    <InfoTab group={group} />
+                  ) : toAdd.length > 0 ? (
+                    <AddSportCard sports={toAdd} />
+                  ) : sport === undefined ? null : (
+                    <TabBody tab={tab} group={group} sport={sport} />
+                  )}
+                </ScrollView>
+              )}
               {tab === 'fillIn' && toAdd.length === 0 ? (
                 <View style={s.postAGame}>
                   <PostAGame />
                 </View>
               ) : null}
             </>
-          )
-        }
+          );
+        }}
       </SportFilterPage>
     </SafeAreaView>
   );
 }
 
-/** The three tabs drawn for the filter's sport. */
+/** The two scrolled tabs drawn for the filter's sport; Games lays itself out. */
 function TabBody({
   tab,
   group,
@@ -203,6 +263,7 @@ function TabBody({
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   tabs: { marginHorizontal: theme.size.gutter },
+  fill: { flex: 1 },
   body: { padding: theme.size.gutter, gap: theme.space.sm },
   // Over the page's bottom corner, at the gutter (play 46).
   postAGame: { position: 'absolute', right: theme.size.gutter, bottom: theme.size.gutter },

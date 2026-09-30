@@ -2381,6 +2381,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/proposals/{proposal_id}/yes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say yes to a game
+         * @description *I'm in — if everybody is, book it and charge my share.* **Silent, free, and it holds nothing**: no money moves, no court is held, nobody is told (the others see the player In on the card). Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.
+         */
+        post: operations["say_yes_api_v1_proposals__proposal_id__yes_post"];
+        /**
+         * Withdraw a yes
+         * @description *Withdraw* on a You're In row: free and silent until the game fills. The seat is open again, and the player may say yes again while it fills. Withdrawing a yes never said records nothing. **A poster withdrawing with nobody else In takes the post with them**; with others In, the game carries on without them.
+         */
+        delete: operations["withdraw_yes_api_v1_proposals__proposal_id__yes_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/proposals/{proposal_id}/no": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say no to a game
+         * @description A swipe left: **silent, final, and never on the player's record.** The card does not come back. A second no records nothing.
+         */
+        post: operations["say_no_api_v1_proposals__proposal_id__no_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/live-yeses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My live yeses
+         * @description Every yes of the reader's on a game that has not filled, **across groups**, soonest game first, each with the share it would charge — You › Payments' *LIVE YESES*. A game past its book-by is not here, whether or not its expiry has been recorded.
+         */
+        get: operations["read_live_yeses_api_v1_players_me_live_yeses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/games-and-money": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Games & money
+         * @description You › Account › *Games & money*: games per week (two until changed) and most I'll pay per game (off until changed), with the ranges the form offers. Applies across sports and groups.
+         */
+        get: operations["read_games_and_money_api_v1_players_me_games_and_money_get"];
+        /**
+         * Save my Games & money
+         * @description Both values, as the screen saves them on every tap. The same answer records nothing. Answers what is now saved.
+         */
+        put: operations["set_games_and_money_api_v1_players_me_games_and_money_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pools/{pool_id}/deck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A group's deck
+         * @description The **Games** tab for one sport and segment: the cards dealt to the reader in this group — the pool is filed under the group's id — each as **the reader's own version**, with its sides, forecast and overlap computed now. **Never dealt**: a card the reader said no to, one they are In on (it is in *You're In*), a kind their Play intent does not want, a share above their *most I'll pay*, a week at their games per week, an hour they already have a game at, a club no longer selling, and a card with somebody In they may not share a court with. Around the deck: a count per segment, the Games badge and the capped weeks. Nothing is recorded.
+         */
+        get: operations["read_group_deck_api_v1_pools__pool_id__deck_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2897,6 +3005,27 @@ export interface components {
             /** @description What this candidate would leave on court. Precomputed only when a line-up has exactly one seat open, so **omitted on every shortlist**. */
             would_be_forecast?: components["schemas"]["ForecastSchema"];
         };
+        /**
+         * CappedWeekSchema
+         * @description A week the player has as many games booked in as they allow: nothing is
+         *     dealt for it.
+         */
+        CappedWeekSchema: {
+            /**
+             * Starts On
+             * Format: date
+             * @description Its Monday, on the club's clock.
+             */
+            starts_on: string;
+            /** Booked */
+            booked: number;
+        };
+        /**
+         * CardType
+         * @description The three cards a deck deals (the mechanics §8.1).
+         * @enum {string}
+         */
+        CardType: "SEAT_OPEN" | "CHALLENGE" | "PICKED_FOR_YOU";
         /**
          * ChallengeDetailResponse
          * @description One challenge, richly — the arrangement, the people and the pairing.
@@ -4022,6 +4151,12 @@ export interface components {
             clashing: components["schemas"]["CourtTagPair"][];
         };
         /**
+         * CourtState
+         * @description What a yes on the card does (the screens A2.3).
+         * @enum {string}
+         */
+        CourtState: "COURT_AVAILABLE" | "BOOK_IT_NOW";
+        /**
          * CourtStrandReading
          * @description One reliability strand that produced a reading.
          *
@@ -4107,6 +4242,12 @@ export interface components {
             join_policy: components["schemas"]["JoinPolicy"];
         };
         /**
+         * DayRange
+         * @description A third of a day, as a card and the posting grid group hours.
+         * @enum {string}
+         */
+        DayRange: "MORNING" | "AFTERNOON" | "EVENING";
+        /**
          * DealDeckRequest
          * @description What a deal is asked for. **The sport, and the week you are asking about.**
          *
@@ -4146,6 +4287,182 @@ export interface components {
              *     **It is an ask and never a correction.** Nothing here writes your profile; the app offers to save it afterwards.
              */
             availability_override?: components["schemas"]["WeeklyHourResource"][];
+        };
+        /**
+         * DeckCardSchema
+         * @description One card, as the reader is dealt it: **their own version** of the game.
+         */
+        DeckCardSchema: {
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /** @description `PICKED_FOR_YOU`, `CHALLENGE` (a member's post) or `SEAT_OPEN` (a rescue — dealt once rescues exist, #545). */
+            type: components["schemas"]["CardType"];
+            kind: components["schemas"]["SearchMode"];
+            /** @description The poster of a challenge; `null` on a pick, and on a challenge once its poster withdrew — *the group challenged you*. */
+            challenger: components["schemas"]["DeckChallengerSchema"] | null;
+            /**
+             * Starts At
+             * Format: date-time
+             * @description The court hour's start; games are 1 h.
+             */
+            starts_at: string;
+            club: components["schemas"]["DeckClubSchema"];
+            /**
+             * Share Grosze
+             * @description What this player pays if it fills.
+             */
+            share_grosze: number;
+            /**
+             * Deadline
+             * Format: date-time
+             * @description When the card leaves unfilled — its book-by. The client counts down only under 24 h.
+             */
+            deadline: string;
+            /**
+             * In Count
+             * @description People In on the whole game, every version counted.
+             */
+            in_count: number;
+            /**
+             * Version Count
+             * @description Versions the game was dealt in; above one, the card says how many people are In on the whole game.
+             */
+            version_count: number;
+            /**
+             * Open Seats After Your Yes
+             * @description Nought is *You complete it*.
+             */
+            open_seats_after_your_yes: number;
+            /** @description `COURT_AVAILABLE` — a yes is a free vote; `BOOK_IT_NOW` — a yes fills the game and books it. */
+            court: components["schemas"]["CourtState"];
+            /**
+             * No Free Cancellation
+             * @description The club's cut-off has already passed for this game.
+             */
+            no_free_cancellation: boolean;
+            /**
+             * Club Confirms
+             * @description An On request club: a full game waits for the club's yes before anybody pays, so *Book it now* charges nobody at once and its stamp carries no price.
+             */
+            club_confirms: boolean;
+            sides: components["schemas"]["DeckSidesSchema"];
+            /** @description `null` where it cannot be read: somebody on the card holds no rating in the sport, or nobody faces the reader yet. */
+            forecast: components["schemas"]["DeckForecastSchema"] | null;
+            overlap: components["schemas"]["DeckOverlapSchema"];
+        };
+        /**
+         * DeckChallengerSchema
+         * @description Who a challenge names — *Kuba challenged you*.
+         */
+        DeckChallengerSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /** Name */
+            name: string | null;
+        };
+        /** DeckClubSchema */
+        DeckClubSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Name
+             * @description The club's name; `null` for a club that no longer exists.
+             */
+            name: string | null;
+        };
+        /**
+         * DeckForecastSchema
+         * @description How even the game on **this** card is forecast to be, with these sides.
+         */
+        DeckForecastSchema: {
+            /** Pct */
+            pct: number;
+            /**
+             * Provisional
+             * @description A seat is empty and was read as matching its partner.
+             */
+            provisional: boolean;
+        };
+        /** DeckOverlapSchema */
+        DeckOverlapSchema: {
+            /** @description *High / Good / Slim overlap*: the hours everybody on the card shares, over the week of whoever has least to give. */
+            grade: components["schemas"]["OverlapGrade"];
+            /**
+             * Cells
+             * @description Twenty-one: day by day from Monday, morning first.
+             */
+            cells: components["schemas"]["OverlapCellSchema"][];
+            game: components["schemas"]["OverlapGameCellSchema"];
+        };
+        /**
+         * DeckSegmentSchema
+         * @description One side of the *Competitive · N / For fun · N* switch.
+         */
+        DeckSegmentSchema: {
+            kind: components["schemas"]["SearchMode"];
+            /**
+             * Count
+             * @description Cards of this kind the reader is dealt here.
+             */
+            count: number;
+        };
+        /**
+         * DeckSidesSchema
+         * @description The rows are the sides (Q70): the reader's, and the other. A side may be
+         *     short of a seat, which the client draws empty.
+         */
+        DeckSidesSchema: {
+            /** Yours */
+            yours: components["schemas"]["DeckTileSchema"][];
+            /** Theirs */
+            theirs: components["schemas"]["DeckTileSchema"][];
+        };
+        /**
+         * DeckTileSchema
+         * @description One person on a card.
+         */
+        DeckTileSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Is You
+             * @description The reader's own tile.
+             */
+            is_you: boolean;
+            /**
+             * Name
+             * @description Their Name, whole — the tile may cut it short, never invent a first name. `null` for an account that can no longer be named.
+             */
+            name: string | null;
+            /** Photo Id */
+            photo_id: string | null;
+            /**
+             * Photo Url
+             * @description A short-lived link to their first photograph; `null` with `photo_id` draws a poster.
+             */
+            photo_url: string | null;
+            /**
+             * Level
+             * @description Their published Level in the card's sport; `null` if unrated.
+             */
+            level: number | null;
+            /**
+             * Is In
+             * @description They said yes: the **IN** tag. Nobody else carries a tag — a player still deciding is a plain tile.
+             */
+            is_in: boolean;
         };
         /**
          * DeclarePlayIntentRequest
@@ -4868,6 +5185,54 @@ export interface components {
          */
         GameStanding: "AWAITING_ENTRY" | "NEVER_PLAYED" | "AWAITING_ANSWER" | "CONFIRMED" | "UNSCORED" | "CALLED_OFF";
         /**
+         * GamesAndMoneyRequest
+         * @description Both values, as the screen saves them on every tap. **Types only**: a
+         *     value the form does not offer is refused by the domain, with a code naming
+         *     what it offers.
+         */
+        GamesAndMoneyRequest: {
+            /**
+             * Games Per Week
+             * @description Games a week, Monday to Sunday, from 1 to 7.
+             */
+            games_per_week: number;
+            /**
+             * Most Ill Pay Grosze
+             * @description The most one game's share may cost, in grosze — one of `most_ill_pay_choices_grosze` — or `null` for *off*.
+             */
+            most_ill_pay_grosze: number | null;
+        };
+        /**
+         * GamesAndMoneyResponse
+         * @description You › Account › **Games & money**: the player's two limits, and what the
+         *     form offers so the client holds neither range.
+         */
+        GamesAndMoneyResponse: {
+            /**
+             * Games Per Week
+             * @description Once this many games are booked in a week (Monday to Sunday), the deck deals nothing more for it.
+             */
+            games_per_week: number;
+            /**
+             * Most Ill Pay Grosze
+             * @description Cards whose share is above this, in grosze, are never dealt; `null` is *off* — every card is shown.
+             */
+            most_ill_pay_grosze: number | null;
+            games_per_week_range: components["schemas"]["GamesPerWeekRangeSchema"];
+            /**
+             * Most Ill Pay Choices Grosze
+             * @description The ceilings offered beside *Off*, in grosze.
+             */
+            most_ill_pay_choices_grosze: number[];
+        };
+        /** GamesPerWeekRangeSchema */
+        GamesPerWeekRangeSchema: {
+            /** Least */
+            least: number;
+            /** Most */
+            most: number;
+        };
+        /**
          * Gender
          * @description What a player says about themselves — self-declared, freely changed.
          *
@@ -4937,6 +5302,41 @@ export interface components {
             is_administrator: boolean;
             /** @description `MEMBER` — the reader is in it (*you're in*); `REQUESTED` — they asked and their request is waiting (*requested · waiting*); `NONE` — neither, and *Join* or *Ask to join* is the tap. **A declined request reads `NONE`**: nothing tells them it was declined, and they may ask again. */
             relation: components["schemas"]["GroupRelation"];
+        };
+        /**
+         * GroupDeckResponse
+         * @description A group's **Games** tab for one sport and segment.
+         */
+        GroupDeckResponse: {
+            /**
+             * Pool Id
+             * Format: uuid
+             */
+            pool_id: string;
+            sport: components["schemas"]["Sport"];
+            kind: components["schemas"]["SearchMode"];
+            /**
+             * Segments
+             * @description The segments the reader's Play intent shows, Competitive first — **empty while they have declared no intent for the sport**, which is the one question that replaces the deck.
+             */
+            segments: components["schemas"]["DeckSegmentSchema"][];
+            /**
+             * Games Badge
+             * @description The tab's badge: cards where somebody is already In with the reader, across the segments.
+             */
+            games_badge: number;
+            /** Games Per Week */
+            games_per_week: number;
+            /**
+             * Capped Weeks
+             * @description Weeks within the deck's fortnight at the reader's games per week — *your 2 games this week are booked*. None of their games is dealt.
+             */
+            capped_weeks: components["schemas"]["CappedWeekSchema"][];
+            /**
+             * Cards
+             * @description This segment's cards in the order dealt: seats open after the reader's yes (fewest first), then seat open › challenge › pick, then the soonest deadline, then the best forecast; the same people only at their best hour.
+             */
+            cards: components["schemas"]["DeckCardSchema"][];
         };
         /**
          * GroupKind
@@ -5632,6 +6032,71 @@ export interface components {
              */
             player_ids: string[];
         };
+        /** LiveYesClubSchema */
+        LiveYesClubSchema: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Name
+             * @description The club's name; `null` for a club that no longer exists.
+             */
+            name: string | null;
+        };
+        /**
+         * LiveYesSchema
+         * @description One yes on a game that has not filled.
+         */
+        LiveYesSchema: {
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /**
+             * Pool Id
+             * Format: uuid
+             * @description The pool the game was dealt in — a group's id.
+             */
+            pool_id: string;
+            sport: components["schemas"]["Sport"];
+            /** @description Competitive, or for fun (a friendly). */
+            kind: components["schemas"]["SearchMode"];
+            /**
+             * Starts At
+             * Format: date-time
+             * @description The court hour's start. Every game is one hour.
+             */
+            starts_at: string;
+            club: components["schemas"]["LiveYesClubSchema"];
+            /**
+             * Share Grosze
+             * @description What this player is charged if the game fills, in grosze.
+             */
+            share_grosze: number;
+            /**
+             * Book By
+             * Format: date-time
+             * @description The latest moment the game can fill; past it the yes lapses.
+             */
+            book_by: string;
+        };
+        /**
+         * LiveYesesResponse
+         * @description You › Payments' **LIVE YESES**: every yes of the reader's on a game that
+         *     has not filled, across groups, soonest game first.
+         */
+        LiveYesesResponse: {
+            /** Yeses */
+            yeses: components["schemas"]["LiveYesSchema"][];
+            /**
+             * Cap Per Sport
+             * @description How many live yeses a player may have in one sport.
+             */
+            cap_per_sport: number;
+        };
         /**
          * LivenessReason
          * @description Why somebody moved, as a code. **Never as a number.**
@@ -6148,6 +6613,38 @@ export interface components {
              */
             ttl_days: number;
         };
+        /** OverlapCellSchema */
+        OverlapCellSchema: {
+            /**
+             * Day
+             * @description ISO weekday, Monday 1.
+             */
+            day: number;
+            /** @description Morning 07–12, Afternoon 12–17, Evening 17–23. */
+            range: components["schemas"]["DayRange"];
+            /** @description `BRIGHT` — everybody on the card is free together for a whole hour of it; `DIM` — all but one (never on a two-person card); `DARK` — fewer. */
+            shade: components["schemas"]["OverlapShade"];
+        };
+        /**
+         * OverlapGameCellSchema
+         * @description The game's own cell, ringed.
+         */
+        OverlapGameCellSchema: {
+            /** Day */
+            day: number;
+            range: components["schemas"]["DayRange"];
+        };
+        /**
+         * OverlapGrade
+         * @enum {string}
+         */
+        OverlapGrade: "HIGH" | "GOOD" | "SLIM";
+        /**
+         * OverlapShade
+         * @description How many of the card's people are free together in a cell.
+         * @enum {string}
+         */
+        OverlapShade: "BRIGHT" | "DIM" | "DARK";
         /**
          * PairingAbsence
          * @description Why a court came back with no cards on it. **Two codes, and a third
@@ -8959,6 +9456,22 @@ export interface components {
              * @constant
              */
             withheld: true;
+        };
+        /**
+         * YesAnswerResponse
+         * @description What a yes left on the game.
+         */
+        YesAnswerResponse: {
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /**
+             * Open Seats
+             * @description Seats nobody is In on yet, this player's yes counted. Nought is a game every seat said yes to.
+             */
+            open_seats: number;
         };
         /**
          * Side
@@ -14012,6 +14525,292 @@ export interface operations {
             };
             /** @description `payment_method_in_use` — a live yes or a booked game ahead still needs it; `details.live_yeses` and `details.upcoming_games` count them. Nothing was removed. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    say_yes_api_v1_proposals__proposal_id__yes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YesAnswerResponse"];
+                };
+            };
+            /** @description `proposal_not_found` — no such game **for this player**: it does not exist, it was never dealt to them, or (for a yes) they are no longer in its group. One code for all three. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In). The card leaves. `proposal_already_answered` — this player said no: the card does not come back. `proposal_is_full` — every seat is In. `payment_method_required` — no saved payment method: save one, then say yes. `live_yeses_exhausted` — `details.cap` live yeses in `details.sport` already. `no_longer_fits` — somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether this player fits the people In could not be read. Nothing was recorded; retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    withdraw_yes_api_v1_proposals__proposal_id__yes_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `proposal_not_found` — no such game **for this player**: it does not exist, it was never dealt to them, or (for a yes) they are no longer in its group. One code for all three. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In). The card leaves. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    say_no_api_v1_proposals__proposal_id__no_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `proposal_not_found` — no such game **for this player**: it does not exist, it was never dealt to them, or (for a yes) they are no longer in its group. One code for all three. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In). The card leaves. `proposal_already_answered` — this player is In: they leave by withdrawing their yes, never by a no. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_live_yeses_api_v1_players_me_live_yeses_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveYesesResponse"];
+                };
+            };
+        };
+    };
+    read_games_and_money_api_v1_players_me_games_and_money_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GamesAndMoneyResponse"];
+                };
+            };
+        };
+    };
+    set_games_and_money_api_v1_players_me_games_and_money_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GamesAndMoneyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GamesAndMoneyResponse"];
+                };
+            };
+            /** @description `games_per_week_out_of_range` — outside `details.least`–`details.most`. `most_ill_pay_not_offered` — not `null` and not one of `details.choices`. Nothing was saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_group_deck_api_v1_pools__pool_id__deck_get: {
+        parameters: {
+            query: {
+                sport: components["schemas"]["Sport"];
+                kind: components["schemas"]["SearchMode"];
+            };
+            header?: never;
+            path: {
+                pool_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupDeckResponse"];
+                };
+            };
+            /** @description `pool_not_found` — no such group, or the reader is not in it. One code for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether the reader fits the people on the cards could not be read. Retry. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

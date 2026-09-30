@@ -1,0 +1,89 @@
+/**
+ * **Every fixed word a group's Games deck and a game's details say** — copy is code, and nothing
+ * is inlined in a component ([#553](https://github.com/Raketa02/Raketa/issues/553); the screens
+ * A2, A4.2).
+ *
+ * Import-free, so a screen can read it at module load; the sentences composed from a value are
+ * `deckPresentation.ts`, which re-exports this. Taken from the mocks (player 1–10, details 5–10),
+ * with their names, prices and dates read as mock data — none of it is here.
+ */
+
+export const PROPOSALS_COPY = {
+  ribbon: {
+    pickedForYou: 'Picked for you',
+    groupChallenged: 'The group challenged you',
+    seatOpen: 'Seat open · court booked',
+  },
+  /** The court block's one tag (the screens A2.3). */
+  courtTag: {
+    available: 'Court available',
+    bookItNow: 'Book it now',
+    booked: 'Booked',
+  },
+  noFreeCancellation: 'no free cancellation',
+  grade: {
+    HIGH: 'High overlap',
+    GOOD: 'Good overlap',
+    SLIM: 'Slim overlap',
+  },
+  range: {
+    MORNING: 'morning',
+    AFTERNOON: 'afternoon',
+    EVENING: 'evening',
+  },
+  /** The grid's column heads, Monday first — letters, as the mocks draw them. */
+  dayLetters: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  you: 'You',
+  youCompleteIt: 'You complete it',
+  in: 'IN',
+  inSpoken: 'In',
+  versus: 'vs',
+  /** The two answers, as the stamps and the buttons say them. */
+  yes: 'I’m in',
+  no: 'Not this time',
+  details: 'Game details',
+  kind: {
+    competitive: 'Competitive',
+    forFun: 'For fun',
+  },
+  reading: 'Reading the games',
+  readAgain: 'Try again',
+  /** A card the server holds no name for — the tile draws the unknown player's mark. */
+  unnamed: '?',
+  /** The club the card was at, when the read no longer names it. */
+  unknownClub: 'A club',
+  game: {
+    back: 'Back',
+    filling: 'Filling',
+    where: 'Where',
+    day: 'Day',
+    time: 'Time',
+    share: 'Your share',
+    until: 'until',
+    nextWeek: 'next week',
+    ifItFills: 'if it fills',
+    bookBy: 'book by',
+    forecast: 'Balance forecast',
+    overlap: 'Who is free',
+    whatAYesMeans:
+      'Your yes costs nothing until everybody is in. When the last yes lands, everyone’s share is charged together and the court is booked.',
+    withdraw: 'Withdraw',
+    gone: 'This game isn’t dealt to you any more.',
+  },
+  /**
+   * **What a refused answer says** (the screens A2.4) — a toast, and the card springs back or
+   * leaves by `refusalOutcome`. Keyed by the route's own code; a code with no words here falls
+   * back to the recovery sentence every screen shares.
+   */
+  refused: {
+    payment_method_required: 'A yes needs a saved way to pay first.',
+    proposal_is_over: 'That game is no longer on.',
+    proposal_already_answered: 'You already answered that game.',
+    proposal_is_full: 'That game just filled.',
+    no_longer_fits: 'That game changed, and isn’t dealt to you any more.',
+    proposal_not_found: 'That game is no longer on.',
+    block_state_unavailable: 'That didn’t go through — try again in a moment.',
+  },
+} as const;

@@ -1224,3 +1224,15 @@ and keeps its name. **Owed, from a root session**: `docs/specs/matchmaking/the-w
 spells these lines in slots and parts of the day (§6.2's _slots you both ticked_ and _No shared
 slots_, the court's _share no slot_, §20.7's `{Day} {part}`), and now disagrees with the client.
 **Not seen on a device**, and the flag is off by default.
+
+**The deck's stage and its buttons serve a second deck** ([#553](https://github.com/Raketa02/Raketa/issues/553)).
+A group's Games deck (`proposals`) stands on `DeckStage` and `DeckAnswers` through `play/types`, so
+the two things that differ between the decks became the caller's: the stamps (`stamps`, words and an
+optional figure — Players passes `PLAYERS_STAMPS`, and a Games yes that charges at once stamps _I'M IN
+· 32 zł_, the figure in mono and never uppercased) and the buttons' spoken names (`labels`, which
+Players composes with `deckAnswerLabels` as before). **The cards behind now fade as well as shrink**
+(Q90 of the Games grilling, `STACK.fade`: 0,7 and 0,4), drawn off the same arrival, so the card coming
+forward brightens as it grows rather than being drawn whole from its first frame — a change to
+Players too. `DeclarationInterstitial` takes `DECK` again, for the Games tab's one-time question, with
+its own line about who reads the answer (`GROUP_DECK_DECLARATION_BODY`) and an `onDeclared` for the
+caller's re-read. **Not seen on a device.**

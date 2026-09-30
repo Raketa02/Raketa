@@ -21,7 +21,7 @@
  * cards behind are drawn and hidden from a listener.
  */
 
-import { act, render, screen } from '@testing-library/react-native';
+import { act, render, screen, within } from '@testing-library/react-native';
 import { useEffect } from 'react';
 import { Text, type ViewStyle } from 'react-native';
 
@@ -30,7 +30,8 @@ import { ReducedMotionProvider, theme } from '@/shared/ui';
 import { fakeHaptics } from '@/test-support/platform';
 import { dragTo, release, swipe } from '@/test-support/swipe';
 
-import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
+import { DeckStage, type DeckExit, type DragVerdict, type StampWords } from './DeckStage';
+import { PLAYERS_STAMPS } from './deckPresentation';
 import { STACK } from './deckStageGeometry';
 
 /** How long a card takes to leave. Longer than the component's own 240, so a flight completes. */
@@ -45,6 +46,7 @@ interface StageOver {
   readonly collapsed?: boolean;
   /** The people on the stage, the top card first. */
   readonly cards?: readonly string[];
+  readonly stamps?: Readonly<Record<DeckExit, StampWords>>;
 }
 
 /** Every mount of a face, in order — so a card promoted in place can be told from one redrawn. */
@@ -68,6 +70,7 @@ function drawStage({
   onAnswer = jest.fn<DragVerdict, [DeckExit]>(() => 'taken'),
   collapsed = false,
   cards = ['Marek Z.'],
+  stamps = PLAYERS_STAMPS,
 }: StageOver = {}) {
   const haptics = fakeHaptics();
   const tree = (over: Partial<StageOver>) => (
@@ -78,6 +81,7 @@ function drawStage({
           onLeft={onLeft}
           onAnswer={onAnswer}
           cards={(over.cards ?? cards).map((name) => ({ key: name, card: <Face name={name} /> }))}
+          stamps={stamps}
         />
       </HapticsProvider>
     </ReducedMotionProvider>
@@ -124,6 +128,14 @@ function standingOf(name: string): { readonly translateY: number; readonly scale
   const transform = styleOf(node).transform as readonly Record<string, unknown>[];
   const read = (key: string) => Number(transform.find((entry) => key in entry)?.[key]);
   return { translateY: read('translateY'), scale: read('scale') };
+}
+
+/** How faint a card is drawn — the opacity on the stage's wrapper above its face. */
+function opacityOf(name: string): number {
+  let node = screen.getByLabelText(name, HIDDEN_TOO).parent;
+  while (node !== null && styleOf(node).transform === undefined) node = node.parent;
+  if (node === null) throw new Error(`no stage above ${name}`);
+  return Number(styleOf(node).opacity ?? 1);
 }
 
 /** An `Animated.Value` renders as itself; what matters is the number it currently holds. */
@@ -242,14 +254,20 @@ describe('the card behind becoming the top card', () => {
     expect(screen.queryByLabelText('Marek Z.', HIDDEN_TOO)).toBeNull();
   });
 
-  /** It was visible behind; it stays visible. Nothing to fade in, because nothing went away. */
-  it('is drawn in full from its first frame, never faded in', () => {
+  /**
+   * It was visible behind; it stays visible. Nothing fades in from nothing, because nothing went
+   * away: it takes over at the opacity it stood at behind (#553) and brightens as it comes to rest.
+   */
+  it('brightens from the opacity it stood at behind, and is never faded in from nothing', () => {
     const { rerender } = drawStage({ cards: ['Marek Z.', 'Ana K.'], leaving: 'yes' });
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    expect(opacityOf('Ana K.')).toBeCloseTo(1 - STACK.fade);
 
     rerender({ leaving: undefined, cards: ['Ana K.'] });
+    expect(opacityOf('Ana K.')).toBeCloseTo(1 - STACK.fade);
 
-    expect(styleOf(topCard('Ana K.')).opacity ?? 1).toBe(1);
+    act(() => jest.advanceTimersByTime(theme.motion.rise + 50));
+    expect(opacityOf('Ana K.')).toBe(1);
   });
 
   /**
@@ -434,10 +452,40 @@ describe('the cards behind', () => {
     expect(behind?.props.importantForAccessibility).toBe('no-hide-descendants');
   });
 
+  /** #553, Q90: the two peeking cards fade as well as shrink — 0,7 and 0,4, the top card whole. */
+  it('draws each card behind fainter than the one in front of it', () => {
+    drawStage({ cards: ['Marek Z.', 'Ana K.', 'Ola W.'], collapsed: true });
+
+    expect(opacityOf('Marek Z.')).toBe(1);
+    expect(opacityOf('Ana K.')).toBeCloseTo(1 - STACK.fade);
+    expect(opacityOf('Ola W.')).toBeCloseTo(1 - 2 * STACK.fade);
+  });
+
   it('draws nothing behind when handed nothing', () => {
     drawStage();
 
     expect(screen.getByLabelText('Marek Z.')).toBeTruthy();
     expect(screen.queryByText('Ana K.', HIDDEN_TOO)).toBeNull();
+  });
+});
+
+describe('the stamps', () => {
+  it('say the answers’ words the deck hands them', () => {
+    drawStage();
+
+    expect(screen.getByText("Let's play", HIDDEN_TOO)).toBeTruthy();
+    expect(screen.getByText('Not today', HIDDEN_TOO)).toBeTruthy();
+  });
+
+  /** #553: a Games yes that charges at once carries its price after the words (Q72). */
+  it('draw a figure after the words when one is handed in', () => {
+    drawStage({
+      stamps: { yes: { words: 'I’m in', figure: '32 zł' }, no: { words: 'Not this time' } },
+    });
+
+    const yes = screen.getByTestId('deck-stamp-yes', HIDDEN_TOO);
+    expect(within(yes).getByText('I’m in · 32 zł', HIDDEN_TOO)).toBeTruthy();
+    const no = screen.getByTestId('deck-stamp-no', HIDDEN_TOO);
+    expect(within(no).getByText('Not this time', HIDDEN_TOO)).toBeTruthy();
   });
 });

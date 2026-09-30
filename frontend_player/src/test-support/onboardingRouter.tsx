@@ -45,6 +45,7 @@ import GroupRoute from '@/app/(app)/(tabs)/play/group/[groupId]/index';
 import GroupFriendsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/friends';
 import GroupMembersRoute from '@/app/(app)/(tabs)/play/group/[groupId]/members';
 import GroupEditRoute from '@/app/(app)/(tabs)/play/group/[groupId]/edit';
+import GameDetailsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/game/[proposalId]';
 import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
@@ -146,6 +147,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/play/group/[groupId]/friends': GroupFriendsRoute,
   '(app)/(tabs)/play/group/[groupId]/members': GroupMembersRoute,
   '(app)/(tabs)/play/group/[groupId]/edit': GroupEditRoute,
+  '(app)/(tabs)/play/group/[groupId]/game/[proposalId]': GameDetailsRoute,
   // A game is pushed over the Home tab and is a `games/` route rather than a `now/` one,
   // because the Home tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,

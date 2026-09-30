@@ -235,6 +235,58 @@ const color = {
    *  it is 1,16, which is a shape read by its contents and not by its edge. Nothing else may
    *  draw it. Derived in radarGround.test.ts. */
   radarControl: 'rgba(16,27,32,0.5)',
+
+  /** THE GAME CARD'S GROUND — the app's FOURTH dark surface: a group's Games deck card and a
+   *  game's details (#553; the screens A2.3, docs/design-system.md Part 16 2026-09-30). One linear
+   *  gradient down the card from the top value to the foot value, under the ribbon, the tiles, the
+   *  forecast, the overlap grid and the court block, and nothing else. Argued for its own record, as
+   *  ADR-0167 §2 said the next dark surface would be: a card a player answers with a swipe, drawn
+   *  the colour of the night the other three are.
+   *
+   *  MEASURED off mocks 2–10 at 1x, as the other grounds were: `#1C333F` under the ribbon and
+   *  `#101B22` at the foot, hue 199–205°, which is `night`'s family. What sits on them, computed
+   *  half-way down: white 15,34; `volt` 12,24; `gameGreen` 3,32 (the forecast's figure, large);
+   *  `gameAmber` 8,71; `gameRed` 3,39 (the figure, large). Derived in gameGround.test.ts. Nothing
+   *  else may draw these. */
+  gameGroundTop: '#1C333F',
+  gameGroundFoot: '#101B22',
+
+  /** The ribbon's band on a pick and a challenge — the mock's dark teal, measured. White 11,66 on
+   *  it; the countdown under an hour is `gameCoral` on it, 4,74. A rescue's ribbon is `coralInk`,
+   *  white 5,89 on it, where the mock's `#D34D2E` carries white at 4,31. */
+  gameRibbon: '#203C48',
+
+  /** THE CARD'S GREEN — measured off the mocks' IN tag, *Book it now* tag and forecast figure, all
+   *  one value. Hue 155°: between `mint` (163°) and `mintInk`, and neither of them, because on this
+   *  ground `mintInk` carries a figure at 2,67 and white on `mint` is 4,07. As a FILL under white,
+   *  4,62 (the two tags); as the forecast's figure on the ground, 3,32 — large text only. */
+  gameGreen: '#308361',
+
+  /** The overlap grid's two unlit shades: DARK — fewer than all but one free — and DIM — all but
+   *  one free (the olive). BRIGHT is `volt`. Measured; the dim cell against the dark is 2,07, which
+   *  is a shade read beside its neighbours and never the only signal: every cell is also spoken
+   *  (`overlapLabel`). */
+  gameCellDark: '#28363C',
+  gameCellDim: '#546A36',
+
+  /** The court block's two beds: GREY where a yes is a free vote (*Court available*, a dashed
+   *  border) and the GREEN-GREY of a court a yes books or has booked (*Book it now*, *Booked*, a
+   *  solid `voltStroke` border). Measured. Volt on them 10,93 and 10,03; white 12,57 on the green. */
+  gameCourt: '#242F35',
+  gameCourtBooked: '#28372A',
+
+  /** WARN ON THE CARD — *Slim overlap*, *no free cancellation*, and the forecast's figure between
+   *  55 and 70. Measured off the two words in mocks 3 and 6; `amber` itself is 2,73 on this ground. */
+  gameAmber: '#DFC072',
+
+  /** BAD ON THE CARD — the forecast's figure under 55. The mock's `#9E3C2B` is 2,32 on the ground,
+   *  under even large text's 3:1, so its hue is kept and ONLY the lightness is raised, to 3,44
+   *  (`arranging`'s rule: measured, then lifted); 3,39 half-way down the gradient. */
+  gameRed: '#C84F3A',
+
+  /** THE COUNTDOWN UNDER AN HOUR — coral's hue (9°), lifted to carry *45 min* on the ribbon at
+   *  4,74, where `coral` there is 2,99. A mark would take `coral`; these are words. */
+  gameCoral: '#F08975',
 } as const;
 
 /**
@@ -846,6 +898,25 @@ const size = {
    *  emoji is taller than a line box the height of its font size. 26 is that footprint kept,
    *  so the disc's proportion is still the mock's; not a new number. */
   deckAnswer: { pass: 54, record: 42, accept: 66, ball: 26 },
+  /** A group's Games card (#553, the screens A2.3), measured off mocks 2–10 at 1x. `ribbon` is
+   *  the band's height; `tileMin` the least a tile shrinks to on a short phone, where the tiles
+   *  give the card's other parts the height they need; `detailsTile` the width:height of a tile on
+   *  a game's details, where nothing competes for it — all three on the 3pt grid. The grid's cells
+   *  are `cell` tall and `cellGap` apart — **4, off the grid on purpose**: 6.8's hour cells' own
+   *  gap (`availability.gap`), so the week is drawn with one rhythm on both surfaces — and the
+   *  game's own cell is ringed `ring` wide and grows `ringOut` (`space.xxs`) past its slot on every
+   *  side, as the mocks draw it standing proud of its row. The court block's border is
+   *  `courtStroke`, a stroke like `onCourtTick`'s, dashed on a free vote and solid on a booking. */
+  gameCard: {
+    ribbon: 30,
+    tileMin: 54,
+    detailsTile: 1.75,
+    cell: 9,
+    cellGap: 4,
+    ring: 2,
+    ringOut: space.xxs,
+    courtStroke: 1.5,
+  },
   /** THE RADAR — the sizes of the field's drawn objects, every one of them the spec's own
    *  ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
    *  §7, `the-radar.md` §7.2–7.4). Points; the kilometres, the ladder and the thresholds are

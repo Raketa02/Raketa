@@ -143,6 +143,14 @@ export function groupCardLabel(group: {
   return [group.name, membersLine(group.memberCount), ...plays, group.homeClub.name].join(', ');
 }
 
+/**
+ * *Games, 4 with somebody In* — the group page's Games tab, spoken with its count: the cards where
+ * somebody is already In with you (#553, the screens A1).
+ */
+export function gamesTabLabel(cards: number): string {
+  return `${GROUPS_COPY.group.tabs.games}, ${cards} with somebody In`;
+}
+
 /** *Info, 2 requests waiting* — the group page's Info tab, spoken with its count (#529). */
 export function infoTabLabel(waiting: number): string {
   return `${GROUPS_COPY.group.tabs.info}, ${counted(waiting, 'request', 'requests')} waiting`;

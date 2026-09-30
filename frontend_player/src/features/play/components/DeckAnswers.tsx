@@ -28,9 +28,11 @@
  * the **i** is the information mark's own serif letter (5.4), and the ball is **drawn**
  * (`DeckBall`): a white outline with its two seams, at Feather's proportion, on the coral. It was the
  * 🎾 emoji as text until 2026-09-15, which the platform substituted in its own colours and clipped
- * at the top. None of the three is spoken: each button carries the name `deckAnswerLabels`
- * composes for the person on the card, so a listener hears *Let's play, Marek Z.* and never
- * *tennis ball*.
+ * at the top. None of the three is spoken: each button carries the name its deck composes — on
+ * Players, `deckAnswerLabels` for the person on the card, so a listener hears *Let's play, Marek
+ * Z.* and never *tennis ball*; on a group's Games deck, the game's own (*I'm in*, *Not this time*,
+ * *Game details*, #553). **The names are the caller's**, because the row is one drawing under two
+ * decks whose cards are about different things — a person, and a game.
  *
  * **Coral on the yes, and only there.** §1.2's list is closed at six and the primary button is
  * on it; the yes is the deck's primary act and takes `primary`'s fill and press. The pass and
@@ -43,12 +45,12 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/shared/ui';
 
-import { deckAnswerLabels } from './accessibilityPresentation';
+import type { DeckAnswerLabels } from './accessibilityPresentation';
 import { DeckBall } from './DeckBall';
 
 export interface DeckAnswersProps {
-  /** §15's `playerName()` — the whole handle of the person on the card, for the three names. */
-  readonly name: string;
+  /** The three buttons' spoken names — see the module note. */
+  readonly labels: DeckAnswerLabels;
   readonly onPass: () => void;
   readonly onAccept: () => void;
   readonly onRecord: () => void;
@@ -64,13 +66,12 @@ export interface DeckAnswersProps {
 }
 
 export function DeckAnswers({
-  name,
+  labels,
   onPass,
   onAccept,
   onRecord,
   answering = false,
 }: DeckAnswersProps) {
-  const labels = deckAnswerLabels(name);
   const { pass, record, accept } = theme.size.deckAnswer;
   // 6.5: the i is under the minimum, and its neighbours are a large step away on either side,
   // so the slop that lifts it to 44 fits between them.

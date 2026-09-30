@@ -57,6 +57,7 @@ import { type ToastTone } from '@/shared/store/toast.store';
 
 import { counted } from '@/shared/formatting/counted';
 
+import type { StampWords } from './DeckStage';
 import type { DeckExit } from './deckStageGeometry';
 import { DECK_ANSWER_WORDS } from './playerCardPresentation';
 
@@ -121,6 +122,15 @@ export function deckCounter(facts: { readonly left: number; readonly give?: numb
 export const STAMP_WORDS: Readonly<Record<DeckExit, string>> = {
   yes: DECK_ANSWER_WORDS.accept,
   no: DECK_ANSWER_WORDS.pass,
+};
+
+/** Between a stamp's words and its figure — the mocks' middle dot: *I'M IN · 32 zł*. */
+export const STAMP_JOIN = ' · ';
+
+/** The same two, as the stage takes a stamp — words and no figure, because Players prices nothing. */
+export const PLAYERS_STAMPS: Readonly<Record<DeckExit, StampWords>> = {
+  yes: { words: STAMP_WORDS.yes },
+  no: { words: STAMP_WORDS.no },
 };
 
 /** The empty state a player reaches by answering everybody the deck could deal them. */

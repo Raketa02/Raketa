@@ -1,5 +1,5 @@
 /**
- * The three conversions that turn an instant or a calendar square into the platform's own day.
+ * The conversions that turn an instant or a calendar square into the platform’s own day and clock.
  *
  * Each is a place a build can be **wrong** rather than merely wordless, and every one of them is
  * wrong in the same way: by consulting the device. So the device's zone is moved about here on
@@ -10,7 +10,7 @@
 
 import { setDeviceZone } from '@/test-support/deviceZone';
 
-import { daysAfter, platformDay, weekdayOf } from './platformZone';
+import { daysAfter, daysBetween, platformClock, platformDay, weekdayOf } from './platformZone';
 
 const DEVICE_ZONE = process.env.TZ;
 
@@ -137,5 +137,36 @@ describe('a day and a number of days after it', () => {
   it('answers nothing for a value that is not a calendar date', () => {
     expect(daysAfter('2026-09-12T00:00:00Z', 1)).toBeUndefined();
     expect(daysAfter('', 1)).toBeUndefined();
+  });
+});
+
+describe('the wall clock an instant reads in the platform zone', () => {
+  it('is the hour and minute in Warsaw, whatever the device says', () => {
+    setDeviceZone('America/Los_Angeles');
+
+    // 17:00 UTC in summer is 19:00 in Warsaw; in winter 18:00.
+    expect(platformClock('2026-09-29T17:00:00Z')).toBe('19:00');
+    expect(platformClock('2026-12-01T17:05:00Z')).toBe('18:05');
+  });
+
+  it('answers nothing for a value that is not an instant', () => {
+    expect(platformClock('19:00')).toBeUndefined();
+  });
+});
+
+describe('how many days apart two calendar days are', () => {
+  it('counts forward and back over a month end, on the calendar', () => {
+    expect(daysBetween('2026-09-30', '2026-09-30')).toBe(0);
+    expect(daysBetween('2026-09-30', '2026-10-01')).toBe(1);
+    expect(daysBetween('2026-09-30', '2026-10-07')).toBe(7);
+    expect(daysBetween('2026-10-01', '2026-09-30')).toBe(-1);
+  });
+
+  it('is not moved by the clock change', () => {
+    expect(daysBetween('2026-10-24', '2026-10-26')).toBe(2);
+  });
+
+  it('answers nothing for a value that is not a calendar date', () => {
+    expect(daysBetween('2026-09-30', 'tomorrow')).toBeUndefined();
   });
 });

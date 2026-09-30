@@ -334,6 +334,28 @@ export { FindAGameScreen } from './components/FindAGameScreen';
 export { DeckScreen } from './components/DeckScreen';
 
 /**
+ * **The deck's stage, its three buttons, and the intent question** — what a group's Games deck
+ * stands on ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A2.1–A2.2): the
+ * pan gesture, the stamps, the fly-off, the arrival and the haptic tick, the ✕ / i / ball row, and
+ * the one-time *Your usual game* card, reused rather than drawn twice. Each takes its words from
+ * its caller where the two decks differ — the stamps and the buttons' names — and nothing of
+ * Players' screen comes with them.
+ */
+export {
+  DeckStage,
+  type DeckExit,
+  type DeckStageProps,
+  type DragVerdict,
+  type StagedCard,
+  type StampWords,
+} from './components/DeckStage';
+export { DeckAnswers, type DeckAnswersProps } from './components/DeckAnswers';
+export {
+  DeclarationInterstitial,
+  type DeclarationInterstitialProps,
+} from './components/DeclarationInterstitial';
+
+/**
  * The whole Fit calculation, in a sheet — and the one surface allowed to draw a term row.
  *
  * Exported because three surfaces open it: the deck's long press, and each of the pool's two

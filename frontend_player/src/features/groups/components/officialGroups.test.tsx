@@ -34,6 +34,7 @@ import {
   stubShare,
 } from '@/test-support/onboardingRouter';
 import { fakeClipboard, fakeShare } from '@/test-support/platform';
+import { stubGroupDeck } from '@/test-support/groupDeck';
 import {
   installTransport,
   json,
@@ -405,6 +406,7 @@ async function openPage(
 ) {
   stubMyGroups(transport, [group]);
   transport.on('GET', `/api/v1/groups/${group.id}`, () => json(page));
+  stubGroupDeck(transport, group.id);
   await onPlay();
   fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${group.name}, `) }));
   await waitFor(() => expect(screen).toHavePathname(`/play/group/${group.id}`));

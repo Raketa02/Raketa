@@ -145,6 +145,7 @@ import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
 
 import { AnswerNotes } from './AnswerNotes';
+import { deckAnswerLabels } from './accessibilityPresentation';
 import { DeckAnswers } from './DeckAnswers';
 import { DeckEnding } from './DeckEnding';
 import { DeckPill } from './DeckPill';
@@ -158,6 +159,7 @@ import {
   DEALING_LABEL,
   DEAL_AGAIN_LABEL,
   NO_RATED_SPORT_LINE,
+  PLAYERS_STAMPS,
   deckCounter,
   wantToPlayYouChip,
   type PlayersPane,
@@ -411,7 +413,9 @@ export function DeckScreen() {
           action={
             showing !== undefined ? (
               <DeckAnswers
-                name={playerName({ kind: 'player', name: showing.candidate.card.name })}
+                labels={deckAnswerLabels(
+                  playerName({ kind: 'player', name: showing.candidate.card.name }),
+                )}
                 onPass={() => answer('no', showing)}
                 onAccept={() => answer('yes', showing)}
                 onRecord={() => setReading(showing.candidate)}
@@ -473,6 +477,7 @@ export function DeckScreen() {
                   }
                   onAnswer={(said) => answer(said, showing)}
                   onLeft={() => cardLeft(showing)}
+                  stamps={PLAYERS_STAMPS}
                   cards={[showing, ...behind].map((card, depth) => ({
                     key: cardKey(card),
                     card: (

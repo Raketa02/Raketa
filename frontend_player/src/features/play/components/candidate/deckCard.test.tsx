@@ -386,7 +386,14 @@ describe('the one element', () => {
 
 describe('the three buttons under the stage', () => {
   it('are named for the person, and the ball stays out of the spoken name', () => {
-    render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} />);
+    render(
+      <DeckAnswers
+        labels={deckAnswerLabels('Filip N.')}
+        onPass={noop}
+        onAccept={noop}
+        onRecord={noop}
+      />,
+    );
 
     const labels = deckAnswerLabels('Filip N.');
     expect(screen.getByRole('button', { name: labels.pass })).toBeTruthy();
@@ -399,7 +406,14 @@ describe('the three buttons under the stage', () => {
 
   /** A drawing and not an emoji: the platform's ball was its own colours, and clipped above. */
   it('draw the yes’s ball as a white outline with its two seams, in one stroke weight', () => {
-    render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} />);
+    render(
+      <DeckAnswers
+        labels={deckAnswerLabels('Filip N.')}
+        onPass={noop}
+        onAccept={noop}
+        onRecord={noop}
+      />,
+    );
 
     const drawn = screen.UNSAFE_getAllByType(Path).map((path) => path.props);
     const ball = Object.values(BALL_PATHS).map((d) => drawn.find((path) => path.d === d));
@@ -429,7 +443,14 @@ describe('the three buttons under the stage', () => {
   });
 
   it('are circles at the mock’s three sizes, the yes the largest', () => {
-    render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} />);
+    render(
+      <DeckAnswers
+        labels={deckAnswerLabels('Filip N.')}
+        onPass={noop}
+        onAccept={noop}
+        onRecord={noop}
+      />,
+    );
 
     const labels = deckAnswerLabels('Filip N.');
     const size = (name: string) =>
@@ -447,7 +468,15 @@ describe('the three buttons under the stage', () => {
   });
 
   it('lock the two answers while a card is leaving, and never the record', () => {
-    render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} answering />);
+    render(
+      <DeckAnswers
+        labels={deckAnswerLabels('Filip N.')}
+        onPass={noop}
+        onAccept={noop}
+        onRecord={noop}
+        answering
+      />,
+    );
 
     const labels = deckAnswerLabels('Filip N.');
     expect(

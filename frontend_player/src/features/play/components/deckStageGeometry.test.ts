@@ -13,6 +13,7 @@ import {
   committed,
   crossedThreshold,
   stackLift,
+  stackOpacity,
   stackScale,
   stampOpacity,
   tilt,
@@ -97,6 +98,15 @@ describe('the stack', () => {
     expect(stackLift(2).outputRange).toEqual([3 * STACK.step, 2 * STACK.step]);
     expect(stackScale(1).outputRange).toEqual([1 - 2 * STACK.shrink, 1 - STACK.shrink]);
     expect(stackScale(2).outputRange).toEqual([1 - 3 * STACK.shrink, 1 - 2 * STACK.shrink]);
+  });
+
+  /** #553, Q90: the cards peeking behind fade as well as shrink, on the same beat. */
+  it('draws each card behind one fade fainter, and brightens the card coming forward', () => {
+    expect(stackOpacity(0).outputRange).toEqual([1 - STACK.fade, 1]);
+    expect(stackOpacity(1).outputRange).toEqual([1 - 2 * STACK.fade, 1 - STACK.fade]);
+    expect(stackOpacity(2).outputRange).toEqual([1 - 3 * STACK.fade, 1 - 2 * STACK.fade]);
+    // The farthest card still shows: 0,4 at rest.
+    expect(stackOpacity(2).outputRange[1]).toBeGreaterThan(0);
   });
 
   it('steps by the small space, so the stack peeks out and does not sprawl', () => {

@@ -37,6 +37,10 @@
  * the top card arrives from the place the card behind it stood, and the card behind it from the
  * place the one behind *that* stood, so a card leaving is followed by every card coming forward
  * as one motion, and nothing jumps.
+ *
+ * **Each card behind is fainter as well as smaller** (Q90 of the Games grilling, #553): one
+ * `fade` step of opacity per place back, drawn off the same arrival, so the card coming forward
+ * brightens as it grows and the queue reads as behind rather than as three cards of one weight.
  */
 
 import { theme } from '@/shared/ui/theme';
@@ -118,7 +122,7 @@ export function tilt(): Interpolation<string> {
  * The stack behind the top card: each card behind sits one `step` lower and `shrink` smaller
  * than the one in front — see the module note.
  */
-export const STACK = { step: theme.space.sm, shrink: 0.05 } as const;
+export const STACK = { step: theme.space.sm, shrink: 0.05, fade: 0.3 } as const;
 
 /**
  * From the top card's arrival (nought to one) to where a card at `depth` stands — one step
@@ -137,6 +141,18 @@ export function stackScale(depth: number): Interpolation<number> {
   return {
     inputRange: [0, 1],
     outputRange: [1 - (depth + 1) * STACK.shrink, 1 - depth * STACK.shrink],
+    extrapolate: 'clamp',
+  };
+}
+
+/**
+ * From the top card's arrival to a card's opacity at `depth` — one fade fainter at nought, its own
+ * at one. The top card is whole; the two behind it are drawn at 0,7 and 0,4.
+ */
+export function stackOpacity(depth: number): Interpolation<number> {
+  return {
+    inputRange: [0, 1],
+    outputRange: [1 - (depth + 1) * STACK.fade, 1 - depth * STACK.fade],
     extrapolate: 'clamp',
   };
 }
