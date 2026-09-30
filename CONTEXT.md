@@ -1985,22 +1985,24 @@ every fact read through the owning context's published port, and one rule of its
 Settled by
 [ADR-0182](docs/adr/0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md)
 on [#501](https://github.com/Raketa02/Raketa/issues/501), and built by
-[#503](https://github.com/Raketa02/Raketa/issues/503).
+[#503](https://github.com/Raketa02/Raketa/issues/503). Its **Courts** and how it sells them through
+Raketa were settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
+§3, §5 and built by [#535](https://github.com/Raketa02/Raketa/issues/535); connecting its payments
+is still to come (#537).
 
 **A place where racket sports are played, known to the platform because it signed up.** Players
 search clubs to set a group's home and to find groups; the club manages its own facts from the club
-website.
+website, and lists there the courts, hours and prices it sells through Raketa.
 
 - **Club** — an **event-sourced aggregate**: a name, a district, a city, **the sports it offers**
   (a non-empty subset of the four — they *filter* the `Sport` registry and never extend it) and
   **a precise point on the map**, stored as the club dropped it, because a club is a public place
-  and not a person's whereabouts. Its details may change at any time, except that a sport an
-  **Official group** declares cannot be taken away. **Not verified**: nothing checks that a club is
-  who it says it is. **Not a court**: *"a court at [club] is free"* speaks of physical courts, and
-  there is still no court, booking or inventory *in the code* — [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) gives a club
-  **Courts** it sells through Raketa (Part 2) — and **not a plan's venue**: a Plan's *Where*
-  stays free text. _Avoid_: venue, centre, facility, location (that is a player's **Location
-  area**).
+  and not a person's whereabouts. Its details may change at any time, except that a sport one of
+  its **Courts** plays, or an **Official group** declares, cannot be taken away — each refusal names
+  the court or the group. **Not verified**: nothing checks that a club is who it says it is. **Not
+  a court**: a club *has* Courts (below), and *"a court at [club] is free"* speaks of one of them —
+  and **not a plan's venue**: a Plan's *Where* stays free text. _Avoid_: venue, centre, facility,
+  location (that is a player's **Location area**).
 - **Club account** — the club's sign-in: **one email and one password, shared by the desk**,
   created with the club. **A separate identity from every User**: its email is unique among club
   accounts and may also be an unrelated User's, with a different password. It signs in **only on
@@ -2009,6 +2011,65 @@ website.
 - **Home club** — the Club a **Group** belongs to. **Required.** A Player group's is chosen at
   creation and never changes; an Official group's is its club. Distances to it are measured from
   the reader's Location area and printed as everywhere else. _Avoid_: base, venue, home court.
+- **Club courts** — an **event-sourced aggregate, one stream per club, filed under the club's own
+  id**: its Courts and their Raketa hours, its Exceptions, its Prices, its Way of working and
+  Raketa settings, and whether it is Paused. **Born by being used** — nothing is written at
+  sign-up, and a club that has set nothing reads no courts, no way of working and the default
+  settings. A stream of its own rather than more events on the Club's, because the Club's is what
+  every player's search is built from.
+- **Court** — one physical court at a Club: a **name** the club uses (*Court 2*, *Kort centralny*;
+  1–40 characters, unique at the club ignoring case), **one sport** from the club's own, and
+  **indoor or outdoor**, which a card shows. **Offered** to Raketa, or **switched off** — kept,
+  with its hours, selling nothing new, whatever is booked on it. **Deleted**, or given another
+  sport, only while no booking is ahead of it. Players never pick its **number**: a card or a post
+  names a court hour at a club, and the number is given at booking. _Avoid_: pitch, field.
+- **Raketa hours** — the hours of an ordinary week a Court is offered to Raketa: **the player's
+  own Weekly hours grid**, seven days by sixteen one-hour cells from 07:00 to 23:00 — an hour
+  outside it could never match anybody — with **no floor**: a court with none offers nothing yet.
+  One save may give the same week to several courts.
+- **Exception** — hours a club closes **without touching its Raketa hours**: a local day or a run
+  of days, whole or between two hours, on **every court** — one added later included — or some,
+  with a **reason** for the club's own records that no player reads. **Refused over a booking**,
+  which the club cancels instead, and allowed over hours that only have cards on them; the cards
+  move to another court or disappear. _Avoid_: closure, block (a Block is between two players).
+- **Price** — what a court-hour costs, **per sport**: a standard price, and optional **price bands**
+  — weekdays or the weekend, between two hours — that price the hours they cover differently;
+  bands of the same days never overlap. **Integer grosze**, from 10 to 1 000 zł, and it **splits**:
+  a price that does not divide into whole grosze among the sport's seats is refused rather than
+  rounded. A new price reaches **new cards only**.
+- **Share** — the court hour's price divided by the seats — four for padel and badminton, two for
+  tennis and squash — exact to the grosz, fixed on the card and never changed by a later price.
+- **Court hour** — one court at one club for **one hour**. Every game lasts exactly one hour. The
+  **sellable court hours** of a club are what it can sell through Raketa: its Raketa hours, less
+  its Exceptions, less what bookings hold, less every hour past its Book-by, each priced by its
+  band or the standard price — **derived, never stored hour by hour**, only for a club that is
+  **Live**, and published to other contexts through a port.
+- **Way of working** — how a club sells through Raketa, **one for the whole club**, chosen on its
+  own and changeable, the change applying to hours not yet booked: **Only Raketa** (Raketa sells
+  alone until the **release lead**), **Instant** (both sell; a Raketa booking is final) or **On
+  request** (the club confirms each full game within its **time to confirm**).
+- **Raketa settings** — the terms a club **confirms**, its first save doing so defaults included:
+  the release lead (Only Raketa; 1–13 days, default 3), the **Cut-off**, the **minimum notice**
+  (Instant and On request; 1–48 h, default 2), the time to confirm (On request; 5–60 min, default
+  30 — never more than the shortest minimum notice), **other clubs' courts** for its groups (off
+  by default, within 10 km), **check-in** (off) and **Paused** (off). Each bound is domain, never
+  configuration. Confirmed only once a Way of working is chosen, since which of them matter
+  depends on it.
+- **Cut-off** — the club's free-cancellation deadline, a Raketa setting (0–72 h, default 24 h
+  before). Leaving before it is free; a game still short at it is called off.
+- **Book-by** — the latest moment a proposal can still fill: the release time (Only Raketa) or the
+  start minus the club's minimum notice (Instant, On request). **Derived, never chosen** — once,
+  from the club's terms, and carried on every sellable court hour. No other clock runs on a
+  proposal.
+- **Paused** — a club taking no new cards on its courts. Booked games are played as booked, and
+  cards already dealt keep their court until their book-by, so its hours stay sellable. A paused
+  club is still **Live**.
+- **Setup checklist** — the five steps before a club's courts reach any deck: connect payments,
+  choose a Way of working, add Courts, set Raketa hours and Prices, confirm the Raketa settings.
+  Each is **done**, **to do**, **locked** behind the step it needs (hours and prices behind a
+  court, the settings behind a way of working) or **pending** — payments, until connecting Stripe
+  is built. Read off the Club courts, never stored. **Live** — every step but a pending one done.
+  _Avoid_: onboarded, active (of a club).
 
 ### Groups
 
@@ -2147,23 +2208,10 @@ yet**; when a term is built, it moves into Part 1 under its context.
   **Group** is the first kind of pool; a city (Explore) will be the next. Proposals, yeses and
   posts belong to a pool, never to a group by name. _Avoid_: audience (that is an Official
   group's).
-- **Court** — one physical court at a Club, with a name the club uses (*Court 2*), **one sport**,
-  and indoor or outdoor. Players never pick its **number**: a card or a post names a court hour at
-  a club, and the number is given at booking.
-- **Court hour** — one court at one club for **one hour**. Every game lasts exactly one hour.
-  The hours a club can sell are **derived** from its weekly pattern, its exceptions and its
-  bookings, never stored hour by hour.
-- **Way of working** — how a club sells through Raketa, **one for the whole club**: **Only
-  Raketa** (Raketa sells alone until the **release lead**), **Instant** (both sell; a Raketa
-  booking is final) or **On request** (the club confirms each full game within its **time to
-  confirm**).
-- **Cut-off** — the club's free-cancellation deadline, a club setting (default 24 h before). Leaving
-  before it is free; a game still short at it is called off.
-- **Book-by** — the latest moment a proposal can still fill: the release time (Only Raketa) or the
-  start minus the club's **minimum notice** (Instant, On request). Derived, never chosen. No other
-  clock runs on a proposal.
-- **Share** — the court hour's price divided by the seats, fixed on the card and never changed by
-  a later price.
+
+**Court**, **Court hour**, **Way of working**, **Cut-off**, **Book-by** and **Share** are built, and
+moved to **Club** in Part 1 with [#535](https://github.com/Raketa02/Raketa/issues/535), beside the
+**Club courts** that hold them.
 
 ### Proposals and the deck
 

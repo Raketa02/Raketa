@@ -183,6 +183,11 @@ from app.seeds.administrators import (
     administrator_lines,
     write_the_administrators,
 )
+from app.seeds.club_courts import (
+    SeededCourts,
+    club_courts_lines,
+    write_the_club_courts,
+)
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.groups import SeededGroups, group_lines, write_the_groups
 from app.seeds.official_groups import (
@@ -1204,6 +1209,9 @@ class SeedReport:
     #: The clubs, each signed up by its own desk. ``None`` on the callers that
     #: drive the populations without the layers above them.
     clubs: SeededClubs | None = None
+    #: What each of those clubs offers Raketa, and how. ``None`` on the same
+    #: callers and for the same reason.
+    club_courts: SeededCourts | None = None
     #: The player groups at those clubs, and who is in each. ``None`` on the same
     #: callers and for the same reason.
     groups: SeededGroups | None = None
@@ -1269,6 +1277,12 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # **The clubs next, before anything that could stand at one.** A club
         # reads nobody, and a group needs a home club.
         clubs = await write_the_clubs(session_factory, settings=settings, now=now)
+        # **Their courts straight after them**, set up by each desk. Nothing
+        # below reads a court yet and a court changes nothing any player-side
+        # layer reads, so like the groups its position after its club is free.
+        club_courts = await write_the_club_courts(
+            session_factory, settings=settings, now=now, clubs=clubs
+        )
         # **The groups straight after their clubs**, created and joined by the
         # named accounts. Nothing below reads a group and a group changes nothing
         # anybody else reads — no pair, no index row, no court — so its position
@@ -1365,6 +1379,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             loop=loop,
             opinions=opinions,
             clubs=clubs,
+            club_courts=club_courts,
             groups=groups,
             administrators=administrators,
             official_groups=official_groups,
@@ -1458,6 +1473,8 @@ def report(run_report: SeedReport) -> list[str]:
     lines.extend(["", *_cohort_lines(run_report.members)])
     if run_report.clubs is not None:
         lines.extend(["", *club_lines(run_report.clubs)])
+    if run_report.club_courts is not None:
+        lines.extend(["", *club_courts_lines(run_report.club_courts)])
     if run_report.groups is not None:
         lines.extend(["", *group_lines(run_report.groups)])
     if run_report.administrators is not None:

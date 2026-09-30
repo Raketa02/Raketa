@@ -247,11 +247,14 @@ class WeeklyHours:
         their week afterwards, and ``PlayerProfile.set_weekly_hours`` accepts a
         blank week.
 
-        **Two callers, and neither is a commit**: the weekly-hours write route,
-        and a search's ``availability_override`` — the week a player improvised
-        for one evening, on any of the three surfaces that take one. Both are
-        edits of an answer already given, which is exactly what the floor does
-        not bind.
+        **Three callers, and none is a commit**: the weekly-hours write route,
+        a search's ``availability_override`` — the week a player improvised for
+        one evening, on any of the three surfaces that take one — and a club
+        court's **Raketa hours** (``clubs/domain/courts.py``), the same grid
+        with no floor at all, since a court offering nothing is a court not
+        painted yet. The first two are edits of an answer already given, which
+        is exactly what the floor does not bind; the third was never an answer
+        a player gave.
 
         **Named rather than a flag on ``of_cells``**, which is
         ``SearchRadius.chosen`` / ``recorded``'s discipline applied to the week:
@@ -353,8 +356,10 @@ WINDOW_ANY_MIN_HOURS: Final = 12 * DAYS_IN_THE_GRID * len(HOURS_OF_THE_DAY) // 2
 
 #: Saturday and Sunday. **A locale assumption, recorded as one rather than as a
 #: constant to tune** (``docs/adr/0100`` §7) — it is not a number, and its
-#: falsifier is the first shard whose weekend is somewhere else.
-_WEEKEND = frozenset({6, 7})
+#: falsifier is the first shard whose weekend is somewhere else. Public because a
+#: club's weekend price band reads the same two days (``clubs/domain/prices.py``),
+#: and a second spelling is how the two would drift apart.
+WEEKEND_DAYS: Final = frozenset({6, 7})
 
 
 class Window(StrEnum):
@@ -402,7 +407,7 @@ def window_of(week: WeeklyHours, today: IsoWeekday) -> Window:
         return Window.ANY
     if len(days) == 1 and len(week) <= WINDOW_SINGLE_DAY_MAX_HOURS:
         return _single_day(next(iter(days)), int(today))
-    if days <= _WEEKEND:
+    if days <= WEEKEND_DAYS:
         return Window.WEEKEND
     return Window.THIS_WEEK
 

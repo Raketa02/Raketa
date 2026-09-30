@@ -188,6 +188,10 @@ AGGREGATE_WRITERS = {
     # runs — which is why the layer needs both, and nothing else.
     "build_club_repository": "clubs",
     "build_club_account_repository": "clubs",
+    # What each club offers Raketa — courts, hours, an exception, prices and
+    # how it works — written by the use cases the club website's Courts &
+    # prices and Raketa settings run (#535), one stream per club.
+    "build_club_courts_repository": "clubs",
     # A group, created by its Owner and joined by its members — the two use
     # cases a request runs, over the one repository both take.
     "build_group_repository": "groups",
@@ -288,6 +292,7 @@ def test_the_walk_has_something_to_walk():
         "administrators.py",
         "catalog.py",
         "clock.py",
+        "club_courts.py",
         "clubs.py",
         "cohort.py",
         "games.py",

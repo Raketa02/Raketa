@@ -136,6 +136,9 @@ from app.modules.clubs.application.password_accounts import ClubPasswordAccounts
 from app.modules.clubs.application.session_holders import ClubAccountSessionHolders
 from app.modules.clubs.domain.ports import (
     ClubAccountRepository,
+    ClubCourtsRepository,
+    CourtBookings,
+    SellableCourtHours,
     ClubDirectory,
     ClubRepository,
     OfficialGroupSports,
@@ -143,9 +146,16 @@ from app.modules.clubs.domain.ports import (
 from app.modules.clubs.infrastructure.event_sourced_club_account_repository import (
     EventSourcedClubAccountRepository,
 )
+from app.modules.clubs.infrastructure.event_sourced_club_courts_repository import (
+    EventSourcedClubCourtsRepository,
+)
 from app.modules.clubs.infrastructure.event_sourced_club_repository import (
     EventSourcedClubRepository,
 )
+from app.modules.clubs.infrastructure.club_courts_sellable_hours import (
+    ClubCourtsSellableHours,
+)
+from app.modules.clubs.infrastructure.no_court_bookings import NoCourtBookings
 from app.modules.clubs.infrastructure.sqlalchemy_club_directory import (
     SqlAlchemyClubDirectory,
 )
@@ -707,6 +717,37 @@ def build_official_group_sports(session: AsyncSession) -> OfficialGroupSports:
     answered by the Groups context over its own directory, so the arrow runs
     ``groups → clubs`` only."""
     return GroupsOfficialGroupSports(build_group_directory(session))
+
+
+def build_club_courts_repository(
+    *, event_store: DomainEventStore, events: DomainEventPublisher
+) -> ClubCourtsRepository:
+    """A club's courts and terms, one stream per club (``docs/adr/0189`` §5).
+    Per unit of work: it remembers the stream versions it loaded. No session of
+    its own, because nothing is projected beside the stream."""
+    return EventSourcedClubCourtsRepository(event_store=event_store, events=events)
+
+
+def build_court_bookings() -> CourtBookings:
+    """The court hours bookings hold: none, while nothing can be booked
+    (#541) — so nought, and the day a booking exists an adapter over the
+    bookings is built here instead."""
+    return NoCourtBookings()
+
+
+def build_sellable_court_hours(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SellableCourtHours:
+    """What the Club context publishes about courts: the hours each live club
+    can sell, derived from its stream less what bookings hold
+    (``docs/adr/0189`` §5)."""
+    return ClubCourtsSellableHours(
+        courts=build_club_courts_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        bookings=build_court_bookings(),
+    )
 
 
 def build_club_directory(session: AsyncSession) -> ClubDirectory:

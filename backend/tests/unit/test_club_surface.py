@@ -39,6 +39,20 @@ CLUB_OPERATIONS = {
     "delete /api/v1/club/administrators/{administrator_id}",
     "get /api/v1/club/groups",
     "put /api/v1/club/groups/{group_id}/administrator",
+    "get /api/v1/club/courts",
+    "post /api/v1/club/courts",
+    "put /api/v1/club/courts/{court_id}",
+    "delete /api/v1/club/courts/{court_id}",
+    "put /api/v1/club/raketa-hours",
+    "get /api/v1/club/exceptions",
+    "post /api/v1/club/exceptions",
+    "delete /api/v1/club/exceptions/{exception_id}",
+    "get /api/v1/club/prices",
+    "put /api/v1/club/prices",
+    "put /api/v1/club/way-of-working",
+    "get /api/v1/club/raketa-settings",
+    "put /api/v1/club/raketa-settings",
+    "get /api/v1/club/setup",
 }
 
 

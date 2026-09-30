@@ -1,0 +1,92 @@
+"""The setup checklist: the five steps a club takes before its courts reach
+anybody's deck, and whether it is **live** (the mechanics §16.2, the screens
+B2).
+
+**Read, never stored.** Every step is a fact the club's stream already holds —
+a way chosen, a court offered, an offered court's hours and its sport's price,
+the settings confirmed — so the checklist is a fold over the aggregate and
+cannot disagree with the pages that change it.
+
+**A step is locked behind the one it needs**, and that is a rule rather than a
+comparison, so it is the backend's (``docs/adr/0021``): hours and prices wait
+for a court, the settings for a way of working. Which step is *next* is the
+first one to do, which a client reads off the order.
+
+**Payments are pending, and live is the other four.** Connecting a Stripe
+account is its own ticket (#537); until it lands the step reads ``PENDING`` —
+not to do, since there is nothing the club can do yet — and is left out of
+*live*. That ticket makes live wait on it.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import StrEnum
+from typing import final
+
+from app.modules.clubs.domain.club_courts import ClubCourts
+
+
+class SetupStep(StrEnum):
+    """The five steps, in the order the Overview lists them."""
+
+    CONNECT_PAYMENTS = "CONNECT_PAYMENTS"
+    WAY_OF_WORKING = "WAY_OF_WORKING"
+    COURTS = "COURTS"
+    HOURS_AND_PRICES = "HOURS_AND_PRICES"
+    SETTINGS = "SETTINGS"
+
+
+class StepState(StrEnum):
+    DONE = "DONE"
+    TO_DO = "TO_DO"
+    #: Waiting on an earlier step it needs.
+    LOCKED = "LOCKED"
+    #: Nothing the club can do yet: the step arrives with its own ticket.
+    PENDING = "PENDING"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SetupChecklist:
+    steps: tuple[tuple[SetupStep, StepState], ...]
+
+    @property
+    def live(self) -> bool:
+        """Every step the club can take is done. A live club's courts can
+        reach decks; a paused one is still live, and simply deals nothing new."""
+
+        return all(
+            state is StepState.DONE
+            for _, state in self.steps
+            if state is not StepState.PENDING
+        )
+
+
+def checklist_of(club: ClubCourts) -> SetupChecklist:
+    selling = club.selling_courts()
+    has_courts = any(court.offered for court in club.courts.values())
+    hours_and_prices = bool(selling) and all(
+        court.sport in club.prices for court in selling
+    )
+    return SetupChecklist(
+        steps=(
+            (SetupStep.CONNECT_PAYMENTS, StepState.PENDING),
+            (SetupStep.WAY_OF_WORKING, _done_or_to_do(club.way is not None)),
+            (SetupStep.COURTS, _done_or_to_do(has_courts)),
+            (
+                SetupStep.HOURS_AND_PRICES,
+                _done_or_to_do(hours_and_prices) if has_courts else StepState.LOCKED,
+            ),
+            (
+                SetupStep.SETTINGS,
+                _done_or_to_do(club.settings_confirmed)
+                if club.way is not None
+                else StepState.LOCKED,
+            ),
+        )
+    )
+
+
+def _done_or_to_do(done: bool) -> StepState:
+    return StepState.DONE if done else StepState.TO_DO

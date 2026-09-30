@@ -395,7 +395,7 @@
           "club"
         ],
         "summary": "Change the signed-in club's details",
-        "description": "A full replacement of the five details, at any time. Saving them unchanged records nothing. **A sport an official group declares cannot be unticked**, and the refusal names the group. Answers the details as recorded \u2014 names trimmed and collapsed, sports in the registry's order.",
+        "description": "A full replacement of the five details, at any time. Saving them unchanged records nothing. **A sport one of the club's courts plays, or an official group declares, cannot be unticked**, and the refusal names the court or the group. Answers the details as recorded \u2014 names trimmed and collapsed, sports in the registry's order.",
         "operationId": "change_details_api_v1_club_details_put",
         "requestBody": {
           "content": {
@@ -429,7 +429,7 @@
             }
           },
           "409": {
-            "description": "`club_sport_declared_by_group` \u2014 the save unticks a sport an official group at the club declares; `details.field` is `sports`, `details.sport` the sport and `details.group` the group's name (the first by name, where several play it). Nothing was recorded. The group's administrator changes its sports first, or the sport stays ticked.",
+            "description": "`club_sport_has_courts` \u2014 the save unticks a sport one of the club's courts plays, switched off or not; `details.field` is `sports`, `details.sport` the sport and `details.court` the court's name (the first in the club's order). Delete the court or give it another sport first. Asked before the groups are. `club_sport_declared_by_group` \u2014 the save unticks a sport an official group at the club declares; `details.field` is `sports`, `details.sport` the sport and `details.group` the group's name (the first by name, where several play it). The group's administrator changes its sports first, or the sport stays ticked. Nothing was recorded either way.",
             "content": {
               "application/json": {
                 "schema": {
@@ -444,6 +444,690 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/courts": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "The club's courts, and the Raketa hours of each",
+        "operationId": "read_courts_api_v1_club_courts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourtsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Add a court",
+        "description": "A court is born **offered**, and offers nothing until its Raketa hours are painted (`PUT /raketa-hours`).",
+        "operationId": "add_court_api_v1_club_courts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourtRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourtResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field the desk has to correct, named by `details.field`: `court_name_invalid` or `court_sport_not_offered`. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/courts/{court_id}": {
+      "put": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Edit a court, or switch it off or on",
+        "description": "A full replacement of the court's name, sport, roof and whether it is offered. **Switching it off is allowed whatever is booked on it** \u2014 a booked game is played as booked \u2014 and keeps its hours; a new sport is refused while a booking is ahead of it. Saving it unchanged records nothing.",
+        "operationId": "change_court_api_v1_club_courts__court_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "court_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Court Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourtChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourtResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`court_name_invalid` or `court_sport_not_offered`, under `details.field`. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`court_not_found` \u2014 no court of this club has that id; another club's is the same answer. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`court_name_taken` \u2014 another court at the club has the name, ignoring case; or `court_has_bookings` \u2014 a new sport for a court with a booking ahead of it. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Delete a court",
+        "operationId": "remove_court_api_v1_club_courts__court_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "court_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Court Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`court_not_found` \u2014 no court of this club has that id; another club's is the same answer. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`court_has_bookings` \u2014 a booking is ahead of this court, one in progress included. Switch it off instead. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/raketa-hours": {
+      "put": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Set the Raketa hours of one court or several",
+        "description": "The same week on every court named \u2014 one court's *Save hours*, *Copy to other courts* or *All courts of a sport*. Recorded per court, only where the week moved. **Never refused over a booking or a card**: a booked game is played as booked, and the pattern is what the club offers from now on. Answers every court of the club.",
+        "operationId": "set_raketa_hours_api_v1_club_raketa_hours_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RaketaHoursRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourtsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`court_not_found` \u2014 no court of this club has that id; another club's is the same answer. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/exceptions": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "The hours the club has closed, that are not over yet",
+        "operationId": "read_exceptions_api_v1_club_exceptions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Close hours without touching the weekly pattern",
+        "description": "An hour, a day or a run of days, on every court or some. **Allowed over an hour with cards on it** \u2014 the cards move to another court or disappear, and nobody was charged \u2014 and refused over a booking.",
+        "operationId": "add_exception_api_v1_club_exceptions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExceptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field the desk has to correct, named by `details.field`: `exception_reason_invalid` (`reason`), `exception_hours_invalid` (`hours`), `exception_days_invalid` or `exception_in_the_past` (`days`), `exception_courts_required` (`courts`). Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`court_not_found` \u2014 no court of this club has that id; another club's is the same answer. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`court_booked_then` \u2014 a booking holds an hour it would close. `details` names the first: `court_id`, `booking_id` and `starts_at`. Cancel the booking first. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/exceptions/{exception_id}": {
+      "delete": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Remove an exception, opening its hours again",
+        "operationId": "remove_exception_api_v1_club_exceptions__exception_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "exception_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Exception Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`exception_not_found` \u2014 no exception of this club has that id; another club's is the same answer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/prices": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "What a court-hour costs, per sport the club offers",
+        "operationId": "read_prices_api_v1_club_prices_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Save the whole price table",
+        "description": "A full replacement: a sport left out is no longer priced. Money is **integer grosze**. **New prices apply to new cards only** \u2014 a card already dealt, and a game already booked, keep their price.",
+        "operationId": "set_prices_api_v1_club_prices_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PricesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A row the desk has to correct \u2014 `details.field` is `prices` and `details.sport` names the row: `price_sport_not_offered`, `price_sport_repeated`, `price_out_of_range` (with `least` and `most`), `price_does_not_split` (with `seats`), `price_band_hours_invalid` or `price_bands_overlap`. Rows are read in the order sent. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/way-of-working": {
+      "put": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Choose how the club works with Raketa",
+        "description": "One way for the whole club \u2014 the setup checklist's second step. Changeable later; **the change applies to hours not yet booked**. Choosing the one it has records nothing. Answers the settings page.",
+        "operationId": "choose_way_of_working_api_v1_club_way_of_working_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WayOfWorkingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaketaSettingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/raketa-settings": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "How the club works with Raketa, and its settings",
+        "operationId": "read_raketa_settings_api_v1_club_raketa_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaketaSettingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Save \u2014 the first time, confirm \u2014 the club's Raketa settings",
+        "description": "Every setting, defaults included: **the first save confirms them**, the setup checklist's last step. A changed setting applies to games booked after the change. Pausing stops new cards on the club's courts; booked games are played as booked.",
+        "operationId": "save_raketa_settings_api_v1_club_raketa_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RaketaSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaketaSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`setting_out_of_range` \u2014 `details.field` names the setting and `least` and `most` its range. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`way_of_working_not_chosen` \u2014 which settings matter depends on the way, so it is chosen first. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/setup": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "The setup checklist, and whether the club is live",
+        "description": "Read off everything the club has set, never stored. The Overview shows it until `live`, and then gives way.",
+        "operationId": "read_setup_api_v1_club_setup_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupResponse"
                 }
               }
             }
@@ -966,6 +1650,15 @@
         "title": "AdministratorStatus",
         "description": "What the Administrators table says of somebody, now."
       },
+      "BandDays": {
+        "type": "string",
+        "enum": [
+          "WEEKDAYS",
+          "WEEKEND"
+        ],
+        "title": "BandDays",
+        "description": "Which days a band prices: Monday to Friday, or Saturday and Sunday."
+      },
       "ClaimCodeRequest": {
         "properties": {
           "email": {
@@ -1253,6 +1946,127 @@
         "title": "ClubSignUpRequest",
         "description": "A club signs up: its details, and the email and password its desk signs\nin with. **No second password field** \u2014 the website asks once."
       },
+      "CourtChangeRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "What the club calls it \u2014 *Court 2*, *Kort centralny*. Trimmed, runs of whitespace collapsed, 1\u201340 characters: `court_name_invalid`. Unique among the club's courts, ignoring case: `409 court_name_taken`."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "One sport, from the club's own: `court_sport_not_offered` otherwise."
+          },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor",
+            "description": "Indoor, or outdoor. Shown on a player's card."
+          },
+          "offered": {
+            "type": "boolean",
+            "title": "Offered",
+            "description": "`false` switches it off: kept, with its hours, and selling nothing new. Allowed whatever is booked on it."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "sport",
+          "indoor",
+          "offered"
+        ],
+        "title": "CourtChangeRequest",
+        "description": "A court's edit form: the three facts it was added with, and whether it\nis offered \u2014 **all four on every save**, a full replacement."
+      },
+      "CourtRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "What the club calls it \u2014 *Court 2*, *Kort centralny*. Trimmed, runs of whitespace collapsed, 1\u201340 characters: `court_name_invalid`. Unique among the club's courts, ignoring case: `409 court_name_taken`."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "One sport, from the club's own: `court_sport_not_offered` otherwise."
+          },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor",
+            "description": "Indoor, or outdoor. Shown on a player's card."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "sport",
+          "indoor"
+        ],
+        "title": "CourtRequest",
+        "description": "A court as the desk types it into *Add a court* or its edit form."
+      },
+      "CourtResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "indoor": {
+            "type": "boolean",
+            "title": "Indoor"
+          },
+          "offered": {
+            "type": "boolean",
+            "title": "Offered",
+            "description": "Offered to Raketa, or switched off \u2014 kept, with its hours, and selling nothing."
+          },
+          "hours": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyHourResource"
+            },
+            "type": "array",
+            "title": "Hours",
+            "description": "The hours of an ordinary week this court is offered to Raketa, Monday-first and in the grid's order. Empty until they are painted."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "sport",
+          "indoor",
+          "offered",
+          "hours"
+        ],
+        "title": "CourtResponse",
+        "description": "A court as the desk's table shows it."
+      },
+      "CourtsResponse": {
+        "properties": {
+          "courts": {
+            "items": {
+              "$ref": "#/components/schemas/CourtResponse"
+            },
+            "type": "array",
+            "title": "Courts",
+            "description": "Every court the club has, in the order they were added."
+          }
+        },
+        "type": "object",
+        "required": [
+          "courts"
+        ],
+        "title": "CourtsResponse"
+      },
       "ErrorResponse": {
         "description": "The body of every error response, on both API surfaces.",
         "properties": {
@@ -1296,6 +2110,168 @@
         ],
         "title": "ErrorResponse",
         "type": "object"
+      },
+      "ExceptionRequest": {
+        "properties": {
+          "court_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Ids",
+            "description": "`null` closes **every** court, one added later included; a list closes those \u2014 at least one (`exception_courts_required`), each the club's (`404 court_not_found`)."
+          },
+          "first_day": {
+            "type": "string",
+            "format": "date",
+            "title": "First Day",
+            "description": "The first local day it closes."
+          },
+          "last_day": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Day",
+            "description": "The last local day it closes, inclusive \u2014 on or after `first_day` (`exception_days_invalid`), and not already over (`exception_in_the_past`)."
+          },
+          "from_hour": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Hour",
+            "description": "With `until_hour`, the hours it closes on each day \u2014 9 and 12 close 09:00\u201312:00. Both `null` close the whole day; one alone, or hours outside 07:00\u201323:00, is `exception_hours_invalid`."
+          },
+          "until_hour": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until Hour",
+            "description": "The hour it closes until, exclusive."
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "For the club's own records, and the label its list shows. Trimmed, 1\u201380 characters: `exception_reason_invalid`. No player reads it."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "court_ids",
+          "first_day",
+          "last_day",
+          "from_hour",
+          "until_hour",
+          "reason"
+        ],
+        "title": "ExceptionRequest",
+        "description": "*Add an exception*: what, when, and why.\n\nThe three forms the desk is offered are one shape: **a date** is a run of\none day, **a range** a run of several, and **hours on a date** a run of one\nday with its hours \u2014 hours on a run of several close them on each day."
+      },
+      "ExceptionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "court_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Ids",
+            "description": "`null` for every court; otherwise the courts it closes, in the club's order. A deleted court leaves the list, and an exception left naming none is gone."
+          },
+          "first_day": {
+            "type": "string",
+            "format": "date",
+            "title": "First Day"
+          },
+          "last_day": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Day"
+          },
+          "from_hour": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Hour"
+          },
+          "until_hour": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until Hour"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "court_ids",
+          "first_day",
+          "last_day",
+          "from_hour",
+          "until_hour",
+          "reason"
+        ],
+        "title": "ExceptionResponse"
+      },
+      "ExceptionsResponse": {
+        "properties": {
+          "exceptions": {
+            "items": {
+              "$ref": "#/components/schemas/ExceptionResponse"
+            },
+            "type": "array",
+            "title": "Exceptions",
+            "description": "Every exception not over yet \u2014 its last day today or later, at the club \u2014 by its first day, then the hour it closes from (a whole day first), then the order they were added."
+          }
+        },
+        "type": "object",
+        "required": [
+          "exceptions"
+        ],
+        "title": "ExceptionsResponse"
       },
       "ForgotPasswordRequest": {
         "properties": {
@@ -1496,6 +2472,263 @@
         "title": "NewPasswordRequest",
         "description": "The new password, and **exactly one** of what opens the way to it: the\n`token` from the email's link, or the `ticket` a claimed code returned.\n\nThe password carries no bound here, deliberately: the rule every account\nshares \u2014 8 to 128 characters with a letter and a digit \u2014 is refused as\n`password_too_weak` naming the field, not as a validation error naming none.\nSending both or neither of `token` and `ticket` is a malformed request rather\nthan a person's mistake, and is the one refusal here that is a `422`."
       },
+      "OtherClubsCourtsSchema": {
+        "properties": {
+          "offered": {
+            "type": "boolean",
+            "title": "Offered",
+            "description": "*Offer our groups other clubs' courts when ours are full*. Off by default."
+          },
+          "within_km": {
+            "type": "integer",
+            "title": "Within Km",
+            "description": "How far such a court may be, in kilometres \u2014 kept while off."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "offered",
+          "within_km"
+        ],
+        "title": "OtherClubsCourtsSchema"
+      },
+      "PriceBandRequest": {
+        "properties": {
+          "days": {
+            "$ref": "#/components/schemas/BandDays",
+            "description": "Monday to Friday, or Saturday and Sunday."
+          },
+          "from_hour": {
+            "type": "integer",
+            "title": "From Hour",
+            "description": "With `until_hour`, the hours it prices \u2014 17 and 22 price 17:00\u201322:00. Within 07:00\u201323:00, at least one hour: `price_band_hours_invalid`. Two bands of the same days may not overlap: `price_bands_overlap`."
+          },
+          "until_hour": {
+            "type": "integer",
+            "title": "Until Hour",
+            "description": "The hour it prices until, exclusive."
+          },
+          "price_grosze": {
+            "type": "integer",
+            "title": "Price Grosze",
+            "description": "The court-hour's price in those hours, in grosze."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "days",
+          "from_hour",
+          "until_hour",
+          "price_grosze"
+        ],
+        "title": "PriceBandRequest"
+      },
+      "PriceBandResponse": {
+        "properties": {
+          "days": {
+            "$ref": "#/components/schemas/BandDays"
+          },
+          "from_hour": {
+            "type": "integer",
+            "title": "From Hour"
+          },
+          "until_hour": {
+            "type": "integer",
+            "title": "Until Hour"
+          },
+          "price_grosze": {
+            "type": "integer",
+            "title": "Price Grosze"
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "What one player pays of it: the price divided by the seats."
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "from_hour",
+          "until_hour",
+          "price_grosze",
+          "share_grosze"
+        ],
+        "title": "PriceBandResponse"
+      },
+      "PricesRequest": {
+        "properties": {
+          "prices": {
+            "items": {
+              "$ref": "#/components/schemas/SportPriceRequest"
+            },
+            "type": "array",
+            "title": "Prices"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "prices"
+        ],
+        "title": "PricesRequest",
+        "description": "The whole price table, **a full replacement**: a sport left out is no\nlonger priced."
+      },
+      "PricesResponse": {
+        "properties": {
+          "prices": {
+            "items": {
+              "$ref": "#/components/schemas/SportPriceResponse"
+            },
+            "type": "array",
+            "title": "Prices",
+            "description": "Every sport the club offers, in the registry's order, priced or not. **New prices apply to new cards only**: a card already dealt keeps the price it was dealt with."
+          }
+        },
+        "type": "object",
+        "required": [
+          "prices"
+        ],
+        "title": "PricesResponse"
+      },
+      "RaketaHoursRequest": {
+        "properties": {
+          "court_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Court Ids",
+            "description": "Each court to give this week. One the club does not have refuses the whole save with `404 court_not_found`. A court named twice is named once."
+          },
+          "hours": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyHourResource"
+            },
+            "type": "array",
+            "title": "Hours",
+            "description": "The week, as the player's grid spells it. **Empty is allowed**: a court offering nothing. A cell sent twice is one cell."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "court_ids",
+          "hours"
+        ],
+        "title": "RaketaHoursRequest",
+        "description": "*Weekly hours for Raketa*, saved on one court or several at once \u2014\nwhich is what *Copy to other courts* and *All courts of a sport* send."
+      },
+      "RaketaSettingsRequest": {
+        "properties": {
+          "release_lead_days": {
+            "type": "integer",
+            "title": "Release Lead Days",
+            "description": "Only Raketa: days before a game unsold hours return to the club. 1\u201313, default 3."
+          },
+          "cut_off_hours": {
+            "type": "integer",
+            "title": "Cut Off Hours",
+            "description": "Hours before a game players may leave free, and a game still short is called off. 0\u201372, default 24."
+          },
+          "minimum_notice_hours": {
+            "type": "integer",
+            "title": "Minimum Notice Hours",
+            "description": "Instant and On request: the latest a Raketa game can book, in hours before it. 1\u201348, default 2."
+          },
+          "time_to_confirm_minutes": {
+            "type": "integer",
+            "title": "Time To Confirm Minutes",
+            "description": "On request: minutes the club has to answer a full game. 5\u201360, default 30 \u2014 never more than the shortest minimum notice."
+          },
+          "other_clubs_courts": {
+            "$ref": "#/components/schemas/OtherClubsCourtsSchema",
+            "description": "The distance is 1\u201350 km, default 10."
+          },
+          "check_in": {
+            "type": "boolean",
+            "title": "Check In",
+            "description": "*We check players in*. Off by default."
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "description": "*Pause Raketa bookings*: no new cards on the club's courts; booked games are played as booked, and cards already dealt keep their court until their book-by."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "release_lead_days",
+          "cut_off_hours",
+          "minimum_notice_hours",
+          "time_to_confirm_minutes",
+          "other_clubs_courts",
+          "check_in",
+          "paused"
+        ],
+        "title": "RaketaSettingsRequest",
+        "description": "The settings form \u2014 every field on every save, defaults included, since\nthe first save is the club **confirming** them. Each number is bounded by\nthe domain: `setting_out_of_range` names the field and carries `least` and\n`most`."
+      },
+      "RaketaSettingsResponse": {
+        "properties": {
+          "way_of_working": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WayOfWorking"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` until the club chooses."
+          },
+          "release_lead_days": {
+            "type": "integer",
+            "title": "Release Lead Days"
+          },
+          "cut_off_hours": {
+            "type": "integer",
+            "title": "Cut Off Hours"
+          },
+          "minimum_notice_hours": {
+            "type": "integer",
+            "title": "Minimum Notice Hours"
+          },
+          "time_to_confirm_minutes": {
+            "type": "integer",
+            "title": "Time To Confirm Minutes"
+          },
+          "other_clubs_courts": {
+            "$ref": "#/components/schemas/OtherClubsCourtsSchema"
+          },
+          "check_in": {
+            "type": "boolean",
+            "title": "Check In"
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused"
+          }
+        },
+        "type": "object",
+        "required": [
+          "way_of_working",
+          "release_lead_days",
+          "cut_off_hours",
+          "minimum_notice_hours",
+          "time_to_confirm_minutes",
+          "other_clubs_courts",
+          "check_in",
+          "paused"
+        ],
+        "title": "RaketaSettingsResponse",
+        "description": "How the club works with Raketa, and every setting \u2014 **at its default\nuntil the club confirms it**, so the form can show what it would save."
+      },
       "RefreshRequest": {
         "properties": {
           "refresh_token": {
@@ -1510,6 +2743,59 @@
         ],
         "title": "RefreshRequest"
       },
+      "SetupResponse": {
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/SetupStepSchema"
+            },
+            "type": "array",
+            "title": "Steps",
+            "description": "The five, in the Overview's order: `CONNECT_PAYMENTS` \u2014 `PENDING` until connecting Stripe is built \u2014 then `WAY_OF_WORKING`, `COURTS` (an offered court), `HOURS_AND_PRICES` (an offered court with hours, and every such court's sport priced) and `SETTINGS` (confirmed)."
+          },
+          "live": {
+            "type": "boolean",
+            "title": "Live",
+            "description": "Every step but a pending one is done: the club's courts can reach players' decks. A paused club is still live."
+          }
+        },
+        "type": "object",
+        "required": [
+          "steps",
+          "live"
+        ],
+        "title": "SetupResponse",
+        "description": "The Overview's checklist, shown until the club is live."
+      },
+      "SetupStep": {
+        "type": "string",
+        "enum": [
+          "CONNECT_PAYMENTS",
+          "WAY_OF_WORKING",
+          "COURTS",
+          "HOURS_AND_PRICES",
+          "SETTINGS"
+        ],
+        "title": "SetupStep",
+        "description": "The five steps, in the order the Overview lists them."
+      },
+      "SetupStepSchema": {
+        "properties": {
+          "step": {
+            "$ref": "#/components/schemas/SetupStep"
+          },
+          "state": {
+            "$ref": "#/components/schemas/StepState",
+            "description": "`DONE`, `TO_DO`, `LOCKED` \u2014 waiting on the step it needs: hours and prices on a court, the settings on a way of working \u2014 or `PENDING`: nothing the club can do yet. *Next* is the first `TO_DO`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "step",
+          "state"
+        ],
+        "title": "SetupStepSchema"
+      },
       "Sport": {
         "type": "string",
         "enum": [
@@ -1520,6 +2806,98 @@
         ],
         "title": "Sport",
         "description": "The four sports Raketa rates, as a closed enum."
+      },
+      "SportPriceRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "A sport the club offers (`price_sport_not_offered`), once per save (`price_sport_repeated`)."
+          },
+          "price_grosze": {
+            "type": "integer",
+            "title": "Price Grosze",
+            "description": "The standard court-hour, in grosze \u2014 12000 is 120 z\u0142. Between `least` and `most` (`price_out_of_range`, which carries both), and splitting into whole grosze among the sport's seats (`price_does_not_split`, which carries `seats`) \u2014 so is every band's."
+          },
+          "bands": {
+            "items": {
+              "$ref": "#/components/schemas/PriceBandRequest"
+            },
+            "type": "array",
+            "title": "Bands",
+            "description": "Optional hours priced differently. Empty is none."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sport",
+          "price_grosze",
+          "bands"
+        ],
+        "title": "SportPriceRequest"
+      },
+      "SportPriceResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "seats": {
+            "type": "integer",
+            "title": "Seats",
+            "description": "How many players a game of this sport seats."
+          },
+          "price_grosze": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Grosze",
+            "description": "The standard court-hour in grosze, or `null` \u2014 not priced yet."
+          },
+          "share_grosze": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Grosze",
+            "description": "What one player pays of the standard price \u2014 the price divided by the seats, exact to the grosz. `null` beside a `null` price."
+          },
+          "bands": {
+            "items": {
+              "$ref": "#/components/schemas/PriceBandResponse"
+            },
+            "type": "array",
+            "title": "Bands",
+            "description": "Weekdays first, then by the hour each opens."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "seats",
+          "price_grosze",
+          "share_grosze",
+          "bands"
+        ],
+        "title": "SportPriceResponse"
+      },
+      "StepState": {
+        "type": "string",
+        "enum": [
+          "DONE",
+          "TO_DO",
+          "LOCKED",
+          "PENDING"
+        ],
+        "title": "StepState"
       },
       "TokenResponse": {
         "properties": {
@@ -1588,6 +2966,55 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WayOfWorking": {
+        "type": "string",
+        "enum": [
+          "ONLY_RAKETA",
+          "INSTANT",
+          "ON_REQUEST"
+        ],
+        "title": "WayOfWorking",
+        "description": "How a club sells through Raketa (the mechanics \u00a716.3)."
+      },
+      "WayOfWorkingRequest": {
+        "properties": {
+          "way_of_working": {
+            "$ref": "#/components/schemas/WayOfWorking",
+            "description": "`ONLY_RAKETA` \u2014 Raketa sells the club's Raketa hours alone, until the release lead; `INSTANT` \u2014 both sell and a Raketa booking is final; `ON_REQUEST` \u2014 the club confirms each full game within its time to confirm, and nobody pays until it does."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "way_of_working"
+        ],
+        "title": "WayOfWorkingRequest"
+      },
+      "WeeklyHourResource": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Day",
+            "description": "ISO weekday \u2014 1 is Monday, 7 is Sunday. The grid is Monday-first."
+          },
+          "hour": {
+            "type": "integer",
+            "maximum": 22.0,
+            "minimum": 7.0,
+            "title": "Hour",
+            "description": "The hour the cell starts at, wall clock \u2014 19 is 19:00 to 20:00. The week runs 07:00 to 23:00, so the first cell is 7 and the last is 22."
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "hour"
+        ],
+        "title": "WeeklyHourResource",
+        "description": "One ticked hour of the week \u2014 a day, and the hour its cell starts at.\n\nTwo named fields rather than the single joined code the event stream stores.\nThe stream's code is a *storage* encoding chosen so a replay folds strings;\nthis is a contract a client renders a grid from, and a client that had to\nsplit ``\"3:19\"`` would be parsing our persistence format.\n\n**Every cell, and there is no exception.** The rule was twice read as\ncovering only the cells a player *chose* \u2014 the one a times rung offers\n(#283), and the week a raised ``KEEP_THESE_TIMES`` quotes back (#286) \u2014 on\nthe argument that a payload handed back is not a resource. Both crossed as\ncodes, and in both cases a client ended up splitting one. What decides this\nis not whose value it is but **what is done with it**: a cell that gets\ndrawn on the seven-by-sixteen grid crosses in these two fields, and the engine\nholding it as a code is a fact about the engine. This side of the boundary\nowns the encoding, so this side is where it is read."
       }
     },
     "securitySchemes": {

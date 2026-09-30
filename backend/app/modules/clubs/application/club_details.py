@@ -9,8 +9,16 @@ from app.modules.clubs.application.commands import (
     ClubDetailsInput,
 )
 from app.modules.clubs.domain.club import Club
-from app.modules.clubs.domain.ports import ClubRepository, OfficialGroupSports
-from app.modules.clubs.domain.untick import refuse_an_untick, unticked
+from app.modules.clubs.domain.ports import (
+    ClubCourtsRepository,
+    ClubRepository,
+    OfficialGroupSports,
+)
+from app.modules.clubs.domain.untick import (
+    refuse_an_untick,
+    refuse_an_untick_of_courts,
+    unticked,
+)
 from app.modules.clubs.domain.value_objects import (
     City,
     ClubDetails,
@@ -38,7 +46,7 @@ def details_from(typed: ClubDetailsInput) -> ClubDetails:
     )
 
 
-async def _the_club(clubs: ClubRepository, club_id: UUID) -> Club:
+async def the_club(clubs: ClubRepository, club_id: UUID) -> Club:
     club = await clubs.load(club_id)
     if club is None:
         # A Club account is opened in the same transaction as its club, so an
@@ -55,7 +63,7 @@ class ReadClubDetails:
         self._clubs = clubs
 
     async def execute(self, club_id: UUID) -> Club:
-        return await _the_club(self._clubs, club_id)
+        return await the_club(self._clubs, club_id)
 
 
 class ChangeClubDetails:
@@ -65,30 +73,37 @@ class ChangeClubDetails:
     sign-up is. Saving them unchanged records nothing. The search row moves in
     the same transaction, so the next search already reads the new name.
 
-    **Unticking a sport an official group declares is refused, naming the
-    group** (``docs/adr/0182`` §5, #509) — ``club_sport_declared_by_group``,
-    after every field has been read. The groups are asked only when a sport
-    is being unticked, since nothing else here is theirs to refuse.
+    **Unticking a sport one of the club's courts plays is refused, naming the
+    court** (#535) — ``club_sport_has_courts`` — and **one an official group
+    declares, naming the group** (``docs/adr/0182`` §5, #509) —
+    ``club_sport_declared_by_group`` — in that order, after every field has
+    been read. Both are asked only when a sport is being unticked, since
+    nothing else here is theirs to refuse.
     """
 
     def __init__(
         self,
         *,
         clubs: ClubRepository,
+        courts: ClubCourtsRepository,
         groups: OfficialGroupSports,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._clubs = clubs
+        self._courts = courts
         self._groups = groups
         self._uow = uow
         self._clock = clock
 
     async def execute(self, command: ChangeClubDetailsCommand) -> Club:
         details = details_from(command.details)
-        club = await _the_club(self._clubs, command.club_id)
+        club = await the_club(self._clubs, command.club_id)
         removed = unticked(club.details.sports.sports, details.sports.sports)
         if removed:
+            refuse_an_untick_of_courts(
+                removed, (await self._courts.load(club.id)).courts.values()
+            )
             refuse_an_untick(removed, await self._groups.declared_at(club.id))
         club.change_details(details, occurred_at=self._clock.now())
         await self._clubs.save(club)

@@ -72,7 +72,11 @@ decides the words, including the case where the right answer is to show nothing 
 **Localisation is not open yet.** One locale, stated. A second market is a new decision, and
 this table changes with it.
 
-**Money is not here any more.** The kernel's money module was removed in the reset, so no
-price crosses the wire. The rules that were here — integer grosze, comma decimal, the
-non-breaking space before `zł`, a discount rendered as a struck-through pair — are recorded
-in the deleted ADR-0023 and must be re-decided, not recovered, when a priced context exists.
+**Money crosses the wire as integer grosze, and its rendering is not decided yet.** The
+kernel's money module was removed in the reset; the first priced context is a club's
+court prices (#535), and it sends every amount as an **integer in grosze**, in a field named
+`…_grosze` — `price_grosze: 14000` is 140 zł, and a share is exact to the grosz because a
+price that does not split among the seats is refused. How a client *renders* one — the
+decimal comma, the space before `zł`, whether whole złoty drop their grosze — is still to be
+decided, here, by the first client that draws a price (#561), rather than recovered from the
+deleted ADR-0023.

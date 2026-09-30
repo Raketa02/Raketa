@@ -23,7 +23,9 @@ from app.bootstrap.composition import (
     build_club_account_passwords,
     build_club_account_repository,
     build_club_account_session_holders,
+    build_club_courts_repository,
     build_club_repository,
+    build_court_bookings,
     build_official_group_sports,
 )
 from app.core.security import BearerCredentialsDep
@@ -37,6 +39,24 @@ from app.modules.auth.application.refresh_token import RefreshAuthTokens
 from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.password_reset import ResetPage
 from app.modules.auth.domain.ports import PasswordAccounts, SessionHolders
+from app.modules.clubs.application.club_courts import (
+    AddCourt,
+    ChangeCourt,
+    ReadClubCourts,
+    ReadSetup,
+    RemoveCourt,
+    SetRaketaHours,
+)
+from app.modules.clubs.application.prices import ReadPrices, SetPrices
+from app.modules.clubs.application.raketa_settings import (
+    ChooseWayOfWorking,
+    SaveRaketaSettings,
+)
+from app.modules.clubs.application.hours_exceptions import (
+    AddException,
+    ReadExceptions,
+    RemoveException,
+)
 from app.modules.clubs.application.club_details import (
     ChangeClubDetails,
     ReadClubDetails,
@@ -47,7 +67,12 @@ from app.modules.clubs.application.resolve_club_account import (
 from app.modules.clubs.application.sign_in_club import SignInClub
 from app.modules.clubs.application.sign_up_club import SignUpClub
 from app.modules.clubs.domain.club_account import ClubAccount
-from app.modules.clubs.domain.ports import ClubAccountRepository, ClubRepository
+from app.modules.clubs.domain.ports import (
+    ClubAccountRepository,
+    ClubCourtsRepository,
+    ClubRepository,
+    CourtBookings,
+)
 
 
 def get_club_repository(
@@ -92,11 +117,108 @@ def get_read_club_details(clubs: ClubRepositoryDep) -> ReadClubDetails:
 ReadClubDetailsDep = Annotated[ReadClubDetails, Depends(get_read_club_details)]
 
 
+# --- Club courts: courts, hours, exceptions, prices, settings (#535) ---------
+
+
+def get_club_courts_repository(
+    event_store: DomainEventStoreDep, events: EventPublisherDep
+) -> ClubCourtsRepository:
+    return build_club_courts_repository(event_store=event_store, events=events)
+
+
+ClubCourtsRepositoryDep = Annotated[
+    ClubCourtsRepository, Depends(get_club_courts_repository)
+]
+
+
+def get_read_club_courts(courts: ClubCourtsRepositoryDep) -> ReadClubCourts:
+    return ReadClubCourts(courts=courts)
+
+
+ReadClubCourtsDep = Annotated[ReadClubCourts, Depends(get_read_club_courts)]
+
+
+def get_read_setup(courts: ClubCourtsRepositoryDep) -> ReadSetup:
+    return ReadSetup(courts=courts)
+
+
+ReadSetupDep = Annotated[ReadSetup, Depends(get_read_setup)]
+
+
+def get_read_exceptions(
+    courts: ClubCourtsRepositoryDep, clock: ClockDep
+) -> ReadExceptions:
+    return ReadExceptions(courts=courts, clock=clock)
+
+
+ReadExceptionsDep = Annotated[ReadExceptions, Depends(get_read_exceptions)]
+
+
+def get_add_court(
+    clubs: ClubRepositoryDep,
+    courts: ClubCourtsRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> AddCourt:
+    return AddCourt(clubs=clubs, courts=courts, uow=uow, clock=clock)
+
+
+AddCourtDep = Annotated[AddCourt, Depends(get_add_court)]
+
+
+def get_court_bookings() -> CourtBookings:
+    return build_court_bookings()
+
+
+CourtBookingsDep = Annotated[CourtBookings, Depends(get_court_bookings)]
+
+
+def get_change_court(
+    clubs: ClubRepositoryDep,
+    courts: ClubCourtsRepositoryDep,
+    bookings: CourtBookingsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangeCourt:
+    return ChangeCourt(
+        clubs=clubs, courts=courts, bookings=bookings, uow=uow, clock=clock
+    )
+
+
+ChangeCourtDep = Annotated[ChangeCourt, Depends(get_change_court)]
+
+
+def get_remove_court(
+    courts: ClubCourtsRepositoryDep,
+    bookings: CourtBookingsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> RemoveCourt:
+    return RemoveCourt(courts=courts, bookings=bookings, uow=uow, clock=clock)
+
+
+RemoveCourtDep = Annotated[RemoveCourt, Depends(get_remove_court)]
+
+
+def get_set_raketa_hours(
+    courts: ClubCourtsRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> SetRaketaHours:
+    return SetRaketaHours(courts=courts, uow=uow, clock=clock)
+
+
+SetRaketaHoursDep = Annotated[SetRaketaHours, Depends(get_set_raketa_hours)]
+
+
 def get_change_club_details(
-    db: DbSession, clubs: ClubRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+    db: DbSession,
+    clubs: ClubRepositoryDep,
+    courts: ClubCourtsRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
 ) -> ChangeClubDetails:
     return ChangeClubDetails(
         clubs=clubs,
+        courts=courts,
         groups=build_official_group_sports(db),
         uow=uow,
         clock=clock,
@@ -104,6 +226,68 @@ def get_change_club_details(
 
 
 ChangeClubDetailsDep = Annotated[ChangeClubDetails, Depends(get_change_club_details)]
+
+
+def get_add_exception(
+    courts: ClubCourtsRepositoryDep,
+    bookings: CourtBookingsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> AddException:
+    return AddException(courts=courts, bookings=bookings, uow=uow, clock=clock)
+
+
+AddExceptionDep = Annotated[AddException, Depends(get_add_exception)]
+
+
+def get_remove_exception(
+    courts: ClubCourtsRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> RemoveException:
+    return RemoveException(courts=courts, uow=uow, clock=clock)
+
+
+RemoveExceptionDep = Annotated[RemoveException, Depends(get_remove_exception)]
+
+
+def get_read_prices(
+    clubs: ClubRepositoryDep, courts: ClubCourtsRepositoryDep
+) -> ReadPrices:
+    return ReadPrices(clubs=clubs, courts=courts)
+
+
+ReadPricesDep = Annotated[ReadPrices, Depends(get_read_prices)]
+
+
+def get_set_prices(
+    clubs: ClubRepositoryDep,
+    courts: ClubCourtsRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> SetPrices:
+    return SetPrices(clubs=clubs, courts=courts, uow=uow, clock=clock)
+
+
+SetPricesDep = Annotated[SetPrices, Depends(get_set_prices)]
+
+
+def get_choose_way_of_working(
+    courts: ClubCourtsRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> ChooseWayOfWorking:
+    return ChooseWayOfWorking(courts=courts, uow=uow, clock=clock)
+
+
+ChooseWayOfWorkingDep = Annotated[
+    ChooseWayOfWorking, Depends(get_choose_way_of_working)
+]
+
+
+def get_save_raketa_settings(
+    courts: ClubCourtsRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> SaveRaketaSettings:
+    return SaveRaketaSettings(courts=courts, uow=uow, clock=clock)
+
+
+SaveRaketaSettingsDep = Annotated[SaveRaketaSettings, Depends(get_save_raketa_settings)]
 
 
 # --- The club's session: the auth use cases, built for the club audience -----
