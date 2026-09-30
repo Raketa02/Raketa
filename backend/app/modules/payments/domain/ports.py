@@ -68,3 +68,18 @@ class NoticeInbox(Protocol):
         whether this is the first time. A notice read before answers ``False``
         and records nothing."""
         ...
+
+
+@runtime_checkable
+class ConnectedAccounts(Protocol):
+    """**The clubs Raketa sells for, by their accounts at the provider** — told
+    when the provider says one changed (#537). A club is the seller, so its
+    account is the Club context's to record; this context holds the provider
+    and hears its notices, and passes this one on. Answered in
+    ``payments/infrastructure/``, so the arrow runs ``payments → clubs``."""
+
+    async def heed(self, account_id: str) -> bool:
+        """The provider said this account changed: read it as it stands and
+        record it on the club that holds it — in the caller's transaction,
+        without committing. ``False`` for an account no club here opened."""
+        ...

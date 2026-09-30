@@ -72,7 +72,8 @@ GitHub Actions ──build──▶ ECR (image)
         "PHOTO_STORAGE_SECRET_KEY":"<the-photo-bucket-secret-key>",
         "STRIPE_SECRET_KEY":"<sk_live_… from the Stripe dashboard>",
         "STRIPE_PUBLISHABLE_KEY":"<pk_live_… from the Stripe dashboard>",
-        "STRIPE_WEBHOOK_SECRET":"<whsec_… of the platform webhook endpoint>"
+        "STRIPE_WEBHOOK_SECRET":"<whsec_… of the platform webhook endpoint>",
+        "STRIPE_CONNECT_WEBHOOK_SECRET":"<whsec_… of the Connected accounts webhook endpoint>"
      }' \
      --region $AWS_REGION
    ```

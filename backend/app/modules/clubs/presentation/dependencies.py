@@ -121,9 +121,9 @@ ReadClubDetailsDep = Annotated[ReadClubDetails, Depends(get_read_club_details)]
 
 
 def get_club_courts_repository(
-    event_store: DomainEventStoreDep, events: EventPublisherDep
+    db: DbSession, event_store: DomainEventStoreDep, events: EventPublisherDep
 ) -> ClubCourtsRepository:
-    return build_club_courts_repository(event_store=event_store, events=events)
+    return build_club_courts_repository(db, event_store=event_store, events=events)
 
 
 ClubCourtsRepositoryDep = Annotated[

@@ -18,7 +18,14 @@ A notice arrives signed, **twice** as often as not, and **out of order**
 **Translated at the edge.** ``PaymentNotices`` reads the provider's own shape
 and answers one of the notices below, in Raketa's words; a kind nothing here
 listens to yet is ``Unheeded`` and is acknowledged all the same — the later
-tickets wire the kinds they need (#537, #541).
+tickets wire the kinds they need (#541).
+
+**Two endpoints, one reading.** The platform's notices — a setup, a card — and
+the **Connected accounts** notices — a club's account, and later the payments
+made on it — arrive at two endpoints, each signed with its own secret; both
+are read by one ``PaymentNotices`` over that endpoint's secret, and acted on by
+the one ``ReceivePaymentNotice``, so a notice is read once whichever it came
+through.
 """
 
 from __future__ import annotations
@@ -53,6 +60,18 @@ class CardUpdatedByBank:
 
 @final
 @dataclass(frozen=True, slots=True)
+class ConnectedAccountChanged:
+    """A club's account at the provider changed — its details, or whether it
+    can take a payment and pay it out (#537). It names the account and carries
+    nothing of it: two changes arrive in either order, so the account is read
+    from the provider as it stands."""
+
+    notice_id: str
+    account_id: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class Unheeded:
     """A notice of a kind nothing here acts on yet."""
 
@@ -60,7 +79,7 @@ class Unheeded:
     kind: str
 
 
-Notice = SetupSucceeded | CardUpdatedByBank | Unheeded
+Notice = SetupSucceeded | CardUpdatedByBank | ConnectedAccountChanged | Unheeded
 
 
 @runtime_checkable

@@ -102,9 +102,14 @@ from app.modules.administrators.infrastructure.users_account_holders import (
 )
 from app.modules.payments.domain.notices import PaymentNotices
 from app.modules.payments.domain.ports import (
+    ConnectedAccounts,
     NoticeInbox,
     PaymentCommitments,
     PaymentMethodRepository,
+)
+from app.modules.payments.infrastructure.club_accounts import (
+    ClubsConnectedAccounts,
+    ProviderPaymentsAccounts,
 )
 from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.payments.infrastructure.event_sourced_payment_method_repository import (  # noqa: E501
@@ -218,7 +223,10 @@ from app.modules.clubs.domain.ports import (
     ClubDirectory,
     ClubRepository,
     OfficialGroupSports,
+    PaymentsAccounts,
 )
+from app.modules.clubs.application.payments_account import HeedPaymentsAccount
+from app.modules.clubs.domain.payments_account import OnboardingPages
 from app.modules.clubs.infrastructure.event_sourced_club_account_repository import (
     EventSourcedClubAccountRepository,
 )
@@ -796,12 +804,18 @@ def build_official_group_sports(session: AsyncSession) -> OfficialGroupSports:
 
 
 def build_club_courts_repository(
-    *, event_store: DomainEventStore, events: DomainEventPublisher
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
 ) -> ClubCourtsRepository:
     """A club's courts and terms, one stream per club (``docs/adr/0189`` §5).
-    Per unit of work: it remembers the stream versions it loaded. No session of
-    its own, because nothing is projected beside the stream."""
-    return EventSourcedClubCourtsRepository(event_store=event_store, events=events)
+    Per unit of work: it remembers the stream versions it loaded. It takes the
+    session as well, because its ``save`` writes which club a newly opened
+    payments account is (#537)."""
+    return EventSourcedClubCourtsRepository(
+        session=session, event_store=event_store, events=events
+    )
 
 
 def build_court_bookings() -> CourtBookings:
@@ -819,6 +833,7 @@ def build_sellable_court_hours(
     (``docs/adr/0189`` §5)."""
     return ClubCourtsSellableHours(
         courts=build_club_courts_repository(
+            session,
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
@@ -911,6 +926,60 @@ def build_payment_notices(settings: Settings) -> PaymentNotices:
     is placed, a reader that refuses every notice as unconfigured."""
 
     return StripeNotices(secret=settings.STRIPE_WEBHOOK_SECRET)
+
+
+def build_connected_account_notices(settings: Settings) -> PaymentNotices:
+    """Stripe's **Connected accounts** webhook — a club's account, and the
+    payments made on it — verified with that endpoint's own secret (#537)."""
+
+    return StripeNotices(secret=settings.STRIPE_CONNECT_WEBHOOK_SECRET)
+
+
+def build_onboarding_pages(settings: Settings) -> OnboardingPages:
+    """Where the provider's hosted pages send a club's desk back to: the club
+    website's own pages, under its configured address."""
+
+    return OnboardingPages(settings.CLUB_WEBSITE_URL)
+
+
+def build_payments_accounts(provider: PaymentProvider) -> PaymentsAccounts:
+    """A club's account at the provider, as the Club context asks for it —
+    answered by the Payments context, which holds the provider, so the arrow
+    runs ``payments → clubs`` only (#537)."""
+
+    return ProviderPaymentsAccounts(provider)
+
+
+def build_connected_accounts(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    settings: Settings,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    clock: Clock,
+) -> ConnectedAccounts:
+    """What a Connected accounts notice moves: the club's own use case, in the
+    notice's transaction — the webhook commits the inbox row and the club's
+    record together."""
+
+    return ClubsConnectedAccounts(
+        HeedPaymentsAccount(
+            clubs=build_club_repository(
+                session, event_store=event_store, events=events
+            ),
+            club_accounts=build_club_account_repository(
+                session, event_store=event_store, events=events
+            ),
+            courts=build_club_courts_repository(
+                session, event_store=event_store, events=events
+            ),
+            payments_accounts=build_payments_accounts(provider),
+            mail=build_mail_queue(session),
+            pages=build_onboarding_pages(settings),
+            clock=clock,
+        )
+    )
 
 
 def build_payment_method_repository(

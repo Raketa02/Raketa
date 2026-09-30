@@ -41,8 +41,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   answers an unwritten aggregate, as the Plan's does. It holds the courts (one sport each, from
   the club's own; indoor or outdoor; offered or switched off), each court's **Raketa hours** —
   the player's own `WeeklyHours`, imported rather than respelled, with no floor — the
-  exceptions, the price table, the way of working, the settings and pause; **no projection is
-  written beside it**. Four things are load-bearing. **Money is integer grosze** and a price
+  exceptions, the price table, the way of working, the settings and pause, and the club's
+  payments account (#537); **no projection of courts is written beside it** — the one row is
+  which club a payments account is. Four things are load-bearing. **Money is integer grosze** and a price
   must **split** among the sport's seats (`price_does_not_split`), so a share is exact and
   nothing is rounded (`domain/prices.py`; `docs/value-formatting.md`). **What a club can sell is
   never stored**: `domain/sellable.py` folds the pattern less the exceptions less what bookings
@@ -54,10 +55,31 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `NoGroupBornGames` answers nought) — `court_has_bookings` and `court_booked_then` are already
   wired to it, and API tests stand in for it by overriding `get_court_bookings`. And **the setup
   checklist is read, never stored** (`domain/setup.py`): *locked* is the backend's rule, and
-  payments read `PENDING` and are left out of *live* until #537 makes live wait on them. A club
+  **live is all five steps** — payments done only while the provider says the club's account
+  is **ready** (#537), so a club Stripe stops is live no longer, and its courts leave the
+  decks with it (`PaymentsStatusChanged` makes the proposer due). A club
   cannot untick a sport one of its courts plays (`club_sport_has_courts`), asked before the
   official groups are. Every hour is wall clock in `CLUB_ZONE` — `plans`' `PLATFORM_ZONE`
   spelled again on purpose, a unit test holding the two together — through `slot_start`.
   Seeded by `app/seeds/club_courts.py`: all three ways of working, Wisła Park half set up and
   not live, Zabłocie Sport paused, and a run that fails if a live club has nothing for sale in
   the next fortnight.
+- **A club's payments account is on its Club courts stream, and the provider decides
+  it** (#537, `domain/payments_account.py`, `application/payments_account.py`).
+  `ConnectPayments` opens the account at the provider **once** (a key of the club and the
+  hour), records and commits it, then answers a fresh single-use link to the provider's
+  hosted pages — back to `<CLUB_WEBSITE_URL>/overview`, and to `/payments/continue` when a
+  link is spent — and **reads the account as it stands** after every link; it refuses only an account the
+  provider, asked, still calls ready (`409 payments_already_connected`) — a club recorded
+  ready is asked first, so a lost notice never withholds *Continue with Stripe*. `HeedPaymentsAccount` is what the
+  provider's notice runs: the account's club through the `club_payments_accounts`
+  projection — the one row the Club courts repository writes, which is why it takes a
+  session — the status read from the provider, recorded if it moved, and **only an account
+  that was ready and is not** is emailed *Stripe needs something from you* (a club still in
+  the provider's pages reads *Stripe needs more details* on its own Overview); it never
+  commits, because the notice's inbox row commits with it. Both ask the provider through
+  `PaymentsAccounts`, this context's own port, answered by `payments` — `clubs` imports
+  nothing of `payments`. Seeded by `app/seeds/club_courts.py`: every club ready through
+  `ConnectPayments` on a fake that finishes onboarding on the link, Wisła Park left
+  *needs more details* through `HeedPaymentsAccount`, and a club with no account is
+  connected on any run.

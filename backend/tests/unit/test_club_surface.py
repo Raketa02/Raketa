@@ -53,6 +53,7 @@ CLUB_OPERATIONS = {
     "get /api/v1/club/raketa-settings",
     "put /api/v1/club/raketa-settings",
     "get /api/v1/club/setup",
+    "post /api/v1/club/payments/onboarding-link",
 }
 
 

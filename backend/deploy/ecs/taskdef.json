@@ -50,7 +50,8 @@
         { "name": "SMTP_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:SMTP_PASSWORD::" },
         { "name": "STRIPE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_SECRET_KEY::" },
         { "name": "STRIPE_PUBLISHABLE_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_PUBLISHABLE_KEY::" },
-        { "name": "STRIPE_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_WEBHOOK_SECRET::" }
+        { "name": "STRIPE_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_WEBHOOK_SECRET::" },
+        { "name": "STRIPE_CONNECT_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_CONNECT_WEBHOOK_SECRET::" }
       ],
       "healthCheck": {
         "command": ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"],

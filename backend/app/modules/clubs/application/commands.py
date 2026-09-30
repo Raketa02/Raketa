@@ -157,3 +157,12 @@ class SaveRaketaSettingsCommand:
     other_clubs_within_km: int
     check_in: bool
     paused: bool
+
+
+@dataclass(frozen=True)
+class ConnectPaymentsCommand:
+    """The desk asked to connect payments, or to continue: its club, and the
+    email it signs in with — which the provider's pages open with."""
+
+    club_id: UUID
+    email: str

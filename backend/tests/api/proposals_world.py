@@ -39,6 +39,7 @@ from tests.api.club_courts_world import (
     adds_a_court,
     chooses,
     confirms_settings,
+    connects_payments,
     sets_hours,
     sets_prices,
 )
@@ -114,6 +115,7 @@ async def a_club_and_its_desk(
         ],
     )
     await confirms_settings(client, desk, paused=paused, **settings)
+    await connects_payments(client, desk)
     return club_id, desk
 
 

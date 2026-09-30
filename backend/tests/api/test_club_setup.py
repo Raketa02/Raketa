@@ -1,11 +1,10 @@
 """The setup checklist on the club's Overview: five steps, and whether the club
-is live (#535, the mechanics §16.2, the screens B2).
+is live (#535, #537, the mechanics §16.2, the screens B2).
 
-A step is **done**, **to do**, **locked** behind the one it needs — hours and
-prices behind a court, the settings behind a way of working — or, for
-payments, **pending**: connecting a Stripe account arrives with its own ticket
-(#537), and until then the step reads pending and the club is live on the
-other four.
+A step is **done**, **to do** or **locked** behind the one it needs — hours and
+prices behind a court, the settings behind a way of working. The club is live
+when all five are done, payments included: how the payments step moves is
+``test_club_payments.py``'s.
 """
 
 from __future__ import annotations
@@ -16,6 +15,7 @@ from tests.api.club_courts_world import (
     adds_a_court,
     chooses,
     confirms_settings,
+    connects_payments,
     court_path,
     sets_hours,
     sets_prices,
@@ -37,7 +37,7 @@ async def test_a_club_that_has_done_nothing_has_its_first_steps_to_do(client):
 
     assert await checklist(client, desk) == (
         {
-            "CONNECT_PAYMENTS": "PENDING",
+            "CONNECT_PAYMENTS": "TO_DO",
             "WAY_OF_WORKING": "TO_DO",
             "COURTS": "TO_DO",
             "HOURS_AND_PRICES": "LOCKED",
@@ -74,9 +74,17 @@ async def test_the_desk_walks_the_checklist_and_the_club_goes_live(client):
 
     await confirms_settings(client, desk)
     steps, live = await checklist(client, desk)
+    assert (steps["SETTINGS"], steps["CONNECT_PAYMENTS"], live) == (
+        "DONE",
+        "TO_DO",
+        False,
+    )
+
+    await connects_payments(client, desk)
+    steps, live = await checklist(client, desk)
 
     assert steps == {
-        "CONNECT_PAYMENTS": "PENDING",
+        "CONNECT_PAYMENTS": "DONE",
         "WAY_OF_WORKING": "DONE",
         "COURTS": "DONE",
         "HOURS_AND_PRICES": "DONE",
@@ -134,6 +142,7 @@ async def test_a_club_with_every_court_switched_off_is_not_live(client):
         client, desk, [{"sport": "PADEL", "price_grosze": 120_00, "bands": []}]
     )
     await confirms_settings(client, desk)
+    await connects_payments(client, desk)
     assert (await checklist(client, desk))[1] is True
 
     await client.put(
@@ -163,5 +172,6 @@ async def test_a_paused_club_is_still_live(client):
     )
 
     await confirms_settings(client, desk, paused=True)
+    await connects_payments(client, desk)
 
     assert (await checklist(client, desk))[1] is True

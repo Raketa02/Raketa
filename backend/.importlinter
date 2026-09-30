@@ -556,6 +556,27 @@ forbidden_modules =
     app.modules.proposals
 allow_indirect_imports = true
 
+# A club does not know how it is paid. `payments` holds the provider, so it
+# answers the one thing a club asks of it — *open my account, a link to its
+# pages, how does it stand* (the setup checklist's first step, #537) — through a
+# port declared in `clubs`' own words and **signed in
+# `payments/infrastructure/`**; and when the provider's Connected accounts
+# notice says an account changed, `payments` tells the club through a port of
+# its **own** words, answered over the Club context's use case in that same
+# module. Both adapters live on the payments side, and the club's link route is
+# `payments`' too, mounted on the club surface — so the arrow runs
+# `payments → clubs` only, as `proposals → payments` does.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:clubs-does-not-know-payments]
+name = The Clubs context does not import Payments
+type = forbidden
+source_modules =
+    app.modules.clubs
+forbidden_modules =
+    app.modules.payments
+allow_indirect_imports = true
+
 # Nor does a group or a club know a game was proposed to it. A group is the first
 # kind of pool and a club sells the court hour, and `proposals` reads both
 # through ports of its own; neither reads back, so a pool can become a city

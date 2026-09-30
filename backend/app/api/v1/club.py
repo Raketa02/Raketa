@@ -18,6 +18,7 @@ from app.modules.clubs.presentation.auth_routes import router as club_auth_route
 from app.modules.clubs.presentation.courts_routes import router as courts_router
 from app.modules.clubs.presentation.routes import router as clubs_router
 from app.modules.groups.presentation.club_routes import router as groups_router
+from app.modules.payments.presentation.club_routes import router as payments_router
 
 club_api_router = APIRouter(prefix="/api/v1/club")
 club_api_router.include_router(club_auth_router)
@@ -25,3 +26,4 @@ club_api_router.include_router(clubs_router)
 club_api_router.include_router(courts_router)
 club_api_router.include_router(administrators_router)
 club_api_router.include_router(groups_router)
+club_api_router.include_router(payments_router)

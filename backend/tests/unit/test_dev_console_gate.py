@@ -89,6 +89,7 @@ def production(**overrides) -> Settings:
         STRIPE_SECRET_KEY="sk_guard_suite",
         STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
         STRIPE_WEBHOOK_SECRET="whsec_guard_suite",
+        STRIPE_CONNECT_WEBHOOK_SECRET="whsec_guard_suite_connect",
         DB_SSL_MODE="require",
         ALLOW_ORIGINS=["https://raketa.example"],
         **overrides,
@@ -127,6 +128,7 @@ def test_the_other_three_are_served(clean_env, environment):
         STRIPE_SECRET_KEY="sk_guard_suite",
         STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
         STRIPE_WEBHOOK_SECRET="whsec_guard_suite",
+        STRIPE_CONNECT_WEBHOOK_SECRET="whsec_guard_suite_connect",
     )
 
     refuse_unless_served(settings)  # does not raise
@@ -229,6 +231,7 @@ PRODUCTION_ENV = {
     "STRIPE_SECRET_KEY": "sk_guard_suite",
     "STRIPE_PUBLISHABLE_KEY": "pk_guard_suite",
     "STRIPE_WEBHOOK_SECRET": "whsec_guard_suite",
+    "STRIPE_CONNECT_WEBHOOK_SECRET": "whsec_guard_suite_connect",
     "DB_SSL_MODE": "require",
     "ALLOW_CREDENTIALS": "false",
 }

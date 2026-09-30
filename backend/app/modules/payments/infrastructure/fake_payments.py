@@ -11,8 +11,9 @@ is told which card was typed — one of the five in ``domain/entered_cards.py``,
 which are Stripe's own test cards down to the last four digits — and behaves as
 that card would: saved, refused at the setup, checked by the bank once or every
 time, or declining every payment once saved. ``card_behaves`` changes a saved
-card's mind later, ``club_account_is`` sets an account's state, and
-``unreachable`` makes every call fail as an outage does.
+card's mind later, ``club_account_is`` sets an account's state,
+``onboarding_completes`` finishes every club's onboarding the moment its link
+is made, and ``unreachable`` makes every call fail as an outage does.
 
 **Every call is recorded**, in order, with its arguments (``calls`` and
 ``called``), so a test asserts what was asked of the provider without a mock.
@@ -125,7 +126,9 @@ class FakePayments:
         onboarding_completes: bool = False,
     ) -> None:
         self._auto_card = confirms_every_setup_with
-        self._onboarding_completes = onboarding_completes
+        #: Set to finish a club's onboarding the moment its link is made — the
+        #: link then lands where the provider's would, back on the club website.
+        self.onboarding_completes = onboarding_completes
         #: Set to make every call fail as an outage does.
         self.unreachable = False
         self.calls: list[RecordedCall] = []
@@ -138,6 +141,8 @@ class FakePayments:
         self._clones: dict[str, str] = {}
         self._payments: dict[str, _Payment] = {}
         self._accounts: dict[str, ClubAccountStatus] = {}
+        # Club id -> the account opened for it.
+        self._club_accounts: dict[UUID, str] = {}
         self._payouts: dict[str, list[Payout]] = {}
 
     # ----------------------------------------------------------------- controls
@@ -177,6 +182,11 @@ class FakePayments:
 
     def club_account_is(self, account_id: str, status: ClubAccountStatus) -> None:
         self._accounts[account_id] = status
+
+    def account_opened_for(self, club_id: UUID) -> str:
+        """The account opened for this club — the id a notice about it names."""
+
+        return self._club_accounts[club_id]
 
     def pays_out(
         self,
@@ -312,6 +322,7 @@ class FakePayments:
         def opened() -> str:
             account_id = _id("acct")
             self._accounts[account_id] = ClubAccountStatus.NOT_STARTED
+            self._club_accounts[club_id] = account_id
             return account_id
 
         return self._once(
@@ -327,7 +338,7 @@ class FakePayments:
             refresh_url=refresh_url,
             return_url=return_url,
         )
-        if self._onboarding_completes:
+        if self.onboarding_completes:
             # A laptop's club has no provider to onboard with: following the
             # link is finishing it, and it lands where the real one would.
             self._accounts[account_id] = ClubAccountStatus.READY

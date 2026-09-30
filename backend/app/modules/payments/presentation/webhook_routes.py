@@ -1,4 +1,13 @@
-"""The payment provider's platform webhook: ``POST /api/v1/webhooks/stripe``.
+"""The payment provider's two webhooks: the platform's, ``POST
+/api/v1/webhooks/stripe``, and the **Connected accounts** endpoint's, ``POST
+/api/v1/webhooks/stripe-connect`` (#537).
+
+**Two endpoints because Stripe sends two kinds of notice to two places**: what
+happens on the platform — a setup, a card — and what happens on a club's own
+account — its onboarding, and later the payments made on it — each signed with
+its endpoint's own secret. Read by one reader each, and acted on by one
+receiver, so a notice is read once through the one inbox whichever endpoint it
+came through.
 
 **No client calls it, so no client document carries it** (``docs/adr/0190``):
 the caller is Stripe, whose event shape is Stripe's contract and not this
@@ -19,6 +28,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request, Response, status
 
 from app.modules.payments.presentation.dependencies import (
+    ConnectedAccountNoticesDep,
     PaymentNoticesDep,
     ReceivePaymentNoticeDep,
 )
@@ -34,6 +44,19 @@ async def receive_stripe_notice(
 ) -> Response:
     # The raw body, byte for byte: the signature is over exactly what was sent,
     # and a body parsed and re-serialised is a body that no longer verifies.
+    notice = notices.read(
+        await request.body(), signature=request.headers.get("Stripe-Signature")
+    )
+    await receive.execute(notice)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/stripe-connect", status_code=status.HTTP_204_NO_CONTENT)
+async def receive_stripe_connect_notice(
+    request: Request,
+    notices: ConnectedAccountNoticesDep,
+    receive: ReceivePaymentNoticeDep,
+) -> Response:
     notice = notices.read(
         await request.body(), signature=request.headers.get("Stripe-Signature")
     )

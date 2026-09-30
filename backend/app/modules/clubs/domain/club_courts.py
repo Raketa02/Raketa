@@ -19,7 +19,7 @@ from datetime import date, datetime
 from typing import Collection, Iterable
 from uuid import UUID
 
-from app.kernel import Sport
+from app.kernel import Sport, invariant
 from app.modules.clubs.domain.club_courts_events import (
     CourtAdded,
     CourtChanged,
@@ -28,6 +28,8 @@ from app.modules.clubs.domain.club_courts_events import (
     CourtSwitchedOn,
     ExceptionAdded,
     ExceptionRemoved,
+    PaymentsAccountOpened,
+    PaymentsStatusChanged,
     PricesSet,
     RaketaHoursSet,
     RaketaPaused,
@@ -48,6 +50,7 @@ from app.modules.clubs.domain.hours_exceptions import (
     ExceptionReason,
     HoursException,
 )
+from app.modules.clubs.domain.payments_account import PaymentsAccount, PaymentsStatus
 from app.modules.clubs.domain.prices import PriceBand, SportPrices
 from app.modules.clubs.domain.raketa_terms import (
     OtherClubsCourts,
@@ -80,6 +83,9 @@ class ClubCourts:
     #: Whether the club has saved its settings at least once.
     settings_confirmed: bool = False
     paused: bool = False
+    #: The club's account at the payment provider — ``None`` until the desk
+    #: first asks to connect.
+    payments: PaymentsAccount | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -372,6 +378,45 @@ class ClubCourts:
             toggled = RaketaPaused if paused else RaketaResumed
             self._record_that(toggled(club_id=self.club_id, occurred_at=occurred_at))
 
+    # --------------------------------------------------------------- payments
+
+    @property
+    def payments_status(self) -> PaymentsStatus:
+        """Where the club's payments account stands — not started while there
+        is none."""
+
+        if self.payments is None:
+            return PaymentsStatus.NOT_STARTED
+        return self.payments.status
+
+    def open_payments_account(self, account_id: str, *, occurred_at: datetime) -> None:
+        """Raketa opened the club's account at the provider. **Once**: a club
+        with an account continues it, and opening a second is a bug in the
+        caller."""
+
+        invariant(self.payments is None, "a club opens one payments account")
+        self._record_that(
+            PaymentsAccountOpened(
+                club_id=self.club_id, account_id=account_id, occurred_at=occurred_at
+            )
+        )
+
+    def record_payments_status(
+        self, status: PaymentsStatus, *, occurred_at: datetime
+    ) -> None:
+        """The account as the provider says it stands now. Recorded only when
+        it moved, so the same reading twice — a notice and the link's own read,
+        or a notice delivered again — records it once."""
+
+        account = invariant(self.payments, "a status for a club with no account")
+        if status is account.status:
+            return
+        self._record_that(
+            PaymentsStatusChanged(
+                club_id=self.club_id, status=status.value, occurred_at=occurred_at
+            )
+        )
+
     def _refuse_a_sport_not_offered(
         self, sport: Sport, offered_sports: Collection[Sport]
     ) -> None:
@@ -461,6 +506,15 @@ class ClubCourts:
             self.courts[event.court_id] = replace(
                 self.courts[event.court_id],
                 hours=WeeklyHours.from_codes(event.hours),
+            )
+        elif isinstance(event, PaymentsAccountOpened):
+            self.payments = PaymentsAccount(
+                account_id=event.account_id, status=PaymentsStatus.NOT_STARTED
+            )
+        elif isinstance(event, PaymentsStatusChanged):
+            self.payments = replace(
+                invariant(self.payments, "a status recorded before its account"),
+                status=PaymentsStatus(event.status),
             )
         else:
             raise TypeError(f"Unsupported club courts event {event!r}")

@@ -1,5 +1,5 @@
-"""The seeded clubs' courts, read back the way the club website reads them
-(#535).
+"""The seeded clubs' courts and payments, read back the way the club website
+reads them (#535, #537).
 
 ``app/seeds/club_courts.py`` sets every seeded club up **through the use cases a
 desk's pages run**, so each is asserted by signing in as its desk and reading
@@ -26,6 +26,7 @@ from tests.api.club_courts_world import (
     PRICES,
     RAKETA_SETTINGS,
     SETUP,
+    WAY_OF_WORKING,
 )
 from tests.api.test_clubs import SIGN_IN, bearer
 from tests.unit.fake_clock import MovableClock
@@ -97,12 +98,48 @@ async def test_the_club_that_is_not_live_has_half_its_checklist_done(
     setup = await read(client, await desk_of(client, "Wisła Park"), SETUP)
 
     assert {row["step"]: row["state"] for row in setup["steps"]} == {
-        "CONNECT_PAYMENTS": "PENDING",
+        "CONNECT_PAYMENTS": "TO_DO",
         "WAY_OF_WORKING": "DONE",
         "COURTS": "DONE",
         "HOURS_AND_PRICES": "TO_DO",
         "SETTINGS": "TO_DO",
     }
+    assert setup["payments"] == "NEEDS_DETAILS"
+
+
+async def test_every_other_club_s_payments_are_ready(client, clock, session_factory):
+    await seeded(session_factory)
+
+    for declared in SEED_CLUB_COURTS:
+        setup = await read(client, await desk_of(client, declared.club), SETUP)
+        expected = "NEEDS_DETAILS" if declared.club == "Wisła Park" else "READY"
+        assert setup["payments"] == expected, declared.club
+
+
+async def test_a_club_seeded_before_payments_is_connected_on_the_next_run(
+    client, clock, session_factory
+):
+    """A database seeded before payments existed holds clubs whose desks had set
+    things up and never connected: the next run sets nothing up again, and
+    still goes to the provider's pages for them."""
+
+    clubs = await write_the_clubs(
+        session_factory, settings=get_settings(), now=NOW, centre=KRAKOW
+    )
+    desk = await desk_of(client, "Wisła Park")
+    chosen = await client.put(
+        WAY_OF_WORKING, json={"way_of_working": "INSTANT"}, headers=desk
+    )
+    assert chosen.status_code == 200, chosen.text
+    assert (await read(client, desk, SETUP))["payments"] == "NOT_STARTED"
+
+    report = await write_the_club_courts(
+        session_factory, settings=get_settings(), now=NOW, clubs=clubs
+    )
+
+    [wisla] = [e for e in report.clubs if e.declared.club == "Wisła Park"]
+    assert wisla.set_up_by_this_run is False
+    assert (await read(client, desk, SETUP))["payments"] == "NEEDS_DETAILS"
 
 
 async def test_every_club_has_courts_per_sport_hours_an_exception_and_bands(

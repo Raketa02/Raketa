@@ -16,6 +16,7 @@ from uuid import UUID, uuid4
 from app.kernel import instant
 from app.modules.clubs.domain.ports import TakenCourtHour
 from app.modules.clubs.presentation.dependencies import get_court_bookings
+from app.modules.payments.presentation.dependencies import get_payment_provider
 from tests.api.administration_world import club_signs_up
 
 COURTS = "/api/v1/club/courts"
@@ -25,6 +26,7 @@ PRICES = "/api/v1/club/prices"
 WAY_OF_WORKING = "/api/v1/club/way-of-working"
 RAKETA_SETTINGS = "/api/v1/club/raketa-settings"
 SETUP = "/api/v1/club/setup"
+PAYMENTS_LINK = "/api/v1/club/payments/onboarding-link"
 
 
 def court_path(court_id: str) -> str:
@@ -98,6 +100,23 @@ async def confirms_settings(client, desk: dict, **overrides) -> dict:
     saved = await client.put(RAKETA_SETTINGS, json=settings(**overrides), headers=desk)
     assert saved.status_code == 200, saved.text
     return saved.json()
+
+
+async def connects_payments(client, desk: dict) -> None:
+    """The desk connects Stripe and finishes its pages in one visit — the
+    checklist's first step, done (#537).
+
+    The provider is the application's own fake, told to finish onboarding the
+    moment the link is made, as a laptop's does: the read that follows every
+    link then finds the account ready."""
+
+    payments = client._transport.app.dependency_overrides[get_payment_provider]()  # noqa: SLF001
+    finishing, payments.onboarding_completes = payments.onboarding_completes, True
+    try:
+        linked = await client.post(PAYMENTS_LINK, headers=desk)
+    finally:
+        payments.onboarding_completes = finishing
+    assert linked.status_code == 200, linked.text
 
 
 @dataclass

@@ -1,9 +1,11 @@
-"""The Club context's two rows: the search projection and the account.
+"""The Club context's rows: the search projection, the account, and which
+club a payments account is.
 
-**Both are projections**, written beside the event in the same transaction
+**All three are projections**, written beside the event in the same transaction
 (``docs/adr/0182`` §2) — the streams are the record. ``clubs`` is what search
 reads and nothing else; ``club_accounts`` is what sign-in and every club
-request read.
+request read; ``club_payments_accounts`` is how a payment provider's notice,
+which names an account, finds the club it is (#537).
 """
 
 from __future__ import annotations
@@ -96,4 +98,16 @@ class ClubAccountORM(Base):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+
+class ClubPaymentsAccountORM(Base):
+    """A club's account at the payment provider. One each, for ever — written
+    by the Club courts repository when the account is opened."""
+
+    __tablename__ = "club_payments_accounts"
+
+    account_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    club_id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False), nullable=False, unique=True
     )

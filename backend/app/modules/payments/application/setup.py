@@ -78,6 +78,13 @@ def setup_key(player_id: UUID, ordinal: int, *, at: Instant) -> str:
     return f"raketa-setup-{player_id}-{ordinal}-{_hour(at)}"
 
 
+def club_account_key(club_id: UUID, *, at: Instant) -> str:
+    """A club's account at the provider: opened once, so the club and the hour
+    are the whole key (#537)."""
+
+    return f"raketa-club-account-{club_id}-{_hour(at)}"
+
+
 class StartPaymentSetup:
     """The player opened the payment setup — the first time, or to change the
     method they have, which keeps working until the new one is saved."""

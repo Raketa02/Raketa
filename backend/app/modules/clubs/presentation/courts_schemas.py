@@ -24,6 +24,7 @@ from app.modules.clubs.domain.courts import Court
 from app.modules.clubs.domain.hours_exceptions import HoursException
 from app.modules.clubs.domain.prices import BandDays, SportPrices, seats, share_of
 from app.modules.clubs.domain.raketa_terms import WayOfWorking
+from app.modules.clubs.domain.payments_account import PaymentsStatus
 from app.modules.clubs.domain.setup import SetupChecklist, SetupStep, StepState
 from app.modules.player_profile.presentation.schemas import WeeklyHourResource
 
@@ -427,9 +428,9 @@ class SetupStepSchema(BaseModel):
     step: SetupStep
     state: StepState = Field(
         description=(
-            "`DONE`, `TO_DO`, `LOCKED` — waiting on the step it needs: hours and "
-            "prices on a court, the settings on a way of working — or `PENDING`: "
-            "nothing the club can do yet. *Next* is the first `TO_DO`."
+            "`DONE`, `TO_DO` or `LOCKED` — waiting on the step it needs: hours "
+            "and prices on a court, the settings on a way of working. *Next* is "
+            "the first `TO_DO`."
         )
     )
 
@@ -439,16 +440,25 @@ class SetupResponse(BaseModel):
 
     steps: list[SetupStepSchema] = Field(
         description=(
-            "The five, in the Overview's order: `CONNECT_PAYMENTS` — `PENDING` "
-            "until connecting Stripe is built — then `WAY_OF_WORKING`, `COURTS` "
+            "The five, in the Overview's order: `CONNECT_PAYMENTS` (the "
+            "provider says the account is ready), `WAY_OF_WORKING`, `COURTS` "
             "(an offered court), `HOURS_AND_PRICES` (an offered court with hours, "
             "and every such court's sport priced) and `SETTINGS` (confirmed)."
         )
     )
+    payments: PaymentsStatus = Field(
+        description=(
+            "Where the club's payments account stands, for the first step's "
+            "row: `NOT_STARTED` — *Connect with Stripe* — `NEEDS_DETAILS` — "
+            "*Stripe needs more details*, and *Continue with Stripe* — or "
+            "`READY`. **Ready can be lost**: the provider may want more later, "
+            "and the club is not live again until it has it."
+        )
+    )
     live: bool = Field(
         description=(
-            "Every step but a pending one is done: the club's courts can reach "
-            "players' decks. A paused club is still live."
+            "Every step is done: the club's courts can reach players' decks. A "
+            "paused club is still live."
         )
     )
 
@@ -459,5 +469,6 @@ class SetupResponse(BaseModel):
                 SetupStepSchema(step=step, state=state)
                 for step, state in checklist.steps
             ],
+            payments=checklist.payments,
             live=checklist.live,
         )

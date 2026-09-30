@@ -194,3 +194,26 @@ class RaketaResumed:
 
     club_id: UUID
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class PaymentsAccountOpened:
+    """Raketa opened the club's account at the payment provider, where the club
+    is paid as the seller (#537). **Once, for ever**: every later link continues
+    this account. It is born not started — the club has filled in nothing."""
+
+    club_id: UUID
+    account_id: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class PaymentsStatusChanged:
+    """The provider says the club's account now stands otherwise — **as read
+    from the provider**, never off a notice, since notices arrive out of order.
+    Ready is the setup checklist's first step done; ready no longer is the club
+    off players' decks until the provider has what it wants."""
+
+    club_id: UUID
+    status: str
+    occurred_at: datetime

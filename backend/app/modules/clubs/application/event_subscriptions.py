@@ -16,6 +16,8 @@ from app.modules.clubs.domain.club_courts_events import (
     CourtSwitchedOn,
     ExceptionAdded,
     ExceptionRemoved,
+    PaymentsAccountOpened,
+    PaymentsStatusChanged,
     PricesSet,
     RaketaHoursSet,
     RaketaPaused,
@@ -56,6 +58,13 @@ def register_club_events(catalog: EventCatalog) -> None:
     )
     catalog.register(RaketaPaused, name="clubs.raketa_paused", version=1)
     catalog.register(RaketaResumed, name="clubs.raketa_resumed", version=1)
+    # The club's payments account (#537), on the same stream.
+    catalog.register(
+        PaymentsAccountOpened, name="clubs.payments_account_opened", version=1
+    )
+    catalog.register(
+        PaymentsStatusChanged, name="clubs.payments_status_changed", version=1
+    )
 
 
 def subscribe_club_handlers(dispatcher: EventDispatcher) -> None:
@@ -78,3 +87,5 @@ def subscribe_club_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(RaketaSettingsChanged, LogClubCourtsEvent())
     dispatcher.subscribe(RaketaPaused, LogClubCourtsEvent())
     dispatcher.subscribe(RaketaResumed, LogClubCourtsEvent())
+    dispatcher.subscribe(PaymentsAccountOpened, LogClubCourtsEvent())
+    dispatcher.subscribe(PaymentsStatusChanged, LogClubCourtsEvent())

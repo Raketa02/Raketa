@@ -7,13 +7,16 @@ a group's home club. ``SellableCourtHours`` (#535): the court hours each club ca
 sell through Raketa, derived and never stored. A consumer reads them and never a
 table or a stream, and never gets an aggregate back.
 
-**Two demands on contexts it does not write**: what the official groups at a
+**Three demands on contexts it does not write**: what the official groups at a
 club declare (``OfficialGroupSports``), because the desk may not untick a sport
-one of them plays (``docs/adr/0182`` §5) and that is a fact about groups; and
+one of them plays (``docs/adr/0182`` §5) and that is a fact about groups;
 which court hours a booking holds (``CourtBookings``), because a court with a
 booking ahead cannot be deleted, an hour a booking holds cannot be closed, and
 what a club can sell is its pattern **less** what is booked — facts about
-bookings, which have no context yet (#541) and one adapter that says so.
+bookings, which have no context yet (#541) and one adapter that says so; and
+the club's account at the payment provider (``PaymentsAccounts``, #537), opened,
+onboarded and read there — **answered by the Payments context**, which holds
+the provider, so the arrow runs ``payments → clubs`` only.
 
 **Each repository writes the search projection in the caller's transaction.**
 A club's projection is what home-club search and join search read, and a club
@@ -35,6 +38,7 @@ from app.kernel import Instant, Sport
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.club_account import ClubAccount
 from app.modules.clubs.domain.club_courts import ClubCourts
+from app.modules.clubs.domain.payments_account import OnboardingPages, PaymentsStatus
 from app.modules.clubs.domain.sellable import ClubOffer
 from app.modules.users.domain.value_objects import Email
 
@@ -72,6 +76,11 @@ class ClubAccountRepository(Protocol):
         only** — a User holding the same address is somebody else."""
         ...
 
+    async def get_by_club(self, club_id: UUID) -> Optional[ClubAccount]:
+        """The club's one sign-in, read from its row — whom an email to the
+        club is addressed to."""
+        ...
+
     async def save(self, account: ClubAccount) -> None:
         """Append what the account recorded, enqueue it, and write its row — in
         the caller's transaction, and without committing it."""
@@ -82,9 +91,12 @@ class ClubAccountRepository(Protocol):
 class ClubCourtsRepository(Protocol):
     """A club's courts and terms: one stream per club, under the club's id.
 
-    **No projection is written beside it**, unlike the club's search row: every
-    reader wants one club's whole state, or a derivation over a few clubs' —
-    which is a stream read each — and nothing searches courts.
+    **One projection is written beside it, and it is not of courts**: every
+    reader of courts wants one club's whole state, or a derivation over a few
+    clubs' — which is a stream read each — and nothing searches them. What is
+    written is which club a payments account is (#537), because the provider's
+    notice names an account and never a club, as ``payment_customers`` answers
+    for a customer.
     """
 
     async def load(self, club_id: UUID) -> ClubCourts:
@@ -94,8 +106,14 @@ class ClubCourtsRepository(Protocol):
         ...
 
     async def save(self, club: ClubCourts) -> None:
-        """Append what the club recorded and enqueue it, in the caller's
-        transaction, without committing it."""
+        """Append what the club recorded, enqueue it, and write which club a
+        newly opened payments account is — in the caller's transaction, without
+        committing it."""
+        ...
+
+    async def club_of_payments_account(self, account_id: str) -> UUID | None:
+        """The club whose payments account this is, or ``None`` for one no club
+        here opened."""
         ...
 
 
@@ -214,6 +232,40 @@ class CourtBookings(Protocol):
         """Every court hour of this club a booking holds, starting at or after
         ``start`` and before ``end`` — **for ever, when ``end`` is ``None``**. In
         no particular order."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# A demand on payments: the club's account at the provider
+# --------------------------------------------------------------------------- #
+
+
+@runtime_checkable
+class PaymentsAccounts(Protocol):
+    """The club's account at the payment provider, **in this context's words**:
+    opened once, onboarded on the provider's own hosted pages, and read back as
+    one of the three states the Overview draws (#537, the screens B2).
+
+    **Every call is the provider's inline answer**, so each may raise the
+    Payments context's ``payments_unavailable`` — a request that met it records
+    nothing it did not already know.
+    """
+
+    async def open(
+        self, *, club_id: UUID, name: str, email: str, asked_at: Instant
+    ) -> str:
+        """Open the club's account, and answer its id. Asked again within the
+        hour, it answers the account the first ask opened, so a retry opens
+        nothing twice."""
+        ...
+
+    async def onboarding_link(self, account_id: str, *, pages: OnboardingPages) -> str:
+        """A fresh link to the provider's hosted pages for this account — the
+        first visit's, or one that continues it. Single use."""
+        ...
+
+    async def status_of(self, account_id: str) -> PaymentsStatus:
+        """The account as the provider says it stands now."""
         ...
 
 

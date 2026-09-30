@@ -21,11 +21,20 @@ from app.api.dependencies import (
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
+    build_connected_account_notices,
+    build_connected_accounts,
     build_notice_inbox,
+    build_onboarding_pages,
+    build_payments_accounts,
     build_payment_commitments,
     build_payment_method_repository,
     build_payment_notices,
     build_payment_provider,
+)
+from app.modules.clubs.application.payments_account import ConnectPayments
+from app.modules.clubs.presentation.dependencies import (
+    ClubCourtsRepositoryDep,
+    ClubRepositoryDep,
 )
 from app.modules.payments.application.method import (
     ReadPaymentMethod,
@@ -39,6 +48,7 @@ from app.modules.payments.application.setup import (
 )
 from app.modules.payments.domain.notices import PaymentNotices
 from app.modules.payments.domain.ports import (
+    ConnectedAccounts,
     NoticeInbox,
     PaymentCommitments,
     PaymentMethodRepository,
@@ -58,6 +68,15 @@ def get_payment_notices(settings: SettingsDep) -> PaymentNotices:
 
 
 PaymentNoticesDep = Annotated[PaymentNotices, Depends(get_payment_notices)]
+
+
+def get_connected_account_notices(settings: SettingsDep) -> PaymentNotices:
+    return build_connected_account_notices(settings)
+
+
+ConnectedAccountNoticesDep = Annotated[
+    PaymentNotices, Depends(get_connected_account_notices)
+]
 
 
 def get_payment_method_repository(
@@ -146,18 +165,69 @@ RemovePaymentMethodDep = Annotated[
 ]
 
 
+def get_connected_accounts(
+    db: DbSession,
+    provider: PaymentProviderDep,
+    settings: SettingsDep,
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+    clock: ClockDep,
+) -> ConnectedAccounts:
+    return build_connected_accounts(
+        db,
+        provider=provider,
+        settings=settings,
+        event_store=event_store,
+        events=events,
+        clock=clock,
+    )
+
+
+ConnectedAccountsDep = Annotated[ConnectedAccounts, Depends(get_connected_accounts)]
+
+
 def get_receive_payment_notice(
     inbox: NoticeInboxDep,
     methods: PaymentMethodRepositoryDep,
+    accounts: ConnectedAccountsDep,
     provider: PaymentProviderDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> ReceivePaymentNotice:
     return ReceivePaymentNotice(
-        inbox=inbox, methods=methods, provider=provider, uow=uow, clock=clock
+        inbox=inbox,
+        methods=methods,
+        accounts=accounts,
+        provider=provider,
+        uow=uow,
+        clock=clock,
     )
 
 
 ReceivePaymentNoticeDep = Annotated[
     ReceivePaymentNotice, Depends(get_receive_payment_notice)
 ]
+
+
+# --- A club's payments account, on the club surface (#537) -----------------
+
+
+def get_connect_payments(
+    clubs: ClubRepositoryDep,
+    courts: ClubCourtsRepositoryDep,
+    provider: PaymentProviderDep,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ConnectPayments:
+    return ConnectPayments(
+        clubs=clubs,
+        courts=courts,
+        payments_accounts=build_payments_accounts(provider),
+        pages=build_onboarding_pages(settings),
+        uow=uow,
+        clock=clock,
+    )
+
+
+ConnectPaymentsDep = Annotated[ConnectPayments, Depends(get_connect_payments)]

@@ -13,7 +13,8 @@ intent, first rating in a sport or Games & money — each of which changes which
 games they may be dealt in every pool they are in — a swipe, which may leave a
 seat for the next best fits or a pick at half In, and **anything a club changes
 about what it sells**, which is everywhere: a club's courts may be in reach of
-any group near it.
+any group near it. Its payments account going ready — or ready no longer — is
+one of those, since it is what makes a club live (#537).
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from app.modules.clubs.domain.club_courts_events import (
     CourtSwitchedOn,
     ExceptionAdded,
     ExceptionRemoved,
+    PaymentsStatusChanged,
     PricesSet,
     RaketaHoursSet,
     RaketaPaused,
@@ -74,6 +76,8 @@ CLUB_EVENTS = (
     RaketaSettingsChanged,
     RaketaPaused,
     RaketaResumed,
+    # Ready is the checklist's first step: a club goes live on it, and off.
+    PaymentsStatusChanged,
 )
 
 

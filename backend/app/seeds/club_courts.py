@@ -20,10 +20,15 @@ stream is the one a desk would have left, and nothing opens a table.
   dealing nothing new;
 - **Wisła Park is not live**: it chose a way, added courts with hours and
   closed a few days for resurfacing, and never priced them or confirmed its
-  settings — half its checklist done.
-
-Payments are *pending* on every checklist until connecting Stripe is built
-(#537), so *live* here is the other four steps.
+  settings — half its checklist done — and it is **half connected**: it went
+  to the provider's pages and the provider says *Stripe needs more details*.
+- **Every other club's payments are ready** (#537): each desk asked for the
+  link through ``ConnectPayments``, the use case *Connect with Stripe* runs,
+  and a fake provider finished its onboarding the moment the link was made —
+  so the read that follows the link found the account ready, as a laptop's does.
+  Wisła Park's is told apart by ``HeedPaymentsAccount``, the use case the
+  provider's notice runs. **A club with no account yet is connected on any
+  run**, so a database seeded before payments existed goes live on the next.
 
 **The exception is placed from the run's own clock**, a few days ahead, so a
 fresh run always shows one on the list; and **re-running adds nothing to a
@@ -52,6 +57,10 @@ from app.bootstrap.composition import (
     build_court_bookings,
     build_domain_event_store,
     build_event_publisher,
+    build_fake_payments,
+    build_mail_queue,
+    build_onboarding_pages,
+    build_payments_accounts,
     build_sellable_court_hours,
     build_unit_of_work,
 )
@@ -62,6 +71,7 @@ from app.modules.clubs.application.commands import (
     AddCourtCommand,
     AddExceptionCommand,
     ChooseWayOfWorkingCommand,
+    ConnectPaymentsCommand,
     PriceBandInput,
     SaveRaketaSettingsCommand,
     SetPricesCommand,
@@ -69,12 +79,17 @@ from app.modules.clubs.application.commands import (
     SportPriceInput,
 )
 from app.modules.clubs.application.hours_exceptions import AddException
+from app.modules.clubs.application.payments_account import (
+    ConnectPayments,
+    HeedPaymentsAccount,
+)
 from app.modules.clubs.application.prices import SetPrices
 from app.modules.clubs.application.raketa_settings import (
     ChooseWayOfWorking,
     SaveRaketaSettings,
 )
 from app.modules.clubs.domain.court_hours import local_day
+from app.modules.clubs.domain.payments_account import PaymentsStatus
 from app.modules.clubs.domain.prices import BandDays, PriceBand
 from app.modules.clubs.domain.ports import ClubAccountRepository
 from app.modules.clubs.domain.raketa_terms import (
@@ -83,10 +98,11 @@ from app.modules.clubs.domain.raketa_terms import (
     WayOfWorking,
 )
 from app.modules.clubs.domain.setup import checklist_of
+from app.modules.payments.domain.provider import ClubAccountStatus
 from app.modules.player_profile.domain.weekly_hours import WEEKEND_DAYS
 from app.modules.users.domain.value_objects import Email
 from app.seeds.clock import FixedClock
-from app.seeds.clubs import SEED_CLUBS, SeededClubs, desk_email
+from app.seeds.clubs import SEED_CLUBS, SeedClub, SeededClubs, desk_email
 
 #: How far ahead the fortnight the self-check reads is — a deck's own horizon.
 HORIZON: Final = timedelta(days=14)
@@ -156,6 +172,9 @@ class SeedClubCourts:
     #: Whether the desk confirmed its settings — the checklist's last step.
     confirmed: bool = True
     paused: bool = False
+    #: What the provider says of its account once the desk has been to the
+    #: provider's pages — ready, unless it stopped half way.
+    payments: ClubAccountStatus = ClubAccountStatus.READY
 
 
 def _padel(*numbers: int) -> tuple[SeedCourt, ...]:
@@ -282,6 +301,7 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
         week=EVENINGS_AND_WEEKENDS,
         exception=SeedException("Resurfacing", days_ahead=7, days=3),
         confirmed=False,
+        payments=ClubAccountStatus.NEEDS_DETAILS,
     ),
     SeedClubCourts(
         club="Nowa Huta Squash",
@@ -318,6 +338,8 @@ class SeededClubCourts:
     set_up_by_this_run: bool
     live: bool
     paused: bool
+    #: Where the club's payments account stands.
+    payments: PaymentsStatus
     #: Court hours for sale in the next fortnight, as the port reads them.
     for_sale: int
 
@@ -353,9 +375,32 @@ async def write_the_club_courts(
         club_repository = build_club_repository(
             session, event_store=event_store, events=events
         )
-        courts = build_club_courts_repository(event_store=event_store, events=events)
+        courts = build_club_courts_repository(
+            session, event_store=event_store, events=events
+        )
         uow = build_unit_of_work(session)
         bookings = build_court_bookings()
+        # The run's own provider: a fake that finishes a club's onboarding when
+        # told to, and knows nothing a laptop's API holds (``payments.py``).
+        provider = build_fake_payments()
+        pages = build_onboarding_pages(settings)
+        connect = ConnectPayments(
+            clubs=club_repository,
+            courts=courts,
+            payments_accounts=build_payments_accounts(provider),
+            pages=pages,
+            uow=uow,
+            clock=clock,
+        )
+        heed = HeedPaymentsAccount(
+            clubs=club_repository,
+            club_accounts=accounts,
+            courts=courts,
+            payments_accounts=build_payments_accounts(provider),
+            mail=build_mail_queue(session),
+            pages=pages,
+            clock=clock,
+        )
 
         for declared in SEED_CLUB_COURTS:
             if declared.club not in signed_up:
@@ -380,6 +425,23 @@ async def write_the_club_courts(
                     choose=ChooseWayOfWorking(courts=courts, uow=uow, clock=clock),
                     save=SaveRaketaSettings(courts=courts, uow=uow, clock=clock),
                 )
+            if (await courts.load(club_id)).payments is None:
+                # The desk's *Connect with Stripe*: the link, and the provider's
+                # pages — finished in one visit for a club that is ready, and
+                # left needing more for one that is not, which the provider's
+                # notice then says.
+                ready = declared.payments is ClubAccountStatus.READY
+                provider.onboarding_completes = ready
+                await connect.execute(
+                    ConnectPaymentsCommand(
+                        club_id=club_id, email=desk_email(_seed_club(declared.club))
+                    )
+                )
+                if not ready:
+                    account = provider.account_opened_for(club_id)
+                    provider.club_account_is(account, declared.payments)
+                    await heed.execute(account)
+                    await uow.commit()
             club = await courts.load(club_id)
             offers = await build_sellable_court_hours(session).between(
                 [club_id], start=now, end=now + HORIZON, now=now
@@ -391,6 +453,7 @@ async def write_the_club_courts(
                     set_up_by_this_run=untouched,
                     live=checklist_of(club).live,
                     paused=club.paused,
+                    payments=club.payments_status,
                     for_sale=0 if offer is None else len(offer.hours),
                 )
             )
@@ -399,9 +462,12 @@ async def write_the_club_courts(
     return SeededCourts(clubs=tuple(seeded))
 
 
+def _seed_club(name: str) -> SeedClub:
+    return next(club for club in SEED_CLUBS if club.name == name)
+
+
 async def _club_id(accounts: ClubAccountRepository, name: str) -> UUID:
-    club = next(club for club in SEED_CLUBS if club.name == name)
-    account = await accounts.get_by_email(Email(desk_email(club)))
+    account = await accounts.get_by_email(Email(desk_email(_seed_club(name))))
     if account is None:
         raise ClubCourtsRefused(f"{name} has no desk to set its courts up with")
     return account.club_id
@@ -513,6 +579,14 @@ def _refuse_a_live_club_with_nothing_for_sale(
             )
 
 
+#: The payments step as the Overview words it.
+_PAYMENTS_WORDS: Final = {
+    PaymentsStatus.NOT_STARTED: "not started",
+    PaymentsStatus.NEEDS_DETAILS: "need more details",
+    PaymentsStatus.READY: "ready",
+}
+
+
 def club_courts_lines(seeded: SeededCourts) -> list[str]:
     """The report's section: every club, how it sells, and what it has for sale."""
 
@@ -530,9 +604,10 @@ def club_courts_lines(seeded: SeededCourts) -> list[str]:
             if entry.live
             else "not live (half its checklist)"
         )
+        payments = _PAYMENTS_WORDS[entry.payments]
         lines.append(
             f"  {declared.club} · {declared.way.value.replace('_', ' ').lower()} · "
-            f"{len(declared.courts)} courts · {state} · "
+            f"{len(declared.courts)} courts · {state} · payments {payments} · "
             f"{entry.for_sale} court hours for sale in the next 14 days"
         )
     return lines

@@ -356,3 +356,15 @@ class ClubSportHasCourts(ConflictError):
             f"the court {court!r} plays {sport.lower()}",
             details={"field": "sports", "sport": sport, "court": court},
         )
+
+
+class PaymentsAlreadyConnected(ConflictError):
+    """The desk asked for a link to the provider's onboarding, and the
+    provider already says the club's account is ready: there is nothing left
+    to fill in, and the checklist's first step is done. Its own dashboard at
+    the provider is where anything else about it is changed."""
+
+    code = "payments_already_connected"
+
+    def __init__(self) -> None:
+        super().__init__("the club's payments account is ready")

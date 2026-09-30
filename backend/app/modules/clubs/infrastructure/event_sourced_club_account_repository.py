@@ -78,6 +78,13 @@ class EventSourcedClubAccountRepository:
         row = result.scalar_one_or_none()
         return _to_domain(row) if row else None
 
+    async def get_by_club(self, club_id: UUID) -> Optional[ClubAccount]:
+        result = await self._session.execute(
+            select(ClubAccountORM).where(ClubAccountORM.club_id == club_id)
+        )
+        row = result.scalar_one_or_none()
+        return _to_domain(row) if row else None
+
     async def save(self, account: ClubAccount) -> None:
         pending = account.pull_events()
         if not pending:

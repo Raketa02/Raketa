@@ -1526,6 +1526,53 @@
           }
         }
       }
+    },
+    "/api/v1/club/payments/onboarding-link": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Connect with Stripe \u2014 or continue",
+        "description": "The setup checklist's first step (*Connect payments*). The first time, opens the club's account at the payment provider \u2014 **once, for ever** \u2014 and answers a link to the provider's hosted pages, where the club gives its company details, its representative and a Polish IBAN. Every later call answers a fresh link for the same account: *Continue with Stripe* while the provider needs more details. **Every call also reads the account as it stands**, so the checklist follows what the provider says even before its notice arrives.",
+        "operationId": "onboarding_link_api_v1_club_payments_onboarding_link_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingLinkResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`payments_already_connected` \u2014 the provider says the account is ready: the checklist's first step is done, and there is nothing left to fill in. No link was made.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`payments_unavailable` \u2014 the provider could not be reached. Try again; an account it had already opened is kept, and the next link continues it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2472,6 +2519,20 @@
         "title": "NewPasswordRequest",
         "description": "The new password, and **exactly one** of what opens the way to it: the\n`token` from the email's link, or the `ticket` a claimed code returned.\n\nThe password carries no bound here, deliberately: the rule every account\nshares \u2014 8 to 128 characters with a letter and a digit \u2014 is refused as\n`password_too_weak` naming the field, not as a validation error naming none.\nSending both or neither of `token` and `ticket` is a malformed request rather\nthan a person's mistake, and is the one refusal here that is a `422`."
       },
+      "OnboardingLinkResponse": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "The provider's own hosted pages for the club's account \u2014 **single use and short-lived**, so the desk is sent there at once and a new one is asked for every time. The provider sends the desk back to the website's `/overview` when it leaves, and to `/payments/continue` \u2014 which asks for a fresh link and follows it \u2014 when this one is spent or stale."
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "OnboardingLinkResponse"
+      },
       "OtherClubsCourtsSchema": {
         "properties": {
           "offered": {
@@ -2492,6 +2553,16 @@
           "within_km"
         ],
         "title": "OtherClubsCourtsSchema"
+      },
+      "PaymentsStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_STARTED",
+          "NEEDS_DETAILS",
+          "READY"
+        ],
+        "title": "PaymentsStatus",
+        "description": "Where the club's payments account stands."
       },
       "PriceBandRequest": {
         "properties": {
@@ -2751,17 +2822,22 @@
             },
             "type": "array",
             "title": "Steps",
-            "description": "The five, in the Overview's order: `CONNECT_PAYMENTS` \u2014 `PENDING` until connecting Stripe is built \u2014 then `WAY_OF_WORKING`, `COURTS` (an offered court), `HOURS_AND_PRICES` (an offered court with hours, and every such court's sport priced) and `SETTINGS` (confirmed)."
+            "description": "The five, in the Overview's order: `CONNECT_PAYMENTS` (the provider says the account is ready), `WAY_OF_WORKING`, `COURTS` (an offered court), `HOURS_AND_PRICES` (an offered court with hours, and every such court's sport priced) and `SETTINGS` (confirmed)."
+          },
+          "payments": {
+            "$ref": "#/components/schemas/PaymentsStatus",
+            "description": "Where the club's payments account stands, for the first step's row: `NOT_STARTED` \u2014 *Connect with Stripe* \u2014 `NEEDS_DETAILS` \u2014 *Stripe needs more details*, and *Continue with Stripe* \u2014 or `READY`. **Ready can be lost**: the provider may want more later, and the club is not live again until it has it."
           },
           "live": {
             "type": "boolean",
             "title": "Live",
-            "description": "Every step but a pending one is done: the club's courts can reach players' decks. A paused club is still live."
+            "description": "Every step is done: the club's courts can reach players' decks. A paused club is still live."
           }
         },
         "type": "object",
         "required": [
           "steps",
+          "payments",
           "live"
         ],
         "title": "SetupResponse",
@@ -2786,7 +2862,7 @@
           },
           "state": {
             "$ref": "#/components/schemas/StepState",
-            "description": "`DONE`, `TO_DO`, `LOCKED` \u2014 waiting on the step it needs: hours and prices on a court, the settings on a way of working \u2014 or `PENDING`: nothing the club can do yet. *Next* is the first `TO_DO`."
+            "description": "`DONE`, `TO_DO` or `LOCKED` \u2014 waiting on the step it needs: hours and prices on a court, the settings on a way of working. *Next* is the first `TO_DO`."
           }
         },
         "type": "object",
@@ -2894,8 +2970,7 @@
         "enum": [
           "DONE",
           "TO_DO",
-          "LOCKED",
-          "PENDING"
+          "LOCKED"
         ],
         "title": "StepState"
       },

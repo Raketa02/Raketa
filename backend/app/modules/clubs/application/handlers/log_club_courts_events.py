@@ -20,6 +20,8 @@ from app.modules.clubs.domain.club_courts_events import (
     CourtSwitchedOn,
     ExceptionAdded,
     ExceptionRemoved,
+    PaymentsAccountOpened,
+    PaymentsStatusChanged,
     PricesSet,
     RaketaHoursSet,
     RaketaPaused,
@@ -44,6 +46,8 @@ ClubCourtsEvent = (
     | RaketaSettingsChanged
     | RaketaPaused
     | RaketaResumed
+    | PaymentsAccountOpened
+    | PaymentsStatusChanged
 )
 
 _LINES: dict[type, str] = {
@@ -60,6 +64,8 @@ _LINES: dict[type, str] = {
     RaketaSettingsChanged: "clubs.raketa_settings.changed",
     RaketaPaused: "clubs.raketa.paused",
     RaketaResumed: "clubs.raketa.resumed",
+    PaymentsAccountOpened: "clubs.payments_account.opened",
+    PaymentsStatusChanged: "clubs.payments_status.changed",
 }
 
 

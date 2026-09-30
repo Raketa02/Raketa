@@ -3,9 +3,13 @@
 **The inbox row and whatever the notice moved commit together**, so a notice is
 either read and acted on or neither — and a second delivery finds the row and
 does nothing. A notice about a customer nobody here opened, a setup that is not
-the one open, or a card that is not the saved one is read and changes nothing:
-the provider has told Raketa something Raketa has no stake in, and a retry
-would tell it again for three days.
+the one open, a card that is not the saved one, or an account no club holds is
+read and changes nothing: the provider has told Raketa something Raketa has no
+stake in, and a retry would tell it again for three days.
+
+**A club's account is the club's to record** (#537): the notice that one
+changed is passed to ``ConnectedAccounts``, which records it in this same
+transaction and leaves the commit here.
 """
 
 from __future__ import annotations
@@ -17,11 +21,16 @@ from app.kernel import Clock, Instant
 from app.modules.payments.application.setup import saved_from
 from app.modules.payments.domain.notices import (
     CardUpdatedByBank,
+    ConnectedAccountChanged,
     Notice,
     SetupSucceeded,
     Unheeded,
 )
-from app.modules.payments.domain.ports import NoticeInbox, PaymentMethodRepository
+from app.modules.payments.domain.ports import (
+    ConnectedAccounts,
+    NoticeInbox,
+    PaymentMethodRepository,
+)
 from app.modules.payments.domain.provider import PaymentProvider
 
 logger = logging.getLogger(__name__)
@@ -35,6 +44,8 @@ def kind_of(notice: Notice) -> str:
             return "setup_succeeded"
         case CardUpdatedByBank():
             return "card_updated_by_bank"
+        case ConnectedAccountChanged():
+            return "connected_account_changed"
         case Unheeded():
             return notice.kind
 
@@ -45,12 +56,14 @@ class ReceivePaymentNotice:
         *,
         inbox: NoticeInbox,
         methods: PaymentMethodRepository,
+        accounts: ConnectedAccounts,
         provider: PaymentProvider,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._inbox = inbox
         self._methods = methods
+        self._accounts = accounts
         self._provider = provider
         self._uow = uow
         self._clock = clock
@@ -69,6 +82,12 @@ class ReceivePaymentNotice:
                 await self._setup_succeeded(notice, at=now)
             case CardUpdatedByBank():
                 await self._card_updated(notice, at=now)
+            case ConnectedAccountChanged():
+                if not await self._accounts.heed(notice.account_id):
+                    logger.info(
+                        "payments.notice.account_of_nobody",
+                        extra={"notice_id": notice.notice_id},
+                    )
             case Unheeded():
                 pass
         await self._uow.commit()

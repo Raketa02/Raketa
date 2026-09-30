@@ -57,6 +57,7 @@ POISON_STRIPE_TEST_KEY = f"sk_test_{POISON_PASSWORD}"
 POISON_STRIPE_LIVE_KEY = f"sk_live_{POISON_PASSWORD}"
 POISON_STRIPE_PUBLISHABLE_KEY = f"pk_test_{POISON_PASSWORD}"
 POISON_STRIPE_WEBHOOK_SECRET = f"whsec_{POISON_PASSWORD}"
+POISON_STRIPE_CONNECT_WEBHOOK_SECRET = f"whsec_connect_{POISON_PASSWORD}"
 
 #: What every deployed environment has to supply because its shipped default is
 #: a laptop's: three addresses out of `docker-compose-local.yml`, the two web
@@ -72,13 +73,15 @@ DEPLOYED_ADDRESSES = {
     "MAIL_SENDER": POISON_MAIL_SENDER,
 }
 DEPLOYED_MAIL_SECURITY = {"SMTP_SECURITY": "starttls"}
-#: What every deployed environment supplies for payments: Stripe, with all three
-#: of its secrets. Production swaps the test key for the live one.
+#: What every deployed environment supplies for payments: Stripe, with its key,
+#: its publishable key and both endpoints' webhook secrets. Production swaps the
+#: test key for the live one.
 DEPLOYED_PAYMENTS = {
     "PAYMENTS_PROVIDER": "stripe",
     "STRIPE_SECRET_KEY": POISON_STRIPE_TEST_KEY,
     "STRIPE_PUBLISHABLE_KEY": POISON_STRIPE_PUBLISHABLE_KEY,
     "STRIPE_WEBHOOK_SECRET": POISON_STRIPE_WEBHOOK_SECRET,
+    "STRIPE_CONNECT_WEBHOOK_SECRET": POISON_STRIPE_CONNECT_WEBHOOK_SECRET,
 }
 
 
@@ -598,8 +601,8 @@ def test_stripe_without_its_keys_refuses_even_on_a_laptop(clean_env, missing) ->
 
 
 def test_a_laptop_may_run_stripe_without_a_webhook_secret(clean_env) -> None:
-    """Its platform endpoint then answers every event with 503, which is honest
-    about a laptop nobody pointed ``stripe listen`` at."""
+    """Its endpoints then answer every event with 503, which is honest about a
+    laptop nobody pointed ``stripe listen`` at."""
     settings = build(
         APP_ENV="local",
         PAYMENTS_PROVIDER="stripe",
@@ -607,13 +610,19 @@ def test_a_laptop_may_run_stripe_without_a_webhook_secret(clean_env) -> None:
         STRIPE_PUBLISHABLE_KEY=POISON_STRIPE_PUBLISHABLE_KEY,
     )
     assert settings.STRIPE_WEBHOOK_SECRET is None
+    assert settings.STRIPE_CONNECT_WEBHOOK_SECRET is None
 
 
+@pytest.mark.parametrize(
+    "secret", ["STRIPE_WEBHOOK_SECRET", "STRIPE_CONNECT_WEBHOOK_SECRET"]
+)
 @pytest.mark.parametrize("env", sorted(DEPLOYED))
-def test_a_deployed_environment_verifies_every_webhook(clean_env, env) -> None:
+def test_a_deployed_environment_verifies_every_webhook(clean_env, env, secret) -> None:
+    """Both endpoints: a club whose account notices were never read would
+    never go live (#537)."""
     with pytest.raises(ConfigurationError) as exc:
-        settings_for(env, STRIPE_WEBHOOK_SECRET=None)
-    assert "STRIPE_WEBHOOK_SECRET" in str(exc.value)
+        settings_for(env, **{secret: None})
+    assert secret in str(exc.value)
 
 
 @pytest.mark.parametrize(
@@ -802,6 +811,10 @@ REFUSALS = [
         lambda: production(STRIPE_WEBHOOK_SECRET=None),
     ),
     (
+        "STRIPE_CONNECT_WEBHOOK_SECRET",
+        lambda: production(STRIPE_CONNECT_WEBHOOK_SECRET=None),
+    ),
+    (
         "STRIPE_SECRET_KEY",
         lambda: settings_for("staging", STRIPE_SECRET_KEY=POISON_STRIPE_LIVE_KEY),
     ),
@@ -839,6 +852,7 @@ REFUSAL_IDS = [
     "PAYMENTS_PROVIDER-fake-in-production",
     "STRIPE_SECRET_KEY-missing",
     "STRIPE_WEBHOOK_SECRET-missing-in-production",
+    "STRIPE_CONNECT_WEBHOOK_SECRET-missing-in-production",
     "STRIPE_SECRET_KEY-live-off-production",
     "STRIPE_SECRET_KEY-test-in-production",
 ]
@@ -871,6 +885,7 @@ def test_no_refusal_echoes_a_value(clean_env, variable, trigger) -> None:
         POISON_STRIPE_LIVE_KEY,
         POISON_STRIPE_PUBLISHABLE_KEY,
         POISON_STRIPE_WEBHOOK_SECRET,
+        POISON_STRIPE_CONNECT_WEBHOOK_SECRET,
         POISON_SECRET,
         POISON_PHOTO_SECRET,
         DEFAULT_JWT_SECRET_KEY,

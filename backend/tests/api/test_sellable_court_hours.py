@@ -38,7 +38,9 @@ from tests.api.club_courts_world import (
     a_desk,
     adds_a_court,
     chooses,
+    PAYMENTS_LINK,
     confirms_settings,
+    connects_payments,
     court_path,
     sets_hours,
     sets_prices,
@@ -97,6 +99,7 @@ async def a_live_club(
     await sets_hours(client, desk, [court["id"]], [(2, 18), (2, 19), (6, 9)])
     await sets_prices(client, desk, padel_prices())
     await confirms_settings(client, desk, **settings)
+    await connects_payments(client, desk)
     return club_id, desk, court
 
 
@@ -205,6 +208,7 @@ async def test_an_hour_a_booking_holds_is_not_sold_again(
     async with session_factory() as session:
         offers = await ClubCourtsSellableHours(
             courts=build_club_courts_repository(
+                session,
                 event_store=build_domain_event_store(session),
                 events=build_event_publisher(session),
             ),
@@ -298,6 +302,25 @@ async def test_a_club_that_is_not_live_sells_nothing_and_is_absent(
     offers = await sellable(session_factory, [half_id, live_id, str(uuid4())])
 
     assert list(offers) == [UUID(live_id)]
+
+
+async def test_a_club_whose_payments_are_not_ready_sells_nothing(
+    client, clock, session_factory, payments
+):
+    """**The club is the seller** (#537): four steps done and an account the
+    provider does not yet call ready is a club that cannot take a share, so
+    none of its hours is for sale."""
+
+    club_id, desk = await a_desk(client, sports=("PADEL",))
+    await chooses(client, desk, "INSTANT")
+    court = await adds_a_court(client, desk, name="Court 1")
+    await sets_hours(client, desk, [court["id"]], [(2, 18)])
+    await sets_prices(client, desk, padel_prices())
+    await confirms_settings(client, desk)
+    linked = await client.post(PAYMENTS_LINK, headers=desk)
+    assert linked.status_code == 200, linked.text
+
+    assert await sellable(session_factory, [club_id]) == {}
 
 
 async def test_a_club_s_hours_are_its_wall_clock_across_the_autumn_change(

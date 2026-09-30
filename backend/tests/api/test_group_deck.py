@@ -35,6 +35,7 @@ import pytest
 from app.api.dependencies import get_clock
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport
+from app.modules.payments.domain.provider import ClubAccountStatus
 from app.modules.proposals.presentation.dependencies import get_booked_games
 from app.modules.rating.domain.events import RatingMovedOnResult
 from app.modules.rating.domain.ids import skill_rating_id
@@ -43,10 +44,12 @@ from app.modules.rating.infrastructure.event_sourced_skill_rating_repository imp
 )
 from tests.api import matchmaking_world as world
 from tests.api.club_courts_world import (
+    PAYMENTS_LINK,
     a_desk,
     adds_a_court,
     chooses,
     confirms_settings,
+    connects_payments,
     court_path,
     sets_hours,
     sets_prices,
@@ -761,6 +764,7 @@ async def test_a_club_that_stops_selling_deals_nothing_more(
         client, desk, [{"sport": "PADEL", "price_grosze": 120_00, "bands": []}]
     )
     await confirms_settings(client, desk)
+    await connects_payments(client, desk)
     await makes(
         session_factory,
         clock,
@@ -777,6 +781,43 @@ async def test_a_club_that_stops_selling_deals_nothing_more(
         headers=desk,
     )
     assert switched.status_code == 200, switched.text
+
+    assert await dealt_ids(client, ola, group) == []
+
+
+async def test_a_club_whose_payments_stop_deals_nothing_more(
+    client, session_factory, clock, crowd, group, payments
+):
+    """**Not live, not paused** (#537): a club the provider stops taking
+    payments for is off the decks until it answers — its cards still filling
+    included, since a fill could charge nobody on its account."""
+
+    ola, kuba, ewa, tomek = crowd[:4]
+    club_id, desk = await a_desk(
+        client, name="Wisla Park", email="desk@wisla.pl", sports=("PADEL",)
+    )
+    await chooses(client, desk, "INSTANT")
+    court = await adds_a_court(client, desk, name="Court 1")
+    await sets_hours(client, desk, [court["id"]], every_hour_of_the_week())
+    await sets_prices(
+        client, desk, [{"sport": "PADEL", "price_grosze": 120_00, "bands": []}]
+    )
+    await confirms_settings(client, desk)
+    await connects_payments(client, desk)
+    await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club_id,
+        versions=((ola, kuba, ewa, tomek),),
+    )
+    assert len(await dealt_ids(client, ola, group)) == 1
+
+    # The provider wants more; the desk's *Continue with Stripe* reads it.
+    account = payments.account_opened_for(UUID(club_id))
+    payments.club_account_is(account, ClubAccountStatus.NEEDS_DETAILS)
+    linked = await client.post(PAYMENTS_LINK, headers=desk)
+    assert linked.status_code == 200, linked.text
 
     assert await dealt_ids(client, ola, group) == []
 

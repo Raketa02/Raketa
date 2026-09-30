@@ -12,10 +12,11 @@ comparison, so it is the backend's (``docs/adr/0021``): hours and prices wait
 for a court, the settings for a way of working. Which step is *next* is the
 first one to do, which a client reads off the order.
 
-**Payments are pending, and live is the other four.** Connecting a Stripe
-account is its own ticket (#537); until it lands the step reads ``PENDING`` —
-not to do, since there is nothing the club can do yet — and is left out of
-*live*. That ticket makes live wait on it.
+**Live is all five** (#537): the club is the seller, so a club whose payments
+account cannot take a payment sells nothing, however ready its courts are. The
+first step is done while the provider says the account is **ready**, and only
+then — so a club the provider stops is live no longer until it answers, and
+its courts leave players' decks with it.
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ from enum import StrEnum
 from typing import final
 
 from app.modules.clubs.domain.club_courts import ClubCourts
+from app.modules.clubs.domain.payments_account import PaymentsStatus
 
 
 class SetupStep(StrEnum):
@@ -42,25 +44,22 @@ class StepState(StrEnum):
     TO_DO = "TO_DO"
     #: Waiting on an earlier step it needs.
     LOCKED = "LOCKED"
-    #: Nothing the club can do yet: the step arrives with its own ticket.
-    PENDING = "PENDING"
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class SetupChecklist:
     steps: tuple[tuple[SetupStep, StepState], ...]
+    #: Where the payments account stands — what the first step's row says
+    #: beside its state: not started, *Stripe needs more details*, ready.
+    payments: PaymentsStatus
 
     @property
     def live(self) -> bool:
-        """Every step the club can take is done. A live club's courts can
-        reach decks; a paused one is still live, and simply deals nothing new."""
+        """Every step is done. A live club's courts can reach decks; a paused
+        one is still live, and simply deals nothing new."""
 
-        return all(
-            state is StepState.DONE
-            for _, state in self.steps
-            if state is not StepState.PENDING
-        )
+        return all(state is StepState.DONE for _, state in self.steps)
 
 
 def checklist_of(club: ClubCourts) -> SetupChecklist:
@@ -71,7 +70,10 @@ def checklist_of(club: ClubCourts) -> SetupChecklist:
     )
     return SetupChecklist(
         steps=(
-            (SetupStep.CONNECT_PAYMENTS, StepState.PENDING),
+            (
+                SetupStep.CONNECT_PAYMENTS,
+                _done_or_to_do(club.payments_status is PaymentsStatus.READY),
+            ),
             (SetupStep.WAY_OF_WORKING, _done_or_to_do(club.way is not None)),
             (SetupStep.COURTS, _done_or_to_do(has_courts)),
             (
@@ -84,7 +86,8 @@ def checklist_of(club: ClubCourts) -> SetupChecklist:
                 if club.way is not None
                 else StepState.LOCKED,
             ),
-        )
+        ),
+        payments=club.payments_status,
     )
 
 

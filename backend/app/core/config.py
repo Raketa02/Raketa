@@ -368,10 +368,13 @@ class Settings(BaseSettings):
     #
     # A laptop runs on the in-process fake, which needs no key and never leaves
     # the machine. Stripe needs its secret key and the publishable key a phone
-    # opens its card fields with; the webhook secret is what the platform
-    # endpoint verifies every event with (`STRIPE_WEBHOOK_SECRET` — `stripe
-    # listen` prints one for a laptop). **The keys are a person's to place**
-    # (#533), in `.env`, never an agent's.
+    # opens its card fields with; the webhook secrets are what each endpoint
+    # verifies every event with — the platform's (`STRIPE_WEBHOOK_SECRET`) and
+    # the **Connected accounts** endpoint's, where a club's account and the
+    # payments made on it notify (`STRIPE_CONNECT_WEBHOOK_SECRET`, #537): Stripe
+    # signs each endpoint's with its own. `stripe listen` prints one for a
+    # laptop. **The keys are a person's to place** (#533), in `.env`, never an
+    # agent's.
     #
     # **A live key moves real money**, so only production may hold one, and
     # production may hold nothing else: a test key there would book games that
@@ -380,6 +383,7 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_PUBLISHABLE_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_CONNECT_WEBHOOK_SECRET: Optional[str] = None
     #: The whole budget for one call to Stripe, connection included. A setup
     #: waits on it inline, and a player is watching a spinner.
     STRIPE_TIMEOUT_SECONDS: float = 20.0
@@ -943,12 +947,15 @@ class Settings(BaseSettings):
         if self.PAYMENTS_PROVIDER is PaymentsProvider.STRIPE:
             # Stripe cannot be asked anything without its secret key, and a
             # phone cannot open its card fields without the publishable one.
-            # The webhook secret is optional only on a laptop, whose platform
-            # endpoint then answers every event with 503 — anything deployed
-            # must verify what it is sent.
+            # The webhook secrets are optional only on a laptop, whose
+            # endpoints then answer every event with 503 — anything deployed
+            # must verify what it is sent, at both endpoints: a club whose
+            # account notices were never read would never go live.
             required = ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"]
             if env in DEPLOYED:
-                required.append("STRIPE_WEBHOOK_SECRET")
+                required.extend(
+                    ["STRIPE_WEBHOOK_SECRET", "STRIPE_CONNECT_WEBHOOK_SECRET"]
+                )
             for name in required:
                 if not getattr(self, name):
                     raise ConfigurationError(

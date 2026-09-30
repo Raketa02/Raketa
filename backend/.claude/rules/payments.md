@@ -45,3 +45,26 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   games are nought until bookings exist (#541). Seeded by `app/seeds/payments.py`: every named account and cohort member saves a fake
   card through the three use cases — the protagonist the mock's Visa •••• 4312, two through the
   wallets — and `brand-new-player` has none.
+- **A club connects payments through the provider's pages, and the arrow runs
+  `payments → clubs`** (#537). The club's account at the provider is recorded on its **Club
+  courts** stream (`clubs/domain/payments_account.py`) — `PaymentsAccountOpened`, once, and
+  `PaymentsStatusChanged` whenever the provider says it moved — and the checklist reads it
+  (see `clubs.md`). The Club context asks for it through **its own** port,
+  `PaymentsAccounts` (open, a link, the status), and this context answers it over the
+  provider in `infrastructure/club_accounts.py`; the notice that an account changed goes
+  the other way through **this** context's port, `ConnectedAccounts`, answered in the same
+  module over the club's `HeedPaymentsAccount`. The club's link route,
+  `POST /api/v1/club/payments/onboarding-link`, is this context's too
+  (`presentation/club_routes.py`, mounted on the club surface), because the provider
+  dependency is — and `.importlinter`'s `clubs-does-not-know-payments` holds the arrow.
+  **The Connected accounts webhook is a second endpoint with its own secret**:
+  `POST /api/v1/webhooks/stripe-connect`, verified with `STRIPE_CONNECT_WEBHOOK_SECRET`
+  (required wherever the platform's is), read by the same `StripeNotices` over that secret
+  and acted on by the same `ReceivePaymentNotice`, so one inbox dedupes both. Stripe still
+  sends v1 `account.updated` there for an Accounts v2 account, naming it at the top level
+  (`account`); that is `ConnectedAccountChanged`, and on the platform endpoint — where it names
+  no connected account — it is nothing. The notice is a prompt: the account is **read from
+  the provider as it stands**, and every link also reads it — a club recorded ready before
+  it is refused one — so neither a late nor a lost notice strands a desk. `FakePayments.onboarding_completes`
+  finishes a club's onboarding on its link (a laptop's always does);
+  `account_opened_for(club_id)` is the account a test's notice names.

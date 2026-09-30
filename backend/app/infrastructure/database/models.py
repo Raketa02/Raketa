@@ -12,7 +12,11 @@ from app.modules.auth.infrastructure.one_time_credential_model import (
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_model import (
     RefreshTokenORM,
 )
-from app.modules.clubs.infrastructure.club_model import ClubAccountORM, ClubORM
+from app.modules.clubs.infrastructure.club_model import (
+    ClubAccountORM,
+    ClubORM,
+    ClubPaymentsAccountORM,
+)
 from app.modules.conversations.infrastructure.conversation_model import (
     ConversationORM,
 )
@@ -50,6 +54,7 @@ __all__ = [
     "CandidateRowORM",
     "ClubAccountORM",
     "ClubORM",
+    "ClubPaymentsAccountORM",
     "ConversationORM",
     "DeckResetORM",
     "EventOutboxORM",
