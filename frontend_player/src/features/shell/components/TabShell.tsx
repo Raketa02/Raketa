@@ -74,7 +74,7 @@ import { Stack, usePathname } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { useChallengesWaiting } from '@/features/challenges/types';
-import { useFeature } from '@/features/feature_flags/types';
+import { useFollowedFeature } from '@/features/feature_flags/types';
 import { useGamesNeedingYou } from '@/features/plans/types';
 import { TabBar, theme } from '@/shared/ui';
 
@@ -107,9 +107,10 @@ export function TabShell() {
   // Followed rather than read once: the bar mounts before any datafile has been read and stays up
   // for the session, so a read at mount would be the code default on every launch
   // ([#550](https://github.com/Raketa02/Raketa/issues/550)). The screens under it still read once.
-  const classicPlay = useFeature('classic_play');
+  const classicPlay = useFollowedFeature('classic_play');
   const gamesNeedingYou = useGamesNeedingYou();
-  const challengesWaiting = useChallengesWaiting();
+  // Chats' count is read only while Chats is drawn: it is Classic play's, column and read.
+  const challengesWaiting = useChallengesWaiting(classicPlay);
 
   return (
     <View style={s.shell}>

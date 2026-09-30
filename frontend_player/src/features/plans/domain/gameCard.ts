@@ -172,19 +172,19 @@ export function mayBeCleared(name: GameCardName): boolean {
  *
  * A `Record` over the union, so a new card name is a decision here rather than a fall-through.
  * **`confirm` is the one that cannot be read off the name**: the card is the same in all four
- * `AWAITING_ANSWER` arms, and only two of them wait on you — so the caller hands in whether a
- * score is waiting on your agreement, which is `features/games`' fold (`awaitsYourAgreement`) and
- * crosses as an answer rather than an import, keeping this module the pure TypeScript it is.
+ * `AWAITING_ANSWER` arms, and only two of them wait on you — so it is asked of the caller, which is
+ * handed `features/games`' fold (`awaitsYourAgreement`) and crosses it as an answer rather than an
+ * import, keeping this module the pure TypeScript it is. It is asked about that card and no other.
  */
-const NEEDS_YOU: Readonly<Record<GameCardName, boolean>> = {
+const NEEDS_YOU: Readonly<Record<GameCardName, boolean | 'when-a-score-awaits-you'>> = {
   planning: false,
   'game-on': false,
   // A seat open in your game — the fill is yours as much as anybody's on the court.
   'needs-a-player': true,
   // A result to enter: the agreed point is behind the fold.
   'needs-result': true,
-  // A result to confirm — narrowed by the caller's answer, below.
-  confirm: true,
+  // A result to confirm — only where a score is waiting on your agreement.
+  confirm: 'when-a-score-awaits-you',
   counted: false,
   uncounted: false,
   'never-played': false,
@@ -192,9 +192,33 @@ const NEEDS_YOU: Readonly<Record<GameCardName, boolean>> = {
   unreadable: false,
 };
 
-export function needsYou(name: GameCardName, scoreAwaitsYourAgreement: boolean): boolean {
-  if (name === 'confirm') return scoreAwaitsYourAgreement;
-  return NEEDS_YOU[name];
+export function needsYou(name: GameCardName, scoreAwaitsYou: () => boolean): boolean {
+  const rule = NEEDS_YOU[name];
+  return rule === 'when-a-score-awaits-you' ? scoreAwaitsYou() : rule;
+}
+
+/**
+ * The plan a game is folded with — its court's row, found by the challenge the game was opened
+ * from (ADR-0164 §1), and `undefined` where the list has not landed or holds none.
+ */
+export function planOf(game: Game, plans: readonly Plan[] | undefined): Plan | undefined {
+  return plans?.find((one) => one.challengeId === game.challengeId);
+}
+
+/**
+ * **How many of the rail's cards need you** — the number on Home's column. The rail's own rows,
+ * each folded with its own plan exactly as the rail folds it, so the badge counts the cards Home
+ * draws and no others; `scoreAwaitsYou` is `awaitsYourAgreement` for the reader, handed in.
+ */
+export function gamesNeedingYou(
+  games: readonly Game[],
+  plans: readonly Plan[] | undefined,
+  scoreAwaitsYou: (game: Game) => boolean,
+): number {
+  return games
+    .filter(belongsOnTheRail)
+    .filter((game) => needsYou(gameCardName(game, planOf(game, plans)), () => scoreAwaitsYou(game)))
+    .length;
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * **`YOUR GAMES · n`, one card, swipe** — the Now tab's whole content
+ * **`YOUR GAMES · n`, one card, swipe** — the Home tab's whole content
  * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §4.1).
  *
  * ## A rail, not a list
@@ -66,7 +66,7 @@ import { useGames } from '@/features/games/types';
 import { recoveryMessage } from '@/shared/errors';
 import { Note, PagerDots, theme } from '@/shared/ui';
 
-import { belongsOnTheRail } from '../domain/gameCard';
+import { belongsOnTheRail, planOf } from '../domain/gameCard';
 import { usePlans } from '../hooks/usePlans';
 
 import { GameCard } from './GameCard';
@@ -151,7 +151,7 @@ export function GamesRail({ empty }: GamesRailProps) {
                 <GameCard
                   key={game.gameId}
                   game={game}
-                  plan={plans.data?.find((one) => one.challengeId === game.challengeId)}
+                  plan={planOf(game, plans.data)}
                   playerId={playerId}
                   conversationId={room?.conversationId}
                   faces={room?.faces ?? NO_FACES}

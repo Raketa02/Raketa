@@ -674,7 +674,7 @@ describe('the shell keeps no per-tab history', () => {
     pressTab('You');
 
     await waitFor(() => expect(screen).toHavePathname('/you'));
-    // Not `[Now, You]`: switching tabs replaces, so there is no cross-tab back to walk.
+    // Not `[Home, You]`: switching tabs replaces, so there is no cross-tab back to walk.
     expect(router.canGoBack()).toBe(false);
   });
 

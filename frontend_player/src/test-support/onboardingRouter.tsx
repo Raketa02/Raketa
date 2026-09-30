@@ -111,9 +111,9 @@ import { queryClient } from '@/shared/lib/query-client';
 import { errorResponse, json, type Transport, type Wire } from './transport';
 
 /**
- * The Now tab's one line — which is what *the player is in the app* looks like on screen.
+ * The Home tab's one line — which is what *the player is in the app* looks like on screen.
  *
- * The gate's fourth destination is the shell's root, and the shell's root is the Now tab, so
+ * The gate's fourth destination is the shell's root, and the shell's root is the Home tab, so
  * every suite that asserts a launch, a finish or a commit landed in the app is asserting this
  * sentence. Taken from the shell's own copy rather than spelled here, because this is exactly the
  * kind of sentence that gets reworded and eight suites holding a string literal is eight red tests
@@ -146,8 +146,8 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/play/group/[groupId]/friends': GroupFriendsRoute,
   '(app)/(tabs)/play/group/[groupId]/members': GroupMembersRoute,
   '(app)/(tabs)/play/group/[groupId]/edit': GroupEditRoute,
-  // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,
-  // because the Now tab's root is the shell's own root and has no segment to nest under.
+  // A game is pushed over the Home tab and is a `games/` route rather than a `now/` one,
+  // because the Home tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,
   '(app)/(tabs)/chats': ChatsRoute,
   // A challenge is pushed over the Chats tab, and the static `challenge` above the id is the
@@ -643,7 +643,7 @@ export const GAMES_PATH = '/api/v1/games';
  * wants a countdown to say a particular thing sets it here rather than mocking a clock: the
  * screens measure from this field and never from the device.
  *
- * Defaulted to nothing, because every launch now draws the Now tab and almost no suite is about
+ * Defaulted to nothing, because every launch now draws the Home tab and almost no suite is about
  * what is on it — an empty list renders no section at all, which is what the tab shipped with.
  */
 export function stubGames(
@@ -1087,7 +1087,7 @@ export const GATE_USER: Wire['MeResponse'] = {
  *
  * **`stubGames`, `stubPlans`, `stubConversations` and `stubSportsmanship` are in here and none
  * of them is a gate read.** The gate's fourth destination is the shell's root, the shell's root is
- * the Now tab, and the Now tab draws a games list
+ * the Home tab, and the Home tab draws a games list
  * ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite that lands in the app
  * makes that request whether or not it is about one. The rooms are one step further out: only the
  * Chats screen reads them, but a suite that walks to that tab for any reason would otherwise fail

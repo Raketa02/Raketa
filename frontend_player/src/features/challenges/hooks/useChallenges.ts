@@ -151,7 +151,7 @@ function useChallengeList(enabled = true, staleTime = 0) {
  * and the list below are two readings of one rule rather than two rules that agree today.
  *
  * `rows` is empty until there is both a list and a reader. Who the reader is comes from
- * `useCurrentUser`, exactly as the Now tab's games list picks its own seat out of a court:
+ * `useCurrentUser`, exactly as the Home tab's games list picks its own seat out of a court:
  * no route serves a player their own id, and every rule here is about *your* seat.
  *
  * **Coming back to the section re-reads it** ([#429](https://github.com/Raketa02/Raketa/issues/429)
@@ -249,7 +249,7 @@ export function useLeavingWouldEnd(challengeId: string): LeavingEnds | undefined
 }
 
 /**
- * **Unanswered challenges addressed to you** — the tab bar's one number, or nothing at all.
+ * **Unanswered challenges addressed to you** — the Chats column's number, or nothing at all.
  *
  * `undefined` covers zero, in flight and refused, and the three are deliberately not told
  * apart: they draw the identical absence, because a spinner or a `?` on permanent chrome is
@@ -258,9 +258,13 @@ export function useLeavingWouldEnd(challengeId: string): LeavingEnds | undefined
  *
  * It counts nothing until the reader is known, which is the same rule as the section's: every
  * clause of the predicate is about *your* seat.
+ *
+ * **`active` is whether the bar draws Chats at all** — Classic play
+ * ([#550](https://github.com/Raketa02/Raketa/issues/550)). Off, the list is not read for a count
+ * nobody would see; the inbox's own section still reads it wherever it is mounted.
  */
-export function useChallengesWaiting(): number | undefined {
-  const { data } = useChallengeList();
+export function useChallengesWaiting(active: boolean): number | undefined {
+  const { data } = useChallengeList(active);
   const me = useCurrentUser().data?.id;
 
   if (data === undefined || me === undefined) return undefined;

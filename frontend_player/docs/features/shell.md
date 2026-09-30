@@ -184,7 +184,7 @@ Games & Fill in screens A1). **Now is Home**, renamed whole — key `home`, labe
 the harness's `HOME_TAB_LINE` — on the same route, `/`. `TabBar` takes **`classicPlay`**, a switch
 rather than a tab list, so ADR-0135's _no caller passes tabs_ stands: without it the bar draws
 Home · Play · You, with it the five as they were. `TabShell` reads `classic_play` with
-**`useFeature`, which follows the flag** rather than reading it once: the bar mounts with the
+**`useFollowedFeature`, which follows the flag** rather than reading it once: the bar mounts with the
 signed-in app, before either datafile has been read — the saved one answers a tick later — and a
 read at mount would be the code default on every launch, so a tester's Classic play would never
 reach the bar. It changes when a datafile lands (launch, foreground) and never swaps the screen

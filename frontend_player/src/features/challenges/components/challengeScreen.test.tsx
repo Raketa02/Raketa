@@ -159,8 +159,8 @@ beforeEach(() => {
   onlineManager.setOnline(true);
   transport = installTransport();
   stubGate(transport, { ratings: [PADEL_RATING], hasPlayerProfile: true });
-  // Now draws the games list, and one test asserts that answering marks it out of date — which
-  // needs an entry in the cache to mark.
+  // Home's badge holds the games list on every screen, and one test asserts that answering re-reads
+  // it — which needs the list served to count the reads of.
   stubGames(transport);
   // The screen reads the reader's own yeses for the invitee's line; nobody, unless a test says.
   stubInterest(transport);

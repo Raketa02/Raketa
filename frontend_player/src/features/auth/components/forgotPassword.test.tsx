@@ -65,7 +65,7 @@ const NEW_PAIR: Wire['TokenResponse'] = {
   expires_in: 900,
 };
 
-/** Tomek plays padel and is past onboarding, so a session that begins lands on the Now tab. */
+/** Tomek plays padel and is past onboarding, so a session that begins lands on the Home tab. */
 const IN_THE_APP: GateStub = {
   hasPlayerProfile: true,
   ratings: [

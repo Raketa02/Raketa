@@ -165,7 +165,7 @@ review comment and a test description all use the same word.
   (`useGamesNeedingYou`, over `needsYou` and games' `awaitsYourAgreement`); the shell reads it on
   every screen, so it holds `GET /games` and `GET /plans` for the session. _Avoid_: "Now" for the
   tab — it survives only as the history of the rail's section below.
-- **A followed flag** — `useFeature`, the one flag read that answers again whenever a datafile
+- **A followed flag** — `useFollowedFeature`, the one flag read that answers again whenever a datafile
   lands, for chrome mounted before any datafile is read and kept for the session: the bar's
   Classic play columns. A **gated screen** still reads once, on mount (`useFeatureOnMount`).
 - **Players** — the second tab, and **the deck is the whole of it**

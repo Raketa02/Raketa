@@ -258,7 +258,7 @@ async function openTheChallenge(
   answer: Wire['ChallengeDetailResponse'] = detail(),
   listed: Wire['ChallengeSchema'] = row(),
   rooms: readonly Wire['ConversationRowSchema'][] = [],
-  classicPlay = true,
+  { classicPlay = true }: { readonly classicPlay?: boolean } = {},
 ) {
   stubChallenges(transport, [listed], READ_AT);
   stubConversations(transport, rooms);
@@ -529,7 +529,7 @@ describe('with Classic play switched off', () => {
   beforeEach(() => stubDatafile(transport, datafileFor({ classic_play: 'off' })));
 
   it('still pushes the builder under the challenge', async () => {
-    await openTheChallenge(detail(), row(), [], false);
+    await openTheChallenge(detail(), row(), [], { classicPlay: false });
 
     await fillTheSeats();
 
@@ -537,7 +537,7 @@ describe('with Classic play switched off', () => {
   });
 
   it('still opens the pool against a seat the fill took', async () => {
-    await openTheChallenge(detail(), row(), [], false);
+    await openTheChallenge(detail(), row(), [], { classicPlay: false });
     await fillTheSeats();
 
     // Take the fill's pick back out of the seat, then fill the hole from the pool — the one way
@@ -639,7 +639,7 @@ describe('the send', () => {
    * Nothing here resets the shell stack: `landOnHome`'s *there is nothing left to be behind* is
    * false when the thing behind is the challenge you were completing.
    */
-  it('pops back to the challenge rather than landing on Now', async () => {
+  it('pops back to the challenge rather than landing on Home', async () => {
     transport.on('POST', SEATS_PATH, () => json(row({ standing: 'AWAITING_ANSWERS' })));
 
     await openTheChallenge();

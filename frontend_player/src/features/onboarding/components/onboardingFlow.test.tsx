@@ -148,7 +148,7 @@ describe('where a launch lands', () => {
     // is re-offered to someone who has already been through it.
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
-    // Which player the gate let through. The landing is the Now tab now that the shell
+    // Which player the gate let through. The landing is the Home tab now that the shell
     // ships, and the account it let through is one tab along.
     fireEvent.press(screen.getByLabelText('You'));
     expect(await screen.findByText('Ada Lovelace')).toBeTruthy();

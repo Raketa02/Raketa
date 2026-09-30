@@ -148,7 +148,7 @@ export const TAB_BAR_TABS = [
  * ([ADR-0189](../../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6).
  * They come back together and where they were, so the bar is the five with these two left out.
  */
-export const CLASSIC_PLAY_TABS: readonly TabBarKey[] = ['players', 'chats'];
+const CLASSIC_PLAY_TABS: readonly TabBarKey[] = ['players', 'chats'];
 
 /** The columns the bar draws: the five with Classic play, and without it Home · ⚡Play · You. */
 function columnsOf(classicPlay: boolean): readonly TabBarTab[] {
@@ -215,14 +215,42 @@ interface ColumnProps<Key extends string = TabBarKey> {
 }
 
 /**
- * A count, drawn on the column's glyph and spoken in its name — `spoken` being the words that
- * follow the column's own label.
+ * A count, drawn on the column's glyph and spoken in its name.
  *
  * It is **not** on `ColumnProps`, because ⚡Play has no badge and never will: the inventory is
  * fixed at two, and a prop the raised column inherits and ignores is the first step to a third.
  */
 interface Badged {
-  readonly badge?: { readonly count: number; readonly spoken: string };
+  readonly waiting?: number;
+}
+
+/** The two columns that carry a count. */
+type BadgedTabKey = Extract<TabBarKey, 'home' | 'chats'>;
+
+function isBadged(key: string): key is BadgedTabKey {
+  return key === 'home' || key === 'chats';
+}
+
+/**
+ * **What a badged column says after its own name** — the badge's half of the column's spoken
+ * label.
+ *
+ * **The words live here rather than in `the-words.md`**: that file is the deck for codes the
+ * backend sends and the app writes words for, and these are chrome copy over counts the client
+ * derives ([#326](https://github.com/Raketa02/Raketa/issues/326) §9). They sit beside
+ * `TAB_BAR_TABS`, which already owns the labels they follow — and each counted phrase goes through
+ * `counted()` like every other in the app, because a market with real plural rules has to have
+ * one function to change rather than every sentence that counts something.
+ */
+const BADGE_WORDS: Readonly<Record<BadgedTabKey, (count: number) => string>> = {
+  home: (count) => `${counted(count, 'game', 'games')} waiting on you`,
+  chats: (count) => `${counted(count, 'challenge', 'challenges')} waiting`,
+};
+
+/** What a column announces — its name, and the count when it is carrying one. */
+function columnLabel(tab: TabBarTab<string>, waiting: number | undefined): string {
+  if (waiting === undefined || !isBadged(tab.key)) return tab.label;
+  return `${tab.label}, ${BADGE_WORDS[tab.key](waiting)}`;
 }
 
 export function TabBar({
@@ -237,25 +265,9 @@ export function TabBar({
   // 34pt of nothing on a notched device.
   const insets = useSafeAreaInsets();
 
-  // Each count is spoken through `counted()` like every other in the app, because a market with
-  // real plural rules has to have one function to change rather than every sentence that counts
-  // something. The words live here, beside the labels they follow: this is chrome copy over a
-  // count the client derives ([#326](https://github.com/Raketa02/Raketa/issues/326) §9).
-  const badges: Readonly<Partial<Record<TabBarKey, Badged['badge']>>> = {
-    home:
-      gamesNeedingYou === undefined
-        ? undefined
-        : {
-            count: gamesNeedingYou,
-            spoken: `${counted(gamesNeedingYou, 'game', 'games')} waiting on you`,
-          },
-    chats:
-      challengesWaiting === undefined
-        ? undefined
-        : {
-            count: challengesWaiting,
-            spoken: `${counted(challengesWaiting, 'challenge', 'challenges')} waiting`,
-          },
+  const waiting: Readonly<Record<BadgedTabKey, number | undefined>> = {
+    home: gamesNeedingYou,
+    chats: challengesWaiting,
   };
 
   return (
@@ -269,7 +281,7 @@ export function TabBar({
             tab={tab}
             selected={active === tab.key}
             onPress={onPress}
-            badge={badges[tab.key]}
+            waiting={isBadged(tab.key) ? waiting[tab.key] : undefined}
           />
         ),
       )}
@@ -323,18 +335,18 @@ function FlankTab<Key extends string>({
   tab,
   selected,
   onPress,
-  badge,
+  waiting,
 }: ColumnProps<Key> & Badged) {
   const tone = selected ? theme.color.ink : theme.color.muted;
 
   return (
-    <Column tab={tab} selected={selected} onPress={onPress} badge={badge} dimOnPress>
+    <Column tab={tab} selected={selected} onPress={onPress} waiting={waiting} dimOnPress>
       {/* The glyph gets a box of its own so the badge can be positioned against the icon
           rather than against the column: a column is 64pt wide and the mark it belongs to
           is 16. */}
       <View style={s.glyphBox}>
         <Glyph name={tab.glyph} size={theme.size.tabIcon} color={tone} />
-        {badge === undefined ? null : <Badge count={badge.count} />}
+        {waiting === undefined ? null : <Badge count={waiting} />}
       </View>
       <Label text={tab.label} color={tone} />
     </Column>
@@ -414,7 +426,7 @@ function Column<Key extends string>({
   tab,
   selected,
   onPress,
-  badge,
+  waiting,
   dimOnPress = false,
   children,
 }: ColumnProps<Key> &
@@ -427,7 +439,7 @@ function Column<Key extends string>({
     <Pressable
       accessible
       accessibilityRole="tab"
-      accessibilityLabel={badge === undefined ? tab.label : `${tab.label}, ${badge.spoken}`}
+      accessibilityLabel={columnLabel(tab, waiting)}
       // The visible tone is the sighted half of this fact and never the whole of it.
       accessibilityState={{ selected }}
       onPress={() => onPress(tab.key)}

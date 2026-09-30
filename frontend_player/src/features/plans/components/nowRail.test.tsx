@@ -1,6 +1,6 @@
 /**
  * **Now's rail, walked the way a player walks it**: the real route tree, the real shell, the real
- * Now tab, and only `fetch` faked.
+ * Home tab, and only `fetch` faked.
  *
  * Most of [#367](https://github.com/Raketa02/Raketa/issues/367)'s and
  * [#413](https://github.com/Raketa02/Raketa/issues/413)'s acceptance criteria are assertions in
@@ -137,7 +137,7 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** Land on the Now tab with these games, these plans and — optionally — a room to open. */
+/** Land on the Home tab with these games, these plans and — optionally — a room to open. */
 async function landOnHome({
   games = [game()],
   plans = [],

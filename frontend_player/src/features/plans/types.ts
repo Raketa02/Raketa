@@ -27,7 +27,7 @@
  */
 
 /**
- * **The Now tab's rail** — `YOUR GAMES · n`, one card, swipe
+ * **The Home tab's rail** — `YOUR GAMES · n`, one card, swipe
  * ([#367](https://github.com/Raketa02/Raketa/issues/367)).
  *
  * Composed by the shell under the tab's own sentences, which it is handed: the tab owns its words

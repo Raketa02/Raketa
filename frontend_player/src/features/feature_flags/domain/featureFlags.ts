@@ -37,7 +37,7 @@ export const FEATURE_DEFAULTS = {
    * builder and the pool behind it. It **replaced `find_a_game`**, which gated Find a game alone:
    * the grilling ruled one flag for the loop (Q42), so a toggle cannot bring back half of it.
    *
-   * Read two ways. **The bar follows it** (`useFeature`), because it is mounted before any
+   * Read two ways. **The bar follows it** (`useFollowedFeature`), because it is mounted before any
    * datafile has been read and stays mounted for the session; **Play's three routes read it once,
    * when they mount** (`useFeatureOnMount`), and the builder and pool close to a bare link while
    * it is off — a search already under way is finished. With it off, the Chats and Players routes

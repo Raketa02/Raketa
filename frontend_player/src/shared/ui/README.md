@@ -322,7 +322,10 @@ inventory of five is its own** rather than a prop, because
 [ADR-0135](../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)
 fixes the family and the five names, and because `theme.size.tabBar.labelMaxScale` is derived
 from exactly those five words in exactly five columns — a caller that could pass a sixth tab
-could invalidate the cap without anything saying so. Feather from `@expo/vector-icons`,
+could invalidate the cap without anything saying so. **It draws three of the five** — Home ·
+⚡Play · You — unless the caller says Classic play is on (`classicPlay`, #550), which brings
+Players and Chats back; a switch, not a list, and three columns are wider than the five the cap
+is derived over. Feather from `@expo/vector-icons`,
 selection **in tone alone**, and the ⚡ is Feather `zap` rather than the character `⚡`,
 which carries `Emoji_Presentation=Yes` and would render in a colour this app does not choose.
 The bar owns the bottom safe-area inset; a CTA above it owns none.

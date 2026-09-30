@@ -15,6 +15,7 @@ import {
   doorOf,
   entryLeadOf,
   gameCardName,
+  gamesNeedingYou,
   needsYou,
 } from './gameCard';
 import type { Plan } from './slots';
@@ -110,23 +111,66 @@ describe('which card a game draws', () => {
  * asks of you.
  */
 describe('which cards need you', () => {
+  const always = () => true;
+
   it('is a seat open in your game, and a result to enter', () => {
-    expect(needsYou('needs-a-player', false)).toBe(true);
-    expect(needsYou('needs-result', false)).toBe(true);
+    expect(needsYou('needs-a-player', always)).toBe(true);
+    expect(needsYou('needs-result', always)).toBe(true);
   });
 
   it('is a result to confirm only when a score is waiting on your agreement', () => {
-    expect(needsYou('confirm', true)).toBe(true);
+    expect(needsYou('confirm', () => true)).toBe(true);
     // Your own score waiting on the other side, or an agreement running out its grace.
-    expect(needsYou('confirm', false)).toBe(false);
+    expect(needsYou('confirm', () => false)).toBe(false);
   });
 
   it('is none of the others — a game being planned, on, or over asks nothing of you', () => {
     const asking = ['needs-a-player', 'needs-result', 'confirm'];
 
     for (const name of GAME_CARD_NAMES.filter((one) => !asking.includes(one))) {
-      expect(needsYou(name, true)).toBe(false);
+      expect(needsYou(name, always)).toBe(false);
     }
+  });
+
+  it('asks whether a score waits on you only about a card that is confirming one', () => {
+    const asked = jest.fn(() => true);
+
+    for (const name of GAME_CARD_NAMES.filter((one) => one !== 'confirm')) needsYou(name, asked);
+    expect(asked).not.toHaveBeenCalled();
+
+    needsYou('confirm', asked);
+    expect(asked).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * **The count on Home's column** — the rail's own rows, each folded with its own plan, counted by
+ * `needsYou`.
+ */
+describe('how many games need you', () => {
+  const nobodysScore = () => false;
+  const SHORT_GAME = game({ gameId: '11111111-0000-4000-8000-00000000000a', seats: SHORT });
+
+  it('counts the rail’s cards that need you, and none of the others', () => {
+    expect(gamesNeedingYou([SHORT_GAME, game()], [], nobodysScore)).toBe(1);
+  });
+
+  it('folds each game with its own plan — a passed agreed point is a result to enter', () => {
+    const agreed = plan({ agreedPoint: '2026-09-11T18:00:00Z' });
+
+    expect(gamesNeedingYou([game()], [agreed], nobodysScore)).toBe(1);
+    // Another court's plan is not this one's, and with no plan there is no agreed point to pass.
+    expect(gamesNeedingYou([game()], [{ ...agreed, challengeId: 'another' }], nobodysScore)).toBe(
+      0,
+    );
+    expect(gamesNeedingYou([game()], undefined, nobodysScore)).toBe(0);
+  });
+
+  it('counts a confirm card only where a score is waiting on your agreement', () => {
+    const answering = game({ standing: 'AWAITING_ANSWER', entryClosesAt: undefined });
+
+    expect(gamesNeedingYou([answering], [], (one) => one === answering)).toBe(1);
+    expect(gamesNeedingYou([answering], [], nobodysScore)).toBe(0);
   });
 });
 

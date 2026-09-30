@@ -34,6 +34,7 @@ import { PLAY_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  CHALLENGES_PATH,
   DATAFILE_PATH,
   datafileFor,
   datafileSettled,
@@ -196,6 +197,22 @@ describe('the bar, by what the datafile says', () => {
 
     await waitFor(() => expect(bar()).toEqual(SHIPPED_BAR));
     await expectFindAGame();
+  });
+
+  /**
+   * Chats' badge is Classic play's, and so is the read behind it: with the column not drawn, the
+   * shell does not hold `GET /challenges` for a count it would never show.
+   */
+  it('reads the challenges for Chats’ badge only while Classic play is on', async () => {
+    stubDatafile(transport, OFF);
+    await launch();
+    expect(bar()).toEqual(SHIPPED_BAR);
+    expect(transport.requestsTo('GET', CHALLENGES_PATH)).toHaveLength(0);
+
+    stubDatafile(transport, ON);
+    await foreground(2);
+
+    await waitFor(() => expect(transport.requestsTo('GET', CHALLENGES_PATH).length).toBe(1));
   });
 
   it('keeps the old loop’s columns from the cached datafile when the fetch fails', async () => {

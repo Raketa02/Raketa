@@ -26,7 +26,7 @@ export { useFeatureOnMount } from './hooks/useFeatureOnMount';
  * A flag **followed**, for chrome mounted before any datafile is read and kept for the session —
  * the tab bar's Classic play columns (#550). A screen never uses it: a screen reads once.
  */
-export { useFeature } from './hooks/useFeature';
+export { useFollowedFeature } from './hooks/useFollowedFeature';
 
 /**
  * The feature's query keys — for the router harness alone, which waits on the datafile read

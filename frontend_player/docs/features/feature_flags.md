@@ -97,9 +97,12 @@ with their plan and Find a game come back together — so `find_a_game` is gone 
 default**. Play's three routes read it where they read `find_a_game`, unchanged in shape. The new
 reader is the tab bar, and it could not be a gate: it mounts with the signed-in app before either
 datafile has been read and stays up for the session, so a read at mount would answer the code
-default every launch. **`useFeature` answers again whenever a datafile lands** — two disabled
-observers on the reads `useFeatureDatafile` owns, so it adds no request and no refetch on focus, and
-the player read from the cache as the gate reads it (`flagContextOf` is shared). That is still §7's
+default every launch. **`useFollowedFeature` answers again whenever a datafile lands** — two disabled
+observers on the reads `useFeatureDatafile` owns, so it adds no request and no refetch on focus —
+and **the player observed**, so a tester mark that changes mid-session reaches the bar on its own
+(one more observer on `/users/me` in a component mounted once; `flagContextFor` is shared with the
+gate, which still reads the player from the cache). The shell also stops reading `GET /challenges`
+for Chats' badge while the flag is off (`useChallengesWaiting(active)`). That is still §7's
 _next cold start or foreground_; what changes is chrome, never the screen under it, and a screen
 still uses `useFeatureOnMount`. The walks moved to `components/theClassicPlayGate.test.tsx`, which
 adds the bar's side of every case, and `launchIntoFindAGame` is `launchIntoClassicPlay`. **The flags

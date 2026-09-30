@@ -14,7 +14,7 @@
  * **Every walk opens a game**, because the card is drawn at the end of the **result screen**
  * rather than above the games list on Now. That is the one structural thing this suite says
  * about where the card lives, and it says it twice: every test reaches the card through a row,
- * and one asserts that the Now tab does not so much as **ask** for the list any more.
+ * and one asserts that the Home tab does not so much as **ask** for the list any more.
  *
  * It asserts against the **copy deck** rather than against strings, because the wording is the
  * deck's to change and the rules are not.
@@ -186,7 +186,7 @@ function give(stars: number, subject: StarSubject) {
 
 const answers = () => transport.requestsTo('POST', ANSWER_PATH).map((request) => request.body);
 
-/** Every ask for the open-card list. Its **absence** is what the Now tab is asserted on. */
+/** Every ask for the open-card list. Its **absence** is what the Home tab is asserted on. */
 const cardReads = () => transport.requestsTo('GET', SPORTSMANSHIP_PATH);
 
 describe('the card at the end of the result screen', () => {
@@ -270,7 +270,7 @@ describe('the card at the end of the result screen', () => {
    * settled game never sees it. Asserted rather than left to a docstring, because a card
    * quietly reappearing above the rail is exactly the regression this move makes easy.
    */
-  it('is nowhere on the Now tab, which no longer surfaces it at all', async () => {
+  it('is nowhere on the Home tab, which no longer surfaces it at all', async () => {
     stubGames(transport, [DOUBLES], READ_AT);
     stubSportsmanship(transport, [DOUBLES_CARD]);
     await launchSignedIn();

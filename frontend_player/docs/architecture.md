@@ -136,9 +136,9 @@ src/app/
 ├── (administrator)/       the administrator area: one club's Groups · You, its own stack and bar
 └── (app)/                 authenticated tree
     ├── _layout.tsx        the redirect guard
-    └── (tabs)/            the shell: one Stack, five tabs
+    └── (tabs)/            the shell: one Stack; Home · Play · You, five tabs with Classic play
         ├── _layout.tsx    TabShell — the navigator and the bar, mounted once
-        ├── index.tsx      Now, and the app's landing
+        ├── index.tsx      Home, and the app's landing
         ├── around.tsx  chats.tsx  you.tsx
         └── play/          the one tab with depth
 ```
@@ -151,7 +151,7 @@ Four of the five tabs are single-screen roots and only Play has depth, which is 
 every time a player leaves it. `<Tabs>` keeps a history per tab and restores it on return —
 so built out of the box, a player who leaves the deck and comes back lands on the deck, and
 the rule fails with **no symptom at all**. Switching tabs **replaces**; entering Play lays
-down `[Now, Find a game]`; and both go through one function, `resetShellStack`, which is also
+down `[Home, Play's root]`; and both go through one function, `resetShellStack`, which is also
 where a Play session ends
 ([#227](https://github.com/Raketa02/Raketa/issues/227),
 [#261](https://github.com/Raketa02/Raketa/issues/261)).

@@ -37,7 +37,7 @@ export function useFeatureOnMount(feature: FeatureKey): boolean {
     return isFeatureEnabled(feature, {
       fresh: client.getQueryData(freshDatafileQuery(environment).queryKey),
       cached: client.getQueryData(savedDatafileQuery(environment).queryKey),
-      context: player === undefined ? undefined : flagContextOf(player),
+      context: flagContextFor(player),
     });
   });
 
@@ -46,9 +46,10 @@ export function useFeatureOnMount(feature: FeatureKey): boolean {
 
 /**
  * The attributes, as the flags repo spells them (§8): who, whether they carry the tester mark, and
- * which build on which platform. Shared with `useFeature`, so the gate and the bar ask about the
- * same player in the same words.
+ * which build on which platform — and nobody, with no signed-in player to bucket. Shared with
+ * `useFollowedFeature`, so the gate and the bar ask about the same player in the same words.
  */
-export function flagContextOf(player: AuthenticatedUser): FlagContext {
+export function flagContextFor(player: AuthenticatedUser | undefined): FlagContext | undefined {
+  if (player === undefined) return undefined;
   return { playerId: player.id, isTester: player.isTester, ...appBuild() };
 }
