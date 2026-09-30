@@ -108,7 +108,8 @@ caller's. **6.15's swipe row is the first control that moves a row**
 [ADR-0165](../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
 §6): a list row that slides left on React Native's own `PanResponder` — as the radius slider
 already drags, and with neither `react-native-gesture-handler` nor `reanimated` added _(both are
-in the app since ADR-0176, for the radar's field alone; the row stays where it is)_ — to
+in the app since ADR-0176, for the radar's field, and gesture-handler since #551 for 6.8's paint
+too; the row stays where it is)_ — to
 reveal **one** control at its full height, and nothing else. The control is 6.1 `dark`'s fill,
 `night`, and **not coral**: §1.2's list is closed, and the act a swipe reveals is the one the
 screens draw `secondary`. #231 §3's argument against a swipe on the deck is kept by construction,
@@ -267,3 +268,26 @@ is full: a fourth value is a new record. `BottomSheet` takes an optional **`mark
 the top row, then the mark and the title under it, centred, the title still the heading focus lands on
 (9.1 as amended, for the invitation sheet's club tile). `theme.size.switcher` holds the switcher chip's
 drawn ⇅ — a 16pt box and a 1,5pt stroke — because Feather ships no up-and-down pair.
+
+**6.8's grid is a week of hours, and a drag across it paints**
+([#551](https://github.com/Raketa02/Raketa/issues/551),
+[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, mock 36).
+`AvailabilityGrid` is transposed — the days across, the hours down — and every caller builds its
+rows from `HOURS` and its cells from `WEEKDAYS`; `weeklyHoursAt` in `shared/vocabulary/week` turns
+the places the grid reports back into hours, so the orientation is read one way, once. **A tap is
+the cell's `Pressable`; a drag is `react-native-gesture-handler`'s pan** over the cells alone, the
+second use of the library after the radar's field: the grid sits in a page that scrolls, and a
+recogniser that claims the touch at a 4pt intent — under both platforms' scroll slop — is what
+keeps a drag down a column a paint, while its claiming cancels the press the cell under the finger
+had begun. The hour labels and the heads are outside the paint field, so a thumb there still
+scrolls. **The pan is built once and reads the rows and `onPaint` through a ref** — the radius
+slider's rule — and reports **the run so far, whole**, which `paintCells` lands idempotently, so a
+caller a render behind the finger drops nothing. What is decided is `availabilityGridGeometry`'s,
+tested as numbers: which cell a point is over (a gap belongs to the cell before it, a finger off
+the grid is over the edge cell), which cells a fast drag jumped (`cellsCrossed`, one step at a
+time along the longer axis), and what a run holds (`extendRun`: each cell once, in the order
+crossed). **The cell is 20pt tall and under the 44pt minimum on purpose**, granted half the gap on
+every side (`hit.availabilityCell`), and the tick stays on a ticked hour although mock 36 draws the
+fill alone — both recorded in design-system Part 16 and flagged. The router suites drag it through
+`test-support/weekGridTouch`. **Not seen on a device**: the paint against the page's scroll on
+either platform, and the press the pan is meant to cancel.

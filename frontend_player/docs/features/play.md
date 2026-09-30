@@ -1220,4 +1220,7 @@ leaves it. `availability_override`, a TIMES rung's `slot`, `KEEP_THESE_TIMES`'s 
 of seven, and every count and name says hours: _3 hours you both ticked · next Tue 19:00_, _No
 shared hours — one of you would have to bend_, the deck's _9 hours_ tile, _6 hours now · 4 on your
 profile_, and the court's _share no hour_ dock. The wire code `NO_SHARED_SLOTS` is the backend's
-and keeps its name. **Not seen on a device**, and the flag is off by default.
+and keeps its name. **Owed, from a root session**: `docs/specs/matchmaking/the-words.md` still
+spells these lines in slots and parts of the day (§6.2's _slots you both ticked_ and _No shared
+slots_, the court's _share no slot_, §20.7's `{Day} {part}`), and now disagrees with the client.
+**Not seen on a device**, and the flag is off by default.

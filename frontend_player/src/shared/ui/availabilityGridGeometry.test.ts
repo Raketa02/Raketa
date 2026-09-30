@@ -6,7 +6,13 @@
  * by hand, never recomputed the way the module computes it.
  */
 
-import { cellUnder, cellsCrossed, type CellField } from './availabilityGridGeometry';
+import {
+  cellUnder,
+  cellsCrossed,
+  extendRun,
+  type CellField,
+  type PaintRun,
+} from './availabilityGridGeometry';
 
 const FIELD: CellField = { width: 234, height: 380, rows: 16, columns: 7, gap: 4 };
 
@@ -72,5 +78,33 @@ describe('the cells a drag crossed', () => {
       { row: 2, column: 3 },
       { row: 2, column: 4 },
     ]);
+  });
+});
+
+describe('a run as the finger carries it', () => {
+  const begun: PaintRun = { cells: [{ row: 11, column: 1 }], at: { row: 11, column: 1 } };
+
+  it('takes on every cell crossed, in the order crossed, and moves to where the finger is', () => {
+    expect(extendRun(begun, { row: 13, column: 1 })).toEqual({
+      cells: [
+        { row: 11, column: 1 },
+        { row: 12, column: 1 },
+        { row: 13, column: 1 },
+      ],
+      at: { row: 13, column: 1 },
+    });
+  });
+
+  it('takes nothing twice when the finger turns back over its own cells', () => {
+    const down = extendRun(begun, { row: 14, column: 1 });
+
+    expect(extendRun(down, { row: 12, column: 1 })).toEqual({
+      cells: down.cells,
+      at: { row: 12, column: 1 },
+    });
+  });
+
+  it('is the same run while the finger stays on one cell', () => {
+    expect(extendRun(begun, { row: 11, column: 1 })).toEqual(begun);
   });
 });

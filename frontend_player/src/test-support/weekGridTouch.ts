@@ -24,10 +24,11 @@ import type { PanGesture, PanGestureHandlerEventPayload } from 'react-native-ges
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { AVAILABILITY_PAINT_FIELD, AVAILABILITY_PAINT_GESTURE } from '@/shared/ui/AvailabilityGrid';
+import type { FieldPoint } from '@/shared/ui/availabilityGridGeometry';
 import { theme } from '@/shared/ui/theme';
 import { HOURS, WEEKDAYS, type WeeklyHour } from '@/shared/vocabulary/week';
 
-const { cellHeight, gap, columns, rows, paintIntent } = theme.size.availability;
+const { cellHeight, gap, paintIntent } = theme.size.availability;
 
 /** Any width will do; this one keeps every coordinate a whole number. */
 const CELL_WIDTH = 30;
@@ -35,17 +36,12 @@ const CELL_WIDTH = 30;
 const FIELD = {
   x: 0,
   y: 0,
-  width: columns * CELL_WIDTH + (columns - 1) * gap,
-  height: rows * cellHeight + (rows - 1) * gap,
+  width: WEEKDAYS.length * CELL_WIDTH + (WEEKDAYS.length - 1) * gap,
+  height: HOURS.length * cellHeight + (HOURS.length - 1) * gap,
 };
 
-interface Point {
-  readonly x: number;
-  readonly y: number;
-}
-
 /** The middle of an hour's cell, in the paint field's own coordinates. */
-function centreOf(cell: WeeklyHour): Point {
+function centreOf(cell: WeeklyHour): FieldPoint {
   return {
     x: WEEKDAYS.indexOf(cell.day) * (CELL_WIDTH + gap) + CELL_WIDTH / 2,
     y: HOURS.indexOf(cell.hour) * (cellHeight + gap) + cellHeight / 2,
@@ -64,7 +60,7 @@ export function paint(from: WeeklyHour, ...through: readonly WeeklyHour[]): void
   });
 
   const start = centreOf(from);
-  const at = (point: Point) => ({
+  const at = (point: FieldPoint) => ({
     x: point.x,
     y: point.y,
     absoluteX: point.x,

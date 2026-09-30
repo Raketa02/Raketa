@@ -1326,7 +1326,7 @@ A feature is not done when the screen looks right.
 [ ] duplicate-submit behaviour decided (idempotency, not just a disabled button)
 [ ] authorization enforced server-side
 [ ] route + deep-link params validated with Zod
-[ ] accessibility implemented (labels, roles, 44pt targets)
+[ ] accessibility implemented (labels, roles, 44pt targets — 6.8's hour cell the one recorded exception)
 [ ] analytics events defined and catalogued, if any
 [ ] breadcrumbs added where useful; no sensitive logging
 [ ] tested on Android and iOS

@@ -37,6 +37,8 @@
  * pinned, because an assertion that restates a derivation cannot fail.
  */
 
+import { HOURS } from '@/shared/vocabulary/week';
+
 import { theme } from './theme';
 import { NARROWEST_SCREEN } from '@/test-support/fontMetrics';
 
@@ -86,7 +88,7 @@ describe('the hour cell (6.8)', () => {
   it('could not draw sixteen hours at the touch minimum on any page', () => {
     const SHORTEST_SCREEN = 667;
     expect(
-      availability.rows * theme.size.minTouch + (availability.rows - 1) * availability.gap,
+      HOURS.length * theme.size.minTouch + (HOURS.length - 1) * availability.gap,
     ).toBeGreaterThan(SHORTEST_SCREEN);
   });
 

@@ -1,5 +1,5 @@
 /**
- * The week grid's paint arithmetic, per design-system 6.8 — two rules, and no React in either.
+ * The week grid's paint arithmetic, per design-system 6.8 — three rules, and no React in any.
  *
  * Kept apart from the component for `swipeRowGeometry`'s reason: a rule about numbers is
  * testable as numbers, and a rule that only exists inside a gesture callback is one a test can
@@ -20,6 +20,13 @@
  * A finger is sampled, not traced, and a fast one arrives three hours further down between two
  * samples. Every cell on the straight line between them was crossed and is painted, stepping
  * one cell at a time along the longer axis so no hour in a run is ever jumped.
+ *
+ * ## What a run holds
+ *
+ * Every cell the drag has crossed, once each, in the order it crossed them, and the cell the
+ * finger is on now. A finger that turns back over its own cells adds nothing: they are painted
+ * already, and the grid reports the run whole, so a cell twice in it would be a cell painted
+ * twice for nothing.
  */
 
 /** A cell by where it is drawn: its row (an hour) and its column (a day), both from 0. */
@@ -62,6 +69,28 @@ export function cellUnder(point: FieldPoint, field: CellField): GridPosition | u
 function along(at: number, length: number, count: number, gap: number): number {
   const pitch = (length + gap) / count;
   return Math.min(count - 1, Math.max(0, Math.floor(at / pitch)));
+}
+
+/** A drag in progress: every cell it has crossed, once each and in order, and where it is now. */
+export interface PaintRun {
+  readonly cells: readonly GridPosition[];
+  readonly at: GridPosition;
+}
+
+/**
+ * The run carried on to `to` — the cells crossed on the way taken on, the ones already in it not
+ * taken again. The same run while the finger stays on one cell.
+ */
+export function extendRun(run: PaintRun, to: GridPosition): PaintRun {
+  if (samePosition(run.at, to)) return run;
+  const crossed = cellsCrossed(run.at, to).filter(
+    (cell) => !run.cells.some((painted) => samePosition(painted, cell)),
+  );
+  return { cells: [...run.cells, ...crossed], at: to };
+}
+
+function samePosition(one: GridPosition, other: GridPosition): boolean {
+  return one.row === other.row && one.column === other.column;
 }
 
 /**

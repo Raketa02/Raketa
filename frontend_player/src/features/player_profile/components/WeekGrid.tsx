@@ -13,12 +13,12 @@
  * Nothing here decides anything: what a tap and a drag do are `availabilityWeek`'s, the words
  * for a day, an hour and a cell are `shared/vocabulary`'s, and the geometry and the gesture are
  * `AvailabilityGrid`'s. The grid reports a drag by where its cells are drawn, and
- * `weeklyHourAt` turns those back into the hours they are.
+ * `weeklyHoursAt` turns those back into the hours they are.
  */
 
 import { AvailabilityGrid } from '@/shared/ui';
 import { cellLabel, dayLabel, hourLabel } from '@/shared/vocabulary/availabilityPresentation';
-import { HOURS, WEEKDAYS, weeklyHourAt, type WeeklyHour } from '@/shared/vocabulary/week';
+import { HOURS, WEEKDAYS, weeklyHoursAt, type WeeklyHour } from '@/shared/vocabulary/week';
 
 import { isTicked } from '../domain/availabilityWeek';
 
@@ -49,12 +49,7 @@ export function WeekGrid({ week, onPressCell, onPaintCells, footnote }: WeekGrid
           accessibilityLabel: cellLabel({ day, hour }),
         })),
       }))}
-      onPaint={(run, on) =>
-        onPaintCells(
-          run.flatMap(({ row, column }) => weeklyHourAt(row, column) ?? []),
-          on,
-        )
-      }
+      onPaint={(run, on) => onPaintCells(weeklyHoursAt(run), on)}
       {...(footnote === undefined ? {} : { footnote })}
     />
   );

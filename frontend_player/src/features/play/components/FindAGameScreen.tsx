@@ -173,7 +173,7 @@ import {
   theme,
 } from '@/shared/ui';
 import { dayLabel, hourLabel } from '@/shared/vocabulary/availabilityPresentation';
-import { HOURS, WEEKDAYS, weeklyHourAt } from '@/shared/vocabulary/week';
+import { HOURS, WEEKDAYS, weeklyHoursAt } from '@/shared/vocabulary/week';
 
 import { findAGameStanding } from '../domain/findAGame';
 import { alreadyAsked } from '../domain/raisedPrompt';
@@ -651,12 +651,7 @@ export function FindAGameScreen() {
                       }),
                     }))}
                     // A drag paints a run onto the working copy, as a tap toggles one hour.
-                    onPaint={(run, on) =>
-                      paintWeekCells(
-                        run.flatMap(({ row, column }) => weeklyHourAt(row, column) ?? []),
-                        on,
-                      )
-                    }
+                    onPaint={(run, on) => paintWeekCells(weeklyHoursAt(run), on)}
                   />
                 </View>
               )}

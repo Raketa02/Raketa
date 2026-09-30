@@ -8,7 +8,7 @@
  * wire sorts.
  */
 
-import { HOURS, WEEKDAYS, paintCells, toggleCell, weeklyHourAt, type WeeklyHour } from './week';
+import { HOURS, WEEKDAYS, paintCells, toggleCell, weeklyHoursAt, type WeeklyHour } from './week';
 
 const TUE_19: WeeklyHour = { day: 2, hour: 19 };
 const TUE_20: WeeklyHour = { day: 2, hour: 20 };
@@ -25,18 +25,31 @@ describe('the shape of the week', () => {
   });
 });
 
-describe('the hour at a place on the grid', () => {
+describe('the hours at places on the grid', () => {
   // 6.8 draws the hours down and the days across, 07:00 and Monday in the top corner.
-  it('reads the row as the hour and the column as the day', () => {
-    expect(weeklyHourAt(0, 0)).toEqual({ day: 1, hour: 7 });
-    expect(weeklyHourAt(12, 1)).toEqual({ day: 2, hour: 19 });
-    expect(weeklyHourAt(15, 6)).toEqual({ day: 7, hour: 22 });
+  it('reads each row as the hour and each column as the day, in the order given', () => {
+    expect(
+      weeklyHoursAt([
+        { row: 0, column: 0 },
+        { row: 12, column: 1 },
+        { row: 15, column: 6 },
+      ]),
+    ).toEqual([
+      { day: 1, hour: 7 },
+      { day: 2, hour: 19 },
+      { day: 7, hour: 22 },
+    ]);
   });
 
-  it('is no hour at all off the grid', () => {
-    expect(weeklyHourAt(16, 0)).toBeUndefined();
-    expect(weeklyHourAt(0, 7)).toBeUndefined();
-    expect(weeklyHourAt(-1, 0)).toBeUndefined();
+  it('leaves out a place the grid does not have', () => {
+    expect(
+      weeklyHoursAt([
+        { row: 16, column: 0 },
+        { row: 3, column: 2 },
+        { row: 0, column: 7 },
+        { row: -1, column: 0 },
+      ]),
+    ).toEqual([{ day: 3, hour: 10 }]);
   });
 });
 

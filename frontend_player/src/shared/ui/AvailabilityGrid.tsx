@@ -96,9 +96,10 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import {
   cellUnder,
-  cellsCrossed,
+  extendRun,
   type FieldPoint,
   type GridPosition,
+  type PaintRun,
 } from './availabilityGridGeometry';
 import { theme } from './theme';
 import { Dash, Plus, PlusOnSurface, Tick } from './Tick';
@@ -217,9 +218,9 @@ export function AvailabilityGrid(props: AvailabilityGridProps) {
         <View style={s.labels}>
           {props.rows.map((row) => (
             <View key={row.key} style={s.labelBox}>
-              <Text style={s.label} numberOfLines={1}>
-                {row.label}
-              </Text>
+              {/* No `numberOfLines`: 6.8 has Dynamic Type *grow* these, and a truncated `07:…`
+                  names no hour at all. `labelMaxRatio` is what protects the cells. */}
+              <Text style={s.label}>{row.label}</Text>
             </View>
           ))}
         </View>
@@ -233,7 +234,10 @@ export function AvailabilityGrid(props: AvailabilityGridProps) {
             importantForAccessibility="no-hide-descendants"
           >
             {columnHeads.map((head) => (
-              <Text key={head} style={s.head} numberOfLines={1}>
+              // Wraps rather than truncates, for the labels' reason: a head cut to `T…` names
+              // two days, and a second line the bottom-aligned columns already absorb is the
+              // lesser cost.
+              <Text key={head} style={s.head}>
                 {head}
               </Text>
             ))}
@@ -269,11 +273,10 @@ export function AvailabilityGrid(props: AvailabilityGridProps) {
   );
 }
 
-/** A drag in progress: what it does, every cell it has crossed, and the one it is on. */
-interface Run {
+/** A drag in progress: whether it ticks or clears, and the run it has painted so far. */
+interface Paint {
   readonly on: boolean;
-  readonly cells: readonly GridPosition[];
-  readonly at: GridPosition;
+  readonly run: PaintRun;
 }
 
 /**
@@ -295,7 +298,7 @@ function PaintField({
   const size = useRef({ width: 0, height: 0 });
   const latest = useRef({ rows, onPaint });
   latest.current = { rows, onPaint };
-  const run = useRef<Run | undefined>(undefined);
+  const paint = useRef<Paint | undefined>(undefined);
 
   const gesture = useMemo(() => {
     const under = (point: FieldPoint) =>
@@ -306,16 +309,14 @@ function PaintField({
         gap: grid.gap,
       });
 
-    /** Carry the run to the cell under `point`, and report it if that crossed anything. */
+    /** Carry the run to the cell under `point`, and report it if that took on another cell. */
     const reach = (point: FieldPoint) => {
-      const held = run.current;
+      const held = paint.current;
       const at = under(point);
       if (held === undefined || at === undefined) return;
-      const crossed = cellsCrossed(held.at, at).filter(
-        (cell) => !held.cells.some((painted) => samePosition(painted, cell)),
-      );
-      run.current = { ...held, cells: [...held.cells, ...crossed], at };
-      if (crossed.length > 0) latest.current.onPaint(run.current.cells, held.on);
+      const run = extendRun(held.run, at);
+      paint.current = { ...held, run };
+      if (run.cells.length > held.run.cells.length) latest.current.onPaint(run.cells, held.on);
     };
 
     return (
@@ -329,13 +330,13 @@ function PaintField({
           const first = under({ x: event.x - event.translationX, y: event.y - event.translationY });
           if (first === undefined) return;
           const on = latest.current.rows[first.row]?.cells[first.column]?.selected !== true;
-          run.current = { on, cells: [first], at: first };
-          latest.current.onPaint(run.current.cells, on);
+          paint.current = { on, run: { cells: [first], at: first } };
+          latest.current.onPaint([first], on);
           reach({ x: event.x, y: event.y });
         })
         .onUpdate((event) => reach({ x: event.x, y: event.y }))
         .onFinalize(() => {
-          run.current = undefined;
+          paint.current = undefined;
         })
     );
   }, []);
@@ -353,10 +354,6 @@ function PaintField({
       </View>
     </GestureDetector>
   );
-}
-
-function samePosition(one: GridPosition, other: GridPosition): boolean {
-  return one.row === other.row && one.column === other.column;
 }
 
 /**

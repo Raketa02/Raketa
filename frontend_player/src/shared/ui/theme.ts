@@ -700,7 +700,6 @@ const size = {
   availability: {
     cellHeight: 20,
     columns: 7, // the seven days, across
-    rows: 16, // the sixteen hours, 07:00 to 22:00, down
     gap: 4,
     paintIntent: 4,
     labelGutter: 9,

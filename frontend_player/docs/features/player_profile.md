@@ -346,7 +346,8 @@ the read, the refusal `weekly_hours_empty`; the draft's and the commit's field i
 the cell is the glossary's **Weekly hour** (`WeeklyHour`, `{ day, hour }`, replacing `WeekCell`
 and the `AvailabilitySlot` alias the glossary now avoids), and the mapper drops an hour outside
 07–22 as it drops a day outside 1–7. A cell is named _Monday 19:00_ and counted in hours —
-_2 hours ticked_. The router suites drive the drag through `test-support/weekGridTouch`, which
+_2 hours ticked_. The grid's own decisions — the gesture, the geometry, the cell under 44pt — are
+[`_shared.md`](_shared.md)'s. The router suites drive the drag through `test-support/weekGridTouch`, which
 lays the paint field out and fires the pan with samples hours apart. **Not seen on a device**:
 that a drag down a column paints rather than scrolls the page on both platforms, the 20pt cell
 under a thumb, and the tick at that size — the three things this change could not prove in Jest.

@@ -57,18 +57,23 @@ export interface WeeklyHour {
 }
 
 /**
- * The hour drawn at a row and a column of the week grid — **the hours run down and the days
- * across**, 07:00 and Monday in the top corner (design-system 6.8, mock 36). `undefined` for a
- * place the grid does not have.
+ * The hours drawn at places on the week grid — **the hours run down and the days across**,
+ * 07:00 and Monday in the top corner (design-system 6.8, mock 36) — in the order given, with a
+ * place the grid does not have left out.
  *
  * Here because every screen that draws the grid builds its rows from `HOURS` and its cells from
- * `WEEKDAYS`, and the grid reports a drag by where it drew the cells it crossed: turning a place
- * back into an hour is the same fact read the other way, written once.
+ * `WEEKDAYS`, and the grid reports a drag by where it drew the cells it crossed: turning those
+ * places back into hours is the same fact read the other way, written once. A place is any
+ * `{ row, column }`, so this folder need not know the grid's own type for one.
  */
-export function weeklyHourAt(row: number, column: number): WeeklyHour | undefined {
-  const hour = HOURS[row];
-  const day = WEEKDAYS[column];
-  return hour === undefined || day === undefined ? undefined : { day, hour };
+export function weeklyHoursAt(
+  places: readonly { readonly row: number; readonly column: number }[],
+): readonly WeeklyHour[] {
+  return places.flatMap(({ row, column }) => {
+    const hour = HOURS[row];
+    const day = WEEKDAYS[column];
+    return hour === undefined || day === undefined ? [] : [{ day, hour }];
+  });
 }
 
 /**
