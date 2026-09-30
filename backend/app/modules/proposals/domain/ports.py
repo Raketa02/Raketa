@@ -1,16 +1,20 @@
 """What the Proposals context needs from the outside world, in its own words.
 
-**Two ports are this context's own store**: the aggregate repository, whose
+**Three ports are this context's own store**: the Proposal repository, whose
 ``save`` writes the pools, proposals and proposal-people projections in the
-caller's transaction, and the directory that reads them back. **The pools are a
-third**: which pools there are, and who is in each.
+caller's transaction, the directory that reads them back, and a player's Games
+& money. **The pools are a fourth**: which pools there are, and who is in each.
 
-**The other four are demands on contexts it does not write**, each answered by
-an adapter in ``infrastructure/`` over that provider's own published port, never
-its table: who is in a group (groups), what a club sells at an hour and what
-it is called (clubs), whether two people fit (blocks, the Player profile and
-rating, judged by the matcher's pair rule), and whether a player has a method
-their share could be charged to (payments).
+**The rest are demands on contexts it does not write**, each answered by an
+adapter in ``infrastructure/`` over that provider's own published port, never
+its table: who is in a group (groups), what a club sells at an hour, what it is
+called and when its free cancellation ends (clubs), whether two people fit
+(blocks, the Player profile and rating, judged by the matcher's pair rule),
+whether a player has a method their share could be charged to (payments) — and,
+for the deck (#539), what a card draws of a person (users, the Player profile,
+rating), how even a card's game is forecast (the matcher's engine over rating),
+which kinds of game a player wants (their Play intent), which games they have
+booked (bookings, #541), and a club's cut-off and way of working (clubs).
 """
 
 from __future__ import annotations
@@ -21,7 +25,10 @@ from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Instant, Sport
+from app.kernel import Instant, Sport, invariant
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
+from app.modules.proposals.domain.deck import CardForecast, SellingTerms, Sides
+from app.modules.proposals.domain.games_and_money import GamesAndMoney
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.proposal import Proposal
 
@@ -86,6 +93,26 @@ class ProposalDirectory(Protocol):
     async def filling_in(self, pool_id: UUID, *, now: Instant) -> Sequence[UUID]:
         """Every proposal in this pool still filling, soonest first."""
         ...
+
+    async def dealt_to(
+        self, player_id: UUID, *, pool_id: UUID, sport: Sport, now: Instant
+    ) -> Sequence[UUID]:
+        """Every proposal in this pool and sport still filling that was dealt to
+        this player and that they have not answered — or took their yes back
+        from — **soonest first**, and by id among games at one hour. Candidates
+        for their deck: the aggregate says which are cards."""
+        ...
+
+
+@runtime_checkable
+class GamesAndMoneyRepository(Protocol):
+    """A player's Games & money, one stream per player under their own id."""
+
+    async def load(self, player_id: UUID) -> GamesAndMoney:
+        """**The defaults for a player who never chose** — never ``None``."""
+        ...
+
+    async def save(self, settings: GamesAndMoney) -> None: ...
 
 
 @runtime_checkable
@@ -175,3 +202,99 @@ class SavedMethods(Protocol):
     the one fact a yes needs from payments (the mechanics §6.1)."""
 
     async def saved_for(self, player_id: UUID) -> bool: ...
+
+
+# --------------------------------------------------------------------------- #
+# The deck's demands (#539)
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class DeckPerson:
+    """What a card draws of one person: a **Name** and never the nickname
+    (``docs/adr/0171``), a photograph, their **published** Level in the card's
+    sport, and their week — which the card summarises with everybody else's and
+    never shows.
+
+    ``name`` is ``None`` for an account ``users`` can no longer name, and the
+    tile is kept. ``photo_id`` and ``photo_url`` are present **exactly
+    together**; neither means the client draws a poster. ``level`` is ``None``
+    for somebody not rated in the sport."""
+
+    name: str | None
+    photo_id: UUID | None
+    photo_url: str | None
+    level: float | None
+    #: Blank for somebody with no Player profile: free for nothing.
+    week: WeeklyHours
+
+    def __post_init__(self) -> None:
+        invariant(
+            (self.photo_id is None) == (self.photo_url is None),
+            f"a photograph with only half an address: {self!r}",
+        )
+
+
+@runtime_checkable
+class DeckPeople(Protocol):
+    async def people(
+        self, player_ids: Collection[UUID], *, sport: Sport
+    ) -> Mapping[UUID, DeckPerson]:
+        """Each of these players, in **one question about the union** of every
+        card in a deck — never one per tile. Everybody asked about is answered."""
+        ...
+
+
+@runtime_checkable
+class BalanceForecasts(Protocol):
+    """**How even the engine forecasts a game**, for each way its people could
+    stand — the Match Fit forecast a line-up and a game screen print, over the
+    same Levels, never a second one."""
+
+    async def forecasts(
+        self, options: Sequence[Sides], *, sport: Sport
+    ) -> Sequence[CardForecast | None]:
+        """One forecast per arrangement, in their order. ``None`` where somebody
+        on it holds no rating in the sport, or where a side is empty."""
+        ...
+
+
+@runtime_checkable
+class ClubTerms(Protocol):
+    """Whether each club sells, and on what terms a card at it is drawn."""
+
+    async def of(
+        self, club_ids: Collection[UUID], *, now: Instant
+    ) -> Mapping[UUID, SellingTerms]:
+        """Each of these clubs **selling through Raketa at ``now``** — live, and
+        answered while paused, since a paused club's cards keep their court —
+        with its cut-off and whether it confirms each game. A club that does not
+        sell is absent: its courts reach nobody's deck (the mechanics §16.2)."""
+        ...
+
+
+@runtime_checkable
+class BookedGames(Protocol):
+    """The games a player has booked — what *games per week* and *one game per
+    hour* are counted from (the mechanics §5.3, §6.6)."""
+
+    async def starts_of(
+        self, player_id: UUID, *, start: Instant, end: Instant
+    ) -> Sequence[Instant]:
+        """When each of this player's booked games starts, from ``start`` until
+        ``end``, in no particular order."""
+        ...
+
+
+@runtime_checkable
+class WantedKinds(Protocol):
+    """Which kinds of game a player wants in a sport — their Play intent, in the
+    deck's words: *competitive*, *for fun*, or both for *either*."""
+
+    async def of(
+        self, player_id: UUID, *, sport: Sport
+    ) -> frozenset[SearchMode] | None:
+        """``None`` while they have declared nothing for the sport — the one
+        question the deck asks before it deals (the mechanics §4.1)."""
+        ...

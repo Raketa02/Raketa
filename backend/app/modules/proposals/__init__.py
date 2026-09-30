@@ -12,13 +12,22 @@ they may use, and it is first-class: every proposal carries its pool and nothing
 here joins through a group. A group is the first kind of pool, filed under the
 group's own id and opened by the first proposal made in it.
 
-It reads six contexts and writes none of them, each through a port it declares
+It reads seven contexts and writes none of them, each through a port it declares
 in its own words (``domain/ports.py``): **groups** for who is in a group's pool,
 **clubs** for the court hour's share and book-by and a club's name, **blocks**,
 the **Player profile** and **rating** for whether two people fit — judged by the
-matcher's own pair rule, never a copy of it — and **payments** for whether a
-player has a method their share could be charged to. It answers one demand back:
+matcher's own pair rule, never a copy of it — **payments** for whether a player
+has a method their share could be charged to, and, for a deck's tiles, **users**
+for a Name. It answers one demand back:
 the live yeses ``payments`` asks about before a method is removed.
+
+**A deck is a read, never an aggregate** (#539): ``ReadGroupDeck`` deals each
+proposal to its reader as their own version, ordered and filtered by
+``domain/deck.py``, through five more demands — what a card draws of a person,
+how even the engine forecasts it, which clubs still sell and their cut-off, the
+reader's Play intent, and the games they have booked (nought until #541). A
+player's **Games & money** — games per week and most I'll pay — is the context's
+second aggregate, one stream per player.
 
 **What it does not do yet** is the engine that builds proposals (#540) and the
 fill that books one (#541): ``MakeProposal`` and ``DealVersion`` are the use

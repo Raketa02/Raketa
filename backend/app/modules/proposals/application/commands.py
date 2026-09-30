@@ -51,3 +51,23 @@ class AnswerProposalCommand:
 
     proposal_id: UUID
     player_id: UUID
+
+
+@dataclass(frozen=True)
+class ReadGroupDeckCommand:
+    """One reader's deck in one pool, sport and segment. ``player_id`` comes
+    from the session."""
+
+    player_id: UUID
+    pool_id: UUID
+    sport: Sport
+    kind: SearchMode
+
+
+@dataclass(frozen=True)
+class SetGamesAndMoneyCommand:
+    """Both values, as the screen sends them on every tap — ``None`` is *off*."""
+
+    player_id: UUID
+    games_per_week: int
+    most_ill_pay_grosze: int | None

@@ -126,3 +126,17 @@ class ProposalExpired:
 
     proposal_id: UUID
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class GamesAndMoneySet:
+    """A player changed their **Games & money** (the mechanics §6.6, §17.1): how
+    many games a week they will play, and the most one may cost them. The only
+    event on that stream, filed under the player's own id; both values travel
+    together, as the screen saves them, so a record read alone is the whole
+    setting. ``None`` is *off* — every card is shown, whatever its share."""
+
+    player_id: UUID
+    games_per_week: int
+    most_ill_pay_grosze: int | None
+    occurred_at: datetime

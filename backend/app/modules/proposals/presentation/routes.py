@@ -1,5 +1,7 @@
-"""The player surface's proposal routes: the three answers to a card, and the
-reader's live yeses (#538; the mechanics §6, §10.2; the screens A2.4, A7.3).
+"""The player surface's proposal routes: the three answers to a card, the
+reader's live yeses (#538; the mechanics §6, §10.2; the screens A2.4, A7.3), a
+group's deck and the reader's Games & money (#539; the mechanics §6.6, §8,
+§17.1; the screens A2, A7.1).
 
 Mounted on the player surface (``app/api/v1/player.py``). Every route takes a
 player's token and answers for that player only.
@@ -19,14 +21,26 @@ from uuid import UUID
 from fastapi import APIRouter, Response, status
 
 from app.core.exception_handlers import ErrorResponse
-from app.modules.proposals.application.commands import AnswerProposalCommand
+from app.engines.matchfit.core import SearchMode
+from app.kernel import Sport
+from app.modules.proposals.application.commands import (
+    AnswerProposalCommand,
+    ReadGroupDeckCommand,
+    SetGamesAndMoneyCommand,
+)
 from app.modules.proposals.presentation.dependencies import (
+    ReadGamesAndMoneyDep,
+    ReadGroupDeckDep,
     ReadLiveYesesDep,
     SayNoDep,
     SayYesDep,
+    SetGamesAndMoneyDep,
     WithdrawYesDep,
 )
 from app.modules.proposals.presentation.schemas import (
+    GamesAndMoneyRequest,
+    GamesAndMoneyResponse,
+    GroupDeckResponse,
     LiveYesesResponse,
     YesAnswerResponse,
 )
@@ -34,6 +48,7 @@ from app.modules.users.presentation.dependencies import CurrentUserDep
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 players_router = APIRouter(prefix="/players/me", tags=["proposals"])
+pools_router = APIRouter(prefix="/pools", tags=["proposals"])
 
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {
@@ -165,3 +180,97 @@ async def read_live_yeses(
     user: CurrentUserDep, read: ReadLiveYesesDep
 ) -> LiveYesesResponse:
     return LiveYesesResponse.from_live(await read.execute(user.id))
+
+
+@pools_router.get(
+    "/{pool_id}/deck",
+    response_model=GroupDeckResponse,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`pool_not_found` — no such group, or the reader is not in it. One "
+                "code for both."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`block_state_unavailable` — whether the reader fits the people on "
+                "the cards could not be read. Retry."
+            ),
+        },
+    },
+    summary="A group's deck",
+    description=(
+        "The **Games** tab for one sport and segment: the cards dealt to the "
+        "reader in this group — the pool is filed under the group's id — each "
+        "as **the reader's own version**, with its sides, forecast and overlap "
+        "computed now. **Never dealt**: a card the reader said no to, one they are "
+        "In on (it is in *You're In*), a kind their Play intent does not want, a "
+        "share above their *most I'll pay*, a week at their games per week, an "
+        "hour they already have a game at, a club no longer selling, and a card "
+        "with somebody In they may not share a court with. Around the deck: a "
+        "count per segment, the Games badge and the capped weeks. Nothing is "
+        "recorded."
+    ),
+)
+async def read_group_deck(
+    pool_id: UUID,
+    sport: Sport,
+    kind: SearchMode,
+    user: CurrentUserDep,
+    read: ReadGroupDeckDep,
+) -> GroupDeckResponse:
+    deck = await read.execute(
+        ReadGroupDeckCommand(player_id=user.id, pool_id=pool_id, sport=sport, kind=kind)
+    )
+    return GroupDeckResponse.from_deck(deck, reader=user.id)
+
+
+@players_router.get(
+    "/games-and-money",
+    response_model=GamesAndMoneyResponse,
+    summary="My Games & money",
+    description=(
+        "You › Account › *Games & money*: games per week (two until changed) and "
+        "most I'll pay per game (off until changed), with the ranges the form "
+        "offers. Applies across sports and groups."
+    ),
+)
+async def read_games_and_money(
+    user: CurrentUserDep, read: ReadGamesAndMoneyDep
+) -> GamesAndMoneyResponse:
+    return GamesAndMoneyResponse.from_settings(await read.execute(user.id))
+
+
+@players_router.put(
+    "/games-and-money",
+    response_model=GamesAndMoneyResponse,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`games_per_week_out_of_range` — outside `details.least`–"
+                "`details.most`. `most_ill_pay_not_offered` — not `null` and not "
+                "one of `details.choices`. Nothing was saved."
+            ),
+        },
+    },
+    summary="Save my Games & money",
+    description=(
+        "Both values, as the screen saves them on every tap. The same answer "
+        "records nothing. Answers what is now saved."
+    ),
+)
+async def set_games_and_money(
+    body: GamesAndMoneyRequest, user: CurrentUserDep, save: SetGamesAndMoneyDep
+) -> GamesAndMoneyResponse:
+    saved = await save.execute(
+        SetGamesAndMoneyCommand(
+            player_id=user.id,
+            games_per_week=body.games_per_week,
+            most_ill_pay_grosze=body.most_ill_pay_grosze,
+        )
+    )
+    return GamesAndMoneyResponse.from_settings(saved)

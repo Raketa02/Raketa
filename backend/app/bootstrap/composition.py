@@ -113,21 +113,42 @@ from app.modules.payments.infrastructure.event_sourced_payment_method_repository
 from app.modules.payments.domain.entered_cards import A_CARD
 from app.modules.payments.infrastructure.fake_payments import FakePayments
 from app.modules.proposals.application.expire_proposals import ExpireProposals
+from app.modules.proposals.application.group_deck import ReadGroupDeck
 from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.making import DealVersion, MakeProposal
 from app.modules.proposals.domain.ports import (
+    BalanceForecasts,
+    BookedGames,
     ClubNames as ProposalClubNames,
+    ClubTerms,
     CourtHours,
+    DeckPeople,
+    GamesAndMoneyRepository,
     PlayerFit,
     Pools,
     ProposalDirectory,
     ProposalRepository,
     SavedMethods,
+    WantedKinds,
 )
 from app.modules.proposals.infrastructure.club_court_hours import (
     ClubCourtHours,
     DirectoryClubNames,
+    SellableClubTerms,
+)
+from app.modules.proposals.infrastructure.event_sourced_games_and_money_repository import (  # noqa: E501
+    EventSourcedGamesAndMoneyRepository,
+)
+from app.modules.proposals.infrastructure.matcher_balance_forecasts import (
+    MatcherBalanceForecasts,
+)
+from app.modules.proposals.infrastructure.no_booked_games import NoBookedGamesYet
+from app.modules.proposals.infrastructure.profile_deck_people import (
+    ProfileDeckPeople,
+)
+from app.modules.proposals.infrastructure.profile_wanted_kinds import (
+    ProfileWantedKinds,
 )
 from app.modules.proposals.infrastructure.event_sourced_proposal_repository import (  # noqa: E501
     EventSourcedProposalRepository,
@@ -1063,6 +1084,106 @@ def build_expire_proposals(session: AsyncSession, *, clock: Clock) -> ExpireProp
         ),
         directory=build_proposal_directory(session),
         unit_of_work=build_unit_of_work(session),
+    )
+
+
+def build_games_and_money_repository(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> GamesAndMoneyRepository:
+    """A player's Games & money, one stream per player under their own id —
+    per unit of work, for the reason every aggregate repository is."""
+    return EventSourcedGamesAndMoneyRepository(event_store=event_store, events=events)
+
+
+def build_booked_games() -> BookedGames:
+    """The games a player has booked: none, while nothing can be booked (#541)
+    — the day a booking can hold a game, an adapter over the bookings is built
+    here instead, and games per week start counting."""
+    return NoBookedGamesYet()
+
+
+def build_deck_people(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> DeckPeople:
+    """What a card draws of a person: a name from ``users``, a face and a week
+    from the Player profile, a published Level from rating. The window is the
+    platform's one photo window."""
+    return ProfileDeckPeople(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        photos=build_photo_storage(settings),
+        ratings=build_rated_player_query(session, runtime=runtime),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+
+def build_balance_forecasts(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> BalanceForecasts:
+    """How even a card's game is forecast: the engine's own forecast under the
+    live ruleset, over rating's estimates — no candidate index."""
+    return MatcherBalanceForecasts(
+        ratings=build_rated_player_query(session, runtime=runtime),
+        ruleset=build_ruleset(),
+    )
+
+
+def build_club_terms(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ClubTerms:
+    """Which clubs sell through Raketa now, each one's cut-off and whether it
+    confirms each game — off the offer the Club context publishes."""
+    return SellableClubTerms(build_sellable_court_hours(session, runtime=runtime))
+
+
+def build_wanted_kinds(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> WantedKinds:
+    """Which kinds of game a player wants in a sport, off their Play intent."""
+    return ProfileWantedKinds(
+        build_play_intent_declaration_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_read_group_deck(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ReadGroupDeck:
+    """A reader's group deck — the Games tab's route, and the seed's screen
+    assertion. ``booked`` is the one port a caller may hand in, because nothing
+    can be booked yet and a test stands in for the bookings to come."""
+    return ReadGroupDeck(
+        pools=build_pools(session),
+        directory=build_proposal_directory(session),
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        settings=build_games_and_money_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        wanted=build_wanted_kinds(session, runtime=runtime),
+        booked=booked if booked is not None else build_booked_games(),
+        terms=build_club_terms(session, runtime=runtime),
+        fit=build_player_fit(session, runtime=runtime),
+        forecasts=build_balance_forecasts(session, runtime=runtime),
+        people=build_deck_people(session, settings=settings, runtime=runtime),
+        clubs=build_proposal_club_names(session),
+        clock=clock,
     )
 
 

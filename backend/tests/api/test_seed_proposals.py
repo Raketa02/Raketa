@@ -26,6 +26,7 @@ from app.seeds.clubs import write_the_clubs
 from app.seeds.payments import write_the_payment_methods
 from app.seeds.proposals import IN_ON_EACH, NotEnoughToDeal, write_the_proposals
 from app.seeds.runner import seed
+from app.seeds.screens import ScreenIsEmpty, assert_the_group_deck
 from tests.api import matchmaking_world as world
 from tests.api.proposals_world import live_ids, saves_a_card, says_yes
 
@@ -120,6 +121,46 @@ async def test_the_protagonist_is_dealt_picks_with_nought_to_three_in(
     completed = await says_yes(client, her, three_in.proposal_id)
     assert completed.status_code == 200, completed.text
     assert completed.json()["open_seats"] == 0
+
+
+async def test_her_group_deck_deals_every_pick_and_an_empty_one_fails_the_run(
+    client, session_factory, payments, now, under_it
+):
+    """The screens' claim about the Games tab (#539): read through the tab's own
+    read, as her, her deck holds the four picks — and a deck that would deal
+    nothing is refused by name rather than handed to a developer."""
+
+    her = await signed_in_as_her(client)
+    her_id = UUID(
+        (await client.get("/api/v1/users/me", headers=her["headers"])).json()["id"]
+    )
+    crowd, _ = await a_crowd(
+        client,
+        session_factory,
+        payments,
+        12,
+        mu=await her_padel_level(session_factory, her_id),
+    )
+    await write_the_proposals(
+        session_factory, settings=get_settings(), now=now, cohort=crowd
+    )
+
+    line = await assert_the_group_deck(
+        session_factory, settings=get_settings(), now=now
+    )
+
+    assert "Padel po pracy · padel competitive: 4 card(s), 3 with somebody In" in line
+    assert line.endswith("the first 0 seat(s) from filling")
+
+    # Her padel intent moves to *for fun*: the competitive segment is not hers.
+    moved = await client.put(
+        "/api/v1/play-intents/PADEL",
+        json={"intent": "FOR_FUN", "surface": "RATING_TAIL"},
+        headers=her["headers"],
+    )
+    assert moved.status_code == 200, moved.text
+    with pytest.raises(ScreenIsEmpty, match="deals nothing"):
+        await assert_the_group_deck(session_factory, settings=get_settings(), now=now)
 
 
 async def test_a_second_run_makes_no_pick_twice(

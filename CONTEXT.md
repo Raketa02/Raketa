@@ -2243,8 +2243,9 @@ for each one.
 ### Proposals
 
 Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §1–§2, §5
-and built by [#538](https://github.com/Raketa02/Raketa/issues/538). The engine that builds
-proposals (#540), posting (#546) and the fill that books one (#541) are still to come.
+and built by [#538](https://github.com/Raketa02/Raketa/issues/538); the group deck and a
+player's Games & money by [#539](https://github.com/Raketa02/Raketa/issues/539). The engine that
+builds proposals (#540), posting (#546) and the fill that books one (#541) are still to come.
 
 **How a game fills: dealt to a pool, answered with a silent yes.**
 
@@ -2290,6 +2291,37 @@ proposals (#540), posting (#546) and the fill that books one (#541) are still to
     with nobody else In.
   - **ProposalExpired** — `proposals.proposal_expired` / v1 — the record, written by the book-by
     sweep, of an expiry that was already true.
+  - **GamesAndMoneySet** — `proposals.games_and_money_set` / v1 — a player's games per week and
+    most I'll pay, both, on their Games & money stream.
+
+**What a player is dealt: their group deck, within their Games & money.**
+
+- **Group deck** — a group's Games tab: the proposals dealt to you in one sport and one
+  **kind**, each drawn as **your own version** — everybody In, you, and the rest of your version
+  — with its sides (the evenest arrangement the engine forecasts, you on your own), the forecast
+  for that version, an overlap grid and the court block. Ordered by the seats that would be open
+  after your yes (fewest first), then **Seat open › Challenge › Picked for you**, then the
+  soonest deadline, then the best forecast; the same people only at their best hour. A card you
+  said no to never returns; one you are In on is in *You're In*; one you took your yes back from
+  is dealt again. Never dealt: a kind your Play intent does not want, a share above **Most I'll
+  pay**, a week at your **Games per week**, an hour you already have a game at, a club no longer
+  selling, or a card with somebody In you may not share a court with. A projection, recomputed
+  at every read and stored nowhere. Distinct from the Players deck of **Classic play**.
+- **Picked for you card · Challenge card · Seat open card** — the three card types: a pick, a
+  **Post** dealt to you as a best fit (its ribbon reads *"Kuba challenged you"*, or *"The group
+  challenged you"* once the poster withdrew), and a **Rescue** — dealt once rescues exist (#545).
+  A *Challenge card* is a label, never **Challenge** (Classic play's aggregate).
+- **IN tag** — the tag on the tile of a player who is **In**: the only tag that signals momentum.
+  A card dealt in versions also says how many are In on the whole proposal.
+- **Overlap grid** — the people on a card's week as 7 days × Morning 07–12 / Afternoon 12–17 /
+  Evening 17–23: *bright* where everybody is free together for one whole hour of the range, *dim*
+  where all but one are (on a card of three or more), the game's cell ringed; graded **High /
+  Good / Slim** by the hours everybody shares over the narrowest week. Never one person's week.
+- **Games & money** — a player's two limits, across sports and pools: **Games per week** (1–7,
+  default 2, counted Monday to Sunday: a week with that many games booked deals nothing more) and
+  **Most I'll pay** (off, 35, 45 or 60 zł: a card whose share is above it is never dealt). An
+  **event-sourced aggregate, one stream per player** under their own id, born by being used; the
+  same answer records nothing.
 
 ## Part 2 — Decided, not yet built: Games and Fill in
 
@@ -2312,15 +2344,11 @@ moved to **Club** in Part 1 with [#535](https://github.com/Raketa02/Raketa/issue
 **Proposal**, **Version**, **Yes**, **In**, **Withdraw** and **Live yes** are built, and moved to
 **Proposals** in Part 1 with [#538](https://github.com/Raketa02/Raketa/issues/538).
 
+**Group deck**, the three **card types**, the **IN tag** and the **Overlap grid** are built, and
+moved to **Proposals** in Part 1 with [#539](https://github.com/Raketa02/Raketa/issues/539).
+
 - **Post** — a proposal a member created by picking the hour and the court. Posting is the
   poster's yes. At most two live per player.
-- **IN tag** — the tag on the tile of a player who is **In**: the only tag that signals momentum.
-  A card dealt in versions also says how many are In on the whole proposal.
-- **Group deck** — the group's Games tab: cards addressed to you, ordered by how few seats would
-  be open after your yes. Distinct from the Players deck of **Classic play**.
-- **Picked for you card · Challenge card · Seat open card** — the three card types: a pick, a
-  **Post** dealt to you as a best fit (its ribbon reads *"Kuba challenged you"*), and a **Rescue**.
-  A *Challenge card* is a label, never Part 1's **Challenge**.
 - **Fills** — the moment the last needed yes lands and a **Booking** opens. Every seat is then
   charged together, all or nothing — at an On request club only once the club confirms, the
   booking *waiting for the club* until it does.
@@ -2346,13 +2374,13 @@ moved to **Club** in Part 1 with [#535](https://github.com/Raketa02/Raketa/issue
 
 **Payment method** and its **Payment terms** are built, and moved to **Payments** in Part 1 with
 [#536](https://github.com/Raketa02/Raketa/issues/536). One is required before the first yes.
+**Games per week** and **Most I'll pay** are built, as **Games & money** under **Proposals** in
+Part 1, with [#539](https://github.com/Raketa02/Raketa/issues/539).
 
 - **Seat charge** — one seat's money in one booking: authorised, captured, refunded or failed.
   Raketa's account of a Stripe payment; Stripe is the ledger of record.
 - **The club is the seller** — every charge is made on the club's own Stripe account; the club
   pays the card fee. Raketa takes no fee.
-- **Games per week** — a player's cap, 1–7, default 2, Monday to Sunday; cards in a capped week
-  are not dealt. **Most I'll pay** — an optional ceiling on the share; cards above it are not dealt.
 
 ### The player's side
 

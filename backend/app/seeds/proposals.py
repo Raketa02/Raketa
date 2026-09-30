@@ -244,18 +244,7 @@ async def _the_group(
     """Her group at the club, created once; everybody in the crowd joins it —
     joining again records nothing."""
 
-    directory = build_group_directory(session)
-    listings = await directory.listings(await directory.groups_of(her))
-    group_id = next(
-        (
-            listing.id
-            for listing in listings.values()
-            if listing.owner_id == her
-            and listing.home_club_id == club_id
-            and listing.name == GroupName(GAMES_GROUP)
-        ),
-        None,
-    )
+    group_id = await _games_group_of(session, her, club_id)
     created = group_id is None
     if group_id is None:
         group_id = await CreatePlayerGroup(
@@ -275,6 +264,32 @@ async def _the_group(
     for member in crowd:
         await join_group(session, settings, group_id, member, FixedClock(at=now))
     return group_id, created
+
+
+async def _games_group_of(
+    session: AsyncSession, her: UUID, club_id: UUID
+) -> UUID | None:
+    directory = build_group_directory(session)
+    listings = await directory.listings(await directory.groups_of(her))
+    return next(
+        (
+            listing.id
+            for listing in listings.values()
+            if listing.owner_id == her
+            and listing.home_club_id == club_id
+            and listing.name == GroupName(GAMES_GROUP)
+        ),
+        None,
+    )
+
+
+async def her_games_group(session: AsyncSession) -> tuple[UUID, UUID] | None:
+    """The protagonist, and the group this layer deals her games in — ``None``
+    before a run has gathered it. What the screens read her deck from."""
+
+    her = await _protagonist(session)
+    group_id = await _games_group_of(session, her, await _club_id(session))
+    return None if group_id is None else (her, group_id)
 
 
 async def _free_at(

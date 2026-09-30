@@ -6,13 +6,16 @@ not fit — and three from what their own account is missing: a payment method,
 a live yes to spare. None of them names another person: *somebody you do not
 fit* is said without saying who, as a withheld row is (``docs/adr/0130``).
 
-The last four are **the dealer's**, met by whoever makes and deals proposals —
+The next four are **the dealer's**, met by whoever makes and deals proposals —
 the engine (#540), a seed, a test — and by no player, since no route makes one.
+
+The last two are **Games & money**'s: a value its form does not offer, each
+naming what it does, so the screen can say both.
 """
 
 from __future__ import annotations
 
-from app.shared.domain import ConflictError, NotFoundError
+from app.shared.domain import BadRequestError, ConflictError, NotFoundError
 
 
 class ProposalNotFound(NotFoundError):
@@ -140,3 +143,34 @@ class CourtHourNotForSale(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("no court of this sport is for sale at this club and hour")
+
+
+# --------------------------------------------------------------------------- #
+# Games & money
+# --------------------------------------------------------------------------- #
+
+
+class GamesPerWeekOutOfRange(BadRequestError):
+    """Games per week outside the one to seven the stepper offers.
+    ``details`` carries the range."""
+
+    code = "games_per_week_out_of_range"
+
+    def __init__(self, *, least: int, most: int) -> None:
+        super().__init__(
+            f"games per week is between {least} and {most}",
+            details={"least": least, "most": most},
+        )
+
+
+class MostIllPayNotOffered(BadRequestError):
+    """A ceiling that is not one of the chips — *off* is ``null``, never a
+    nought. ``details.choices`` carries the ones offered, in grosze."""
+
+    code = "most_ill_pay_not_offered"
+
+    def __init__(self, *, choices: tuple[int, ...]) -> None:
+        super().__init__(
+            "most I'll pay is off or one of the offered ceilings",
+            details={"choices": list(choices)},
+        )

@@ -1363,6 +1363,24 @@ Rules to preserve:
   yes that leaves `open_seats` at nought books. Seeded by `app/seeds/proposals.py`: the
   protagonist's *Padel po pracy* at Bonarka Arena, gathered from the cohort members who fit
   her and each other, with four picks at her hours — nought, one, two and three In.
+  **The group deck is a read over those streams, stored nowhere** (#539):
+  `GET /pools/{id}/deck?sport&kind` deals each card as **the reader's own version** — In,
+  the reader, the rest of their version in dealt order (`domain/deck.py`) — with the sides
+  drawn as the evenest arrangement **the engine's own `forecast`** gives over rating's
+  estimates (`BalanceForecasts`, no candidate index), an overlap grid graded off the
+  engine's `group_availability` (`domain/overlap.py`), and the court block. The order is
+  §8.2's four keys, the fourth read as **the forecast of the reader's version**; the same
+  people only at their best hour, per segment. Every filter is read live: `PlayerFit` for
+  blocks, gender preference and the level window — a card with somebody In the reader does
+  not fit is withheld, a name that does not fit them or anybody on the card is left off —
+  the Play intent (`WantedKinds`; *no preference* is both segments, undeclared is none), a
+  club no longer selling (`ClubTerms`, off the published offer, which is also where *no free
+  cancellation* and *the club confirms* come from), and the reader's **Games & money** — its own event-sourced aggregate, one stream
+  per player, born by being used (`GET/PUT /players/me/games-and-money`,
+  `proposals.games_and_money_set` / v1). Games per week and *one game per hour* read
+  **`BookedGames`, whose only adapter answers nothing until #541**; API tests override
+  `get_booked_games`. A withdrawn yes is dealt again. The seed fails if her deck would be
+  empty (`assert_the_group_deck`, beside the screens battery).
 - **A group is a crowd at a home club, and its link never changes**
   ([ADR-0183](../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md),
   #504, #505, #506). `app/modules/groups/` holds **one event-sourced aggregate for both

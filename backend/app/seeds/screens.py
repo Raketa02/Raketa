@@ -71,7 +71,7 @@ from typing import Mapping
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bootstrap.composition import build_candidate_source
+from app.bootstrap.composition import build_candidate_source, build_read_group_deck
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
@@ -101,6 +101,7 @@ from app.modules.matchmaking.domain.searches import (
     SearchSurface,
 )
 from app.modules.matchmaking.domain.shortlist import run as run_the_pipeline
+from app.modules.proposals.application.commands import ReadGroupDeckCommand
 from app.seeds.catalog import (
     THE_BLANK_WEEK_PLAYER,
     THE_NEWCOMER,
@@ -108,8 +109,10 @@ from app.seeds.catalog import (
     THE_POPULATED_PLAYER,
     SeedAccount,
 )
+from app.seeds.clock import FixedClock
 from app.seeds.cohort import COHORT, PLAYED_GAMES, Cohort, PlayedGame
 from app.seeds.pairs import SeededPairs
+from app.seeds.proposals import GAMES_GROUP, GAMES_KIND, GAMES_SPORT, her_games_group
 from app.seeds.paths import (
     TRACE_ID,
     ReadPaths,
@@ -235,6 +238,56 @@ async def assert_the_screens(
             )
             lines.extend(await _the_three_named_states(paths))
     return tuple(lines)
+
+
+async def assert_the_group_deck(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    settings: Settings,
+    now: Instant,
+) -> str:
+    """*The protagonist's group deck deals her something* (#539; the screens
+    Part D).
+
+    Read through ``ReadGroupDeck`` — the Games tab's own read, filters and all —
+    as her, in the games group and the segment the proposals layer deals in. It
+    is asked **beside** the battery rather than inside it: the cohort's own
+    acceptance test builds a world without proposals, and a group deck is a
+    claim about this layer's fixture. A deck that deals nothing — her intent
+    moved, a ceiling under every share, a week at her cap, the picks expired or
+    unfit — fails the run by name with what the read said around it.
+    """
+
+    async with session_factory() as session:
+        found = await her_games_group(session)
+        if found is None:
+            raise ScreenIsEmpty(
+                f"the group deck · {THE_POPULATED_PLAYER.slug} has no "
+                f"{GAMES_GROUP} to read — the proposals layer runs first"
+            )
+        her, group_id = found
+        deck = await build_read_group_deck(
+            session, settings=settings, clock=FixedClock(at=now)
+        ).execute(
+            ReadGroupDeckCommand(
+                player_id=her, pool_id=group_id, sport=GAMES_SPORT, kind=GAMES_KIND
+            )
+        )
+    where = (
+        f"group deck · {THE_POPULATED_PLAYER.slug} · {GAMES_GROUP} · "
+        f"{GAMES_SPORT.value.lower()} {GAMES_KIND.value.lower()}"
+    )
+    if not deck.cards:
+        raise ScreenIsEmpty(
+            f"{where} deals nothing: segments "
+            f"{[(segment.kind.value, segment.count) for segment in deck.segments]}, "
+            f"{deck.games_per_week} games a week, capped weeks "
+            f"{[week.starts_on.isoformat() for week in deck.capped_weeks]}"
+        )
+    return (
+        f"{where}: {len(deck.cards)} card(s), {deck.games_badge} with somebody In, "
+        f"the first {deck.cards[0].open_seats_after_your_yes} seat(s) from filling"
+    )
 
 
 # ---------------------------------------------------------------------------

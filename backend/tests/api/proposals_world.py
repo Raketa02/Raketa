@@ -73,11 +73,12 @@ async def a_club_selling(
     way: str = "INSTANT",
     paused: bool = False,
     hours: list[tuple[int, int]] | None = None,
+    padel_grosze: int = 120_00,
     **settings,
 ) -> str:
     """A live club selling one padel and one tennis court at every hour of the
-    week — padel at 120 zł (30 zł a seat), tennis at 80 zł (40 zł a seat).
-    Its id."""
+    week — padel at 120 zł (30 zł a seat) unless told otherwise, tennis at 80 zł
+    (40 zł a seat). Its id."""
 
     club_id, desk = await a_desk(
         client,
@@ -98,7 +99,7 @@ async def a_club_selling(
         client,
         desk,
         [
-            {"sport": "PADEL", "price_grosze": 120_00, "bands": []},
+            {"sport": "PADEL", "price_grosze": padel_grosze, "bands": []},
             {"sport": "TENNIS", "price_grosze": 80_00, "bands": []},
         ],
     )

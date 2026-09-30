@@ -6861,6 +6861,173 @@
           }
         ]
       }
+    },
+    "/api/v1/players/me/games-and-money": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "My Games & money",
+        "description": "You \u203a Account \u203a *Games & money*: games per week (two until changed) and most I'll pay per game (off until changed), with the ranges the form offers. Applies across sports and groups.",
+        "operationId": "read_games_and_money_api_v1_players_me_games_and_money_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GamesAndMoneyResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Save my Games & money",
+        "description": "Both values, as the screen saves them on every tap. The same answer records nothing. Answers what is now saved.",
+        "operationId": "set_games_and_money_api_v1_players_me_games_and_money_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GamesAndMoneyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GamesAndMoneyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`games_per_week_out_of_range` \u2014 outside `details.least`\u2013`details.most`. `most_ill_pay_not_offered` \u2014 not `null` and not one of `details.choices`. Nothing was saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/pools/{pool_id}/deck": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "A group's deck",
+        "description": "The **Games** tab for one sport and segment: the cards dealt to the reader in this group \u2014 the pool is filed under the group's id \u2014 each as **the reader's own version**, with its sides, forecast and overlap computed now. **Never dealt**: a card the reader said no to, one they are In on (it is in *You're In*), a kind their Play intent does not want, a share above their *most I'll pay*, a week at their games per week, an hour they already have a game at, a club no longer selling, and a card with somebody In they may not share a court with. Around the deck: a count per segment, the Games badge and the capped weeks. Nothing is recorded.",
+        "operationId": "read_group_deck_api_v1_pools__pool_id__deck_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SearchMode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDeckResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`pool_not_found` \u2014 no such group, or the reader is not in it. One code for both.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the reader fits the people on the cards could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7567,6 +7734,37 @@
         ],
         "title": "CandidateSchema",
         "description": "One row of the shortlist: the pairing, and the person.\n\nThree field families have a **different author** from the rest and are\nattached by the backend after the scorer returns \u2014 the card, the at-stake\nblock and the distance. None of them is a fact the scorer may see, and none\nmay be computed by the client. **On a reading two more join them**, the\nbearing and the sport chips, on the same argument.\n\nOn a read-back this row means *the live gates still admit this person*, and\nit says so: ``withheld`` is ``false``, positively, rather than absent. A row\nthe gates no longer admit is a :class:`WithheldRowSchema` instead, and the\ntwo are a union precisely so that **rendering a person the product has agreed\nnot to show is not a shape this contract can hold** (``docs/adr/0109``)."
+      },
+      "CappedWeekSchema": {
+        "properties": {
+          "starts_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Starts On",
+            "description": "Its Monday, on the club's clock."
+          },
+          "booked": {
+            "type": "integer",
+            "title": "Booked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "starts_on",
+          "booked"
+        ],
+        "title": "CappedWeekSchema",
+        "description": "A week the player has as many games booked in as they allow: nothing is\ndealt for it."
+      },
+      "CardType": {
+        "type": "string",
+        "enum": [
+          "SEAT_OPEN",
+          "CHALLENGE",
+          "PICKED_FOR_YOU"
+        ],
+        "title": "CardType",
+        "description": "The three cards a deck deals (the mechanics \u00a78.1)."
       },
       "ChallengeDetailResponse": {
         "properties": {
@@ -9058,6 +9256,15 @@
         "title": "CourtSocialVibeEvidence",
         "description": "What the two of them are like around the game.\n\nThe same shape as playing style and deliberately a **separate variant**: the\ntwo terms carry different weights, invert between the modes, and a client\nrenders them under different headings. One variant with a column field would\nmake *which term is this* a value the client has to branch on rather than a\ntype it can dispatch over."
       },
+      "CourtState": {
+        "type": "string",
+        "enum": [
+          "COURT_AVAILABLE",
+          "BOOK_IT_NOW"
+        ],
+        "title": "CourtState",
+        "description": "What a yes on the card does (the screens A2.3)."
+      },
       "CourtStrandReading": {
         "properties": {
           "strand": {
@@ -9177,6 +9384,16 @@
         "title": "CreatePlayerGroupRequest",
         "description": "A player creates a group. **No sport is asked for**: the group plays\nwhatever its members are rated in (``docs/adr/0183`` \u00a76)."
       },
+      "DayRange": {
+        "type": "string",
+        "enum": [
+          "MORNING",
+          "AFTERNOON",
+          "EVENING"
+        ],
+        "title": "DayRange",
+        "description": "A third of a day, as a card and the posting grid group hours."
+      },
       "DealDeckRequest": {
         "properties": {
           "sport": {
@@ -9198,6 +9415,344 @@
         ],
         "title": "DealDeckRequest",
         "description": "What a deal is asked for. **The sport, and the week you are asking about.**\n\nThis said *one field, and that is the whole contract* until the week was\nadded, and the three refusals it was written to protect are untouched by\nthat: **a mode, a widening and a pass window** may not arrive here, and a\ngrid is none of the three.\n\n**There is no `mode` here and there never will be.** The deck reads your own\ndeclared Play intent for this sport, resolved backend-side, and *no\npreference* is a working deck rather than a blocked one \u2014 indecision is not a\nstate this product refuses. A mode on this body would be the field the\ntelemetry constraint refuses: `mode` is null exactly when the surface is the\ndeck.\n\n**There is no widening here either.** The relaxation ladder does not reach\nthe deck, so a deal carries no rung offers and there is no offer for one to\ncite.\n\n**There is nothing about a pass.** The suppression window crosses the wire in\nno shape at all \u2014 no field, no code, no timestamp \u2014 which is what makes a\npass unable to become something stronger by way of a request.\n\n**The week is an ask and never a correction**, exactly as it is on a search.\nIt is here because the alternative was a deck that silently ranks on a week\nthe player has just replaced, and because a client cannot compute the\ndifference itself: a search that took a times rung ran on a grid with a slot\nthe player never ticked, and only this backend knows that."
+      },
+      "DeckCardSchema": {
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/CardType",
+            "description": "`PICKED_FOR_YOU`, `CHALLENGE` (a member's post) or `SEAT_OPEN` (a rescue \u2014 dealt once rescues exist, #545)."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "challenger": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckChallengerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The poster of a challenge; `null` on a pick, and on a challenge once its poster withdrew \u2014 *the group challenged you*."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start; games are 1 h."
+          },
+          "club": {
+            "$ref": "#/components/schemas/DeckClubSchema"
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "What this player pays if it fills."
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deadline",
+            "description": "When the card leaves unfilled \u2014 its book-by. The client counts down only under 24 h."
+          },
+          "in_count": {
+            "type": "integer",
+            "title": "In Count",
+            "description": "People In on the whole game, every version counted."
+          },
+          "version_count": {
+            "type": "integer",
+            "title": "Version Count",
+            "description": "Versions the game was dealt in; above one, the card says how many people are In on the whole game."
+          },
+          "open_seats_after_your_yes": {
+            "type": "integer",
+            "title": "Open Seats After Your Yes",
+            "description": "Nought is *You complete it*."
+          },
+          "court": {
+            "$ref": "#/components/schemas/CourtState",
+            "description": "`COURT_AVAILABLE` \u2014 a yes is a free vote; `BOOK_IT_NOW` \u2014 a yes fills the game and books it."
+          },
+          "no_free_cancellation": {
+            "type": "boolean",
+            "title": "No Free Cancellation",
+            "description": "The club's cut-off has already passed for this game."
+          },
+          "club_confirms": {
+            "type": "boolean",
+            "title": "Club Confirms",
+            "description": "An On request club: a full game waits for the club's yes before anybody pays, so *Book it now* charges nobody at once and its stamp carries no price."
+          },
+          "sides": {
+            "$ref": "#/components/schemas/DeckSidesSchema"
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckForecastSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` where it cannot be read: somebody on the card holds no rating in the sport, or nobody faces the reader yet."
+          },
+          "overlap": {
+            "$ref": "#/components/schemas/DeckOverlapSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "type",
+          "kind",
+          "challenger",
+          "starts_at",
+          "club",
+          "share_grosze",
+          "deadline",
+          "in_count",
+          "version_count",
+          "open_seats_after_your_yes",
+          "court",
+          "no_free_cancellation",
+          "club_confirms",
+          "sides",
+          "forecast",
+          "overlap"
+        ],
+        "title": "DeckCardSchema",
+        "description": "One card, as the reader is dealt it: **their own version** of the game."
+      },
+      "DeckChallengerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name"
+        ],
+        "title": "DeckChallengerSchema",
+        "description": "Who a challenge names \u2014 *Kuba challenged you*."
+      },
+      "DeckClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The club's name; `null` for a club that no longer exists."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "DeckClubSchema"
+      },
+      "DeckForecastSchema": {
+        "properties": {
+          "pct": {
+            "type": "integer",
+            "title": "Pct"
+          },
+          "provisional": {
+            "type": "boolean",
+            "title": "Provisional",
+            "description": "A seat is empty and was read as matching its partner."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct",
+          "provisional"
+        ],
+        "title": "DeckForecastSchema",
+        "description": "How even the game on **this** card is forecast to be, with these sides."
+      },
+      "DeckOverlapSchema": {
+        "properties": {
+          "grade": {
+            "$ref": "#/components/schemas/OverlapGrade",
+            "description": "*High / Good / Slim overlap*: the hours everybody on the card shares, over the week of whoever has least to give."
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/OverlapCellSchema"
+            },
+            "type": "array",
+            "title": "Cells",
+            "description": "Twenty-one: day by day from Monday, morning first."
+          },
+          "game": {
+            "$ref": "#/components/schemas/OverlapGameCellSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grade",
+          "cells",
+          "game"
+        ],
+        "title": "DeckOverlapSchema"
+      },
+      "DeckSegmentSchema": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "Cards of this kind the reader is dealt here."
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "count"
+        ],
+        "title": "DeckSegmentSchema",
+        "description": "One side of the *Competitive \u00b7 N / For fun \u00b7 N* switch."
+      },
+      "DeckSidesSchema": {
+        "properties": {
+          "yours": {
+            "items": {
+              "$ref": "#/components/schemas/DeckTileSchema"
+            },
+            "type": "array",
+            "title": "Yours"
+          },
+          "theirs": {
+            "items": {
+              "$ref": "#/components/schemas/DeckTileSchema"
+            },
+            "type": "array",
+            "title": "Theirs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "yours",
+          "theirs"
+        ],
+        "title": "DeckSidesSchema",
+        "description": "The rows are the sides (Q70): the reader's, and the other. A side may be\nshort of a seat, which the client draws empty."
+      },
+      "DeckTileSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "is_you": {
+            "type": "boolean",
+            "title": "Is You",
+            "description": "The reader's own tile."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their Name, whole \u2014 the tile may cut it short, never invent a first name. `null` for an account that can no longer be named."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived link to their first photograph; `null` with `photo_id` draws a poster."
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level",
+            "description": "Their published Level in the card's sport; `null` if unrated."
+          },
+          "is_in": {
+            "type": "boolean",
+            "title": "Is In",
+            "description": "They said yes: the **IN** tag. Nobody else carries a tag \u2014 a player still deciding is a plain tile."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "is_you",
+          "name",
+          "photo_id",
+          "photo_url",
+          "level",
+          "is_in"
+        ],
+        "title": "DeckTileSchema",
+        "description": "One person on a card."
       },
       "DeclarePlayIntentRequest": {
         "properties": {
@@ -10124,6 +10679,93 @@
         "title": "GameStanding",
         "description": "The six standings, as codes. A client's words are the client's own."
       },
+      "GamesAndMoneyRequest": {
+        "properties": {
+          "games_per_week": {
+            "type": "integer",
+            "title": "Games Per Week",
+            "description": "Games a week, Monday to Sunday, from 1 to 7."
+          },
+          "most_ill_pay_grosze": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Most Ill Pay Grosze",
+            "description": "The most one game's share may cost, in grosze \u2014 one of `most_ill_pay_choices_grosze` \u2014 or `null` for *off*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "games_per_week",
+          "most_ill_pay_grosze"
+        ],
+        "title": "GamesAndMoneyRequest",
+        "description": "Both values, as the screen saves them on every tap. **Types only**: a\nvalue the form does not offer is refused by the domain, with a code naming\nwhat it offers."
+      },
+      "GamesAndMoneyResponse": {
+        "properties": {
+          "games_per_week": {
+            "type": "integer",
+            "title": "Games Per Week",
+            "description": "Once this many games are booked in a week (Monday to Sunday), the deck deals nothing more for it."
+          },
+          "most_ill_pay_grosze": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Most Ill Pay Grosze",
+            "description": "Cards whose share is above this, in grosze, are never dealt; `null` is *off* \u2014 every card is shown."
+          },
+          "games_per_week_range": {
+            "$ref": "#/components/schemas/GamesPerWeekRangeSchema"
+          },
+          "most_ill_pay_choices_grosze": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Most Ill Pay Choices Grosze",
+            "description": "The ceilings offered beside *Off*, in grosze."
+          }
+        },
+        "type": "object",
+        "required": [
+          "games_per_week",
+          "most_ill_pay_grosze",
+          "games_per_week_range",
+          "most_ill_pay_choices_grosze"
+        ],
+        "title": "GamesAndMoneyResponse",
+        "description": "You \u203a Account \u203a **Games & money**: the player's two limits, and what the\nform offers so the client holds neither range."
+      },
+      "GamesPerWeekRangeSchema": {
+        "properties": {
+          "least": {
+            "type": "integer",
+            "title": "Least"
+          },
+          "most": {
+            "type": "integer",
+            "title": "Most"
+          }
+        },
+        "type": "object",
+        "required": [
+          "least",
+          "most"
+        ],
+        "title": "GamesPerWeekRangeSchema"
+      },
       "Gender": {
         "type": "string",
         "enum": [
@@ -10229,6 +10871,67 @@
         ],
         "title": "GroupAtClubSchema",
         "description": "A group inside a club's card, with what it is to the reader."
+      },
+      "GroupDeckResponse": {
+        "properties": {
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/DeckSegmentSchema"
+            },
+            "type": "array",
+            "title": "Segments",
+            "description": "The segments the reader's Play intent shows, Competitive first \u2014 **empty while they have declared no intent for the sport**, which is the one question that replaces the deck."
+          },
+          "games_badge": {
+            "type": "integer",
+            "title": "Games Badge",
+            "description": "The tab's badge: cards where somebody is already In with the reader, across the segments."
+          },
+          "games_per_week": {
+            "type": "integer",
+            "title": "Games Per Week"
+          },
+          "capped_weeks": {
+            "items": {
+              "$ref": "#/components/schemas/CappedWeekSchema"
+            },
+            "type": "array",
+            "title": "Capped Weeks",
+            "description": "Weeks within the deck's fortnight at the reader's games per week \u2014 *your 2 games this week are booked*. None of their games is dealt."
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/DeckCardSchema"
+            },
+            "type": "array",
+            "title": "Cards",
+            "description": "This segment's cards in the order dealt: seats open after the reader's yes (fewest first), then seat open \u203a challenge \u203a pick, then the soonest deadline, then the best forecast; the same people only at their best hour."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pool_id",
+          "sport",
+          "kind",
+          "segments",
+          "games_badge",
+          "games_per_week",
+          "capped_weeks",
+          "cards"
+        ],
+        "title": "GroupDeckResponse",
+        "description": "A group's **Games** tab for one sport and segment."
       },
       "GroupKind": {
         "type": "string",
@@ -11921,6 +12624,67 @@
         ],
         "title": "OutstandingSchema",
         "description": "How many yeses you have in flight for one sport, and the cap in force.\n\n**Outstanding means sent, unexpired and not yet mutual** \u2014 a mutual has been\nanswered and is no longer in flight. The pair travels together on every read,\nbecause a cap you cannot see is a refusal you cannot predict."
+      },
+      "OverlapCellSchema": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day",
+            "description": "ISO weekday, Monday 1."
+          },
+          "range": {
+            "$ref": "#/components/schemas/DayRange",
+            "description": "Morning 07\u201312, Afternoon 12\u201317, Evening 17\u201323."
+          },
+          "shade": {
+            "$ref": "#/components/schemas/OverlapShade",
+            "description": "`BRIGHT` \u2014 everybody on the card is free together for a whole hour of it; `DIM` \u2014 all but one (never on a two-person card); `DARK` \u2014 fewer."
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "range",
+          "shade"
+        ],
+        "title": "OverlapCellSchema"
+      },
+      "OverlapGameCellSchema": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day"
+          },
+          "range": {
+            "$ref": "#/components/schemas/DayRange"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "range"
+        ],
+        "title": "OverlapGameCellSchema",
+        "description": "The game's own cell, ringed."
+      },
+      "OverlapGrade": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "GOOD",
+          "SLIM"
+        ],
+        "title": "OverlapGrade"
+      },
+      "OverlapShade": {
+        "type": "string",
+        "enum": [
+          "BRIGHT",
+          "DIM",
+          "DARK"
+        ],
+        "title": "OverlapShade",
+        "description": "How many of the card's people are free together in a cell."
       },
       "PairingAbsence": {
         "type": "string",

@@ -1,0 +1,438 @@
+"""The group deck as one reader is dealt it — the rules that need no I/O (the
+mechanics §6.6, §7, §8; the screens A2).
+
+A deck is **a projection, never an aggregate** (``docs/adr/0189`` §5): every card
+is a proposal read for one person at one instant. Five rules shape it.
+
+**My card is my version** (§7): everybody In — on any version, since yeses are
+the game's — then me, then the rest of my version's names for the seats still
+open, **in the order they were dealt**, so the names a no left behind come
+before the next best fits dealt for its seat. Somebody who took their yes back
+is still named and simply not In; somebody who said no is gone. **Two people who
+may not share a court are never on one card** (§4.1): a card with somebody In I
+do not fit is withheld — my yes would be refused (``no_longer_fits``) — and a
+name that does not fit me, somebody In or a name already on the card, or who has
+left the pool, is left off for the next one. A pair *In* that stopped fitting is
+not mine to hide: it is the fill's to read (#541). A card that would show nobody
+but me is not dealt: there is no game on it.
+
+**A withdrawn yes is dealt again.** A no is final (§5.3); a yes taken back is no
+verdict on the card and may be said again while it fills, and the deck is where
+a card is answered — so a card I withdrew from comes back to me.
+
+**The sides are the evenest arrangement, with me on my own** (§8.1, Q70): each
+way the people on my card can stand is forecast by the engine, and the highest
+forecast is drawn — a tie keeps the arrangement named first, so the answer is
+the same on every process. An empty seat is one of the positions.
+
+**The order is §8.2's four keys**: seats still open after my yes, fewest first;
+then a seat open, a challenge, a pick; then the soonest deadline; then the best
+fit for me — **read as the forecast of my own version**, the engine's number
+for how good this game is with me in it, highest first and a card with none
+last. Then the same people are dealt **only at their best hour** (§5.3): the
+first card in that order a set of people is on is the one they are on.
+
+**A week at the player's cap deals nothing** (§6.6, Q73), counted Monday to
+Sunday on the club's clock; and neither does an hour they already have a game at
+(§5.3).
+
+**Two borrows, both pure**: the club's clock — ``CLUB_ZONE``, ``local_day`` and
+``hour_start`` from ``clubs/domain/court_hours.py``, where every court hour is
+read — and the grid's first hour from ``player_profile/domain/weekly_hours.py``.
+A card's week and its hour are the club's, so a second spelling of either is how
+a card and the hour it sells would come to disagree.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Collection, Iterable, Sequence
+from dataclasses import dataclass
+from datetime import date, timedelta
+from enum import StrEnum
+from typing import Final, final
+from uuid import UUID
+
+from app.engines.matchfit.core import SearchMode
+from app.kernel import Instant, exhaustive, hours, invariant, shifted
+from app.modules.clubs.domain.court_hours import CLUB_ZONE, hour_start, local_day
+from app.modules.player_profile.domain.weekly_hours import FIRST_HOUR, WeeklyHours
+from app.modules.proposals.domain.overlap import Overlap, overlap_of
+from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
+
+#: How far ahead the engine deals, and so how far ahead a deck can hold a card
+#: (the mechanics §4.3).
+DECK_HORIZON: Final = timedelta(days=14)
+#: Every game is one hour (the mechanics §2).
+_A_GAME: Final = timedelta(hours=1)
+_A_WEEK: Final = timedelta(days=7)
+
+
+class CardType(StrEnum):
+    """The three cards a deck deals (the mechanics §8.1)."""
+
+    #: A rescue: a booked game that lost a player. Dealt once rescues exist (#545).
+    SEAT_OPEN = "SEAT_OPEN"
+    #: A member's post, dealt to a best fit.
+    CHALLENGE = "CHALLENGE"
+    #: A game the engine built.
+    PICKED_FOR_YOU = "PICKED_FOR_YOU"
+
+
+#: At the same momentum: a rescue is a real booked court losing its game, a
+#: challenge is a person's own ask, a pick is the engine's suggestion (§8.2).
+_TYPE_RANK: Final = {
+    CardType.SEAT_OPEN: 0,
+    CardType.CHALLENGE: 1,
+    CardType.PICKED_FOR_YOU: 2,
+}
+
+
+class CourtState(StrEnum):
+    """What a yes on the card does (the screens A2.3)."""
+
+    #: A free vote: the game does not fill.
+    COURT_AVAILABLE = "COURT_AVAILABLE"
+    #: The yes fills the game, and books it.
+    BOOK_IT_NOW = "BOOK_IT_NOW"
+
+
+def card_type(proposal: Proposal) -> CardType:
+    match proposal.origin:
+        case Origin.POST:
+            return CardType.CHALLENGE
+        case Origin.PICK:
+            return CardType.PICKED_FOR_YOU
+        case _:
+            exhaustive(proposal.origin)
+
+
+# --------------------------------------------------------------------------- #
+# Who is on my card
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ReadersView:
+    """A proposal as one reader is dealt it: who is In, the reader, and the rest
+    of their version shown beside them."""
+
+    reader: UUID
+    #: Everybody In, in the order they said yes.
+    in_: tuple[UUID, ...]
+    #: The rest of the reader's version on the card, in the order dealt.
+    others: tuple[UUID, ...]
+
+    @property
+    def people(self) -> tuple[UUID, ...]:
+        return (*self.in_, self.reader, *self.others)
+
+
+def view_of(
+    proposal: Proposal,
+    reader: UUID,
+    *,
+    unfit: Collection[frozenset[UUID]],
+    in_the_pool: Collection[UUID],
+    now: Instant,
+) -> ReadersView | None:
+    """The reader's card — ``None`` for a proposal that is not in their deck:
+    never dealt to them, answered by them, no longer filling or full, withheld
+    for somebody In they do not fit, or showing nobody but them. ``unfit`` is
+    every pair on it that may not share a court."""
+
+    version = proposal.version_of(reader)
+    if (
+        version is None
+        or reader in proposal.yeses
+        or reader in proposal.declined
+        or proposal.standing_at(now) is not Standing.FILLING
+        or proposal.open_seats == 0
+    ):
+        return None
+    if any(frozenset((reader, player)) in unfit for player in proposal.yeses):
+        return None
+    seats_beside = proposal.seats - len(proposal.yeses) - 1
+    on_the_card = [reader, *proposal.yeses]
+    others: list[UUID] = []
+    for player in version.players:
+        if len(others) == seats_beside:
+            break
+        if (
+            player in on_the_card
+            or player in proposal.declined
+            or player not in in_the_pool
+            or any(frozenset((player, there)) in unfit for there in on_the_card)
+        ):
+            continue
+        others.append(player)
+        on_the_card.append(player)
+    if not proposal.yeses and not others:
+        return None
+    return ReadersView(reader=reader, in_=proposal.yeses, others=tuple(others))
+
+
+def named_on(proposal: Proposal) -> tuple[UUID, ...]:
+    """Everybody any version of the proposal names, in dealt order."""
+
+    return tuple(player for version in proposal.versions for player in version.players)
+
+
+def challenger_of(proposal: Proposal) -> UUID | None:
+    """Who a challenge names — *Kuba challenged you* — and ``None`` on a pick and
+    once the poster withdrew: *the group challenged you* (§8.1)."""
+
+    if proposal.origin is Origin.POST and not proposal.poster_withdrew:
+        return proposal.poster_id
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# The sides
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Sides:
+    """Which way round the people on a card stand: the reader's side, and the
+    other. A side may be short of a seat."""
+
+    yours: tuple[UUID, ...]
+    theirs: tuple[UUID, ...]
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SellingTerms:
+    """What a card needs of the club it is at, while the club sells: when its
+    free cancellation ends, and whether it confirms each full game itself."""
+
+    cut_off_hours: int
+    #: An On request club: *Book it now* waits for the club, and nobody is
+    #: charged until it says yes (the mechanics §11).
+    confirms_each_game: bool
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CardForecast:
+    """How even the engine forecasts a card's game, as a whole percent, and
+    whether a seat was assumed to match its partner to say so."""
+
+    pct: int
+    provisional: bool
+
+
+def arrangements(
+    reader: UUID, others: Sequence[UUID], *, seats_per_side: int
+) -> tuple[Sides, ...]:
+    """Every way the people on a card can stand, the reader on their own side:
+    each of the others as their partner, in the card's order, and — while a seat
+    is empty — the reader beside the empty one. Never a side of nobody unless
+    there is nobody else at all."""
+
+    invariant(seats_per_side >= 1, f"{seats_per_side} a side")
+    if seats_per_side == 1:
+        return (Sides(yours=(reader,), theirs=tuple(others)),)
+    partners: list[UUID | None] = list(others)
+    if len(others) < 2 * seats_per_side - 1:
+        partners.append(None)
+    options = tuple(
+        Sides(
+            yours=(reader,) if partner is None else (reader, partner),
+            theirs=tuple(player for player in others if player != partner),
+        )
+        for partner in partners
+    )
+    fitting = tuple(
+        option for option in options if 1 <= len(option.theirs) <= seats_per_side
+    )
+    return fitting or (Sides(yours=(reader,), theirs=tuple(others)),)
+
+
+def evenest(
+    options: Sequence[Sides], forecasts: Sequence[CardForecast | None]
+) -> tuple[Sides, CardForecast | None]:
+    """The arrangement with the highest forecast, the first among equals; the
+    first arrangement and no forecast when none could be read."""
+
+    invariant(len(options) == len(forecasts) > 0, "a forecast per arrangement")
+    best: tuple[Sides, CardForecast | None] = (options[0], None)
+    for option, forecast in zip(options, forecasts, strict=True):
+        if forecast is not None and (best[1] is None or forecast.pct > best[1].pct):
+            best = (option, forecast)
+    return best
+
+
+# --------------------------------------------------------------------------- #
+# A card, and the order
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class DeckCard:
+    """One card as its reader is dealt it."""
+
+    proposal_id: UUID
+    type: CardType
+    kind: SearchMode
+    #: Who a challenge names; ``None`` on a pick and once the poster withdrew.
+    challenger_id: UUID | None
+    club_id: UUID
+    start: Instant
+    share_grosze: int
+    #: When the card leaves: the book-by.
+    deadline: Instant
+    #: Everybody In on the game, across every version.
+    in_: tuple[UUID, ...]
+    sides: Sides
+    forecast: CardForecast | None
+    overlap: Overlap
+    open_seats_after_your_yes: int
+    #: How many versions the game was dealt in — more than one, and the card
+    #: says how many are In on the whole game.
+    version_count: int
+    no_free_cancellation: bool
+    #: At an On request club the club confirms a full game before anybody pays.
+    club_confirms: bool
+
+    @property
+    def court(self) -> CourtState:
+        if self.open_seats_after_your_yes == 0:
+            return CourtState.BOOK_IT_NOW
+        return CourtState.COURT_AVAILABLE
+
+    @property
+    def people(self) -> frozenset[UUID]:
+        return frozenset((*self.sides.yours, *self.sides.theirs))
+
+
+def card_of(
+    proposal: Proposal,
+    view: ReadersView,
+    *,
+    sides: Sides,
+    forecast: CardForecast | None,
+    weeks: Sequence[WeeklyHours],
+    terms: SellingTerms,
+    now: Instant,
+) -> DeckCard:
+    """The card ``view`` is of, standing as ``sides`` — ``weeks`` being the
+    weeks of the people on it, whose overlap it draws on the club's clock."""
+
+    return DeckCard(
+        proposal_id=proposal.proposal_id,
+        type=card_type(proposal),
+        kind=proposal.kind,
+        challenger_id=challenger_of(proposal),
+        club_id=proposal.club_id,
+        start=proposal.start,
+        share_grosze=proposal.share_grosze,
+        deadline=proposal.book_by,
+        in_=view.in_,
+        sides=sides,
+        forecast=forecast,
+        overlap=overlap_of(weeks, start=proposal.start, zone=CLUB_ZONE),
+        open_seats_after_your_yes=proposal.open_seats - 1,
+        version_count=len(proposal.versions),
+        no_free_cancellation=cut_off_passed(
+            proposal.start, cut_off_hours=terms.cut_off_hours, now=now
+        ),
+        club_confirms=terms.confirms_each_game,
+    )
+
+
+def _order_key(card: DeckCard) -> tuple[int, int, Instant, int, str]:
+    # A card with no forecast after every card with one: a pct is at most 100.
+    fit = -card.forecast.pct if card.forecast is not None else 1
+    return (
+        card.open_seats_after_your_yes,
+        _TYPE_RANK[card.type],
+        card.deadline,
+        fit,
+        str(card.proposal_id),
+    )
+
+
+def dealt_in_order(cards: Iterable[DeckCard]) -> tuple[DeckCard, ...]:
+    """One segment's cards in §8.2's order, the same people only at their best
+    hour — **one batch**, so call it per kind."""
+
+    seen: set[frozenset[UUID]] = set()
+    dealt: list[DeckCard] = []
+    for card in sorted(cards, key=_order_key):
+        if card.people in seen:
+            continue
+        seen.add(card.people)
+        dealt.append(card)
+    return tuple(dealt)
+
+
+# --------------------------------------------------------------------------- #
+# Weeks, the cut-off, and an hour already taken
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CappedWeek:
+    """A week in which the player has as many games booked as they allow."""
+
+    #: Its Monday, on the club's clock.
+    starts_on: date
+    booked: int
+
+
+def week_of(at: Instant) -> date:
+    """The Monday of the week ``at`` falls in, on the club's clock."""
+
+    day = local_day(at)
+    return day - timedelta(days=day.weekday())
+
+
+def weeks_ahead(now: Instant) -> tuple[date, ...]:
+    """Every week a card dealt now could be in: this one to the one the
+    horizon ends in."""
+
+    first, last = week_of(now), week_of(now + DECK_HORIZON)
+    return tuple(
+        first + _A_WEEK * index for index in range((last - first).days // 7 + 1)
+    )
+
+
+def week_window(weeks: Sequence[date]) -> tuple[Instant, Instant]:
+    """From the first of these weeks' first court hour to the one after the
+    last — every game in them, since no court hour opens before the grid does."""
+
+    invariant(bool(weeks), "the window of no weeks")
+    return hour_start(weeks[0], FIRST_HOUR), hour_start(weeks[-1] + _A_WEEK, FIRST_HOUR)
+
+
+def capped_weeks(
+    weeks: Sequence[date], booked: Iterable[Instant], *, games_per_week: int
+) -> tuple[CappedWeek, ...]:
+    counts = {week: 0 for week in weeks}
+    for start in booked:
+        week = week_of(start)
+        if week in counts:
+            counts[week] += 1
+    return tuple(
+        CappedWeek(starts_on=week, booked=count)
+        for week, count in counts.items()
+        if count >= games_per_week
+    )
+
+
+def hour_taken(start: Instant, booked: Iterable[Instant]) -> bool:
+    """Whether the hour from ``start`` overlaps a game the player already has."""
+
+    return any(abs(start - game) < _A_GAME for game in booked)
+
+
+def cut_off_passed(start: Instant, *, cut_off_hours: int, now: Instant) -> bool:
+    """Whether the club's free cancellation has already ended for a game at
+    ``start`` — *no free cancellation* on the card (§5.4). Elapsed hours."""
+
+    return now >= shifted(start, hours(-cut_off_hours))

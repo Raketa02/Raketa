@@ -15,19 +15,30 @@ from app.api.dependencies import (
     DbSession,
     DomainEventStoreDep,
     EventPublisherDep,
+    SettingsDep,
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
+    build_booked_games,
+    build_games_and_money_repository,
     build_proposal_club_names,
     build_proposal_directory,
     build_proposal_guards,
     build_proposal_repository,
+    build_read_group_deck,
 )
 from app.modules.proposals.application.answers import SayNo, SayYes, WithdrawYes
+from app.modules.proposals.application.games_and_money import (
+    ReadGamesAndMoney,
+    SetGamesAndMoney,
+)
+from app.modules.proposals.application.group_deck import ReadGroupDeck
 from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
 from app.modules.proposals.domain.ports import (
+    BookedGames,
     ClubNames,
+    GamesAndMoneyRepository,
     ProposalDirectory,
     ProposalRepository,
 )
@@ -100,3 +111,50 @@ def get_read_live_yeses(
 
 
 ReadLiveYesesDep = Annotated[ReadLiveYeses, Depends(get_read_live_yeses)]
+
+
+def get_games_and_money_repository(
+    event_store: DomainEventStoreDep, events: EventPublisherDep
+) -> GamesAndMoneyRepository:
+    return build_games_and_money_repository(event_store=event_store, events=events)
+
+
+GamesAndMoneyRepositoryDep = Annotated[
+    GamesAndMoneyRepository, Depends(get_games_and_money_repository)
+]
+
+
+def get_read_games_and_money(
+    settings: GamesAndMoneyRepositoryDep,
+) -> ReadGamesAndMoney:
+    return ReadGamesAndMoney(settings=settings)
+
+
+ReadGamesAndMoneyDep = Annotated[ReadGamesAndMoney, Depends(get_read_games_and_money)]
+
+
+def get_set_games_and_money(
+    settings: GamesAndMoneyRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> SetGamesAndMoney:
+    return SetGamesAndMoney(settings=settings, uow=uow, clock=clock)
+
+
+SetGamesAndMoneyDep = Annotated[SetGamesAndMoney, Depends(get_set_games_and_money)]
+
+
+def get_booked_games() -> BookedGames:
+    """The games a player has booked — none until bookings exist (#541); a test
+    stands in for them by overriding this."""
+    return build_booked_games()
+
+
+BookedGamesDep = Annotated[BookedGames, Depends(get_booked_games)]
+
+
+def get_read_group_deck(
+    db: DbSession, settings: SettingsDep, clock: ClockDep, booked: BookedGamesDep
+) -> ReadGroupDeck:
+    return build_read_group_deck(db, settings=settings, clock=clock, booked=booked)
+
+
+ReadGroupDeckDep = Annotated[ReadGroupDeck, Depends(get_read_group_deck)]

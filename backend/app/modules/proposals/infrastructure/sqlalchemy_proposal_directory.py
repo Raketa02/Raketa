@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from typing import final
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, and_, func, select
+from sqlalchemy import ColumnElement, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engines.matchfit.core import SearchMode
@@ -91,6 +91,34 @@ class SqlAlchemyProposalDirectory:
             await self._session.scalars(
                 select(ProposalORM.id)
                 .where(ProposalORM.pool_id == pool_id, _filling(now))
+                .order_by(ProposalORM.start, ProposalORM.id)
+            )
+        ).all()
+
+    async def dealt_to(
+        self, player_id: UUID, *, pool_id: UUID, sport: Sport, now: Instant
+    ) -> Sequence[UUID]:
+        return (
+            await self._session.scalars(
+                select(ProposalORM.id)
+                .join(
+                    ProposalPersonORM,
+                    and_(
+                        ProposalPersonORM.proposal_id == ProposalORM.id,
+                        ProposalPersonORM.player_id == player_id,
+                    ),
+                )
+                .where(
+                    ProposalORM.pool_id == pool_id,
+                    ProposalORM.sport == sport.value,
+                    _filling(now),
+                    # Dealt a version — a poster is In without one.
+                    ProposalPersonORM.version.is_not(None),
+                    or_(
+                        ProposalPersonORM.answer.is_(None),
+                        ProposalPersonORM.answer == "WITHDRAWN",
+                    ),
+                )
                 .order_by(ProposalORM.start, ProposalORM.id)
             )
         ).all()

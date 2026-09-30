@@ -229,7 +229,7 @@ from app.seeds.photos import (
 from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
 from app.seeds.plans import SeededPlans, costs as plan_costs, write_the_plans
 from app.seeds.rooms import SeededRooms, open_the_rooms
-from app.seeds.screens import assert_the_screens
+from app.seeds.screens import assert_the_group_deck, assert_the_screens
 from app.seeds.sportsmanship import SeededOpinions, write_what_players_said
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
@@ -1402,6 +1402,12 @@ async def run(settings: Settings | None = None) -> SeedReport:
             pairs=pairs,
             photographs=photographs,
             photos=photos,
+        )
+        # Beside the battery: the group deck is this run's proposals layer's
+        # claim, and the cohort's acceptance test builds no proposals.
+        screens = (
+            *screens,
+            await assert_the_group_deck(session_factory, settings=settings, now=now),
         )
         return SeedReport(
             accounts=accounts,

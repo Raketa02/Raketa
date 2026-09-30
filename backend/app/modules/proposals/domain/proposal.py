@@ -215,6 +215,12 @@ class Proposal:
         return SPORT_SPECS[self.sport].players
 
     @property
+    def seats_per_side(self) -> int:
+        """Two in doubles, one in singles."""
+
+        return self.seats // 2
+
+    @property
     def open_seats(self) -> int:
         """Seats nobody is In on yet. Nought is a game every seat said yes to,
         which the fill turns into a booking (#541)."""

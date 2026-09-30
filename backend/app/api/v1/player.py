@@ -69,6 +69,7 @@ from app.modules.player_record.presentation.routes import (
 )
 from app.modules.proposals.presentation.routes import (
     players_router as proposal_players_router,
+    pools_router,
 )
 from app.modules.proposals.presentation.routes import router as proposals_router
 from app.modules.rating.presentation.routes import ratings_router
@@ -113,3 +114,4 @@ player_api_router.include_router(administrator_groups_router)
 player_api_router.include_router(payments_router)
 player_api_router.include_router(proposals_router)
 player_api_router.include_router(proposal_players_router)
+player_api_router.include_router(pools_router)

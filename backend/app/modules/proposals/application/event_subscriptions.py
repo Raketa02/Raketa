@@ -3,11 +3,13 @@ from __future__ import annotations
 from app.application.events import EventCatalog, EventDispatcher
 from app.modules.groups.domain.events import GroupDeleted, GroupLeft
 from app.modules.proposals.application.handlers import (
+    LogGamesAndMoneySet,
     LogProposalEvent,
     WithdrawYesesOnLeaving,
 )
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.domain.events import (
+    GamesAndMoneySet,
     NoSaid,
     ProposalExpired,
     ProposalMade,
@@ -25,6 +27,7 @@ _EVENTS = (
     (YesWithdrawn, "proposals.yes_withdrawn"),
     (ProposalWithdrawn, "proposals.proposal_withdrawn"),
     (ProposalExpired, "proposals.proposal_expired"),
+    (GamesAndMoneySet, "proposals.games_and_money_set"),
 )
 
 
@@ -41,6 +44,7 @@ def subscribe_proposal_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(YesWithdrawn, LogProposalEvent())
     dispatcher.subscribe(ProposalWithdrawn, LogProposalEvent())
     dispatcher.subscribe(ProposalExpired, LogProposalEvent())
+    dispatcher.subscribe(GamesAndMoneySet, LogGamesAndMoneySet())
 
 
 def subscribe_the_pool_leaver(
