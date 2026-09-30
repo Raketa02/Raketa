@@ -13,8 +13,8 @@ import { findAGame } from './findAGame';
 
 const SEARCHES = '/api/v1/searches';
 
-const TUESDAY_EVENING = { day: 2, part: 'evening' } as const;
-const SATURDAY_MORNING = { day: 6, part: 'morning' } as const;
+const TUESDAY_EVENING = { day: 2, hour: 19 } as const;
+const SATURDAY_MORNING = { day: 6, hour: 9 } as const;
 
 const SHORTLIST: Wire['ShortlistResponse'] = {
   search: {
@@ -36,7 +36,7 @@ const SHORTLIST: Wire['ShortlistResponse'] = {
     radius_clamp: false,
     sorts_available: ['BEST_FIT'],
     rung_offers: null,
-    prompts: [{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] }],
+    prompts: [{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, hour: 19 }] }],
   },
   candidates: [],
 };
@@ -154,7 +154,7 @@ describe('the week', () => {
     expect(request?.body).toEqual({
       sport: 'PADEL',
       mode: 'FOR_FUN',
-      availability_override: [{ day: 2, part: 'EVENING' }],
+      availability_override: [{ day: 2, hour: 19 }],
     });
   });
 

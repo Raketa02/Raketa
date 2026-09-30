@@ -530,10 +530,11 @@ const radius = {
   daySquare: 10,
   seg: 10,
   segThumb: 8,
-  /** The availability grid's cell. A fresh token beside the dead `daySquare`: the slot
-   *  squares of the deleted 6.7 are NOT being restored, and a cell that borrowed their
-   *  radius would be the first step back toward a booking grid. */
-  availabilityCell: 10,
+  /** The week grid's cell. A fresh token beside the dead `daySquare`: the slot squares of the
+   *  deleted 6.7 are NOT being restored, and a cell that borrowed their radius would be the
+   *  first step back toward a booking grid. 6 on a 20pt hour cell — mock 36's corner, which
+   *  at 10 would round the cell into a pill. */
+  availabilityCell: 6,
   /** The door row's lead square. Between `btn` and `segThumb`: a 28pt square at 10 reads as a
    *  small button, which it is not — the row is the control and the square is its glyph's
    *  ground — and at 8 reads as a chip's thumb. Named for the object, as `availabilityCell` is. */
@@ -678,23 +679,30 @@ const size = {
     currentRadius: 3,
     gap: 3,
   },
-  /** The availability grid — 6.8. Seven rows of three, days DOWN and parts of the day
-   *  ACROSS, which is a touch decision and not a taste one: seven columns want
-   *  7 x 44 = 308pt against the 290pt of content the narrowest phone has, and no
-   *  hit-slop closes that on any phone in the population. Laid out this way the cell reaches
-   *  the minimum by its own geometry — the first control in the app that does — so there is
-   *  no `hit` entry here, and `cardPadding` is subtracted before the division because the
-   *  grid now sits inside a card.
+  /** The week grid — 6.8. Seven days ACROSS and sixteen hours DOWN, as mock 36 draws it:
+   *  16 rows at the 44pt minimum would be 704pt of grid, taller than any page, so the cell is
+   *  20pt tall and a seventh of the width, the whole week fits a phone, and a press and drag
+   *  paints a run instead of each hour being hit alone. `hit.availabilityCell` grants each
+   *  cell half the gap on every side — the neighbour rule's most — so no point between two
+   *  cells presses nothing. 6.5 records the departure from the minimum.
    *
-   *  `labelMaxRatio` caps the day-label column so Dynamic Type grows the labels without
-   *  starving the cells: at the cap the three still share 59,5pt each on that phone.
-   *  `footnoteMinHeight` is two lines of `type.rlLabel`, always laid out, so ticking the
-   *  first cell never moves the grid out from under the finger; the hairline above it is
-   *  drawn only when there are words to separate. */
+   *  `paintIntent` is how far a finger travels on the cells before the touch is a paint rather
+   *  than a tap. Below the scroll view's own slop, so a drag down a column is claimed by the
+   *  grid before the page can take it as a scroll; and a tap that drifts that far paints only
+   *  the cell it is on, which is the same as tapping it.
+   *
+   *  `labelMaxRatio` caps the hour-label column so Dynamic Type grows the labels without
+   *  starving the cells. `footnoteMinHeight` is two lines of `type.rlLabel`, always laid out,
+   *  so ticking the first hour never moves the grid out from under the finger; the hairline
+   *  above it is drawn only when there are words to separate. `tick` and `tickStroke` are the
+   *  12 x 12 mark family's box — the plus a search adds and the diff's plus and dash — which
+   *  the tick box reads from here too. */
   availability: {
-    cellHeight: 44, // = minTouch, by geometry rather than by slop
-    columns: 3, // the three parts of the day, across
-    gap: 6,
+    cellHeight: 20,
+    columns: 7, // the seven days, across
+    rows: 16, // the sixteen hours, 07:00 to 22:00, down
+    gap: 4,
+    paintIntent: 4,
     labelGutter: 9,
     labelMaxRatio: 0.25,
     cardPadding: space.md,
@@ -1137,6 +1145,10 @@ const hit = {
    *  targets, which is the neighbour rule read vertically. No horizontal slop: the row is
    *  already the card's width. */
   peopleRow: { top: 3, bottom: 3 },
+  /** The week grid's hour cell (6.8): half the 4pt gap on every side, which is all the
+   *  neighbour rule allows and exactly enough that the reachable areas tile the grid with no
+   *  dead point between two cells. It does not reach 44 — see `size.availability`. */
+  availabilityCell: { top: 2, bottom: 2, left: 2, right: 2 },
 } as const;
 
 // ---------------------------------------------------------------------------

@@ -21,8 +21,8 @@ import {
   type PlayOrigin,
 } from './lineup';
 
-const TUESDAY_EVENING = { day: 2, part: 'evening' } as const;
-const SATURDAY_MORNING = { day: 6, part: 'morning' } as const;
+const TUESDAY_EVENING = { day: 2, hour: 19 } as const;
+const SATURDAY_MORNING = { day: 6, hour: 9 } as const;
 
 const ORIGIN: PlayOrigin = {
   sport: 'padel',

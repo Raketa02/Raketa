@@ -376,7 +376,7 @@ profile editor that later edits the same values.
   unknown sport. _Avoid_: "config" and "settings"; neither is about this player, and both
   invite something per-player being added to it.
 - **Profile surface** — the **one read** this app holds about the player's declared facts:
-  the availability grid, the Search radius and the per-sport Play intent, in one round trip
+  the weekly hours, the Search radius and the per-sport Play intent, in one round trip
   across the two aggregates that own them — and, since the route **grew** the day **You** was
   built ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
   tags, the photos with their verdicts and the intro, read on #471, and the standing

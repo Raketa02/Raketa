@@ -127,7 +127,7 @@ export function deckTiles(facts: DeckTileFacts): readonly DeckTile[] {
   return [
     tile('balance', facts.balancePct, formatPercent),
     tile('reliability', facts.playerScore, String),
-    tile('overlap', facts.sharedSlots, (slots) => counted(slots, 'slot', 'slots')),
+    tile('overlap', facts.sharedSlots, (hours) => counted(hours, 'hour', 'hours')),
   ];
 }
 

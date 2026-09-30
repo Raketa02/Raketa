@@ -172,8 +172,8 @@ import {
   courtSeatCount,
   theme,
 } from '@/shared/ui';
-import { dayLabel, dayPartHead } from '@/shared/vocabulary/availabilityPresentation';
-import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
+import { dayLabel, hourLabel } from '@/shared/vocabulary/availabilityPresentation';
+import { HOURS, WEEKDAYS, weeklyHourAt } from '@/shared/vocabulary/week';
 
 import { findAGameStanding } from '../domain/findAGame';
 import { alreadyAsked } from '../domain/raisedPrompt';
@@ -226,11 +226,12 @@ export function FindAGameScreen() {
 
   const week = usePlaySession((state) => state.week);
   // `addedCell` here rather than the store's own name: this screen asks *is this the cell* of
-  // each of twenty-one squares, and the answer it hands the grid is a boolean of the same name.
+  // each of the week's cells, and the answer it hands the grid is a boolean of the same name.
   const addedCell = usePlaySession((state) => state.addedForThisSearch);
   const clearAddedForThisSearch = usePlaySession((state) => state.clearAddedForThisSearch);
   const enter = usePlaySession((state) => state.enter);
   const toggleWeekCell = usePlaySession((state) => state.toggleWeekCell);
+  const paintWeekCells = usePlaySession((state) => state.paintWeekCells);
   // The visit's own memory of what has been asked, shared with the builder, the deck and the
   // pool: `KEEP_THESE_TIMES` is about the working week, and ⚡ two screens on mints a second
   // search over the same one (#287).
@@ -619,7 +620,7 @@ export function FindAGameScreen() {
                 <View style={s.section} ref={weekSection}>
                   <Text style={s.heading}>{WEEK_HEADING}</Text>
                   <AvailabilityGrid
-                    columnHeads={DAY_PARTS.map(dayPartHead)}
+                    columnHeads={WEEKDAYS.map(dayLabel)}
                     // Two facts, one sentence, decided in the copy deck: the marker is a comparison
                     // against the profile's own week made on every tap — not a flag a toggle sets,
                     // which is what makes a slot ticked and unticked stop reporting itself as
@@ -630,18 +631,18 @@ export function FindAGameScreen() {
                       improvised,
                       addedForThisSearch: addedCell !== undefined,
                     })}
-                    rows={WEEKDAYS.map((day) => ({
-                      key: String(day),
-                      label: dayLabel(day),
-                      cells: DAY_PARTS.map((part) => {
-                        const cell = { day, part };
+                    rows={HOURS.map((hour) => ({
+                      key: String(hour),
+                      label: hourLabel(hour),
+                      cells: WEEKDAYS.map((day) => {
+                        const cell = { day, hour };
                         // A cell the player never ticked, standing for this search alone. Pressing
                         // it is an ordinary tick — and the store drops the mark on that press,
                         // because from then on the cell is the player's own ask.
                         const added = addedCell !== undefined && sameCell(addedCell, cell);
 
                         return {
-                          key: `${day}-${part}`,
+                          key: `${day}-${hour}`,
                           selected: isTicked(week, cell),
                           addedForThisSearch: added,
                           onPress: () => toggleWeekCell(cell),
@@ -649,6 +650,13 @@ export function FindAGameScreen() {
                         };
                       }),
                     }))}
+                    // A drag paints a run onto the working copy, as a tap toggles one hour.
+                    onPaint={(run, on) =>
+                      paintWeekCells(
+                        run.flatMap(({ row, column }) => weeklyHourAt(row, column) ?? []),
+                        on,
+                      )
+                    }
                   />
                 </View>
               )}

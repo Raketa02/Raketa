@@ -65,7 +65,7 @@ const TERMS: readonly ScoredTerm[] = [
   scored('AVAILABILITY_OVERLAP', {
     kind: 'availability_overlap',
     sharedCount: 9,
-    nextSlot: { day: 2, part: 'evening' },
+    nextSlot: { day: 2, hour: 19 },
   }),
   scored('DISTANCE', { kind: 'distance', km: 2, areaCode: HERE, outsideTheirRadius: false }),
   scored('INTENT_ALIGNMENT', {
@@ -177,7 +177,7 @@ describe('what the deck card draws, in the mock’s order', () => {
       'Reliability',
       '88',
       'Overlap',
-      '9 slots',
+      '9 hours',
     ];
     const seen = order.map((line) => texts.indexOf(line));
 
@@ -191,7 +191,7 @@ describe('what the deck card draws, in the mock’s order', () => {
 
     expect(screen.queryByText('Shared tags')).toBeNull();
     expect(screen.queryByText(/Drag the card|long-press/)).toBeNull();
-    expect(textsInOrder().at(-1)).toBe('9 slots');
+    expect(textsInOrder().at(-1)).toBe('9 hours');
   });
 
   it('prints the level in the existing 40pt figure and the name in the card’s own role', () => {
@@ -298,10 +298,10 @@ describe('the three tiles', () => {
     expect(screen.getAllByText(NO_VALUE)).toHaveLength(2);
     expect(screen.getByText('Balance')).toBeTruthy();
     expect(screen.getByText('Reliability')).toBeTruthy();
-    expect(screen.getByText('9 slots')).toBeTruthy();
+    expect(screen.getByText('9 hours')).toBeTruthy();
     // The dashes say nothing to a listener; the one figure does.
     expect(spokenBody()).not.toContain('Balance');
-    expect(spokenBody()).toContain('Overlap 9 slots');
+    expect(spokenBody()).toContain('Overlap 9 hours');
   });
 
   it('speaks the tiles that have a figure', () => {
@@ -309,7 +309,7 @@ describe('the three tiles', () => {
 
     expect(spokenBody()).toContain('Balance 72%');
     expect(spokenBody()).toContain('Reliability 88');
-    expect(spokenBody()).toContain('Overlap 9 slots');
+    expect(spokenBody()).toContain('Overlap 9 hours');
     expect(spokenBody()).not.toContain('Shared tags');
   });
 });

@@ -30,10 +30,10 @@
  *
  * ## What is here, and what is `shared/`
  *
- * A cell's identity and the press over it are **`shared/vocabulary/week`**, beside the days
- * and the parts of the day that were already there. `player_profile` toggles these
- * twenty-one cells for the availability step and Play toggles them for the week it searches
- * on, and the second was written identically to the first — which is that folder's own test,
+ * A cell's identity, the tap over it and the drag across a run are
+ * **`shared/vocabulary/week`**, beside the days and the hours that were already there.
+ * `player_profile` toggles these cells for the availability step and Play toggles them for the
+ * week it searches on, and the second was written identically to the first — which is that folder's own test,
  * *"whether a second feature would have written the identical table"*, and the cross-feature
  * ownership `docs/architecture.md`'s fourth non-negotiable asks to see proven before a move.
  *
@@ -43,7 +43,7 @@
  * judged by.
  */
 
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 /**
  * The week Play is searching on: the cells that are ticked, in the order they were ticked.
@@ -51,19 +51,19 @@ import type { WeekCell } from '@/shared/vocabulary/week';
  * The same shape the profile's own week has, and deliberately not a distinct type — the two
  * are compared for equality on every tap, and a wrapper would mean unwrapping to do it.
  */
-export type WorkingWeek = readonly WeekCell[];
+export type WorkingWeek = readonly WeeklyHour[];
 
 /**
  * One cell as a single comparable value.
  *
  * The comparison below is a **set** comparison, and doing it by scanning lists is what makes a
- * duplicated cell invisible: `[Tue evening, Tue evening]` and `[Tue evening, Sat morning]` are
+ * duplicated cell invisible: `[Tue 19:00, Tue 19:00]` and `[Tue 19:00, Sat 09:00]` are
  * the same length, and every member of the first is in the second. Nothing in this app's own
  * toggle can produce a repeat, but a week arriving off the wire is not this app's own, and a
  * comparison the origin of every line-up rests on should not depend on that.
  */
-function cellKey(cell: WeekCell): string {
-  return `${cell.day}-${cell.part}`;
+function cellKey(cell: WeeklyHour): string {
+  return `${cell.day}-${cell.hour}`;
 }
 
 function cellsOf(week: WorkingWeek): ReadonlySet<string> {
@@ -77,7 +77,7 @@ function cellsOf(week: WorkingWeek): ReadonlySet<string> {
  * `sameWeek` below asks whether two weeks are the same week; this answers the same question in
  * the shape a cache key needs, which is a value that can be compared without holding the other
  * week. Sorted for exactly that reason: ticks are kept in **press order** and a week is a set,
- * so `[Tue evening, Sat morning]` and `[Sat morning, Tue evening]` have to hash alike or a
+ * so `[Tue 19:00, Sat 09:00]` and `[Sat 09:00, Tue 19:00]` have to hash alike or a
  * player who ticked a cell and unticked it would be asking a question the cache has already
  * answered and cannot recognise.
  */
@@ -89,7 +89,7 @@ export function weekIdentity(week: WorkingWeek): readonly string[] {
  * Whether two weeks tick the same cells — **as sets**, because order is not a fact about a
  * week.
  *
- * This is the whole of AC-27. A player who ticks Tuesday evening and unticks it has a list in
+ * This is the whole of AC-27. A player who ticks Tuesday 19:00 and unticks it has a list in
  * a different order and a week that is the same week, and anything comparing lists positionally
  * would report it as changed forever.
  */
@@ -104,7 +104,8 @@ export function sameWeek(one: WorkingWeek, other: WorkingWeek): boolean {
  * The week the player is searching on, at the moment they enter Play.
  *
  * A copy rather than the profile's own array, so that a tap on the grid cannot be a tap on
- * the profile: the two are the same twenty-one cells and nothing else about them is shared.
+ * the profile: the two are the same hundred and twelve cells and nothing else about them is
+ * shared.
  */
 export function seedWorkingWeek(profileWeek: WorkingWeek): WorkingWeek {
   return [...profileWeek];
@@ -155,4 +156,4 @@ export function sentWeekForOrigin(
 }
 
 /** Re-exported so a Play screen reads its whole week vocabulary from one place. */
-export { isTicked, sameCell, toggleCell } from '@/shared/vocabulary/week';
+export { isTicked, paintCells, sameCell, toggleCell } from '@/shared/vocabulary/week';

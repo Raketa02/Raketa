@@ -726,19 +726,19 @@ Everything else follows. A value outside the grid is a bug.
 
 ## 4.2 Radius
 
-| Radius              | Applied to                                         |
-| ------------------- | -------------------------------------------------- |
-| `pill` (height ÷ 2) | The chip — the only true pill                      |
-| 22 (top corners)    | Bottom sheet                                       |
-| 18                  | The deck card — **not a card**, see below          |
-| 15                  | Dark card                                          |
-| 13                  | Card, popover                                      |
-| 12                  | Toast                                              |
-| 10                  | Button, note, segmented control, availability cell |
-| 9                   | Info button, the court ([7.12](#712-the-court))    |
-| 8                   | Sport dot backing, the balance bar                 |
-| 7                   | The fit pill ([7.10](#710-the-fit-pill))           |
-| 6                   | Tag, sport dot                                     |
+| Radius              | Applied to                                      |
+| ------------------- | ----------------------------------------------- |
+| `pill` (height ÷ 2) | The chip — the only true pill                   |
+| 22 (top corners)    | Bottom sheet                                    |
+| 18                  | The deck card — **not a card**, see below       |
+| 15                  | Dark card                                       |
+| 13                  | Card, popover                                   |
+| 12                  | Toast                                           |
+| 10                  | Button, note, segmented control                 |
+| 9                   | Info button, the court ([7.12](#712-the-court)) |
+| 8                   | Sport dot backing, the balance bar              |
+| 7                   | The fit pill ([7.10](#710-the-fit-pill))        |
+| 6                   | Tag, sport dot, availability cell               |
 
 **The pattern: the bigger the surface, the rounder.** A dark card is 15 where a light one
 is 13 — the darker fill makes the corner read tighter at the same radius.
@@ -1221,7 +1221,8 @@ is right beside it. The dot stays free to say which sport, on a card that says s
 
 ## 6.5 Touch targets
 
-**Nothing tappable may have a reachable area smaller than 44 × 44pt.** The prototype's
+**Nothing tappable may have a reachable area smaller than 44 × 44pt** — with one recorded
+exception, [6.8](#68-the-availability-grid)'s hour cell, below. The prototype's
 controls are visually smaller than that, which is correct — the _visual_ stays, the
 _target_ grows:
 
@@ -1237,12 +1238,13 @@ _target_ grows:
 Horizontal slop is bounded by the neighbour: in a `sqrow` with a 6pt gap, horizontal slop
 is at most 3 per side or targets overlap and the wrong square is selected.
 
-Onboarding's second part adds four targets, and three of them are built to the minimum
-rather than granted it:
+Onboarding's second part adds four targets. Two are built to the minimum rather than granted
+it, one is granted it, and **the hour cell is the one target in this system under the minimum on
+purpose**:
 
 | Control                                                     | Visual                      | `hitSlop`                                        |
 | ----------------------------------------------------------- | --------------------------- | ------------------------------------------------ |
-| Availability cell ([6.8](#68-the-availability-grid))        | 44 tall, ≥ 59,5 wide        | none — the geometry _is_ the target              |
+| Availability cell ([6.8](#68-the-availability-grid))        | 20 tall, ≥ 23 wide          | `{ top: 2, bottom: 2, left: 2, right: 2 }`       |
 | Photo tile ([6.9](#69-the-photo-tile-and-picker))           | ≥ 90 × 120                  | none                                             |
 | Photo remove control ([6.9](#69-the-photo-tile-and-picker)) | 28                          | `{ top: 8, bottom: 8, left: 8, right: 8 }`       |
 | Radius slider row ([6.10](#610-the-radius-slider))          | 44 tall, full content width | none — the **row** is the surface, not the thumb |
@@ -1272,10 +1274,15 @@ a **grown** box's padding in any case — 13pt above and below a value 16 tall, 
 finger would otherwise find nothing at all. Horizontal slop would have been refused here for the
 neighbour rule: the reveal control sits inside the same box.
 
-**The availability cell lost 6pt of width to its card and still clears the minimum**, at
-59,5 rather than 65,5 ([6.8](#68-the-availability-grid)). The figure is in this table rather
-than only in the test because it is the one target here whose margin is now small enough that
-a change elsewhere — the card's padding, the gap, the label cap — could spend it.
+**The hour cell is reachable 24pt high and at least 27pt wide, and no more** (2026-09-30,
+[6.8](#68-the-availability-grid)). Sixteen hours at 44pt are taller than any page, so the week of
+hours is drawn as mock 36 draws it and the minimum is met by the gesture rather than the cell: a
+press and drag paints a run, so a week is drawn by a finger rather than hit hour by hour. Its
+slop is half the 4pt gap on every side — the neighbour rule's most, read in both axes — which
+makes the reachable areas tile the grid exactly: no dead point between two cells and no point
+that belongs to both. It replaced a 44 × 59,5 cell that needed no slop at all, and the figures
+are here as well as in `profileControlGeometry.test.ts` because they are the ones a change to the
+card, the gap or the label cap would spend.
 
 **A `hitSlop` around the box would have been the wrong answer here**, not merely a second
 one. Growing a 20pt square to 44 leaves the sentence beside it inert, so the target stops
@@ -1370,60 +1377,68 @@ Feedback is immediate — use `Pressable`'s `pressed` state, not a 120ms animati
 
 ## 6.8 The availability grid
 
-The player's ordinary week, as seven days by three parts of the day. One cell is one
-standing preference, and the grid is the only place time preference is expressed anywhere
-in this product.
+The player's ordinary week — their **weekly hours** — as seven days by sixteen one-hour cells,
+07:00 to 23:00. One cell is one standing preference, and the grid is the only place time
+preference is expressed anywhere in this product. **Hours since 2026-09-30**
+([#551](https://github.com/Raketa02/Raketa/issues/551),
+[ADR-0189](../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, mock 36):
+the week was seven days by three parts of the day until a court began to be booked by the hour
+([Part 16](#part-16--amendments-after-locking) records the change).
 
-**6.7 is not being reused, and this is not 6.7 returning under a new number.** That
-section held the slot squares — day / time / hour / range squares and their four-state
-vocabulary — and it went with the booking grid in the 2026-08-25 reset
-([Part 17](#part-17--what-the-reset-removed)). A slot square was _one bookable hour on one
-court_, and it needed four states because a court is free, held, taken or yours. A cell
-here has **two** states, names no court and no hour, and nothing can be booked from it. (The
-mark below is a fact drawn on one of those two, not a third — it presses like every other
-cell.)
-Section numbers in this document never move, so this is 6.8 and 6.7 stays empty.
+**6.7 is not being reused, and this is not 6.7 returning under a new number.** That section held
+the slot squares of the booking grid the 2026-08-25 reset removed
+([Part 17](#part-17--what-the-reset-removed)): _one bookable hour on one court_, four states
+deep because a court is free, held, taken or yours. A cell here names an hour of an ordinary
+week and no court, has **two** states, and nothing can be booked from it. Section numbers in
+this document never move, so this is 6.8 and 6.7 stays empty.
 
 ```
-seven rows of three — days DOWN the page, parts of the day ACROSS
-MONDAY FIRST, and the seven run Monday to Sunday
+seven days ACROSS, sixteen hours DOWN — mock 36
+MONDAY FIRST along the top, 07:00 FIRST down the side
 the whole thing on a card, with the footnote inside it
 
 card         surface, radius.card, 1pt line, padding 12
-column head  flab / ink, once, above the grid          MORNING · AFTERNOON · EVENING
-day label    flab / ink, content-sized, capped at 0.25 x the card's inside, labelGutter 9
-cell         flex 1, height 44, radius.availabilityCell, gap 6, NO border
+column head  flab / muted, once, above the grid          MON · TUE · … · SUN
+hour label   num.tiny / muted, content-sized, capped at 0.25 x the card's inside, labelGutter 9
+cell         flex 1, height 20, radius.availabilityCell (6), gap 4, NO border
 footnote     rlLabel / muted inside the card, above it a 1pt line hairline, minHeight 32
 ```
 
-**Monday first**, because that is how the week reads here — and the order is the contract's
-too: `AvailabilitySlotResource` numbers days 1–7 as ISO weekdays and says the grid is
-Monday-first in as many words. The three parts of the day run in the order `DayPart`
-declares them, so nothing on this side sorts.
+**Monday first and 07:00 first**, because that is how the week reads here — and the orders are
+the contract's too: `WeeklyHourResource` numbers days 1–7 as ISO weekdays, Monday-first, and an
+hour by the wall-clock hour its cell starts at, 7 to 22. Nothing on this side sorts. The hour
+labels are clock figures read down a column, so they are mono and tabular, `07:00` padded to
+line up with `22:00`.
 
-**A cell is the only thing on the grid that is pressable.** Not a day label, not a column
-head, not the row or the column they name, and **there is no bulk selection at all** — no
-row tap, no column tap, no _weekends_ shortcut. A shortcut is a claim about what players
-want that this product has no evidence for, and describing an irregular week is the whole
-reason the grid is 21 independent answers rather than three.
+**Days are columns, and the cell is under the touch minimum on purpose.** The three-part week
+turned days into rows so a cell could reach 44pt by its own geometry. Sixteen hours cannot: at
+the minimum they are 704pt of grid plus gaps, taller than the shortest phone before a header or
+a button has taken anything, and a grid that scrolled under the finger painting it would paint
+the wrong hours. So the week is drawn as mock 36 draws it, fits a phone whole, and meets the
+minimum another way — **a press and drag paints a run**, and each cell is granted half the gap
+on every side, the neighbour rule's most ([6.5](#65-touch-targets)). On the narrowest phone, with
+the hour labels at their cap, a cell is still more than 23pt wide and 27pt reachable;
+`profileControlGeometry.test.ts` pins that, the tiling of the reachable areas, and the reason
+sixteen rows at 44 cannot be drawn.
 
-**Days are rows because seven columns cannot be reached.** Seven cells at the 44pt minimum
-([6.5](#65-touch-targets)) want 308pt; the narrowest phone has 290pt of content
-([Part 0.2](#02-what-replaces-the-frame)), and no `hitSlop` closes a deficit against
-neighbours 6pt apart. **The widest phone in the population does not close it either**, so
-this is a property of seven columns rather than a device to design around. Turned this way
-each cell is 44 tall by its own geometry and, with the card's padding taken off and the label
-column at its cap, **59,5pt** wide on that same phone — the first control in the app that
-reaches the touch minimum in **both** axes without being granted anything.
-`profileControlGeometry.test.ts` pins that division, because it is the kind of arithmetic
-that holds on the phone an agent tests on and fails on the one a player owns.
+The grid does not scroll. The screen does ([10.1](#101-screen-structure)) — from the hour labels,
+the heads and the card's edge, which are not part of the paint field.
 
-**The card takes 24pt off that division and the margin is what is left.** It was 65,5pt of
-cell before the grid sat on a surface of its own; it is 59,5 now, still 15,5 clear of the
-minimum, and the test states the margin rather than only the bound so the next person adding
-padding can see the room they are spending.
+### A tap and a drag
 
-The grid does not scroll. The screen does ([10.1](#101-screen-structure)).
+**A tap on a cell toggles that hour**, in both directions, always. **A finger that moves
+`paintIntent` (4pt) on the cells is a paint**: the cell it began on decides what the drag does —
+it **ticks**, or it **clears** if that cell was already ticked — and every cell the finger then
+crosses gets the same, including the ones a fast finger jumped between two samples. Turning back
+over painted cells leaves them painted. The pan is `react-native-gesture-handler`'s, as the
+radar's is, because the grid sits in a page that scrolls: 4pt is under both platforms' scroll
+slop, so the grid claims a drag down a column before the page can take it as a scroll, and its
+claiming cancels the press the cell under the finger had begun. A tap that drifts far enough to
+be claimed paints only the cell it is on — which is what the tap would have done.
+
+**Still no bulk selection.** Not a day head, not an hour label, not a row or a column, and no
+_weekends_ shortcut: a shortcut is a claim about what players want that this product has no
+evidence for. A drag is a player drawing the week they mean, one hour at a time.
 
 ### Cell states
 
@@ -1434,114 +1449,87 @@ The grid does not scroll. The screen does ([10.1](#101-screen-structure)).
 | **pressed**    | —        | —      | `opacity: .7`, over either of those            |
 
 **There is no disabled cell and no fourth state.** Every cell toggles, always, in both
-directions: the grid has no floor, no ceiling, and no rule that could close one off. A
-greyed cell would be the screen claiming a constraint the domain does not have.
+directions: the grid has no floor, no ceiling, and no rule that could close one off. A greyed
+cell would be the screen claiming a constraint the domain does not have.
 
-**The selected state is a fill _and_ a tick, and the tick is the half that matters.** The
-fill goes `paper2` → `mint`: 3,39:1, and a relative luminance of 0,824 against 0,208, which
-is what [Part 13](#part-13--accessibility) asks of a non-text graphical object and what a
-reader who sees no hue at all still reads as a dark square in a field of pale ones. But a cell
-is a bare rectangle with nothing else in it, and 21 rectangles differing only in lightness is
-a texture. The tick is the shape Part 13 asks for, and it is what makes a ticked week readable
-as a pattern rather than as a stain. Drawn in `react-native-svg` with a round cap and join: at
-2pt, butt caps make a tick read as two bars meeting at a corner.
+**The selected state is a fill _and_ a tick — although mock 36 draws the fill alone.** `paper2`
+→ `mint` is 3,39:1, a relative luminance of 0,824 against 0,208, which is what
+[Part 13](#part-13--accessibility) asks of a non-text graphical object. But every state carries
+a word or a shape, never colour alone, and a lightness is still a colour; the 12 × 12 tick fits
+the 20pt cell with room to spare. Drawn in `react-native-svg` with a round cap and join: at 2pt,
+butt caps make a tick read as two bars meeting at a corner. **Flagged for the product owner**:
+the mock's plain runs are one decision away, and this paragraph is where it would be reversed.
 
 **The tick is `surface` on `mint` at 4,07:1, and that does not cross Rule C.**
-[Rule C](#22-accent-and-semantics) refuses white **type** on mint; a 2pt stroke is a
-graphical object and clears the 3:1 that binds one. The distinction is the same one
-[7.11](#711-the-balance-bar) already relies on.
+[Rule C](#22-accent-and-semantics) refuses white **type** on mint; a 2pt stroke is a graphical
+object and clears the 3:1 that binds one.
 
-**`mint` and not `ink`, which reverses an earlier decision here.** It was `ink` because
-[Part 12](#part-12--screens)'s copy for the onboarding step says the grid is _a preference and
-not a promise_, and painting it mint would have the colour contradict the sentence beside it.
-That reading stands for a **status**, and this is not one: the cell says _I could play then_,
-and nothing anywhere reads a green square as a booking. What decided it is the drawing — 21
-`ink` rectangles with a 1pt border each, on a card, read as holes punched through the card
-rather than as answers, and two softer fills at a legal ratio do not.
-
-**No cell border.** The card bounds the grid ([2.1](#21-surfaces-and-structure): `line`
-_bounds a thing_), and a line drawn around each of 21 adjacent squares inside one card is a
-fold repeated 21 times inside one thing, which is what `line2` means and neither is what this
-is.
+**No cell border.** The card bounds the grid ([2.1](#21-surfaces-and-structure): `line` _bounds a
+thing_), and a line drawn around each of 112 adjacent cells inside one card is a fold repeated
+over and over inside one thing.
 
 ### The mark a search leaves on a cell
 
-One cell may carry a **third fact**, and a fact is not a state: _this search added this
-slot, and you did not tick it_. A times rung on the pool widens the searcher's own grid by
-one cell for **one** search
-([ADR-0099](../../docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)), and the week
-the player filled in disagrees with the search that ran until the grid says which cell that
-was ([#283](https://github.com/Raketa02/Raketa/issues/283)).
+One cell may carry a **third fact**, and a fact is not a state: _this search added this hour,
+and you did not tick it_. A times rung on Classic play's pool widens the searcher's own week by
+one hour for **one** search
+([ADR-0099](../../docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)), and the week the
+player filled in disagrees with the search that ran until the grid says which hour that was
+([#283](https://github.com/Raketa02/Raketa/issues/283)).
 
 | Fact                      | Fill     | Mark                           |
 | ------------------------- | -------- | ------------------------------ |
 | **added for this search** | `paper2` | a **plus**, in `ink` — 14,57:1 |
 
-**The cell is not filled, and that is the whole of it.** It is not part of the week the
-player is asking with — the ask is unchanged and the request carries the same grid it
-carried before — so a filled cell would say the opposite of what is true, under a finger
-that is about to tick it. Pressing it is an ordinary tick and the mark goes with the press:
-from then on the cell is the player's own answer.
+**The cell is not filled, and that is the whole of it.** It is not part of the week the player is
+asking with, so a filled cell would say the opposite of what is true. Pressing it — or painting
+across it — is an ordinary answer and the mark goes with it: from then on the hour is the
+player's own.
 
-**`ink` and not `volt`, though the diff variant's plus is volt.** The two land on different
-beds: the diff draws its plus on a filled cell, where volt as a stroke is legal, and this one
-sits on `paper2`, where volt is ~1,3:1 and simply not there
-([2.2](#22-accent-and-semantics)). It is the same crossed pair at the same size — `Tick.tsx`
-draws it twice for the bed, never for the meaning.
+**`ink` and not `volt`, though the diff variant's plus is volt.** The two land on different beds:
+the diff draws its plus on a filled cell, where volt as a stroke is legal, and this one sits on
+`paper2`, where volt is ~1,3:1 and simply not there ([2.2](#22-accent-and-semantics)).
 
 ### The footnote slot
 
 An `rlLabel` message in `muted` **inside the card**, under a 1pt `line` hairline, at most two
-lines long, and **its height is reserved whether or not it has anything in it.** The hairline
-is drawn only when there are words to separate; the height is not conditional on either. The
-line that appears at zero slots names what an empty week costs; the line that replaces it can
-name the count. Neither may move the grid, because the moment a player is most likely to tick
-a second cell is immediately after ticking the first, and a grid that jumps upward under a
-finger mid-tap selects the wrong cell. `minHeight` is two lines of `rlLabel` (32), which is
-the longest either message may run to — a third line is an amendment, not a copy tweak.
+lines long, and **its height is reserved whether or not it has anything in it.** The hairline is
+drawn only when there are words to separate; the height is not conditional on either. The line
+that appears at no hours names what an empty week means; the line that replaces it counts the
+hours. Neither may move the grid, because the moment a player is most likely to tick a second
+hour is immediately after ticking the first. `minHeight` is two lines of `rlLabel` (32) — a third
+line is an amendment, not a copy tweak.
 
-**Inside the card rather than under it**, because the sentence is about the grid: a count of
-slots floating beneath a bare block of squares belonged to whatever came next on the page as
-much as to the week above it.
-
-**The diff variant reserves nothing**, and that is this rule read rather than an exception to
-it. What the reservation protects is a cell moving under a finger between two taps, and
-nothing on the diff grid is pressable: it cannot gain a footnote, cannot lose one, and 44pt of
-empty card is 44pt `SH.saveav` does not have — that sheet draws this grid above two buttons
-and stops at 88 % of the screen ([9.1](#91-bottom-sheet)).
+**The diff variant reserves nothing**, and that is this rule read rather than an exception to it:
+nothing on the diff grid is pressable, and `SH.saveav` draws it above two buttons in a sheet that
+stops at 88 % of the screen ([9.1](#91-bottom-sheet)).
 
 ### The empty state
 
-**An empty grid is a complete answer and is drawn as one:** 21 unselected cells, the
-footnote carrying the consequence, and the screen's forward control enabled. Nothing is
-greyed, nothing is pre-seeded, and no cell is ticked on the player's behalf — a pre-seeded
-slot is a claim the player never made that silently becomes a matchmaking input. Blank
-means _no preference_ and never _leave me out_.
+**An empty grid is a complete answer and is drawn as one:** 112 unselected cells, the footnote
+carrying what it means, and — on the You tab — _Save your week_ open. Nothing is greyed, nothing
+is pre-seeded, and no cell is ticked on the player's behalf. Blank means _no preference_ and never
+_leave me out_. Onboarding's step is the one place a week must hold an hour to continue
+([ADR-0102](../../docs/adr/0102-silence-is-never-scored.md)); that floor is the step's control's,
+never the grid's.
 
 ### Accessibility
 
-Each cell is a `checkbox` with `accessibilityState={{ checked }}`, and its label names
-**its day and its part of the day** — `"Monday morning"` — because a screen reader gets no
-help from the row it is in or the column it is under. The column heads are therefore
-decoration to assistive technology and are hidden from it (`accessibilityElementsHidden`
-/ `importantForAccessibility="no-hide-descendants"`); without that, every cell is announced
-twice.
+Each cell is a `checkbox` with `accessibilityState={{ checked }}`, and its label names **its day
+and its hour** — `"Monday 19:00"` — because a screen reader gets no help from the row it is in or
+the column it is under. The column heads are therefore decoration to assistive technology and are
+hidden from it; without that, every cell is announced twice. A listener toggles hour by hour: the
+drag is a shortcut for a finger, and nothing it does is out of reach one cell at a time.
 
-`checkbox` rather than `button` because the state is the point and the role is what carries
-it: 21 buttons announce 21 identical actions, where 21 checkboxes announce 21 answers.
-
-Dynamic Type grows the day labels, and `labelMaxRatio` is what stops them starving the
-cells. At the cap the three cells still share 178,5pt inside the card on the narrowest phone.
-The cells contain no text, so nothing inside one scales, and `allowFontScaling={false}` never
-arises ([Part 13](#part-13--accessibility)).
+Dynamic Type grows the hour labels, and `labelMaxRatio` is what stops them starving the cells. The
+cells contain no text, so nothing inside one scales.
 
 ### The diff variant
 
-`SH.saveav` draws the same week with a **third fact** on each cell: the slots this search
-added, and the ones it dropped. `the-words.md` §20.7 calls it _"a different control with a
-third fact … not interactive"_ — which describes a second accessibility tree and **not a
-second file**. It is this seven-by-three geometry exactly, and a second copy of that grid is
-the drift `Tick` was extracted to prevent.
+`SH.saveav` draws the same week with a **third fact** on each cell: the hours this search added,
+and the ones it dropped. `the-words.md` §20.7 calls it _"a different control with a third fact …
+not interactive"_ — which describes a second accessibility tree and **not a second file**. It is
+this geometry exactly.
 
 > **One component, two modes, two accessibility trees.**
 
@@ -1552,26 +1540,12 @@ the drift `Tick` was extracted to prevent.
 | **dropped**        | `paper2` | a **dash**, in `muted` |
 | **off**, unchanged | `paper2` | —                      |
 
-**The prototype's scheme is replaced by the arrival rather than after it**, because it is a
-[Part 13](#part-13--accessibility) violation twice over. New drew a **volt ring** and dropped
-drew **45 % opacity** — colour as the only signal, on a sheet whose own body copy named the
-colour as the mechanism (_"Green rings are new, faded ones you dropped"_, rewritten against
-this table by [#277](https://github.com/Raketa02/Raketa/issues/277)) — and a volt ring on
-paper is 1,3:1, so half of it was not there at all
-([2.2](#22-accent-and-semantics): volt is a fill anywhere and a stroke only on dark).
-
-**Three shapes, from the tick's own family.** One 12 × 12 box, one 2pt round-capped stroke,
-and plus-and-minus is the diff idiom every reader already has;
-[6.9](#69-the-photo-tile-and-picker)'s add glyph is the same crossed pair at 20 × 20, so
-nothing here is a new drawing. The plus is `volt` **on `mint`** at 3,25:1 — tighter than the
-10,60 it had on `ink`, and still a fill dark enough for volt to be a stroke on.
-
-**Nothing on it is pressable**, so nothing carries `checked` and nothing offers a state a
-reader could try to change. **A cell with nothing to say is hidden** rather than announced
-empty: a slot that was off and stayed off tells a listener nothing, and twenty-one of those
-between the ones that changed is the double announcement the column heads are hidden to avoid.
-The three sentences are §20.7's — `{Day} {part}` · `{Day} {part}, newly added` ·
-`{Day} {part}, dropped` — and they are the caller's, like every other word on this grid.
+**Three shapes, from the tick's own family**, because the prototype's volt ring and 45 % opacity
+were colour as the only signal ([#277](https://github.com/Raketa02/Raketa/issues/277)). **Nothing
+on it is pressable**, so nothing carries `checked`, and **a cell with nothing to say is hidden**
+rather than announced empty. The three sentences are §20.7's — `{Day} {hour}` ·
+`{Day} {hour}, newly added` · `{Day} {hour}, dropped` — and they are the caller's, like every
+other word on this grid.
 
 ---
 
@@ -4387,6 +4361,10 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-09-28 | [2.1](#21-surfaces-and-structure) · [`theme.ts`](../src/shared/ui/theme.ts) `paper3` `muted2` · [`ClubCard.tsx`](../src/features/groups/components/ClubCard.tsx)                                                                                                                                                                              | The club card's tray on `paper2`, its small text `muted`                                                                                                                                                                                                                                                                                                     | **`paper3` `#E2DED3`** for the tray and **`muted2` `#4E5E64`** for the text on it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | The owner's QA walk of #529: the tray read as the page. `paper2` on `paper` is 1.07, and the eye does not find it at a card's bottom edge; `paper3` is 1.21. A deeper tray costs the small text — `muted` on `paper2` was already 4.49, under 4.5, and on `paper3` it is 4.02 — so the text on it takes its own grey, 5.02. Both ratios are held by `clubCard.test.tsx` rather than typed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-09-28 | [1.2](#12-one-accent-used-sparingly) · [6.3](#63-segmented-control) · [`Segment.tsx`](../src/shared/ui/Segment.tsx) `badge` · [`theme.ts`](../src/shared/ui/theme.ts) `size.segmentBadge` · [`GroupScreen.tsx`](../src/features/groups/components/GroupScreen.tsx)                                                                            | The Chats badge the one badge, on the tab bar alone; 6.3 with no count slot                                                                                                                                                                                                                                                                                  | **The Chats badge at a segment's size**, over the top-right corner of a group page's Info tab, counting the requests waiting on its Owner — 16pt, `num.tiny`, the same `coralInk` fill and white digit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | The owner asked for it by name (#529 D6: _the same circle as the Chats tab's_). 1.2's sixth entry does not widen: it is the same mark meaning the same thing — a count of things only you can clear — on a second surface. The number is out of the label, because a number in a segment's label reads as part of the view's name                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-09-30 | [10.2](#102-the-tab-bar) · [1.2](#12-one-accent-used-sparingly) · [`TabBar.tsx`](../src/shared/ui/TabBar.tsx) `classicPlay` `gamesNeedingYou` · [`TabShell.tsx`](../src/features/shell/components/TabShell.tsx)                                                                                                                               | Five columns, `Now · Players · ⚡Play · Chats · You`; one badge, on Chats                                                                                                                                                                                                                                                                                    | **`Home · ⚡Play · You` as the app ships, and the five with Classic play** — Players and Chats drawn in their places only while `classic_play` is on. **Now is Home**, renamed whole (key `home`, label _Home_, the same `home` glyph and route `/`). The five-glyph inventory is unchanged and `labelMaxScale` is still derived over the five, the narrowest the columns get. **A second badge, on Home**, counting the games that need you, in the Chats badge's own mark and geometry and spoken in the column's name (_Home, 2 games waiting on you_); Chats' badge is drawn only with its column; 1.2's sixth coral entry is now _the tab bar's count badge_, on either column. A route whose column is not drawn lights no column                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | [ADR-0189](../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6 and the Games & Fill in screens A1/A10 (#550): the old loop moves behind one flag, off by default, and the bar loses its two columns with it. A switch rather than a tab list keeps ADR-0135's argument — no caller passes tabs. Home's badge is the mechanics §3 count; its first three sources are today's rail cards (a seat open, a result to enter, a score waiting on your agreement), and a payment to confirm joins with the booked game (#555, #556). **Not seen on a device**: the three-column bar, Home's badge, and the bar growing to five a moment after launch for a Classic play tester, when the saved datafile is read                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-09-30 | [6.8](#68-the-availability-grid) · [4.2](#42-radius) `availabilityCell` · [`AvailabilityGrid.tsx`](../src/shared/ui/AvailabilityGrid.tsx) · [`theme.ts`](../src/shared/ui/theme.ts) `size.availability`                                                                                                                                       | Seven days **down** by three parts of the day **across**, 44pt cells at radius 10, the column heads `flab` / `ink` naming the parts, the day labels `flab` / `ink`                                                                                                                                                                                           | **Seven days across by sixteen hours down**, 07:00 to 22:00 (mock 36): column heads `MON … SUN` in `flab` / `muted`, hour labels `07:00 … 22:00` in `num.tiny` / `muted`, cells 20pt tall at gap 4 and radius 6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | [#551](https://github.com/Raketa02/Raketa/issues/551), ADR-0189 §5: a court is booked by the hour, so the week is held and drawn by the hour. Sixteen rows at 44pt do not fit any page, and a grid that scrolled under the finger painting it would paint the wrong hours, so the mock's compact grid is drawn as it is. Radius 10 on a 20pt cell is a pill; 6 is the mock's corner                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-09-30 | [6.8](#68-the-availability-grid) · [`AvailabilityGrid.tsx`](../src/shared/ui/AvailabilityGrid.tsx) `onPaint` · [`availabilityGridGeometry.ts`](../src/shared/ui/availabilityGridGeometry.ts) · `size.availability.paintIntent`                                                                                                                | A cell is the only pressable thing on the grid, and a press toggles it                                                                                                                                                                                                                                                                                       | **A tap toggles one hour; a press and drag paints a run** — ticking, or clearing if the first cell was ticked — every cell the finger crosses, the ones between two samples included. The pan is `react-native-gesture-handler`'s at a 4pt intent; the grid reports the run so far, whole, to `onPaint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | The spec's §4.2 and A6: 112 hours tapped one by one is not a question anybody finishes. Still **no bulk selection** — no row, column or _weekends_ control. The recogniser is what keeps a drag down a column a paint rather than a scroll of the page it sits in; the hour labels and the heads stay outside the paint field so a thumb there still scrolls                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-09-30 | [6.5](#65-touch-targets) · [`theme.ts`](../src/shared/ui/theme.ts) `hit.availabilityCell` · `profileControlGeometry.test.ts`                                                                                                                                                                                                                  | The availability cell reached the minimum in both axes by its own geometry, 44 × 59,5, with no `hitSlop`                                                                                                                                                                                                                                                     | **The hour cell is under the minimum on purpose**: 20pt tall, at least 23pt wide on the narrowest phone, granted half the gap on every side — reachable 24 × 27 and tiling the grid exactly                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | The one target in the system below 44 × 44, and the reason is written in 6.5: the minimum is met by the gesture rather than the cell. The slop is the neighbour rule's most in both axes. **Flagged for the product owner**, beside the tick below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-09-30 | [6.8](#68-the-availability-grid) selected state                                                                                                                                                                                                                                                                                               | —                                                                                                                                                                                                                                                                                                                                                            | **The tick is kept on a ticked hour**, 12 × 12 in `surface`, although mock 36 draws the fill alone                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Every state carries a word or a shape, never colour alone, and a lightness is still a colour. **Flagged for the product owner**: the mock's plain runs are one decision away                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 # Part 17 — What the reset removed
 
@@ -4447,7 +4425,7 @@ TYPE        Archivo everywhere · IBM Plex Mono for every number
 SPACE       a 3pt grid · 9 between cards · 15 at the gutter
             content width = screen − 30 · rail card = 0.74 × content, or 1.0 with dots
 RADIUS      bigger surface, rounder · dark card 15, light card 13
-TOUCH       44 × 44pt minimum reachable · hitSlop when the visual is smaller
+TOUCH       44 × 44pt minimum reachable · hitSlop when the visual is smaller · 6.8's hour cell the one exception
             no hover — every pressable declares its pressed state
 NUMBERS     mono + tabular · weight 600, never 700 — mono 700 is not loaded
             comma decimals · 2,71 · 65% · 1,9 km · 60 min · 18:30

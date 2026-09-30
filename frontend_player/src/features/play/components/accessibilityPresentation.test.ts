@@ -33,7 +33,7 @@ const MAREK = {
   fit: 78,
   level: { level: 2.71, band: 'Established', range: { low: 2.55, high: 2.87 } },
   meta: { km: 4.3, theirAreaCode: 'A+050612+0019938', myAreaCode: 'A+050612+0019938' },
-  reasons: ['0,12 above you', '3 slots you both ticked · next Tue evening'],
+  reasons: ['0,12 above you', '3 hours you both ticked · next Tue 19:00'],
   concerns: ['A long way out'],
 } as const;
 
@@ -215,36 +215,36 @@ describe('Fit states the scale it is against', () => {
 });
 
 describe('the cell a times rung added', () => {
-  const THURSDAY_EVENING = { day: 4, part: 'evening' } as const;
+  const THURSDAY_EVENING = { day: 4, hour: 19 } as const;
 
   /**
    * The mark is drawn as a plus and a plus is not readable, so this is the whole of what a
    * listener gets ([#283](https://github.com/Raketa02/Raketa/issues/283)). It suffixes the
-   * cell's ordinary name rather than replacing it: the square is still Thursday evening.
+   * cell's ordinary name rather than replacing it: the square is still Thursday 19:00.
    */
   it('says which search the cell belongs to, after saying which cell it is', () => {
     expect(searchWeekCellLabel(THURSDAY_EVENING, true)).toBe(
-      'Thursday evening, added for this search',
+      'Thursday 19:00, added for this search',
     );
   });
 
   /** `checked` says what the week holds; nothing here may say it twice. */
   it('is the plain name on every other cell', () => {
-    expect(searchWeekCellLabel(THURSDAY_EVENING, false)).toBe('Thursday evening');
+    expect(searchWeekCellLabel(THURSDAY_EVENING, false)).toBe('Thursday 19:00');
   });
 });
 
 describe("the diff grid's third fact", () => {
   it('says it in words, where the sheet drew it in a colour', () => {
-    const cell = { day: 1, part: 'evening' } as const;
+    const cell = { day: 1, hour: 19 } as const;
 
-    expect(availabilityDiffCellLabel(cell, 'on')).toBe('Monday evening');
-    expect(availabilityDiffCellLabel(cell, 'added')).toBe('Monday evening, newly added');
-    expect(availabilityDiffCellLabel(cell, 'dropped')).toBe('Monday evening, dropped');
+    expect(availabilityDiffCellLabel(cell, 'on')).toBe('Monday 19:00');
+    expect(availabilityDiffCellLabel(cell, 'added')).toBe('Monday 19:00, newly added');
+    expect(availabilityDiffCellLabel(cell, 'dropped')).toBe('Monday 19:00, dropped');
   });
 
   it('hides a slot that was off and stayed off rather than announcing it empty', () => {
-    expect(availabilityDiffCellLabel({ day: 1, part: 'evening' }, 'off')).toBeUndefined();
+    expect(availabilityDiffCellLabel({ day: 1, hour: 19 }, 'off')).toBeUndefined();
   });
 });
 

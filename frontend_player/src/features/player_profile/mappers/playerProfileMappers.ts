@@ -34,7 +34,13 @@ import {
   type SocialTagGroupId,
   type SocialTagId,
 } from '@/shared/vocabulary/socialTags';
-import { WEEKDAYS, type DayPart, type WeekCell, type Weekday } from '@/shared/vocabulary/week';
+import {
+  HOURS,
+  WEEKDAYS,
+  type Hour,
+  type WeeklyHour,
+  type Weekday,
+} from '@/shared/vocabulary/week';
 
 import type { Gender, GenderPreference } from '../domain/gender';
 import type { PlayerProfileSurface, PlayIntentDeclarations } from '../domain/PlayerProfileSurface';
@@ -48,14 +54,13 @@ type PhotoResponse = components['schemas']['PhotoResponse'];
 type WireSocialTag = components['schemas']['SocialTag'];
 type WireSocialTagGroup = components['schemas']['SocialTagGroup'];
 type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequest'];
-type WireDayPart = components['schemas']['DayPart'];
 type WireGender = components['schemas']['Gender'];
 type WireGenderPreference = components['schemas']['GenderPreference'];
 type WireConsentSurface = components['schemas']['ConsentSurface'];
 type ProposalsOptInResponse = components['schemas']['ProposalsOptInResponse'];
 type WirePhotoReview = components['schemas']['PhotoReviewDecision'];
 type ProfilePhotoResource = components['schemas']['ProfilePhotoResource'];
-type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
+type WeeklyHourResource = components['schemas']['WeeklyHourResource'];
 type PlayerProfileReadResponse = components['schemas']['PlayerProfileReadResponse'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
 
@@ -123,7 +128,7 @@ export function toProfileOptions(response: PlayerProfileOptionsResponse): Profil
 /**
  * The two spellings of a verdict, which are the same word and still get a table.
  *
- * The reason is the day parts', not the tag ids': `PhotoReview` is an enum the app speaks
+ * The reason is the gender tables', not the tag ids': `PhotoReview` is an enum the app speaks
  * in its own words rather than an id it stores and sends back, so a third value on either
  * side stops this file compiling instead of producing a string the row has no sentence for.
  */
@@ -188,58 +193,43 @@ export function toPhotoAddress(response: PhotoResponse): string {
   return response.url;
 }
 
-/**
- * The three parts of a day, in the two spellings that exist.
- *
- * The app's are lower case because they are values in its own code; the wire's are the
- * backend's enum. A table rather than `part.toUpperCase()`, for the reason the tag ids are
- * a membership test rather than a cast: a fourth part added to either side then stops this
- * file compiling instead of producing a string the other end has never heard of.
- */
-const WIRE_DAY_PART: Readonly<Record<DayPart, WireDayPart>> = {
-  morning: 'MORNING',
-  afternoon: 'AFTERNOON',
-  evening: 'EVENING',
-};
-
-/** The same table read the other way, inverted so the two cannot disagree about a part. */
-const DAY_PART: Readonly<Record<WireDayPart, DayPart>> = {
-  MORNING: 'morning',
-  AFTERNOON: 'afternoon',
-  EVENING: 'evening',
-};
-
 const WEEKDAY = new Set<number>(WEEKDAYS);
+const HOUR = new Set<number>(HOURS);
 
 /**
- * A week as the wire spells it — **the whole grid, every time**, because the list *is* the
+ * A week as the wire spells it — **the whole week, every time**, because the list *is* the
  * week and what is absent from it is unticked.
  *
- * Exported because Play sends one too: the search's `availability_override` is this same
- * twenty-one-cell week improvised for one search
- * ([#268](https://github.com/Raketa02/Raketa/issues/268)), and a second table spelled in that
- * feature's `mappers/` would be the drift `week.ts` was promoted to stop, arriving one layer
- * lower. `sport.ts`'s rule is the shape: *the two spellings meet in `mappers/`, and only
- * there* — so this is the one place, and Play reaches it through this feature's public
- * surface.
+ * One spelling on both sides: a day and the wall-clock hour its cell starts at, in two named
+ * fields (`WeeklyHourResource`), so the outbound half is a copy rather than a translation.
+ *
+ * Exported because Play sends one too: the search's `availability_override` is this same week
+ * improvised for one search ([#268](https://github.com/Raketa02/Raketa/issues/268)), and a
+ * second table spelled in that feature's `mappers/` would be the drift `week.ts` was promoted
+ * to stop, arriving one layer lower. `sport.ts`'s rule is the shape: *the two spellings meet in
+ * `mappers/`, and only there* — so this is the one place, and Play reaches it through this
+ * feature's public surface.
  *
  * **Order is carried, never imposed.** Nothing here sorts and nothing deduplicates; the
- * write path collapses repeated cells itself.
+ * write path collapses repeated hours itself.
  */
-export function toWireSlots(week: readonly WeekCell[]): AvailabilitySlotResource[] {
-  return week.map((cell) => ({ day: cell.day, part: WIRE_DAY_PART[cell.part] }));
+export function toWireWeeklyHours(week: readonly WeeklyHour[]): WeeklyHourResource[] {
+  return week.map((cell) => ({ day: cell.day, hour: cell.hour }));
 }
 
 /**
- * The inbound half. A cell naming a day outside 1-7 is **dropped**, not clamped.
+ * The inbound half. A cell naming a day outside 1-7, or an hour outside 7-22, is **dropped**,
+ * not clamped.
  *
- * The wire types `day` as a bare integer, so seven is a promise rather than a compiler's
- * guarantee, and there is no honest eighth day to render — the answer `toSocialTagId` gives
- * a tag with no label, for the same reason.
+ * The wire types `day` and `hour` as bare integers, so seven days and sixteen hours are a
+ * promise rather than a compiler's guarantee, and there is no honest eighth day or 23:00 row to
+ * render — the answer `toSocialTagId` gives a tag with no label, for the same reason.
  */
-export function toWeekCells(slots: readonly AvailabilitySlotResource[]): readonly WeekCell[] {
-  return slots.flatMap((slot) =>
-    WEEKDAY.has(slot.day) ? [{ day: slot.day as Weekday, part: DAY_PART[slot.part] }] : [],
+export function toWeeklyHours(cells: readonly WeeklyHourResource[]): readonly WeeklyHour[] {
+  return cells.flatMap((cell) =>
+    WEEKDAY.has(cell.day) && HOUR.has(cell.hour)
+      ? [{ day: cell.day as Weekday, hour: cell.hour as Hour }]
+      : [],
   );
 }
 
@@ -288,7 +278,7 @@ export function toPlayIntentDeclared(response: {
  * The three facts the Play screens hold and the three the You tab edits, out of the one
  * read that carries them.
  *
- * Nothing is defaulted here. An empty `availability` is *a cleared week*, which is a legal
+ * Nothing is defaulted here. An empty `weekly_hours` is *a cleared week*, which is a legal
  * answer and not a missing one; an absent sport in `play_intents` is *undeclared*, which is
  * the set difference the search screen's interstitial is opened on; an empty `photos` is *a
  * profile holding none*, which the poster stands in for; and an omitted `intro` is *none was
@@ -300,7 +290,7 @@ export function toPlayIntentDeclared(response: {
  */
 export function toPlayerProfileSurface(response: PlayerProfileReadResponse): PlayerProfileSurface {
   return {
-    week: toWeekCells(response.availability),
+    week: toWeeklyHours(response.weekly_hours),
     searchRadiusKm: response.search_radius_km,
     playIntents: toPlayIntentDeclarations(response.play_intents),
     socialTagIds: toSocialTagIds(response.social_tags),
@@ -314,7 +304,7 @@ export function toPlayerProfileSurface(response: PlayerProfileReadResponse): Pla
 
 /**
  * The two screens that ask the proposals question, in the two spellings that exist — a table
- * for the day parts' reason: the profile screen keys a sentence by it, so a third surface on
+ * for the gender tables' reason: the profile screen keys a sentence by it, so a third surface on
  * the wire stops this file compiling instead of producing a code the screen has no words for.
  */
 const CONSENT_SURFACE: Readonly<Record<WireConsentSurface, ConsentSurface>> = {
@@ -344,8 +334,8 @@ function toProfilePhotoHeld(served: ProfilePhotoResource): UploadedPhoto {
 /**
  * The two gender vocabularies, in the two spellings that exist.
  *
- * Tables rather than `gender.toUpperCase()`, and the reason is the day parts' rather than
- * the tag ids': these are **enums the app speaks in its own words**, not ids it stores and
+ * Tables rather than `gender.toUpperCase()`, and not the tag ids' membership test: these are
+ * **enums the app speaks in its own words**, not ids it stores and
  * sends back, so a fourth value on either side stops this file compiling instead of
  * producing a string the other end has never heard of. `prefer-not-to-say` would not even
  * survive a cast, which is the shape of bug a table cannot have.
@@ -417,7 +407,7 @@ export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileReque
     // body a later reader could tell apart by accident.
     ...(commit.intro === undefined ? {} : { intro: commit.intro }),
     photo_ids: [...commit.photoIds],
-    availability: toWireSlots(commit.availability),
+    weekly_hours: toWireWeeklyHours(commit.weeklyHours),
     location: { latitude: commit.location.latitude, longitude: commit.location.longitude },
     search_radius_km: commit.searchRadiusKm,
     proposals_opt_in: {

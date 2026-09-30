@@ -281,7 +281,7 @@ afterEach(async () => {
 async function openAFullCourt() {
   await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
-  await screen.findByLabelText('Tuesday evening');
+  await screen.findByLabelText('Tuesday 19:00');
 
   fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
   await screen.findByText(POOL_RANKING);

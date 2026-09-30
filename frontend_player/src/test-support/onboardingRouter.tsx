@@ -530,9 +530,9 @@ export const PROFILE_SURFACE_PATH = '/api/v1/players/me/profile';
  * You is the one screen whose question is *what did the check conclude about mine*.
  */
 export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
-  availability: [
-    { day: 2, part: 'EVENING' },
-    { day: 6, part: 'MORNING' },
+  weekly_hours: [
+    { day: 2, hour: 19 },
+    { day: 6, hour: 9 },
   ],
   search_radius_km: 12,
   play_intents: { PADEL: 'FOR_FUN' },

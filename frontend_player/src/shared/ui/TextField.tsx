@@ -36,8 +36,8 @@
  * surface, and a field needs it twice over: the box alone is 42, and a grown box holds a value
  * 16 tall inside 13pt of padding, so half of what looks like the field would be dead to a
  * finger. Label, box and message are one target and pressing any of them moves the caret in —
- * which clears the minimum on **geometry** rather than on a `hitSlop`, exactly as the
- * availability cell and the tick box row do.
+ * which clears the minimum on **geometry** rather than on a `hitSlop`, exactly as the tick box
+ * row does.
  *
  * **The cap is a number of lines and it is the caller's.** 6.10's posture: the radius slider
  * knows *"no step and no default, and no bound of its own"*. Neither surface that needs a

@@ -343,8 +343,8 @@ describe('You', () => {
       doorRowLabel(
         YOUR_WEEK_TITLE,
         weekLine([
-          { day: 2, part: 'evening' },
-          { day: 6, part: 'morning' },
+          { day: 2, hour: 19 },
+          { day: 6, hour: 9 },
         ]),
       ),
     );
@@ -381,8 +381,8 @@ describe('You', () => {
         doorRowLabel(
           YOUR_WEEK_TITLE,
           weekLine([
-            { day: 2, part: 'evening' },
-            { day: 6, part: 'morning' },
+            { day: 2, hour: 19 },
+            { day: 6, hour: 9 },
           ]),
         ),
       ),
@@ -577,8 +577,8 @@ describe('a Play session ends exactly when the shell lays a stack down', () => {
   /** A player mid-build: a week they have edited, and two people on the court. */
   function halfwayThroughBuildingOne() {
     const session = usePlaySession.getState();
-    session.enter([{ day: 2, part: 'evening' }]);
-    session.toggleWeekCell({ day: 6, part: 'morning' });
+    session.enter([{ day: 2, hour: 19 }]);
+    session.toggleWeekCell({ day: 6, hour: 9 });
     session.seat('search-1', 'player-a');
     session.seat('search-1', 'player-b');
   }
@@ -642,8 +642,8 @@ describe('a Play session ends exactly when the shell lays a stack down', () => {
     await waitFor(() => expect(screen).toHavePathname('/play'));
     // The session the player is in the middle of is still the session they are in.
     expect(usePlaySession.getState().week).toEqual([
-      { day: 2, part: 'evening' },
-      { day: 6, part: 'morning' },
+      { day: 2, hour: 19 },
+      { day: 6, hour: 9 },
     ]);
     expect(usePlaySession.getState().lineup?.seats).toEqual(['player-a', 'player-b']);
   });

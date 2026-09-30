@@ -406,7 +406,7 @@ const summary = (filled: number) => courtSummaryLabel({ sportName: 'Padel', fill
 async function openTheBuilder() {
   await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
-  await screen.findByLabelText('Tuesday evening');
+  await screen.findByLabelText('Tuesday 19:00');
 
   fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
   // The floor runs from the **answer**, so the latch has to be up before the clock is driven —
@@ -1741,7 +1741,7 @@ describe('singles', () => {
   async function openTheMatch() {
     await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
-    await screen.findByLabelText('Tuesday evening');
+    await screen.findByLabelText('Tuesday 19:00');
 
     fireEvent.press(screen.getByLabelText(courtEntryLabel(TENNIS_SEATS)));
     await screen.findByText(TENNIS_RANKING);
@@ -1894,7 +1894,7 @@ describe('the question ⚡ raised', () => {
   it('does not ask again what Find a game already asked over the same week', async () => {
     const keepTheseTimes: Wire['PromptSchema'] = {
       prompt: 'KEEP_THESE_TIMES',
-      slots: [{ day: 1, part: 'MORNING' }],
+      slots: [{ day: 1, hour: 9 }],
     };
     const KEEP_THESE_TIMES = promptCopy({
       prompt: 'KEEP_THESE_TIMES',
@@ -1908,7 +1908,7 @@ describe('the question ⚡ raised', () => {
 
     await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
-    fireEvent.press(await screen.findByLabelText('Monday morning'));
+    fireEvent.press(await screen.findByLabelText('Monday 09:00'));
 
     fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
     await screen.findByText(POOL_RANKING);

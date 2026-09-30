@@ -24,7 +24,7 @@
 import { useMutation } from '@tanstack/react-query';
 
 import {
-  useChangeAvailability,
+  useChangeWeeklyHours,
   useChangeSearchRadius,
   useDeclarePlayIntent,
 } from '@/features/player_profile/types';
@@ -38,7 +38,7 @@ import {
 } from '../use-cases/answerPrompt';
 
 export function useAnswerPrompt() {
-  const week = useChangeAvailability();
+  const week = useChangeWeeklyHours();
   const radius = useChangeSearchRadius();
   const intent = useDeclarePlayIntent();
 

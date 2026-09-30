@@ -16,7 +16,7 @@ function answeredDraft(): ProfileDraft {
     socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
     intro: 'Moved from Wrocław in May. Needs opponents.',
     photoIds: ['photo-1'],
-    availability: [{ day: 3, part: 'evening' }],
+    weeklyHours: [{ day: 3, hour: 19 }],
     location: { latitude: 41.39, longitude: 2.16 },
     searchRadiusKm: 10,
     proposalsOptIn: { accepted: true, copyVersion: 'proposals-opt-in.v1' },
@@ -38,7 +38,7 @@ describe('a draft with every answer given', () => {
         socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
         intro: 'Moved from Wrocław in May. Needs opponents.',
         photoIds: ['photo-1'],
-        availability: [{ day: 3, part: 'evening' }],
+        weeklyHours: [{ day: 3, hour: 19 }],
         location: { latitude: 41.39, longitude: 2.16 },
         searchRadiusKm: 10,
         proposalsOptIn: { accepted: true, copyVersion: 'proposals-opt-in.v1' },
@@ -74,11 +74,11 @@ describe('a draft with every answer given', () => {
     expect(standing.kind).toBe('ready');
   });
 
-  it('is ready on one ticked cell of twenty-one', () => {
+  it('is ready on one ticked hour of the week', () => {
     // The floor is exactly one. One tick is a real answer, and the near-total absence of
     // overlap that follows is a *measured* near-zero (ADR-0102).
     const standing = readyToCommit(
-      recordAnswer(answeredDraft(), { availability: [{ day: 6, part: 'morning' }] }),
+      recordAnswer(answeredDraft(), { weeklyHours: [{ day: 6, hour: 9 }] }),
     );
 
     expect(standing.kind).toBe('ready');
@@ -117,7 +117,7 @@ describe('a draft still missing an answer', () => {
     // The week stopped being a genuinely empty answer when ADR-0102 gave it a floor:
     // silence about when a player usually plays is never scored, so it is asked for.
     // Photos keep the exemption — none is still an answer to *add some photos*.
-    const standing = readyToCommit(recordAnswer(answeredDraft(), { availability: [] }));
+    const standing = readyToCommit(recordAnswer(answeredDraft(), { weeklyHours: [] }));
 
     expect(standing).toEqual({ kind: 'incomplete', missing: ['availability'] });
   });

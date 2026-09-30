@@ -35,7 +35,7 @@ import type { AppError } from '@/shared/errors';
 import type { PlayIntent } from '@/shared/vocabulary/playIntent';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { Sport } from '@/shared/vocabulary/sport';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { Gender, GenderPreference } from '../domain/gender';
 import type { PlayerProfileSurface } from '../domain/PlayerProfileSurface';
@@ -43,7 +43,7 @@ import type { UploadedPhoto } from '../domain/photoCollection';
 import type { ProposalsOptIn } from '../domain/ProfileDraft';
 import type { RecordedProposalsOptIn } from '../domain/proposalsOptIn';
 import { answerProposalsOptIn } from '../use-cases/answerProposalsOptIn';
-import { changeAvailability } from '../use-cases/changeAvailability';
+import { changeWeeklyHours } from '../use-cases/changeWeeklyHours';
 import { changeGender } from '../use-cases/changeGender';
 import { changeGenderPreference } from '../use-cases/changeGenderPreference';
 import { changeIntro } from '../use-cases/changeIntro';
@@ -76,11 +76,11 @@ export function useProfileSurface() {
  * The one caller today is the prompt sheet's *yes* to `KEEP_THESE_TIMES`
  * ([#275](https://github.com/Raketa02/Raketa/issues/275)); *You* will be the second.
  */
-export function useChangeAvailability() {
+export function useChangeWeeklyHours() {
   const client = useQueryClient();
 
-  return useMutation<readonly WeekCell[], AppError, readonly WeekCell[]>({
-    mutationFn: (week) => changeAvailability(week),
+  return useMutation<readonly WeeklyHour[], AppError, readonly WeeklyHour[]>({
+    mutationFn: (week) => changeWeeklyHours(week),
     onSuccess: (week) => {
       client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
         held === undefined ? held : { ...held, week },

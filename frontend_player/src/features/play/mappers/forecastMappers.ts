@@ -41,7 +41,7 @@
 import type { components } from '@/generated/schema';
 import { toWireSport } from '@/features/onboarding/types';
 import type { Sport } from '@/shared/vocabulary/sport';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { Candidate, SearchEnvelope } from '../domain/candidate';
 import type {
@@ -101,7 +101,7 @@ type WireSplit = components['schemas']['SplitSchema'];
  */
 export type LineupAsk = {
   /** The improvised week, or `undefined` to fill against the grid the profile holds. */
-  readonly sentWeek: readonly WeekCell[] | undefined;
+  readonly sentWeek: readonly WeeklyHour[] | undefined;
 } & (
   | {
       readonly sport: Sport;

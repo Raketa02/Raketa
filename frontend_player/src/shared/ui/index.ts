@@ -17,6 +17,7 @@ export {
   type AvailabilityGridProps,
   type AvailabilityGridRow,
 } from './AvailabilityGrid';
+export type { GridPosition } from './availabilityGridGeometry';
 export {
   BALANCE_INK,
   BALANCE_SCALE,

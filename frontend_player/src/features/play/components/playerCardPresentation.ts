@@ -54,7 +54,7 @@ import {
 import { slotName } from '@/shared/vocabulary/availabilityPresentation';
 import { NO_TAGS_IN_COMMON, socialTagName } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { AtStake } from '../domain/candidate';
 import type { SocialTagOverlap } from '../domain/socialTagOverlap';
@@ -155,30 +155,30 @@ export function balanceRowValue(evidence: {
  * It lives here rather than in `reasonPresentation` because the *row* is the surface that can
  * reach it: every card that draws an overlap row has `AVAILABILITY_OVERLAP` in its drawn set,
  * so the reason line for that term is filtered off exactly the cards the row appears on. A
- * zero spelled `0 slots` on the row and *No shared slots* in the sentence would make the
+ * zero spelled `0 hours` on the row and *No shared hours* in the sentence would make the
  * copy the row could reach the copy nobody ever reads.
  *
  * It is **a fact about arranging a game and not a refusal**: the availability term zeroes,
  * nobody is removed, and the times rung of the ladder exists for exactly this pairing.
  */
-export const NO_SHARED_SLOTS = 'No shared slots — one of you would have to bend';
+export const NO_SHARED_HOURS = 'No shared hours — one of you would have to bend';
 
 /**
- * `3 slots · next Tue evening` — how much of your week is theirs, and the soonest of it.
+ * `3 hours · next Tue 19:00` — how much of your week is theirs, and the soonest of it.
  *
  * The count routes through the one pluralisation helper, so no string here hardcodes an `s`
- * (§4, §19), and the slot name is the **promoted** `DayPart` and weekday tables rather than a
- * third list. The zero takes {@link NO_SHARED_SLOTS} rather than `0 slots`, for the reason
+ * (§4, §19), and the hour's name is the **promoted** weekday and hour tables rather than a
+ * third list. The zero takes {@link NO_SHARED_HOURS} rather than `0 hours`, for the reason
  * written there.
  */
 export function overlapRowValue(evidence: {
   readonly sharedCount: number;
-  readonly nextSlot: WeekCell | null;
+  readonly nextSlot: WeeklyHour | null;
 }): string {
-  if (evidence.sharedCount === 0) return NO_SHARED_SLOTS;
+  if (evidence.sharedCount === 0) return NO_SHARED_HOURS;
 
-  const slots = counted(evidence.sharedCount, 'slot', 'slots');
-  return evidence.nextSlot === null ? slots : `${slots} · next ${slotName(evidence.nextSlot)}`;
+  const hours = counted(evidence.sharedCount, 'hour', 'hours');
+  return evidence.nextSlot === null ? hours : `${hours} · next ${slotName(evidence.nextSlot)}`;
 }
 
 /**

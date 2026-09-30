@@ -46,7 +46,7 @@
  * underneath it that number does not bound the sheet, it **truncates** it: the children keep
  * their heights, the column overflows, and whatever is last in it goes off the bottom of the
  * screen — which on a sheet is always the controls, because a sheet reads statement first and
- * answer last. That is not a hypothetical: `SH.saveav` draws a seven-by-three grid above two
+ * answer last. That is not a hypothetical: `SH.saveav` draws the week grid above two
  * buttons, and on the narrowest phone the buttons were simply not there.
  *
  * So the head is fixed and **the children are a `ScrollView` that shrinks**, which is what

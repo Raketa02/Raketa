@@ -92,7 +92,7 @@ const STEPS = [
   {
     path: '/availability',
     title: 'When do you usually play?',
-    eyebrow: 'Setting up · Step 4 of 8 · Tick at least one',
+    eyebrow: 'Setting up · Step 4 of 8 · Pick at least one hour',
     back: 'Back to Your court photos',
     forward: 'Continue',
   },
@@ -179,10 +179,10 @@ function answerTheStep(index: number) {
   // opens at the served default.
   if (OPTIONAL_STEPS.includes(index)) return;
 
-  // The week's floor is one of twenty-one, so one cell is the whole of what step three
+  // The week's floor is one hour, so one cell is the whole of what step four
   // asks for. Its own suite is where the grid itself is exercised.
   if (STEPS[index]!.path === '/availability') {
-    fireEvent.press(screen.getByLabelText('Wednesday evening'));
+    fireEvent.press(screen.getByLabelText('Wednesday 19:00'));
     return;
   }
 

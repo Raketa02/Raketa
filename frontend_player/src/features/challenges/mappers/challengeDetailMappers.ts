@@ -46,7 +46,7 @@
 
 import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
-import { toWeekCells } from '@/features/player_profile/types';
+import { toWeeklyHours } from '@/features/player_profile/types';
 import {
   DEGRADED_REASONS,
   FORECAST_ASSUMPTIONS,
@@ -253,11 +253,11 @@ function toEvidence(evidence: WireEvidence): Evidence | undefined {
       // engine's working rather than the pair's facts, and nothing on this screen draws them.
       return { kind: 'reliability', score: evidence.score, floorBreached: evidence.floor_breached };
     case 'availability_overlap': {
-      const [next] = evidence.next_slot == null ? [] : toWeekCells([evidence.next_slot]);
+      const [next] = evidence.next_slot == null ? [] : toWeeklyHours([evidence.next_slot]);
       return {
         kind: 'availability_overlap',
         sharedCount: evidence.shared_count,
-        // A cell naming a day outside 1–7 is dropped by `toWeekCells`, which leaves the same
+        // A cell naming a day outside 1–7 is dropped by `toWeeklyHours`, which leaves the same
         // `null` the wire uses for *there is no shared cell*: both mean the line says a count
         // and no next slot, and neither invents a Tuesday.
         nextSlot: next ?? null,

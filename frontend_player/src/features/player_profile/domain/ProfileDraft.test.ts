@@ -25,7 +25,7 @@ describe('a draft that has been started', () => {
       socialTagIds: [],
       intro: '',
       photoIds: [],
-      availability: [],
+      weeklyHours: [],
       location: undefined,
       searchRadiusKm: undefined,
       proposalsOptIn: undefined,
@@ -41,13 +41,13 @@ describe('recording an answer', () => {
     // the player the rest.
     const walked = recordAnswer(
       recordAnswer(recordAnswer(emptyDraft(), { searchRadiusKm: 12 }), {
-        availability: [{ day: 1, part: 'morning' }],
+        weeklyHours: [{ day: 1, hour: 9 }],
       }),
       { location: { latitude: 41.39, longitude: 2.16 } },
     );
 
     expect(walked.searchRadiusKm).toBe(12);
-    expect(walked.availability).toEqual([{ day: 1, part: 'morning' }]);
+    expect(walked.weeklyHours).toEqual([{ day: 1, hour: 9 }]);
     expect(walked.location).toEqual({ latitude: 41.39, longitude: 2.16 });
   });
 

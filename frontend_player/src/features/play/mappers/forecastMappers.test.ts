@@ -116,13 +116,13 @@ describe('the two asks', () => {
         sport: 'padel',
         mode: 'COMPETITIVE',
         lockedSeats: [B, C],
-        sentWeek: [{ day: 2, part: 'evening' }],
+        sentWeek: [{ day: 2, hour: 19 }],
       }),
     ).toEqual({
       sport: 'PADEL',
       mode: 'COMPETITIVE',
       locked_seats: [B, C],
-      availability_override: [{ day: 2, part: 'EVENING' }],
+      availability_override: [{ day: 2, hour: 19 }],
     });
   });
 

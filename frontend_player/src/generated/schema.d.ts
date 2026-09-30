@@ -409,7 +409,7 @@ export interface paths {
          *
          *     **`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial **before** a search is refused with `play_intent_not_declared` rather than after.
          *
-         *     **An empty `availability` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*. **An empty `photos` list is one too**: a profile may hold none.
+         *     **An empty `weekly_hours` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*. **An empty `photos` list is one too**: a profile may hold none.
          *
          *     **Absent means omitted, never `null`.** `intro` is omitted where no line was written; a photo's `review` is omitted where nobody looked — which is not `allowed`; `gender` is omitted on a profile committed before the question existed — which is not `PREFER_NOT_TO_SAY`.
          *
@@ -427,7 +427,7 @@ export interface paths {
          *
          *     **Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value — and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.
          *
-         *     **The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served — it is fixed, and a client holds it as a constant.
+         *     **`weekly_hours` are required**, at least one hour of the 7 × 16 week (07:00 to 23:00). Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served — it is fixed, and a client holds it as a constant.
          *
          *     **The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.
          *
@@ -442,7 +442,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/players/me/availability": {
+    "/api/v1/players/me/weekly-hours": {
         parameters: {
             query?: never;
             header?: never;
@@ -451,16 +451,18 @@ export interface paths {
         };
         get?: never;
         /**
-         * Replace this player's week
-         * @description The whole week, every time — the list **is** the grid, and what is absent from it is unticked. Unkeyed and safe to send twice: the same week twice lands the same state, and a transition that changes nothing records nothing.
+         * Replace this player's weekly hours — Save your week
+         * @description The whole week, every time — the list **is** the week, and what is absent from it is unticked. An hour is a day and the hour its cell starts at, 7 to 22: the week runs 07:00 to 23:00. Unkeyed and safe to send twice: the same week twice lands the same state, and a transition that changes nothing records nothing.
          *
-         *     **An empty list is a legal value and clears the week.** The floor of one ticked cell binds the *commit*, which is the answer a player is asked for at the end of onboarding, and not every later edit of it. A cleared week is read as *absent* by the matcher, never as a zero — silence is never scored (`docs/adr/0102`).
+         *     **An empty list is a legal value and clears the week.** The floor of one ticked hour binds the *commit*, which is the answer a player is asked for at the end of onboarding, and not every later edit of it. A cleared week is read as *absent* by the matcher, never as a zero — silence is never scored (`docs/adr/0102`).
          *
          *     **This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine notices that a search ran on a week the profile does not hold and asks; nothing in the matcher writes a profile, so a *yes* is this request. Declining writes nothing anywhere.
          *
-         *     Repeated cells are collapsed and the response carries the grid as stored, in the platform's reading order — so a client can see what the profile now holds rather than assuming it kept what was sent.
+         *     Repeated hours are collapsed and the response carries the week as stored, in the platform's reading order — so a client can see what the profile now holds rather than assuming it kept what was sent.
+         *
+         *     It replaced `PUT /players/me/availability`, whose week was mornings, afternoons and evenings (`docs/adr/0189` §5).
          */
-        put: operations["change_availability_api_v1_players_me_availability_put"];
+        put: operations["set_weekly_hours_api_v1_players_me_weekly_hours_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2295,6 +2297,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/me/payment-methods/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start saving a payment method
+         * @description Opens a setup at the provider for a card saved for **off-session** use — charged by the club when a game fills, without the player present. The first opens the player's customer at the provider. A method already saved **keeps working** until a setup saves another (*Change*); a setup left open is replaced by the next one. Answers what the phone opens the provider's card fields with — **never the setup's secret**, which is the answer to accepting the terms.
+         */
+        post: operations["start_payment_setup_api_v1_players_me_payment_methods_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/payment-methods/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept the payment terms
+         * @description Records the acceptance — the version, the moment and the address it came from — **before anything is saved**, and answers the open setup's secret. With no setup open, accepts them again for the saved method after its bank moved it to another brand, and answers no secret. Accepting what nothing asks for records nothing.
+         */
+        post: operations["accept_payment_terms_api_v1_players_me_payment_methods_terms_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/payment-methods/confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the save
+         * @description Reads what the open setup saved at the provider and records it as the player's method — replacing, and releasing, the one they had. Confirming again answers the same method.
+         */
+        post: operations["confirm_payment_setup_api_v1_players_me_payment_methods_confirmation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/payment-methods/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The saved payment method
+         * @description The card or wallet the club charges when a game fills, or `null` — *Not set up* — and whether the terms wait to be accepted again.
+         */
+        get: operations["read_payment_method_api_v1_players_me_payment_methods_current_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Remove the saved payment method
+         * @description Forgets the method and releases it at the provider, where it can never be charged again. Refused while anything could still be charged to it.
+         */
+        delete: operations["remove_payment_method_api_v1_players_me_payment_methods_current_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2663,52 +2749,11 @@ export interface components {
             kind: "availability_overlap";
             /**
              * Shared Count
-             * @description Cells both of them ticked
+             * @description Hours of the week both of them ticked
              */
             shared_count: number;
-            /** @description The soonest cell both ticked, or null when there is none */
+            /** @description The soonest hour both ticked, or null when there is none */
             next_slot: components["schemas"]["SharedSlot"] | null;
-        };
-        /**
-         * AvailabilityResponse
-         * @description The week as the profile now holds it.
-         *
-         *     A body rather than a ``204`` because the value stored is not always the
-         *     value sent: repeated cells are collapsed and the order is the platform's
-         *     reading order, so a client that kept what it sent would hold a week the
-         *     profile does not.
-         */
-        AvailabilityResponse: {
-            /** Availability */
-            availability: components["schemas"]["AvailabilitySlotResource"][];
-        };
-        /**
-         * AvailabilitySlotResource
-         * @description One ticked cell of the availability grid.
-         *
-         *     Two named fields rather than the single joined code the event stream stores.
-         *     The stream's code is a *storage* encoding chosen so a replay folds strings;
-         *     this is a contract a client renders a grid from, and a client that had to
-         *     split ``"3:EVENING"`` would be parsing our persistence format.
-         *
-         *     **Every cell, and there is no exception.** The rule was twice read as
-         *     covering only the cells a player *chose* — the one a times rung offers
-         *     (#283), and the week a raised ``KEEP_THESE_TIMES`` quotes back (#286) — on
-         *     the argument that a payload handed back is not a resource. Both crossed as
-         *     codes, and in both cases a client ended up splitting one. What decides this
-         *     is not whose value it is but **what is done with it**: a cell that gets
-         *     drawn on the seven-by-three grid crosses in these two fields, and the engine
-         *     holding it as a code is a fact about the engine. This side of the boundary
-         *     owns the encoding, so this side is where it is read.
-         */
-        AvailabilitySlotResource: {
-            /**
-             * Day
-             * @description ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.
-             */
-            day: number;
-            /** @description Which part of that day */
-            part: components["schemas"]["DayPart"];
         };
         /** BandResponse */
         BandResponse: {
@@ -3024,25 +3069,6 @@ export interface components {
             seats: components["schemas"]["SeatSchema"][];
         };
         /**
-         * ChangeAvailabilityRequest
-         * @description The week, replaced whole.
-         *
-         *     **No floor, and that is the difference from the commit.** An empty list is a
-         *     cleared week and is recorded; ``availability_grid_empty`` refuses the answer
-         *     a player is *asked for* at the end of onboarding, not every later edit of it.
-         *
-         *     Repeated cells are collapsed rather than refused, and the response carries
-         *     the grid as it was stored — so a client that sent the same cell twice, or
-         *     sent the week in its own order, can see what the profile now holds.
-         */
-        ChangeAvailabilityRequest: {
-            /**
-             * Availability
-             * @description Every cell still ticked. **The list is the week** — what is absent is unticked — and an empty list clears it, which is a legal value rather than a refusal.
-             */
-            availability: components["schemas"]["AvailabilitySlotResource"][];
-        };
-        /**
          * ChangeGenderPreferenceRequest
          * @description A new durable answer to *who am I willing to play with*.
          */
@@ -3251,7 +3277,7 @@ export interface components {
          *
          *     The week's *floor* is not spelled here, and that is the same decision the tag
          *     selection's is: an empty list passes this schema and is refused by the domain
-         *     with ``availability_grid_empty``, so the client gets a code it can branch on
+         *     with ``weekly_hours_empty``, so the client gets a code it can branch on
          *     and a recovery it can offer, rather than a 422 that can only say some field
          *     somewhere was wrong.
          */
@@ -3267,10 +3293,10 @@ export interface components {
              */
             photo_ids?: string[];
             /**
-             * Availability
-             * @description The cells of the week this player ticked. **At least one of the twenty-one** — an empty list is refused with `availability_grid_empty`. The minimum is exactly one and is not served: it is fixed, so a client holds it as a constant. Repeated cells are collapsed, and the floor is counted after that.
+             * Weekly Hours
+             * @description The hours of the week this player ticked. **At least one of the 112** — an empty list is refused with `weekly_hours_empty`. The minimum is exactly one and is not served: it is fixed, so a client holds it as a constant. Repeated hours are collapsed, and the floor is counted after that.
              */
-            availability: components["schemas"]["AvailabilitySlotResource"][];
+            weekly_hours: components["schemas"]["WeeklyHourResource"][];
             location: components["schemas"]["LocationAreaResource"];
             /**
              * Search Radius Km
@@ -3543,10 +3569,10 @@ export interface components {
             kind: "availability_overlap";
             /**
              * Shared Count
-             * @description Cells both of them ticked
+             * @description Hours of the week both of them ticked
              */
             shared_count: number;
-            /** @description The soonest cell both ticked, or null when there is none */
+            /** @description The soonest hour both ticked, or null when there is none */
             next_slot: components["schemas"]["CourtSharedSlot"] | null;
         };
         /**
@@ -3945,10 +3971,10 @@ export interface components {
         };
         /**
          * CourtSharedSlot
-         * @description The next cell of the week both players ticked.
+         * @description The next hour of the week both players ticked.
          *
          *     **The grid is never rendered to anybody as a calendar.** Only the count of
-         *     shared slots and the name of the next shared one are ever shown, because
+         *     shared hours and the name of the next shared one are ever shown, because
          *     overlap is a fact about a pair where a calendar is a fact about a person.
          */
         CourtSharedSlot: {
@@ -3957,8 +3983,11 @@ export interface components {
              * @description ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.
              */
             day: number;
-            /** @description Which part of that day */
-            part: components["schemas"]["DayPart"];
+            /**
+             * Hour
+             * @description The hour that cell starts at, wall clock — 19 is 19:00 to 20:00
+             */
+            hour: number;
         };
         /**
          * CourtSocialVibeEvidence
@@ -4078,19 +4107,6 @@ export interface components {
             join_policy: components["schemas"]["JoinPolicy"];
         };
         /**
-         * DayPart
-         * @description The three parts of a day a player may tick.
-         *
-         *     Closed, and deliberately coarse. The product asks *when do you usually play*,
-         *     and an answer finer than this would be a schedule — which is the thing a
-         *     preference is explicitly not.
-         *
-         *     Declared in rendering order, so ``tuple(DayPart)`` is the order a grid is
-         *     laid out in and no caller sorts.
-         * @enum {string}
-         */
-        DayPart: "MORNING" | "AFTERNOON" | "EVENING";
-        /**
          * DealDeckRequest
          * @description What a deal is asked for. **The sport, and the week you are asking about.**
          *
@@ -4129,7 +4145,7 @@ export interface components {
              *
              *     **It is an ask and never a correction.** Nothing here writes your profile; the app offers to save it afterwards.
              */
-            availability_override?: components["schemas"]["AvailabilitySlotResource"][];
+            availability_override?: components["schemas"]["WeeklyHourResource"][];
         };
         /**
          * DeclarePlayIntentRequest
@@ -6148,6 +6164,61 @@ export interface components {
          * @enum {string}
          */
         PairingAbsence: "NOTHING_TO_COMPUTE" | "COULD_NOT_BE_READ";
+        /**
+         * PaymentMethodResponse
+         * @description The player's payment method, as You › Payments draws it.
+         */
+        PaymentMethodResponse: {
+            /** @description The saved method, or `null` — *Not set up*. */
+            method: components["schemas"]["SavedMethodSchema"] | null;
+            /**
+             * Terms Needed
+             * @description `true` when the bank moved the saved card to another brand: it cannot be charged until the player accepts the terms again (`POST …/terms` with no setup open). Always `false` with no method.
+             */
+            terms_needed: boolean;
+            /**
+             * Terms Version
+             * @description The version of the terms in force.
+             */
+            terms_version: string;
+        };
+        /**
+         * PaymentSetupResponse
+         * @description A setup opened: what the phone opens the provider's card fields with.
+         */
+        PaymentSetupResponse: {
+            /**
+             * Setup Id
+             * @description The setup the phone's provider fields confirm. **Its secret is not here**: it is the answer to accepting the terms, and nothing can be saved without it.
+             */
+            setup_id: string;
+            /**
+             * Publishable Key
+             * @description The key the provider's fields are opened with. Not a secret: it collects details and can charge nothing.
+             */
+            publishable_key: string;
+            /**
+             * Terms Version
+             * @description The version of the payment terms in force — the words the client must show before *Accept and continue*, and send back.
+             */
+            terms_version: string;
+        };
+        /** PaymentTermsRequest */
+        PaymentTermsRequest: {
+            /**
+             * Terms Version
+             * @description The version of the words the player was shown. Anything but the terms in force is `409 payment_terms_outdated`.
+             */
+            terms_version: string;
+        };
+        /** PaymentTermsResponse */
+        PaymentTermsResponse: {
+            /**
+             * Client Secret
+             * @description The secret the phone confirms the open setup with — its **only** appearance on any response. `null` when the terms were accepted again for the method already saved, after its bank moved it to another brand: there is nothing to confirm.
+             */
+            client_secret: string | null;
+        };
         /** PendingInvitationSchema */
         PendingInvitationSchema: {
             /**
@@ -6569,14 +6640,16 @@ export interface components {
          *     where an id comes from.
          *
          *     **Fields are only ever added.** A shipped mobile app parses this document for
-         *     months after it stops being built.
+         *     months after it stops being built. ``weekly_hours`` is the one replacement,
+         *     of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), made
+         *     while no build had shipped anywhere but ``local``.
          */
         PlayerProfileReadResponse: {
             /**
-             * Availability
-             * @description The cells of the week this player has ticked, in the platform's own reading order. **An empty list is a real answer** — a player may clear their week — and it means *we do not know when they play*, never *never*.
+             * Weekly Hours
+             * @description The hours of the week this player has ticked, in the platform's own reading order — day, then hour. **An empty list is a real answer** — a player may clear their week — and it means *we do not know when they play*, never *never*.
              */
-            availability: components["schemas"]["AvailabilitySlotResource"][];
+            weekly_hours: components["schemas"]["WeeklyHourResource"][];
             /**
              * Search Radius Km
              * @description Whole kilometres. What the search screen's slider opens at.
@@ -6636,7 +6709,9 @@ export interface components {
          *     route; the commit's answer stays what it was.
          *
          *     **Fields are only ever added.** A shipped mobile app parses this document for
-         *     months after it stops being built.
+         *     months after it stops being built. ``weekly_hours`` is the one replacement,
+         *     of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), made
+         *     while no build had shipped anywhere but ``local``.
          */
         PlayerProfileResponse: {
             /**
@@ -6648,8 +6723,8 @@ export interface components {
             social_tag_ids: components["schemas"]["SocialTag"][];
             /** Photo Ids */
             photo_ids: string[];
-            /** Availability */
-            availability: components["schemas"]["AvailabilitySlotResource"][];
+            /** Weekly Hours */
+            weekly_hours: components["schemas"]["WeeklyHourResource"][];
             location: components["schemas"]["LocationAreaResource"];
             /** Search Radius Km */
             search_radius_km: number;
@@ -6953,9 +7028,9 @@ export interface components {
             radius_km?: number;
             /**
              * Slots
-             * @description The week this search actually ran on, in the same two named fields every other week on the wire crosses in — because the sheet **draws** this one on the seven-by-three grid beside the profile's own and quotes its count off the same list. **An empty list is a cleared week** — the player unticked every cell, which is a legal edit and a legal thing to be offered — where the field being absent means this is not the times prompt at all.
+             * @description The week this search actually ran on, in the same two named fields every other week on the wire crosses in — because the sheet **draws** this one on the seven-by-sixteen grid beside the profile's own and quotes its count off the same list. **An empty list is a cleared week** — the player unticked every hour, which is a legal edit and a legal thing to be offered — where the field being absent means this is not the times prompt at all.
              */
-            slots?: components["schemas"]["AvailabilitySlotResource"][];
+            slots?: components["schemas"]["WeeklyHourResource"][];
             /** @description The mode your recent searches keep choosing */
             mode?: components["schemas"]["SearchMode"];
         };
@@ -7491,7 +7566,7 @@ export interface components {
              * Availability Override
              * @description The week to run **this one line-up** against. Omit to use the grid on your profile — **omit it, never send `null`**.
              */
-            availability_override?: components["schemas"]["AvailabilitySlotResource"][];
+            availability_override?: components["schemas"]["WeeklyHourResource"][];
             /**
              * Offered By Search Id
              * Format: uuid
@@ -7521,7 +7596,7 @@ export interface components {
              *
              *     **It is an ask and never a correction.** Nothing here writes your profile; the app offers to save it afterwards.
              */
-            availability_override?: components["schemas"]["AvailabilitySlotResource"][];
+            availability_override?: components["schemas"]["WeeklyHourResource"][];
             /**
              * Offered By Search Id
              * Format: uuid
@@ -7570,8 +7645,23 @@ export interface components {
              * @description The widened radius, on a `RADIUS` rung. Always inside the same 1-50 km your own slider holds: a relaxation never offers a radius you could not have set yourself, so a searcher already at 50 km is offered no radius rung at all.
              */
             radius_km?: number;
-            /** @description The one cell this rung would add to your week, on a `TIMES` rung, and **for this search only**. The same two named fields every other slot crosses in, because this one is drawn on the same seven-by-three grid the player just filled in — ticked there as belonging to this search and to no later one. */
-            slot?: components["schemas"]["AvailabilitySlotResource"];
+            /** @description The one hour this rung would add to your week, on a `TIMES` rung, and **for this search only**. The same two named fields every other hour crosses in, because this one is drawn on the same seven-by-sixteen grid the player just filled in — ticked there as belonging to this search and to no later one. */
+            slot?: components["schemas"]["WeeklyHourResource"];
+        };
+        /** SavedMethodSchema */
+        SavedMethodSchema: {
+            /**
+             * Brand
+             * @description The card network as the provider names it, lower case — `visa`, `mastercard`, `unknown` for one it does not recognise. An open set: draw a plain card for a brand you have no badge for.
+             */
+            brand: string;
+            /**
+             * Last Four
+             * @description The last four digits of the card number.
+             */
+            last_four: string;
+            /** @description The phone's wallet it was saved through, or `null` for a card typed in. */
+            wallet: components["schemas"]["Wallet"] | null;
         };
         /**
          * SavedSettingsResponse
@@ -7999,11 +8089,30 @@ export interface components {
             b: number;
         };
         /**
+         * SetWeeklyHoursRequest
+         * @description The weekly hours, replaced whole — *Save your week*.
+         *
+         *     **No floor, and that is the difference from the commit.** An empty list is a
+         *     cleared week and is recorded; ``weekly_hours_empty`` refuses the answer a
+         *     player is *asked for* at the end of onboarding, not every later edit of it.
+         *
+         *     Repeated hours are collapsed rather than refused, and the response carries
+         *     the week as it was stored — so a client that sent the same hour twice, or
+         *     sent the week in its own order, can see what the profile now holds.
+         */
+        SetWeeklyHoursRequest: {
+            /**
+             * Weekly Hours
+             * @description Every hour still ticked. **The list is the week** — what is absent is unticked — and an empty list clears it, which is a legal value rather than a refusal.
+             */
+            weekly_hours: components["schemas"]["WeeklyHourResource"][];
+        };
+        /**
          * SharedSlot
-         * @description The next cell of the week both players ticked.
+         * @description The next hour of the week both players ticked.
          *
          *     **The grid is never rendered to anybody as a calendar.** Only the count of
-         *     shared slots and the name of the next shared one are ever shown, because
+         *     shared hours and the name of the next shared one are ever shown, because
          *     overlap is a fact about a pair where a calendar is a fact about a person.
          */
         SharedSlot: {
@@ -8012,8 +8121,11 @@ export interface components {
              * @description ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.
              */
             day: number;
-            /** @description Which part of that day */
-            part: components["schemas"]["DayPart"];
+            /**
+             * Hour
+             * @description The hour that cell starts at, wall clock — 19 is 19:00 to 20:00
+             */
+            hour: number;
         };
         /**
          * ShortlistResponse
@@ -8731,15 +8843,67 @@ export interface components {
             ctx?: Record<string, never>;
         };
         /**
+         * Wallet
+         * @description The phone's own wallet a card was saved through. Only the two the setup
+         *     offers (the mechanics §12.4): Apple Pay on an iPhone, Google Pay on Android.
+         *     A card saved through any other wallet is recorded as a plain card.
+         * @enum {string}
+         */
+        Wallet: "APPLE_PAY" | "GOOGLE_PAY";
+        /**
+         * WeeklyHourResource
+         * @description One ticked hour of the week — a day, and the hour its cell starts at.
+         *
+         *     Two named fields rather than the single joined code the event stream stores.
+         *     The stream's code is a *storage* encoding chosen so a replay folds strings;
+         *     this is a contract a client renders a grid from, and a client that had to
+         *     split ``"3:19"`` would be parsing our persistence format.
+         *
+         *     **Every cell, and there is no exception.** The rule was twice read as
+         *     covering only the cells a player *chose* — the one a times rung offers
+         *     (#283), and the week a raised ``KEEP_THESE_TIMES`` quotes back (#286) — on
+         *     the argument that a payload handed back is not a resource. Both crossed as
+         *     codes, and in both cases a client ended up splitting one. What decides this
+         *     is not whose value it is but **what is done with it**: a cell that gets
+         *     drawn on the seven-by-sixteen grid crosses in these two fields, and the engine
+         *     holding it as a code is a fact about the engine. This side of the boundary
+         *     owns the encoding, so this side is where it is read.
+         */
+        WeeklyHourResource: {
+            /**
+             * Day
+             * @description ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.
+             */
+            day: number;
+            /**
+             * Hour
+             * @description The hour the cell starts at, wall clock — 19 is 19:00 to 20:00. The week runs 07:00 to 23:00, so the first cell is 7 and the last is 22.
+             */
+            hour: number;
+        };
+        /**
+         * WeeklyHoursResponse
+         * @description The weekly hours as the profile now holds them.
+         *
+         *     A body rather than a ``204`` because the value stored is not always the
+         *     value sent: repeated hours are collapsed and the order is the platform's
+         *     reading order, so a client that kept what it sent would hold a week the
+         *     profile does not.
+         */
+        WeeklyHoursResponse: {
+            /** Weekly Hours */
+            weekly_hours: components["schemas"]["WeeklyHourResource"][];
+        };
+        /**
          * Window
-         * @description When a game found on a grid would plausibly be played. **A code, never a
+         * @description When a game found on a week would plausibly be played. **A code, never a
          *     sentence** — *"tonight"* is the client's word (``docs/adr/0022``).
          *
          *     **Derived, never chosen** (``docs/adr/0100``). There is no window picker
-         *     anywhere: a player changes their window by changing their grid, which is the
+         *     anywhere: a player changes their window by changing their week, which is the
          *     same act that changes their matches. One control, one meaning.
          *
-         *     It is a **label on the search**, not a proposed time — the grid is still
+         *     It is a **label on the search**, not a proposed time — the week is still
          *     never rendered to anybody as a calendar, and this says only how soon the week
          *     it ran on comes round.
          * @enum {string}
@@ -9585,7 +9749,7 @@ export interface operations {
              *
              *     `search_radius_out_of_bounds` — outside the served range, or off its step.
              *
-             *     `availability_grid_empty` — nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.
+             *     `weekly_hours_empty` — nothing ticked on the week. At least one of its 112 hours; the minimum is exactly one and is not served.
              *
              *     `proposals_opt_in_not_answered` — the answer was `null`. Ask the question; do not send `false` on the player's behalf.
              *
@@ -9643,7 +9807,7 @@ export interface operations {
             };
         };
     };
-    change_availability_api_v1_players_me_availability_put: {
+    set_weekly_hours_api_v1_players_me_weekly_hours_put: {
         parameters: {
             query?: never;
             header?: never;
@@ -9652,7 +9816,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ChangeAvailabilityRequest"];
+                "application/json": components["schemas"]["SetWeeklyHoursRequest"];
             };
         };
         responses: {
@@ -9662,7 +9826,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AvailabilityResponse"];
+                    "application/json": components["schemas"]["WeeklyHoursResponse"];
                 };
             };
             /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
@@ -13661,6 +13825,198 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_payment_setup_api_v1_players_me_payment_methods_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSetupResponse"];
+                };
+            };
+            /** @description `adult_attestation_missing` — this account has not given the Adult attestation, which playing requires: an account an invitation opened, before *Start playing*'s first step. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `payment_setups_exhausted` — five setups were started in the last day, the card-testing guard. Nothing was asked of the provider. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `payments_unavailable` — the payment provider could not be reached. Nothing was recorded; retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_payment_terms_api_v1_players_me_payment_methods_terms_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentTermsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentTermsResponse"];
+                };
+            };
+            /** @description `payment_terms_outdated` — the words shown are not the terms in force, named by `details.terms_version`. `payment_setup_not_started` — no setup is open: never started, or cancelled at the provider. Start one. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `payments_unavailable` — the payment provider could not be reached. Nothing was recorded; retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_payment_setup_api_v1_players_me_payment_methods_confirmation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentMethodResponse"];
+                };
+            };
+            /** @description `payment_terms_not_accepted` — the terms come first; nothing was saved. `payment_setup_not_finished` — the phone has not confirmed, or the bank's check is not done (`details.status`: `AWAITING_THE_PHONE`, `AUTHENTICATING`, `PROCESSING`). `payment_method_declined` — the bank refused the card; the same setup can try another. `payment_setup_not_started` — no setup is open: never started, or cancelled at the provider. Start one. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `payments_unavailable` — the payment provider could not be reached. Nothing was recorded; retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_payment_method_api_v1_players_me_payment_methods_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentMethodResponse"];
+                };
+            };
+        };
+    };
+    remove_payment_method_api_v1_players_me_payment_methods_current_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `payment_method_not_found` — nothing is saved. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `payment_method_in_use` — a live yes or a booked game ahead still needs it; `details.live_yeses` and `details.upcoming_games` count them. Nothing was removed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

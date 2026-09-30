@@ -268,18 +268,19 @@ there is no add control on screen rather than a disabled one. Every word on it i
 caller's, because the step that collects photos and the profile editor that will change
 them do not say the same things.
 
-**The availability grid** (6.8) is seven days by three parts of the day on a card that also
-holds its footnote, and **days are rows because seven columns cannot be reached** — seven cells
-at the 44pt minimum want 308pt against the 290pt of content the narrowest phone has, and the
-widest phone in the population does not close it either. Turned this way a cell is 44 tall by
-its own geometry and 59,5 wide inside the card, the first control in the app that reaches the
-touch minimum in both axes without being granted a `hitSlop`; `profileControlGeometry.test.ts`
-pins that division **and the 15,5pt of margin the card left**, because that margin is small
-enough that padding added elsewhere could spend it. A cell is the only pressable thing on it —
-there is no row, column or _weekends_ shortcut anywhere in the component — and its selected
-state is a fill **and** a tick: `paper2` to `mint` is a 3,39:1 luminance step rather than a
-change of hue, and the tick is what stops twenty-one squares differing only in lightness
-reading as a texture. Every word is the caller's.
+**The availability grid** (6.8) is the week of hours — seven days across, sixteen hours down,
+07:00 to 22:00, mock 36 — on a card that also holds its footnote. **A tap toggles one hour and a
+press and drag paints a run**: the cell the drag began on decides whether it ticks or clears, and
+`onPaint` is handed the run so far, whole, on every move, so a caller one render behind the finger
+still lands every hour. The pan is `react-native-gesture-handler`'s over the cells alone, because
+the grid sits in a scrolling page: at a 4pt intent it claims a drag down a column before either
+platform begins a scroll, while the hour labels and the heads stay a scroll handle. Which cell a
+point is over and which cells a fast finger jumped are `availabilityGridGeometry.ts`'s, tested as
+numbers. **The cell is under the 44pt minimum on purpose** — sixteen rows at 44 are taller than any
+page — and is granted half the gap on every side, which tiles the reachable areas exactly;
+`profileControlGeometry.test.ts` pins that and the width left at the label cap. There is no row,
+column or _weekends_ shortcut, and the selected state is a fill **and** a tick, though mock 36
+draws the fill alone: every state carries a shape, never colour alone. Every word is the caller's.
 
 **The radius slider** (6.10) is one number on a track, and **the row is the control rather
 than the thumb**: a press anywhere on its 44pt reaches the value at that point, which is

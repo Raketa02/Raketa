@@ -46,7 +46,7 @@ through the same _code → message, never message → message_ mechanism, and **
 template inlined in a component** ([`the-words.md`](../../../docs/specs/matchmaking/the-words.md)
 §20). **One rule decides every element**: _one accessibility element per action, and everything
 with no action of its own merges into the nearest action above it_ — which is what makes the
-question navigator one element and the availability grid twenty-one, as one rule rather than
+question navigator one element and the availability grid one per hour, as one rule rather than
 two precedents. It has three consequences worth knowing before reading the file. **The card is
 spoken in a different order than it is drawn** — identifying facts lead, the argument follows —
 and it is the one recorded divergence from visual order in the feature. **The seat, its clear
@@ -1206,3 +1206,18 @@ fill-the-seat still go through. The Players deck is this feature's too, and it i
 flag by way of the bar: the shell draws its column only with Classic play on
 ([`shell.md`](shell.md)). Every suite that walks the deck, the radar or Find a game launches through
 `launchIntoClassicPlay`.
+
+**Classic play speaks hours too: the week it searches on, the sheet that offers to keep it, and
+the card's shared-hour line** ([#551](https://github.com/Raketa02/Raketa/issues/551), ruled on
+#534: _hours everywhere_). Find a game's week is the same 7 × 16 grid as the profile's
+([`player_profile.md`](player_profile.md)), built from `HOURS` × `WEEKDAYS`, and a drag paints a
+run onto the working copy through `paintWeekCells` beside `toggleWeekCell` in the session store.
+**A painted run that crosses the times rung's offered hour takes its mark off**, for the tap's
+reason — ticked or cleared, the player has answered that hour themselves — and a run elsewhere
+leaves it. `availability_override`, a TIMES rung's `slot`, `KEEP_THESE_TIMES`'s `slots` and
+`next_slot` all cross as `{ day, hour }` through player_profile's `toWireWeeklyHours` and
+`toWeeklyHours`, so there is still one spelling of a week. `SH.saveav`'s diff grid is sixteen rows
+of seven, and every count and name says hours: _3 hours you both ticked · next Tue 19:00_, _No
+shared hours — one of you would have to bend_, the deck's _9 hours_ tile, _6 hours now · 4 on your
+profile_, and the court's _share no hour_ dock. The wire code `NO_SHARED_SLOTS` is the backend's
+and keeps its name. **Not seen on a device**, and the flag is off by default.

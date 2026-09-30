@@ -43,7 +43,7 @@ const UNFILLED: Readonly<Record<UnfilledReason, string>> = {
   NO_CANDIDATE_ABOVE_FLOOR: 'Nobody in range was a good enough fit for this seat',
   NO_ADMISSIBLE_COMBINATION: 'Plenty of people, but no four of you work together',
   POOL_EXHAUSTED: 'Nobody left in range — everybody who fits is already seated',
-  NO_SHARED_SLOTS: "Seated, but the four of you share no slot — you'd all have to bend",
+  NO_SHARED_SLOTS: "Seated, but the four of you share no hour — you'd all have to bend",
 };
 
 export function unfilledSeatLine(reason: UnfilledReason): string {

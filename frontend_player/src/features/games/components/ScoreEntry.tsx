@@ -165,7 +165,7 @@ const s = StyleSheet.create({
   sideLabelAway: { color: theme.color.muted },
   cell: {
     flex: 1,
-    // The 44pt minimum by geometry rather than by slop, as the availability grid's cell is.
+    // The 44pt minimum by geometry rather than by slop, as the tick box's row is.
     height: theme.size.minTouch,
     borderRadius: theme.radius.btn,
     backgroundColor: theme.color.paper2,

@@ -1603,8 +1603,8 @@ function toOccupant(
  * the size of a dot, with most of its own control blank around it.
  *
  * So the face is drawn at **`minTouch` itself**. The visual and the reachable area are the
- * same square, there is no slop to bound and nothing to spend — the availability cell's own
- * answer one screen over, and the shape [7.12](../../../../docs/design-system.md#712-the-court)
+ * same square, there is no slop to bound and nothing to spend — the tick box row's own answer,
+ * and the shape [7.12](../../../../docs/design-system.md#712-the-court)
  * says the clear badge is the single control in this app that cannot have. Two of them plus
  * the gap is 91pt against the 103pt a panel has inside its padding on the narrowest phone,
  * which is the arithmetic `builder.test.tsx` pins.

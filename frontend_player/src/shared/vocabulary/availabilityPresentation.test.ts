@@ -1,58 +1,73 @@
 /**
- * What a day, a part of a day and one cell of the week are called.
+ * What a day, an hour and one cell of the week are called.
  *
  * Two things here are load-bearing rather than decorative. **Each cell names its day and its
- * part of the day**, because a screen reader gets nothing from the row a cell is in or the
- * column it is under. And **all twenty-one names are distinct**, which is what stops two
- * cells announcing alike.
+ * hour**, because a screen reader gets nothing from the row a cell is in or the column it is
+ * under. And **all hundred and twelve names are distinct**, which is what stops two cells
+ * announcing alike.
  *
- * The third is the promotion itself: the sentence form — *Tue evening* — is built from the
- * same two tables the grid draws, so a reason line and a column head can never disagree
- * about which day is Thursday.
+ * The third is the promotion itself: the sentence form — *Tue 19:00* — is built from the same
+ * two tables the grid draws, so a reason line and a column head can never disagree about which
+ * day is Thursday or what 19:00 is written as.
  */
 
-import { cellLabel, dayLabel, dayPartHead, slotName } from './availabilityPresentation';
-import { DAY_PARTS, WEEKDAYS, type WeekCell } from './week';
+import { cellLabel, dayLabel, hourLabel, slotName } from './availabilityPresentation';
+import { HOURS, WEEKDAYS, type WeeklyHour } from './week';
 
-const EVERY_CELL: readonly WeekCell[] = WEEKDAYS.flatMap((day) =>
-  DAY_PARTS.map((part) => ({ day, part })),
+const EVERY_CELL: readonly WeeklyHour[] = HOURS.flatMap((hour) =>
+  WEEKDAYS.map((day) => ({ day, hour })),
 );
 
 describe('naming a cell', () => {
-  it('names the day and the part of the day, in that order', () => {
-    expect(cellLabel({ day: 1, part: 'morning' })).toBe('Monday morning');
-    expect(cellLabel({ day: 7, part: 'evening' })).toBe('Sunday evening');
+  it('names the whole day and the hour the cell starts at, in that order', () => {
+    expect(cellLabel({ day: 1, hour: 7 })).toBe('Monday 07:00');
+    expect(cellLabel({ day: 7, hour: 22 })).toBe('Sunday 22:00');
   });
 
-  it('gives all twenty-one a name of their own', () => {
+  it('gives all hundred and twelve a name of their own', () => {
     const names = EVERY_CELL.map(cellLabel);
 
-    expect(new Set(names).size).toBe(21);
+    expect(new Set(names).size).toBe(112);
   });
 });
 
 describe('the labels around the grid', () => {
-  it('shortens each day for a column capped at a quarter of the content', () => {
+  it('shortens each day for a column seven share', () => {
     expect(WEEKDAYS.map(dayLabel)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
   });
 
-  it('heads the three columns with the parts of the day', () => {
-    expect(DAY_PARTS.map(dayPartHead)).toEqual(['Morning', 'Afternoon', 'Evening']);
+  it('labels the sixteen rows with the hour each starts at, on the 24-hour clock', () => {
+    expect(HOURS.map(hourLabel)).toEqual([
+      '07:00',
+      '08:00',
+      '09:00',
+      '10:00',
+      '11:00',
+      '12:00',
+      '13:00',
+      '14:00',
+      '15:00',
+      '16:00',
+      '17:00',
+      '18:00',
+      '19:00',
+      '20:00',
+      '21:00',
+      '22:00',
+    ]);
   });
 });
 
 describe('a cell inside a sentence', () => {
-  it('is the short day and the part in lower case', () => {
+  it('is the short day and the hour', () => {
     // `the-words.md` §6.2's `next {slot}`: a phrase in a line of prose, not a heading over
     // a column.
-    expect(slotName({ day: 2, part: 'evening' })).toBe('Tue evening');
+    expect(slotName({ day: 2, hour: 19 })).toBe('Tue 19:00');
   });
 
-  it('is built from the same tables the grid draws, never a third list', () => {
-    // The whole reason the tables were promoted rather than copied: one Thursday.
-    for (const cell of EVERY_CELL) {
-      expect(slotName(cell).startsWith(dayLabel(cell.day))).toBe(true);
-      expect(slotName(cell).endsWith(cell.part)).toBe(true);
-    }
+  it('writes the day and the hour as the grid heads them, never a third spelling', () => {
+    // The whole reason the tables were promoted rather than copied: one Thursday, one 07:00.
+    expect(slotName({ day: 4, hour: 7 })).toBe('Thu 07:00');
+    expect(slotName({ day: 7, hour: 22 })).toBe('Sun 22:00');
   });
 });

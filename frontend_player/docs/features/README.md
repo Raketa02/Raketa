@@ -56,8 +56,8 @@ steps over a client-held draft, and the one write that ends them — the Social 
 2 to 6 chips from a served vocabulary, the intro step, one line about yourself or nothing, with
 a visible Skip and the contact fence said up front, the photos step, up to three court photos or none, each
 one checked server-side against the on-court rule and **warned about rather than refused**,
-the availability grid, seven days by three parts of the day, blank on arrival and requiring
-one ticked cell of the twenty-one before it continues
+the week of hours, seven days by sixteen hours, tapped or painted by a drag, blank on arrival and
+requiring one ticked hour before it continues
 ([ADR-0102](../../../docs/adr/0102-silence-is-never-scored.md)), the location step, one foreground fix coarsened to about a kilometre before it is
 held, the radius step, a slider over the served bounds that opens at the served default, the gender
 step, one required answer about the player and one optional preference over who they are

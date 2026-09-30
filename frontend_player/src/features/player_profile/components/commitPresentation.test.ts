@@ -9,7 +9,7 @@
  * drive it.
  *
  * The week arrives from **both** directions since ADR-0102 gave it a floor: a draft that
- * holds no ticked cell, and a commit the server refused with `availability_grid_empty`.
+ * holds no ticked cell, and a commit the server refused with `weekly_hours_empty`.
  * They are asked for in the same words on purpose — which side noticed is not something a
  * player has any use for — and that is asserted rather than left to two tables that could
  * drift into two sentences.
@@ -91,11 +91,11 @@ describe('the answer the last step asks for', () => {
 });
 
 describe('a commit the server refused', () => {
-  it('reads the week off `availability_grid_empty`, and offers the step that asks it', () => {
+  it('reads the week off `weekly_hours_empty`, and offers the step that asks it', () => {
     // **The commit re-validates what the picker already enforced.** A disabled control is
     // absent from a replayed request and from a build that predates the floor, so this
     // refusal is a real thing to render rather than an impossible one.
-    const refused = stepTheCommitRefused(refusal('availability_grid_empty'));
+    const refused = stepTheCommitRefused(refusal('weekly_hours_empty'));
 
     expect(refused?.step).toBe('availability');
     expect(refused?.label).toBe('Set when you usually play');
@@ -106,7 +106,7 @@ describe('a commit the server refused', () => {
     // same thing either way, so they are asked for it in the same sentence.
     const wanted = answerStillWanted(['availability']);
 
-    expect(stepTheCommitRefused(refusal('availability_grid_empty'))).toEqual({
+    expect(stepTheCommitRefused(refusal('weekly_hours_empty'))).toEqual({
       step: 'availability',
       body: wanted?.copy.body,
       label: wanted?.copy.label,

@@ -37,13 +37,13 @@ import {
 describe('the live lines', () => {
   it('counts the week, and says what an empty one means', () => {
     expect(weekLine([])).toBe('Nothing ticked — we do not know when you play');
-    expect(weekLine([{ day: 1, part: 'morning' }])).toBe('1 slot ticked');
+    expect(weekLine([{ day: 1, hour: 9 }])).toBe('1 hour ticked');
     expect(
       weekLine([
-        { day: 1, part: 'morning' },
-        { day: 6, part: 'evening' },
+        { day: 1, hour: 9 },
+        { day: 6, hour: 19 },
       ]),
-    ).toBe('2 slots ticked');
+    ).toBe('2 hours ticked');
   });
 
   it('reads the radius with the figure and the step’s own words', () => {

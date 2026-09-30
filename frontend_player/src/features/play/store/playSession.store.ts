@@ -58,12 +58,19 @@
 import { create } from 'zustand';
 
 import type { Sport } from '@/shared/vocabulary/sport';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { Lineup, SeatedPlayerId } from '../domain/lineup';
 import { alsoAsked, NOTHING_ASKED, type AskedQuestions } from '../domain/raisedPrompt';
 import type { Prompt } from '../domain/vocabulary';
-import { sameCell, seedWorkingWeek, toggleCell, type WorkingWeek } from '../domain/workingWeek';
+import {
+  isTicked,
+  paintCells,
+  sameCell,
+  seedWorkingWeek,
+  toggleCell,
+  type WorkingWeek,
+} from '../domain/workingWeek';
 
 interface PlaySessionState {
   /**
@@ -87,7 +94,7 @@ interface PlaySessionState {
    * conflation ADR-0099 exists to prevent arriving from the client instead of the engine
    * ([#283](https://github.com/Raketa02/Raketa/issues/283)).
    */
-  readonly addedForThisSearch: WeekCell | undefined;
+  readonly addedForThisSearch: WeeklyHour | undefined;
   /**
    * **The questions this visit has already put to the player**, by sport and code.
    *
@@ -146,7 +153,16 @@ interface PlaySessionState {
    * own ask, travelling on every search from here, and *added for this search* would be the
    * grid saying so about a cell that outlived the search it belonged to.
    */
-  readonly toggleWeekCell: (cell: WeekCell) => void;
+  readonly toggleWeekCell: (cell: WeeklyHour) => void;
+  /**
+   * Paint a dragged run onto the working copy — every hour of `run` ticked, or cleared when `on`
+   * is false. A no-op outside a session. The grid reports the run so far, whole, on every move,
+   * and painting it again lands the same week.
+   *
+   * **A run that crosses the offered cell takes the mark off it**, for `toggleWeekCell`'s
+   * reason: ticked or cleared, the player has now answered that hour themselves.
+   */
+  readonly paintWeekCells: (run: readonly WeeklyHour[], on: boolean) => void;
   /**
    * Record the cell a times rung just added. **One caller: the pool, on a taken rung.**
    *
@@ -154,7 +170,7 @@ interface PlaySessionState {
    * screen that learned it — which is what this store is for, and why the mark is not a
    * `useState` on the pool the way its pending replacement is.
    */
-  readonly addForThisSearch: (cell: WeekCell) => void;
+  readonly addForThisSearch: (cell: WeeklyHour) => void;
   /**
    * Forget it — **the next search does not carry it.**
    *
@@ -270,6 +286,15 @@ export const usePlaySession = create<PlaySessionState>((set) => ({
         ...(marked !== undefined && sameCell(marked, cell)
           ? { addedForThisSearch: undefined }
           : {}),
+      };
+    }),
+  paintWeekCells: (run, on) =>
+    set((state) => {
+      if (state.week === undefined) return state;
+      const marked = state.addedForThisSearch;
+      return {
+        week: paintCells(state.week, run, on),
+        ...(marked !== undefined && isTicked(run, marked) ? { addedForThisSearch: undefined } : {}),
       };
     }),
   // Dropped outside a session for `toggleWeekCell`'s own reason: the pool is only reachable

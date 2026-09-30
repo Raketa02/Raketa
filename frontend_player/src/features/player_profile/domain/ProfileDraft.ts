@@ -20,7 +20,7 @@
  *
  * ## Empty and absent are different, and the difference is the product's
  *
- * Photos, availability and the intro start **empty**, because empty is a real answer to all
+ * Photos, the weekly hours and the intro start **empty**, because empty is a real answer to all
  * three: a player may hold no photos, *a blank week means "no preference", never "leave me
  * out"*, and a player who skips the intro has no line rather than a missing one. The other
  * three start **absent**, because they are questions that must actually be answered — and
@@ -29,22 +29,19 @@
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { Gender, GenderPreference } from './gender';
 import { DEFAULT_GENDER_PREFERENCE } from './gender';
 
 /**
- * One cell of the grid: a day, and one of the three parts of it.
+ * One **weekly hour**: a day, and the hour its cell starts at. In the draft's list it is a
+ * **ticked** one.
  *
- * In the draft's list it is a **ticked** one, but the same pair names a cell whatever its
- * state — which is why the grid's rules take one of these rather than a loose day and part.
- *
- * The cell itself is `@/shared/vocabulary/week`'s, because Play reads the same week back as
- * *overlap* and two spellings of a day would drift; this alias is the draft's word for it,
- * where a cell in the list means *ticked*.
+ * `@/shared/vocabulary/week`'s own, because Play reads the same week back as *overlap* and two
+ * spellings of a day would drift. Re-exported so the draft's shapes are read from one file.
  */
-export type AvailabilitySlot = WeekCell;
+export type { WeeklyHour };
 
 /**
  * Where the player plays.
@@ -89,8 +86,8 @@ export interface ProfileDraft {
   readonly intro: string;
   /** Uploaded photo ids, in the order the player arranged them — the first one leads. */
   readonly photoIds: readonly string[];
-  /** The cells of the week that were ticked. Empty is an answer. */
-  readonly availability: readonly AvailabilitySlot[];
+  /** The hours of the week that were ticked. Empty is an answer. */
+  readonly weeklyHours: readonly WeeklyHour[];
   readonly location: LocationArea | undefined;
   /** Whole kilometres. Absent until the player has been shown the served bounds. */
   readonly searchRadiusKm: number | undefined;
@@ -116,7 +113,7 @@ export function emptyDraft(): ProfileDraft {
     socialTagIds: [],
     intro: '',
     photoIds: [],
-    availability: [],
+    weeklyHours: [],
     location: undefined,
     searchRadiusKm: undefined,
     proposalsOptIn: undefined,

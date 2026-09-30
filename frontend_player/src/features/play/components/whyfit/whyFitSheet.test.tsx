@@ -62,7 +62,7 @@ const DISTANCE = scored('DISTANCE', 17.4, {
 const OVERLAP = scored('AVAILABILITY_OVERLAP', 17.4, {
   kind: 'availability_overlap',
   sharedCount: 3,
-  nextSlot: { day: 2, part: 'evening' },
+  nextSlot: { day: 2, hour: 19 },
 });
 
 function candidate(over: Partial<Candidate> = {}): Candidate {

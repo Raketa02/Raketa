@@ -1,7 +1,7 @@
 /**
  * The words the availability **step** says about the week it collects.
  *
- * **The step says what it is not.** A seven-by-three grid looks enough like a diary that a
+ * **The step says what it is not.** A week of hours looks enough like a diary that a
  * player could reasonably think they were promising to turn up, so the screen states in as
  * many words that this is a preference and not a promise, and that nobody ever sees it as a
  * calendar. That is the same obligation the photos step's copy carries about what is and is
@@ -25,7 +25,7 @@
  *
  * ## The floor is in the eyebrow, not only in a grey button
  *
- * ADR-0102 made one tick of twenty-one required. The tag step's copy already settled where
+ * ADR-0102 made one ticked hour required. The tag step's copy already settled where
  * a rule like that belongs — *"a player should learn how many tags are wanted by reading
  * the screen, not by being stopped by it"* — so the week states its floor in the chrome the
  * player reads before they start pressing, and the control names what is missing on top of
@@ -64,7 +64,7 @@ export const AVAILABILITY_PROMISE_BODY =
  * back to the plain position line until the bounds arrive.
  */
 export function availabilityEyebrow(): string {
-  return `${stepEyebrow('availability')} · Tick at least one`;
+  return `${stepEyebrow('availability')} · Pick at least one hour`;
 }
 
 /**
@@ -72,10 +72,10 @@ export function availabilityEyebrow(): string {
  *
  * A blocked control names what is missing rather than merely being grey, exactly as the tag
  * step's does. There is no countdown to run: the floor is one, so the control is either
- * asking for a tick or it is not.
+ * asking for an hour or it is not.
  */
 export function availabilityContinueLabel(standing: WeekStanding): string {
-  return standing.kind === 'empty' ? 'Tick at least one slot to continue' : 'Continue';
+  return standing.kind === 'empty' ? 'Pick at least one hour to continue' : 'Continue';
 }
 
 /**
@@ -93,6 +93,6 @@ export function availabilityFootnote(standing: WeekStanding): string {
   if (standing.kind === 'empty') {
     return 'Nothing ticked means we do not know when you play, never that you are unavailable.';
   }
-  const slots = standing.count === 1 ? '1 slot' : `${standing.count} slots`;
-  return `${slots} ticked. Overlap with another player is counted from these.`;
+  const hours = standing.count === 1 ? '1 hour' : `${standing.count} hours`;
+  return `${hours} ticked. Overlap with another player is counted from these.`;
 }

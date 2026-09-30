@@ -40,6 +40,7 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { paint } from '@/test-support/weekGridTouch';
 
 import { availabilityFootnote } from './availabilityPresentation';
 import {
@@ -78,17 +79,17 @@ const RATING: Wire['RatingResponse'] = {
   updated_at: '2026-08-14T09:00:00Z',
 };
 
-/** Two cells and a twelve-kilometre radius — the profile as the tab opens on it. */
+/** Two hours and a twelve-kilometre radius — the profile as the tab opens on it. */
 const SURFACE = profileSurface({
-  availability: [
-    { day: 2, part: 'EVENING' },
-    { day: 6, part: 'MORNING' },
+  weekly_hours: [
+    { day: 2, hour: 19 },
+    { day: 6, hour: 9 },
   ],
   search_radius_km: 12,
   play_intents: { PADEL: 'FOR_FUN' },
 });
 
-const AVAILABILITY_PATH = '/api/v1/players/me/availability';
+const WEEKLY_HOURS_PATH = '/api/v1/players/me/weekly-hours';
 const RADIUS_PATH = '/api/v1/players/me/search-radius';
 const LOCATION_PATH = '/api/v1/players/me/location';
 
@@ -117,16 +118,16 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-const TWO_SLOTS = weekLine([
-  { day: 2, part: 'evening' },
-  { day: 6, part: 'morning' },
+const TWO_HOURS = weekLine([
+  { day: 2, hour: 19 },
+  { day: 6, hour: 9 },
 ]);
 
 /** A signed-in player standing on the You tab, with the profile read in. */
 async function onYou() {
   await launchSignedIn();
   fireEvent.press(await screen.findByLabelText('You'));
-  await screen.findByLabelText(doorRowLabel(YOUR_WEEK_TITLE, TWO_SLOTS));
+  await screen.findByLabelText(doorRowLabel(YOUR_WEEK_TITLE, TWO_HOURS));
 }
 
 const row = (title: string, line: string) => screen.getByLabelText(doorRowLabel(title, line));
@@ -138,11 +139,12 @@ const row = (title: string, line: string) => screen.getByLabelText(doorRowLabel(
 describe('Your week', () => {
   async function openTheWeek() {
     await onYou();
-    fireEvent.press(row(YOUR_WEEK_TITLE, TWO_SLOTS));
+    fireEvent.press(row(YOUR_WEEK_TITLE, TWO_HOURS));
     await screen.findByRole('header', { name: YOUR_WEEK_TITLE });
-    await screen.findByLabelText('Tuesday evening');
+    await screen.findByLabelText('Tuesday 19:00');
   }
 
+  /** The hours ticked, in the order the grid draws them: 07:00 first, Monday first along it. */
   const ticked = () =>
     screen
       .getAllByRole('checkbox')
@@ -152,7 +154,7 @@ describe('Your week', () => {
   it('opens on the week the profile holds, with the count under the grid', async () => {
     await openTheWeek();
 
-    expect(ticked()).toEqual(['Tuesday evening', 'Saturday morning']);
+    expect(ticked()).toEqual(['Saturday 09:00', 'Tuesday 19:00']);
     expect(screen.getByText(availabilityFootnote({ kind: 'ticked', count: 2 }))).toBeTruthy();
     // Nothing has changed, and the button says so rather than merely being grey — and is
     // green, whole, because the state is the message.
@@ -160,40 +162,40 @@ describe('Your week', () => {
     expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
   });
 
-  it('writes nothing on a press, and the whole week on Save — then draws the route’s answer', async () => {
+  it('writes nothing on a tap, and the whole week on Save — then draws the route’s answer', async () => {
     // The route collapses and re-orders: what the screen draws afterwards is this, not the draft.
-    transport.on('PUT', AVAILABILITY_PATH, () =>
-      json<Wire['AvailabilityResponse']>({
-        availability: [
-          { day: 2, part: 'EVENING' },
-          { day: 3, part: 'EVENING' },
-          { day: 6, part: 'MORNING' },
+    transport.on('PUT', WEEKLY_HOURS_PATH, () =>
+      json<Wire['WeeklyHoursResponse']>({
+        weekly_hours: [
+          { day: 2, hour: 19 },
+          { day: 3, hour: 19 },
+          { day: 6, hour: 9 },
         ],
       }),
     );
     await openTheWeek();
 
-    fireEvent.press(screen.getByLabelText('Wednesday evening'));
-    expect(transport.requestsTo('PUT', AVAILABILITY_PATH)).toHaveLength(0);
+    fireEvent.press(screen.getByLabelText('Wednesday 19:00'));
+    expect(transport.requestsTo('PUT', WEEKLY_HOURS_PATH)).toHaveLength(0);
     expect(screen.getByText(availabilityFootnote({ kind: 'ticked', count: 3 }))).toBeTruthy();
     // Something to send: the accent, and the act's own words.
     expect(fillOf(screen.getByLabelText(SAVE_YOUR_WEEK))).toBe(theme.color.coralInk);
 
     fireEvent.press(screen.getByLabelText(SAVE_YOUR_WEEK));
 
-    await waitFor(() => expect(transport.requestsTo('PUT', AVAILABILITY_PATH)).toHaveLength(1));
-    expect(transport.requestsTo('PUT', AVAILABILITY_PATH)[0]?.body).toEqual({
-      availability: [
-        { day: 2, part: 'EVENING' },
-        { day: 6, part: 'MORNING' },
-        { day: 3, part: 'EVENING' },
+    await waitFor(() => expect(transport.requestsTo('PUT', WEEKLY_HOURS_PATH)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', WEEKLY_HOURS_PATH)[0]?.body).toEqual({
+      weekly_hours: [
+        { day: 2, hour: 19 },
+        { day: 6, hour: 9 },
+        { day: 3, hour: 19 },
       ],
     });
     // Saved: the draft is dropped and the grid is the cache, which is the route's week — and
     // the button has turned green under the word.
     expect(await screen.findByLabelText(SAVED)).toBeTruthy();
     expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
-    expect(ticked()).toEqual(['Tuesday evening', 'Wednesday evening', 'Saturday morning']);
+    expect(ticked()).toEqual(['Saturday 09:00', 'Tuesday 19:00', 'Wednesday 19:00']);
 
     // And the row's live line follows the cache on the way back.
     fireEvent.press(screen.getByLabelText('Back'));
@@ -202,18 +204,82 @@ describe('Your week', () => {
         doorRowLabel(
           YOUR_WEEK_TITLE,
           weekLine([
-            { day: 2, part: 'evening' },
-            { day: 3, part: 'evening' },
-            { day: 6, part: 'morning' },
+            { day: 2, hour: 19 },
+            { day: 3, hour: 19 },
+            { day: 6, hour: 9 },
           ]),
         ),
       ),
     ).toBeTruthy();
   });
 
+  it('paints a run by dragging, writes nothing until Save, and then sends the painted week', async () => {
+    transport.on('PUT', WEEKLY_HOURS_PATH, () =>
+      json<Wire['WeeklyHoursResponse']>({
+        weekly_hours: [
+          { day: 2, hour: 19 },
+          { day: 5, hour: 17 },
+          { day: 5, hour: 18 },
+          { day: 5, hour: 19 },
+          { day: 5, hour: 20 },
+          { day: 6, hour: 9 },
+        ],
+      }),
+    );
+    await openTheWeek();
+
+    // Friday, 17:00 down to 20:00, sampled at the ends.
+    paint({ day: 5, hour: 17 }, { day: 5, hour: 20 });
+
+    expect(transport.requestsTo('PUT', WEEKLY_HOURS_PATH)).toHaveLength(0);
+    expect(ticked()).toEqual([
+      'Saturday 09:00',
+      'Friday 17:00',
+      'Friday 18:00',
+      'Tuesday 19:00',
+      'Friday 19:00',
+      'Friday 20:00',
+    ]);
+    expect(screen.getByText(availabilityFootnote({ kind: 'ticked', count: 6 }))).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText(SAVE_YOUR_WEEK));
+
+    await waitFor(() => expect(transport.requestsTo('PUT', WEEKLY_HOURS_PATH)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', WEEKLY_HOURS_PATH)[0]?.body).toEqual({
+      weekly_hours: [
+        { day: 2, hour: 19 },
+        { day: 6, hour: 9 },
+        { day: 5, hour: 17 },
+        { day: 5, hour: 18 },
+        { day: 5, hour: 19 },
+        { day: 5, hour: 20 },
+      ],
+    });
+    expect(await screen.findByLabelText(SAVED)).toBeTruthy();
+  });
+
+  it('clears a run by dragging from an hour already ticked, and Save is shut again once the week is back', async () => {
+    await openTheWeek();
+
+    paint({ day: 2, hour: 17 }, { day: 2, hour: 21 });
+    expect(screen.getByLabelText(SAVE_YOUR_WEEK).props.accessibilityState?.disabled).toBe(false);
+
+    // Begun on 19:00, which is ticked: this one clears — and takes the profile's own 19:00
+    // with it, which is a change of its own.
+    paint({ day: 2, hour: 19 }, { day: 2, hour: 17 });
+    expect(ticked()).toEqual(['Saturday 09:00', 'Tuesday 20:00', 'Tuesday 21:00']);
+
+    paint({ day: 2, hour: 20 }, { day: 2, hour: 21 });
+    fireEvent.press(screen.getByLabelText('Tuesday 19:00'));
+
+    // Back to the week the profile holds, by a different road: nothing to send.
+    expect(ticked()).toEqual(['Saturday 09:00', 'Tuesday 19:00']);
+    expect(screen.getByLabelText(SAVED).props.accessibilityState?.disabled).toBe(true);
+  });
+
   it('lets an empty week be saved — the commit’s floor does not bind here', async () => {
-    transport.on('PUT', AVAILABILITY_PATH, () =>
-      json<Wire['AvailabilityResponse']>({ availability: [] }),
+    transport.on('PUT', WEEKLY_HOURS_PATH, () =>
+      json<Wire['WeeklyHoursResponse']>({ weekly_hours: [] }),
     );
     await openTheWeek();
 
@@ -225,21 +291,21 @@ describe('Your week', () => {
 
     fireEvent.press(screen.getByLabelText(SAVE_YOUR_WEEK));
 
-    await waitFor(() => expect(transport.requestsTo('PUT', AVAILABILITY_PATH)).toHaveLength(1));
-    expect(transport.requestsTo('PUT', AVAILABILITY_PATH)[0]?.body).toEqual({ availability: [] });
+    await waitFor(() => expect(transport.requestsTo('PUT', WEEKLY_HOURS_PATH)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', WEEKLY_HOURS_PATH)[0]?.body).toEqual({ weekly_hours: [] });
     fireEvent.press(await screen.findByLabelText('Back'));
     expect(await screen.findByLabelText(doorRowLabel(YOUR_WEEK_TITLE, weekLine([])))).toBeTruthy();
   });
 
   it('keeps the draft and says why when the save is refused', async () => {
-    transport.on('PUT', AVAILABILITY_PATH, () => errorResponse(403, 'forbidden'));
+    transport.on('PUT', WEEKLY_HOURS_PATH, () => errorResponse(403, 'forbidden'));
     await openTheWeek();
 
-    fireEvent.press(screen.getByLabelText('Wednesday evening'));
+    fireEvent.press(screen.getByLabelText('Wednesday 19:00'));
     fireEvent.press(screen.getByLabelText(SAVE_YOUR_WEEK));
 
     expect(await screen.findByRole('alert')).toBeTruthy();
-    expect(ticked()).toContain('Wednesday evening');
+    expect(ticked()).toContain('Wednesday 19:00');
     expect(screen.getByLabelText(SAVE_YOUR_WEEK)).toBeTruthy();
   });
 });
@@ -420,6 +486,6 @@ describe('a row whose read has not answered', () => {
 
     // The failure names the recovery, on the row, rather than the row going quiet.
     expect(await screen.findByLabelText(`${YOUR_WEEK_TITLE}, `, { exact: false })).toBeTruthy();
-    expect(screen.queryByLabelText(doorRowLabel(YOUR_WEEK_TITLE, TWO_SLOTS))).toBeNull();
+    expect(screen.queryByLabelText(doorRowLabel(YOUR_WEEK_TITLE, TWO_HOURS))).toBeNull();
   });
 });

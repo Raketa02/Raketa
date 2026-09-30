@@ -460,7 +460,7 @@ async function openDeck() {
 async function leaveAndReturn() {
   fireEvent.press(screen.getByLabelText('Play'));
   await waitFor(() => expect(screen).toHavePathname('/play'));
-  await screen.findByLabelText('Tuesday evening');
+  await screen.findByLabelText('Tuesday 19:00');
   fireEvent.press(screen.getByLabelText('Players'));
   await waitFor(() => expect(screen).toHavePathname('/players'));
 }
@@ -534,8 +534,8 @@ describe('what the deck deals', () => {
   it('deals on the profile’s week, whatever was improvised on Find a game', async () => {
     await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
-    await screen.findByLabelText('Tuesday evening');
-    fireEvent.press(screen.getByLabelText('Monday morning'));
+    await screen.findByLabelText('Tuesday 19:00');
+    fireEvent.press(screen.getByLabelText('Monday 09:00'));
 
     fireEvent.press(screen.getByLabelText('Players'));
     await waitFor(() => expect(screen).toHavePathname('/players'));
@@ -1668,7 +1668,7 @@ describe('Players, the tab', () => {
     stubProfileSurface(
       transport,
       profileSurface({
-        availability: [{ day: 2, part: 'EVENING' }],
+        weekly_hours: [{ day: 2, hour: 19 }],
         search_radius_km: 12,
         play_intents: {},
       }),

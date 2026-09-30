@@ -30,7 +30,7 @@ import {
 const OVERLAP = (over: Partial<AvailabilityOverlapEvidence>): AvailabilityOverlapEvidence => ({
   kind: 'availability_overlap',
   sharedCount: 3,
-  nextSlot: { day: 2, part: 'evening' },
+  nextSlot: { day: 2, hour: 19 },
   ...over,
 });
 
@@ -177,26 +177,24 @@ describe('their record', () => {
 
 describe('when you both play', () => {
   it('counts the shared cells and names the next one', () => {
-    expect(availabilityOverlapReason(OVERLAP({}))).toBe(
-      '3 slots you both ticked · next Tue evening',
-    );
+    expect(availabilityOverlapReason(OVERLAP({}))).toBe('3 hours you both ticked · next Tue 19:00');
   });
 
   it('stops at the count when there is no next cell', () => {
-    expect(availabilityOverlapReason(OVERLAP({ nextSlot: null }))).toBe('3 slots you both ticked');
+    expect(availabilityOverlapReason(OVERLAP({ nextSlot: null }))).toBe('3 hours you both ticked');
   });
 
   it('hardcodes no plural', () => {
     // §J4's gap is the map's fog; what this file owes is that no sentence assumes one.
     expect(availabilityOverlapReason(OVERLAP({ sharedCount: 1, nextSlot: null }))).toBe(
-      '1 slot you both ticked',
+      '1 hour you both ticked',
     );
   });
 
   it('says a zero would have to be bent around, and blames nobody', () => {
     const line = availabilityOverlapReason(OVERLAP({ sharedCount: 0, nextSlot: null }));
 
-    expect(line).toBe('No shared slots — one of you would have to bend');
+    expect(line).toBe('No shared hours — one of you would have to bend');
     expect(line).not.toMatch(/unavailable|never free/i);
   });
 });
@@ -318,7 +316,7 @@ describe('the register, across every line this build can write', () => {
 describe('the one entry point', () => {
   it('dispatches on kind, so a surface never branches on a term', () => {
     expect(reasonLine(OVERLAP({ sharedCount: 2, nextSlot: null }), {})).toBe(
-      '2 slots you both ticked',
+      '2 hours you both ticked',
     );
     expect(
       reasonLine(

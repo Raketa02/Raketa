@@ -46,7 +46,7 @@ const COPY: Readonly<Record<SocialStep, StepCopy>> = {
   },
   availability: {
     title: 'When do you usually play?',
-    asks: 'Your ordinary week, as days and parts of the day.',
+    asks: 'Your ordinary week, as the hours of each day you could play.',
   },
   location: {
     title: 'Where do you play?',

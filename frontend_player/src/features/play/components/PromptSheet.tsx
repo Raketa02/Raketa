@@ -56,9 +56,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { offlineMessage } from '@/shared/errors';
 import { AvailabilityGrid, BottomSheet, Button, Note, theme, type FocusTarget } from '@/shared/ui';
-import { dayPartHead } from '@/shared/vocabulary/availabilityPresentation';
+import { dayLabel } from '@/shared/vocabulary/availabilityPresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
-import { DAY_PARTS } from '@/shared/vocabulary/week';
+import { WEEKDAYS } from '@/shared/vocabulary/week';
 
 import { acceptWritesTheValue, type RaisedPrompt } from '../domain/raisedPrompt';
 import { useAnswerPrompt } from '../hooks/useAnswerPrompt';
@@ -180,7 +180,7 @@ export function PromptSheet({
         <AvailabilityGrid
           variant="diff"
           rows={weekDiffRows(raised.week, raised.profileWeek)}
-          columnHeads={DAY_PARTS.map(dayPartHead)}
+          columnHeads={WEEKDAYS.map(dayLabel)}
         />
       ) : null}
 

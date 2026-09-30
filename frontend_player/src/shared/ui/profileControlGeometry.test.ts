@@ -2,10 +2,10 @@
  * The three controls onboarding's second part introduces, pinned at the one width where
  * their geometry can fail.
  *
- * `docs/design-system.md` 6.8, 6.9 and 6.10 each make an arithmetic claim — *this cell is
- * 44pt without hit-slop*, *this remove control reaches 44pt without crossing into its
- * neighbour*, *this slider's row is the touch minimum* — and every one of them is a
- * division by a screen width. Part 13 locks 44 × 44pt as the minimum reachable area, and
+ * `docs/design-system.md` 6.8, 6.9 and 6.10 each make an arithmetic claim — *this hour cell is
+ * reachable up to its neighbours and no further*, *this remove control reaches 44pt without
+ * crossing into its neighbour*, *this slider's row is the touch minimum* — and every one of
+ * them is a division by a screen width. Part 13 locks 44 × 44pt as the minimum reachable area, and
  * 6.5 bounds horizontal hit-slop by the neighbour, so a target that clears 44 on a wide
  * phone and misses it on a narrow one is a rule that holds for most players and quietly
  * fails the rest.
@@ -13,13 +13,15 @@
  * **The narrowest phone is where all three are decided.** Content width is screen width
  * less two gutters ([Part 0.2](../../../docs/design-system.md#02-what-replaces-the-frame)),
  * so on a 320pt device there are 290pt to divide. That is the number 7.9 already reasons
- * against for the question navigator, and it is the number that ruled out laying the
- * availability grid out as seven columns: 7 × 44 = 308 does not fit in 290, no hit-slop
- * closes the deficit, and the widest phone in the population does not close it either.
+ * against for the question navigator, and it is the number that shows seven columns cannot
+ * reach the minimum: 7 × 44 = 308 does not fit in 290.
  *
- * **6.8 now draws its grid inside a card**, which takes another 24pt off the width before
- * the three cells divide it. That is why `cardPadding` appears in the arithmetic below: the
- * bound the section claims is still met, and it is met with less room than it used to be.
+ * **6.8's week of hours is the one control here that is under the minimum on purpose**
+ * (mock 36, ADR-0189 §5): seven days across and sixteen hours down cannot be 44pt in either
+ * axis, so the grid is drawn to fit the page and a drag paints a run. What is pinned for it
+ * is what it keeps — reachable areas that tile the grid without overlapping, a cell width that
+ * survives Dynamic Type on the narrowest phone, and a paint intent that claims a drag before
+ * the page can take it as a scroll.
  *
  * A test and not a runtime assertion, for the reason `bandEdges.test.ts` gives: a
  * `theme.ts` that checked its own arithmetic would be the app refusing to launch over a
@@ -51,65 +53,76 @@ describe('the narrowest content width', () => {
     expect(NARROWEST_CONTENT).toBe(290);
   });
 
-  it('cannot fit seven columns at the touch minimum, which is why days are rows', () => {
+  it('cannot fit seven columns at the touch minimum', () => {
     expect(7 * theme.size.minTouch).toBeGreaterThan(NARROWEST_CONTENT);
   });
 });
 
-describe('the availability cell (6.8)', () => {
+describe('the hour cell (6.8)', () => {
   const { availability } = theme.size;
+  const slop = theme.hit.availabilityCell;
 
   /** What the grid has to divide: the content width, less the card it sits inside. */
   const insideTheCard = NARROWEST_CONTENT - 2 * availability.cardPadding;
 
   /**
-   * Three cells share whatever the day-label column leaves, inside the card. The label
-   * column is content-sized so it grows with Dynamic Type, capped by `labelMaxRatio` — so
-   * this is the *worst* case, the cell width at the largest text setting the cap allows.
+   * Seven cells share whatever the hour-label column leaves, inside the card. The label column
+   * is content-sized so it grows with Dynamic Type, capped by `labelMaxRatio` — so this is the
+   * *worst* case, the cell width at the largest text setting the cap allows.
    */
-  const widestLabelColumn = insideTheCard * availability.labelMaxRatio;
-  const cellWidth =
+  const narrowestCell =
     (insideTheCard -
-      widestLabelColumn -
+      insideTheCard * availability.labelMaxRatio -
       availability.labelGutter -
       (availability.columns - 1) * availability.gap) /
     availability.columns;
 
-  it('reaches the touch minimum by height alone, with no hit-slop to grant', () => {
-    expect(availability.cellHeight).toBe(theme.size.minTouch);
-  });
-
-  it('clears the touch minimum in width even with the label column at its cap', () => {
-    expect(cellWidth).toBeGreaterThanOrEqual(theme.size.minTouch);
+  /**
+   * The reason the cell is not 44pt tall: sixteen hours at the minimum, with their gaps, are
+   * taller than the shortest phone in the population is — before a header, a button or a tab
+   * bar has taken anything. A grid that scrolled under the finger painting it would paint the
+   * wrong hours.
+   */
+  it('could not draw sixteen hours at the touch minimum on any page', () => {
+    const SHORTEST_SCREEN = 667;
+    expect(
+      availability.rows * theme.size.minTouch + (availability.rows - 1) * availability.gap,
+    ).toBeGreaterThan(SHORTEST_SCREEN);
   });
 
   /**
-   * The card is what makes that assertion worth re-reading rather than inheriting: it takes
-   * 24pt off the width, and the margin over the minimum is what is left of what the layout
-   * used to have. Stated so the next person adding padding to the card can see the room they
-   * are spending.
+   * The neighbour rule, read in both axes: each cell reaches half the gap on every side and not
+   * a point more, so two cells' reachable areas meet exactly — no dead point between them, and
+   * no point that belongs to both.
    */
-  it('is left 15,5pt of room over the minimum once the card has taken its padding', () => {
-    expect(cellWidth - theme.size.minTouch).toBeCloseTo(15.5, 1);
+  it('reaches exactly half the gap on every side, so the reachable areas tile the grid', () => {
+    expect(slop.top + slop.bottom).toBe(availability.gap);
+    expect(slop.left + slop.right).toBe(availability.gap);
+  });
+
+  /** Stated as a figure, so the next change to the cell, the gap or the slop is a choice. */
+  it('is reachable 24pt high, one hour to the next', () => {
+    expect(reachable(availability.cellHeight, slop.top, slop.bottom)).toBe(24);
   });
 
   /**
-   * The other axis, and the property no other control in the app has: this cell reaches the
-   * minimum in **both** directions without a `hitSlop` entry to grant it either one.
+   * The label column's cap is the one thing standing between Dynamic Type and a cell too
+   * narrow to aim at, so the width left at the cap is stated — and the margin it keeps.
    */
-  it('needs no hit-slop in either axis', () => {
-    expect(theme.hit).not.toHaveProperty('availability');
+  it('is still more than 23pt wide on the narrowest phone with the labels at their cap', () => {
+    expect(narrowestCell).toBeGreaterThan(23);
+    expect(reachable(narrowestCell, slop.left, slop.right)).toBeGreaterThan(27);
   });
 
   /**
-   * The label column's cap is the only thing standing between Dynamic Type and a cell too
-   * narrow to hit, so it is worth stating what it may not grow to: a cap that let the
-   * labels take a third of the card would still pass the assertion above today, and would
-   * stop passing it the moment the gap, the padding or the gutter moved.
+   * A drag down a column is the grid's only if the grid claims it first. Both platforms begin
+   * a scroll once a finger has moved their touch slop — 8dp on Android, about 10pt on iOS — so
+   * the paint intent sits under the smaller of the two.
    */
-  it('caps the label column well short of what would starve the cells', () => {
-    const capThatWouldStarveThem = 1 - (availability.columns * theme.size.minTouch) / insideTheCard;
-    expect(availability.labelMaxRatio).toBeLessThan(capThatWouldStarveThem);
+  it('claims a drag before either platform would begin a scroll', () => {
+    const ANDROID_TOUCH_SLOP = 8;
+    expect(availability.paintIntent).toBeLessThan(ANDROID_TOUCH_SLOP);
+    expect(availability.paintIntent).toBeGreaterThan(0);
   });
 });
 

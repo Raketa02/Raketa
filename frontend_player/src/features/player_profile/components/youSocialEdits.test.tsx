@@ -145,8 +145,8 @@ afterEach(async () => {
 });
 
 const TWO_SLOTS = weekLine([
-  { day: 2, part: 'evening' },
-  { day: 6, part: 'morning' },
+  { day: 2, hour: 19 },
+  { day: 6, hour: 9 },
 ]);
 
 /** A signed-in player standing on the You tab, with the profile read in. */

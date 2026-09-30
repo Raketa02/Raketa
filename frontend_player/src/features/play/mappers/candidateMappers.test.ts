@@ -74,7 +74,7 @@ const OVERLAP: Wire['ScoredTermSchema'] = {
   evidence: {
     kind: 'availability_overlap',
     shared_count: 3,
-    next_slot: { day: 2, part: 'EVENING' },
+    next_slot: { day: 2, hour: 19 },
   },
 };
 
@@ -122,7 +122,7 @@ describe('the envelope', () => {
             ask: 'TIMES',
             candidates_above_floor: 7,
             window: 'WEEKEND',
-            slot: { day: 6, part: 'MORNING' },
+            slot: { day: 6, hour: 9 },
           },
           {
             rung: 'B',
@@ -143,7 +143,7 @@ describe('the envelope', () => {
         ask: 'TIMES',
         candidatesAboveFloor: 7,
         window: 'WEEKEND',
-        slot: { day: 6, part: 'morning' },
+        slot: { day: 6, hour: 9 },
       },
       // A rung never relaxes two asks at once, so a radius rung's cell is a measured `null`
       // rather than a field it happens to be missing.
@@ -173,7 +173,7 @@ describe('the envelope', () => {
             ask: 'TIMES',
             candidates_above_floor: 4,
             window: 'ANY',
-            slot: { day: 8, part: 'MORNING' },
+            slot: { day: 8, hour: 9 },
           },
         ],
       }),
@@ -262,7 +262,7 @@ describe('the candidate', () => {
     expect(candidate.terms[0]?.evidence).toEqual({
       kind: 'availability_overlap',
       sharedCount: 3,
-      nextSlot: { day: 2, part: 'evening' },
+      nextSlot: { day: 2, hour: 19 },
     });
   });
 

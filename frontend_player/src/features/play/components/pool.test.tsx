@@ -173,7 +173,7 @@ const TIMES_RUNG: Wire['RungOfferSchema'] = {
   window: 'THIS_WEEK',
   // A cell outside the profile's own week, which is the only kind a times rung offers: the
   // engine tests the additions somebody in range has ticked and the searcher has not.
-  slot: { day: 4, part: 'EVENING' },
+  slot: { day: 4, hour: 19 },
 };
 
 const RADIUS_RUNG: Wire['RungOfferSchema'] = {
@@ -251,7 +251,7 @@ afterEach(async () => {
 async function openThePool() {
   await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
-  await screen.findByLabelText('Tuesday evening');
+  await screen.findByLabelText('Tuesday 19:00');
 
   fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
   await screen.findByText(
@@ -283,7 +283,7 @@ describe('Classic play switched off in the middle of a search', () => {
     await launchSignedIn();
     await datafileSettled(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
-    await screen.findByLabelText('Tuesday evening');
+    await screen.findByLabelText('Tuesday 19:00');
 
     stubDatafile(transport, datafileFor({ classic_play: 'off' }));
     act(() => {
@@ -341,7 +341,7 @@ async function openTheSinglesPool(
 
   await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
-  await screen.findByLabelText('Tuesday evening');
+  await screen.findByLabelText('Tuesday 19:00');
 
   fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('tennis'))));
   await screen.findByText(
@@ -1070,7 +1070,7 @@ describe('the ladder', () => {
     offerRungs();
     await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
-    await screen.findByLabelText('Tuesday evening');
+    await screen.findByLabelText('Tuesday 19:00');
 
     // Find a game holds the same envelope and offers nothing off it.
     expect(screen.queryByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 22 }, 9))).toBeNull();
@@ -1188,7 +1188,7 @@ describe('the ladder', () => {
  * drawn where nobody is looking is not the requirement.
  */
 describe('the cell a times rung adds', () => {
-  const THURSDAY_EVENING = { day: 4, part: 'evening' } as const;
+  const THURSDAY_EVENING = { day: 4, hour: 19 } as const;
 
   async function takeTheTimesRung() {
     transport.on('POST', SEARCHES, (request) =>
@@ -1602,8 +1602,8 @@ describe('the question a climb raised', () => {
       {
         prompt: 'KEEP_THESE_TIMES',
         slots: [
-          { day: 2, part: 'EVENING' },
-          { day: 1, part: 'MORNING' },
+          { day: 2, hour: 19 },
+          { day: 1, hour: 9 },
         ],
       },
     ]);
@@ -1611,9 +1611,9 @@ describe('the question a climb raised', () => {
     await climb();
     await screen.findByText(KEEP_THESE_TIMES);
 
-    // The stub's profile week is Tuesday evening and Saturday morning.
-    expect(screen.getByLabelText('Monday morning, newly added')).toBeTruthy();
-    expect(screen.getByLabelText('Saturday morning, dropped')).toBeTruthy();
+    // The stub's profile week is Tuesday 19:00 and Saturday 09:00.
+    expect(screen.getByLabelText('Monday 09:00, newly added')).toBeTruthy();
+    expect(screen.getByLabelText('Saturday 09:00, dropped')).toBeTruthy();
   });
 
   /**

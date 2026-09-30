@@ -12,8 +12,8 @@ import { acceptPrompt, declinePrompt, type PromptWrites } from './answerPrompt';
 
 const DECLINES = '/api/v1/prompt-declines';
 
-const TUESDAY_EVENING = { day: 2, part: 'evening' } as const;
-const SATURDAY_MORNING = { day: 6, part: 'morning' } as const;
+const TUESDAY_EVENING = { day: 2, hour: 19 } as const;
+const SATURDAY_MORNING = { day: 6, hour: 9 } as const;
 
 let transport: Transport;
 let written: unknown[];
