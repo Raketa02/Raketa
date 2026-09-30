@@ -6397,6 +6397,242 @@
           }
         }
       }
+    },
+    "/api/v1/players/me/payment-methods/setup": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Start saving a payment method",
+        "description": "Opens a setup at the provider for a card saved for **off-session** use \u2014 charged by the club when a game fills, without the player present. The first opens the player's customer at the provider. A method already saved **keeps working** until a setup saves another (*Change*); a setup left open is replaced by the next one. Answers what the phone opens the provider's card fields with \u2014 **never the setup's secret**, which is the answer to accepting the terms.",
+        "operationId": "start_payment_setup_api_v1_players_me_payment_methods_setup_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSetupResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`adult_attestation_missing` \u2014 this account has not given the Adult attestation, which playing requires: an account an invitation opened, before *Start playing*'s first step.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`payments_unavailable` \u2014 the payment provider could not be reached. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`payment_setups_exhausted` \u2014 five setups were started in the last day, the card-testing guard. Nothing was asked of the provider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/me/payment-methods/terms": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Accept the payment terms",
+        "description": "Records the acceptance \u2014 the version, the moment and the address it came from \u2014 **before anything is saved**, and answers the open setup's secret. With no setup open, accepts them again for the saved method after its bank moved it to another brand, and answers no secret. Accepting what nothing asks for records nothing.",
+        "operationId": "accept_payment_terms_api_v1_players_me_payment_methods_terms_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentTermsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentTermsResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`payments_unavailable` \u2014 the payment provider could not be reached. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`payment_terms_outdated` \u2014 the words shown are not the terms in force, named by `details.terms_version`. `payment_setup_not_started` \u2014 no setup is open: never started, or cancelled at the provider. Start one. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/me/payment-methods/confirmation": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Confirm the save",
+        "description": "Reads what the open setup saved at the provider and records it as the player's method \u2014 replacing, and releasing, the one they had. Confirming again answers the same method.",
+        "operationId": "confirm_payment_setup_api_v1_players_me_payment_methods_confirmation_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentMethodResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`payments_unavailable` \u2014 the payment provider could not be reached. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`payment_terms_not_accepted` \u2014 the terms come first; nothing was saved. `payment_setup_not_finished` \u2014 the phone has not confirmed, or the bank's check is not done (`details.status`: `AWAITING_THE_PHONE`, `AUTHENTICATING`, `PROCESSING`). `payment_method_declined` \u2014 the bank refused the card; the same setup can try another. `payment_setup_not_started` \u2014 no setup is open: never started, or cancelled at the provider. Start one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/me/payment-methods/current": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "The saved payment method",
+        "description": "The card or wallet the club charges when a game fills, or `null` \u2014 *Not set up* \u2014 and whether the terms wait to be accepted again.",
+        "operationId": "read_payment_method_api_v1_players_me_payment_methods_current_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentMethodResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Remove the saved payment method",
+        "description": "Forgets the method and releases it at the provider, where it can never be charged again. Refused while anything could still be charged to it.",
+        "operationId": "remove_payment_method_api_v1_players_me_payment_methods_current_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`payment_method_not_found` \u2014 nothing is saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`payment_method_in_use` \u2014 a live yes or a booked game ahead still needs it; `details.live_yeses` and `details.upcoming_games` count them. Nothing was removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -11362,6 +11598,102 @@
         "title": "PairingAbsence",
         "description": "Why a court came back with no cards on it. **Two codes, and a third\nanswer that is their absence** (``docs/adr/0143`` \u00a76).\n\nThree answers rather than two, because an outage drawing the *identical*\nabsence as an unrated sport is the collapse ADR-0141's Consequences refused\nin as many words. And refusing the whole read with a 503 is worse than\neither: it turns an unrelated matchmaking outage into *you cannot answer your\nchallenge*, and answering is not gated.\n\n**The codes are the contract and the client writes both sentences**\n(``docs/adr/0106``)."
       },
+      "PaymentMethodResponse": {
+        "properties": {
+          "method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SavedMethodSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The saved method, or `null` \u2014 *Not set up*."
+          },
+          "terms_needed": {
+            "type": "boolean",
+            "title": "Terms Needed",
+            "description": "`true` when the bank moved the saved card to another brand: it cannot be charged until the player accepts the terms again (`POST \u2026/terms` with no setup open). Always `false` with no method."
+          },
+          "terms_version": {
+            "type": "string",
+            "title": "Terms Version",
+            "description": "The version of the terms in force."
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "terms_needed",
+          "terms_version"
+        ],
+        "title": "PaymentMethodResponse",
+        "description": "The player's payment method, as You \u203a Payments draws it."
+      },
+      "PaymentSetupResponse": {
+        "properties": {
+          "setup_id": {
+            "type": "string",
+            "title": "Setup Id",
+            "description": "The setup the phone's provider fields confirm. **Its secret is not here**: it is the answer to accepting the terms, and nothing can be saved without it."
+          },
+          "publishable_key": {
+            "type": "string",
+            "title": "Publishable Key",
+            "description": "The key the provider's fields are opened with. Not a secret: it collects details and can charge nothing."
+          },
+          "terms_version": {
+            "type": "string",
+            "title": "Terms Version",
+            "description": "The version of the payment terms in force \u2014 the words the client must show before *Accept and continue*, and send back."
+          }
+        },
+        "type": "object",
+        "required": [
+          "setup_id",
+          "publishable_key",
+          "terms_version"
+        ],
+        "title": "PaymentSetupResponse",
+        "description": "A setup opened: what the phone opens the provider's card fields with."
+      },
+      "PaymentTermsRequest": {
+        "properties": {
+          "terms_version": {
+            "type": "string",
+            "title": "Terms Version",
+            "description": "The version of the words the player was shown. Anything but the terms in force is `409 payment_terms_outdated`."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "terms_version"
+        ],
+        "title": "PaymentTermsRequest"
+      },
+      "PaymentTermsResponse": {
+        "properties": {
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Secret",
+            "description": "The secret the phone confirms the open setup with \u2014 its **only** appearance on any response. `null` when the terms were accepted again for the method already saved, after its bank moved it to another brand: there is nothing to confirm."
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_secret"
+        ],
+        "title": "PaymentTermsResponse"
+      },
       "PendingInvitationSchema": {
         "properties": {
           "administrator_id": {
@@ -12825,6 +13157,38 @@
         ],
         "title": "RungOfferSchema",
         "description": "One rung of the relaxation ladder, priced. **Offered, never applied.**\n\nThe engine computes what relaxing one of *your own* asks would be worth and\nhands you the number; it never takes the offer for you, because only you can\nsay truthfully that you are free on a Saturday.\n\n**The count is real.** It comes from re-running the whole search at this\nrung \u2014 not from an estimate, and not from the strict count plus something."
+      },
+      "SavedMethodSchema": {
+        "properties": {
+          "brand": {
+            "type": "string",
+            "title": "Brand",
+            "description": "The card network as the provider names it, lower case \u2014 `visa`, `mastercard`, `unknown` for one it does not recognise. An open set: draw a plain card for a brand you have no badge for."
+          },
+          "last_four": {
+            "type": "string",
+            "title": "Last Four",
+            "description": "The last four digits of the card number."
+          },
+          "wallet": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Wallet"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The phone's wallet it was saved through, or `null` for a card typed in."
+          }
+        },
+        "type": "object",
+        "required": [
+          "brand",
+          "last_four",
+          "wallet"
+        ],
+        "title": "SavedMethodSchema"
       },
       "SavedSettingsResponse": {
         "properties": {
@@ -14372,6 +14736,15 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "Wallet": {
+        "type": "string",
+        "enum": [
+          "APPLE_PAY",
+          "GOOGLE_PAY"
+        ],
+        "title": "Wallet",
+        "description": "The phone's own wallet a card was saved through. Only the two the setup\noffers (the mechanics \u00a712.4): Apple Pay on an iPhone, Google Pay on Android.\nA card saved through any other wallet is recorded as a plain card."
       },
       "WeeklyHourResource": {
         "properties": {

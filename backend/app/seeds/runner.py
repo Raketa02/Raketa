@@ -190,6 +190,11 @@ from app.seeds.club_courts import (
 )
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.groups import SeededGroups, group_lines, write_the_groups
+from app.seeds.payments import (
+    SeededPaymentMethods,
+    payment_method_lines,
+    write_the_payment_methods,
+)
 from app.seeds.official_groups import (
     SeededOfficialGroups,
     official_group_lines,
@@ -1221,6 +1226,9 @@ class SeedReport:
     #: The official groups those administrators run, and who is in each.
     #: ``None`` on the same callers and for the same reason.
     official_groups: SeededOfficialGroups | None = None
+    #: The card every seeded player but one has saved. ``None`` on the same
+    #: callers and for the same reason.
+    payment_methods: SeededPaymentMethods | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1274,6 +1282,15 @@ async def run(settings: Settings | None = None) -> SeedReport:
             )
             await refuse_a_cohort_that_has_aged_out(session, members, now=now)
             await refuse_a_histogram_that_has_moved(session, members)
+        # **The payment methods straight after the people**, each saved through
+        # the setup a phone runs. Nothing below reads one yet and a saved card
+        # changes nothing any other layer reads, so its place is free; it is
+        # here because every game the later layers will seed is paid for.
+        payment_methods = await write_the_payment_methods(
+            session_factory,
+            now=now,
+            cohort=[(member.member.handle, member.player_id) for member in members],
+        )
         # **The clubs next, before anything that could stand at one.** A club
         # reads nobody, and a group needs a home club.
         clubs = await write_the_clubs(session_factory, settings=settings, now=now)
@@ -1383,6 +1400,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             groups=groups,
             administrators=administrators,
             official_groups=official_groups,
+            payment_methods=payment_methods,
             photographs=photographs,
         )
     finally:
@@ -1471,6 +1489,8 @@ def report(run_report: SeedReport) -> list[str]:
                 f"assessment {seeded_scenario.assessment_id}"
             )
     lines.extend(["", *_cohort_lines(run_report.members)])
+    if run_report.payment_methods is not None:
+        lines.extend(["", *payment_method_lines(run_report.payment_methods)])
     if run_report.clubs is not None:
         lines.extend(["", *club_lines(run_report.clubs)])
     if run_report.club_courts is not None:

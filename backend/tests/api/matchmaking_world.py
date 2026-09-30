@@ -53,6 +53,7 @@ from app.modules.conversations.infrastructure.absent_providers import (
     NobodyIsFollowing,
 )
 from app.modules.matchmaking.infrastructure.pass_model import PassORM
+from app.modules.payments.infrastructure.fake_payments import FakePayments
 from app.modules.matchmaking.infrastructure.prompt_decline_model import (
     PromptDeclineORM,
 )
@@ -906,7 +907,7 @@ async def forecast(
 
 
 async def deliver_the_outbox(
-    session_factory, *, rounds: int = 6, live_channel=None
+    session_factory, *, rounds: int = 6, live_channel=None, payments=None
 ) -> int:
     """Run the transactional outbox to exhaustion, the way the worker does.
 
@@ -932,9 +933,14 @@ async def deliver_the_outbox(
     (``docs/adr/0147`` §3). The parameter is required in the application and
     optional here for exactly that reason: *nobody is following* is the honest
     answer for most of this file.
+
+    **``payments`` is the provider a replaced or removed card is released at** —
+    the ``payments`` fixture, when a test reads what was released; otherwise a
+    fake nobody reads, which is the seed run's answer too.
     """
 
     runtime = build_event_runtime()
+    provider = payments if payments is not None else FakePayments()
     nudges = (
         NobodyIsFollowing()
         if live_channel is None
@@ -948,6 +954,7 @@ async def deliver_the_outbox(
                 clock=build_clock(),
                 batch_size=100,
                 nudges=nudges,
+                payments=provider,
             )
             delivered = await batch.execute(worker_id="tests")
         published += delivered

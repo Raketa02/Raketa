@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.bootstrap.composition import build_nobody_is_following
+from app.bootstrap.composition import build_fake_payments, build_nobody_is_following
 from app.bootstrap.events import (
     build_event_delivery_worker,
     build_event_runtime,
@@ -195,4 +195,5 @@ def _worker_polling_through(polls: _Polls) -> EventWorker:
         # Nobody is following a sign-up: this test's outbox row reaches a logging
         # handler, and the room teller is the only subscriber a nudge is for.
         nudges=build_nobody_is_following(),
+        payments=build_fake_payments(),
     )

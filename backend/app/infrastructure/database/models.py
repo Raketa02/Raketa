@@ -24,6 +24,10 @@ from app.modules.matchmaking.infrastructure.candidate_index_model import (
 )
 from app.modules.matchmaking.infrastructure.deck_reset_model import DeckResetORM
 from app.modules.matchmaking.infrastructure.interest_model import InterestORM
+from app.modules.payments.infrastructure.payment_models import (
+    PaymentCustomerORM,
+    PaymentNoticeORM,
+)
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
     SearchORM,
@@ -50,6 +54,8 @@ __all__ = [
     "InterestORM",
     "MailQueueORM",
     "OneTimeCredentialORM",
+    "PaymentCustomerORM",
+    "PaymentNoticeORM",
     "RefreshTokenORM",
     "SearchCandidateORM",
     "SearchORM",

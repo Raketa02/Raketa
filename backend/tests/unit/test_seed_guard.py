@@ -89,6 +89,10 @@ def production(**overrides) -> Settings:
         SMTP_HOST="smtp.raketa.example",
         SMTP_SECURITY="starttls",
         MAIL_SENDER="Raketa <no-reply@raketa.example>",
+        PAYMENTS_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="sk_guard_suite",
+        STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
+        STRIPE_WEBHOOK_SECRET="whsec_guard_suite",
         DB_SSL_MODE="require",
         ALLOW_ORIGINS=["https://raketa.example"],
         **overrides,
@@ -125,6 +129,10 @@ def test_the_other_three_are_permitted(clean_env, environment):
         SMTP_HOST="smtp.raketa.example",
         SMTP_SECURITY="starttls",
         MAIL_SENDER="Raketa <no-reply@raketa.example>",
+        PAYMENTS_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="sk_guard_suite",
+        STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
+        STRIPE_WEBHOOK_SECRET="whsec_guard_suite",
     )
 
     refuse_unless_seedable(settings)  # does not raise
@@ -232,6 +240,10 @@ def test_importing_the_package_refuses_in_production():
         SMTP_HOST="smtp.raketa.example",
         SMTP_SECURITY="starttls",
         MAIL_SENDER="Raketa <no-reply@raketa.example>",
+        PAYMENTS_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="sk_guard_suite",
+        STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
+        STRIPE_WEBHOOK_SECRET="whsec_guard_suite",
         DB_SSL_MODE="require",
         ALLOW_CREDENTIALS="false",
     )
@@ -257,6 +269,10 @@ def test_the_command_refuses_in_production_before_it_reaches_a_database():
         SMTP_HOST="smtp.raketa.example",
         SMTP_SECURITY="starttls",
         MAIL_SENDER="Raketa <no-reply@raketa.example>",
+        PAYMENTS_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="sk_guard_suite",
+        STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
+        STRIPE_WEBHOOK_SECRET="whsec_guard_suite",
         DB_SSL_MODE="require",
         ALLOW_CREDENTIALS="false",
     )

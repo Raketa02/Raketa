@@ -55,6 +55,12 @@ from app.modules.matchmaking.presentation.dependencies import (  # noqa: E402
     get_prompt_ledger,
     get_suppression_ledger,
 )
+from app.modules.payments.infrastructure.fake_payments import (  # noqa: E402
+    FakePayments,
+)
+from app.modules.payments.presentation.dependencies import (  # noqa: E402
+    get_payment_provider,
+)
 from app.modules.player_profile.presentation.dependencies import (  # noqa: E402
     get_photo_review,
     get_photo_storage,
@@ -121,6 +127,22 @@ def photo_review():
     """
 
     return PassThroughPhotoReview()
+
+
+@pytest.fixture
+def payments():
+    """The payment provider every API test runs against: the in-process fake,
+    fresh for each test (``docs/adr/0189`` §4).
+
+    Overridden on ``client`` regardless, so **no test in this suite needs a
+    Stripe key or a network** — the fake is held to Stripe's own demands in
+    ``tests/demands/test_payments_demands.py``, which is what makes that safe.
+    It confirms nothing on its own: a test says which card the player's phone
+    entered (``phone_enters``), and reads what was asked of the provider off
+    ``calls``.
+    """
+
+    return FakePayments()
 
 
 @pytest.fixture
@@ -203,6 +225,7 @@ async def app(
     prompt_ledger,
     candidate_source,
     live_channel,
+    payments,
 ):
     """The application every API test drives, with its seams already replaced.
 
@@ -230,6 +253,7 @@ async def app(
     app.dependency_overrides[get_suppression_ledger] = lambda: suppression_ledger
     app.dependency_overrides[get_prompt_ledger] = lambda: prompt_ledger
     app.dependency_overrides[get_candidate_source] = lambda: candidate_source
+    app.dependency_overrides[get_payment_provider] = lambda: payments
     # `ASGITransport` runs no lifespan, so nothing has initialised either Redis
     # client and `get_redis()` would raise. The ledgers above are overridden one
     # layer higher and never reach it; the live channel deliberately is not.
@@ -283,7 +307,12 @@ class Mailbox:
         # module into every test.
         from tests.api.matchmaking_world import deliver_the_outbox
 
-        await deliver_the_outbox(self._session_factory)
+        # The application's own provider, so a card released from the outbox
+        # is released at the fake the test reads.
+        payments = self._app.dependency_overrides.get(get_payment_provider)
+        await deliver_the_outbox(
+            self._session_factory, payments=payments() if payments else None
+        )
         while True:
             async with self._session_factory() as session:
                 run = await DeliverQueuedMail(

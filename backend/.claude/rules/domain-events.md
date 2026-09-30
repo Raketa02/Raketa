@@ -40,5 +40,10 @@ name, is what history is recorded under.
   offline for ever*), and `mail_queue`, where a rendered email waits for the mail worker
   and is purged once sent (ADR-0186 §2). **No token, code or ticket may ever be written to
   an event or to the outbox** (ADR-0184 §4); an event says *that* a password changed, never
-  *what* opened the way to it.
+  *what* opened the way to it. A setup's secret is the same kind of thing: asked of the
+  provider when it is handed out, and never recorded.
+- **One table is event-free because it holds no domain fact**: `payment_notices`, the payment
+  webhook's inbox — the id of every provider notice already read, written in the transaction
+  that acted on it, the outbox's mirror (ADR-0190 §3). What a notice *moves* is still
+  event-sourced.
 - `domain/` stays pure Python: no FastAPI, SQLAlchemy, Pydantic or external SDK imports.

@@ -212,8 +212,13 @@ allow_indirect_imports = true
 # it through the `Mailer` port, and that is only true while nothing on the inside
 # can reach the library — or construct the adapter over it, which the flag below
 # catches as well.
+#
+# `stripe` joined it with the payment provider (docs/adr/0189 §4, docs/adr/0190):
+# money moves through one port with two adapters, and *a fake held to the same
+# demands as Stripe* is only true while no use case can reach Stripe around it —
+# which a use case constructing `StripePayments` would, and the flag below sees.
 [importlinter:contract:a-business-layer-cannot-reach-an-imaging-or-object-store-library]
-name = No domain or application layer imports an imaging, object-store, HTTP-client or mail library
+name = No domain or application layer imports an imaging, object-store, HTTP-client, mail or payments library
 type = forbidden
 source_modules =
     app.application
@@ -228,6 +233,7 @@ forbidden_modules =
     botocore
     aiohttp
     smtplib
+    stripe
 allow_indirect_imports = false
 
 # The ephemeral store is fenced out of the business layers on exactly the argument

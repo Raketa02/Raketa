@@ -60,6 +60,12 @@ from app.modules.games.application.event_subscriptions import (
     register_game_events,
     subscribe_game_handlers,
 )
+from app.modules.payments.application.event_subscriptions import (
+    register_payment_events,
+    subscribe_payment_handlers,
+    subscribe_the_method_releaser,
+)
+from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.plans.application.event_subscriptions import (
     register_plan_events,
     subscribe_plan_handlers,
@@ -110,6 +116,7 @@ class EventRuntime:
         clock: Clock,
         batch_size: int,
         nudges: NudgePublisher,
+        payments: PaymentProvider,
     ) -> EventBatch:
         """One batch of the outbox, over this session.
 
@@ -121,6 +128,12 @@ class EventRuntime:
         would make the quiet answer the one nobody chose. That it is a
         conversation's port in a shared loop is a coupling this class already
         carries — ``_dispatcher_over`` below exists for the same subscriber.
+
+        **``payments`` is required on the same argument**, and reaches the one
+        subscriber that releases a replaced or removed card at the provider: the
+        API's delivery holds the provider its requests hold, a seed run's holds
+        the fake it saved its cards through, and a default here would be a
+        release sent somewhere nobody chose.
         """
 
         # See ``_dispatcher_over`` for why the composition root is reached at
@@ -131,14 +144,20 @@ class EventRuntime:
         return EventBatch(
             outbox=SqlAlchemyOutboxRepository(session),
             codec=self.codec,
-            dispatcher=self._dispatcher_over(session, nudges=nudges),
+            dispatcher=self._dispatcher_over(
+                session, nudges=nudges, payments=payments
+            ),
             uow=build_unit_of_work(session),
             clock=clock,
             batch_size=batch_size,
         )
 
     def _dispatcher_over(
-        self, session: AsyncSession, *, nudges: NudgePublisher
+        self,
+        session: AsyncSession,
+        *,
+        nudges: NudgePublisher,
+        payments: PaymentProvider,
     ) -> EventDispatcher:
         """The process's subscriptions, plus the ones that need this batch's session.
 
@@ -165,6 +184,7 @@ class EventRuntime:
         subscribe_the_room_teller(
             dispatcher, build_tell_the_room(session, nudges=nudges)
         )
+        subscribe_the_method_releaser(dispatcher, payments)
         return dispatcher
 
 
@@ -182,6 +202,7 @@ def build_event_runtime() -> EventRuntime:
     register_club_events(catalog)
     register_group_events(catalog)
     register_administrator_events(catalog)
+    register_payment_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
@@ -196,6 +217,7 @@ def build_event_runtime() -> EventRuntime:
     subscribe_club_handlers(dispatcher)
     subscribe_group_handlers(dispatcher)
     subscribe_administrator_handlers(dispatcher)
+    subscribe_payment_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),
@@ -232,6 +254,7 @@ def build_event_delivery_worker(
     session_factory: async_sessionmaker[AsyncSession],
     settings: Settings,
     nudges: NudgePublisher,
+    payments: PaymentProvider,
     clock: Clock | None = None,
 ) -> EventWorker:
     """The embedded outbox drain. **This is the delivery that is live.**
@@ -249,6 +272,7 @@ def build_event_delivery_worker(
             clock=processing_clock,
             batch_size=settings.EVENT_DELIVERY_BATCH_SIZE,
             nudges=nudges,
+            payments=payments,
         ),
         poll_interval_seconds=settings.EVENT_DELIVERY_POLL_INTERVAL_SECONDS,
     )

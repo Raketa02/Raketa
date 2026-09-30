@@ -68,6 +68,25 @@ class SmtpSecurity(StrEnum):
     TLS = "tls"
 
 
+class PaymentsProvider(StrEnum):
+    """Which adapter money moves through (``docs/adr/0189`` §4).
+
+    ``fake`` is the in-process provider a laptop, a seed run and every test use,
+    and a deployed environment refuses it: it saves cards that do not exist and
+    charges nobody, so a game would be booked that no one paid for. ``stripe`` is
+    Stripe, in test mode or live according to the key it is given.
+    """
+
+    FAKE = "fake"
+    STRIPE = "stripe"
+
+
+#: The prefixes of a Stripe key that moves real money — a secret key and a
+#: restricted one — and of one that moves only test money.
+STRIPE_LIVE_KEY_PREFIXES = ("sk_live_", "rk_live_")
+STRIPE_TEST_KEY_PREFIXES = ("sk_test_", "rk_test_")
+
+
 #: Spelled once, for refusal messages and for the environment template.
 ENVIRONMENT_NAMES = ", ".join(e.value for e in Environment)
 
@@ -339,6 +358,36 @@ class Settings(BaseSettings):
     #: was wedged. Exceeding it is not an error a player sees — the adapter fails
     #: open and records that it did.
     PHOTO_REVIEW_TIMEOUT_SECONDS: float = 10.0
+
+    # --- payments (docs/adr/0189 §4; the mechanics Appendix A)
+    #
+    # **Which provider money moves through, and the keys it holds, are
+    # configuration; what is charged, when and to whom is not.** A share, a
+    # cut-off and the fee withheld on a refund are rules a domain test observes,
+    # and live with the Club courts and the bookings.
+    #
+    # A laptop runs on the in-process fake, which needs no key and never leaves
+    # the machine. Stripe needs its secret key and the publishable key a phone
+    # opens its card fields with; the webhook secret is what the platform
+    # endpoint verifies every event with (`STRIPE_WEBHOOK_SECRET` — `stripe
+    # listen` prints one for a laptop). **The keys are a person's to place**
+    # (#533), in `.env`, never an agent's.
+    #
+    # **A live key moves real money**, so only production may hold one, and
+    # production may hold nothing else: a test key there would book games that
+    # nobody paid for. Neither refusal ever prints the key.
+    PAYMENTS_PROVIDER: PaymentsProvider = PaymentsProvider.FAKE
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_PUBLISHABLE_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    #: The whole budget for one call to Stripe, connection included. A setup
+    #: waits on it inline, and a player is watching a spinner.
+    STRIPE_TIMEOUT_SECONDS: float = 20.0
+    #: **Read by nothing but the payments demand suite**: a club account a person
+    #: onboarded once in Stripe test mode, which the suite charges against.
+    #: Onboarding is a walk through Stripe's hosted pages that the suite does not
+    #: script, so without it the money half of the suite is skipped by name.
+    STRIPE_TEST_CLUB_ACCOUNT: Optional[str] = None
 
     # --- domain event delivery
     EVENT_DELIVERY_WORKER_ENABLED: bool = True
@@ -766,6 +815,15 @@ class Settings(BaseSettings):
                     f"relay will send from — set MAIL_SENDER explicitly or use "
                     f"'local'."
                 )
+            if self.PAYMENTS_PROVIDER is PaymentsProvider.FAKE:
+                # The same refusal again, and the one whose failure is money:
+                # the fake saves cards that do not exist and charges nobody, so
+                # every game it booked would be one no player paid for.
+                raise ConfigurationError(
+                    f"PAYMENTS_PROVIDER is the in-process fake, and APP_ENV "
+                    f"selects '{env}', which is deployed. The fake charges nobody "
+                    f"— set PAYMENTS_PROVIDER to stripe or use 'local'."
+                )
 
         if env in DEPLOYED:
             # A second question of the same set, kept separate because it is a rule
@@ -847,8 +905,43 @@ class Settings(BaseSettings):
                     f"strength."
                 )
 
+        if self.PAYMENTS_PROVIDER is PaymentsProvider.STRIPE:
+            # Stripe cannot be asked anything without its secret key, and a
+            # phone cannot open its card fields without the publishable one.
+            # The webhook secret is optional only on a laptop, whose platform
+            # endpoint then answers every event with 503 — anything deployed
+            # must verify what it is sent.
+            required = ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"]
+            if env in DEPLOYED:
+                required.append("STRIPE_WEBHOOK_SECRET")
+            for name in required:
+                if not getattr(self, name):
+                    raise ConfigurationError(
+                        f"{name} is not set, and PAYMENTS_PROVIDER selects "
+                        f"stripe. Place the key from the Stripe dashboard in "
+                        f"the environment, or select the fake on a laptop."
+                    )
+
+        key = self.STRIPE_SECRET_KEY or ""
+        if env is not Environment.PRODUCTION and key.startswith(
+            STRIPE_LIVE_KEY_PREFIXES
+        ):
+            # Whichever provider is selected: a live key on a laptop is a key
+            # one setting away from charging real cards from a test run.
+            raise ConfigurationError(
+                f"STRIPE_SECRET_KEY is a live key, and APP_ENV selects '{env}'. "
+                f"A live key moves real money and only production may hold one "
+                f"— use a test key (sk_test_…) here."
+            )
+
         if env is not Environment.PRODUCTION:
             return
+
+        if key.startswith(STRIPE_TEST_KEY_PREFIXES):
+            raise ConfigurationError(
+                "STRIPE_SECRET_KEY is a test key in production. Every game it "
+                "booked would be one nobody paid for — use the live key."
+            )
 
         if self.JWT_SECRET_KEY == DEFAULT_JWT_SECRET_KEY:
             raise ConfigurationError(

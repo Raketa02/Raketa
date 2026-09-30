@@ -464,9 +464,9 @@ async def test_nothing_player_side_begins_before_the_attestation(
     client, marta_invited
 ):
     """``docs/adr/0185`` §5: an account an invitation opened holds no
-    attestation, and neither an assessment nor a Player profile can begin
-    until it has given one — the invariant every sign-up used to keep by
-    construction."""
+    attestation, and neither an assessment, a Player profile nor a payment
+    method can begin until it has given one — the invariant every sign-up used
+    to keep by construction."""
 
     from tests.api.matchmaking_world import commit_profile
 
@@ -485,11 +485,16 @@ async def test_nothing_player_side_begins_before_the_attestation(
         json={"social_tag_ids": []},
         headers={**marta, "Idempotency-Key": "before-attesting"},
     )
+    payment_setup = await client.post(
+        "/api/v1/players/me/payment-methods/setup", headers=marta
+    )
 
     assert assessment.status_code == 403, assessment.text
     assert assessment.json()["code"] == "adult_attestation_missing"
     assert profile.status_code == 403, profile.text
     assert profile.json()["code"] == "adult_attestation_missing"
+    assert payment_setup.status_code == 403, payment_setup.text
+    assert payment_setup.json()["code"] == "adult_attestation_missing"
 
     await client.post(ATTEST, headers=marta, json={"adult_attested": True})
     await client.put(
@@ -501,3 +506,7 @@ async def test_nothing_player_side_begins_before_the_attestation(
     )
     assert started.status_code == 201, started.text
     await commit_profile(client, token)
+    set_up = await client.post(
+        "/api/v1/players/me/payment-methods/setup", headers=marta
+    )
+    assert set_up.status_code == 201, set_up.text

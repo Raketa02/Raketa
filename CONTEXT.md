@@ -2195,6 +2195,51 @@ Official group per WhatsApp group and post its link there.
   the club the request names, or `not_an_administrator` — the request after a removal. The
   person's player side and its sessions are untouched.
 
+### Payments
+
+Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §4–§5 and
+built by [#536](https://github.com/Raketa02/Raketa/issues/536)
+([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)). The
+**Seat charge** is still to come (#541), and so is connecting a club's account (#537).
+
+**How a player pays: a card or a wallet saved once, charged later by the club.** Every charge is
+made on the club's own account — **the club is the seller** — and a player's card is copied there
+for each one.
+
+- **Payment method** — a player's saved card or wallet: its **brand** (the network, as the
+  provider names it), its **last four digits** and the **wallet** it came through (Apple Pay,
+  Google Pay, or none). An **event-sourced aggregate, one stream per player**, born by being
+  used: a player who never opened the setup has none — *Not set up*. **Change** keeps the old
+  method working until the new one is saved; **remove** is refused while anything could still be
+  charged to it — a live yes, or a booked game ahead. A card number never reaches Raketa.
+  _Avoid_: card for the method as a whole (it may be a wallet — though a wallet saves a card, and
+  *card* is right for what the provider holds: its brand and last four), payment details, billing
+  info.
+- **Setup** — saving a method: the player chooses how to pay, types a card into the provider's
+  own fields, **accepts the payment terms**, and confirms with their bank — the step that saves.
+  One saves a card for **off-session** use, charged later without the player present. At most
+  **five a day** per player. _Avoid_: onboarding (that is the player's first run, and a club's
+  Stripe account).
+- **Payment terms** — the words that name the club as the one charging: *when a game you said yes
+  to fills, the club charges your share* (the mechanics §12.5). **Accepted before anything is
+  saved**: the setup's secret — the only way a phone can save a card — is the answer to accepting
+  them. The acceptance is recorded with **the version shown, the moment and the address**; the
+  words are the client's, the version in force the backend's. **A card whose bank moved it to
+  another brand asks for them again** before it can be charged. _Avoid_: consent screen, T&Cs.
+- **Payment provider** — where money actually moves: **Stripe**, or on a laptop and in every test
+  an in-process **fake** held to the same demands. A deployed environment refuses the fake.
+- **Payment method events** (durable name / version) — never a card number or a setup's secret:
+  - **PaymentSetupStarted** — `payments.setup_started` / v1 — a setup opened, under the player's
+    one customer at the provider; names the setup it replaced, which is then cancelled there.
+  - **PaymentTermsAccepted** — `payments.terms_accepted` / v1 — for the open setup, or again for
+    the saved method after a brand change.
+  - **PaymentMethodSaved** — `payments.method_saved` / v1 — the first method.
+  - **PaymentMethodChanged** — `payments.method_changed` / v1 — a new method over the old, which
+    is then released at the provider.
+  - **PaymentMethodRemoved** — `payments.method_removed` / v1 — released at the provider after.
+  - **PaymentMethodUpdated** — `payments.method_updated` / v1 — the bank updated the card: a new
+    number, or a new brand — as read from the provider, never off its notice.
+
 ## Part 2 — Decided, not yet built: Games and Fill in
 
 Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) and
@@ -2256,8 +2301,9 @@ moved to **Club** in Part 1 with [#535](https://github.com/Raketa02/Raketa/issue
 
 ### Money
 
-- **Payment method** — a player's saved card or wallet, saved once with the **consent** that
-  names the club as the one charging. Required before the first yes.
+**Payment method** and its **Payment terms** are built, and moved to **Payments** in Part 1 with
+[#536](https://github.com/Raketa02/Raketa/issues/536). One is required before the first yes.
+
 - **Seat charge** — one seat's money in one booking: authorised, captured, refunded or failed.
   Raketa's account of a Stripe payment; Stripe is the ledger of record.
 - **The club is the seller** — every charge is made on the club's own Stripe account; the club

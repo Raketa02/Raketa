@@ -48,6 +48,7 @@ from app.modules.clubs.domain import errors as clubs_errors  # noqa: F401
 from app.modules.matchmaking.domain import (  # noqa: F401
     errors as matchmaking_errors,
 )
+from app.modules.payments.domain import errors as payments_errors  # noqa: F401
 from app.modules.player_profile.domain import errors as profile_errors
 from app.modules.rating.domain import errors as rating_errors
 from app.modules.users.domain import errors as users_errors  # noqa: F401

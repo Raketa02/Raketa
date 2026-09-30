@@ -69,7 +69,10 @@ GitHub Actions ──build──▶ ECR (image)
         "WRITER_DB_URL":"postgresql+asyncpg://<user>:<pwd>@<rds-endpoint>:5432/<db>",
         "READER_DB_URL":"postgresql+asyncpg://<user>:<pwd>@<rds-endpoint>:5432/<db>",
         "REDIS_URL":"redis://<elasticache-endpoint>:6379/0",
-        "PHOTO_STORAGE_SECRET_KEY":"<the-photo-bucket-secret-key>"
+        "PHOTO_STORAGE_SECRET_KEY":"<the-photo-bucket-secret-key>",
+        "STRIPE_SECRET_KEY":"<sk_live_… from the Stripe dashboard>",
+        "STRIPE_PUBLISHABLE_KEY":"<pk_live_… from the Stripe dashboard>",
+        "STRIPE_WEBHOOK_SECRET":"<whsec_… of the platform webhook endpoint>"
      }' \
      --region $AWS_REGION
    ```

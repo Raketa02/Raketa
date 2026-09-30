@@ -37,7 +37,8 @@
         { "name": "SMTP_PORT", "value": "587" },
         { "name": "SMTP_SECURITY", "value": "starttls" },
         { "name": "MAIL_SENDER", "value": "Raketa <no-reply@<PUBLIC_SITE_DOMAIN>>" },
-        { "name": "RUN_MIGRATIONS_ON_STARTUP", "value": "true" }
+        { "name": "RUN_MIGRATIONS_ON_STARTUP", "value": "true" },
+        { "name": "PAYMENTS_PROVIDER", "value": "stripe" }
       ],
       "secrets": [
         { "name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:JWT_SECRET_KEY::" },
@@ -46,7 +47,10 @@
         { "name": "REDIS_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:REDIS_URL::" },
         { "name": "PHOTO_STORAGE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:PHOTO_STORAGE_SECRET_KEY::" },
         { "name": "SMTP_USERNAME", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:SMTP_USERNAME::" },
-        { "name": "SMTP_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:SMTP_PASSWORD::" }
+        { "name": "SMTP_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:SMTP_PASSWORD::" },
+        { "name": "STRIPE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_SECRET_KEY::" },
+        { "name": "STRIPE_PUBLISHABLE_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_PUBLISHABLE_KEY::" },
+        { "name": "STRIPE_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_WEBHOOK_SECRET::" }
       ],
       "healthCheck": {
         "command": ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"],

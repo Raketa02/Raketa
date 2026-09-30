@@ -47,6 +47,7 @@ from app.modules.matchmaking.presentation.prompt_decline_routes import (
 )
 from app.modules.matchmaking.presentation.radar_routes import router as radar_router
 from app.modules.matchmaking.presentation.routes import router as searches_router
+from app.modules.payments.presentation.routes import router as payments_router
 from app.modules.plans.presentation.routes import router as plans_router
 from app.modules.player_profile.presentation.photo_routes import (
     router as photos_router,
@@ -105,3 +106,4 @@ player_api_router.include_router(join_search_router)
 player_api_router.include_router(invitations_router)
 player_api_router.include_router(administrator_router)
 player_api_router.include_router(administrator_groups_router)
+player_api_router.include_router(payments_router)

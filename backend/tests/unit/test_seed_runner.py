@@ -139,6 +139,7 @@ WRITTEN_CONTEXTS = frozenset(
         "games",
         "conversations",
         "plans",
+        "payments",
     }
 )
 
@@ -203,6 +204,9 @@ AGGREGATE_WRITERS = {
     # a signed-in pair, as the request it is does, and that pair is a refresh
     # token row written through `auth`'s own `TokenRotator`.
     "build_refresh_token_repository": "auth",
+    # A player's saved card, set up the way a phone sets it up — start, the
+    # terms, the save — over the one repository all three take (#536).
+    "build_payment_method_repository": "payments",
 }
 
 #: The two infrastructure modules the seed path may import, and neither is an
@@ -302,6 +306,7 @@ def test_the_walk_has_something_to_walk():
         "official_groups.py",
         "pairs.py",
         "paths.py",
+        "payments.py",
         "photos.py",
         "plans.py",
         "pool_history.py",

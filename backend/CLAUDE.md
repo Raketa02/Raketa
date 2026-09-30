@@ -131,7 +131,8 @@ Rules to preserve:
   Two tables made that argument for a different reason — **an event would hold a
   secret** — and are named here for it: `one_time_credentials` (ADR-0184 §3) and the
   `mail_queue` (ADR-0186 §2). The password change they lead to is still an event on the
-  account's own stream.
+  account's own stream. A third made it for a third reason — **it holds no domain fact**:
+  `payment_notices`, the webhook's inbox, the outbox's mirror (ADR-0190 §3).
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural
@@ -626,7 +627,9 @@ Rules to preserve:
   for the public site
   ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
   §5). No path is in two documents (`tests/unit/test_club_surface.py`,
-  `tests/unit/test_public_surface.py`). The one
+  `tests/unit/test_public_surface.py`). **A route no client calls is on no surface**: the
+  payment provider's webhooks mount through `app/api/v1/webhooks.py`, under
+  `/api/v1/webhooks` and out of every document (ADR-0190 §4). The one
   exception to the prefix is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
   second client: one no-build `console.html` behind a `FileResponse` at `/dev`, and one
   roster route, which is the whole of `openapi.dev.json`. It **acts as another player by
@@ -1284,6 +1287,41 @@ Rules to preserve:
   Seeded by `app/seeds/club_courts.py`: all three ways of working, Wisła Park half set up and
   not live, Zabłocie Sport paused, and a run that fails if a live club has nothing for sale in
   the next fortnight.
+- **Money goes through one port, and the terms come before the secret**
+  ([ADR-0189](../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §4,
+  [ADR-0190](../docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md), #536).
+  `app/modules/payments/` holds the **Payment method** — event-sourced, one stream per player
+  under the player's own id, born by being used — and **`PaymentProvider`**
+  (`domain/provider.py`), the one port every movement of money goes through, in Raketa's words:
+  a setup, a card on file, an authorised payment, a refund with the fee withheld, a club
+  account's three states. It already covers what #537, #541, #545 and #548 need, so reach for it
+  rather than widening it. Four things are load-bearing. **Two adapters, one demand suite**:
+  `StripePayments` (Connect direct charges on the club's account, Accounts v2 with
+  `fees_collector`/`losses_collector` = `stripe`, v1 Customers, a clone per charge, a key on every
+  write) and `FakePayments`, controlled by **the card the phone entered** — Stripe's own five test
+  cards, in `domain/entered_cards.py` — and `app/bootstrap/payments_demands.py` runs
+  `tests/demands/test_payments_demands.py` against both, the fake always and Stripe only with a
+  **test** key. **Which one is configuration** (`PAYMENTS_PROVIDER`): a laptop is on a fake that
+  confirms every setup with Visa •••• 4242, every test on its own fake (the `payments` fixture),
+  and a deployed environment refuses the fake; a live key is refused off production and a test
+  key in it. **The setup's secret is the answer to the terms**: `POST …/setup` answers the setup
+  id and the publishable key and never the secret, `POST …/terms` records version, moment and
+  address and answers it, and the save refuses a setup without them however it arrives — so *the
+  terms before anything is saved* is the contract's. **The provider is called inline only where
+  its answer is the response**, before anything is written; a replaced or removed card is
+  released, and a replaced setup cancelled, by outbox subscribers, and the provider is a
+  **per-run delivery seam** (`create_event_batch_for(..., payments=)`) beside `nudges`; a key
+  is the act and **the hour**, so a failure Stripe stored against it lasts an hour, not a day. And **the webhook is on no
+  surface**: `POST /api/v1/webhooks/stripe` (`app/api/v1/webhooks.py`) is in no OpenAPI
+  document, verifies the signature with a five-minute tolerance before reading, and reads a
+  notice **once** through `payment_notices`, in the transaction that acts on it, and treats it
+  as a prompt — the card or setup it names is **read from the provider as it stands**, because
+  notices arrive out of order; a notice finds its player through `payment_customers`, a
+  projection the repository writes. *Remove* asks
+  `PaymentCommitments`, which answers nought (`NoCommitmentsYet`) until proposals and bookings
+  exist. Seeded by `app/seeds/payments.py`: every named account and cohort member saves a fake
+  card through the three use cases — the protagonist the mock's Visa •••• 4312, two through the
+  wallets — and `brand-new-player` has none.
 - **A group is a crowd at a home club, and its link never changes**
   ([ADR-0183](../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md),
   #504, #505, #506). `app/modules/groups/` holds **one event-sourced aggregate for both
@@ -1565,7 +1603,7 @@ tests.
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Ten registers, and they are ten on purpose — one per kind of claim.**
+  **Eleven registers, and they are eleven on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
@@ -1607,6 +1645,10 @@ tests.
   the record's list has **three** implementations, which is what the suite has to be
   parameterised over: *where has this reader been shown this person* is a question three
   contexts each answer about themselves.
+  **The eleventh, `payments_demands.py`, is a kind of its own**: the two adapters of one port
+  onto the outside world — the fake and Stripe — so a fake that drifts from the provider goes red.
+  Its rows build over the **settings**, not a session, and one may be absent: Stripe runs only
+  where a person placed a test key, and is skipped by name otherwise (ADR-0190 §1).
   **A row carries a builder, and not always over a bare session.** `challenge_demands.py`'s
   takes the two seams the platform supplies from outside a request — the process's
   candidate index and the exposure ledger behind Redis — because the pairing it contracts

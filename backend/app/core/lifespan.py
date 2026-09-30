@@ -46,7 +46,9 @@ from fastapi import FastAPI
 from app.bootstrap.composition import (
     build_background_session_factory,
     build_candidate_source,
+    close_payment_provider,
     build_nudge_publisher,
+    build_payment_provider,
     build_scoring_meter,
 )
 from app.bootstrap.events import build_event_delivery_worker
@@ -147,6 +149,10 @@ def build_lifespan(settings: Settings):
                     # and the parameter is required so the difference is written
                     # down rather than defaulted.
                     nudges=build_nudge_publisher(app.state.redis),
+                    # And the provider every request of this process pays
+                    # through, so a card a request replaced or removed is
+                    # released at the provider that saved it.
+                    payments=build_payment_provider(settings),
                 )
                 # Kept on the application because the delivery worker's identity
                 # is the lease its batches claim outbox rows under, and a test or
@@ -197,5 +203,8 @@ def build_lifespan(settings: Settings):
             # turns a clean shutdown into an exception nobody reads.
             await close_redis()
             await close_redis_subscriber()
+            # And the payment provider's HTTP session, where it opened one —
+            # Stripe's, never the fake's — for the same reason and last.
+            await close_payment_provider()
 
     return lifespan

@@ -82,6 +82,8 @@ a migration or a seed run — not only for a process serving HTTP.
 | backend | **any deployed environment** with no `SMTP_HOST` or no `MAIL_SENDER` | The defaults are the mail catcher's compose service name and a sender on the reserved `.example` domain. An environment that inherited them would queue every reset and invitation for a relay that does not exist. **This is how the production sender stays off until a domain exists**: by refusing to start, never by quietly not sending ([ADR-0186](adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §1). |
 | backend | a deployed environment with `SMTP_SECURITY=none` | Every reset and invitation email carries a code that opens an account, so the connection to the relay is encrypted: `starttls` or `tls`. |
 | backend | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
+| backend | **any deployed environment** with `PAYMENTS_PROVIDER=fake`, or with Stripe and no `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` or `STRIPE_WEBHOOK_SECRET` | The fake saves cards that do not exist and charges nobody, so every game it booked would be one no player paid for; and a webhook nobody can verify is one anybody can forge ([ADR-0190](adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)). A laptop runs on the fake by default, and may run Stripe without a webhook secret. |
+| backend | a **live** Stripe key (`sk_live_`, `rk_live_`) anywhere but `production`, or a **test** one (`sk_test_`, `rk_test_`) in `production` | A live key on a laptop is one setting away from a test run charging real cards; a test key in production books games nobody paid for. Whichever provider is selected, and the key is never printed. |
 | backend | a deployed environment with `BCRYPT_ROUNDS` below production's 12 | Nothing fails at a weak cost — every login still works — so the stored passwords would just be cheaper to crack, and nobody would notice. The default is 12 everywhere, and only a laptop may lower it; the test suite uses bcrypt's minimum, 4. |
 | player | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
 | player | a deployed `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_FEATURES_URL` that is not `https://` | The scheme rule, below. |
@@ -435,7 +437,9 @@ The day a domain is registered, this is a configuration task rather than a redes
    `CLUB_WEBSITE_URL`, `SMTP_HOST` and `MAIL_SENDER` explicitly. Then `JWT_SECRET_KEY`
    (`openssl rand -hex 32`), `PHOTO_STORAGE_SECRET_KEY`, `DB_SSL_MODE` (one of `require`,
    `verify-ca`, `verify-full`), `SMTP_SECURITY` (`starttls` or `tls`) with the relay's
-   `SMTP_PORT`, `SMTP_USERNAME` and `SMTP_PASSWORD`, and `ALLOW_ORIGINS` as an explicit
+   `SMTP_PORT`, `SMTP_USERNAME` and `SMTP_PASSWORD`, `PAYMENTS_PROVIDER=stripe` with
+   `STRIPE_SECRET_KEY` (live in production, test everywhere else), `STRIPE_PUBLISHABLE_KEY`
+   and `STRIPE_WEBHOOK_SECRET`, and `ALLOW_ORIGINS` as an explicit
    `https://` list rather than a wildcard — or an explicit empty list, which is what it is
    today. No browser calls the backend: both web apps call it from their servers, and the
    mobile app sends no `Origin` header.

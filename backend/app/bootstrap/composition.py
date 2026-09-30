@@ -32,6 +32,8 @@ way `build_assessment_repository` takes its two.
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -98,6 +100,24 @@ from app.modules.administrators.infrastructure.sqlalchemy_administrator_director
 from app.modules.administrators.infrastructure.users_account_holders import (
     UsersAccountHolders,
 )
+from app.modules.payments.domain.notices import PaymentNotices
+from app.modules.payments.domain.ports import (
+    NoticeInbox,
+    PaymentCommitments,
+    PaymentMethodRepository,
+)
+from app.modules.payments.domain.provider import PaymentProvider
+from app.modules.payments.infrastructure.event_sourced_payment_method_repository import (  # noqa: E501
+    EventSourcedPaymentMethodRepository,
+)
+from app.modules.payments.domain.entered_cards import A_CARD
+from app.modules.payments.infrastructure.fake_payments import FakePayments
+from app.modules.payments.infrastructure.no_commitments_yet import NoCommitmentsYet
+from app.modules.payments.infrastructure.sqlalchemy_notice_inbox import (
+    SqlAlchemyNoticeInbox,
+)
+from app.modules.payments.infrastructure.stripe_notices import StripeNotices
+from app.modules.payments.infrastructure.stripe_payments import StripePayments
 from app.modules.player_profile.application.has_player_profile import (
     HasPlayerProfile,
 )
@@ -754,6 +774,113 @@ def build_club_directory(session: AsyncSession) -> ClubDirectory:
     """What the Club context publishes: its clubs, read off the search
     projection (``docs/adr/0182`` §2) and never as an aggregate."""
     return SqlAlchemyClubDirectory(session)
+
+
+# --------------------------------------------------------------------------
+# Payments (docs/adr/0189 §4)
+# --------------------------------------------------------------------------
+
+
+def build_payment_provider(settings: Settings) -> PaymentProvider:
+    """The one provider this process moves money through — **one per
+    process**, whichever it is.
+
+    The fake is one because a laptop's setups must outlive the request that
+    opened them: the phone confirms in one request what another started. Stripe
+    is one because its client holds an HTTP session, and a session per request
+    is a session leaked per request. Which of the two is configuration
+    (``PAYMENTS_PROVIDER``), and a deployed environment refuses the fake.
+    """
+
+    if settings.PAYMENTS_PROVIDER == "fake":
+        return _the_laptop_s_fake()
+    return _stripe_for(settings)
+
+
+@lru_cache(maxsize=1)
+def _the_laptop_s_fake() -> FakePayments:
+    """A laptop's phone has no real provider to confirm a setup against, so its
+    fake confirms every setup with ``A_CARD`` and finishes a club's onboarding
+    the moment its link is made (``fake_payments.py``)."""
+
+    return FakePayments(confirms_every_setup_with=A_CARD, onboarding_completes=True)
+
+
+#: The process's Stripe client — one, in any process that asks, by the keys it
+#: was built over — kept here so the shutdown can close its HTTP session.
+_STRIPE_CLIENTS: dict[tuple[str | None, str | None, float], StripePayments] = {}
+
+
+def _stripe_for(settings: Settings) -> StripePayments:
+    key = (
+        settings.STRIPE_SECRET_KEY,
+        settings.STRIPE_PUBLISHABLE_KEY,
+        settings.STRIPE_TIMEOUT_SECONDS,
+    )
+    if key not in _STRIPE_CLIENTS:
+        _STRIPE_CLIENTS[key] = build_stripe_payments(settings)
+    return _STRIPE_CLIENTS[key]
+
+
+async def close_payment_provider() -> None:
+    """Close the HTTP session the process's Stripe client opened, if it made
+    one — the API's shutdown, after every request and task is done with it."""
+
+    clients = list(_STRIPE_CLIENTS.values())
+    _STRIPE_CLIENTS.clear()
+    for client in clients:
+        await client.close()
+
+
+def build_fake_payments() -> FakePayments:
+    """A fresh fake that confirms nothing until it is told what the phone
+    entered — a seed run's, and the demand suite's."""
+
+    return FakePayments()
+
+
+def build_stripe_payments(settings: Settings) -> StripePayments:
+    """A fresh Stripe adapter over these keys, owning its own HTTP session —
+    the demand suite's, which asks it from a new event loop every test."""
+
+    return StripePayments(
+        secret_key=settings.STRIPE_SECRET_KEY or "",
+        publishable_key=settings.STRIPE_PUBLISHABLE_KEY or "",
+        timeout_seconds=settings.STRIPE_TIMEOUT_SECONDS,
+    )
+
+
+def build_payment_notices(settings: Settings) -> PaymentNotices:
+    """Stripe's platform webhook, verified with its secret — or, where no secret
+    is placed, a reader that refuses every notice as unconfigured."""
+
+    return StripeNotices(secret=settings.STRIPE_WEBHOOK_SECRET)
+
+
+def build_payment_method_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> PaymentMethodRepository:
+    """One stream per player (``docs/adr/0189`` §5). Takes the session as well,
+    because its ``save`` writes the customer row beside the stream."""
+
+    return EventSourcedPaymentMethodRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_payment_commitments() -> PaymentCommitments:
+    """What could still be charged to a method: nothing, while no proposal takes
+    a yes (#540) and no booking holds a game (#541) — so nought, and the day
+    either exists an adapter over it is built here instead."""
+
+    return NoCommitmentsYet()
+
+
+def build_notice_inbox(session: AsyncSession) -> NoticeInbox:
+    return SqlAlchemyNoticeInbox(session)
 
 
 # --------------------------------------------------------------------------

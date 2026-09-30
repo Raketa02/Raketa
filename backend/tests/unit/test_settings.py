@@ -50,6 +50,13 @@ POISON_PUBLIC_SITE_URL = f"https://{POISON_PASSWORD}.raketa.example"
 POISON_CLUB_WEBSITE_URL = f"https://{POISON_PASSWORD}.clubs.raketa.example"
 POISON_SMTP_HOST = f"{POISON_PASSWORD}.smtp.example"
 POISON_MAIL_SENDER = f"Raketa <no-reply@{POISON_PASSWORD}.example>"
+#: Stripe keys, each carrying the poison: a test key a laptop and a rehearsal
+#: hold, the live key only production may, and the publishable and webhook
+#: secrets beside them.
+POISON_STRIPE_TEST_KEY = f"sk_test_{POISON_PASSWORD}"
+POISON_STRIPE_LIVE_KEY = f"sk_live_{POISON_PASSWORD}"
+POISON_STRIPE_PUBLISHABLE_KEY = f"pk_test_{POISON_PASSWORD}"
+POISON_STRIPE_WEBHOOK_SECRET = f"whsec_{POISON_PASSWORD}"
 
 #: What every deployed environment has to supply because its shipped default is
 #: a laptop's: three addresses out of `docker-compose-local.yml`, the two web
@@ -65,6 +72,14 @@ DEPLOYED_ADDRESSES = {
     "MAIL_SENDER": POISON_MAIL_SENDER,
 }
 DEPLOYED_MAIL_SECURITY = {"SMTP_SECURITY": "starttls"}
+#: What every deployed environment supplies for payments: Stripe, with all three
+#: of its secrets. Production swaps the test key for the live one.
+DEPLOYED_PAYMENTS = {
+    "PAYMENTS_PROVIDER": "stripe",
+    "STRIPE_SECRET_KEY": POISON_STRIPE_TEST_KEY,
+    "STRIPE_PUBLISHABLE_KEY": POISON_STRIPE_PUBLISHABLE_KEY,
+    "STRIPE_WEBHOOK_SECRET": POISON_STRIPE_WEBHOOK_SECRET,
+}
 
 
 @pytest.fixture
@@ -102,9 +117,10 @@ def settings_for(env, **overrides) -> Settings:
     env = Environment(env)
     base: dict = {"APP_ENV": env}
     if env in DEPLOYED:
-        base |= DEPLOYED_ADDRESSES | DEPLOYED_MAIL_SECURITY
+        base |= DEPLOYED_ADDRESSES | DEPLOYED_MAIL_SECURITY | DEPLOYED_PAYMENTS
     if env is Environment.PRODUCTION:
         base |= {
+            "STRIPE_SECRET_KEY": POISON_STRIPE_LIVE_KEY,
             "JWT_SECRET_KEY": POISON_SECRET,
             "PHOTO_STORAGE_SECRET_KEY": POISON_PHOTO_SECRET,
             "DB_SSL_MODE": "require",
@@ -297,7 +313,12 @@ def test_an_unprovisioned_environment_that_is_provisioned_starts(
     Still only the unbuilt two: `production` is covered by
     `test_a_valid_production_configuration_starts`, which has four more things to
     supply before it gets an answer."""
-    settings = build(APP_ENV=env, **DEPLOYED_ADDRESSES, **DEPLOYED_MAIL_SECURITY)
+    settings = build(
+        APP_ENV=env,
+        **DEPLOYED_ADDRESSES,
+        **DEPLOYED_MAIL_SECURITY,
+        **DEPLOYED_PAYMENTS,
+    )
     assert settings.APP_ENV is Environment(env)
 
 
@@ -542,6 +563,85 @@ def test_no_refusal_fires_outside_the_environment_it_names(clean_env) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Payments
+# --------------------------------------------------------------------------- #
+#
+# Which provider money moves through is configuration, and three of its
+# configurations are dangerous rather than wrong: a deployed environment on the
+# fake books games nobody paid for, a live key off production is a laptop one
+# setting away from charging real cards, and a test key in production is the
+# fake again in a different coat.
+
+
+def test_a_laptop_moves_money_through_the_fake(clean_env) -> None:
+    """No key, no network, nothing leaves the machine — and no refusal."""
+    assert build(APP_ENV="local").PAYMENTS_PROVIDER == "fake"
+
+
+@pytest.mark.parametrize("env", sorted(DEPLOYED))
+def test_a_deployed_environment_refuses_the_fake(clean_env, env) -> None:
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(env, PAYMENTS_PROVIDER="fake")
+    assert "PAYMENTS_PROVIDER" in str(exc.value)
+
+
+@pytest.mark.parametrize("missing", ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"])
+def test_stripe_without_its_keys_refuses_even_on_a_laptop(clean_env, missing) -> None:
+    keys = {
+        "STRIPE_SECRET_KEY": POISON_STRIPE_TEST_KEY,
+        "STRIPE_PUBLISHABLE_KEY": POISON_STRIPE_PUBLISHABLE_KEY,
+    }
+    del keys[missing]
+    with pytest.raises(ConfigurationError) as exc:
+        build(APP_ENV="local", PAYMENTS_PROVIDER="stripe", **keys)
+    assert missing in str(exc.value)
+
+
+def test_a_laptop_may_run_stripe_without_a_webhook_secret(clean_env) -> None:
+    """Its platform endpoint then answers every event with 503, which is honest
+    about a laptop nobody pointed ``stripe listen`` at."""
+    settings = build(
+        APP_ENV="local",
+        PAYMENTS_PROVIDER="stripe",
+        STRIPE_SECRET_KEY=POISON_STRIPE_TEST_KEY,
+        STRIPE_PUBLISHABLE_KEY=POISON_STRIPE_PUBLISHABLE_KEY,
+    )
+    assert settings.STRIPE_WEBHOOK_SECRET is None
+
+
+@pytest.mark.parametrize("env", sorted(DEPLOYED))
+def test_a_deployed_environment_verifies_every_webhook(clean_env, env) -> None:
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(env, STRIPE_WEBHOOK_SECRET=None)
+    assert "STRIPE_WEBHOOK_SECRET" in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    "env", [Environment.LOCAL, Environment.DEVELOPMENT, Environment.STAGING]
+)
+@pytest.mark.parametrize("prefix", ["sk_live_", "rk_live_"])
+def test_only_production_may_hold_a_live_key(clean_env, env, prefix) -> None:
+    """Whichever provider is selected — a live key sitting unused in a laptop's
+    ``.env`` is one setting away from a test run charging real cards."""
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(env, STRIPE_SECRET_KEY=f"{prefix}{POISON_PASSWORD}")
+    assert "STRIPE_SECRET_KEY" in str(exc.value)
+
+
+@pytest.mark.parametrize("prefix", ["sk_test_", "rk_test_"])
+def test_production_refuses_a_test_key(clean_env, prefix) -> None:
+    with pytest.raises(ConfigurationError) as exc:
+        production(STRIPE_SECRET_KEY=f"{prefix}{POISON_PASSWORD}")
+    assert "STRIPE_SECRET_KEY" in str(exc.value)
+
+
+def test_production_runs_on_the_live_key(clean_env) -> None:
+    settings = production()
+    assert settings.PAYMENTS_PROVIDER == "stripe"
+    assert settings.STRIPE_SECRET_KEY == POISON_STRIPE_LIVE_KEY
+
+
+# --------------------------------------------------------------------------- #
 # The work factor
 # --------------------------------------------------------------------------- #
 #
@@ -692,6 +792,23 @@ REFUSALS = [
         lambda: settings_for("staging", BCRYPT_ROUNDS=BCRYPT_MINIMUM_ROUNDS),
     ),
     ("BCRYPT_ROUNDS", lambda: production(BCRYPT_ROUNDS=BCRYPT_MINIMUM_ROUNDS)),
+    ("PAYMENTS_PROVIDER", lambda: production(PAYMENTS_PROVIDER="fake")),
+    (
+        "STRIPE_SECRET_KEY",
+        lambda: settings_for("staging", STRIPE_SECRET_KEY=None),
+    ),
+    (
+        "STRIPE_WEBHOOK_SECRET",
+        lambda: production(STRIPE_WEBHOOK_SECRET=None),
+    ),
+    (
+        "STRIPE_SECRET_KEY",
+        lambda: settings_for("staging", STRIPE_SECRET_KEY=POISON_STRIPE_LIVE_KEY),
+    ),
+    (
+        "STRIPE_SECRET_KEY",
+        lambda: production(STRIPE_SECRET_KEY=POISON_STRIPE_TEST_KEY),
+    ),
 ]
 
 #: Several refusals name the same variable, so the ids are spelled rather than derived —
@@ -719,6 +836,11 @@ REFUSAL_IDS = [
     "SMTP_SECURITY-none-in-production",
     "BCRYPT_ROUNDS",
     "BCRYPT_ROUNDS-in-production",
+    "PAYMENTS_PROVIDER-fake-in-production",
+    "STRIPE_SECRET_KEY-missing",
+    "STRIPE_WEBHOOK_SECRET-missing-in-production",
+    "STRIPE_SECRET_KEY-live-off-production",
+    "STRIPE_SECRET_KEY-test-in-production",
 ]
 
 
@@ -745,6 +867,10 @@ def test_no_refusal_echoes_a_value(clean_env, variable, trigger) -> None:
         POISON_CLUB_WEBSITE_URL,
         POISON_SMTP_HOST,
         POISON_MAIL_SENDER,
+        POISON_STRIPE_TEST_KEY,
+        POISON_STRIPE_LIVE_KEY,
+        POISON_STRIPE_PUBLISHABLE_KEY,
+        POISON_STRIPE_WEBHOOK_SECRET,
         POISON_SECRET,
         POISON_PHOTO_SECRET,
         DEFAULT_JWT_SECRET_KEY,
