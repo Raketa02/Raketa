@@ -53,6 +53,7 @@ import YouGameSuggestionsRoute from '@/app/(app)/(tabs)/you/game-suggestions';
 import YouIntroRoute from '@/app/(app)/(tabs)/you/intro';
 import YouKindOfGameRoute from '@/app/(app)/(tabs)/you/kind-of-game';
 import YouNameRoute from '@/app/(app)/(tabs)/you/name';
+import YouPaymentsRoute from '@/app/(app)/(tabs)/you/payments';
 import YouPassportRoute from '@/app/(app)/(tabs)/you/passport';
 import YouPhotosRoute from '@/app/(app)/(tabs)/you/photos';
 import YouRadiusRoute from '@/app/(app)/(tabs)/you/radius';
@@ -100,7 +101,9 @@ import {
   ImagePickingProvider,
   LiveStreamProvider,
   LocationProvider,
+  PaymentsProvider,
   type ClipboardPort,
+  type PaymentsPort,
   type HapticsPort,
   type SharePort,
   type ImagePickingPort,
@@ -109,6 +112,7 @@ import {
 } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
 
+import { fakePayments } from './platform';
 import { errorResponse, json, type Transport, type Wire } from './transport';
 
 /**
@@ -188,6 +192,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/tags': YouTagsRoute,
   '(app)/(tabs)/you/intro': YouIntroRoute,
   '(app)/(tabs)/you/name': YouNameRoute,
+  '(app)/(tabs)/you/payments': YouPaymentsRoute,
   // The administrator area (#516) — a sibling of `(app)`, one club's area per id, with its own two
   // tabs: Groups at the root, You beside it, New official group and a group's page pushed over
   // Groups, and a group's settings and Start playing's first step pushed over You (#517).
@@ -367,6 +372,25 @@ export function resetShare(): void {
 }
 
 /**
+ * The payment provider this tree saves a card through, for the suite whose screen is You ›
+ * Payments (#552). **Like the live channel, it always has a fake**: the device's port would reach
+ * Stripe's SDK, which jest's setup has made answer *no error* to everything — a card saved without a
+ * bank anybody described. A suite that says nothing gets a phone with no wallet whose fields hold
+ * nothing; a suite that walks a setup says so with `stubPayments(fakePayments())` and keeps it.
+ */
+let payments: PaymentsPort | undefined;
+
+/** Run the tree against this payment provider. Call before `launchSignedIn`. */
+export function stubPayments(port: PaymentsPort): void {
+  payments = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetPayments(): void {
+  payments = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -395,15 +419,21 @@ function TestRoot() {
 }
 
 /**
- * The four ports, wrapped where a suite said what they are — and the live channel always.
+ * The ports, wrapped where a suite said what they are — and the live channel and the payment
+ * provider always.
  *
  * Composed here rather than in `TestRoot` so adding a port is one entry rather than another
  * level of nesting and another conditional. The live channel's default is a fake rather than
- * the device, for the reason `stubLiveStream` states.
+ * the device, for the reason `stubLiveStream` states; the payment provider's, for the reason
+ * `stubPayments` states.
  */
 function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withPayments = (
+    <PaymentsProvider port={payments ?? NO_PAYMENTS}>{children}</PaymentsProvider>
+  );
+
   const withShare =
-    share === undefined ? children : <ShareProvider port={share}>{children}</ShareProvider>;
+    share === undefined ? withPayments : <ShareProvider port={share}>{withPayments}</ShareProvider>;
 
   const withClipboard =
     clipboard === undefined ? (
@@ -454,6 +484,13 @@ const SILENT_CHANNEL: LiveStreamPort = {
     return () => {};
   },
 };
+
+/**
+ * The payment provider a suite that said nothing gets — one instance for the process, for
+ * `SILENT_CHANNEL`'s reason: a fake holds what was typed, and shared across suites it would carry
+ * one suite's card into the next. This one is a fresh fake per process that no suite types into.
+ */
+const NO_PAYMENTS: PaymentsPort = fakePayments();
 
 /** The four sports the backend serves, as the registry route answers. */
 export const SPORTS_SERVED: Wire['SportsResponse'] = {
@@ -1151,6 +1188,31 @@ export function stubGate(
   stubSportsmanship(transport);
   stubDatafile(transport);
   stubMyGroups(transport);
+  stubPaymentMethod(transport);
+}
+
+export const PAYMENT_METHOD_PATH = '/api/v1/players/me/payment-methods/current';
+
+/** The version of the payment terms the backend holds in force (#536). */
+export const PAYMENT_TERMS_IN_FORCE = '2026-09-29';
+
+/**
+ * The saved payment method, as `GET …/payment-methods/current` answers — **nothing saved** unless
+ * the suite says otherwise. The gate stubs it, because the You tab's Payments row reads it on every
+ * visit to the tab (#552).
+ */
+export function stubPaymentMethod(
+  transport: Transport,
+  method: Wire['SavedMethodSchema'] | null = null,
+  { termsNeeded = false }: { readonly termsNeeded?: boolean } = {},
+) {
+  transport.on('GET', PAYMENT_METHOD_PATH, () =>
+    json<Wire['PaymentMethodResponse']>({
+      method,
+      terms_needed: termsNeeded,
+      terms_version: PAYMENT_TERMS_IN_FORCE,
+    }),
+  );
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

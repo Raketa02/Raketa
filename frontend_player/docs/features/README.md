@@ -33,6 +33,7 @@ is referenced from the other by a sentence, not copied.
 | [`groups.md`](groups.md)                     | Play › Groups, New group, Join a group, a group's page, Friends                                |
 | [`links.md`](links.md)                       | The three links into the app, the reader, the held link, the two sign-out sheets               |
 | [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate                         |
+| [`payments.md`](payments.md)                 | You › Payments: the four-step setup, the method card, Change and Remove, the Stripe port       |
 | [`plans.md`](plans.md)                       | The plan card, the ladder, the Now rail and its nine card states                               |
 | [`proposals.md`](proposals.md)               | A group's Games deck, the game card, a game's details, the answers                             |
 | [`play.md`](play.md)                         | The copy deck, the three cards, the court, the four screens, `SH.whyfit`                       |

@@ -56,9 +56,17 @@ describe('what the tabs are called', () => {
 });
 
 describe("what You's groups say", () => {
-  /** `the-words.md` §27: three groups, for the three questions the rows answer. */
-  it('names the three questions the rows answer, in the order they are asked', () => {
-    expect(Object.values(YOU_COPY.groups)).toEqual(['Playing', 'Finding players', 'On your card']);
+  /**
+   * `the-words.md` §27: three groups, for the three questions the rows answer — and a fourth, the
+   * account, since money arrived (ADR-0189 amending ADR-0179 §9; the screens A7, #552).
+   */
+  it('names the four questions the rows answer, in the order they are asked', () => {
+    expect(Object.values(YOU_COPY.groups)).toEqual([
+      'Playing',
+      'Finding players',
+      'On your card',
+      'Account',
+    ]);
     expect(YOU_COPY.eyebrow).toBe('Player profile');
   });
 });

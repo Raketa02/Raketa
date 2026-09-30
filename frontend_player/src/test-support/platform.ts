@@ -40,8 +40,16 @@
  * it.
  */
 
+import { createElement, useEffect } from 'react';
+import { TextInput } from 'react-native';
+
 import type {
+  BankAnswer,
+  CardFieldsProps,
   ClipboardPort,
+  ConfirmWith,
+  PaymentsPort,
+  PhoneWallet,
   SharePort,
   FollowLive,
   HapticsPort,
@@ -413,6 +421,117 @@ export function fakeShare(): FakeShare {
     openWhatsApp: (message) => {
       if (port.whatsAppInstalled) whatsApped.push(message);
       return Promise.resolve(port.whatsAppInstalled);
+    },
+  };
+  return port;
+}
+
+/**
+ * **A payment provider that behaves as Stripe's test cards do** (#552) — the backend's
+ * `domain/entered_cards.py` again, from the phone's side: the number a suite types decides how the
+ * bank answers, down to the last four digits Stripe's test mode uses.
+ *
+ * | Typed | The bank |
+ * | --- | --- |
+ * | `4242 4242 4242 4242` (and any other complete number) | saves it and asks nothing |
+ * | `4000 0025 0000 3155` | checks it once — and answers as `bank` says |
+ * | `4000 0000 0000 0002` | refuses it |
+ *
+ * **The fields are one text input**, labelled `FAKE_CARD_NUMBER`, where Stripe draws three: a
+ * suite types a whole number and the entry is complete at sixteen digits — the expiry and the CVC
+ * are Stripe's business and nothing above the port ever sees them. **They mount empty**, as
+ * Stripe's do: the entry lives in the view, and a step opened again starts with nothing typed. The wallet answers as
+ * `walletSheet` says. Neither verb rejects, as the device's never does.
+ */
+export interface FakePayments extends PaymentsPort {
+  /** The phone's own wallet. `null` — the default — is a phone that cannot pay with one. */
+  wallet: PhoneWallet | null;
+  /** How the player answers the bank's check, for the card that asks for one. */
+  bank: 'approves' | 'closes';
+  /** How the player answers the wallet's sheet. */
+  walletSheet: 'pays' | 'closes';
+  /** Every key the provider was handed, oldest first. */
+  readonly keys: readonly string[];
+  /** Every setup secret the bank was asked with, oldest first — what the terms' answer reached. */
+  readonly confirmed: readonly string[];
+  /** How many times the bank's own check was drawn. */
+  readonly checks: number;
+}
+
+/** The fake fields' accessible name — the one control a suite types a card into. */
+export const FAKE_CARD_NUMBER = 'Card number (test)';
+
+/** Stripe's test cards, by what their bank does. */
+export const TEST_CARDS = {
+  saves: '4242424242424242',
+  checksOnce: '4000002500003155',
+  declines: '4000000000000002',
+} as const;
+
+export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}): FakePayments {
+  const keys: string[] = [];
+  const confirmed: string[] = [];
+  let checks = 0;
+  /** What is in the fields right now — digits only. */
+  let typed = '';
+
+  const complete = () => typed.length === 16;
+
+  function CardFields({ onChange, accessibilityLabel }: CardFieldsProps) {
+    // Mounted empty, as Stripe's are: what was typed lives in the view and goes with it, so a card
+    // details step opened again after a decline holds nothing.
+    useEffect(() => {
+      typed = '';
+    }, []);
+    return createElement(TextInput, {
+      accessibilityLabel: FAKE_CARD_NUMBER,
+      accessibilityHint: accessibilityLabel,
+      onChangeText: (text: string) => {
+        typed = text.replace(/\D/g, '');
+        onChange({ complete: complete() });
+      },
+    });
+  }
+
+  function answer(via: ConfirmWith): BankAnswer {
+    if (via.kind === 'wallet') return port.walletSheet === 'pays' ? 'saved' : 'cancelled';
+    const number = via.card.reference?.replace(/^pm_fake_/, '') ?? '';
+    if (number === TEST_CARDS.declines) return 'declined';
+    if (number === TEST_CARDS.checksOnce) {
+      checks += 1;
+      return port.bank === 'approves' ? 'saved' : 'cancelled';
+    }
+    return 'saved';
+  }
+
+  const port: FakePayments = {
+    wallet: initial.wallet ?? null,
+    bank: 'approves',
+    walletSheet: 'pays',
+    get keys() {
+      return keys;
+    },
+    get confirmed() {
+      return confirmed;
+    },
+    get checks() {
+      return checks;
+    },
+
+    CardFields,
+    phoneWallet: () => Promise.resolve(port.wallet),
+    takeCard: (publishableKey) => {
+      keys.push(publishableKey);
+      return Promise.resolve(
+        complete()
+          ? { kind: 'taken', card: { reference: `pm_fake_${typed}` } }
+          : { kind: 'refused' },
+      );
+    },
+    confirmSetup: ({ publishableKey, clientSecret, with: via }) => {
+      keys.push(publishableKey);
+      confirmed.push(clientSecret);
+      return Promise.resolve(answer(via));
     },
   };
   return port;

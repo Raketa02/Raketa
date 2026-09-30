@@ -107,6 +107,15 @@ const hapticsImport = {
     'src/test-support/platform.ts in a test. See docs/adr/0167 §2.',
 };
 
+const stripeImport = {
+  group: ['@stripe/*'],
+  message:
+    'Only src/shared/lib/platform/payments.tsx may import the Stripe SDK. Its card fields and the ' +
+    "bank's check are native and cannot be driven from a test, and a saved card is a walk a suite " +
+    'has to finish — use the PaymentsPort from @/shared/lib/platform (its CardFields included), ' +
+    'and fakePayments() from src/test-support/platform.ts in a test. See #552.',
+};
+
 const featurevisorImport = {
   group: ['@featurevisor/*'],
   message:
@@ -192,6 +201,7 @@ const CORE_PATTERNS = [
   liveStreamImport,
   hapticsImport,
   clipboardImport,
+  stripeImport,
   featurevisorImport,
   observabilityVendorImports,
 ];
@@ -418,6 +428,12 @@ export default [
     // The clipboard — read and write, the same one-file-wide exemption as the motor (#512, #513).
     files: ['src/shared/lib/platform/clipboard.ts'],
     rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(clipboardImport)) },
+  },
+  {
+    // The payment provider's phone half — Stripe's fields and the bank's check, one file wide like
+    // the other native ports (#552).
+    files: ['src/shared/lib/platform/payments.tsx'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(stripeImport)) },
   },
   {
     // The share sheet — one verb, one file, the clipboard's exemption with the path ban

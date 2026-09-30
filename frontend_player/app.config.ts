@@ -39,6 +39,7 @@ import {
   IDENTIFIED_ENVIRONMENTS,
 } from './src/shared/config/appIdentity';
 import { APP_SCHEME, nativeLinkConfig, readLinkDomain } from './src/shared/config/appLinks';
+import { APPLE_PAY_MERCHANTS } from './src/shared/config/applePay';
 
 export default (): ExpoConfig => {
   const environment = process.env.EXPO_PUBLIC_ENV;
@@ -102,6 +103,13 @@ export default (): ExpoConfig => {
           photosPermission:
             'Raketa uses your photos so you can put a picture of yourself on your profile.',
         },
+      ],
+      [
+        // Stripe's card fields and the bank's check, for You › Payments (#552). Google Pay is
+        // declared on Android. **No Apple Pay merchant yet** — see `shared/config/applePay.ts`:
+        // an empty list adds no entitlement.
+        '@stripe/stripe-react-native',
+        { merchantIdentifier: [...APPLE_PAY_MERCHANTS], enableGooglePay: true },
       ],
     ],
     experiments: {

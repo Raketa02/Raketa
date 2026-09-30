@@ -836,7 +836,12 @@ sessions.
   so a feature that imports one is a feature no test can drive — which is the argument,
   more than tidiness, and it is the argument the third one is here on too even though its
   far side is a socket. The linter enforces all three bans and
-  `scripts/test-import-boundaries.sh` proves it still does.
+  `scripts/test-import-boundaries.sh` proves it still does. Four more have joined them since —
+  haptics, the clipboard, the share sheet, and **`PaymentsPort` over `@stripe/stripe-react-native`**
+  ([#552](https://github.com/Raketa02/Raketa/issues/552)), the one port that carries a component:
+  Stripe's card fields are a native view whose entry stays inside it, so the port hands a screen
+  `CardFields` beside its verbs, and `fakePayments()` behaves as Stripe's test cards do
+  ([`docs/features/_shared.md`](features/_shared.md)).
 - **A screen reaches a port through its context** — `useLocation()` /
   `useImagePicking()` / `useLiveStream()`, each defaulting to the real device, so nothing
   in the app wires anything up and a test wraps the tree in the device it wants. A screen
@@ -1359,6 +1364,11 @@ when the code that needs them is written — not preemptively:
   behind `shared/lib/observability` ([Part 15](#part-15--observability)).
 - Maestro — E2E journeys ([Part 16](#part-16--testing)).
 
+> `@stripe/stripe-react-native` joined the manifest with You › Payments
+> ([#552](https://github.com/Raketa02/Raketa/issues/552)), at the version Expo SDK 52 pins (0.38.6),
+> behind the seventh platform port — a native module and a native view, so it needs a development
+> build rebuilt with it.
+>
 > `expo-network` was on this list and has since joined the manifest, with the code that
 > wires the online and focus managers ([Part 7](#part-7--tanstack-query)). So have
 > `expo-location` and `expo-image-picker`, with the two ports that own them

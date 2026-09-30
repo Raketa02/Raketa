@@ -100,6 +100,7 @@ const YOU_SCREENS = [
   'you/tags',
   'you/intro',
   'you/name',
+  'you/payments',
 ] as const;
 
 export function TabShell() {

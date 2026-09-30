@@ -291,3 +291,20 @@ every side (`hit.availabilityCell`), and the tick stays on a ticked hour althoug
 fill alone — both recorded in design-system Part 16 and flagged. The router suites drag it through
 `test-support/weekGridTouch`. **Not seen on a device**: the paint against the page's scroll on
 either platform, and the press the pan is meant to cancel.
+
+**The seventh port is the payment provider's phone half, and it carries a component**
+([#552](https://github.com/Raketa02/Raketa/issues/552)). `shared/lib/platform/payments.tsx` is the only
+importer of `@stripe/stripe-react-native` — fenced in `CORE_PATTERNS` like the native ports, one file
+wide, and probed by `pnpm test:boundaries`. Stripe's card fields are a native **view** whose entry
+stays inside it, so `PaymentsPort` carries `CardFields` beside `phoneWallet`, `takeCard` (turn what
+the fields hold into a reference, while they are mounted) and `confirmSetup` (the bank's check, or the
+wallet's sheet — four answers, never a rejection). `PaymentsProvider`/`usePayments` as the other
+ports; `fakePayments()` behaves as Stripe's test cards do, and **the router harness always provides
+one** (`NO_PAYMENTS`, `stubPayments`), the live channel's rule: the device's port would reach an SDK
+jest has mocked into answering _no error_ to everything. `jest.setup.js` uses the SDK's own jest mock
+for that far side. `app.config.ts` adds Stripe's config plugin with Google Pay declared and **no
+Apple Pay merchant** — an entitlement a personal team cannot sign (O6); the one value both the
+plugin and the port read is `shared/config/applePay.ts`, which imports nothing, for
+`appIdentity.ts`'s reason. `theme.size.payments` holds
+the step mark, the method card's badge and the fields' row. The record is
+[`payments.md`](payments.md).

@@ -4,7 +4,7 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Eight modules may be imported from exactly one place:
+# Nine modules may be imported from exactly one place:
 #
 #   expo-secure-store                            → src/shared/lib/auth
 #   @react-native-async-storage/async-storage    → feature_flags/api/datafileCache.ts
@@ -14,6 +14,7 @@
 #   react-native-sse                             → platform/liveStream.ts
 #   expo-haptics                                 → platform/haptics.ts
 #   expo-clipboard                               → platform/clipboard.ts
+#   @stripe/stripe-react-native                  → platform/payments.tsx
 #   @featurevisor/sdk                            → feature_flags/api/featurevisor.ts
 #
 # And one **name** out of a module every screen imports:
@@ -177,6 +178,7 @@ LIVE_PORT='src/shared/lib/platform/liveStream.ts'
 HAPTICS_PORT='src/shared/lib/platform/haptics.ts'
 CLIPBOARD_PORT='src/shared/lib/platform/clipboard.ts'
 SHARE_PORT='src/shared/lib/platform/share.ts'
+PAYMENTS_PORT='src/shared/lib/platform/payments.tsx'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 
 # The flag seam's three edges, each an api/ file of one feature: the fetch, the saved
@@ -303,6 +305,20 @@ expect_blocked expo-clipboard "$OTHER_PLATFORM_FILE" 'clipboard.ts'
 expect_allowed expo-clipboard "$CLIPBOARD_PORT"
 # And the port itself is still under every other ban.
 expect_blocked expo-haptics "$CLIPBOARD_PORT" 'haptics.ts'
+
+echo
+echo "the payment provider — @stripe/stripe-react-native belongs to platform/payments.tsx"
+expect_blocked @stripe/stripe-react-native "$FEATURE" 'payments.tsx'
+expect_blocked @stripe/stripe-react-native "$SCREEN" 'payments.tsx'
+expect_blocked @stripe/stripe-react-native "$TEST" 'payments.tsx'
+expect_blocked @stripe/stripe-react-native "$SUPPORT" 'payments.tsx'
+expect_blocked @stripe/stripe-react-native "$AUTH" 'payments.tsx'
+# One file wide: the clipboard beside it may not reach the provider.
+expect_blocked @stripe/stripe-react-native "$CLIPBOARD_PORT" 'payments.tsx'
+expect_blocked @stripe/stripe-react-native "$OTHER_PLATFORM_FILE" 'payments.tsx'
+expect_allowed @stripe/stripe-react-native "$PAYMENTS_PORT"
+# And the port itself is still under every other ban.
+expect_blocked expo-clipboard "$PAYMENTS_PORT" 'clipboard.ts'
 
 echo
 echo "the share sheet — { Share } from react-native belongs to platform/share.ts"

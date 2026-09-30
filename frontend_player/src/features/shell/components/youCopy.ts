@@ -9,10 +9,12 @@
  * §1). The group titles are exported because the screens behind the rows wear them as their
  * eyebrow: *Playing · Skill passport*, *Finding players · Your week*, *On your card · Name*.
  *
- * **Three groups, because the rows answer three questions**: what has the platform concluded
- * about me, what does the matcher read when it looks for a game, and what does a stranger read
- * about me. A fourth question — the account — is not asked on this tab (ADR-0179 §9), and
- * *Sign out* stays at the foot as the account panel draws it.
+ * **Four groups, because the rows answer four questions**: what has the platform concluded
+ * about me, what does the matcher read when it looks for a game, what does a stranger read about
+ * me — and, since money arrived, how do I pay for a game. That fourth, the **account**, was not
+ * asked on this tab until ADR-0189 amended ADR-0179 §9; its group sits after *On your card* and
+ * before *Sign out* (the screens A7, #552), and *Sign out* stays at the foot as the account panel
+ * draws it.
  *
  * **The placeholder line is gone.** *Your profile, your radius, your week — not built yet*
  * was a citation for as long as the tab was unbuilt; the tab is built, and the fifth tab has
@@ -26,5 +28,6 @@ export const YOU_COPY = {
     playing: 'Playing',
     findingPlayers: 'Finding players',
     onYourCard: 'On your card',
+    account: 'Account',
   },
 } as const;

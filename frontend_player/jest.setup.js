@@ -118,6 +118,15 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 afterEach(() => require('@react-native-async-storage/async-storage').clear());
 
+// --- the payment provider's phone half ---------------------------------------
+// Stripe's SDK is a native module and a native view with no JS implementation under either, and
+// exactly one module imports it: `shared/lib/platform/payments.tsx` (#552). The SDK ships its own
+// jest mock of its whole surface — every call answering *no error* — which is the far side of that
+// port as the storage mock above is of its own, so it is used as it comes. Every screen above the
+// port runs against `fakePayments()` instead; this is here so the port's own suite can run, and so
+// a suite that never mentions a payment can import the platform module at all.
+jest.mock('@stripe/stripe-react-native', () => require('@stripe/stripe-react-native/jest/mock.js'));
+
 // --- the font registry ------------------------------------------------------
 // The one partial mock in this file, and the one that is not a port's far side.
 //

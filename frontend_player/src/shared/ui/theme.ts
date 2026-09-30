@@ -917,6 +917,13 @@ const size = {
     ringOut: space.xxs,
     courtStroke: 1.5,
   },
+  /** YOU › PAYMENTS — the setup checklist and the method card (7.23, #552; mocks 41–47).
+   *  `stepMark` is a step's round mark — its number, or the tick once finished — at `fit`'s 26,
+   *  the size the mocks draw beside a `question` title. `badge` is the method card's brand square,
+   *  42 as mock 47 measures it against the card's 15pt padding. `cardFields` is Stripe's field
+   *  row, `textField.row`'s 42 plus the native border Stripe draws inside the box rather than
+   *  around it — 44, which is also 6.5's minimum for the one target the row is. */
+  payments: { stepMark: 26, badge: 42, cardFields: 44 },
   /** THE RADAR — the sizes of the field's drawn objects, every one of them the spec's own
    *  ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
    *  §7, `the-radar.md` §7.2–7.4). Points; the kilometres, the ladder and the thresholds are

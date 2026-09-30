@@ -14563,7 +14563,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In). The card leaves. `proposal_already_answered` — this player said no: the card does not come back. `proposal_is_full` — every seat is In. `payment_method_required` — no saved payment method: save one, then say yes. `live_yeses_exhausted` — `details.cap` live yeses in `details.sport` already. `no_longer_fits` — somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded. */
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_already_answered` — this player said no: the card does not come back. `proposal_is_full` — every seat is In. `payment_method_required` — no saved payment method: save one, then say yes. `live_yeses_exhausted` — `details.cap` live yeses in `details.sport` already. `no_longer_fits` — somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -14619,7 +14619,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In). The card leaves. */
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -14666,7 +14666,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In). The card leaves. `proposal_already_answered` — this player is In: they leave by withdrawing their yes, never by a no. */
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_already_answered` — this player is In: they leave by withdrawing their yes, never by a no. */
             409: {
                 headers: {
                     [name: string]: unknown;
