@@ -100,6 +100,42 @@ async def test_a_new_person_is_emailed_a_button_to_the_public_site_and_a_code(
     assert code_in(email) in email.html
 
 
+async def test_the_way_to_the_code_box_makes_the_app_s_labels_stand_out(
+    client, desk, mailbox
+):
+    """*Have an invitation code?* under *Sign in* is two labels inside one
+    sentence, and the first ends in a question mark. They are what she has to
+    find on the screen, so they are bold in the HTML and quoted in the plain
+    text, which has no bold (#529 I2)."""
+
+    await invites(client, desk, name="Marta Wójcik", email=MARTA)
+
+    email = await the_email_to(mailbox, MARTA)
+    assert (
+        "tap <strong>Have an invitation code?</strong> under "
+        "<strong>Sign in</strong>, and enter this code:" in email.html
+    )
+    assert (
+        "tap “Have an invitation code?” under “Sign in”, and enter this code:"
+        in email.text
+    )
+
+
+async def test_an_invitation_says_groups_and_never_whatsapp(client, desk, mailbox):
+    """Where a club's players talk is the club's business: the invitation is to
+    run its groups (#529 I4)."""
+
+    await player_signs_up(client)
+    await invites(client, desk, name="Marta Wójcik", email=MARTA)
+    await invites(client, desk, name="Tomek Kowalski", email=TOMEK)
+
+    for address in (MARTA, TOMEK):
+        email = await the_email_to(mailbox, address)
+        assert "run its groups on Raketa" in email.text
+        assert "WhatsApp" not in email.text
+        assert "WhatsApp" not in email.html
+
+
 async def test_an_existing_account_is_asked_to_accept_in_the_app_with_no_code(
     client, desk, mailbox
 ):

@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from html import escape
-from typing import Optional, final
+from typing import Optional, TypeAlias, final
 
 from app.application.ports.mail import OutgoingMessage
 
@@ -29,6 +29,24 @@ SIGNATURE = "Raketa"
 #: ``coral`` fails contrast and white on this passes (5.89:1). Spelled here rather
 #: than shared — an email is a client of nobody's design tokens.
 _BUTTON_COLOUR = "#B8351C"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class OnScreen:
+    """Words the person has to find on a screen: a button's or a link's label.
+
+    Inside a sentence a label is easy to read past — *tap Have an invitation
+    code? under Sign in* is one run of words, and the label's own question mark
+    reads as the sentence's. So it stands out: **bold** in the HTML, and in
+    quotes in the plain text, which has no bold.
+    """
+
+    text: str
+
+
+#: A line of words, some of which may be a label to find.
+Phrase: TypeAlias = str | tuple[str | OnScreen, ...]
 
 
 @final
@@ -46,7 +64,7 @@ class ButtonEmail:
     #: The 8-character code, for an email that carries a credential, and the
     #: line that says what to do with it.
     code: Optional[str] = None
-    code_line: Optional[str] = None
+    code_line: Optional[Phrase] = None
     #: What a person who did not ask for this email should do.
     footer: Optional[str] = None
 
@@ -70,7 +88,7 @@ def _text(email: ButtonEmail) -> str:
     parts.extend([f"{email.button_label}:", email.button_url, ""])
     if email.code is not None:
         if email.code_line:
-            parts.append(email.code_line)
+            parts.append(_plain(email.code_line))
         # On a line of its own, so it can be read and typed without its
         # neighbours, and found by a person scanning the email for it.
         parts.extend(["", email.code, ""])
@@ -94,7 +112,7 @@ def _html(email: ButtonEmail) -> str:
     code = ""
     if email.code is not None:
         code_line = (
-            f'<p style="margin:0 0 8px">{escape(email.code_line)}</p>'
+            f'<p style="margin:0 0 8px">{_marked_up(email.code_line)}</p>'
             if email.code_line
             else ""
         )
@@ -117,4 +135,23 @@ def _html(email: ButtonEmail) -> str:
         f"{paragraphs}{button}{code}{footer}"
         f'<p style="margin:0;color:#6b6b6b">— {escape(SIGNATURE)}</p>'
         "</body></html>"
+    )
+
+
+def _plain(phrase: Phrase) -> str:
+    if isinstance(phrase, str):
+        return phrase
+    return "".join(
+        f"“{part.text}”" if isinstance(part, OnScreen) else part for part in phrase
+    )
+
+
+def _marked_up(phrase: Phrase) -> str:
+    if isinstance(phrase, str):
+        return escape(phrase)
+    return "".join(
+        f"<strong>{escape(part.text)}</strong>"
+        if isinstance(part, OnScreen)
+        else escape(part)
+        for part in phrase
     )

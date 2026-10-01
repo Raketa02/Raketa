@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from app.application.mail.layout import ButtonEmail, render
+from app.application.mail.layout import ButtonEmail, OnScreen, render
 from app.application.ports.mail import OutgoingMessage
 
 #: The ``kind`` each message is queued under — what outlives the purge.
@@ -28,9 +28,13 @@ NEW_PERSON_KIND: Final = "administrator_invitation.new_person"
 EXISTING_ACCOUNT_KIND: Final = "administrator_invitation.existing_account"
 CLUB_RESET_KIND: Final = "administrator_invitation.club_reset"
 
+#: The two labels are the sign-in screen's own, and what the person looks for.
 _CODE_LINE: Final = (
-    "Or open the Raketa app, tap Have an invitation code? under Sign in, and "
-    "enter this code:"
+    "Or open the Raketa app, tap ",
+    OnScreen("Have an invitation code?"),
+    " under ",
+    OnScreen("Sign in"),
+    ", and enter this code:",
 )
 
 
@@ -44,8 +48,8 @@ def new_person_email(
             subject=f"{club_name} invited you to run its groups on Raketa",
             heading=f"Hi {name}, {club_name} invited you to Raketa",
             lines=(
-                f"{club_name} wants you to run its WhatsApp groups on Raketa as "
-                f"an administrator. Set a password to get started.",
+                f"{club_name} wants you to run its groups on Raketa as an "
+                f"administrator. Set a password to get started.",
                 "The button and the code below work for 72 hours, and each works once.",
             ),
             button_label="Set your password",
@@ -70,7 +74,7 @@ def existing_account_email(
             subject=f"{club_name} wants to make you an administrator",
             heading=f"{club_name} wants to make you an administrator",
             lines=(
-                f"{club_name} wants you to run its WhatsApp groups on Raketa. "
+                f"{club_name} wants you to run its groups on Raketa. "
                 f"Open Raketa, signed in as {to}, and accept the invitation "
                 f"there.",
                 "No new password is needed: it is added to the account you "
