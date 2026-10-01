@@ -131,7 +131,7 @@ export {
 } from './TabBar';
 export { Tag, type TagProps, type TagVariant } from './Tag';
 export { TextField, type TextFieldProps } from './TextField';
-export { Dash, Plus, PlusOnMedia, Tick } from './Tick';
+export { Dash, Plus, PlusOnMedia, Tick, TICK_PATH, TICK_SPACE } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
 export { Toast, ToastHost, type ToastProps } from './Toast';
 export { ModalStage, type ModalStageProps } from './ModalStage';

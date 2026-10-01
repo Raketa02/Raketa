@@ -104,9 +104,10 @@ export function WhoCanJoinCard({
   readonly joinPolicy: JoinPolicy;
   readonly onJoinPolicy: (policy: JoinPolicy) => void;
   /**
-   * The note that there is no sport to pick — true of a player group, which plays whatever its
-   * members are rated in, and **false of an official group**, which declares its sports on a card
-   * of its own (#516). So New official group draws the card without it.
+   * The note that there is no sport to pick — true of a player group being made, which plays
+   * whatever its members are rated in, and **false of an official group**, which declares its
+   * sports on a card of its own (#516), and of **Edit group**, whose Owner is past choosing what
+   * the group is (#529).
    */
   readonly noSportNote?: boolean;
 }) {

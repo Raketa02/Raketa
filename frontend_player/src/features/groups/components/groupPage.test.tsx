@@ -11,6 +11,7 @@
 
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { getAnimatedStyle } from 'react-native-reanimated';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { savePhonePreference } from '@/shared/lib/preferences';
@@ -272,6 +273,53 @@ describe('the fast filter', () => {
     expect(await pill('Tennis')).toBeTruthy();
     expect(screen.queryByTestId('sport-bar')).toBeNull();
     expect(await screen.findByText(/once 2 who play tennis are in/)).toBeTruthy();
+  });
+
+  describe('open, against the group’s tile', () => {
+    // An iPhone's width: the bar's right end is the gutter less its inset, the tile at the lead.
+    const HEADER = 393;
+    const TILE = { x: 32, width: 36 };
+    const RIGHT_END = HEADER - (theme.size.gutter - theme.size.groupPage.filterPad);
+
+    async function openBarOver(rowWidth: number): Promise<number | undefined> {
+      stubAPlayer([BADMINTON, SQUASH, PADEL, TENNIS]);
+      await openGroup();
+      // The header draws its tile and its pill once the group is read.
+      const closed = await pill('Padel');
+      fireEvent(screen.getByTestId('sport-filter-header'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 0, width: HEADER, height: 66 } },
+      });
+      fireEvent(
+        screen.getByTestId('sport-filter-cover', { includeHiddenElements: true }),
+        'layout',
+        {
+          nativeEvent: { layout: { x: TILE.x, y: 15, width: TILE.width, height: 36 } },
+        },
+      );
+      fireEvent.press(closed);
+      const bar = await screen.findByTestId('sport-bar');
+      fireEvent(within(bar).getByRole('button', { name: 'Padel' }), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 0, width: 80, height: 27 } },
+      });
+      fireEvent(screen.getByTestId('sport-bar-row'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 0, width: rowWidth, height: 27 } },
+      });
+      act(() => jest.advanceTimersByTime(theme.motion.unfold + 16));
+      return (getAnimatedStyle(screen.getByTestId('sport-bar')) as { width?: number }).width;
+    }
+
+    // #529 E2: the tile's edge showed past the open bar's end.
+    it('covers the tile whole, stopping short of the back arrow, once the sports reach it', async () => {
+      const pad = theme.size.groupPage.filterPad;
+      // The sports alone would end 19 points into the tile.
+      expect(await openBarOver(RIGHT_END - (TILE.x + 17) - 2 * pad)).toBe(
+        RIGHT_END - (TILE.x - theme.space.xs),
+      );
+    });
+
+    it('ends where the sports end when they stop short of the tile', async () => {
+      expect(await openBarOver(150)).toBe(150 + 2 * theme.size.groupPage.filterPad);
+    });
   });
 
   it('folds without changing anything when the player taps elsewhere', async () => {

@@ -13,13 +13,16 @@ import { getAnimatedStyle } from 'react-native-reanimated';
 
 import { ReducedMotionProvider, theme } from '@/shared/ui';
 
-import { SportBar } from './SportFilter';
+import { SportBar, type BarCover } from './SportFilter';
 
 const PAD = theme.size.groupPage.filterPad;
 const ROW = 300;
 const PILL = 80;
 
-function drawBar({ reduced = false }: { readonly reduced?: boolean } = {}) {
+function drawBar({
+  reduced = false,
+  cover,
+}: { readonly reduced?: boolean; readonly cover?: BarCover } = {}) {
   const onChoose = jest.fn();
   render(
     <ReducedMotionProvider value={reduced}>
@@ -27,6 +30,7 @@ function drawBar({ reduced = false }: { readonly reduced?: boolean } = {}) {
         sports={['padel', 'tennis', 'squash', 'badminton']}
         sport="padel"
         onChoose={onChoose}
+        {...(cover === undefined ? {} : { cover })}
       />
     </ReducedMotionProvider>,
   );
@@ -83,6 +87,26 @@ describe('the fast filter’s bar', () => {
     expect(halfway).toBeLessThan(ROW + 2 * PAD);
 
     act(() => jest.advanceTimersByTime(theme.motion.unfold));
+    expect(barStyle().width).toBe(ROW + 2 * PAD);
+  });
+
+  // #529 E2: open with every sport in it, the bar ended a few points into the group's tile, and
+  // the tile's edge showed past its end.
+  it('opens over the tile whole when the sports would end across it', () => {
+    drawBar({ cover: { reaches: ROW + 2 * PAD - 10, whole: ROW + 2 * PAD + 20 } });
+    layOut();
+
+    act(() => jest.advanceTimersByTime(theme.motion.unfold + FRAME));
+
+    expect(barStyle().width).toBe(ROW + 2 * PAD + 20);
+  });
+
+  it('ends where the sports end when they stop short of the tile', () => {
+    drawBar({ cover: { reaches: ROW + 2 * PAD + 5, whole: ROW + 2 * PAD + 40 } });
+    layOut();
+
+    act(() => jest.advanceTimersByTime(theme.motion.unfold + FRAME));
+
     expect(barStyle().width).toBe(ROW + 2 * PAD);
   });
 

@@ -7,8 +7,11 @@
  * - **Want to join · N** — the Owner's, and only while somebody is waiting (`WantToJoin`).
  * - **The members row** — up to five stacked faces and *+N*, *N members*, the sport dots and who
  *   approves joins, and a chevron: the door to **Members** (story 72).
- * - **Edit group** — the Owner's, a door row above the way out (story 75).
- * - **Delete the group** or **Leave the group** — whichever the reader can take (`ExitDoor`).
+ * - **Edit group** — the Owner's, a door row (story 75).
+ *
+ * **The way out is not here**: *Delete the group* or *Leave the group* (`ExitDoor`) stands at the
+ * page's foot under Info, outside what scrolls, so it is always in the same place however long the
+ * queue above it is (#529). The group page draws it, because the page owns the scroll.
  *
  * **Info is not drawn for a sport**: the members row counts everybody, and Members opens on the
  * filter's sport. Nothing on it is computed on the phone — who owns the group, who has been in
@@ -25,7 +28,6 @@ import type { Group } from '../domain/group';
 import { membersRow, readerFace } from '../domain/groupInfo';
 import { useReaderId } from '../hooks/useReaderId';
 
-import { ExitDoor } from './ExitDoor';
 import { FaceStack } from './FaceStack';
 import { GroupLinkActions } from './GroupLinkActions';
 import { groupEditRoute, groupMembersRoute } from './groupRoutes';
@@ -58,7 +60,6 @@ export function InfoTab({ group }: { readonly group: Group }) {
           />
         </Card>
       ) : null}
-      <ExitDoor group={group} />
     </>
   );
 }

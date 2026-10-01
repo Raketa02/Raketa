@@ -107,6 +107,8 @@ export const GROUPS_COPY = {
   info: {
     /** The members row's policy line — who answers a request, from where the reader stands. */
     anyoneCanJoin: 'anyone can join',
+    /** A search row's line for a group that asks — whoever answers (#529). */
+    needsApproval: 'Needs approval',
     youApprove: 'you approve joins',
     ownerApproves: 'the owner approves joins',
     /** An official group's read names nobody; its Administrator answers (#519). */
@@ -128,7 +130,7 @@ export const GROUPS_COPY = {
     /** An Owner leaving with other members in it — ADR-0183 §7's handover, said before it happens. */
     leaveHandover: 'It passes to whoever has been in it longest, with the requests waiting.',
     rejoinAnyone: 'You can join again any time with its link.',
-    rejoinAsk: 'To come back, you ask to join again with its link.',
+    rejoinAsk: 'To come back, you ask to join again.',
     leaveClose: 'Stay in the group',
     deleted: 'Group deleted',
     left: 'You left the group',
@@ -149,8 +151,13 @@ export const GROUPS_COPY = {
     saving: 'Saving the group',
     saved: 'Saved',
     admittedLine: 'Everybody who was waiting is in the group now.',
+    /** The check before a save that switches People I approve to Anyone (#529). */
+    anyoneTitle: 'Let anyone join?',
+    anyoneBody:
+      'Selecting Anyone allows anyone to join the group, including players with pending requests.',
+    anyoneClose: 'Keep People I approve',
   },
-  /** The tag beside an official group's name on a club card, in both searches (2026-09-27 mocks). */
+  /** What an official group's rows and header say beside its name — spoken; `OfficialMark` draws it (#529). */
   official: 'official',
   action: {
     join: 'Join',

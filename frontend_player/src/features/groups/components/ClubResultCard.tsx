@@ -32,9 +32,7 @@ export function ClubResultCard({ club }: { readonly club: SearchedClub }) {
       {club.groups.length === 0 ? (
         <Text style={s.none}>{GROUPS_COPY.joinGroup.noGroupsHere}</Text>
       ) : (
-        club.groups.map((group) => (
-          <GroupAtClubRow key={group.id} group={group} clubName={club.name} variant="join" />
-        ))
+        club.groups.map((group) => <GroupAtClubRow key={group.id} group={group} variant="join" />)
       )}
     </ClubCard>
   );

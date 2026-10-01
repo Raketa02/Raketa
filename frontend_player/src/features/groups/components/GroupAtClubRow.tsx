@@ -1,24 +1,24 @@
 /**
- * **A group on a club card's band** — its tile, its name with an **official** tag on an official
- * group, its sport dots and size, and what the reader can do about it (play 9, 10, 24, 35–37; the
- * 2026-09-27 mocks).
+ * **A group on a club card's band** — its tile, its name with the official mark beside it on an
+ * official group (`OfficialMark`, which replaced the mocks' *official* tag, #529), its sport dots
+ * and size, and what the reader can do about it (play 9, 10, 24, 35–37; the 2026-09-27 mocks).
  *
  * Drawn in two places that differ in one thing, the line after the count:
  *
- * - **Join a group** names who approves, on one line, truncated — *11 members · Coach Andrzej a…*
- *   (play 35): the reader is deciding whether to ask, and that is who answers.
+ * - **Join a group** says whether joining needs a yes — *11 members · Needs approval* or
+ *   *anyone can join* (play 35, shortened in #529): the reader is deciding whether to ask.
  * - **New group's home-club search** stops at the count: the row sits under a club that is itself
  *   the thing being chosen, so it says only enough to recognise the group.
  *
- * The name and the line are **one element**, spoken whole with the sports by name — the dots have
- * no words of their own — and the action beside it is the row's one control. An official group's
- * dots are the sports it declares, as served (#519).
+ * The name and the line are **one element**, spoken whole with *official* and the sports by name —
+ * neither the mark nor the dots have words of their own — and the action beside it is the row's
+ * one control. An official group's dots are the sports it declares, as served (#519).
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
-import { Tag, theme } from '@/shared/ui';
+import { theme } from '@/shared/ui';
 
 import type { GroupAtClub } from '../domain/group';
 
@@ -26,6 +26,7 @@ import { GroupActionControl } from './GroupActionControl';
 import { GroupMonogram } from './GroupMonogram';
 import { GROUPS_COPY } from './groupsCopy';
 import { groupRowMeta, membersLine } from './groupsPresentation';
+import { OfficialMark } from './OfficialMark';
 import { SportDots } from './SportDots';
 
 /** Which screen's row: Join a group's, or New group's home-club search's. */
@@ -33,14 +34,12 @@ export type GroupAtClubRowVariant = 'join' | 'homeClub';
 
 export interface GroupAtClubRowProps {
   readonly group: GroupAtClub;
-  /** The club whose card the row sits in — who approves an official group that needs an administrator. */
-  readonly clubName: string;
   readonly variant: GroupAtClubRowVariant;
 }
 
-/** The second line: Join a group's names who approves; home-club search's stops at the count. */
-function rowLine(group: GroupAtClub, clubName: string, variant: GroupAtClubRowVariant): string {
-  return variant === 'join' ? groupRowMeta(group, clubName) : membersLine(group.memberCount);
+/** The second line: Join a group's says whether it needs a yes; home-club search's stops at the count. */
+function rowLine(group: GroupAtClub, variant: GroupAtClubRowVariant): string {
+  return variant === 'join' ? groupRowMeta(group) : membersLine(group.memberCount);
 }
 
 function rowLabel(group: GroupAtClub, line: string, official: boolean): string {
@@ -49,8 +48,8 @@ function rowLabel(group: GroupAtClub, line: string, official: boolean): string {
   return [group.name, ...tagged, line, ...plays].join(', ');
 }
 
-export function GroupAtClubRow({ group, clubName, variant }: GroupAtClubRowProps) {
-  const line = rowLine(group, clubName, variant);
+export function GroupAtClubRow({ group, variant }: GroupAtClubRowProps) {
+  const line = rowLine(group, variant);
   const official = group.kind === 'OFFICIAL';
 
   return (
@@ -62,7 +61,7 @@ export function GroupAtClubRow({ group, clubName, variant }: GroupAtClubRowProps
           <Text style={s.name} numberOfLines={1}>
             {group.name}
           </Text>
-          {official ? <Tag label={GROUPS_COPY.official} variant="ok" /> : null}
+          {official ? <OfficialMark fontSize={theme.type.cardTitle.fontSize} /> : null}
         </View>
         <View style={s.meta}>
           <SportDots sports={group.sports} />
@@ -80,7 +79,8 @@ export function GroupAtClubRow({ group, clubName, variant }: GroupAtClubRowProps
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   words: { flex: 1, gap: theme.space.xxs },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
+  // The mark sits on the name's line, centred on it, a `space.xxs` after its last letter.
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
   name: { ...theme.type.cardTitle, color: theme.color.ink, flexShrink: 1 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
   // The row is only ever drawn on a club card's tray, where `muted` falls short of 4,5.

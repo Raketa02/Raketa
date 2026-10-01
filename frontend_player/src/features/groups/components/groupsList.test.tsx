@@ -5,7 +5,7 @@
  */
 
 import { router } from 'expo-router';
-import { StyleSheet, type ViewStyle } from 'react-native';
+import { RefreshControl, StyleSheet, type ViewStyle } from 'react-native';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -177,6 +177,26 @@ describe('the Groups list', () => {
     await openGroups();
 
     expect(await screen.findByText(GROUPS_COPY.list.empty)).toBeTruthy();
+  });
+
+  // #529: a group joined or left on another phone reached the list only by leaving it.
+  it('reads the list again on a pull, and the spinner stops once it has', async () => {
+    stubMyGroups(transport, [OGRODY_OPEN_PLAY]);
+    await openGroups();
+    await cardNamed('Ogrody open play');
+
+    stubMyGroups(transport, [KAZIMIERZ_CREW, OGRODY_OPEN_PLAY]);
+    const pull = within(screen.getByTestId('groups-list')).UNSAFE_getByType(RefreshControl);
+    await act(async () => {
+      fireEvent(pull, 'refresh');
+    });
+
+    expect(await cardNamed('Kazimierz crew')).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        within(screen.getByTestId('groups-list')).UNSAFE_getByType(RefreshControl).props.refreshing,
+      ).toBe(false),
+    );
   });
 
   it('says why when the list cannot be read, and reads it again', async () => {

@@ -2,10 +2,10 @@
  * **Members** — who in the group the reader could play the filter's sport with (play 61;
  * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 80–84).
  *
- * Pushed over a group's page from Info's members row. The header is *KAZIMIERZ CREW · 8* over
- * *Members* — the group's name and **its member count**, which is everybody, whoever a block hides
- * here — and **the sport pill, sharing the filter's one state** (`SportFilterPage`): a sport
- * picked here is the page's sport when the player goes back.
+ * Pushed over a group's page from Info's members row. The header is *Members* and **the sport
+ * pill, sharing the filter's one state** (`SportFilterPage`): a sport picked here is the page's
+ * sport when the player goes back. It carries no eyebrow — the group's name and count over it
+ * said nothing the page it was pushed from had not just said (#529).
  *
  * **The list is the server's, in the server's order**: only members rated in the sport, the
  * reader first as *You*, then the Owner with the **admin** tag — on an official group, its
@@ -47,7 +47,6 @@ import {
   memberLine,
   memberName,
   memberRowLabel,
-  membersEyebrow,
   openRecordLabel,
   playSportCount,
 } from './groupsPresentation';
@@ -69,7 +68,6 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
           <ScreenHeader
             onBack={() => router.back()}
             backLabel={COPY.back}
-            {...(group === undefined ? {} : { eyebrow: membersEyebrow(group) })}
             title={COPY.title}
             right={group === undefined ? undefined : pill}
           />

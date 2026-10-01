@@ -3,7 +3,7 @@
  *
  * | | |
  * | --- | --- |
- * | `useMyGroups` | `GET /groups` — the reader's groups, newest joined first; `useGroupsList` re-reads it on a return |
+ * | `useMyGroups` | `GET /groups` — the reader's groups, newest joined first; `useGroupsList` re-reads it on a return, and on a pull |
  * | `useGroup` | `GET /groups/{id}` — one group, as its page reads it |
  * | `useGroupMembers` | `GET /groups/{id}/members?sport=` — Members, for the filter's sport |
  * | `useJoinRequests` | `GET /groups/{id}/requests` — *Want to join*, asked **only by the Owner** |
@@ -88,6 +88,15 @@ export function useJoinRequests(groupId: string, enabled = true) {
     queryFn: ({ signal }) => readJoinRequests(groupId, { signal }),
     enabled,
   });
+}
+
+/**
+ * **The Groups list's pull** (#529) — the reader's groups, read again now rather than marked stale,
+ * so a group joined or left on another phone is on the list when the spinner stops.
+ */
+export function useMyGroupsReread(): () => Promise<void> {
+  const client = useQueryClient();
+  return () => client.invalidateQueries({ queryKey: groupKeys.mine() });
 }
 
 /**

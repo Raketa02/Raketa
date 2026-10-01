@@ -209,11 +209,20 @@ export function useEditGroup(groupId: string) {
   });
 }
 
-/** *Leave the group* or *Delete the group* — whichever door the Info tab drew. */
+/**
+ * *Leave the group* or *Delete the group* — whichever door the Info tab drew.
+ *
+ * **Offline, the act waits for the network, as every write here does — and closing the sheet takes
+ * it back** (`takeBack`, #529). A paused mutation is not the sheet's: `reset` only lets go of it, and
+ * it resumes on the next reconnect or return to the app whatever the player is looking at by then.
+ * A player who closed the sheet said *stay*, so the waiting act is removed from the queue as well.
+ */
 export function useExitGroup(groupId: string) {
   const client = useQueryClient();
+  const mutationKey = groupKeys.exit(groupId);
 
-  return useMutation<void, AppError, GroupExit>({
+  const act = useMutation<void, AppError, GroupExit>({
+    mutationKey,
     mutationFn: (exit) => exitGroup(groupId, exit),
     onSuccess: () => {
       client.setQueryData<readonly MyGroup[]>(groupKeys.mine(), (groups) =>
@@ -232,4 +241,15 @@ export function useExitGroup(groupId: string) {
       }
     },
   });
+
+  /** The sheet was closed: forget the act, and drop it from the queue if it is still waiting. */
+  function takeBack() {
+    const queue = client.getMutationCache();
+    for (const waiting of queue.findAll({ mutationKey, predicate: (m) => m.state.isPaused })) {
+      queue.remove(waiting);
+    }
+    act.reset();
+  }
+
+  return { act, takeBack };
 }

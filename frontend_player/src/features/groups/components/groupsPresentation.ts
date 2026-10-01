@@ -13,7 +13,7 @@
  *   with real plural rules has one function to change.
  */
 
-import { sportLabel } from '@/features/onboarding/types';
+import { sportLabel, sportShortLabel } from '@/features/onboarding/types';
 import { courtSummaryLabel, seatLabel, type SeatPlace } from '@/features/play/types';
 import { counted } from '@/shared/formatting/counted';
 import { playerName } from '@/shared/formatting/playerName';
@@ -60,30 +60,20 @@ export function membersAtClub(count: number, clubName: string): string {
 }
 
 /**
- * **Who answers a request** (story 40) — *anyone can join* on an Anyone group; otherwise a player
- * group's Owner (*Karol Nowak approves joins*), an official group's Administrator (*Administrator
- * Marta Wójcik approves joins*, #519), or, while an official group **needs an administrator**, the
- * club it belongs to (*Ogrody 33 approves joins*, ADR-0183 §3) — its requests wait for a handover.
- * The row is drawn inside its club's card, which hands the club's name in.
+ * **Whether joining needs somebody's yes** — *anyone can join* on an Anyone group, and *Needs
+ * approval* on every other, whoever answers: a player group's Owner, an official group's
+ * Administrator, or the club while the group needs one (#529). The row named them until the
+ * owner asked for the shorter line; who answers is on the group's page once the reader is in.
  */
-export function approverLine(
-  group: Pick<GroupAtClub, 'kind' | 'joinPolicy' | 'ownerName' | 'administratorName'>,
-  clubName: string,
-): string {
-  if (group.joinPolicy === 'ANYONE') return GROUPS_COPY.info.anyoneCanJoin;
-  switch (group.kind) {
-    case 'PLAYER':
-      return `${group.ownerName ?? 'the owner'} approves joins`;
-    case 'OFFICIAL':
-      return group.administratorName === null
-        ? `${clubName} approves joins`
-        : `Administrator ${group.administratorName} approves joins`;
-  }
+export function approverLine(group: Pick<GroupAtClub, 'joinPolicy'>): string {
+  return group.joinPolicy === 'ANYONE'
+    ? GROUPS_COPY.info.anyoneCanJoin
+    : GROUPS_COPY.info.needsApproval;
 }
 
-/** *11 members · Coach Andrzej approves joins* — a group row's second line (play 9, 35). */
-export function groupRowMeta(group: GroupAtClub, clubName: string): string {
-  return `${membersLine(group.memberCount)}${DOT}${approverLine(group, clubName)}`;
+/** *11 members · Needs approval* — a group row's second line (play 9, 35). */
+export function groupRowMeta(group: GroupAtClub): string {
+  return `${membersLine(group.memberCount)}${DOT}${approverLine(group)}`;
 }
 
 /** *Tennis, Padel* — a club's sports, in the order the club serves them. */
@@ -310,6 +300,33 @@ export function requestLevels(levels: readonly SportLevel[]): string {
   return levels.map(({ sport, level }) => `${sportLabel(sport)} ${formatLevel(level)}`).join(DOT);
 }
 
+/** How many of a request's sports its row draws as tags; the rest are one *+N* tag. */
+const REQUEST_TAGS_SHOWN = 2;
+
+/** One sport a request's row draws: its dot's sport, and *Pad 2,44*. */
+export interface RequestTag {
+  readonly sport: Sport;
+  readonly label: string;
+}
+
+/**
+ * *Pad 2,44 · Ten 2,60 · +2* — what a request's row draws under the name (#529): **the first two
+ * sports in the order served**, short, each with its Level, and one *+N* for the rest, so four
+ * sports never run the row onto a second line. Drawn only — the row is spoken with
+ * `requestLevels`, every sport by its whole name.
+ */
+export function requestTags(levels: readonly SportLevel[]): {
+  readonly shown: readonly RequestTag[];
+  readonly more?: string;
+} {
+  const shown = levels.slice(0, REQUEST_TAGS_SHOWN).map(({ sport, level }) => ({
+    sport,
+    label: `${sportShortLabel(sport)} ${formatLevel(level)}`,
+  }));
+  const rest = levels.length - shown.length;
+  return rest > 0 ? { shown, more: `+${rest}` } : { shown };
+}
+
 /** A name as a row draws it — the whole Name, or the word for somebody who can't be named. */
 export function personName(name: string | null): string {
   return name === null ? playerName({ kind: 'unknown' }) : playerName({ kind: 'player', name });
@@ -407,9 +424,16 @@ export const EDIT_REFUSALS = {
   group_not_found: GROUP_GONE,
 } as const satisfies Readonly<Record<string, string>>;
 
-/** *Kazimierz crew · 8* — Members' eyebrow (play 61), drawn upper case. */
-export function membersEyebrow(group: Pick<Group, 'name' | 'memberCount'>): string {
-  return `${group.name}${DOT}${group.memberCount}`;
+/**
+ * *Ogrody 33 Club, official, 12 members · Ogrody 33* — an official group's header, spoken: the
+ * mark beside the name has no words of its own, so the header says it (#529).
+ */
+export function groupHeaderLabel(group: Pick<Group, 'name' | 'memberCount' | 'homeClub'>): string {
+  return [
+    group.name,
+    GROUPS_COPY.official,
+    membersAtClub(group.memberCount, group.homeClub.name),
+  ].join(', ');
 }
 
 /** *Play Padel · 8* — the list's heading: the sport, and how many here play it. */

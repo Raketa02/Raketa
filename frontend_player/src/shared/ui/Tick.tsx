@@ -46,8 +46,9 @@ import { theme } from './theme';
 
 /**
  * The tick's path, in its own 12-unit box — **exported for the on-court mark**, which draws the
- * same tick in a smaller box (`OnCourtMark`): one mark family, one drawing, and the scaling is
- * the `viewBox`'s rather than a second path.
+ * same tick in a smaller box (`OnCourtMark`), and for a group's official mark, which draws it
+ * inside its seal: one mark family, one drawing, and the scaling is the `viewBox`'s rather than a
+ * second path.
  */
 export const TICK_PATH = 'M 2.5 6.5 L 5 9 L 9.5 3.5';
 export const TICK_SPACE = 12;

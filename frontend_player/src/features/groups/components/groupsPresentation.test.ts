@@ -13,11 +13,11 @@ import {
   linkShown,
   memberLine,
   memberRowLabel,
-  membersEyebrow,
   membersRowLabel,
   openRecordLabel,
   playSportCount,
   requestLevels,
+  requestTags,
   emptySeatLabel,
   friendsPicked,
   gamesHeadline,
@@ -67,41 +67,26 @@ function official(overrides: Partial<GroupAtClub> = {}): GroupAtClub {
 
 describe('the approver line', () => {
   it('says anyone can join an Anyone group', () => {
-    expect(approverLine(group({ joinPolicy: 'ANYONE' }), 'Ogrody 33')).toBe('anyone can join');
-    expect(approverLine(official({ joinPolicy: 'ANYONE' }), 'Ogrody 33')).toBe('anyone can join');
+    expect(approverLine(group({ joinPolicy: 'ANYONE' }))).toBe('anyone can join');
+    expect(approverLine(official({ joinPolicy: 'ANYONE' }))).toBe('anyone can join');
   });
 
-  // ADR-0171 §4: the whole Name, never a first name cut from it.
-  it('names the Owner whole on a People I approve group', () => {
-    expect(approverLine(group({ ownerName: 'Karol Nowak' }), 'Ogrody 33')).toBe(
-      'Karol Nowak approves joins',
-    );
-  });
-
-  it('says the owner approves when the Owner can no longer be named', () => {
-    expect(approverLine(group({ ownerName: null }), 'Ogrody 33')).toBe('the owner approves joins');
-  });
-
-  // #519, story 40: an official group has no Owner; its Administrator answers.
-  it('names an official group’s Administrator whole', () => {
-    expect(approverLine(official(), 'Ogrody 33')).toBe('Administrator Marta Wójcik approves joins');
-  });
-
-  // ADR-0183 §3: while it needs an administrator, it reads as the club's.
-  it('names the club while an official group needs an administrator', () => {
-    expect(approverLine(official({ administratorName: null }), 'Ogrody 33')).toBe(
-      'Ogrody 33 approves joins',
-    );
+  // #529: who approves was too long for the row; that somebody does is what the reader needs.
+  it('says a People I approve group needs approval, whoever answers', () => {
+    expect(approverLine(group({ ownerName: 'Karol Nowak' }))).toBe('Needs approval');
+    expect(approverLine(group({ ownerName: null }))).toBe('Needs approval');
+    expect(approverLine(official())).toBe('Needs approval');
+    expect(approverLine(official({ administratorName: null }))).toBe('Needs approval');
   });
 });
 
 describe('a group row’s second line', () => {
-  it('is the count and who approves', () => {
-    expect(groupRowMeta(group(), 'Ogrody 33')).toBe('11 members · Coach Andrzej approves joins');
+  it('is the count and whether it needs approval', () => {
+    expect(groupRowMeta(group())).toBe('11 members · Needs approval');
   });
 
   it('counts one member in the singular', () => {
-    expect(groupRowMeta(group({ memberCount: 1, joinPolicy: 'ANYONE' }), 'Ogrody 33')).toBe(
+    expect(groupRowMeta(group({ memberCount: 1, joinPolicy: 'ANYONE' }))).toBe(
       '1 member · anyone can join',
     );
   });
@@ -239,13 +224,36 @@ describe('the Info tab', () => {
     ).toBe('Padel 2,44 · Tennis 2,60');
   });
 
+  // #529: four sports over two lines made the row untidy — two tags, and the rest counted.
+  it('draws a request’s first two sports as short tags, in the order served, and counts the rest', () => {
+    const four = [
+      { sport: 'padel', level: 2.71 },
+      { sport: 'tennis', level: 3.1 },
+      { sport: 'squash', level: 2.3 },
+      { sport: 'badminton', level: 2.05 },
+    ] as const;
+
+    const drawn = (levels: Parameters<typeof requestTags>[0]) => {
+      const { shown, more } = requestTags(levels);
+      return [
+        ...shown.map((tag) => `${tag.sport}: ${tag.label}`),
+        ...(more === undefined ? [] : [more]),
+      ];
+    };
+
+    expect(drawn(four)).toEqual(['padel: Pad 2,71', 'tennis: Ten 3,10', '+2']);
+    expect(drawn(four.slice(0, 3))).toEqual(['padel: Pad 2,71', 'tennis: Ten 3,10', '+1']);
+    expect(drawn(four.slice(1, 3))).toEqual(['tennis: Ten 3,10', 'squash: Squ 2,30']);
+    expect(drawn(four.slice(3))).toEqual(['badminton: Bad 2,05']);
+  });
+
   it('says what leaving does — the handover for an Owner, and the way back in', () => {
     expect(exitSheetBody('leave', { isOwner: false, joinPolicy: 'ANYONE' })).toEqual([
       'You can join again any time with its link.',
     ]);
     expect(exitSheetBody('leave', { isOwner: true, joinPolicy: 'PEOPLE_I_APPROVE' })).toEqual([
       'It passes to whoever has been in it longest, with the requests waiting.',
-      'To come back, you ask to join again with its link.',
+      'To come back, you ask to join again.',
     ]);
     expect(exitSheetBody('delete', { isOwner: true, joinPolicy: 'ANYONE' })).toEqual([
       'Nobody else is in it. Its link stops working, and the group can’t be brought back.',
@@ -254,10 +262,6 @@ describe('the Info tab', () => {
 });
 
 describe('Members', () => {
-  it('heads the page with the group’s name and its count', () => {
-    expect(membersEyebrow({ name: 'Kazimierz crew', memberCount: 8 })).toBe('Kazimierz crew · 8');
-  });
-
   it('heads the list with the sport and how many play it here', () => {
     expect(playSportCount('padel', 8)).toBe('Play Padel · 8');
   });

@@ -29,6 +29,8 @@ export const groupKeys = {
   requests: (groupId: string) => [...groupKeys.detail(groupId), 'requests'] as const,
   /** **A mutation key**: the answers to one group's requests, counted to re-read the queue once. */
   answers: (groupId: string) => [...groupKeys.requests(groupId), 'answer'] as const,
+  /** **A mutation key**: leaving or deleting one group — found to take a waiting one back (#529). */
+  exit: (groupId: string) => [...groupKeys.detail(groupId), 'exit'] as const,
   /** Every cached search — the root a join rewrites. */
   searches: () => [...groupKeys.all, 'search'] as const,
   /** New group's home-club search, for one text. */

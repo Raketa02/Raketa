@@ -117,7 +117,7 @@ function ClubResult({
     <ClubCard club={club} headLabel={setAsHomeLabel(club)} onChoose={() => onChoose(club)}>
       {club.groups.length > 0
         ? club.groups.map((group) => (
-            <GroupAtClubRow key={group.id} group={group} clubName={club.name} variant="homeClub" />
+            <GroupAtClubRow key={group.id} group={group} variant="homeClub" />
           ))
         : null}
     </ClubCard>

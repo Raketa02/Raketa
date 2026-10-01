@@ -70,6 +70,13 @@ const OGRODY_ID = 'c0000000-0000-4000-8000-000000000003';
 const LINK = 'https://raketa.app/join/K7PQ2MXA';
 
 /** The club's group, run by Marta: it plays padel, and Marta approves joins. */
+/** The official marks drawn — hidden from a screen reader, so found among hidden elements. */
+function officialMarks(inside?: Parameters<typeof within>[0]) {
+  return (inside === undefined ? screen : within(inside)).queryAllByTestId('official-mark', {
+    includeHiddenElements: true,
+  });
+}
+
 const O3_CLUB: Wire['GroupAtClubSchema'] = {
   id: 'a0000000-0000-4000-8000-000000000031',
   kind: 'OFFICIAL',
@@ -221,37 +228,36 @@ async function homeClubSearch(text = 'ogrody') {
 // ---------------------------------------------------------------------------
 
 describe('an official group in Join a group', () => {
-  it('is tagged official and draws its declared sports as its dots', async () => {
+  it('carries the official mark and draws its declared sports as its dots', async () => {
     const card = await joinSearch();
 
-    // Two official groups and Karol's: the tag is an official group's alone.
-    expect(within(card).getAllByText(COPY.official)).toHaveLength(2);
+    // Two official groups and Karol's: the mark is an official group's alone, and the words
+    // *official* are spoken rather than drawn (#529).
+    expect(officialMarks(card)).toHaveLength(2);
+    expect(within(card).queryByText(COPY.official)).toBeNull();
     // The dots have no words of their own; the row speaks the sports by name.
     expect(
-      screen.getByLabelText(
-        'Ogrody 33 Club, official, 11 members · Administrator Marta Wójcik approves joins, plays Padel',
-      ),
+      screen.getByLabelText('Ogrody 33 Club, official, 11 members · Needs approval, plays Padel'),
     ).toBeTruthy();
     expect(
       screen.getByLabelText(
-        'Ogrody open play, official, 8 members · Ogrody 33 approves joins, plays Padel, Tennis',
+        'Ogrody open play, official, 8 members · Needs approval, plays Padel, Tennis',
       ),
     ).toBeTruthy();
     expect(
-      screen.getByLabelText(
-        'Ogrody wieczorem, 5 members · Karol Nowak approves joins, plays Tennis',
-      ),
+      screen.getByLabelText('Ogrody wieczorem, 5 members · Needs approval, plays Tennis'),
     ).toBeTruthy();
   });
 
-  it('names its administrator as who approves, the club while it needs one, and a player group’s Owner as before', async () => {
+  // #529: whoever answers — its administrator, the club while it needs one, a player group's
+  // Owner — the row says only that somebody does.
+  it('says every group that asks needs approval, whoever answers', async () => {
     const card = await joinSearch();
 
-    expect(
-      within(card).getByText('11 members · Administrator Marta Wójcik approves joins'),
-    ).toBeTruthy();
-    expect(within(card).getByText('8 members · Ogrody 33 approves joins')).toBeTruthy();
-    expect(within(card).getByText('5 members · Karol Nowak approves joins')).toBeTruthy();
+    expect(within(card).getByText('11 members · Needs approval')).toBeTruthy();
+    expect(within(card).getByText('8 members · Needs approval')).toBeTruthy();
+    expect(within(card).getByText('5 members · Needs approval')).toBeTruthy();
+    expect(within(card).queryByText(/approves joins/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Ask to join Ogrody 33 Club' })).toBeTruthy();
   });
 
@@ -266,18 +272,19 @@ describe('an official group in Join a group', () => {
 });
 
 describe('an official group in New group’s home-club search', () => {
-  // The 2026-09-27 mocks: the count alone under the name, and the tag on an official group only.
-  it('is tagged official, and each row under the club says its count', async () => {
+  // The 2026-09-27 mocks: the count alone under the name, and the mark on an official group only.
+  it('carries the official mark, and each row under the club says its count', async () => {
     await homeClubSearch();
 
-    expect(screen.getAllByText(COPY.official)).toHaveLength(2);
+    expect(officialMarks()).toHaveLength(2);
+    expect(screen.queryByText(COPY.official)).toBeNull();
     expect(screen.getByText('11 members')).toBeTruthy();
     expect(screen.getByText('8 members')).toBeTruthy();
     expect(screen.getByText('5 members')).toBeTruthy();
   });
 
   // The dots have no words of their own; the row speaks its sports, the declared ones.
-  it('speaks its tag and its declared sports', async () => {
+  it('speaks official and its declared sports', async () => {
     await homeClubSearch();
 
     expect(screen.getByLabelText('Ogrody 33 Club, official, 11 members, plays Padel')).toBeTruthy();
@@ -308,7 +315,7 @@ describe('an account that runs an official group', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Join Ogrody open play' }));
 
     expect(await screen.findByText(COPY.action.in)).toBeTruthy();
-    expect(screen.getByText('9 members · Administrator Tomek Kowal approves joins')).toBeTruthy();
+    expect(screen.getByText('9 members · Needs approval')).toBeTruthy();
     expect(transport.requestsTo('POST', `/api/v1/groups/${TOMEK_RUNS.id}/membership`)).toHaveLength(
       1,
     );
@@ -408,7 +415,7 @@ async function openPage(
   await onPlay();
   fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${group.name}, `) }));
   await waitFor(() => expect(screen).toHavePathname(`/play/group/${group.id}`));
-  await screen.findByRole('header', { name: group.name });
+  await screen.findByRole('header', { name: new RegExp(`^${group.name}`) });
 }
 
 const tab = (name: string, selected?: boolean) =>
@@ -427,6 +434,30 @@ function barOptions(): string[] {
 }
 
 const PADEL_AND_SQUASH: Wire['MyGroupSchema'] = { ...O3_MINE, sports: ['PADEL', 'SQUASH'] };
+
+describe('an official group’s header', () => {
+  // #529: the mark beside the name, as in both searches — drawn, not spoken; the header says it.
+  it('carries the official mark beside the name, and says official', async () => {
+    stubAPlayer([PADEL, TENNIS]);
+    await openPage();
+
+    expect(
+      screen.getByRole('header', { name: 'Ogrody 33 Club, official, 12 members · Ogrody 33' }),
+    ).toBeTruthy();
+    expect(officialMarks()).toHaveLength(1);
+  });
+
+  it('is an official group’s alone', async () => {
+    stubAPlayer([PADEL, TENNIS]);
+    const mine: Wire['MyGroupSchema'] = { ...O3_MINE, kind: 'PLAYER', name: 'Ogrody wieczorem' };
+    await openPage(mine, pageOf(mine, { administrator_name: null }));
+
+    expect(
+      screen.getByRole('header', { name: /^Ogrody wieczorem/ }).props.accessibilityLabel,
+    ).toBeUndefined();
+    expect(officialMarks()).toHaveLength(0);
+  });
+});
 
 describe('the filter on an official group’s page', () => {
   it('lists only the sports the player is rated in that the group plays', async () => {

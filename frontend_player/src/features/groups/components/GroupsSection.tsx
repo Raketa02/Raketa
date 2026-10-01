@@ -12,14 +12,18 @@
  * both; 10.1's own line is one `tiny` sentence that never says nothing is here, and Part 16
  * records the departure. The buttons are there in every state: creating or joining
  * never waits on the list.
+ *
+ * **A pull reads the list again** (#529), drawn as the Shell draws its pull — a group joined or
+ * left on another phone is on it when the spinner stops, without leaving the list and coming back.
  */
 
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, theme } from '@/shared/ui';
 
-import { useGroupsList } from '../hooks/useGroups';
+import { useGroupsList, useMyGroupsReread } from '../hooks/useGroups';
+import { usePull } from '../hooks/usePull';
 
 import { GroupCard } from './GroupCard';
 import { JOIN_GROUP_ROUTE, NEW_GROUP_ROUTE } from './groupRoutes';
@@ -30,9 +34,22 @@ const COPY = GROUPS_COPY.list;
 
 export function GroupsSection() {
   const groups = useGroupsList();
+  const { refreshing, pull } = usePull(useMyGroupsReread());
 
   return (
-    <ScrollView contentContainerStyle={s.content}>
+    <ScrollView
+      testID="groups-list"
+      contentContainerStyle={s.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={pull}
+          tintColor={theme.color.muted}
+          colors={[theme.color.muted]}
+          progressBackgroundColor={theme.color.paper}
+        />
+      }
+    >
       <View style={s.actions}>
         <Button
           label={COPY.newGroup}

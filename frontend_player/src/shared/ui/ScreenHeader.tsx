@@ -94,6 +94,13 @@ export interface ScreenHeaderProps {
    * a face was would be the design system owning one, which #338 §5 refused by name.
    */
   readonly lead?: ReactNode;
+  /**
+   * **A mark on the title's own line**, straight after its last letter and centred on it — a
+   * group's official mark (#529). Hidden from a screen reader by whoever draws it, so a screen
+   * whose mark means something says it in `titleLabel`. The title still ends in an ellipsis
+   * before the mark is pushed off.
+   */
+  readonly titleMark?: ReactNode;
   /** A segmented control, a close control — whatever the screen pins to the right. */
   readonly right?: ReactNode;
   readonly onBack?: () => void;
@@ -114,6 +121,7 @@ export function ScreenHeader({
   eyebrow,
   subline,
   lead,
+  titleMark,
   right,
   onBack,
   backLabel = 'Back',
@@ -158,10 +166,20 @@ export function ScreenHeader({
           >
             {title === undefined ? (
               <Text style={s.eyebrow}>{eyebrow}</Text>
-            ) : (
+            ) : titleMark === undefined ? (
               <Text style={[s.title, compact ? s.titleCompact : undefined]} numberOfLines={lines}>
                 {title}
               </Text>
+            ) : (
+              <View style={s.titleLine}>
+                <Text
+                  style={[s.title, compact ? s.titleCompact : undefined, s.titleBesideMark]}
+                  numberOfLines={lines}
+                >
+                  {title}
+                </Text>
+                {titleMark}
+              </View>
             )}
             {subline !== undefined ? (
               <Text style={s.subline} numberOfLines={lines}>
@@ -194,6 +212,9 @@ const s = StyleSheet.create({
   named: { gap: theme.space.xxs },
   title: { ...theme.type.h1, color: theme.color.ink },
   titleCompact: { ...theme.type.h2 },
+  // The mark rides the title's line: the title gives way to it rather than pushing it off.
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
+  titleBesideMark: { flexShrink: 1 },
   subline: { ...theme.type.tiny, color: theme.color.muted },
   back: { alignItems: 'center', justifyContent: 'center' },
   backPressed: { opacity: 0.7 },

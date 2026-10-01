@@ -29,6 +29,11 @@
  * sport by its name. **Under reduced motion** the value starts at 1 and the bar is simply open.
  * **Folding is immediate** — see `motion.unfold`.
  *
+ * **Open, it never ends across the group's tile** (#529): where its sports would stop somewhere
+ * over the tile, a sliver of it showed past the bar's round end, so the bar opens that much further
+ * and covers it whole (`BarCover`, which the page measures). Where they stop short of the tile, the
+ * bar ends where they do.
+ *
  * Never a `Modal`, and nothing here is one: the bar is a layer of the page (ADR-0178).
  */
 
@@ -133,6 +138,15 @@ export function SportPill({ sports, sport, onUnfold }: SportPillProps) {
   );
 }
 
+/**
+ * **What the open bar must not end across**, as two of its own widths: the one at which its round
+ * end reaches the thing — the group's tile — and the one that covers it whole.
+ */
+export interface BarCover {
+  readonly reaches: number;
+  readonly whole: number;
+}
+
 export interface SportBarProps {
   /** Every sport the filter lists, in the registry's order. */
   readonly sports: readonly Sport[];
@@ -140,9 +154,16 @@ export interface SportBarProps {
   readonly sport: Sport;
   /** A sport was tapped: another one picks it, the current one only folds. */
   readonly onChoose: (sport: Sport) => void;
+  /** What the open bar covers whole rather than ending across — absent where nothing is. */
+  readonly cover?: BarCover;
 }
 
-export function SportBar({ sports, sport, onChoose }: SportBarProps) {
+/** The bar's open width: its sports', or past the tile whole where they would end across it. */
+function openWidth(sports: number, cover: BarCover | undefined): number {
+  return cover !== undefined && sports > cover.reaches ? Math.max(sports, cover.whole) : sports;
+}
+
+export function SportBar({ sports, sport, onChoose, cover }: SportBarProps) {
   const reduced = useReducedMotion();
   const others = sports.filter((other) => other !== sport);
 
@@ -151,7 +172,7 @@ export function SportBar({ sports, sport, onChoose }: SportBarProps) {
   const [pillWidth, setPillWidth] = useState<number>();
   const measured = rowWidth !== undefined && pillWidth !== undefined;
   const closed = (pillWidth ?? 0) + 2 * PAD;
-  const open = (rowWidth ?? 0) + 2 * PAD;
+  const open = openWidth((rowWidth ?? 0) + 2 * PAD, cover);
 
   useEffect(() => {
     if (!measured || reduced) return;
@@ -284,7 +305,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   // Laid out once at its whole width, against the bar's right edge, so the growing bar uncovers
-  // it leftwards and the current pill never moves.
+  // it leftwards and the current pill never moves — and what the bar opens past it is white.
   row: {
     position: 'absolute',
     top: PAD,

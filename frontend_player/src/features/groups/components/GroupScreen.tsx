@@ -22,8 +22,10 @@
  * knows somebody is asking without opening Info. Nobody else's page reads the requests, so nobody
  * else's tab carries a count.
  *
- * **Info re-reads on a pull** (#529) — the group, who is waiting and the members row with it.
- * Only Info: the other three tabs are drawn for a sport and read their own rows.
+ * **Info re-reads on a pull, and each time it is come back to** (#529) — the group, who is waiting
+ * and the members row with it — from another tab or from a screen pushed over the page (Members,
+ * Edit group), so what another phone changed meanwhile is on it without a pull. Only Info: the
+ * other three tabs are drawn for a sport and read their own rows.
  *
  * **Every state has its drawing.** While the read is on its way the header has only its way back.
  * `group_not_found` is one sentence, because the server gives the same answer for *no such group*
@@ -33,26 +35,30 @@
  */
 
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { codeMessage } from '@/shared/errors';
+import { useOnReturn } from '@/shared/lib/platform';
 import { ScreenHeader, Segment, theme, type SegmentOption } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Group } from '../domain/group';
 import { GROUP_TABS, OPENING_TAB, type GroupTab } from '../domain/groupPage';
 import { useGroup, useGroupReread, useJoinRequests } from '../hooks/useGroups';
+import { usePull } from '../hooks/usePull';
 
 import { AddSportCard } from './AddSportCard';
+import { ExitDoor } from './ExitDoor';
 import { FillInTab, PostAGame } from './FillInTab';
 import { FriendsTab } from './FriendsTab';
 import { GamesTab } from './GamesTab';
 import { GroupMonogram } from './GroupMonogram';
 import { GROUPS_COPY } from './groupsCopy';
-import { infoTabLabel, membersAtClub } from './groupsPresentation';
+import { groupHeaderLabel, infoTabLabel, membersAtClub } from './groupsPresentation';
 import { InfoTab } from './InfoTab';
+import { OfficialMark } from './OfficialMark';
 import { ReadFailure } from './ReadFailure';
 import { SportFilterPage } from './SportFilterPage';
 
@@ -75,49 +81,39 @@ function useGroupTabs(groupId: string, isOwner: boolean): readonly SegmentOption
   );
 }
 
-/** A pull's spinner: on from the pull until the re-read has settled, and one pull at a time. */
-function usePull(reread: () => Promise<void>) {
-  const [refreshing, setRefreshing] = useState(false);
-  const inFlight = useRef(false);
-
-  async function pull() {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setRefreshing(true);
-    try {
-      await reread();
-    } catch {
-      // A refused re-read is the read's own to say, on what it draws; the spinner only stops.
-    } finally {
-      inFlight.current = false;
-      setRefreshing(false);
-    }
-  }
-
-  return { refreshing, pull: () => void pull() };
-}
-
 export function GroupScreen({ groupId }: { readonly groupId: string }) {
   const read = useGroup(groupId);
   const group = read.data;
 
   const [tab, setTab] = useState<GroupTab>(OPENING_TAB);
   const tabs = useGroupTabs(groupId, group?.isOwner === true);
-  const { refreshing, pull } = usePull(useGroupReread(groupId));
+  const reread = useGroupReread(groupId);
+  const { refreshing, pull } = usePull(reread);
+
+  // Coming back to Info is a look at it, so it is read again — from another tab, or back from a
+  // screen pushed over the page.
+  function select(next: GroupTab) {
+    if (next === 'info' && tab !== 'info') void reread();
+    setTab(next);
+  }
+  useOnReturn(() => {
+    if (tab === 'info') void reread();
+  });
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <SportFilterPage
         {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
-        header={(pill) => (
+        header={(pill, cover) => (
           <ScreenHeader
             compact
             onBack={() => router.back()}
             backLabel={COPY.back}
             lead={
-              group === undefined ? undefined : (
-                <GroupMonogram monogram={group.monogram} size="header" />
-              )
+              group === undefined
+                ? undefined
+                : // The open bar covers the tile whole or not at all (#529).
+                  cover(<GroupMonogram monogram={group.monogram} size="header" />)
             }
             title={group?.name}
             subline={
@@ -125,6 +121,12 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
                 ? undefined
                 : membersAtClub(group.memberCount, group.homeClub.name)
             }
+            {...(group?.kind === 'OFFICIAL'
+              ? {
+                  titleMark: <OfficialMark fontSize={theme.type.h2.fontSize} />,
+                  titleLabel: groupHeaderLabel(group),
+                }
+              : {})}
             right={group === undefined ? undefined : pill}
           />
         )}
@@ -142,8 +144,9 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
             )
           ) : (
             <>
-              <Segment options={tabs} selected={tab} onSelect={setTab} style={s.tabs} />
+              <Segment options={tabs} selected={tab} onSelect={select} style={s.tabs} />
               <ScrollView
+                testID="group-page-body"
                 contentContainerStyle={s.body}
                 refreshControl={
                   tab === 'info' ? (
@@ -167,6 +170,12 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
                   <TabBody tab={tab} group={group} sport={sport} />
                 )}
               </ScrollView>
+              {/* Info's way out, at the page's foot and never scrolled away (#529). */}
+              {tab === 'info' ? (
+                <View style={s.exit}>
+                  <ExitDoor group={group} />
+                </View>
+              ) : null}
               {tab === 'fillIn' && toAdd.length === 0 ? (
                 <View style={s.postAGame}>
                   <PostAGame />
@@ -204,6 +213,12 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   tabs: { marginHorizontal: theme.size.gutter },
   body: { padding: theme.size.gutter, gap: theme.space.sm },
+  // Under the scroll rather than over it, so nothing on Info is ever behind the door.
+  exit: {
+    paddingHorizontal: theme.size.gutter,
+    paddingTop: theme.space.sm,
+    paddingBottom: theme.size.gutter,
+  },
   // Over the page's bottom corner, at the gutter (play 46).
   postAGame: { position: 'absolute', right: theme.size.gutter, bottom: theme.size.gutter },
 });

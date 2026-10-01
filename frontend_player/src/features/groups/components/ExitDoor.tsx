@@ -9,6 +9,10 @@
  * leaving does is said before it happens — an Owner's group passes to whoever has been in it
  * longest, with the requests waiting — and so is the way back in, under the group's rule.
  *
+ * **Closing the sheet takes the act back**, even one the network is still holding while the phone
+ * is offline — it would otherwise leave the group whenever the connection came back, from whatever
+ * page the player was on by then (#529 F5).
+ *
  * **The sheet is the surface while the act is in flight**: the door has no line of its own to say
  * a refusal on, so the sheet stays up, its act busy, and a refusal is said on it in words with the
  * act still there. The two that mean the count moved since the page was read — somebody joined an
@@ -41,13 +45,14 @@ import { EXIT_REFUSALS, EXIT_WORDS, exitSheetBody } from './groupsPresentation';
 export function ExitDoor({ group }: { readonly group: Group }) {
   const exit = groupExit(group);
   const words = EXIT_WORDS[exit];
-  const act = useExitGroup(group.id);
+  const { act, takeBack } = useExitGroup(group.id);
   const [open, setOpen] = useState(false);
   const door = useRef<View>(null);
 
+  // Closing is *stay*: an act the network is still holding is taken back with it (#529).
   function close() {
     setOpen(false);
-    act.reset();
+    takeBack();
   }
 
   function confirm() {

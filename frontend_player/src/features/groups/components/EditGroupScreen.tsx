@@ -9,6 +9,11 @@
  * — busy while in flight, and the screen stays. What the save answers is the group as its page
  * reads it, written under the page's key, so *back* lands on the new name.
  *
+ * **Switching to Anyone is asked first** (#529): a save that turns People I approve into Anyone
+ * opens a sheet saying what it does — *anyone can join, including players with pending requests* —
+ * and only its *Save* sends it; closing it keeps the form as it is, unsaved. Any other save goes at
+ * once. The *Who can join* card carries no note here: the Owner is past choosing what a group is.
+ *
  * **Switching to Anyone shows the people it admitted** (story 76): everybody waiting is in at once,
  * and the answer says who, in the order they asked, as a card under the button — *LET IN · 2*,
  * a face and a name each (`AdmittedCard`). It stays until the next save.
@@ -19,13 +24,13 @@
  */
 
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { codeMessage } from '@/shared/errors';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { Button, Note, ScreenHeader, theme } from '@/shared/ui';
+import { behindOverlay, BottomSheet, Button, Note, ScreenHeader, theme } from '@/shared/ui';
 
 import type { Group } from '../domain/group';
 import { detailsUnchanged } from '../domain/groupInfo';
@@ -70,32 +75,56 @@ function EditGroupForm({ group }: { readonly group: Group }) {
   const [joinPolicy, setJoinPolicy] = useState(group.joinPolicy);
   const edit = useEditGroup(group.id);
 
+  const [asking, setAsking] = useState(false);
+  const saveButton = useRef<View>(null);
+
   const details = groupDetailsFrom({ name, joinPolicy });
   const unchanged = detailsUnchanged({ name, joinPolicy }, group);
   const admitted = edit.data?.admitted ?? [];
+  // What the group is now against what the form says — not against the last save's answer, which
+  // is the same thing once it lands and writes the page's key.
+  const opensToAnyone = group.joinPolicy === 'PEOPLE_I_APPROVE' && joinPolicy === 'ANYONE';
 
-  function save() {
+  function send() {
     if (details === undefined || unchanged) return;
     // The server collapses what the form cannot see — runs of spaces — so the field takes the
     // name as saved, and *Saved* is true of what is on screen.
     edit.mutate(details, { onSuccess: ({ group: saved }) => setName(saved.name) });
   }
 
+  function save() {
+    if (details === undefined || unchanged) return;
+    if (opensToAnyone) {
+      setAsking(true);
+      return;
+    }
+    send();
+  }
+
+  function confirm() {
+    setAsking(false);
+    send();
+  }
+
   return (
     <KeyboardAvoidingView style={s.body} behavior={KEYBOARD_AVOIDANCE}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <GroupNameCard name={name} onName={setName} />
-        <WhoCanJoinCard joinPolicy={joinPolicy} onJoinPolicy={setJoinPolicy} />
+        <WhoCanJoinCard joinPolicy={joinPolicy} onJoinPolicy={setJoinPolicy} noSportNote={false} />
 
-        <Button
-          label={unchanged ? COPY.saved : COPY.save}
-          variant={unchanged ? 'settled' : 'primary'}
-          size="xl"
-          disabled={details === undefined || unchanged}
-          busy={edit.isPending}
-          busyLabel={COPY.saving}
-          onPress={save}
-        />
+        {/* Hidden from a screen reader while the sheet is up: one label on the button and on the
+            sheet's act, so the first press reaches the button and the second the act. */}
+        <View ref={saveButton} {...behindOverlay(asking)}>
+          <Button
+            label={unchanged ? COPY.saved : COPY.save}
+            variant={unchanged ? 'settled' : 'primary'}
+            size="xl"
+            disabled={details === undefined || unchanged}
+            busy={edit.isPending}
+            busyLabel={COPY.saving}
+            onPress={save}
+          />
+        </View>
 
         {edit.error !== null ? (
           <Note variant="coral" accessibilityRole="alert">
@@ -105,6 +134,19 @@ function EditGroupForm({ group }: { readonly group: Group }) {
 
         {admitted.length > 0 ? <AdmittedCard people={admitted} /> : null}
       </ScrollView>
+
+      <BottomSheet
+        visible={asking}
+        onClose={() => setAsking(false)}
+        title={COPY.anyoneTitle}
+        closeLabel={COPY.anyoneClose}
+        returnFocusTo={saveButton}
+      >
+        <Text style={s.sheetBody}>{COPY.anyoneBody}</Text>
+        <View style={s.sheetAct}>
+          <Button label={COPY.save} size="lg" onPress={confirm} />
+        </View>
+      </BottomSheet>
     </KeyboardAvoidingView>
   );
 }
@@ -117,4 +159,7 @@ const s = StyleSheet.create({
     paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
+  // The exit sheet's measures (`ExitDoor`): its line under the title, and its act under that.
+  sheetBody: { ...theme.type.tiny, color: theme.color.ink, paddingTop: theme.space.sm },
+  sheetAct: { paddingTop: theme.space.md },
 });

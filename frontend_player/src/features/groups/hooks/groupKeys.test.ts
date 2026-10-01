@@ -26,6 +26,13 @@ describe('the groups query keys', () => {
     expect(groupKeys.requests('a').slice(0, page.length)).toEqual(page);
   });
 
+  it('keys leaving one group apart from leaving any other', () => {
+    expect(groupKeys.exit('a')).not.toEqual(groupKeys.exit('b'));
+    expect(groupKeys.exit('a').slice(0, groupKeys.detail('a').length)).toEqual(
+      groupKeys.detail('a'),
+    );
+  });
+
   it('keys the answers to a group’s requests apart from every other group’s', () => {
     expect(groupKeys.answers('a')).not.toEqual(groupKeys.answers('b'));
   });

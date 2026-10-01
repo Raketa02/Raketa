@@ -271,8 +271,8 @@ describe('a club that already has groups', () => {
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Ask to join Ogrody 33 Club' })).toBeTruthy();
     expect(screen.getByText(GROUPS_COPY.action.in)).toBeTruthy();
-    // Player groups, both: the tag is an official group's.
-    expect(screen.queryByText(GROUPS_COPY.official)).toBeNull();
+    // Player groups, both: the mark is an official group's.
+    expect(screen.queryByTestId('official-mark', { includeHiddenElements: true })).toBeNull();
   });
 
   it('turns Ask to join into requested · waiting', async () => {

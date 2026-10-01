@@ -472,6 +472,11 @@ const num = {
    *  label on a hairline. A size and not a scale of `xs`, for 15.3's reason — the pair changes
    *  together with the record. */
   tiny: { fontFamily: font.mono[500], fontSize: 11, letterSpacing: -0.385, lineHeight: 16 },
+  /** A LEVEL IN A TAG — *Pad 2,44* under a Join request's name (#529, Part 16 2026-09-30).
+   *  `type.tag`'s 9,5 / 12 box and weight in the mono family, with the ramp's −0,035em (−0,33):
+   *  a figure is mono, and `tiny` at 11 puts two tags and a *+2* past the room a request row
+   *  leaves beside ✕ and Approve on a 393pt phone. */
+  tag: { fontFamily: font.mono[600], fontSize: 9.5, letterSpacing: -0.33, lineHeight: 12 },
 } as const;
 
 /**
@@ -870,6 +875,13 @@ const size = {
    *  line at every placement, and its stroke is 1,5 for the same reason 6.8's is 2: at 7pt a 2pt
    *  stroke is a blob. Same path as `Tick`, in a smaller box. */
   onCourtTick: { share: 0.72, stroke: 1.5 },
+  /** AN OFFICIAL GROUP'S MARK — a seal with `Tick`'s path in it, beside the group's name in both
+   *  searches and in its page's header, where the *official* tag was (#529). The product owner's
+   *  bound: **no bigger than a lowercase letter**. So its box is a SHARE of the name's own font
+   *  size, and the share is Archivo's x-height — 526 of 1000 units (`OS/2.sxHeight`), 6,84pt
+   *  beside a row's `cardTitle` and 7,89 beside the header's `h2` — `onCourtTick`'s rule, read at
+   *  the lowercase line rather than the capital one. */
+  officialMark: { share: 0.526 },
   /** The text field — 6.13. `row` is the box at ONE line, and it is `btnXl`: the field and
    *  the button it sits above are the same control height, which is what four shipped auth
    *  boxes have drawn since sign-up. It is written as its own number rather than borrowed

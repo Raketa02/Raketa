@@ -55,7 +55,7 @@ beforeEach(() => {
     <QueryClientProvider client={new QueryClient()}>
       <View>
         <ClubCard club={CLUB} headLabel="Ogrody 33">
-          <GroupAtClubRow group={GROUP} clubName={CLUB.name} variant="join" />
+          <GroupAtClubRow group={GROUP} variant="join" />
         </ClubCard>
       </View>
     </QueryClientProvider>,
@@ -73,10 +73,7 @@ describe('the club card’s tray', () => {
   // Small text needs 4,5 — `muted` on `paper2` was already 4,49.
   it('keeps the group row’s small grey line readable on it', () => {
     const tray = colourOf(screen.getByTestId(TRAY).props.style, 'backgroundColor');
-    const line = colourOf(
-      screen.getByText('11 members · Coach Andrzej approves joins').props.style,
-      'color',
-    );
+    const line = colourOf(screen.getByText('11 members · Needs approval').props.style, 'color');
 
     expect(contrast(rgb(line), rgb(tray))).toBeGreaterThanOrEqual(4.5);
   });

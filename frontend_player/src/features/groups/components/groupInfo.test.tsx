@@ -10,6 +10,7 @@
  * Groups list are re-read after each and have to agree with it.
  */
 
+import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { RefreshControl } from 'react-native';
 
@@ -345,6 +346,13 @@ async function openMembers() {
   expect(await screen.findByRole('header', { name: COPY.members.title })).toBeTruthy();
 }
 
+/** The tags under a request's name, left to right. */
+function requestTagTexts(who: Person): string[] {
+  return within(screen.getByTestId(`join-request-${who.id}`))
+    .queryAllByTestId(/^request-tag/)
+    .map((node) => node.props.children as string);
+}
+
 /** Members' rows, top to bottom, by whose they are. */
 const memberIds = () =>
   screen
@@ -426,6 +434,20 @@ describe('Want to join', () => {
     expect(order).toEqual(['raketa.app/join/K7PQ2MXA', 'Want to join · 2', '8 members']);
   });
 
+  // #529: four sports ran the row onto three lines. Two short tags, the rest as one +N tag, and
+  // every sport still spoken in full.
+  it('draws two sports as short tags and counts the rest, speaking every one', async () => {
+    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL, TOMASZ] });
+    await screen.findByRole('header', { name: 'Want to join · 2' });
+
+    expect(requestTagTexts(MICHAL)).toEqual(['Pad 2,44', 'Ten 2,60']);
+    expect(requestTagTexts(TOMASZ)).toEqual(['Pad 2,71', 'Ten 3,10', '+2']);
+    expect(screen.queryByText(/Squash|Badminton/)).toBeNull();
+    expect(
+      screen.getByLabelText('Tomasz Król, Padel 2,71 · Tennis 3,10 · Squash 2,30 · Badminton 2,05'),
+    ).toBeTruthy();
+  });
+
   it('is never asked for by anybody but the Owner', async () => {
     await openInfo({ members: KAZIMIERZ, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL] });
 
@@ -438,8 +460,9 @@ describe('Want to join', () => {
     await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
 
     await membersRow(/^8 members/);
+    // Once for the tab's count as the page opened, and again as Info was come to.
     await waitFor(() =>
-      expect(transport.requestsTo('GET', `${GROUP_PATH}/requests`)).toHaveLength(1),
+      expect(transport.requestsTo('GET', `${GROUP_PATH}/requests`)).toHaveLength(2),
     );
     expect(screen.queryByText(/^Want to join/)).toBeNull();
   });
@@ -550,7 +573,9 @@ describe('the Info tab’s count', () => {
 
 describe('pulling Info', () => {
   const OWNED = [ME, KAROL, EWA, ZOFIA, ANIA, KUBA, OLA, MAREK];
-  const pull = () => fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+  // The page's own — the Groups list under it has a pull of its own (#529).
+  const pageBody = () => within(screen.getByTestId('group-page-body'));
+  const pull = () => fireEvent(pageBody().UNSAFE_getByType(RefreshControl), 'refresh');
 
   // #529: a request that arrived while the page was open reached it only by leaving and coming back.
   it('re-reads the group and who is waiting', async () => {
@@ -572,7 +597,7 @@ describe('pulling Info', () => {
     expect(await screen.findByRole('button', { name: 'Info, 2 requests waiting' })).toBeTruthy();
     expect(await membersRow(/^7 members,/)).toBeTruthy();
     await waitFor(() =>
-      expect(screen.UNSAFE_getByType(RefreshControl).props.refreshing).toBe(false),
+      expect(pageBody().UNSAFE_getByType(RefreshControl).props.refreshing).toBe(false),
     );
   });
 
@@ -581,7 +606,42 @@ describe('pulling Info', () => {
     fireEvent.press(await tab('Games'));
     await tab('Games', true);
 
-    expect(screen.UNSAFE_queryByType(RefreshControl)).toBeNull();
+    expect(pageBody().UNSAFE_queryByType(RefreshControl)).toBeNull();
+  });
+});
+
+// #529 F2: what another phone changed reached Info only by a pull. Coming back to it is a look too.
+describe('coming back to Info', () => {
+  const OWNED = [ME, KAROL, EWA, ZOFIA, ANIA, KUBA, OLA, MAREK];
+
+  it('re-reads the group and who is waiting, from another tab', async () => {
+    const server = await openInfo({
+      members: OWNED,
+      policy: 'PEOPLE_I_APPROVE',
+      requests: [MICHAL],
+    });
+    expect(await screen.findByRole('header', { name: 'Want to join · 1' })).toBeTruthy();
+    fireEvent.press(await tab('Games'));
+    await tab('Games', true);
+
+    // Tomasz asks on his phone, and Karol leaves on his, while this one is on Games.
+    server.state.waiting.push(TOMASZ);
+    server.leave(KAROL);
+    fireEvent.press(await tab('Info'));
+
+    expect(await screen.findByRole('header', { name: 'Want to join · 2' })).toBeTruthy();
+    expect(await membersRow(/^7 members,/)).toBeTruthy();
+  });
+
+  it('re-reads them on the way back from Members', async () => {
+    const server = await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
+    await openMembers();
+
+    server.state.waiting.push(TOMASZ);
+    fireEvent.press(screen.getByRole('button', { name: COPY.members.back }));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP_ID}`));
+
+    expect(await screen.findByRole('header', { name: 'Want to join · 1' })).toBeTruthy();
   });
 });
 
@@ -613,9 +673,11 @@ describe('Edit group', () => {
     await openInfo({ members: OWNED });
     await openEdit();
 
-    // It opens on what the group says, with nothing to save.
+    // It opens on what the group says, with nothing to save — and, #529, no note under Who can
+    // join: the Owner is past choosing what a group is.
     expect(screen.getByDisplayValue('Kazimierz crew')).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.editGroup.saved, disabled: true })).toBeTruthy();
+    expect(screen.queryByText(COPY.newGroup.noSportNote)).toBeNull();
 
     fireEvent.changeText(screen.getByDisplayValue('Kazimierz crew'), 'Kazimierz padel');
     fireEvent.press(screen.getByRole('button', { name: COPY.editGroup.save }));
@@ -640,6 +702,13 @@ describe('Edit group', () => {
     fireEvent.press(screen.getByRole('button', { name: COPY.newGroup.anyone }));
     fireEvent.press(screen.getByRole('button', { name: COPY.editGroup.save }));
 
+    // #529: asked first, with what it does to the people waiting — and nothing sent until then.
+    const sheet = within(await screen.findByTestId('bottom-sheet'));
+    expect(sheet.getByRole('header', { name: COPY.editGroup.anyoneTitle })).toBeTruthy();
+    expect(sheet.getByText(COPY.editGroup.anyoneBody)).toBeTruthy();
+    expect(transport.requestsTo('PUT', `${GROUP_PATH}/details`)).toHaveLength(0);
+    fireEvent.press(sheet.getByRole('button', { name: COPY.editGroup.save }));
+
     expect(await screen.findByRole('header', { name: 'Let in · 2' })).toBeTruthy();
     expect(screen.getByText(COPY.editGroup.admittedLine)).toBeTruthy();
     expect(
@@ -650,6 +719,34 @@ describe('Edit group', () => {
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP_ID}`));
     expect(await membersRow(/^10 members, plays Padel, Tennis, anyone can join$/)).toBeTruthy();
     await waitFor(() => expect(screen.queryByText(/^Want to join/)).toBeNull());
+  });
+
+  it('saves nothing when the Owner steps back from Anyone', async () => {
+    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE', requests: [MICHAL] });
+    await screen.findByRole('header', { name: 'Want to join · 1' });
+    await openEdit();
+
+    fireEvent.press(screen.getByRole('button', { name: COPY.newGroup.anyone }));
+    fireEvent.press(screen.getByRole('button', { name: COPY.editGroup.save }));
+    fireEvent.press(await screen.findByRole('button', { name: COPY.editGroup.anyoneClose }));
+
+    await waitFor(() => expect(screen.queryByTestId('bottom-sheet')).toBeNull());
+    expect(transport.requestsTo('PUT', `${GROUP_PATH}/details`)).toHaveLength(0);
+    // The form still holds the choice, unsaved, for the Owner to change or save.
+    expect(screen.getByRole('button', { name: COPY.editGroup.save })).toBeTruthy();
+  });
+
+  it('asks nothing of a save that keeps People I approve', async () => {
+    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
+    await openEdit();
+
+    fireEvent.changeText(screen.getByDisplayValue('Kazimierz crew'), 'Kazimierz padel');
+    fireEvent.press(screen.getByRole('button', { name: COPY.editGroup.save }));
+
+    expect(
+      await screen.findByRole('button', { name: COPY.editGroup.saved, disabled: true }),
+    ).toBeTruthy();
+    expect(screen.queryByTestId('bottom-sheet')).toBeNull();
   });
 
   it('says why a name was refused', async () => {
@@ -672,6 +769,70 @@ describe('leaving and deleting', () => {
     const sheet = within(await screen.findByTestId('bottom-sheet'));
     fireEvent.press(sheet.getByRole('button', { name: act }));
   }
+
+  // #529 F1: the way out stands at the page's foot, however long Info is, and never scrolls away.
+  it.each([
+    ['Leave', { members: KAZIMIERZ }, COPY.info.leave],
+    ['Delete', { name: 'My raketa group', members: [ME] }, COPY.info.delete],
+  ] as const)('pins %s under the page, outside what scrolls', async (_, setup, door) => {
+    await openInfo(setup);
+
+    expect(await screen.findByRole('button', { name: door })).toBeTruthy();
+    const scrolled = within(screen.getByTestId('group-page-body'));
+    expect(scrolled.getByRole('button', { name: / members?, / })).toBeTruthy();
+    expect(scrolled.queryByRole('button', { name: door })).toBeNull();
+  });
+
+  it('is Info’s alone', async () => {
+    await openInfo({ members: KAZIMIERZ });
+    fireEvent.press(await tab('Games'));
+    await tab('Games', true);
+
+    expect(screen.queryByRole('button', { name: COPY.info.leave })).toBeNull();
+  });
+
+  // #529 F5: a leave the network was holding went on waiting after the sheet was closed, and left
+  // the group a minute later — silently, from whatever page the player was on by then.
+  describe('while the phone is offline', () => {
+    afterEach(() => onlineManager.setOnline(true));
+
+    const leaves = () => transport.requestsTo('DELETE', `${GROUP_PATH}/membership`);
+
+    async function comeBackOnline() {
+      await act(async () => {
+        onlineManager.setOnline(true);
+        await Promise.resolve();
+      });
+    }
+
+    it('takes a waiting leave back when the sheet is closed', async () => {
+      await openInfo({ members: KAZIMIERZ });
+      act(() => onlineManager.setOnline(false));
+
+      fireEvent.press(await screen.findByRole('button', { name: COPY.info.leave }));
+      await confirm(COPY.info.leave);
+      expect(leaves()).toHaveLength(0);
+      fireEvent.press(await screen.findByRole('button', { name: COPY.info.leaveClose }));
+      await waitFor(() => expect(screen.queryByTestId('bottom-sheet')).toBeNull());
+      await comeBackOnline();
+
+      expect(leaves()).toHaveLength(0);
+      expect(screen).toHavePathname(`/play/group/${GROUP_ID}`);
+    });
+
+    it('still leaves once the phone is back, when the sheet was left open', async () => {
+      await openInfo({ members: KAZIMIERZ });
+      act(() => onlineManager.setOnline(false));
+
+      fireEvent.press(await screen.findByRole('button', { name: COPY.info.leave }));
+      await confirm(COPY.info.leave);
+      expect(leaves()).toHaveLength(0);
+      await comeBackOnline();
+
+      await waitFor(() => expect(leaves()).toHaveLength(1));
+      await waitFor(() => expect(screen).toHavePathname('/play'));
+    });
+  });
 
   it('deletes a group its Owner is alone in, after asking, and lands on the list', async () => {
     const server = await openInfo({ name: 'My raketa group', members: [ME] });
@@ -749,12 +910,13 @@ describe('leaving and deleting', () => {
 });
 
 describe('Members', () => {
-  it('heads the page with the group, its count and the sport pill', async () => {
+  // #529 F1: the group's name and count over *Members* said nothing the page under it did not.
+  it('heads the page with Members and the sport pill, and nothing above them', async () => {
     await openInfo({ members: KAZIMIERZ });
     await openMembers();
 
-    expect(screen.getByText('Kazimierz crew · 8')).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Sport: Padel' })).toBeTruthy();
+    expect(screen.queryByText(/Kazimierz crew/i)).toBeNull();
   });
 
   it('lists who plays the sport: you, the Owner with admin, then newest joined first', async () => {

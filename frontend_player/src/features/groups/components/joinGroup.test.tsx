@@ -260,19 +260,19 @@ describe('the answers', () => {
     expect(within(card).getByText(COPY.noGroupsHere)).toBeTruthy();
   });
 
-  it('draws each group with its count, who approves, and what the reader can do', async () => {
+  it('draws each group with its count, whether it needs approval, and what the reader can do', async () => {
     await openJoin();
 
     type('ogrody');
 
-    expect(await screen.findByText('11 members · Coach Andrzej approves joins')).toBeTruthy();
+    expect(await screen.findByText('11 members · Needs approval')).toBeTruthy();
     expect(screen.getByText('7 members · anyone can join')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Ask to join Ogrody 33 Club' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Join Ogrody open play' })).toBeTruthy();
     // The dots have no words of their own; the row speaks the sports by name.
     expect(
       screen.getByLabelText(
-        'Ogrody 33 Club, 11 members · Coach Andrzej approves joins, plays Padel, Tennis, Squash, Badminton',
+        'Ogrody 33 Club, 11 members · Needs approval, plays Padel, Tennis, Squash, Badminton',
       ),
     ).toBeTruthy();
   });
