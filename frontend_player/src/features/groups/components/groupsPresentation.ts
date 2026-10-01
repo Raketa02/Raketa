@@ -29,6 +29,7 @@ import {
   type SportLevel,
 } from '../domain/group';
 import { adminTagged, type GroupExit } from '../domain/groupInfo';
+import type { GroupKind } from '../domain/vocabulary';
 import type { GamesCard } from '../domain/groupPage';
 import type { GroupAction } from '../domain/groupRules';
 
@@ -122,15 +123,24 @@ export const CREATE_REFUSALS = {
   home_club_unknown: 'That club isn’t in Raketa any more. Pick another home club.',
 } as const satisfies Readonly<Record<string, string>>;
 
-/** A card on the Groups list, spoken: name, size, sports and home club. */
+/** A card on the Groups list, spoken: name, *official* where it is, size, sports and home club. */
 export function groupCardLabel(group: {
+  readonly kind: GroupKind;
   readonly name: string;
   readonly memberCount: number;
   readonly sports: SearchedClub['sports'];
   readonly homeClub: { readonly name: string };
 }): string {
+  // The mark beside an official group's name has no words of its own, so the card says it.
+  const tagged = group.kind === 'OFFICIAL' ? [GROUPS_COPY.official] : [];
   const plays = group.sports.length > 0 ? [`plays ${sportsList(group.sports)}`] : [];
-  return [group.name, membersLine(group.memberCount), ...plays, group.homeClub.name].join(', ');
+  return [
+    group.name,
+    ...tagged,
+    membersLine(group.memberCount),
+    ...plays,
+    group.homeClub.name,
+  ].join(', ');
 }
 
 /** *Info, 2 requests waiting* — the group page's Info tab, spoken with its count (#529). */
@@ -436,18 +446,22 @@ export function groupHeaderLabel(group: Pick<Group, 'name' | 'memberCount' | 'ho
   ].join(', ');
 }
 
-/** *Play Padel · 8* — the list's heading: the sport, and how many here play it. */
-export function playSportCount(sport: Sport, count: number): string {
-  return `Play ${sportLabel(sport)}${DOT}${count}`;
+/**
+ * *Members · 8* — the screen's title, with how many here play the filter's sport: it moves with the
+ * pill. The word alone before the list is in, and where there is no sport to list.
+ */
+export function membersTitle(count: number | undefined): string {
+  return count === undefined
+    ? GROUPS_COPY.members.title
+    : `${GROUPS_COPY.members.title}${DOT}${count}`;
 }
 
-/** *Padel 2,71 · score 92* — a row's line; no score for somebody with no record, never *score 0*. */
-export function memberLine(
-  sport: Sport,
-  member: Pick<GroupMember, 'level' | 'playerScore'>,
-): string {
-  const level = `${sportLabel(sport)} ${formatLevel(member.level)}`;
-  return member.playerScore === undefined ? level : `${level}${DOT}score ${member.playerScore}`;
+/**
+ * *Padel 2,71* — a row's line, after the sport's dot. The Player Score left it for a tag beside the
+ * name (`PlayerScoreTag`), so the line is the sport and its Level and nothing else.
+ */
+export function memberLine(sport: Sport, member: Pick<GroupMember, 'level'>): string {
+  return `${sportLabel(sport)} ${formatLevel(member.level)}`;
 }
 
 /** Who a Members row is about, and whether it is the reader's own. */
@@ -463,15 +477,22 @@ export function memberName(member: Pick<MemberRowPerson, 'name' | 'you'>): strin
   return member.you ? playerName({ kind: 'you' }) : personName(member.name);
 }
 
-/** *Karol Tomczak, admin, Padel 2,75 · score 93* — a row, spoken as it is drawn. */
+/**
+ * *Karol Tomczak, score 93, admin, Padel 2,75* — a row, spoken in the order it is drawn: the name,
+ * the score tag, the admin tag, the line. **No score for somebody with no record**, never
+ * *score 0*: the tag is not drawn, so it is not said. The tag's tint is not spoken — the figure
+ * is the fact, and the band is a reading of it.
+ */
 export function memberRowLabel(sport: Sport, member: MemberRowPerson): string {
+  const score =
+    member.playerScore === undefined ? [] : [`${GROUPS_COPY.members.score} ${member.playerScore}`];
   const admin = adminTagged(member) ? [GROUPS_COPY.members.admin] : [];
-  return [memberName(member), ...admin, memberLine(sport, member)].join(', ');
+  return [memberName(member), ...score, ...admin, memberLine(sport, member)].join(', ');
 }
 
-/** *Open Zofia Bąk's record* — what a hold on the row does, named for the rotor. */
-export function openRecordLabel(member: Pick<MemberRowPerson, 'name' | 'you'>): string {
-  return member.you ? 'Open your record' : `Open ${personName(member.name)}’s record`;
+/** *Opens their record* — what a tap on a row does. The row's label already says whose. */
+export function openRecordHint(member: Pick<MemberRowPerson, 'you'>): string {
+  return member.you ? GROUPS_COPY.members.openYours : GROUPS_COPY.members.openTheirs;
 }
 
 /** *Let in · 2* — who a switch to Anyone admitted, on Edit group after the save. */

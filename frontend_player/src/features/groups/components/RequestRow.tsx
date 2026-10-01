@@ -1,10 +1,11 @@
 /**
  * **One person asking to join** — club 20's row, **everywhere**: an Owner's *Want to join* on a
  * player group's Info tab (#514) and an Administrator's on an official group's page (#516). The
- * face, the whole Name, and under it **the first two sports they are rated in as tags** — the
- * sport's dot, its short name and the Level in mono (*Pad 2,44*) — **and one *+N* tag for the
- * rest** (#529, the owner's mock of 2026-09-30): four sports over two lines, as club 20 drew them,
- * made the row untidy. The row is still spoken with every sport by its whole name. Then **✕** and
+ * face, the whole Name, and under it **the first two sports they are rated in** — the sport's
+ * dot, its short name and the Level in mono (*● Pad 2,44*) — **and one *+N* for the rest** (#529,
+ * the owner's mock of 2026-09-30): four sports over two lines, as club 20 drew them, made the row
+ * untidy. **No tag around either** (the owner's ask, 2026-10-01): the dot and the text, and the
+ * count as text alone. The row is still spoken with every sport by its whole name. Then **✕** and
  * **Approve**.
  *
  * **It answers nothing itself.** Which route an answer goes to is the caller's — the Owner's
@@ -53,7 +54,7 @@ export function RequestRow({ request, divided, onDecline, onApprove }: RequestRo
         <Text style={s.name} numberOfLines={1}>
           {personName(request.name)}
         </Text>
-        {request.levels.length > 0 ? <LevelTags request={request} /> : null}
+        {request.levels.length > 0 ? <LevelLine request={request} /> : null}
       </View>
 
       <CloseControl onPress={onDecline} accessibilityLabel={declineLabel(request.name)} />
@@ -69,29 +70,31 @@ export function RequestRow({ request, divided, onDecline, onApprove }: RequestRo
 }
 
 /**
- * The tags under the name — the shape of 6.4's tag (its corner, inset and `line2` fill), with the
- * sport's own round dot and the Level in mono, because a Level is a figure. On one line; a phone
- * too narrow for two and a *+N* wraps the last onto a second rather than cutting a Level.
+ * The line under the name — each sport its own round dot and the Level in mono, because a Level is
+ * a figure, then the *+N* as text. No box around any of them: the dot is what marks a sport, and a
+ * fill around a dot and four characters was a tag drawn for no status. On one line; a phone too
+ * narrow for two and a *+N* wraps the last onto a second rather than cutting a Level.
  */
-function LevelTags({ request }: { readonly request: JoinRequest }) {
+function LevelLine({ request }: { readonly request: JoinRequest }) {
   const { shown, more } = requestTags(request.levels);
 
   return (
-    <View style={s.tags}>
+    <View style={s.levels}>
       {shown.map(({ sport, label }) => (
-        <View key={sport} style={s.tag}>
-          <View style={[s.dot, { backgroundColor: sportColour(sport) }]} />
-          <Text testID="request-tag" style={s.tagLabel} numberOfLines={1}>
+        <View key={sport} testID="request-sport" style={s.level}>
+          <View
+            testID="request-sport-dot"
+            style={[s.dot, { backgroundColor: sportColour(sport) }]}
+          />
+          <Text testID="request-tag" style={s.levelLabel} numberOfLines={1}>
             {label}
           </Text>
         </View>
       ))}
       {more === undefined ? null : (
-        <View style={s.tag}>
-          <Text testID="request-tag-more" style={s.tagLabel} numberOfLines={1}>
-            {more}
-          </Text>
-        </View>
+        <Text testID="request-tag-more" style={s.levelLabel} numberOfLines={1}>
+          {more}
+        </Text>
       )}
     </View>
   );
@@ -107,21 +110,21 @@ const s = StyleSheet.create({
   },
   words: { flex: 1, gap: theme.space.xxs },
   name: { ...theme.type.cardTitle, color: theme.color.ink },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xxs },
-  tag: {
+  // `space.sm` between sports, now no fill separates them, and `space.xxs` between two lines on
+  // a phone too narrow for one; `space.xxs` from a dot to its text.
+  levels: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: theme.space.xxs,
-    paddingVertical: theme.space.xxs,
-    paddingHorizontal: theme.space.xs,
-    borderRadius: theme.radius.tag,
-    backgroundColor: theme.color.line2,
+    columnGap: theme.space.sm,
+    rowGap: theme.space.xxs,
   },
+  level: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
   // Round: it is the sport's dot, as the group's own dots are (`SportDots`).
   dot: {
     width: theme.size.sportDot,
     height: theme.size.sportDot,
     borderRadius: theme.radius.dot,
   },
-  tagLabel: { ...theme.num.tag, ...theme.tabular, color: theme.color.muted },
+  levelLabel: { ...theme.num.tag, ...theme.tabular, color: theme.color.muted },
 });

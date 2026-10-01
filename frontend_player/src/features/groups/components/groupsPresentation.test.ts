@@ -13,9 +13,9 @@ import {
   linkShown,
   memberLine,
   memberRowLabel,
+  membersTitle,
   membersRowLabel,
-  openRecordLabel,
-  playSportCount,
+  openRecordHint,
   requestLevels,
   requestTags,
   emptySeatLabel,
@@ -262,16 +262,17 @@ describe('the Info tab', () => {
 });
 
 describe('Members', () => {
-  it('heads the list with the sport and how many play it here', () => {
-    expect(playSportCount('padel', 8)).toBe('Play Padel · 8');
+  it('titles the screen with how many play the sport here, and the word alone before it is known', () => {
+    expect(membersTitle(8)).toBe('Members · 8');
+    expect(membersTitle(undefined)).toBe('Members');
   });
 
-  it('reads a row’s Level and Player Score, and no score where there is none', () => {
-    expect(memberLine('padel', { level: 2.71, playerScore: 92 })).toBe('Padel 2,71 · score 92');
+  it('reads a row’s line as the sport and its Level — the score is the tag beside the name', () => {
+    expect(memberLine('padel', { level: 2.71 })).toBe('Padel 2,71');
     expect(memberLine('tennis', { level: 3.1 })).toBe('Tennis 3,10');
   });
 
-  it('speaks a row as who, the admin tag, and the line', () => {
+  it('speaks a row as it is drawn: who, the score tag, the admin tag, and the line', () => {
     expect(
       memberRowLabel('padel', {
         name: 'Karol Tomczak',
@@ -281,7 +282,7 @@ describe('Members', () => {
         isAdministrator: false,
         you: false,
       }),
-    ).toBe('Karol Tomczak, admin, Padel 2,75 · score 93');
+    ).toBe('Karol Tomczak, score 93, admin, Padel 2,75');
     expect(
       memberRowLabel('padel', {
         name: 'Tomek Kowal',
@@ -305,9 +306,9 @@ describe('Members', () => {
     ).toBe('Marta Wójcik, admin, Padel 2,60');
   });
 
-  it('names the record a hold opens', () => {
-    expect(openRecordLabel({ name: 'Zofia Bąk', you: false })).toBe('Open Zofia Bąk’s record');
-    expect(openRecordLabel({ name: 'Tomek Kowal', you: true })).toBe('Open your record');
+  it('hints what a tap on a row opens — the name is already the row’s', () => {
+    expect(openRecordHint({ you: false })).toBe('Opens their record');
+    expect(openRecordHint({ you: true })).toBe('Opens your record');
   });
 });
 

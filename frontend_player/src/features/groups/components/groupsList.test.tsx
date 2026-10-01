@@ -152,6 +152,27 @@ describe('the Groups list', () => {
     ]);
   });
 
+  // The official mark the club card's rows and the group's header draw, on the list's card too.
+  it('marks an official group beside its name, and says so, and no other group', async () => {
+    const official = { ...OGRODY_OPEN_PLAY, kind: 'OFFICIAL' as const, name: 'Ogrody 33 Club' };
+    stubMyGroups(transport, [official, KAZIMIERZ_CREW]);
+    await openGroups();
+
+    const marked = await cardNamed('Ogrody 33 Club');
+    expect(marked.props.accessibilityLabel).toBe(
+      'Ogrody 33 Club, official, 8 members, plays Padel, Tennis, Squash, Badminton, Ogrody 33',
+    );
+    expect(
+      within(marked).getByTestId('official-mark', { includeHiddenElements: true }),
+    ).toBeTruthy();
+
+    const plain = await cardNamed('Kazimierz crew');
+    expect(plain.props.accessibilityLabel).not.toMatch(/official/);
+    expect(
+      within(plain).queryByTestId('official-mark', { includeHiddenElements: true }),
+    ).toBeNull();
+  });
+
   // Story 9: the backend's letters, as typed, on the hue its colour key names.
   it('draws each group’s tile — its letters on the colour its key names', async () => {
     stubMyGroups(transport, [OGRODY_OPEN_PLAY, KAZIMIERZ_CREW]);

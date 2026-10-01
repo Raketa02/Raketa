@@ -22,7 +22,8 @@
  * nothing.
  *
  * The page draws its own header and body, handed what they need: the header the pill, once there
- * is a sport to show, and the body the sport — `undefined` until the phone has answered, so
+ * is a sport to show, and the sport itself — Members counts its list in its title — and the body
+ * the sport — `undefined` until the phone has answered, so
  * nothing is drawn for one sport and then another (ADR-0188 §4) — and, for an official group the
  * reader is rated in none of the sports of, what they would add to see it (#519).
  */
@@ -58,10 +59,12 @@ export interface SportFilterPageProps {
    * `cover`, which the header wraps round what the open bar must cover whole rather than end across:
    * the group's tile. It measures the box it is given against the header's own left edge, so the
    * header draws it as a direct child of a root that spans the page, as `ScreenHeader` does its lead.
+   * And the sport the page is on, as the body is handed it: Members' title counts that sport's list.
    */
   readonly header: (
     pill: ReactNode | undefined,
     cover: (node: ReactNode) => ReactNode,
+    sport: Sport | undefined,
   ) => ReactNode;
   /**
    * Everything under the header, for the sport the page is on — `undefined` until it is known —
@@ -113,7 +116,7 @@ export function SportFilterPage({ declaredSports, header, children }: SportFilte
           setHeaderBox({ width, height });
         }}
       >
-        {header(pill, cover)}
+        {header(pill, cover, sport)}
       </View>
 
       {children(sport, toAdd)}

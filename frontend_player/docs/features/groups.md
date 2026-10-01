@@ -267,10 +267,11 @@ element, spoken with the sports by name, and it opens Members.
 owns the group — anybody else would be refused, and a read that can only be refused is not asked —
 and drawn only while somebody is waiting, and not while the queue is being read, so the members row
 never drops a card's height and comes back. Each row is the face, the whole Name and, under it,
-**the first two sports the person is rated in as tags** — the sport's dot, its short name and the
-Level in mono (_Pad 2,44_) — **and one _+N_ tag for the rest**, in the order served (#529, the owner's
-mock of 2026-09-30: four sports in full ran the row onto three lines). The row is still spoken with
-every sport by its whole name. **✕** is _Decline {name}_ and **Approve** _Approve {name}_. **This write is optimistic where a join is not** (`useAnswerRequest`): either answer ends the
+**the first two sports the person is rated in** — the sport's dot, its short name and the Level in
+mono (_● Pad 2,44_) — **and one _+N_ for the rest**, in the order served (#529, the owner's mock of
+2026-09-30: four sports in full ran the row onto three lines). **No tag around either** (the owner's
+ask, 2026-10-01): the dot and the text, `space.sm` between sports, and the count as text alone. The
+row is still spoken with every sport by its whole name. **✕** is _Decline {name}_ and **Approve** _Approve {name}_. **This write is optimistic where a join is not** (`useAnswerRequest`): either answer ends the
 request whatever the server then does, so there is nothing for it to decide about where the row goes,
 only whether the tap reached it — the row goes on the tap and comes back, with a toast in the Owner's
 words, only on a refusal — that row alone, where it stood, since another answer may still be on its
@@ -312,32 +313,42 @@ they were on by then. The waiting act is removed from the queue with the close; 
 left open still goes when the phone is back.
 
 **Members is the server's list for the filter's sport** (play 61, stories 80–84; `MembersScreen`,
-pushed at `/play/group/[groupId]/members`). The header is _Members_ with no eyebrow — the group's
-name and count over it said nothing the page it was pushed from had not (#529) — and **the same pill
-as the page, over the same state**:
+pushed at `/play/group/[groupId]/members`). The header is **_Members · N_**, N the rows the list
+draws for the pill's sport — it moves when the sport does, read off the list's own query, and is the
+word alone until the list is in or where there is no sport to list (2026-10-01: the _PLAY PADEL · N_
+heading over the list gave its count to the title and went). No eyebrow — the group's name and count
+over it said nothing the page it was pushed from had not (#529) — and **the same pill as the page,
+over the same state**:
 the filter is now `SportFilterPage`, the header, the body and the unfolding bar the page and Members
 share, and the sport is `useGroupSport`'s one value, so a pick on Members is the page's sport when the
-player goes back. _PLAY PADEL · N_ counts the rows drawn. The rows come in the server's order — the
-reader as _You_, the Owner with a `base` **admin** tag, then newest joined first — each _Padel 2,71 ·
-score 92_, with **no score where there is no record**, never _score 0_. **No friend tag**: PRD #500
-overrides play 61 by name.
+player goes back. The rows come in the server's order — the
+reader as _You_, the Owner with a `base` **admin** tag, then newest joined first. **The Player Score
+is a tag beside the name** (2026-10-01, the product owner's mocks): `PlayerScoreTag`, a drawn ✦ and
+the figure in `num.tag` on the tint of `scoreBand`'s band — mint 90–100 (the best partners), neutral
+70–89 (nothing to flag; 70 is the matcher's `SCORE_MIN`), amber 50–69 (worth a look before approving
+or inviting), red 0–49 (risky) — then the admin tag. Under the name, the **sport's dot** and _Padel
+2,71_. **No tag where there is no record**, never _score 0_. The row is spoken as drawn: _Karol
+Tomczak, score 93, admin, Padel 2,75_ — the figure, not the band, which is a reading of it. The mocks
+typed the strong band in `mint` and the amber one in amber's retired `#9A6A0B`; both fall short of
+4,5:1 on their tints at 9,5pt, so the tag draws `mintInk` and today's `amber` (`PlayerScoreTag.test`).
+**No friend tag**: PRD #500 overrides play 61 by name, and the 2026-10-01 mocks' _friend_ with it.
 
-**Members opens the record on a press and hold, as the ticket asks.** The games feature's players
-card refused the hold on #285's argument — no affordance, no announcement, no accessibility
-equivalent — and taps instead; #514 and play 61 decide the gesture here, and the row answers the third
-objection the way the photo tile does: the hold is also the row's standard `longpress` accessibility
-action, named for the record it opens (_Open Zofia Bąk's record_, _Open your record_), with a hint
-that says the gesture, and the page ends in _Press and hold anyone for the full record._ It opens the
-existing `PlayerRecordSheet` with the filter's sport; the reader's own row opens their own record.
+**Members opens the record on a tap** (2026-10-01, the product owner's ask). It was a press and
+hold, as #514 and play 61 asked, with the row's standard `longpress` accessibility action and a page
+footer, _Press and hold anyone for the full record._, to explain a gesture with no affordance. A tap
+is the obvious gesture and answers #285's objection to the hold the way the games feature's players
+card does: the row is a button, every screen reader activates it, and its hint says what it opens
+(_Opens their record_, _Opens your record_). The footer and the custom action went with the hold. It
+opens the existing `PlayerRecordSheet` with the filter's sport; the reader's own row opens their own
+record.
 **Everybody on the list can be opened** because a group both are in is a disclosure the record
 route admits on (ADR-0159's 2026-09-30 amendment); before it, anybody the reader had not been shown
 by a search, a challenge or a game met _This record isn't available_ (#529 F1).
 
 **What this record departs from, and what is open.** The way out is 6.1's `secondary` where play
 57–60 draw it in dark red: `red` is _ended badly_ and coral is closed at six. Club 20 draws the
-Levels in sans; they are mono, as every Level is. Members' hold is the second gesture for the record
-sheet across two people lists. All three are in design-system Part 16 for the product owner, with the
-stacked faces' sizes. Leave, Delete, Save and the two answers pause offline and resume, as join and
+Levels in sans; they are mono, as every Level is. Both are in design-system Part 16 for the product
+owner, with the stacked faces' sizes. Leave, Delete, Save and the two answers pause offline and resume, as join and
 create do; no act here says so beside itself yet. **Nothing here has been seen on a device.**
 
 **The administrator area draws with this feature's pieces, and they are lent from `types.ts`**
@@ -373,8 +384,10 @@ seal in `mintInk` with `Tick`'s own path in white, **no bigger than a lowercase 
 is Archivo's x-height as a share of the name's font size (`size.officialMark`), 6,84pt in a row
 and 7,89 in the header — on the name's line and centred on it. The mark is hidden from a screen
 reader and the word moved into the spoken name: the row's _Ogrody 33 Club, official, …_ as before,
-and the header's `titleLabel`, _Ogrody 33 Club, official, 12 members · Ogrody 33_. The Groups list's
-card draws no mark yet: the ask was the searches and the page.
+and the header's `titleLabel`, _Ogrody 33 Club, official, 12 members · Ogrody 33_. **The Groups
+list's card carries it too** (2026-10-01, the product owner's ask): beside the card's `h2` name,
+7,89pt, and the card's spoken name says _official_ after the name, as the row's does. The list's
+read already served `kind`; `MyGroup` carries it now.
 
 **An account that runs an official group joins it directly** (`groupAction`): the row it runs is
 **Join** whatever the policy, in both searches and New group's club rows, and the one tap admits it.

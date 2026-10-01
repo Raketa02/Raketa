@@ -169,6 +169,14 @@ export function sportPill(sportName: string, level: number): string {
  * out of a hundred.
  */
 export const PLAYER_SCORE_BLOCK = 'Player reliability';
+
+/**
+ * *Full record* — the fold under the three blocks, holding the counted card and the tags. The
+ * blocks are the summary and this is everything they summarise, so the fold is named for the
+ * whole of it rather than for its first row. **Spoken only**: the row draws a chevron alone, and
+ * this is the name a screen reader gives it.
+ */
+export const FULL_RECORD = 'Full record';
 export const LAST_FIVE_BLOCK = 'Last 5';
 export const COUNTED_BLOCK = 'Counted';
 const PLAYER_SCORE_DENOMINATOR = 100;

@@ -886,6 +886,11 @@ const size = {
    *  beside a row's `cardTitle` and 7,89 beside the header's `h2` — `onCourtTick`'s rule, read at
    *  the lowercase line rather than the capital one. */
   officialMark: { share: 0.526 },
+  /** THE SCORE TAG'S SPARK — the four-pointed star before a Player Score on Members' rows, drawn
+   *  because Archivo ships no U+2726. A SHARE of the figure's own font size, `onCourtTick`'s
+   *  rule: 0,8 of `num.tag` is about the digits' cap height, so the spark reads as part of the
+   *  figure rather than as a bullet beside it. */
+  scoreSpark: { share: 0.8 },
   /** The text field — 6.13. `row` is the box at ONE line, and it is `btnXl`: the field and
    *  the button it sits above are the same control height, which is what four shipped auth
    *  boxes have drawn since sign-up. It is written as its own number rather than borrowed
@@ -1254,8 +1259,8 @@ const shadow = {
 
 // ---------------------------------------------------------------------------
 // Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, one
-// unfold, and the yes screen's entrance, which is the first and the fade composed. Nothing else
-// moves.
+// unfold, one disclose, and the yes screen's entrance, which is the first and the fade composed.
+// Nothing else moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
@@ -1315,6 +1320,15 @@ const motion = {
    * a state the eye already knows. Skipped under reduced motion, where the bar is simply open.
    */
   unfold: 280,
+  /**
+   * The record sheet's *Full record* opening and closing under its three blocks: the fold's
+   * height runs to the content's measured height while the content fades in and slides down a
+   * `space.md` into place, and the chevron turns over. **Both ways**, unlike `unfold`: closing
+   * hands the space back to the sheet, and a sheet that jumped a card's height shorter would
+   * read as a different surface. `unfold`'s pace, `easeDecel`, on the UI thread. Skipped under
+   * reduced motion, where the fold is simply open or shut.
+   */
+  disclose: 280,
   /**
    * The radar's flight — a tap on a face carries the view to them, centred, at the 3 km stop
    * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)

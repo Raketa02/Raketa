@@ -140,8 +140,11 @@ export const GROUPS_COPY = {
     title: 'Members',
     back: 'Back to the group',
     admin: 'admin',
-    footer: 'Press and hold anyone for the full record.',
-    holdHint: 'Press and hold for the full record',
+    /** The score tag, spoken — *score 92*; the tag itself draws a spark and the figure. */
+    score: 'score',
+    /** A row's hint: a tap opens the record, and the row's label already says whose. */
+    openYours: 'Opens your record',
+    openTheirs: 'Opens their record',
   },
   /** Edit group — the New group form's two cards and Save (no mock; #514). */
   editGroup: {

@@ -42,3 +42,31 @@ export function scoreTone(score: number): ScoreTone {
   if (score < SCORE_FLOOR) return 'poor';
   return score < SCORE_STRONG ? 'neutral' : 'good';
 }
+
+/**
+ * Where a record below the floor stops being a wobble and starts being a risk — the one step the
+ * score tag adds to the ladder above, and **only below the floor**.
+ */
+export const SCORE_RISKY = 50;
+
+/**
+ * **The score tag's four bands** — the ladder above with its bottom step cut in two, for the one
+ * surface that tints the figure itself: the score tag on Members' rows.
+ *
+ * - `strong` (90–100) — shows up, answers, confirms: the best partners.
+ * - `ordinary` (70–89) — nothing to flag.
+ * - `wobbly` (50–69) — late answers, a dropout: worth a look before approving or inviting.
+ * - `risky` (0–49) — no-shows on the record.
+ *
+ * **A refinement of `scoreTone`, never a second ladder**: the two steps it shares are read off
+ * the same two constants, so `strong` is always `good`, `ordinary` always `neutral`, and both of
+ * the new bands are `poor`. A tag cannot turn amber where a meter on the record stays neutral.
+ */
+export type ScoreBand = 'strong' | 'ordinary' | 'wobbly' | 'risky';
+
+export function scoreBand(score: number): ScoreBand {
+  const tone = scoreTone(score);
+  if (tone === 'good') return 'strong';
+  if (tone === 'neutral') return 'ordinary';
+  return score < SCORE_RISKY ? 'risky' : 'wobbly';
+}

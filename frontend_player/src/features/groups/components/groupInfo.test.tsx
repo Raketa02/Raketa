@@ -12,8 +12,9 @@
 
 import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { RefreshControl } from 'react-native';
+import { RefreshControl, StyleSheet } from 'react-native';
 
+import { sportColour } from '@/features/onboarding/types';
 import { OWN_RECORD_TITLE, RECORD_TITLE } from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -343,7 +344,7 @@ const rowFaces = () =>
 async function openMembers() {
   fireEvent.press(await membersRow(/ members?, /));
   await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP_ID}/members`));
-  expect(await screen.findByRole('header', { name: COPY.members.title })).toBeTruthy();
+  expect(await screen.findByRole('header', { name: /^Members/ })).toBeTruthy();
 }
 
 /** The tags under a request's name, left to right. */
@@ -446,6 +447,22 @@ describe('Want to join', () => {
     expect(
       screen.getByLabelText('Tomasz Król, Padel 2,71 · Tennis 3,10 · Squash 2,30 · Badminton 2,05'),
     ).toBeTruthy();
+  });
+
+  // 2026-10-01: the sports are the dot and the text, and the +N the text alone — no tag box.
+  it('draws each sport as its dot and its text, and the count as text, with no tag around either', async () => {
+    await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE', requests: [TOMASZ] });
+    await screen.findByRole('header', { name: 'Want to join · 1' });
+
+    const row = within(screen.getByTestId(`join-request-${TOMASZ.id}`));
+    const fills = row
+      .getAllByTestId(/^request-(sport|tag)/, { includeHiddenElements: true })
+      .map((node) => StyleSheet.flatten(node.props.style)?.backgroundColor);
+    // Two dots in the sports' own colours, and nothing else on the line carries a fill.
+    expect(fills.filter((fill) => fill !== undefined)).toEqual([
+      sportColour('padel'),
+      sportColour('tennis'),
+    ]);
   });
 
   it('is never asked for by anybody but the Owner', async () => {
@@ -923,16 +940,28 @@ describe('Members', () => {
     await openInfo({ members: KAZIMIERZ });
     await openMembers();
 
-    expect(await screen.findByRole('header', { name: 'Play Padel · 7' })).toBeTruthy();
+    // The count is the title's now, and the *Play Padel · 7* heading under the header is gone.
+    expect(await screen.findByRole('header', { name: 'Members · 7' })).toBeTruthy();
+    expect(screen.queryByText(/^Play Padel/)).toBeNull();
     // Marek plays tennis only, so he is not on padel's list.
     expect(memberIds()).toEqual([ME.id, KAROL.id, OLA.id, KUBA.id, ANIA.id, ZOFIA.id, EWA.id]);
-    expect(screen.getByLabelText('You, Padel 2,71 · score 92')).toBeTruthy();
-    expect(screen.getByLabelText('Karol Tomczak, admin, Padel 2,75 · score 93')).toBeTruthy();
+    expect(screen.getByLabelText('You, score 92, Padel 2,71')).toBeTruthy();
+    expect(screen.getByLabelText('Karol Tomczak, score 93, admin, Padel 2,75')).toBeTruthy();
     // No record, no score — never *score 0*.
     expect(screen.getByLabelText('Ola Nowak, Padel 2,64')).toBeTruthy();
+    // The score is a tag beside the name now, on its band's tint; Ola has none.
+    const row = (id: string) => within(screen.getByTestId(`member-${id}`));
+    expect(row(ME.id).getByTestId('score-tag-strong')).toBeTruthy();
+    expect(row(ME.id).getByText('92')).toBeTruthy();
+    expect(row(OLA.id).queryByTestId(/^score-tag-/)).toBeNull();
+    // Every line opens on the sport's own dot.
+    const dots = screen.getAllByTestId('member-sport-dot', { includeHiddenElements: true });
+    expect(dots).toHaveLength(7);
+    expect(StyleSheet.flatten(dots[0]?.props.style).backgroundColor).toBe(sportColour('padel'));
     expect(screen.getAllByText(COPY.members.admin)).toHaveLength(1);
     expect(screen.queryByText(/friend/i)).toBeNull();
-    expect(screen.getByText(COPY.members.footer)).toBeTruthy();
+    // A tap opens the record now, so there is no hold to explain.
+    expect(screen.queryByText(/press and hold/i)).toBeNull();
   });
 
   it('shares the filter with the group page', async () => {
@@ -946,7 +975,8 @@ describe('Members', () => {
       within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Tennis' }),
     );
 
-    expect(await screen.findByRole('header', { name: 'Play Tennis · 3' })).toBeTruthy();
+    // The title counts the new sport's list.
+    expect(await screen.findByRole('header', { name: 'Members · 3' })).toBeTruthy();
     expect(memberIds()).toEqual([ME.id, KAROL.id, MAREK.id]);
 
     fireEvent.press(screen.getByRole('button', { name: COPY.members.back }));
@@ -954,7 +984,7 @@ describe('Members', () => {
     expect(await screen.findByRole('button', { name: 'Sport: Tennis' })).toBeTruthy();
   });
 
-  it('opens the full record of anybody held', async () => {
+  it('opens the full record of anybody tapped', async () => {
     transport.on('GET', `/api/v1/players/${ZOFIA.id}/record`, () =>
       json<Wire['PlayerRecordResponse']>({
         is_self: false,
@@ -979,7 +1009,7 @@ describe('Members', () => {
     await openInfo({ members: KAZIMIERZ });
     await openMembers();
 
-    fireEvent(await screen.findByLabelText(/^Zofia Bąk,/), 'longPress');
+    fireEvent.press(await screen.findByRole('button', { name: /^Zofia Bąk,/ }));
 
     expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
     await waitFor(() =>
@@ -987,16 +1017,16 @@ describe('Members', () => {
     );
   });
 
-  it('opens your own record from your own row, by its accessibility action too', async () => {
+  it('opens your own record from your own row, a button like every other', async () => {
     stubOwnRecord(transport);
     await openInfo({ members: KAZIMIERZ });
     await openMembers();
 
-    const you = await screen.findByLabelText(/^You,/);
-    expect(you.props.accessibilityActions).toEqual([
-      { name: 'longpress', label: 'Open your record' },
-    ]);
-    fireEvent(you, 'accessibilityAction', { nativeEvent: { actionName: 'longpress' } });
+    const you = await screen.findByRole('button', { name: /^You,/ });
+    // A plain tap, which every screen reader activates — no hold, so no custom action for one.
+    expect(you.props.accessibilityActions).toBeUndefined();
+    expect(you.props.accessibilityHint).toBe('Opens your record');
+    fireEvent.press(you);
 
     expect(await screen.findByText(OWN_RECORD_TITLE)).toBeTruthy();
   });
@@ -1008,7 +1038,7 @@ describe('Members', () => {
 
     await openMembers();
 
-    expect(await screen.findByLabelText('Ewa Mazur, admin, Padel 2,60 · score 91')).toBeTruthy();
+    expect(await screen.findByLabelText('Ewa Mazur, score 91, admin, Padel 2,60')).toBeTruthy();
     expect(memberIds()).toEqual([ME.id, EWA.id, OLA.id, KUBA.id, ANIA.id, ZOFIA.id]);
     expect(screen.queryByLabelText(/^Karol Tomczak,/)).toBeNull();
   });

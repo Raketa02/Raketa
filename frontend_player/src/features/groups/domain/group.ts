@@ -37,6 +37,8 @@ export interface ClubName {
 /** **A card on the reader's Groups list** (play mock 38). The list comes newest joined first. */
 export interface MyGroup {
   readonly id: string;
+  /** An official group's card draws the official mark beside its name, as its page does. */
+  readonly kind: GroupKind;
   readonly name: string;
   readonly monogram: Monogram;
   /** The sport dots: each sport at least two members are rated in, in the registry's order. */
@@ -157,7 +159,7 @@ export interface Group {
 }
 
 /**
- * **One row of Members, for one sport** (play 61; #514) — *Padel 2,71 · score 92*. Only members
+ * **One row of Members, for one sport** (play 61; #514) — *Padel 2,71* and a score tag. Only members
  * rated in the sport are listed, so `level` is always there; `playerScore` is **absent** for
  * somebody the platform has watched nothing of — no record is not a bad one, and never `0`.
  * The **admin** tag is drawn on a player group's Owner and on an official group's Administrator who

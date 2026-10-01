@@ -2,36 +2,45 @@
  * **Members** — who in the group the reader could play the filter's sport with (play 61;
  * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 80–84).
  *
- * Pushed over a group's page from Info's members row. The header is *Members* and **the sport
+ * Pushed over a group's page from Info's members row. The header is *Members · N* and **the sport
  * pill, sharing the filter's one state** (`SportFilterPage`): a sport picked here is the page's
- * sport when the player goes back. It carries no eyebrow — the group's name and count over it
- * said nothing the page it was pushed from had not just said (#529).
+ * sport when the player goes back. **N is how many rows the list draws for the pill's sport**, so
+ * it moves when the sport does — the title reads the list's own query, one key and one request —
+ * and the title is the word alone until the list is in, or where there is no sport to list. It
+ * carries no eyebrow — the group's name and count over it said nothing the page it was pushed from
+ * had not just said (#529) — and the list no heading: the *Play Padel · N* that stood over it gave
+ * its count to the title (2026-10-01).
  *
  * **The list is the server's, in the server's order**: only members rated in the sport, the
  * reader first as *You*, then the Owner with the **admin** tag — on an official group, its
- * Administrator who joined as a player (#519) — then newest joined first — each
- * row *Padel 2,71 · score 92*, with no score for somebody the platform has watched nothing of. A
- * blocked pair is left out either way round and nothing says so. **No friend tag**: there is no
- * friends feature (PRD #500 overrides play 61 by name). *PLAY PADEL · N* counts the rows drawn.
+ * Administrator who joined as a player (#519) — then newest joined first. Each row is the name,
+ * the **score tag** (`PlayerScoreTag`: a spark and the Player Score on its band's tint) and the
+ * admin tag, over the sport's dot and *Padel 2,71*; no tag for somebody the platform has watched
+ * nothing of. A blocked pair is left out either way round and nothing says so. **No friend tag**:
+ * there is no friends feature (PRD #500 overrides play 61 by name).
  *
- * ## Press and hold, as the ticket asks
+ * ## A tap opens the record
  *
- * **Pressing and holding a row opens the existing player record sheet** for that person — your
- * own row opens your own record, retitled by the sheet's own rule — and the page ends with *Press
- * and hold anyone for the full record.* The games feature's players card refused the hold on
- * #285's argument, that a hold has no affordance and no equivalent in the accessibility API; the
- * ticket and play 61 decide the gesture here, so the row answers the second half of that argument
- * the way the photo tile does: **the hold is also the row's standard `longpress` accessibility
- * action**, named for the record it opens, which VoiceOver and TalkBack both offer, and the hint
- * says the gesture. The footer says it to everybody else. Recorded in the feature's design record.
+ * **Tapping a row opens the existing player record sheet** for that person — your own row opens
+ * your own record, retitled by the sheet's own rule. It was a press and hold, as #514 and play 61
+ * asked, with a footer to explain it; the product owner moved it to a tap (2026-10-01) as the more
+ * obvious gesture, which also answers #285's objection to the hold — no affordance and no
+ * accessibility equivalent — the way the games feature's players card does: the row is a button,
+ * every screen reader activates it, and the hint says what it opens. So the footer went with the
+ * hold, and so did the custom `longpress` action. Recorded in the feature's design record.
  */
 
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
+import { sportColour } from '@/features/onboarding/types';
+import {
+  PlayerRecordSheet,
+  PlayerScoreTag,
+  type RecordSubject,
+} from '@/features/player_record/types';
 import { codeMessage } from '@/shared/errors';
 import { Card, PlayerPhoto, ScreenHeader, Tag, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -47,8 +56,8 @@ import {
   memberLine,
   memberName,
   memberRowLabel,
-  openRecordLabel,
-  playSportCount,
+  membersTitle,
+  openRecordHint,
 } from './groupsPresentation';
 import { ROW_FACE } from './peopleRow';
 import { ReadFailure } from './ReadFailure';
@@ -64,11 +73,10 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
     <SafeAreaView style={s.screen} edges={['top']}>
       <SportFilterPage
         {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
-        header={(pill) => (
-          <ScreenHeader
-            onBack={() => router.back()}
-            backLabel={COPY.back}
-            title={COPY.title}
+        header={(pill, _cover, sport) => (
+          <MembersHeader
+            groupId={groupId}
+            sport={sport}
             right={group === undefined ? undefined : pill}
           />
         )}
@@ -98,6 +106,33 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
   );
 }
 
+interface MembersHeaderProps {
+  readonly groupId: string;
+  readonly sport: Sport | undefined;
+  readonly right: ReactNode | undefined;
+}
+
+/** *Members*, and how many the list draws for the pill's sport once there is one. */
+function MembersHeader({ groupId, sport, right }: MembersHeaderProps) {
+  return sport === undefined ? (
+    <Header title={membersTitle(undefined)} right={right} />
+  ) : (
+    <CountedHeader groupId={groupId} sport={sport} right={right} />
+  );
+}
+
+/** The list's own query, so the title and the rows under it are one read and agree. */
+function CountedHeader({ groupId, sport, right }: MembersHeaderProps & { readonly sport: Sport }) {
+  const members = useGroupMembers(groupId, sport).data;
+  return <Header title={membersTitle(members?.length)} right={right} />;
+}
+
+function Header({ title, right }: { readonly title: string; readonly right: ReactNode }) {
+  return (
+    <ScreenHeader onBack={() => router.back()} backLabel={COPY.back} title={title} right={right} />
+  );
+}
+
 function MembersList({ groupId, sport }: { readonly groupId: string; readonly sport: Sport }) {
   const read = useGroupMembers(groupId, sport);
   const readerId = useReaderId();
@@ -118,9 +153,6 @@ function MembersList({ groupId, sport }: { readonly groupId: string; readonly sp
           )
         ) : (
           <>
-            <Text accessibilityRole="header" style={s.eyebrow}>
-              {playSportCount(sport, members.length)}
-            </Text>
             {members.length > 0 ? (
               <Card style={s.card}>
                 {members.map((member, at) => {
@@ -132,7 +164,7 @@ function MembersList({ groupId, sport }: { readonly groupId: string; readonly sp
                       sport={sport}
                       you={you}
                       divided={at > 0}
-                      onHold={() =>
+                      onOpen={() =>
                         setReading({ kind: you ? 'me' : 'player', playerId: member.playerId })
                       }
                     />
@@ -140,7 +172,6 @@ function MembersList({ groupId, sport }: { readonly groupId: string; readonly sp
                 })}
               </Card>
             ) : null}
-            <Text style={s.footer}>{COPY.footer}</Text>
           </>
         )}
       </ScrollView>
@@ -164,25 +195,19 @@ interface MemberRowProps {
   readonly sport: Sport;
   readonly you: boolean;
   readonly divided: boolean;
-  readonly onHold: () => void;
+  readonly onOpen: () => void;
 }
 
-function MemberRow({ member, sport, you, divided, onHold }: MemberRowProps) {
+function MemberRow({ member, sport, you, divided, onOpen }: MemberRowProps) {
   const person = { ...member, you };
 
   return (
     <Pressable
       testID={`member-${member.playerId}`}
-      accessible
+      accessibilityRole="button"
       accessibilityLabel={memberRowLabel(sport, person)}
-      accessibilityHint={COPY.holdHint}
-      onLongPress={onHold}
-      // The standard `longpress` action, so the hold is not the only way in: VoiceOver and
-      // TalkBack both offer it, and neither can hold a row down.
-      accessibilityActions={[{ name: 'longpress', label: openRecordLabel(person) }]}
-      onAccessibilityAction={(event) => {
-        if (event.nativeEvent.actionName === 'longpress') onHold();
-      }}
+      accessibilityHint={openRecordHint(person)}
+      onPress={onOpen}
       hitSlop={theme.hit.peopleRow}
       // 6.6: the row is the target, so the row dims.
       style={({ pressed }) => [
@@ -201,11 +226,20 @@ function MemberRow({ member, sport, you, divided, onHold }: MemberRowProps) {
           <Text style={s.name} numberOfLines={1}>
             {memberName(person)}
           </Text>
+          {member.playerScore === undefined ? null : <PlayerScoreTag score={member.playerScore} />}
           {adminTagged(member) ? <Tag label={COPY.admin} /> : null}
         </View>
-        <Text style={s.line} numberOfLines={1}>
-          {memberLine(sport, member)}
-        </Text>
+        <View style={s.lineRow}>
+          <View
+            testID="member-sport-dot"
+            style={[s.dot, { backgroundColor: sportColour(sport) }]}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          />
+          <Text style={s.line} numberOfLines={1}>
+            {memberLine(sport, member)}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -218,7 +252,6 @@ const s = StyleSheet.create({
     paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
-  eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
   card: { gap: theme.space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   // 5.3: `line2` folds one card into rows.
@@ -231,7 +264,13 @@ const s = StyleSheet.create({
   words: { flex: 1, gap: theme.space.xxs },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
   name: { ...theme.type.cardTitle, color: theme.color.ink, flexShrink: 1 },
-  // Mono whole, as 7.19's fact line is: the Level and the score are figures.
-  line: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted },
-  footer: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
+  // The sport's dot, then the line — round, as every sport dot is (`SportDots`).
+  lineRow: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
+  dot: {
+    width: theme.size.sportDot,
+    height: theme.size.sportDot,
+    borderRadius: theme.radius.dot,
+  },
+  // Mono whole, as 7.19's fact line is: the Level is a figure.
+  line: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted, flexShrink: 1 },
 });

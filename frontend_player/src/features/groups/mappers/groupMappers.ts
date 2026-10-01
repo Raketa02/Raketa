@@ -46,6 +46,7 @@ function toClubName(wire: Schemas['ClubNameSchema']): ClubName {
 export function toMyGroup(wire: Schemas['MyGroupSchema']): MyGroup {
   return {
     id: wire.id,
+    kind: wire.kind,
     name: wire.name,
     monogram: toMonogram(wire.monogram),
     sports: toSports(wire.sports),

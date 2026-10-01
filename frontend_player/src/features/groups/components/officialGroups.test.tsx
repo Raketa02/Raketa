@@ -360,16 +360,15 @@ const O3_MINE: Wire['MyGroupSchema'] = {
 };
 
 describe('an official group on the Groups list', () => {
-  it('draws its declared sports as its dots', async () => {
+  it('draws its declared sports as its dots, and the official mark beside its name', async () => {
     stubMyGroups(transport, [O3_MINE]);
 
     await onPlay();
 
-    expect(
-      await screen.findByRole('button', {
-        name: 'Ogrody 33 Club, 12 members, plays Padel, Ogrody 33',
-      }),
-    ).toBeTruthy();
+    const card = await screen.findByRole('button', {
+      name: 'Ogrody 33 Club, official, 12 members, plays Padel, Ogrody 33',
+    });
+    expect(officialMarks(card)).toHaveLength(1);
   });
 });
 
@@ -444,7 +443,9 @@ describe('an official group’s header', () => {
     expect(
       screen.getByRole('header', { name: 'Ogrody 33 Club, official, 12 members · Ogrody 33' }),
     ).toBeTruthy();
-    expect(officialMarks()).toHaveLength(1);
+    // The header's mark, and the list card's under the page — a page pushed over the list leaves
+    // the list's card mounted beneath it, and that card carries the mark too.
+    expect(officialMarks()).toHaveLength(2);
   });
 
   it('is an official group’s alone', async () => {
@@ -554,6 +555,8 @@ describe('an official group’s page for a player rated in none of its sports', 
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${O3_MINE.id}/members`));
 
     expect(await screen.findByText(ADD_HEADLINE)).toBeTruthy();
+    // No sport, so no list and nothing to count: the title is the word alone.
+    expect(screen.getByRole('header', { name: COPY.members.title })).toBeTruthy();
     expect(transport.requestsTo('GET', `/api/v1/groups/${O3_MINE.id}/members`)).toHaveLength(0);
   });
 
@@ -652,7 +655,7 @@ describe('Members of an official group', () => {
     fireEvent.press(await screen.findByRole('button', { name: /^12 members, / }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${O3_MINE.id}/members`));
 
-    expect(await screen.findByLabelText('Marta Wójcik, admin, Padel 2,60 · score 91')).toBeTruthy();
+    expect(await screen.findByLabelText('Marta Wójcik, score 91, admin, Padel 2,60')).toBeTruthy();
     expect(screen.getAllByText(COPY.members.admin)).toHaveLength(1);
     expect(screen.getByLabelText('Michał Rogalski, Padel 2,44')).toBeTruthy();
   });
