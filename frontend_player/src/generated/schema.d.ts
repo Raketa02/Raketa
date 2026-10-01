@@ -1863,9 +1863,9 @@ export interface paths {
          * One player's record
          * @description Who this person is, as of the moment you opened it.
          *
-         *     **Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge or a game with, and yourself — and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.
+         *     **Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge, a game or a group with, and yourself — and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.
          *
-         *     **Nothing expires.** A search record is kept for ever, so a sheet you could open this morning opens next year — any shorter window could only refuse a face the app is currently showing.
+         *     **Nothing expires but a group.** A search record is kept for ever, so a sheet you could open this morning opens next year — any shorter window could only refuse a face the app is currently showing. A group opens it while you are both in it, because its Members lists who is in it now.
          *
          *     **The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.
          *
@@ -6671,8 +6671,9 @@ export interface components {
          *
          *     **Read through a prior disclosure and never about a person at large.** A
          *     record opens for somebody a search of yours returned, somebody you share an
-         *     open challenge or a game with, and yourself. Anybody else — and anybody a
-         *     live gate no longer admits — is `404`, in one shape that names nothing.
+         *     open challenge, a game or a group with, and yourself. Anybody else — and
+         *     anybody a live gate no longer admits — is `404`, in one shape that names
+         *     nothing.
          */
         PlayerRecordResponse: {
             /**

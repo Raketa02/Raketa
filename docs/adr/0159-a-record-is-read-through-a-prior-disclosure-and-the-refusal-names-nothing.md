@@ -441,3 +441,24 @@ stopped being a promise.
 through a prior disclosure with no expiry, `?sport=` still says what the sheet is about and
 never who may be seen, your own record still has no gates, and this context still stores
 nothing at all.
+
+## Amendment — 2026-09-30: a group they are both in is the fourth strand
+
+**Found in [#529](https://github.com/Raketa02/Raketa/issues/529) F1–F2.** A group's Members
+([#514](https://github.com/Raketa02/Raketa/issues/514)) lists every member rated in the sport and
+ends in *Press and hold anyone for the full record* — and every co-member a reader had not been
+shown by a search, a challenge or a game answered `record_unavailable`. A member who never
+searched could open nobody's record but their own.
+
+§3's anticipated fourth row is that surface: `GroupsTheyShare`, a fourth implementation of
+`PriorDisclosure` over `groups`' directory. The pair must **both be members right now** — a
+Join request that waits is not membership, and leaving ends it, because Members lists who is in
+the group now. It is the one strand that ends, and it ends by membership rather than by age:
+*nothing expires* still holds of the other three. It answers **every sport**, because Members
+lists a member in whichever sport they are rated in; the gates find the partition that admits,
+at most four evaluations, which §4's cost already bounds.
+
+**The gates are unchanged**, and that leaves one case open. A co-member the mutual gender
+preference refuses, or with no index row in any partition, still meets the one refusal while
+Members lists them — Members hides only blocks. Whether the group strand should run fewer gates
+than a search does is a product call, recorded here and not decided.

@@ -598,6 +598,7 @@ forbidden_modules =
     app.modules.challenges
     app.modules.conversations
     app.modules.games
+    app.modules.groups
     app.modules.matchmaking
     app.modules.plans
     app.modules.player_profile

@@ -111,10 +111,10 @@ class PriorDisclosure(Protocol):
     id is a player-enumeration endpoint, and a UUID being hard to guess is not an
     authorization model.
 
-    **Three implementations, one question**, which is what lets a fourth entry
-    point satisfy the same demand later without this context learning what a
-    challenge is. A search of the reader's that returned them, a challenge the
-    pair are both seated in, a game they both played.
+    **Four implementations, one question**, which is what let a fourth entry
+    point satisfy the same demand without this context learning what a group
+    is. A search of the reader's that returned them, a challenge the pair are
+    both seated in, a game they both played, a group they are both in.
 
     **The answer is sports and not booleans**, because the gates that re-run on
     every open read a candidate index row and the index is partitioned by sport.

@@ -1,6 +1,6 @@
-"""The three things that entitle a reader to a record, one adapter each.
+"""The four things that entitle a reader to a record, one adapter each.
 
-Three implementations of one port, in the **consumer's** infrastructure — the
+Four implementations of one port, in the **consumer's** infrastructure — the
 shape ``sportsmanship`` takes over ``games``' directory, and for the same reason:
 a provider publishes what it knows about its own subject, and the context that
 wants it narrower does the narrowing. *Have I been shown this person* does not
@@ -8,13 +8,14 @@ become a method on somebody else's port.
 
 **Each answers in sports and never in ids.** What the caller needs is a
 partition to re-evaluate the four fail-closed gates in, and a search id, a
-challenge id or a game id would be an identifier this answer is not about — and
-one more thing on a refusal path that is supposed to say nothing.
+challenge id, a game id or a group id would be an identifier this answer is not
+about — and one more thing on a refusal path that is supposed to say nothing.
 
-**They are three because the entitlements are three, not because the stores
-are.** A fourth surface that shows one player to another satisfies this same
-demand with a fourth row in the register, and this context never learns what it
-is.
+**They are four because the entitlements are four, not because the stores
+are.** The fourth is the one the others anticipated: a group's Members is a
+surface that shows one player to another and is not a search, so it satisfied
+this same demand with a fourth row in the register, and this context never
+learned what a group is. A fifth would do the same.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from app.kernel import Instant, Sport
 from app.modules.challenges.domain.ports import ChallengeDirectory
 from app.modules.challenges.domain.standing import ENDED
 from app.modules.games.domain.ports import GameDirectory
+from app.modules.groups.domain.ports import GroupDirectory
 from app.modules.matchmaking.domain.search_store import SearchStore
 
 
@@ -44,7 +46,7 @@ class SearchesThatShowedThem:
     every card a reading drew by the same rule it opens from a shortlist's,
     and a fourth register row over this same adapter would be the first row
     twice. The fourth *row* ADR-0159 §3 anticipated is for a surface that is
-    not a search, and there is none yet.
+    not a search, and a group's Members is the first (``GroupsTheyShare``).
     """
 
     def __init__(self, searches: SearchStore) -> None:
@@ -141,8 +143,52 @@ class GamesTheyPlayed:
         )
 
 
+@final
+class GroupsTheyShare:
+    """``PriorDisclosure`` over ``groups``' directory. **The fourth strand.**
+
+    A group's Members lists everybody in it who plays the sport — face, name,
+    Level, score — and promises *Press and hold anyone for the full record*
+    (#514). A member who never searched has been shown every one of them by the
+    group and by nothing else, so without this strand the promise was
+    ``record_unavailable`` for everybody but themselves (#529).
+
+    **Membership as it stands, never as it was.** A game does not stop having
+    happened; a group left is simply no longer one the pair are in, and Members
+    stops listing whoever left. A Join request that waits is not membership
+    either: the Owner reads the queue, and nothing there opens a record.
+    """
+
+    def __init__(self, groups: GroupDirectory) -> None:
+        self._groups = groups
+
+    async def partitions_between(
+        self, *, reader_id: UUID, subject_id: UUID, now: Instant
+    ) -> frozenset[Sport]:
+        """**Every sport**, when the pair are both in a group right now.
+
+        Members is read for any sport and lists a member in each one they are
+        rated in, so the group has shown them in every partition they have a row
+        in — and the admission loop finds that partition by running the gates,
+        where a partition with no row for them cannot be evaluated and excludes.
+        That costs at most four gate evaluations, which is the bound
+        ``RecordAdmission`` already states.
+
+        **Two reads of one player's memberships each, and never a listing.**
+        What the pair share is the intersection of the groups each is in, which
+        says nothing about who else is in them. ``now`` is ignored: the
+        projection is membership as it stands.
+        """
+
+        shared = set(await self._groups.groups_of(reader_id)) & set(
+            await self._groups.groups_of(subject_id)
+        )
+        return frozenset(Sport) if shared else frozenset()
+
+
 __all__ = [
     "ChallengesTheyShare",
     "GamesTheyPlayed",
+    "GroupsTheyShare",
     "SearchesThatShowedThem",
 ]

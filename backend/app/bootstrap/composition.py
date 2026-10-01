@@ -520,6 +520,7 @@ from app.modules.player_record.domain.ports import (
 from app.modules.player_record.infrastructure.disclosures import (
     ChallengesTheyShare,
     GamesTheyPlayed,
+    GroupsTheyShare,
     SearchesThatShowedThem,
 )
 from app.modules.player_record.infrastructure.live_record_gates import (
@@ -2372,6 +2373,17 @@ def build_game_disclosure(session: AsyncSession) -> PriorDisclosure:
     """*We were on a court together* — over ``games``' directory."""
 
     return GamesTheyPlayed(build_game_directory(session))
+
+
+def build_group_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*We are both in a group* — over ``groups``' directory.
+
+    The strand a group's Members needed: it lists every member rated in the
+    sport and opens their record on a press and hold, and a member who never
+    searched had been shown them by the group alone.
+    """
+
+    return GroupsTheyShare(build_group_directory(session))
 
 
 def build_record_gates(

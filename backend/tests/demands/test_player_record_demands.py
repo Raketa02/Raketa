@@ -33,9 +33,11 @@ import pytest_asyncio
 
 from app.bootstrap.composition import (
     build_challenge_repository,
+    build_club_repository,
     build_domain_event_store,
     build_event_publisher,
     build_game_repository,
+    build_group_repository,
     build_search_store,
     build_skill_rating_repository,
     build_sportsmanship_ledger,
@@ -60,9 +62,20 @@ from app.kernel import Instant, Sport, instant
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seats import SeatPlan, court_sides
+from app.modules.clubs.domain.club import Club
+from app.modules.clubs.domain.value_objects import (
+    City,
+    ClubDetails,
+    ClubName,
+    District,
+    MapPoint,
+    OfferedSports,
+)
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
+from app.modules.groups.domain.group import Group
+from app.modules.groups.domain.value_objects import GroupCode, GroupName, JoinPolicy
 from app.modules.matchmaking.domain.ports import AtStake
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
@@ -299,6 +312,76 @@ async def test_a_game_they_both_played_discloses_for_ever(session):
     assert await disclosure.partitions_between(
         reader_id=a, subject_id=b, now=_now()
     ) == frozenset({SPORT})
+
+
+async def _a_group(session, owner: UUID, *others: UUID, policy=JoinPolicy.ANYONE):
+    """A player group at a club, and whoever else tapped *Join* — each made
+    through its own aggregate, the club first because a group has a home club."""
+
+    now = datetime.now(timezone.utc)
+    events = build_event_publisher(session)
+    club = Club.register(
+        club_id=new_uuid(),
+        details=ClubDetails(
+            name=ClubName("Ogrody 33"),
+            district=District("Grzegórzki"),
+            city=City("Kraków"),
+            sports=OfferedSports.of({SPORT}),
+            point=MapPoint(latitude=50.06, longitude=19.95),
+        ),
+        occurred_at=now,
+    )
+    await build_club_repository(
+        session, event_store=build_domain_event_store(session), events=events
+    ).save(club)
+    group = Group.create_player_group(
+        group_id=new_uuid(),
+        name=GroupName("Czwartkowy padel"),
+        home_club_id=club.id,
+        join_policy=policy,
+        owner_id=owner,
+        code=GroupCode("k7pq2mxa"),
+        occurred_at=now,
+    )
+    for other in others:
+        group.join(other, occurred_at=now)
+    await build_group_repository(
+        session, event_store=build_domain_event_store(session), events=events
+    ).save(group)
+    await session.commit()
+
+
+async def test_a_group_they_are_both_in_discloses_every_sport_both_ways(session):
+    """Members lists a member in whichever sport they are rated in, so the group
+    has shown them in every partition — the gates find the one that admits."""
+
+    owner, member = new_uuid(), new_uuid()
+    await _a_group(session, owner, member)
+
+    disclosure = _disclosure("GroupsTheyShare", session)
+
+    for reader, subject in ((owner, member), (member, owner)):
+        assert await disclosure.partitions_between(
+            reader_id=reader, subject_id=subject, now=_now()
+        ) == frozenset(Sport)
+
+
+async def test_a_join_request_that_waits_discloses_nobody(session):
+    """Asking is not membership: the Owner reads the queue, and nothing there
+    opens a record either way round."""
+
+    owner, asking = new_uuid(), new_uuid()
+    await _a_group(session, owner, asking, policy=JoinPolicy.PEOPLE_I_APPROVE)
+
+    disclosure = _disclosure("GroupsTheyShare", session)
+
+    for reader, subject in ((owner, asking), (asking, owner)):
+        assert (
+            await disclosure.partitions_between(
+                reader_id=reader, subject_id=subject, now=_now()
+            )
+            == frozenset()
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -815,7 +898,7 @@ async def _a_confirmed_game(
 
 
 def _disclosure(name: str, session) -> PriorDisclosure:
-    """One named implementation of the three-signatory port.
+    """One named implementation of the four-signatory port.
 
     Named rather than parameterised, because these arrangements are each about
     **one** strand: a search record says nothing about a challenge, and a

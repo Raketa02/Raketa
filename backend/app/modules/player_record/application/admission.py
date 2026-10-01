@@ -3,8 +3,8 @@
 > A record is read **through a prior disclosure**, never **about** a person.
 
 Admitted on three strands and never otherwise: the reader **is** the subject; a
-search of the reader's **returned** them; or the pair **share an open challenge
-or a game**. Without a rule of that shape, a route taking a player id is a
+search of the reader's **returned** them; or the pair **share an open challenge,
+a game or a group**. Without a rule of that shape, a route taking a player id is a
 player-enumeration endpoint — a level, a photograph and an area for anybody in
 the city reachable by id — and a UUID being hard to guess is not an
 authorization model (``docs/adr/0159``).
@@ -12,7 +12,9 @@ authorization model (``docs/adr/0159``).
 **Nothing expires.** A search record is kept for ever (``docs/adr/0104``), so any
 window shorter than that could only misfire: it would refuse a face the app is
 *currently showing*, drawn from a shortlist the reader can still open. So there
-is no ``since`` on any read here and no age on any answer.
+is no ``since`` on any read here and no age on any answer. **A group is the one
+strand that ends**, and not by age: it is membership as it stands, because a
+group's Members lists who is in it now.
 
 **And the four fail-closed gates run live on every open**, because a disclosure
 made in August is not a permission to show somebody in December. The disclosure
@@ -27,8 +29,8 @@ somebody the reader demonstrably just saw. Asked in the partition the search
 actually ran in, the row is there.
 
 **What this costs, stated rather than discovered.** One read per disclosure
-source — three, in parallel with nothing, because they are three different
-questions of three different stores — and then one gate evaluation per disclosed
+source — four, in parallel with nothing, because they are four different
+questions of four different stores — and then one gate evaluation per disclosed
 partition until one admits. A gate evaluation is a profile load, three set reads
 over a single id and one index container binding, and there are at most four
 partitions because there are four sports. In the overwhelming case there is one
