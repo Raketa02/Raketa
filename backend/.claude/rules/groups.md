@@ -123,9 +123,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   gave them, or `null` — *needs an administrator*), `member_count` (the group's own
   count, an Administrator who plays included), `waiting_count`, `whatsapp_size` and
   `whatsapp_percent` (rounded half up by `WhatsAppSize.percent_arrived`, **never
-  capped**), and `games`. **`games` is read through `GroupBornGames`, whose only
-  adapter answers nought** — no group picks a game yet — so the day one can, another
-  adapter answers and the figure keeps its meaning. `PUT …/groups/{id}/administrator`
+  capped**), and `games`. **`games` is the games booked in the group** (ADR-0189 §8),
+  read through `GroupBornGames` — answered by `BookingsGroupBornGames`, **signed in
+  `proposals/infrastructure/`**, because a group's pool is filed under the group's id and
+  that is Proposals' fact: the bookings in its pool, every one counted (#542). `groups`
+  knows neither proposals nor bookings. `PUT …/groups/{id}/administrator`
   is the handover: one `administrator_assigned` event and nothing else moves — the
   link, the policy, the size, the members and **the waiting requests**, which the new
   Administrator simply finds; anything but the club's official group is

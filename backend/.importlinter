@@ -481,6 +481,7 @@ source_modules =
     app.modules.plans
     app.modules.player_record
     app.modules.player_score
+    app.modules.proposals
     app.modules.sportsmanship
 forbidden_modules =
     app.modules.conversations

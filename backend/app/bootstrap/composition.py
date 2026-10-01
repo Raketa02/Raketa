@@ -120,8 +120,11 @@ from app.modules.payments.infrastructure.event_sourced_payment_method_repository
 )
 from app.modules.payments.domain.entered_cards import A_CARD
 from app.modules.payments.infrastructure.fake_payments import FakePayments
+from app.modules.proposals.application.booking_details import ReadBookingDetails
 from app.modules.proposals.application.expire_proposals import ExpireProposals
 from app.modules.proposals.application.group_deck import ReadGroupDeck
+from app.modules.proposals.application.home import ReadHome
+from app.modules.proposals.application.proposal_details import ReadProposalDetails
 from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.making import DealVersion, MakeProposal
@@ -129,7 +132,10 @@ from app.modules.proposals.application.propose_games import ProposeGames
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
     BookedGames,
+    ClubDistances,
     GameBookings,
+    GameResults,
+    PlayerBookings,
     SeatCharges,
     UndecidedCharges,
     ClubNames as ProposalClubNames,
@@ -162,14 +168,20 @@ from app.modules.proposals.application.fill import Fill
 from app.modules.proposals.infrastructure.bookings import (
     BookingsBookedGames,
     BookingsGameBookings,
+    BookingsGroupBornGames,
+    BookingsPlayerBookings,
 )
+from app.modules.proposals.infrastructure.club_distances import ProfileClubDistances
+from app.modules.proposals.infrastructure.game_results import GamesGameResults
 from app.modules.bookings.application.book_the_game import BookTheGame, FindACourt
 from app.modules.bookings.domain.ports import (
     BookingDirectory,
     BookingRepository,
+    CheckInCodes,
     ClubCourtsAtTheHour,
     GameOpening,
 )
+from app.modules.bookings.infrastructure.check_in_codes import KeyedCheckInCodes
 from app.modules.bookings.infrastructure.club_courts import (
     BookedCourtHours,
     SellableClubCourts,
@@ -318,7 +330,6 @@ from app.modules.groups.infrastructure.clubs_official_group_sports import (
 from app.modules.groups.infrastructure.event_sourced_group_repository import (
     EventSourcedGroupRepository,
 )
-from app.modules.groups.infrastructure.no_group_born_games import NoGroupBornGames
 from app.modules.groups.infrastructure.profile_group_faces import ProfileGroupFaces
 from app.modules.groups.infrastructure.profile_reader_areas import ProfileReaderAreas
 from app.modules.groups.infrastructure.published_group_member_scores import (
@@ -1647,6 +1658,121 @@ def build_booking_directory(session: AsyncSession) -> BookingDirectory:
     return SqlAlchemyBookingDirectory(session)
 
 
+def build_check_in_codes(settings: Settings) -> CheckInCodes:
+    """Each seat's check-in code, derived under a key of its own drawn from the
+    platform's signing secret — never stored (#542)."""
+    return KeyedCheckInCodes(settings.JWT_SECRET_KEY)
+
+
+def build_player_bookings(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> PlayerBookings:
+    """A player's booked games, folded from each booking's stream, and each
+    seat's check-in code — Home's and the details' (#542)."""
+    return BookingsPlayerBookings(
+        directory=build_booking_directory(session),
+        bookings=build_booking_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        codes=build_check_in_codes(settings),
+    )
+
+
+def build_game_results(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GameResults:
+    """Where a booked game's ordinary Game stands, off its own aggregate."""
+    return GamesGameResults(
+        build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_club_distances(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ClubDistances:
+    """How far a club is from a player's Location area, printed as every
+    distance on the platform is."""
+    return ProfileClubDistances(
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        clubs=build_club_directory(session),
+    )
+
+
+def build_read_home(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadHome:
+    """Home: the reader's booked games and the ones that need them (#542)."""
+    return ReadHome(
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        results=build_game_results(session, runtime=runtime),
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        directory=build_proposal_directory(session),
+        people=build_deck_people(session, settings=settings, runtime=runtime),
+        clubs=build_proposal_club_names(session),
+        clock=clock,
+    )
+
+
+def build_read_booking_details(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadBookingDetails:
+    """A booked game's details, for a player in it (#542)."""
+    return ReadBookingDetails(
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        results=build_game_results(session, runtime=runtime),
+        people=build_deck_people(session, settings=settings, runtime=runtime),
+        clubs=build_proposal_club_names(session),
+        distances=build_club_distances(session, runtime=runtime),
+        clock=clock,
+    )
+
+
+def build_read_proposal_details(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadProposalDetails:
+    """A game still filling, for anybody dealt it (#542)."""
+    return ReadProposalDetails(
+        pools=build_pools(session),
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        fit=build_player_fit(session, runtime=runtime),
+        forecasts=build_balance_forecasts(session, runtime=runtime),
+        people=build_deck_people(session, settings=settings, runtime=runtime),
+        terms=build_club_terms(session, runtime=runtime),
+        clubs=build_proposal_club_names(session),
+        distances=build_club_distances(session, runtime=runtime),
+        clock=clock,
+    )
+
+
 def build_club_courts_at_the_hour(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> ClubCourtsAtTheHour:
@@ -1866,11 +1992,11 @@ def build_group_administrators(session: AsyncSession) -> GroupAdministrators:
     return AdministratorsGroupAdministrators(build_administrator_directory(session))
 
 
-def build_group_born_games() -> GroupBornGames:
-    """The club's *Games* figure: games born in a group, of which there are none
-    while no group picks a game (``docs/adr/0183`` §11) — so nought, and the
-    day one can, an adapter over those games is built here instead."""
-    return NoGroupBornGames()
+def build_group_born_games(session: AsyncSession) -> GroupBornGames:
+    """The club's *Games* figure: the games booked in each group
+    (``docs/adr/0183`` §11 as ``docs/adr/0189`` §8 amends it) — the bookings in
+    its pool, which is filed under the group's own id (#542)."""
+    return BookingsGroupBornGames(build_booking_directory(session))
 
 
 def build_reader_areas(
@@ -3662,7 +3788,8 @@ def build_played_court(
             session=session,
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
-        )
+        ),
+        build_game_directory(session, runtime=runtime),
     )
 
 

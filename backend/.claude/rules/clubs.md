@@ -50,10 +50,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   hold less every hour past its **book-by** — derived once, in `raketa_terms.book_by`, and
   carried on each hour — for a **live** club only, and publishes it as `SellableCourtHours`
   (`build_sellable_court_hours`), which the proposer, posting and the fill read; a paused club
-  is still live and says `taking_new_cards=False`. **Bookings do not exist yet**, so
-  `CourtBookings` is a demand with one adapter answering nothing (`NoCourtBookings`, as
-  `NoGroupBornGames` answers nought) — `court_has_bookings` and `court_booked_then` are already
-  wired to it, and API tests stand in for it by overriding `get_court_bookings`. And **the setup
+  is still live and says `taking_new_cards=False`. **What bookings hold is the Bookings
+  context's**: `CourtBookings` is answered over its projection by `BookedCourtHours`, signed in
+  `bookings/infrastructure/` (#541) — `court_has_bookings` and `court_booked_then` read it, and
+  API tests may stand in for it by overriding `get_court_bookings`. And **the setup
   checklist is read, never stored** (`domain/setup.py`): *locked* is the backend's rule, and
   **live is all five steps** — payments done only while the provider says the club's account
   is **ready** (#537), so a club Stripe stops is live no longer, and its courts leave the

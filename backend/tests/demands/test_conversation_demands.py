@@ -387,6 +387,45 @@ async def test_a_game_it_cannot_answer_about_is_absent_rather_than_empty(
     assert await court.line_ups_of((new_uuid(),)) == {}
 
 
+@pytest.mark.parametrize("implementation", registered(PlayedCourt))
+async def test_a_player_finds_the_challenge_of_every_game_they_are_on(
+    implementation, session, challenges
+):
+    """A booked game's room is filed under its booking, which nobody accepted a
+    seat on — so the game is the only way back to it (#542)."""
+
+    four = tuple(new_uuid() for _ in range(4))
+    booking = new_uuid()
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=booking,
+        sport=Sport.PADEL,
+        kind=GameKind.COUNTED,
+        window=None,
+        line_up=LineUp.of(
+            (
+                Seating(side=GameSide.A, player_id=four[0]),
+                Seating(side=GameSide.A, player_id=four[1]),
+                Seating(side=GameSide.B, player_id=four[2]),
+                Seating(side=GameSide.B, player_id=four[3]),
+            )
+        ),
+        occurred_at=_at(),
+        starts_at=_at(48),
+    )
+    repository = build_game_repository(
+        session=session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+    await repository.save(game)
+    await session.commit()
+    court: PlayedCourt = implementation.build(session)
+
+    assert await court.challenges_played_by(four[2]) == frozenset({booking})
+    assert await court.challenges_played_by(new_uuid()) == frozenset()
+
+
 # ---------------------------------------------------------------------------
 # MemberFaces — a handle and a face, and nothing else
 # ---------------------------------------------------------------------------

@@ -191,3 +191,49 @@ def test_an_acceptance_inside_the_grace_is_still_an_answer():
 
     assert asked is not None and asked.answered is True
     assert asked.closed_at == accepted_at
+
+
+# --------------------------------------------------------------------------- #
+# Whose agreement a score waits on — Home's *result to confirm* (#542)
+# --------------------------------------------------------------------------- #
+
+
+def test_a_score_waits_on_the_other_side_and_never_on_its_own():
+    game = _put(_game())
+    now = instant(PLAYED_AT + timedelta(hours=1))
+
+    assert game.awaits_agreement_from(ASKED, now=now)
+    assert not game.awaits_agreement_from(OPENER, now=now)
+
+
+def test_two_scores_on_the_table_wait_on_both_sides():
+    game = _put(_game())
+    countered_at = instant(PLAYED_AT + timedelta(hours=1))
+    game.state_result(by=ASKED, score=_score((4, 6), (3, 6)), occurred_at=countered_at)
+    now = instant(countered_at + timedelta(hours=1))
+
+    assert game.awaits_agreement_from(ASKED, now=now)
+    assert game.awaits_agreement_from(OPENER, now=now)
+
+
+def test_an_agreement_running_out_its_grace_waits_on_nobody():
+    """Settled unless somebody disagrees — a right the screen still offers,
+    never a task."""
+
+    game = _put(_game())
+    accepted_at = instant(PLAYED_AT + timedelta(hours=1))
+    game.accept_result(by=ASKED, occurred_at=accepted_at)
+    now = instant(accepted_at + timedelta(minutes=5))
+
+    assert not game.awaits_agreement_from(ASKED, now=now)
+    assert not game.awaits_agreement_from(OPENER, now=now)
+
+
+def test_nothing_waits_before_a_score_or_after_the_result_settles_or_off_the_court():
+    game = _game()
+    assert not game.awaits_agreement_from(ASKED, now=PLAYED_AT)
+
+    _put(game)
+    settled = instant(PLAYED_AT + PROPOSAL_WINDOW + timedelta(minutes=1))
+    assert not game.awaits_agreement_from(ASKED, now=settled)
+    assert not game.awaits_agreement_from(new_uuid(), now=PLAYED_AT)

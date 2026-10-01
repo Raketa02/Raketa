@@ -84,6 +84,7 @@ from app.bootstrap.composition import (
     build_member_faces,
     build_membership,
     build_nobody_is_following,
+    build_played_court,
     build_unit_of_work,
     build_user_repository,
 )
@@ -642,6 +643,7 @@ def _read_conversations(
             session=session, conversations=conversations
         ),
         arranging=arranging,
+        played=build_played_court(session),
         membership=build_membership(session, arranging=arranging),
         lifetime=build_lifetime(session, arranging=arranging),
         faces=build_member_faces(session, settings=settings),

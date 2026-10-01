@@ -2,6 +2,8 @@
 paths:
   - "app/modules/bookings/**"
   - "app/modules/proposals/application/fill.py"
+  - "app/modules/proposals/application/home.py"
+  - "app/modules/proposals/application/booking_details.py"
   - "app/modules/payments/application/seat_charges.py"
   - "app/modules/payments/domain/seat_charge.py"
 ---
@@ -86,7 +88,10 @@ mechanics §11–§12.2).
   which would ghost a game booked a fortnight ahead — and its room's end with it. **Its chat is
   opened by `GamePlanned`** (the room teller's `_note_game`): a booking's yeses are silent and open
   nothing, so the game is the opening, the room born about it and its members the game's line-up.
-  The Chats tab finds rooms through challenges, so a booked game's room is reached from its game.
+  **The details reach it as a join** (ADR-0149 §3): `GET /conversations` finds rooms through the
+  reader's games as well as their accepted challenges (#542), and the room's `game_id` is the
+  booked game's — no booking read carries a conversation id, and `proposals` is on the fence
+  that keeps every context from knowing a conversation exists.
 - **What the fill does to everybody's other yeses**: each player's other live yes at the booked
   hour is **withdrawn** (`YesWithdrawn`, as their own tap writes), and a player whose booked games
   this week reach their *games per week* has every other yes that week **paused** (`YesPaused`,
@@ -100,3 +105,16 @@ mechanics §11–§12.2).
   `MakeProposal` and filled by four `SayYes`, hers last, through the run's fake; the seed's outbox
   then captures them (the fake **adopts a hold another process made**, as it answers a card it
   never saved). `FakePayments.phone_confirms_payment` is a phone confirming a payment.
+- **Home and the details read the bookings; Proposals assembles them** (#542; the mechanics
+  §14, §15.1). `GET /home`, `GET /bookings/{id}` and `GET /proposals/{id}` are Proposals' reads
+  (`application/home.py`, `booking_details.py`, `proposal_details.py`), over `PlayerBookings` —
+  signed in `proposals/infrastructure/bookings.py`, folding each booking's stream — beside the
+  deck's people and forecasts. **A status is folded on every read** (`proposals/domain/home.py`):
+  *booked* until the hour, then the Game's result states (`GameResults`, over `games`' own
+  `standing_at`); *waiting for the club*, *seat open* and *called off by the booking* are on the
+  enum for #543–#547 to produce. **The forecast is the Game's pairing** (`GET
+  /games/{id}/pairing`) — the details only say whether it is drawn. **A check-in code is derived,
+  never stored** (`bookings/domain/check_in.py`): an HMAC of the booking and the player under a
+  key drawn from `JWT_SECRET_KEY` with its own prefix (`KeyedCheckInCodes`), six characters in
+  the typed-code alphabet plus a `RAKETA-CHECK-IN:1:<booking>:<player>:<code>` QR payload, shown
+  on the club's calendar day of the game while it stands — #547's desk recomputes it.

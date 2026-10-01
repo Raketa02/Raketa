@@ -13,7 +13,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0098](../../../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Eleven registers, and they are eleven on purpose — one per kind of claim.**
+  **Twelve registers, and they are twelve on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
@@ -59,6 +59,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   onto the outside world — the fake and Stripe — so a fake that drifts from the provider goes red.
   Its rows build over the **settings**, not a session, and one may be absent: Stripe runs only
   where a person placed a test key, and is skipped by name otherwise (ADR-0190 §1).
+  **The twelfth, `proposal_demands.py`, is Proposals' consumer register** (#542): Home's and the
+  details' three demands — a player's bookings (`bookings`), a booked game's result (`games`), a
+  club's distance (the Player profile and `clubs`). The deck's, the proposer's and the fill's
+  ports (#538–#541) were contracted over HTTP only and are owed rows there.
   **A row carries a builder, and not always over a bare session.** `challenge_demands.py`'s
   takes the two seams the platform supplies from outside a request — the process's
   candidate index and the exposure ledger behind Redis — because the pairing it contracts

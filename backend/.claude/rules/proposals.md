@@ -100,3 +100,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `MarkDueForProposing`: a joining, a player's week, intent, first rating or Games & money,
   a swipe, anything a club changes about what it sells — which is everywhere). The due set
   is process memory and best effort; the sweep is the guarantee.
+- **A game still filling has its details, for anybody dealt it** (#542; the mechanics §14.2):
+  `GET /proposals/{id}` (`application/proposal_details.py`, rules in `domain/details.py`) is the
+  deck's card as a screen for the readers the deck does not serve — a card's *i*, a You're In row,
+  a payment to confirm, a game already answered. A reader still deciding sees **their own card**,
+  exactly as the deck deals it, and is refused `proposal_not_found` where the deck withholds it
+  (somebody In they do not fit); a reader **In** sees everybody In and nobody's deciding. **A full
+  game still filling is *waiting for the club*** — only an On request club leaves one so. The
+  `actions` are what the routes would take: `YES`/`NO`, `WITHDRAW`, `LEAVE` while the club
+  decides, `CONFIRM_PAYMENT` (with `your_payment`) for a refused share, nothing once it is over or
+  the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **Home's badge counts the payments to
+  confirm** beside the cards that need the reader (`owed_by`, shared with the TO CONFIRM read).

@@ -18,7 +18,10 @@ booked (bookings), and a club's cut-off and way of working (clubs) — and,
 for the proposer (#540), where a pool may play (groups and clubs), every hour a
 club sells (clubs), and each member's Level and week (rating, the Player
 profile) — and, for the fill (#541), a court for a full game and its booking
-(bookings), and every seat's share, all or nothing (payments).
+(bookings), and every seat's share, all or nothing (payments) — and, for Home
+and the details (#542), a player's booked games and each seat's check-in code
+(bookings), where each game's result stands (games), and how far a club is from
+a player (the Player profile and clubs).
 """
 
 from __future__ import annotations
@@ -35,6 +38,7 @@ from app.kernel import Instant, Sport, invariant
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.deck import CardForecast, SellingTerms, Sides
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
+from app.modules.proposals.domain.home import BookedGame, CheckIn, GameResult
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.proposal import Proposal
 from app.modules.proposals.domain.proposer import CourtHourOnSale, PoolClubs
@@ -538,4 +542,55 @@ class UndecidedCharges(Protocol):
         """Release every charge on this game that is not taken and not one of
         ``keeping`` — only ``of_player``'s, when one is named — in the caller's
         transaction."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# Home and the details' demands (#542)
+# --------------------------------------------------------------------------- #
+
+
+@runtime_checkable
+class PlayerBookings(Protocol):
+    """**A demand of the Bookings context**: the games a player booked, as
+    their booking records them, and each seat's check-in code."""
+
+    async def of_player(self, player_id: UUID) -> Sequence[BookedGame]:
+        """Every booked game this player has a seat on, whenever it is —
+        **soonest first**, and by id among games at one hour."""
+        ...
+
+    async def find(self, booking_id: UUID) -> BookedGame | None:
+        """The booked game with this id, whoever is on it."""
+        ...
+
+    def check_in(self, booking_id: UUID, player_id: UUID) -> CheckIn:
+        """This player's code for this booking — the same on every read."""
+        ...
+
+
+@runtime_checkable
+class GameResults(Protocol):
+    """**A demand of the Games context**: where each booked game's ordinary
+    Game stands, read by one of its players."""
+
+    async def of(
+        self, game_ids: Collection[UUID], *, reader: UUID, now: Instant
+    ) -> Mapping[UUID, GameResult]:
+        """Each of these games at ``now``, as ``reader`` reads it — one
+        question about the set. A game that cannot be read is absent."""
+        ...
+
+
+@runtime_checkable
+class ClubDistances(Protocol):
+    """How far each club is from a player — the WHERE line's *3,1 km*."""
+
+    async def from_player(
+        self, player_id: UUID, club_ids: Collection[UUID]
+    ) -> Mapping[UUID, float]:
+        """Each club's distance from this player's Location area, in
+        kilometres as every distance on the platform is printed — one decimal,
+        never below a tenth. **Empty for a player with no Location area**; a
+        club that does not exist is absent."""
         ...

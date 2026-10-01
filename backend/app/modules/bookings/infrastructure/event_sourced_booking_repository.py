@@ -9,11 +9,11 @@ sells, and the game counted in the player's week, the moment the fill commits.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -141,3 +141,22 @@ class SqlAlchemyBookingDirectory:
             query = query.where(BookingORM.start < end)
         rows = await self._session.scalars(query)
         return [stored_instant(at) for at in rows.all()]
+
+    async def of_player(self, player_id: UUID) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingORM.id)
+            .join(BookingSeatORM, BookingSeatORM.booking_id == BookingORM.id)
+            .where(BookingSeatORM.player_id == player_id)
+            .order_by(BookingORM.start, BookingORM.id)
+        )
+        return list(rows.all())
+
+    async def counted_in(self, pool_ids: Collection[UUID]) -> Mapping[UUID, int]:
+        if not pool_ids:
+            return {}
+        rows = await self._session.execute(
+            select(BookingORM.pool_id, func.count(BookingORM.id))
+            .where(BookingORM.pool_id.in_(sorted(set(pool_ids))))
+            .group_by(BookingORM.pool_id)
+        )
+        return {pool_id: count for pool_id, count in rows.all()}

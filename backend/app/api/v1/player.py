@@ -72,6 +72,8 @@ from app.modules.player_record.presentation.routes import (
     router as player_record_router,
 )
 from app.modules.proposals.presentation.routes import (
+    bookings_router,
+    home_router,
     players_router as proposal_players_router,
     pools_router,
 )
@@ -125,3 +127,5 @@ player_api_router.include_router(pools_router)
 player_api_router.include_router(seat_charges_router)
 player_api_router.include_router(seat_charge_confirmation_router)
 player_api_router.include_router(receipts_router)
+player_api_router.include_router(home_router)
+player_api_router.include_router(bookings_router)

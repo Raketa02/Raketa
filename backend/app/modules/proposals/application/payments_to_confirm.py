@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import final
 from uuid import UUID
 
-from app.kernel import Clock, instant
+from app.kernel import Clock, Instant, instant
 from app.modules.proposals.domain.ports import (
     ClubNames,
     ProposalDirectory,
@@ -49,16 +49,12 @@ class ReadPaymentsToConfirm:
         self._clock = clock
 
     async def execute(self, player_id: UUID) -> tuple[PaymentToConfirm, ...]:
-        now = instant(self._clock.now())
-        owed: list[tuple[Proposal, UUID, ReopenReason]] = []
-        for proposal_id in await self._directory.reopened_for(player_id, now=now):
-            proposal = await self._proposals.load(proposal_id)
-            if proposal is None or proposal.standing_at(now) is not Standing.FILLING:
-                continue
-            reopened = proposal.reopened.get(player_id)
-            if reopened is None or reopened.payment_to_confirm is None:
-                continue
-            owed.append((proposal, reopened.payment_to_confirm, reopened.reason))
+        owed = await owed_by(
+            player_id,
+            proposals=self._proposals,
+            directory=self._directory,
+            now=instant(self._clock.now()),
+        )
         names = await self._clubs.names_of(
             {proposal.club_id for proposal, _, _ in owed}
         )
@@ -71,3 +67,26 @@ class ReadPaymentsToConfirm:
             )
             for proposal, charge_id, reason in owed
         )
+
+
+async def owed_by(
+    player_id: UUID,
+    *,
+    proposals: ProposalRepository,
+    directory: ProposalDirectory,
+    now: Instant,
+) -> list[tuple[Proposal, UUID, ReopenReason]]:
+    """Every game still filling on which this player has a payment to confirm,
+    with the charge and why it was refused — soonest first. Home counts them
+    among the games that need the player (#542)."""
+
+    owed: list[tuple[Proposal, UUID, ReopenReason]] = []
+    for proposal_id in await directory.reopened_for(player_id, now=now):
+        proposal = await proposals.load(proposal_id)
+        if proposal is None or proposal.standing_at(now) is not Standing.FILLING:
+            continue
+        reopened = proposal.reopened.get(player_id)
+        if reopened is None or reopened.payment_to_confirm is None:
+            continue
+        owed.append((proposal, reopened.payment_to_confirm, reopened.reason))
+    return owed

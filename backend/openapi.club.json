@@ -1904,7 +1904,7 @@
           "games": {
             "type": "integer",
             "title": "Games",
-            "description": "How many games **the group gave birth to** \u2014 never a game two of its members arranged elsewhere. No group picks a game yet, so `0`; the day one can, it counts them and means the same."
+            "description": "How many games **were booked in the group** \u2014 every game its deck filled into a booking at a court \u2014 never a game two of its members arranged elsewhere."
           }
         },
         "type": "object",

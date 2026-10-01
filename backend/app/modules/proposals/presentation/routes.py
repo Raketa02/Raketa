@@ -1,7 +1,8 @@
 """The player surface's proposal routes: the three answers to a card, the
 reader's live yeses (#538; the mechanics §6, §10.2; the screens A2.4, A7.3), a
 group's deck and the reader's Games & money (#539; the mechanics §6.6, §8,
-§17.1; the screens A2, A7.1).
+§17.1; the screens A2, A7.1), and Home and a game's two details — still filling,
+or booked (#542; the mechanics §14; the screens A4, A8).
 
 Mounted on the player surface (``app/api/v1/player.py``). Every route takes a
 player's token and answers for that player only.
@@ -31,21 +32,27 @@ from app.modules.proposals.application.commands import (
 )
 from app.modules.proposals.presentation.dependencies import (
     ConfirmPaymentDep,
+    ReadBookingDetailsDep,
+    ReadHomeDep,
     ReadPaymentsToConfirmDep,
     ReadGamesAndMoneyDep,
     ReadGroupDeckDep,
     ReadLiveYesesDep,
+    ReadProposalDetailsDep,
     SayNoDep,
     SayYesDep,
     SetGamesAndMoneyDep,
     WithdrawYesDep,
 )
 from app.modules.proposals.presentation.schemas import (
+    BookingDetailsResponse,
     GamesAndMoneyRequest,
     GamesAndMoneyResponse,
     GroupDeckResponse,
+    HomeResponse,
     LiveYesesResponse,
     PaymentsToConfirmResponse,
+    ProposalDetailsResponse,
     YesAnswerResponse,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
@@ -54,6 +61,8 @@ router = APIRouter(prefix="/proposals", tags=["proposals"])
 players_router = APIRouter(prefix="/players/me", tags=["proposals"])
 pools_router = APIRouter(prefix="/pools", tags=["proposals"])
 seat_charges_router = APIRouter(prefix="/seat-charges", tags=["proposals"])
+home_router = APIRouter(prefix="/home", tags=["proposals"])
+bookings_router = APIRouter(prefix="/bookings", tags=["proposals"])
 
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {
@@ -364,3 +373,93 @@ async def confirm_payment(
         ConfirmPaymentCommand(seat_charge_id=seat_charge_id, player_id=user.id)
     )
     return YesAnswerResponse.from_answer(answer)
+
+
+@router.get(
+    "/{proposal_id}",
+    response_model=ProposalDetailsResponse,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`proposal_not_found` — no such game **for this player**: it does "
+                "not exist, it was never dealt to them, they are no longer in its "
+                "group, or somebody In is somebody they may not share a court with "
+                "while they are not In — the deck withholds that card, and this is "
+                "the same card. One code for all four."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`block_state_unavailable` — whether the reader fits the people on "
+                "it could not be read. Retry."
+            ),
+        },
+    },
+    summary="A game still filling",
+    description=(
+        "The game details of a proposal, for anybody dealt it — a card's **i**, "
+        "a You're In row, a payment to confirm: who is In (the **IN** tags), the "
+        "sides and their forecast, the club and its distance **with no court "
+        "number** (one is given at booking), the share and the book-by, the "
+        "overlap grid, and **what the reader may do now** (`actions`). A reader "
+        "still deciding sees their own card as the deck deals it; a reader In "
+        "sees everybody In. Answered for a game that has ended too, with nothing "
+        "to do; a `FILLED` game's booking has the same id. Nothing is recorded."
+    ),
+)
+async def read_proposal_details(
+    proposal_id: UUID, user: CurrentUserDep, read: ReadProposalDetailsDep
+) -> ProposalDetailsResponse:
+    return ProposalDetailsResponse.from_details(
+        await read.execute(proposal_id, user.id), reader=user.id
+    )
+
+
+@home_router.get(
+    "",
+    response_model=HomeResponse,
+    summary="Home",
+    description=(
+        "**The reader's games from the moment they fill**, soonest first, each "
+        "with its status and money line, and **how many need them** — Home's "
+        "badge. The status is folded at `read_at` from the booking, its Game's "
+        "result and the clock: *Booked* until the hour, then the result states "
+        "as today's cards name them. A game a Classic play challenge opened is "
+        "not here — it is `GET /games`'. Nothing is recorded."
+    ),
+)
+async def read_home(user: CurrentUserDep, read: ReadHomeDep) -> HomeResponse:
+    return HomeResponse.from_home(await read.execute(user.id), reader=user.id)
+
+
+@bookings_router.get(
+    "/{booking_id}",
+    response_model=BookingDetailsResponse,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`booking_not_found` — no such booked game **for this player**: it "
+                "does not exist, or they have no seat on it. One code for both."
+            ),
+        },
+    },
+    summary="A booked game",
+    description=(
+        "The game details of a booked game, for a player in it: the sides with "
+        "each seat's face, Level and *paid* tag, the status, WHERE (the club, the "
+        "court and how far it is), the hour, the money line, whether the balance "
+        "forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on "
+        "the game's day, the reader's check-in code** — a QR payload and a short "
+        "code, theirs alone. **The chat is the reader's room whose `game_id` is "
+        "this game's**, in `GET /conversations`. Nothing is recorded."
+    ),
+)
+async def read_booking_details(
+    booking_id: UUID, user: CurrentUserDep, read: ReadBookingDetailsDep
+) -> BookingDetailsResponse:
+    return BookingDetailsResponse.from_details(
+        await read.execute(booking_id, user.id), reader=user.id
+    )

@@ -1,0 +1,725 @@
+"""**Home and a game's details** (#542; the mechanics §3, §14, §15.1; the screens
+A4, A8): the reader's games from the moment they fill, each with its status and
+money line and how many need them; a booked game's details with its check-in code
+on the day; a game still filling, opened by anybody dealt it; the club's *Games*
+figure; and the booked game's room, which the details reach through the reader's
+own list of rooms.
+
+Every read is taken over HTTP as the phone or the club's website takes it, and
+every game is made the way the platform makes one: proposed, answered over HTTP,
+filled by its last yes against the **fake payment provider**.
+
+The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
+**Saturday 10 October, 17:00** at Bonarka Arena, padel at 120 zł — 30 zł a
+seat — with a 24-hour cut-off, so free to leave until **Friday 17:00**. Ola lives
+in Kraków, 3,3 km south of the club.
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+from uuid import UUID, uuid4
+
+import pytest
+
+from app.api.dependencies import get_clock
+from app.modules.payments.domain.entered_cards import A_CARD_THE_BANK_ALWAYS_CHECKS
+from tests.api import matchmaking_world as world
+from tests.api.administration_world import (
+    MARTA,
+    invites,
+    marta_sets_her_password,
+    me,
+)
+from tests.api.proposals_world import (
+    MONDAY_MORNING,
+    a_club_and_its_desk,
+    a_club_selling,
+    a_group,
+    a_player,
+    makes,
+    says_no,
+    says_yes,
+    warsaw,
+)
+from tests.api.test_official_groups import an_official_group
+from tests.unit.fake_clock import MovableClock
+
+HOME = "/api/v1/home"
+CLUB_GROUPS = "/api/v1/club/groups"
+CONVERSATIONS = "/api/v1/conversations"
+#: Three kilometres south of Bonarka Arena's point.
+IN_KRAKOW = (50.03, 19.95)
+SATURDAY_FIVE_UTC = "2026-10-10T15:00:00Z"
+FRIDAY_FIVE_UTC = "2026-10-09T15:00:00Z"
+A_SCORE = {"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}}
+
+
+@pytest.fixture
+def clock(app):
+    """Monday 5 October 2026, 08:00 in Kraków."""
+
+    fixed = MovableClock(MONDAY_MORNING)
+    app.dependency_overrides[get_clock] = lambda: fixed
+    return fixed
+
+
+@pytest.fixture
+async def club(client) -> str:
+    return await a_club_selling(client)
+
+
+@pytest.fixture
+async def four(client, payments) -> list[dict]:
+    """Ola, Kuba, Ewa and Tomek: rated in padel, each with a card that pays.
+    Ola lives in Kraków."""
+
+    return [
+        await a_player(client, payments, "ola", location=IN_KRAKOW),
+        *[await a_player(client, payments, name) for name in ("kuba", "ewa", "tomek")],
+    ]
+
+
+@pytest.fixture
+async def group(client, club, four) -> UUID:
+    return await a_group(client, four[0], club, *four[1:])
+
+
+async def a_card(
+    session_factory, clock, *, club: str, group: UUID, four: list[dict], **kwargs
+) -> UUID:
+    return await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        versions=(tuple(four),),
+        **kwargs,
+    )
+
+
+async def a_booked_game(
+    client, session_factory, clock, *, club: str, group: UUID, four: list[dict], **kw
+) -> dict:
+    """The four's game, every one of them In: its booking and its Game."""
+
+    proposal = await a_card(
+        session_factory, clock, club=club, group=group, four=four, **kw
+    )
+    for player in four[:3]:
+        assert (await says_yes(client, player, proposal)).status_code == 200
+    last = await says_yes(client, four[3], proposal)
+    assert last.status_code == 200, last.text
+    booked = last.json()["booked"]
+    assert booked is not None, last.text
+    return {"booking_id": booked["booking_id"], "game_id": booked["game_id"]}
+
+
+async def home_of(client, player: dict) -> dict:
+    read = await client.get(HOME, headers=player["headers"])
+    assert read.status_code == 200, read.text
+    return read.json()
+
+
+async def details_of(client, player: dict, booking_id: str):
+    return await client.get(f"/api/v1/bookings/{booking_id}", headers=player["headers"])
+
+
+async def proposal_of(client, player: dict, proposal_id: UUID | str):
+    return await client.get(
+        f"/api/v1/proposals/{proposal_id}", headers=player["headers"]
+    )
+
+
+def names_of(tiles: list[dict]) -> list[str]:
+    return [tile["name"] for tile in tiles]
+
+
+def opponent_of(card: dict, four: list[dict]) -> dict:
+    """Somebody on the other side of the reader's card."""
+
+    theirs = card["sides"]["theirs"][0]["player_id"]
+    return next(player for player in four if str(player["id"]) == theirs)
+
+
+# --------------------------------------------------------------------------- #
+# Home
+# --------------------------------------------------------------------------- #
+
+
+async def test_home_is_empty_before_any_game_fills(
+    client, session_factory, clock, club, four, group
+):
+    await a_card(session_factory, clock, club=club, group=group, four=four)
+
+    home = await home_of(client, four[0])
+
+    assert home["games"] == []
+    assert home["needing_you"] == 0
+    assert home["read_at"] == "2026-10-05T06:00:00Z"
+
+
+async def test_every_player_finds_the_booked_game_on_home_with_its_money_line(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+
+    for player in four:
+        home = await home_of(client, player)
+        [card] = home["games"]
+        assert home["needing_you"] == 0
+        assert card["booking_id"] == booked["booking_id"]
+        assert card["game_id"] == booked["game_id"]
+        assert card["pool_id"] == str(group)
+        assert card["sport"] == "PADEL"
+        assert card["kind"] == "COMPETITIVE"
+        assert card["status"] == "BOOKED"
+        assert card["needs_you"] is False
+        assert card["starts_at"] == SATURDAY_FIVE_UTC
+        assert card["club"] == {"id": club, "name": "Bonarka Arena"}
+        assert card["court_name"] == "Court 1"
+        assert card["money"] == {
+            "share_grosze": 30_00,
+            "paid": True,
+            "free_to_leave_until": FRIDAY_FIVE_UTC,
+        }
+        yours, theirs = card["sides"]["yours"], card["sides"]["theirs"]
+        assert yours[0]["player_id"] == str(player["id"])
+        assert yours[0]["is_you"] is True
+        assert len(yours) == len(theirs) == 2
+        assert {tile["player_id"] for tile in yours + theirs} == {
+            str(one["id"]) for one in four
+        }
+        assert all(tile["paid"] for tile in yours + theirs)
+        assert sorted(names_of(yours + theirs)) == ["ewa", "kuba", "ola", "tomek"]
+
+
+async def test_from_the_cut_off_on_the_money_line_is_only_paid(
+    client, session_factory, clock, club, four, group
+):
+    await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.move(timedelta(days=4, hours=9))  # Friday 17:00
+
+    [card] = (await home_of(client, four[0]))["games"]
+
+    assert card["status"] == "BOOKED"
+    assert card["money"]["paid"] is True
+    assert card["money"]["free_to_leave_until"] is None
+
+
+async def test_from_its_hour_the_game_needs_its_result_and_the_badge_counts_it(
+    client, session_factory, clock, club, four, group
+):
+    await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.move(timedelta(days=5, hours=9))  # Saturday 17:00
+
+    home = await home_of(client, four[0])
+
+    [card] = home["games"]
+    assert card["status"] == "NEEDS_RESULT"
+    assert card["needs_you"] is True
+    assert home["needing_you"] == 1
+
+
+async def test_a_score_needs_only_the_side_whose_answer_it_waits_on(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.move(timedelta(days=5, hours=10))
+    ola = four[0]
+    [card] = (await home_of(client, ola))["games"]
+    partner = next(
+        one for one in four if str(one["id"]) == card["sides"]["yours"][1]["player_id"]
+    )
+    rival = opponent_of(card, four)
+    told = await client.post(
+        f"/api/v1/games/{booked['game_id']}/result",
+        json=A_SCORE,
+        headers=ola["headers"],
+    )
+    assert told.status_code == 200, told.text
+
+    for player, waits in ((ola, False), (partner, False), (rival, True)):
+        home = await home_of(client, player)
+        [card] = home["games"]
+        assert card["status"] == "CONFIRM_THE_RESULT"
+        assert card["needs_you"] is waits
+        assert home["needing_you"] == int(waits)
+
+
+async def test_a_score_nobody_answered_is_counted_once_its_window_closes(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.move(timedelta(days=5, hours=10))
+    await client.post(
+        f"/api/v1/games/{booked['game_id']}/result",
+        json=A_SCORE,
+        headers=four[0]["headers"],
+    )
+    clock.move(timedelta(hours=25))
+
+    [card] = (await home_of(client, four[2]))["games"]
+
+    assert card["status"] == "COUNTED"
+    assert card["needs_you"] is False
+
+
+async def test_a_game_nobody_said_happened_ends_never_played(
+    client, session_factory, clock, club, four, group
+):
+    await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    # A day after the hour's end: Sunday 18:00.
+    clock.move(timedelta(days=6, hours=10))
+
+    home = await home_of(client, four[0])
+
+    [card] = home["games"]
+    assert card["status"] == "NEVER_PLAYED"
+    assert home["needing_you"] == 0
+
+
+async def test_the_badge_counts_a_payment_to_confirm_beside_the_cards(
+    client, session_factory, clock, payments, club, four
+):
+    """A game still filling is not on Home, but a payment to confirm on one is
+    a game that needs the player (the mechanics §3)."""
+
+    tomek = await a_player(
+        client, payments, "tomek2", entered=A_CARD_THE_BANK_ALWAYS_CHECKS
+    )
+    players = [tomek, *four[:3]]
+    group = await a_group(client, four[0], club, tomek, *four[1:3])
+    proposal = await a_card(
+        session_factory, clock, club=club, group=group, four=players
+    )
+    for player in players:
+        await says_yes(client, player, proposal)
+
+    home = await home_of(client, tomek)
+
+    assert home["games"] == []
+    assert home["needing_you"] == 1
+
+
+async def test_home_lists_the_soonest_game_first(
+    client, session_factory, clock, payments, club, four, group
+):
+    saturday = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    tuesday = await a_booked_game(
+        client,
+        session_factory,
+        clock,
+        club=club,
+        group=group,
+        four=four,
+        start=warsaw(6, 19),
+    )
+
+    games = (await home_of(client, four[1]))["games"]
+
+    assert [game["booking_id"] for game in games] == [
+        tuesday["booking_id"],
+        saturday["booking_id"],
+    ]
+
+
+async def test_nobody_else_finds_the_game_on_their_home(
+    client, session_factory, clock, payments, club, four, group
+):
+    await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    stranger = await a_player(client, payments, "stranger")
+
+    assert (await home_of(client, stranger))["games"] == []
+
+
+# --------------------------------------------------------------------------- #
+# A booked game's details
+# --------------------------------------------------------------------------- #
+
+
+async def test_a_player_in_the_game_reads_its_details(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+
+    read = await details_of(client, four[0], booked["booking_id"])
+
+    assert read.status_code == 200, read.text
+    details = read.json()
+    assert details["booking_id"] == booked["booking_id"]
+    assert details["game_id"] == booked["game_id"]
+    assert details["pool_id"] == str(group)
+    assert details["sport"] == "PADEL"
+    assert details["kind"] == "COMPETITIVE"
+    assert details["status"] == "BOOKED"
+    assert details["needs_you"] is False
+    assert details["starts_at"] == SATURDAY_FIVE_UTC
+    assert details["ends_at"] == "2026-10-10T16:00:00Z"
+    assert details["where"] == {"id": club, "name": "Bonarka Arena", "distance_km": 3.3}
+    assert details["court_name"] == "Court 1"
+    assert details["money"] == {
+        "share_grosze": 30_00,
+        "paid": True,
+        "free_to_leave_until": FRIDAY_FIVE_UTC,
+    }
+    yours, theirs = details["sides"]["yours"], details["sides"]["theirs"]
+    assert yours[0]["player_id"] == str(four[0]["id"])
+    assert yours[0]["name"] == "ola"
+    assert [tile["is_you"] for tile in yours + theirs] == [True, False, False, False]
+    assert all(tile["paid"] for tile in yours + theirs)
+    assert all(tile["level"] is not None for tile in yours + theirs)
+    assert details["shows_forecast"] is True
+    # Monday: not the game's day.
+    assert details["check_in"] is None
+
+
+async def test_the_forecast_the_details_draw_is_the_game_s_own_pairing(
+    client, session_factory, clock, club, four, group
+):
+    """*Balance forecast — as built today* (the screens A4.1): the booked game is
+    an ordinary Game, and its pairing read answers while the details draw it."""
+
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    details = (await details_of(client, four[0], booked["booking_id"])).json()
+
+    pairing = await client.get(
+        f"/api/v1/games/{booked['game_id']}/pairing", headers=four[0]["headers"]
+    )
+
+    assert details["shows_forecast"] is True
+    assert pairing.status_code == 200, pairing.text
+    assert {seat["player_id"] for seat in pairing.json()["seats"]} == {
+        str(player["id"]) for player in four
+    }
+
+
+async def test_on_the_game_day_each_player_is_shown_their_own_check_in_code(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.move(timedelta(days=5))  # Saturday 08:00
+
+    codes = {}
+    for player in four:
+        details = (await details_of(client, player, booked["booking_id"])).json()
+        check_in = details["check_in"]
+        assert check_in is not None
+        assert len(check_in["short_code"]) == 6
+        assert check_in["qr_payload"].endswith(
+            f":{booked['booking_id']}:{player['id']}:{check_in['short_code']}"
+        )
+        codes[player["id"]] = check_in["short_code"]
+        again = (await details_of(client, player, booked["booking_id"])).json()
+        assert again["check_in"] == check_in
+
+    assert len(set(codes.values())) == 4
+
+
+async def test_the_check_in_code_is_gone_the_day_after(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.move(timedelta(days=6))  # Sunday 08:00
+
+    details = (await details_of(client, four[0], booked["booking_id"])).json()
+
+    assert details["status"] == "NEEDS_RESULT"
+    assert details["check_in"] is None
+
+
+async def test_the_forecast_is_not_drawn_once_a_score_is_told(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.move(timedelta(days=5, hours=10))
+    await client.post(
+        f"/api/v1/games/{booked['game_id']}/result",
+        json=A_SCORE,
+        headers=four[0]["headers"],
+    )
+
+    details = (await details_of(client, four[0], booked["booking_id"])).json()
+
+    assert details["status"] == "CONFIRM_THE_RESULT"
+    assert details["shows_forecast"] is False
+
+
+async def test_nobody_off_the_court_reads_a_booking(
+    client, session_factory, clock, payments, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    stranger = await a_player(client, payments, "stranger")
+
+    for booking_id in (booked["booking_id"], str(uuid4())):
+        refused = await details_of(client, stranger, booking_id)
+        assert refused.status_code == 404, refused.text
+        assert refused.json()["code"] == "booking_not_found"
+
+
+# --------------------------------------------------------------------------- #
+# A game still filling
+# --------------------------------------------------------------------------- #
+
+
+async def test_a_player_still_deciding_reads_their_own_card(
+    client, session_factory, clock, club, four, group
+):
+    proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
+    await says_yes(client, four[1], proposal)
+
+    read = await proposal_of(client, four[0], proposal)
+
+    assert read.status_code == 200, read.text
+    details = read.json()
+    assert details["proposal_id"] == str(proposal)
+    assert details["pool_id"] == str(group)
+    assert details["type"] == "PICKED_FOR_YOU"
+    assert details["challenger"] is None
+    assert details["status"] == "FILLING"
+    assert details["actions"] == ["YES", "NO"]
+    assert details["your_payment"] is None
+    assert details["in_count"] == 1
+    assert details["seats"] == 4
+    assert details["starts_at"] == SATURDAY_FIVE_UTC
+    assert details["where"] == {"id": club, "name": "Bonarka Arena", "distance_km": 3.3}
+    assert "court_name" not in details
+    assert details["share_grosze"] == 30_00
+    assert details["no_free_cancellation"] is False
+    assert details["club_confirms"] is False
+    tiles = details["sides"]["yours"] + details["sides"]["theirs"]
+    assert {tile["player_id"] for tile in tiles} == {str(one["id"]) for one in four}
+    assert details["sides"]["yours"][0]["is_you"] is True
+    assert [tile["name"] for tile in tiles if tile["is_in"]] == ["kuba"]
+    assert len(details["overlap"]["cells"]) == 21
+
+
+async def test_a_player_in_reads_everybody_in_and_may_withdraw(
+    client, session_factory, clock, club, four, group
+):
+    proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
+    await says_yes(client, four[1], proposal)
+    await says_yes(client, four[0], proposal)
+
+    details = (await proposal_of(client, four[0], proposal)).json()
+
+    assert details["actions"] == ["WITHDRAW"]
+    assert details["in_count"] == 2
+    tiles = details["sides"]["yours"] + details["sides"]["theirs"]
+    assert sorted(tile["name"] for tile in tiles) == ["kuba", "ola"]
+    assert all(tile["is_in"] for tile in tiles)
+
+
+async def test_a_no_is_final_and_offers_nothing_more(
+    client, session_factory, clock, club, four, group
+):
+    proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
+    await says_no(client, four[0], proposal)
+
+    details = (await proposal_of(client, four[0], proposal)).json()
+
+    assert details["status"] == "FILLING"
+    assert details["actions"] == []
+
+
+async def test_somebody_it_is_nothing_to_reads_nothing(
+    client, session_factory, clock, payments, club, four, group
+):
+    proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
+    member = await a_player(client, payments, "member")
+    joined = await client.post(
+        f"/api/v1/groups/{group}/membership", headers=member["headers"]
+    )
+    assert joined.status_code in (200, 201), joined.text
+    stranger = await a_player(client, payments, "stranger")
+
+    for reader, proposal_id in (
+        (member, proposal),
+        (stranger, proposal),
+        (four[0], uuid4()),
+    ):
+        refused = await proposal_of(client, reader, proposal_id)
+        assert refused.status_code == 404, refused.text
+        assert refused.json()["code"] == "proposal_not_found"
+
+
+async def test_a_player_who_left_the_group_reads_nothing(
+    client, session_factory, clock, club, four, group
+):
+    proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
+    left = await client.delete(
+        f"/api/v1/groups/{group}/membership", headers=four[2]["headers"]
+    )
+    assert left.status_code in (200, 204), left.text
+
+    refused = await proposal_of(client, four[2], proposal)
+
+    assert refused.status_code == 404, refused.text
+
+
+async def test_a_card_with_somebody_in_the_reader_blocked_is_not_shown_to_them(
+    client, session_factory, clock, club, four, group
+):
+    proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
+    await says_yes(client, four[1], proposal)
+    blocked = await world.block_between(client, four[0]["token"], four[1]["id"])
+    assert blocked.status_code in (200, 201, 204), blocked.text
+
+    refused = await proposal_of(client, four[0], proposal)
+
+    assert refused.status_code == 404, refused.text
+
+
+async def test_a_full_game_at_an_on_request_club_waits_and_its_players_may_leave(
+    client, session_factory, clock, four
+):
+    club, _ = await a_club_and_its_desk(client, way="ON_REQUEST")
+    group = await a_group(client, four[0], club, *four[1:])
+    proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
+    for player in four:
+        await says_yes(client, player, proposal)
+
+    details = (await proposal_of(client, four[0], proposal)).json()
+
+    assert details["status"] == "WAITING_FOR_THE_CLUB"
+    assert details["actions"] == ["LEAVE"]
+    assert details["club_confirms"] is True
+    assert details["in_count"] == 4
+
+
+async def test_a_filled_game_reads_filled_with_nothing_to_do(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+
+    details = (await proposal_of(client, four[0], booked["booking_id"])).json()
+
+    assert details["status"] == "FILLED"
+    assert details["actions"] == []
+
+
+async def test_a_refused_payment_is_confirmed_from_the_details(
+    client, session_factory, clock, payments, club, four
+):
+    tomek = await a_player(
+        client, payments, "tomek2", entered=A_CARD_THE_BANK_ALWAYS_CHECKS
+    )
+    players = [tomek, *four[:3]]
+    group = await a_group(client, four[0], club, tomek, *four[1:3])
+    proposal = await a_card(
+        session_factory, clock, club=club, group=group, four=players
+    )
+    for player in players:
+        await says_yes(client, player, proposal)
+
+    details = (await proposal_of(client, tomek, proposal)).json()
+
+    assert details["status"] == "FILLING"
+    assert details["actions"] == ["CONFIRM_PAYMENT"]
+    owed = (
+        await client.get(
+            "/api/v1/players/me/payments-to-confirm", headers=tomek["headers"]
+        )
+    ).json()["payments"]
+    assert details["your_payment"] == {
+        "seat_charge_id": owed[0]["seat_charge_id"],
+        "refusal": "AUTHENTICATION_REQUIRED",
+    }
+
+
+# --------------------------------------------------------------------------- #
+# The club's Games figure
+# --------------------------------------------------------------------------- #
+
+
+async def test_the_club_counts_the_games_booked_in_each_official_group(
+    client, session_factory, clock, mailbox, four
+):
+    club, desk = await a_club_and_its_desk(client, name="Ogrody 33")
+    row = await invites(client, desk, name="Marta Wójcik", email=MARTA)
+    marta_headers = await marta_sets_her_password(client, mailbox)
+    marta = {
+        "id": (await me(client, marta_headers))["id"],
+        "headers": marta_headers,
+        "administrator_id": row["id"],
+    }
+    official = await an_official_group(client, marta, club, join_policy="ANYONE")
+    quiet = await an_official_group(
+        client, marta, club, name="Ogrody open play", join_policy="ANYONE"
+    )
+    for player in four:
+        joined = await client.post(
+            f"/api/v1/groups/{official['id']}/membership", headers=player["headers"]
+        )
+        assert joined.status_code in (200, 201), joined.text
+    await a_booked_game(
+        client,
+        session_factory,
+        clock,
+        club=club,
+        group=UUID(official["id"]),
+        four=four,
+    )
+
+    read = await client.get(CLUB_GROUPS, headers=desk)
+
+    assert read.status_code == 200, read.text
+    games = {group["id"]: group["games"] for group in read.json()["groups"]}
+    assert games == {official["id"]: 1, quiet["id"]: 0}
+
+
+# --------------------------------------------------------------------------- #
+# The chat: a join over the reader's rooms
+# --------------------------------------------------------------------------- #
+
+
+async def test_the_booked_game_s_room_is_in_every_player_s_rooms(
+    client, session_factory, clock, payments, mailbox, club, four, group
+):
+    """The details reach the chat as Classic play's game screen does — the
+    reader's room whose ``game_id`` is the game's (``docs/adr/0149`` §3)."""
+
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    await mailbox.drain()
+
+    for player in four:
+        read = await client.get(CONVERSATIONS, headers=player["headers"])
+        assert read.status_code == 200, read.text
+        [room] = read.json()["conversations"]
+        assert room["game_id"] == booked["game_id"]
+        assert room["challenge_id"] == booked["booking_id"]
+    stranger = await a_player(client, payments, "stranger")
+    theirs = await client.get(CONVERSATIONS, headers=stranger["headers"])
+    assert theirs.json()["conversations"] == []

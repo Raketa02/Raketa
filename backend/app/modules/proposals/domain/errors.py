@@ -29,6 +29,17 @@ class ProposalNotFound(NotFoundError):
         super().__init__("no such proposal")
 
 
+class BookingNotFound(NotFoundError):
+    """No such booked game **for this player**: it does not exist, or they have
+    no seat on it. One code for both, so a booking id is not a way to learn
+    whose evening it is (#542)."""
+
+    code = "booking_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("no such booking")
+
+
 class ProposalIsOver(ConflictError):
     """The game is no longer filling — its book-by passed, its poster withdrew
     it, or the last court at its club and hour went — named by

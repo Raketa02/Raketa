@@ -564,6 +564,26 @@ class Game:
             now=now,
         )
 
+    def awaits_agreement_from(self, player_id: UUID, *, now: Instant) -> bool:
+        """Whether a score on the table waits on this player's agreement — the
+        *result to confirm* that is theirs to clear (#542; the mechanics §3).
+
+        **The other side's score is up and nobody has agreed with anything**: a
+        score of their own side's waits on the other side, and an agreement
+        running out its grace is settled unless somebody disagrees — a right
+        the screen still offers, not a task. Never true off the court, and never
+        outside ``AWAITING_ANSWER``.
+        """
+
+        side = self.line_up.side_of(player_id)
+        if (
+            side is None
+            or self.standing_at(now) is not GameStanding.AWAITING_ANSWER
+            or self.standing_acceptance() is not None
+        ):
+            return False
+        return any(proposal.side is not side for proposal in self.standing_proposals())
+
     def outcome_for(self, player_id: UUID, *, now: Instant) -> Outcome | None:
         """Win or loss for one of the people who played. **Never a draw.**
 

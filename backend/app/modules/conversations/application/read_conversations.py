@@ -57,6 +57,7 @@ from app.modules.conversations.domain.ports import (
     ConversationDirectory,
     MemberFace,
     MemberFaces,
+    PlayedCourt,
 )
 
 
@@ -104,6 +105,7 @@ class ReadConversations:
         *,
         directory: ConversationDirectory,
         arranging: ArrangingCourt,
+        played: PlayedCourt,
         membership: Membership,
         lifetime: Lifetime,
         faces: MemberFaces,
@@ -111,6 +113,7 @@ class ReadConversations:
     ) -> None:
         self._directory = directory
         self._arranging = arranging
+        self._played = played
         self._membership = membership
         self._lifetime = lifetime
         self._faces = faces
@@ -122,12 +125,15 @@ class ReadConversations:
         now = self._clock.now()
 
         # **Found through the challenges this player accepted**, which reaches
-        # every room including the ones whose line-up has completed: a game's
-        # line-up is frozen from those very seats and nothing in ``games`` can
-        # move anybody. Which record membership is then *read from* is still the
-        # two-record rule below.
+        # every room a challenge opened, including the ones whose line-up has
+        # completed — **and through the games they are on the court of**, which
+        # is the only way to a booked game's room: it is filed under the
+        # booking, and nobody accepted a seat on a booking (#541, #542). Which
+        # record membership is then *read from* is still the two-record rule
+        # below, so a candidate the reader is not a member of is dropped there.
         rooms = await self._directory.for_challenges(
             await self._arranging.accepted_by(command.reader_id)
+            | await self._played.challenges_played_by(command.reader_id)
         )
         # **Dropped before membership is asked**, exactly as ``ARoomOfYours``
         # drops one: a room with a game answers off its own stream, a room

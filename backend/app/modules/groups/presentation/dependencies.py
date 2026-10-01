@@ -144,8 +144,8 @@ GroupAdministratorsDep = Annotated[
 ]
 
 
-def get_group_born_games() -> GroupBornGames:
-    return build_group_born_games()
+def get_group_born_games(db: DbSession) -> GroupBornGames:
+    return build_group_born_games(db)
 
 
 GroupBornGamesDep = Annotated[GroupBornGames, Depends(get_group_born_games)]

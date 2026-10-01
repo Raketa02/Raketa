@@ -25,7 +25,10 @@ from app.bootstrap.composition import (
     build_proposal_club_names,
     build_proposal_directory,
     build_proposal_repository,
+    build_read_booking_details,
     build_read_group_deck,
+    build_read_home,
+    build_read_proposal_details,
     build_say_yes,
 )
 from app.modules.payments.presentation.dependencies import PaymentProviderDep
@@ -35,15 +38,18 @@ from app.modules.proposals.application.answers import (
     SayYes,
     WithdrawYes,
 )
+from app.modules.proposals.application.booking_details import ReadBookingDetails
 from app.modules.proposals.application.games_and_money import (
     ReadGamesAndMoney,
     SetGamesAndMoney,
 )
 from app.modules.proposals.application.group_deck import ReadGroupDeck
+from app.modules.proposals.application.home import ReadHome
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
 from app.modules.proposals.application.payments_to_confirm import (
     ReadPaymentsToConfirm,
 )
+from app.modules.proposals.application.proposal_details import ReadProposalDetails
 from app.modules.proposals.domain.ports import (
     BookedGames,
     ClubNames,
@@ -190,3 +196,30 @@ def get_read_group_deck(
 
 
 ReadGroupDeckDep = Annotated[ReadGroupDeck, Depends(get_read_group_deck)]
+
+
+def get_read_home(db: DbSession, settings: SettingsDep, clock: ClockDep) -> ReadHome:
+    return build_read_home(db, settings=settings, clock=clock)
+
+
+ReadHomeDep = Annotated[ReadHome, Depends(get_read_home)]
+
+
+def get_read_booking_details(
+    db: DbSession, settings: SettingsDep, clock: ClockDep
+) -> ReadBookingDetails:
+    return build_read_booking_details(db, settings=settings, clock=clock)
+
+
+ReadBookingDetailsDep = Annotated[ReadBookingDetails, Depends(get_read_booking_details)]
+
+
+def get_read_proposal_details(
+    db: DbSession, settings: SettingsDep, clock: ClockDep
+) -> ReadProposalDetails:
+    return build_read_proposal_details(db, settings=settings, clock=clock)
+
+
+ReadProposalDetailsDep = Annotated[
+    ReadProposalDetails, Depends(get_read_proposal_details)
+]

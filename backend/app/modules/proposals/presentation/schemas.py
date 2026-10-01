@@ -1,4 +1,5 @@
-"""The player surface's shapes for proposals (#538, #539).
+"""The player surface's shapes for proposals (#538, #539), and Home and the
+two details a game has — booked, or still filling (#542).
 
 **Money crosses as integer grosze**, as every price on this platform does, and
 the client renders it (``docs/value-formatting.md``). A yes answers only the
@@ -15,19 +16,30 @@ codes and values here.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Sport
+from app.kernel import Instant, Sport
 from app.modules.proposals.application.answers import YesAnswer
+from app.modules.proposals.application.booking_details import BookingDetails
 from app.modules.proposals.application.group_deck import GroupDeck
+from app.modules.proposals.application.home import Home, HomeGame
 from app.modules.proposals.application.live_yeses import LiveYeses, NamedLiveYes
 from app.modules.proposals.application.payments_to_confirm import PaymentToConfirm
-from app.modules.proposals.domain.deck import CardType, CourtState, DeckCard
+from app.modules.proposals.application.proposal_details import ProposalDetails
+from app.modules.proposals.domain.deck import (
+    GAME_LENGTH,
+    CardForecast,
+    CardType,
+    CourtState,
+    DeckCard,
+    Sides,
+)
+from app.modules.proposals.domain.details import ProposalStatus, ReaderAction
 from app.modules.proposals.domain.games_and_money import (
     GAMES_PER_WEEK,
     MOST_ILL_PAY_CHOICES_GROSZE,
@@ -38,6 +50,12 @@ from app.modules.proposals.domain.overlap import (
     Overlap,
     OverlapGrade,
     OverlapShade,
+)
+from app.modules.proposals.domain.home import (
+    BookedGame,
+    BookedMoney,
+    CheckIn,
+    HomeStatus,
 )
 from app.modules.proposals.domain.ports import DeckPerson, PaymentRefusal
 
@@ -406,30 +424,11 @@ class DeckCardSchema(BaseModel):
         people: Mapping[UUID, DeckPerson],
         club_names: Mapping[UUID, str],
     ) -> "DeckCardSchema":
-        def name_of(player_id: UUID) -> str | None:
-            person = people.get(player_id)
-            return None if person is None else person.name
-
-        def tile(player_id: UUID) -> DeckTileSchema:
-            person = people.get(player_id)
-            return DeckTileSchema(
-                player_id=player_id,
-                is_you=player_id == reader,
-                name=name_of(player_id),
-                photo_id=None if person is None else person.photo_id,
-                photo_url=None if person is None else person.photo_url,
-                level=None if person is None else person.level,
-                is_in=player_id in card.in_,
-            )
-
-        challenger = card.challenger_id
         return cls(
             proposal_id=card.proposal_id,
             type=card.type,
             kind=card.kind,
-            challenger=None
-            if challenger is None
-            else DeckChallengerSchema(player_id=challenger, name=name_of(challenger)),
+            challenger=_challenger(card.challenger_id, people),
             starts_at=card.start,
             club=DeckClubSchema(id=card.club_id, name=club_names.get(card.club_id)),
             share_grosze=card.share_grosze,
@@ -440,17 +439,54 @@ class DeckCardSchema(BaseModel):
             court=card.court,
             no_free_cancellation=card.no_free_cancellation,
             club_confirms=card.club_confirms,
-            sides=DeckSidesSchema(
-                yours=[tile(player) for player in card.sides.yours],
-                theirs=[tile(player) for player in card.sides.theirs],
-            ),
-            forecast=None
-            if card.forecast is None
-            else DeckForecastSchema(
-                pct=card.forecast.pct, provisional=card.forecast.provisional
-            ),
+            sides=_deck_sides(card.sides, reader=reader, people=people, in_=card.in_),
+            forecast=_forecast(card.forecast),
             overlap=_overlap(card.overlap),
         )
+
+
+def _deck_sides(
+    sides: Sides,
+    *,
+    reader: UUID,
+    people: Mapping[UUID, DeckPerson],
+    in_: Collection[UUID],
+) -> DeckSidesSchema:
+    """A card's two rows of tiles — the deck's and a proposal's details'."""
+
+    def tile(player_id: UUID) -> DeckTileSchema:
+        person = people.get(player_id)
+        return DeckTileSchema(
+            player_id=player_id,
+            is_you=player_id == reader,
+            name=None if person is None else person.name,
+            photo_id=None if person is None else person.photo_id,
+            photo_url=None if person is None else person.photo_url,
+            level=None if person is None else person.level,
+            is_in=player_id in in_,
+        )
+
+    return DeckSidesSchema(
+        yours=[tile(player) for player in sides.yours],
+        theirs=[tile(player) for player in sides.theirs],
+    )
+
+
+def _challenger(
+    player_id: UUID | None, people: Mapping[UUID, DeckPerson]
+) -> DeckChallengerSchema | None:
+    if player_id is None:
+        return None
+    person = people.get(player_id)
+    return DeckChallengerSchema(
+        player_id=player_id, name=None if person is None else person.name
+    )
+
+
+def _forecast(forecast: CardForecast | None) -> DeckForecastSchema | None:
+    if forecast is None:
+        return None
+    return DeckForecastSchema(pct=forecast.pct, provisional=forecast.provisional)
 
 
 def _overlap(overlap: Overlap) -> DeckOverlapSchema:
@@ -598,4 +634,460 @@ class PaymentsToConfirmResponse(BaseModel):
                 )
                 for one in owed
             ]
+        )
+
+
+# --------------------------------------------------------------------------- #
+# Home and a booked game's details (#542)
+# --------------------------------------------------------------------------- #
+
+_HOME_STATUS = (
+    "`BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour "
+    "has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is "
+    "on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and "
+    "no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. "
+    "`CALLED_OFF` — it will not be played. Two more arrive with the tickets that "
+    "produce them: `WAITING_FOR_THE_CLUB` (an On request club has not confirmed "
+    "yet, #543) and `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+)
+
+
+class BookedTileSchema(BaseModel):
+    """One seat on a booked game."""
+
+    player_id: UUID
+    is_you: bool
+    name: str | None = Field(
+        description=(
+            "Their Name, whole — the tile may cut it short, never invent a first "
+            "name. `null` for an account that can no longer be named."
+        )
+    )
+    photo_id: UUID | None
+    photo_url: str | None = Field(
+        description=(
+            "A short-lived link to their first photograph; `null` with `photo_id` "
+            "draws a poster."
+        )
+    )
+    level: float | None = Field(
+        description="Their published Level in the game's sport; `null` if unrated."
+    )
+    paid: bool = Field(description="Their share was taken — the *paid* tag.")
+
+
+class BookedSidesSchema(BaseModel):
+    """The sides the game was booked with, **the reader's first, with them first
+    on it** — *You + Piotr vs Inés + Bartek*."""
+
+    yours: list[BookedTileSchema]
+    theirs: list[BookedTileSchema]
+
+
+class BookedMoneySchema(BaseModel):
+    """The money line: *Paid · 30 zł · free to leave until Sat 17:00*."""
+
+    share_grosze: int = Field(description="Every seat's share, in grosze.")
+    paid: bool = Field(description="Every seat's share was taken.")
+    free_to_leave_until: datetime | None = Field(
+        description=(
+            "The club's cut-off while it is still ahead at `read_at` — leaving "
+            "before it is refunded. `null` from the cut-off on, and for a game "
+            "that filled after it. The line switches by itself at this instant."
+        )
+    )
+
+
+class BookedClubSchema(BaseModel):
+    id: UUID
+    name: str | None = Field(
+        description="The club's name; `null` for a club that no longer exists."
+    )
+
+
+def _tile(
+    player_id: UUID,
+    *,
+    reader: UUID,
+    sport_people: Mapping[UUID, DeckPerson],
+) -> BookedTileSchema:
+    person = sport_people.get(player_id)
+    return BookedTileSchema(
+        player_id=player_id,
+        is_you=player_id == reader,
+        name=None if person is None else person.name,
+        photo_id=None if person is None else person.photo_id,
+        photo_url=None if person is None else person.photo_url,
+        level=None if person is None else person.level,
+        paid=True,
+    )
+
+
+def _booked_sides(
+    sides: Sides,
+    *,
+    game: BookedGame,
+    reader: UUID,
+    people: Mapping[tuple[Sport, UUID], DeckPerson],
+) -> BookedSidesSchema:
+    sport_people = {
+        player: person
+        for (sport, player), person in people.items()
+        if sport is game.sport
+    }
+    return BookedSidesSchema(
+        yours=[
+            _tile(player, reader=reader, sport_people=sport_people)
+            for player in sides.yours
+        ],
+        theirs=[
+            _tile(player, reader=reader, sport_people=sport_people)
+            for player in sides.theirs
+        ],
+    )
+
+
+def _money(money: BookedMoney) -> BookedMoneySchema:
+    return BookedMoneySchema(
+        share_grosze=money.share_grosze,
+        paid=money.paid,
+        free_to_leave_until=money.free_to_leave_until,
+    )
+
+
+class HomeGameSchema(BaseModel):
+    """One card on Home: a game the reader booked."""
+
+    booking_id: UUID = Field(
+        description=(
+            "The booking — the same id the game had while it filled. "
+            "`GET /bookings/{id}` for its details."
+        )
+    )
+    game_id: UUID = Field(
+        description=(
+            "The ordinary Game it opened: the result is told and agreed on "
+            "`/games/{id}/result`, and its room in `GET /conversations` carries "
+            "this id."
+        )
+    )
+    pool_id: UUID = Field(description="The pool it filled in — a group's id.")
+    sport: Sport
+    kind: SearchMode = Field(description="Competitive, or for fun (a friendly).")
+    status: HomeStatus = Field(description=_HOME_STATUS)
+    needs_you: bool = Field(
+        description=(
+            "One of the games that need the reader: a result to enter, the other "
+            "side's score waiting on their agreement, or a seat open in their game."
+        )
+    )
+    starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
+    club: BookedClubSchema
+    court_name: str = Field(description="What the club calls the court — *Court 2*.")
+    sides: BookedSidesSchema
+    money: BookedMoneySchema
+
+    @classmethod
+    def from_card(
+        cls,
+        card: HomeGame,
+        *,
+        reader: UUID,
+        people: Mapping[tuple[Sport, UUID], DeckPerson],
+    ) -> "HomeGameSchema":
+        game = card.game
+        return cls(
+            booking_id=game.booking_id,
+            game_id=game.game_id,
+            pool_id=game.pool_id,
+            sport=game.sport,
+            kind=game.kind,
+            status=card.state.status,
+            needs_you=card.state.needs_you,
+            starts_at=game.start,
+            club=BookedClubSchema(id=game.club_id, name=card.club_name),
+            court_name=game.court_name,
+            sides=_booked_sides(
+                game.seen_by(reader), game=game, reader=reader, people=people
+            ),
+            money=_money(card.state.money),
+        )
+
+
+class HomeResponse(BaseModel):
+    """**Home**: the reader's games from the moment they fill."""
+
+    read_at: datetime = Field(
+        description=(
+            "The instant every status and money line here was folded against. "
+            "Switch a card's line at `free_to_leave_until` from this clock."
+        )
+    )
+    needing_you: int = Field(
+        description=(
+            "Home's badge — the games that need the reader: the cards with "
+            "`needs_you`, and every payment they have to confirm "
+            "(`GET /players/me/payments-to-confirm`), a game still filling whose "
+            "seat is theirs until somebody else takes it."
+        )
+    )
+    games: list[HomeGameSchema] = Field(
+        description=(
+            "Every game the reader booked, **soonest first** — the ones that are "
+            "over too; a client shelves an ended card as it chooses. A game a "
+            "Classic play challenge opened is not here."
+        )
+    )
+
+    @classmethod
+    def from_home(cls, home: Home, *, reader: UUID) -> "HomeResponse":
+        return cls(
+            read_at=home.read_at,
+            needing_you=home.needing_you,
+            games=[
+                HomeGameSchema.from_card(card, reader=reader, people=home.people)
+                for card in home.games
+            ],
+        )
+
+
+class WhereSchema(BaseModel):
+    """WHERE: the club, and how far it is from the reader."""
+
+    id: UUID
+    name: str | None = Field(
+        description="The club's name; `null` for a club that no longer exists."
+    )
+    distance_km: float | None = Field(
+        description=(
+            "From the reader's Location area to the club, one decimal, never below "
+            "a tenth — *3,1 km*. `null` for a reader with no Location area."
+        )
+    )
+
+
+class CheckInSchema(BaseModel):
+    """*Show at the desk*: the reader's own code for this game."""
+
+    short_code: str = Field(
+        description=(
+            "Six characters to type when the camera will not read — upper case, "
+            "no look-alikes."
+        )
+    )
+    qr_payload: str = Field(
+        description="What the QR code encodes: the booking, the player and the code."
+    )
+
+    @classmethod
+    def from_code(cls, code: CheckIn) -> "CheckInSchema":
+        return cls(short_code=code.short_code, qr_payload=code.qr_payload)
+
+
+class BookingDetailsResponse(BaseModel):
+    """A booked game's details, for a player in it."""
+
+    booking_id: UUID
+    game_id: UUID = Field(
+        description=(
+            "The ordinary Game it opened: its result acts, its balance forecast "
+            "(`GET /games/{id}/pairing`) and its room in `GET /conversations` are "
+            "all reached by this id."
+        )
+    )
+    pool_id: UUID
+    sport: Sport
+    kind: SearchMode
+    read_at: datetime = Field(
+        description="The instant the status and money line were folded against."
+    )
+    status: HomeStatus = Field(description=_HOME_STATUS)
+    needs_you: bool
+    starts_at: datetime
+    ends_at: datetime = Field(description="An hour after `starts_at`: TIME's *until*.")
+    where: WhereSchema
+    court_name: str = Field(description="The court the game was given — *Court 2*.")
+    sides: BookedSidesSchema
+    money: BookedMoneySchema
+    shows_forecast: bool = Field(
+        description=(
+            "Draw the balance forecast — `GET /games/{game_id}/pairing`, the card "
+            "today's game screen draws — while the full game awaits its entry. "
+            "`false` while a seat is open and once a result is told."
+        )
+    )
+    check_in: CheckInSchema | None = Field(
+        description=(
+            "On the game's day — the club's calendar day — the reader's code to "
+            "show at the desk. `null` on every other day, and for a game that "
+            "will not be played."
+        )
+    )
+
+    @classmethod
+    def from_details(
+        cls, details: BookingDetails, *, reader: UUID
+    ) -> "BookingDetailsResponse":
+        game = details.game
+        return cls(
+            booking_id=game.booking_id,
+            game_id=game.game_id,
+            pool_id=game.pool_id,
+            sport=game.sport,
+            kind=game.kind,
+            read_at=details.read_at,
+            status=details.state.status,
+            needs_you=details.state.needs_you,
+            starts_at=game.start,
+            ends_at=_an_hour_after(game.start),
+            where=WhereSchema(
+                id=game.club_id,
+                name=details.club_name,
+                distance_km=details.distance_km,
+            ),
+            court_name=game.court_name,
+            sides=_booked_sides(
+                details.sides, game=game, reader=reader, people=details.people
+            ),
+            money=_money(details.state.money),
+            shows_forecast=details.shows_forecast,
+            check_in=(
+                None
+                if details.check_in is None
+                else CheckInSchema.from_code(details.check_in)
+            ),
+        )
+
+
+def _an_hour_after(start: Instant) -> datetime:
+    return start + GAME_LENGTH
+
+
+# --------------------------------------------------------------------------- #
+# A game still filling, opened (#542)
+# --------------------------------------------------------------------------- #
+
+
+class ProposalDetailsResponse(BaseModel):
+    """A game still filling, as the reader opens it — the deck's card turned
+    into a screen."""
+
+    proposal_id: UUID
+    pool_id: UUID
+    type: CardType = Field(
+        description="`PICKED_FOR_YOU`, or `CHALLENGE` (a member's post)."
+    )
+    kind: SearchMode
+    sport: Sport
+    challenger: DeckChallengerSchema | None = Field(
+        description=(
+            "The poster of a challenge; `null` on a pick, and once its poster withdrew."
+        )
+    )
+    read_at: datetime
+    status: ProposalStatus = Field(
+        description=(
+            "`FILLING` — seats are open: *Filling · `in_count` of `seats` in*. "
+            "`WAITING_FOR_THE_CLUB` — every seat is In and an On request club has "
+            "still to say yes; nobody pays until it does. `FILLED` — booked: "
+            "`GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, "
+            "`COURT_HOUR_LOST` — it ended unfilled."
+        )
+    )
+    actions: list[ReaderAction] = Field(
+        description=(
+            "What the reader may do now, in the screen's order: `YES` and `NO` "
+            "(*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in "
+            "its place while the club decides — *Leave the game* with its sheet, "
+            "sent as the withdrawal, `DELETE /proposals/{id}/yes` — and "
+            "`CONFIRM_PAYMENT` when their seat waits on a refused payment "
+            "(`your_payment`). Empty once the game is over or their answer is "
+            "final."
+        )
+    )
+    your_payment: YourPaymentSchema | None = Field(
+        description=(
+            "The payment to confirm to take the seat back — present exactly when "
+            "`actions` holds `CONFIRM_PAYMENT`."
+        )
+    )
+    in_count: int = Field(description="People In on the whole game.")
+    seats: int = Field(description="Four in padel and badminton, two otherwise.")
+    starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
+    where: WhereSchema = Field(
+        description="The club and its distance — never a court, given at booking."
+    )
+    share_grosze: int = Field(description="*30 zł if it fills*.")
+    book_by: datetime = Field(
+        description="When the game leaves unfilled — *book by Sat 13:00*."
+    )
+    no_free_cancellation: bool = Field(
+        description="The club's cut-off has already passed for this game."
+    )
+    club_confirms: bool = Field(
+        description="An On request club: a full game waits for its yes."
+    )
+    sides: DeckSidesSchema = Field(
+        description=(
+            "Everybody drawn, the reader on their own side: for a reader still "
+            "deciding, their own card as the deck deals it; for a reader In, "
+            "everybody In — the client draws the open seats empty."
+        )
+    )
+    forecast: DeckForecastSchema | None = Field(
+        description=(
+            "How even the game drawn is forecast — `null` where it cannot be read."
+        )
+    )
+    overlap: DeckOverlapSchema
+
+    @classmethod
+    def from_details(
+        cls, details: ProposalDetails, *, reader: UUID
+    ) -> "ProposalDetailsResponse":
+        proposal = details.proposal
+        reopened = details.reopened
+        to_confirm = (
+            reopened.payment_to_confirm
+            if reopened is not None and ReaderAction.CONFIRM_PAYMENT in details.actions
+            else None
+        )
+        return cls(
+            proposal_id=proposal.proposal_id,
+            pool_id=proposal.pool.id,
+            type=details.type,
+            kind=proposal.kind,
+            sport=proposal.sport,
+            challenger=_challenger(details.challenger_id, details.people),
+            read_at=details.read_at,
+            status=details.status,
+            actions=list(details.actions),
+            your_payment=(
+                None
+                if reopened is None or to_confirm is None
+                else YourPaymentSchema(
+                    seat_charge_id=to_confirm,
+                    refusal=PaymentRefusal(reopened.reason.value),
+                )
+            ),
+            in_count=len(proposal.yeses),
+            seats=proposal.seats,
+            starts_at=proposal.start,
+            where=WhereSchema(
+                id=proposal.club_id,
+                name=details.club_name,
+                distance_km=details.distance_km,
+            ),
+            share_grosze=proposal.share_grosze,
+            book_by=proposal.book_by,
+            no_free_cancellation=details.no_free_cancellation,
+            club_confirms=details.club_confirms,
+            sides=_deck_sides(
+                details.sides,
+                reader=reader,
+                people=details.people,
+                in_=details.view.in_,
+            ),
+            forecast=_forecast(details.forecast),
+            overlap=_overlap(details.overlap),
         )

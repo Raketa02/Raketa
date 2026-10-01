@@ -159,14 +159,18 @@ async def a_player(
     entered: EnteredCard = A_CARD,
     gender: str = "WOMAN",
     gender_preference: str | None = None,
+    location: tuple[float, float] | None = None,
 ) -> dict:
     """One player, rated in ``sports`` and — unless told otherwise — with a
-    saved card. Their id and headers."""
+    saved card, living where the world's profiles live unless ``location``
+    says otherwise. Their id and headers."""
 
     player_id, token = await world.register(client, name)
     profile: dict = {"gender": gender}
     if gender_preference is not None:
         profile["gender_preference"] = gender_preference
+    if location is not None:
+        profile["location"] = {"latitude": location[0], "longitude": location[1]}
     await world.commit_profile(client, token, **profile)
     for sport in sports:
         await world.rate(client, token, sport)

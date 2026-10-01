@@ -2,8 +2,10 @@
 
 **Two ports are its own store**: the Booking repository, whose ``save`` writes
 the ``bookings`` and ``booking_seats`` projections in the caller's transaction,
-and the directory that reads them back — which court hours bookings hold, and
-which games a player has booked.
+and the directory that reads them back — which court hours bookings hold, which
+games a player has booked, and how many were booked in each pool. **A third is
+its own key**: each seat's check-in code, derived under the server's secret
+(#542).
 
 **Two are demands on contexts it does not write**: which courts a club still
 has for Raketa at an hour, and its cut-off (``clubs``, over what it sells), and
@@ -13,13 +15,14 @@ line-up opens one with).
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.bookings.domain.booking import BookedCourt, Booking
+from app.modules.bookings.domain.check_in import CheckInCode
 
 
 @runtime_checkable
@@ -59,6 +62,29 @@ class BookingDirectory(Protocol):
         """When each of this player's booked games starts, from ``start`` until
         ``end`` — for ever when ``end`` is ``None`` — soonest first."""
         ...
+
+    async def of_player(self, player_id: UUID) -> Sequence[UUID]:
+        """Every booking this player has a seat on, whenever it is — **soonest
+        game first**, and by id among games at one hour (#542)."""
+        ...
+
+    async def counted_in(self, pool_ids: Collection[UUID]) -> Mapping[UUID, int]:
+        """How many games were booked in each of these pools — one question
+        about the set. A pool absent from the answer has booked none (#542).
+
+        **Every booking counts**, because every booking today is a booked game;
+        a booking refused or called off (#543, #544, #547) is its ticket's to
+        leave out, or the club's *Games* would count a game nobody played."""
+        ...
+
+
+@runtime_checkable
+class CheckInCodes(Protocol):
+    """Each seat's check-in code (the mechanics §15.1): derived from the
+    booking and the player under **the server's own key**, never stored, so
+    the phone is shown it and the desk recomputes it."""
+
+    def code_for(self, booking_id: UUID, player_id: UUID) -> CheckInCode: ...
 
 
 @final

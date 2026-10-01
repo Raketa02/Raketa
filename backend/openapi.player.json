@@ -6835,6 +6835,75 @@
         }
       }
     },
+    "/api/v1/proposals/{proposal_id}": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "A game still filling",
+        "description": "The game details of a proposal, for anybody dealt it \u2014 a card's **i**, a You're In row, a payment to confirm: who is In (the **IN** tags), the sides and their forecast, the club and its distance **with no court number** (one is given at booking), the share and the book-by, the overlap grid, and **what the reader may do now** (`actions`). A reader still deciding sees their own card as the deck deals it; a reader In sees everybody In. Answered for a game that has ended too, with nothing to do; a `FILLED` game's booking has the same id. Nothing is recorded.",
+        "operationId": "read_proposal_details_api_v1_proposals__proposal_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalDetailsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them, they are no longer in its group, or somebody In is somebody they may not share a court with while they are not In \u2014 the deck withholds that card, and this is the same card. One code for all four.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the reader fits the people on it could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/players/me/live-yeses": {
       "get": {
         "tags": [
@@ -7229,6 +7298,92 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/home": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Home",
+        "description": "**The reader's games from the moment they fill**, soonest first, each with its status and money line, and **how many need them** \u2014 Home's badge. The status is folded at `read_at` from the booking, its Game's result and the clock: *Booked* until the hour, then the result states as today's cards name them. A game a Classic play challenge opened is not here \u2014 it is `GET /games`'. Nothing is recorded.",
+        "operationId": "read_home_api_v1_home_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bookings/{booking_id}": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "A booked game",
+        "description": "The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** \u2014 a QR payload and a short code, theirs alone. **The chat is the reader's room whose `game_id` is this game's**, in `GET /conversations`. Nothing is recorded.",
+        "operationId": "read_booking_details_api_v1_bookings__booking_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDetailsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such booked game **for this player**: it does not exist, or they have no seat on it. One code for both.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -7804,6 +7959,68 @@
         "title": "BlockSurface",
         "description": "The four surfaces of `search-telemetry.md` \u00a72, as a block records them."
       },
+      "BookedClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The club's name; `null` for a club that no longer exists."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "BookedClubSchema"
+      },
+      "BookedMoneySchema": {
+        "properties": {
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "Every seat's share, in grosze."
+          },
+          "paid": {
+            "type": "boolean",
+            "title": "Paid",
+            "description": "Every seat's share was taken."
+          },
+          "free_to_leave_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free To Leave Until",
+            "description": "The club's cut-off while it is still ahead at `read_at` \u2014 leaving before it is refunded. `null` from the cut-off on, and for a game that filled after it. The line switches by itself at this instant."
+          }
+        },
+        "type": "object",
+        "required": [
+          "share_grosze",
+          "paid",
+          "free_to_leave_until"
+        ],
+        "title": "BookedMoneySchema",
+        "description": "The money line: *Paid \u00b7 30 z\u0142 \u00b7 free to leave until Sat 17:00*."
+      },
       "BookedSchema": {
         "properties": {
           "booking_id": {
@@ -7826,6 +8043,211 @@
         ],
         "title": "BookedSchema",
         "description": "The game a yes booked \u2014 *It's a game!*"
+      },
+      "BookedSidesSchema": {
+        "properties": {
+          "yours": {
+            "items": {
+              "$ref": "#/components/schemas/BookedTileSchema"
+            },
+            "type": "array",
+            "title": "Yours"
+          },
+          "theirs": {
+            "items": {
+              "$ref": "#/components/schemas/BookedTileSchema"
+            },
+            "type": "array",
+            "title": "Theirs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "yours",
+          "theirs"
+        ],
+        "title": "BookedSidesSchema",
+        "description": "The sides the game was booked with, **the reader's first, with them first\non it** \u2014 *You + Piotr vs In\u00e9s + Bartek*."
+      },
+      "BookedTileSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "is_you": {
+            "type": "boolean",
+            "title": "Is You"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their Name, whole \u2014 the tile may cut it short, never invent a first name. `null` for an account that can no longer be named."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived link to their first photograph; `null` with `photo_id` draws a poster."
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level",
+            "description": "Their published Level in the game's sport; `null` if unrated."
+          },
+          "paid": {
+            "type": "boolean",
+            "title": "Paid",
+            "description": "Their share was taken \u2014 the *paid* tag."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "is_you",
+          "name",
+          "photo_id",
+          "photo_url",
+          "level",
+          "paid"
+        ],
+        "title": "BookedTileSchema",
+        "description": "One seat on a booked game."
+      },
+      "BookingDetailsResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The ordinary Game it opened: its result acts, its balance forecast (`GET /games/{id}/pairing`) and its room in `GET /conversations` are all reached by this id."
+          },
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At",
+            "description": "The instant the status and money line were folded against."
+          },
+          "status": {
+            "$ref": "#/components/schemas/HomeStatus",
+            "description": "`BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played. Two more arrive with the tickets that produce them: `WAITING_FOR_THE_CLUB` (an On request club has not confirmed yet, #543) and `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+          },
+          "needs_you": {
+            "type": "boolean",
+            "title": "Needs You"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At",
+            "description": "An hour after `starts_at`: TIME's *until*."
+          },
+          "where": {
+            "$ref": "#/components/schemas/WhereSchema"
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name",
+            "description": "The court the game was given \u2014 *Court 2*."
+          },
+          "sides": {
+            "$ref": "#/components/schemas/BookedSidesSchema"
+          },
+          "money": {
+            "$ref": "#/components/schemas/BookedMoneySchema"
+          },
+          "shows_forecast": {
+            "type": "boolean",
+            "title": "Shows Forecast",
+            "description": "Draw the balance forecast \u2014 `GET /games/{game_id}/pairing`, the card today's game screen draws \u2014 while the full game awaits its entry. `false` while a seat is open and once a result is told."
+          },
+          "check_in": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheckInSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "On the game's day \u2014 the club's calendar day \u2014 the reader's code to show at the desk. `null` on every other day, and for a game that will not be played."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "game_id",
+          "pool_id",
+          "sport",
+          "kind",
+          "read_at",
+          "status",
+          "needs_you",
+          "starts_at",
+          "ends_at",
+          "where",
+          "court_name",
+          "sides",
+          "money",
+          "shows_forecast",
+          "check_in"
+        ],
+        "title": "BookingDetailsResponse",
+        "description": "A booked game's details, for a player in it."
       },
       "CalledOffBySchema": {
         "properties": {
@@ -8324,6 +8746,27 @@
         ],
         "title": "ChangeSocialTagsRequest",
         "description": "The Social tags, replaced whole (``docs/adr/0179`` \u00a78).\n\nStrings rather than an enum, as the commit carries them: an id outside the\nserved vocabulary is refused by the domain with ``unknown_social_tag``, a\ncount outside the served bounds with ``social_tag_selection_out_of_bounds``,\nand the client gets a code it can act on rather than a 422."
+      },
+      "CheckInSchema": {
+        "properties": {
+          "short_code": {
+            "type": "string",
+            "title": "Short Code",
+            "description": "Six characters to type when the camera will not read \u2014 upper case, no look-alikes."
+          },
+          "qr_payload": {
+            "type": "string",
+            "title": "Qr Payload",
+            "description": "What the QR code encodes: the booking, the player and the code."
+          }
+        },
+        "type": "object",
+        "required": [
+          "short_code",
+          "qr_payload"
+        ],
+        "title": "CheckInSchema",
+        "description": "*Show at the desk*: the reader's own code for this game."
       },
       "ClaimCodeRequest": {
         "properties": {
@@ -11556,6 +11999,128 @@
         ],
         "title": "HomeClubPageResponse"
       },
+      "HomeGameSchema": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id",
+            "description": "The booking \u2014 the same id the game had while it filled. `GET /bookings/{id}` for its details."
+          },
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The ordinary Game it opened: the result is told and agreed on `/games/{id}/result`, and its room in `GET /conversations` carries this id."
+          },
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id",
+            "description": "The pool it filled in \u2014 a group's id."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Competitive, or for fun (a friendly)."
+          },
+          "status": {
+            "$ref": "#/components/schemas/HomeStatus",
+            "description": "`BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played. Two more arrive with the tickets that produce them: `WAITING_FOR_THE_CLUB` (an On request club has not confirmed yet, #543) and `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+          },
+          "needs_you": {
+            "type": "boolean",
+            "title": "Needs You",
+            "description": "One of the games that need the reader: a result to enter, the other side's score waiting on their agreement, or a seat open in their game."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start; games are 1 h."
+          },
+          "club": {
+            "$ref": "#/components/schemas/BookedClubSchema"
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name",
+            "description": "What the club calls the court \u2014 *Court 2*."
+          },
+          "sides": {
+            "$ref": "#/components/schemas/BookedSidesSchema"
+          },
+          "money": {
+            "$ref": "#/components/schemas/BookedMoneySchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "game_id",
+          "pool_id",
+          "sport",
+          "kind",
+          "status",
+          "needs_you",
+          "starts_at",
+          "club",
+          "court_name",
+          "sides",
+          "money"
+        ],
+        "title": "HomeGameSchema",
+        "description": "One card on Home: a game the reader booked."
+      },
+      "HomeResponse": {
+        "properties": {
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At",
+            "description": "The instant every status and money line here was folded against. Switch a card's line at `free_to_leave_until` from this clock."
+          },
+          "needing_you": {
+            "type": "integer",
+            "title": "Needing You",
+            "description": "Home's badge \u2014 the games that need the reader: the cards with `needs_you`, and every payment they have to confirm (`GET /players/me/payments-to-confirm`), a game still filling whose seat is theirs until somebody else takes it."
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/HomeGameSchema"
+            },
+            "type": "array",
+            "title": "Games",
+            "description": "Every game the reader booked, **soonest first** \u2014 the ones that are over too; a client shelves an ended card as it chooses. A game a Classic play challenge opened is not here."
+          }
+        },
+        "type": "object",
+        "required": [
+          "read_at",
+          "needing_you",
+          "games"
+        ],
+        "title": "HomeResponse",
+        "description": "**Home**: the reader's games from the moment they fill."
+      },
+      "HomeStatus": {
+        "type": "string",
+        "enum": [
+          "WAITING_FOR_THE_CLUB",
+          "BOOKED",
+          "SEAT_OPEN",
+          "NEEDS_RESULT",
+          "CONFIRM_THE_RESULT",
+          "COUNTED",
+          "UNCOUNTED",
+          "NEVER_PLAYED",
+          "CALLED_OFF"
+        ],
+        "title": "HomeStatus",
+        "description": "What a game on Home is, right now (the mechanics \u00a714.1)."
+      },
       "InProgressAssessmentResponse": {
         "properties": {
           "assessment_id": {
@@ -13836,6 +14401,167 @@
         "title": "PromptSchema",
         "description": "A question the app is offering to ask. **It never changes a value.**\n\nThe platform notices that you improvised a week, that you keep widening to\nthe same radius, that your searches disagree with what you declared, or that\nthe week on your profile is months old \u2014 and in every case it asks. The\npayload is the value already in play, so the sheet can show the change rather\nthan describe it."
       },
+      "ProposalDetailsResponse": {
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id"
+          },
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/CardType",
+            "description": "`PICKED_FOR_YOU`, or `CHALLENGE` (a member's post)."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "challenger": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckChallengerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The poster of a challenge; `null` on a pick, and once its poster withdrew."
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProposalStatus",
+            "description": "`FILLING` \u2014 seats are open: *Filling \u00b7 `in_count` of `seats` in*. `WAITING_FOR_THE_CLUB` \u2014 every seat is In and an On request club has still to say yes; nobody pays until it does. `FILLED` \u2014 booked: `GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, `COURT_HOUR_LOST` \u2014 it ended unfilled."
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/ReaderAction"
+            },
+            "type": "array",
+            "title": "Actions",
+            "description": "What the reader may do now, in the screen's order: `YES` and `NO` (*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in its place while the club decides \u2014 *Leave the game* with its sheet, sent as the withdrawal, `DELETE /proposals/{id}/yes` \u2014 and `CONFIRM_PAYMENT` when their seat waits on a refused payment (`your_payment`). Empty once the game is over or their answer is final."
+          },
+          "your_payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YourPaymentSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The payment to confirm to take the seat back \u2014 present exactly when `actions` holds `CONFIRM_PAYMENT`."
+          },
+          "in_count": {
+            "type": "integer",
+            "title": "In Count",
+            "description": "People In on the whole game."
+          },
+          "seats": {
+            "type": "integer",
+            "title": "Seats",
+            "description": "Four in padel and badminton, two otherwise."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start; games are 1 h."
+          },
+          "where": {
+            "$ref": "#/components/schemas/WhereSchema",
+            "description": "The club and its distance \u2014 never a court, given at booking."
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "*30 z\u0142 if it fills*."
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By",
+            "description": "When the game leaves unfilled \u2014 *book by Sat 13:00*."
+          },
+          "no_free_cancellation": {
+            "type": "boolean",
+            "title": "No Free Cancellation",
+            "description": "The club's cut-off has already passed for this game."
+          },
+          "club_confirms": {
+            "type": "boolean",
+            "title": "Club Confirms",
+            "description": "An On request club: a full game waits for its yes."
+          },
+          "sides": {
+            "$ref": "#/components/schemas/DeckSidesSchema",
+            "description": "Everybody drawn, the reader on their own side: for a reader still deciding, their own card as the deck deals it; for a reader In, everybody In \u2014 the client draws the open seats empty."
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckForecastSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How even the game drawn is forecast \u2014 `null` where it cannot be read."
+          },
+          "overlap": {
+            "$ref": "#/components/schemas/DeckOverlapSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "pool_id",
+          "type",
+          "kind",
+          "sport",
+          "challenger",
+          "read_at",
+          "status",
+          "actions",
+          "your_payment",
+          "in_count",
+          "seats",
+          "starts_at",
+          "where",
+          "share_grosze",
+          "book_by",
+          "no_free_cancellation",
+          "club_confirms",
+          "sides",
+          "forecast",
+          "overlap"
+        ],
+        "title": "ProposalDetailsResponse",
+        "description": "A game still filling, as the reader opens it \u2014 the deck's card turned\ninto a screen."
+      },
+      "ProposalStatus": {
+        "type": "string",
+        "enum": [
+          "FILLING",
+          "WAITING_FOR_THE_CLUB",
+          "FILLED",
+          "EXPIRED",
+          "WITHDRAWN",
+          "COURT_HOUR_LOST"
+        ],
+        "title": "ProposalStatus",
+        "description": "Where a proposal stands for its details (the mechanics \u00a714.2)."
+      },
       "ProposalsOptInRequest": {
         "properties": {
           "accepted": {
@@ -14080,6 +14806,18 @@
         ],
         "title": "ReadRadarRequest",
         "description": "What a reading is asked for. **The sport, and that is the whole\ncontract** (``the-radar.md`` \u00a72).\n\n**There is no `mode`**, because there is none: the radar scores every\npairing under the deck's ruler, and a mode on this body would be the field\nthe telemetry constraint refuses. **There is no radius**, because the reach\nis your own Search radius and there is no city; the slider on Find a game\nis where it moves. **There is no position**, because the server holds your\narea and puts it on a cold start. And **there is no week**: a reading ranks\nnobody, so there is nothing for a grid to rank on."
+      },
+      "ReaderAction": {
+        "type": "string",
+        "enum": [
+          "YES",
+          "NO",
+          "WITHDRAW",
+          "LEAVE",
+          "CONFIRM_PAYMENT"
+        ],
+        "title": "ReaderAction",
+        "description": "What the reader may do from the details."
       },
       "ReceiptSchema": {
         "properties": {
@@ -16324,6 +17062,47 @@
         ],
         "title": "WeeklyHoursResponse",
         "description": "The weekly hours as the profile now holds them.\n\nA body rather than a ``204`` because the value stored is not always the\nvalue sent: repeated hours are collapsed and the order is the platform's\nreading order, so a client that kept what it sent would hold a week the\nprofile does not."
+      },
+      "WhereSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The club's name; `null` for a club that no longer exists."
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km",
+            "description": "From the reader's Location area to the club, one decimal, never below a tenth \u2014 *3,1 km*. `null` for a reader with no Location area."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "distance_km"
+        ],
+        "title": "WhereSchema",
+        "description": "WHERE: the club, and how far it is from the reader."
       },
       "Window": {
         "type": "string",

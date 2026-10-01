@@ -1,0 +1,229 @@
+"""Home's statuses and money lines — the rules that need no I/O (#542; the
+mechanics §14.1–§14.2, §15.1; the screens A4.1, A8).
+
+**A booked game's status is folded on every read** from the booking, its
+ordinary Game's result and the clock — never stored. Booked until its hour; then
+the result states, unchanged from today's cards. **The money line** is the share
+every seat paid, and — while the club's cut-off is still ahead — until when it
+is free to leave. **The forecast** shows while the game awaits its entry, and
+**the check-in code** on the game's day, while the game stands.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo
+
+import pytest
+
+from app.engines.matchfit.core import SearchMode
+from app.kernel import Sport, instant
+from app.modules.proposals.domain.home import (
+    BookedGame,
+    GameResult,
+    HomeStatus,
+    ResultStage,
+    check_in_shown,
+    money_of,
+    needs_you,
+    shows_forecast,
+    status_of,
+)
+
+WARSAW = ZoneInfo("Europe/Warsaw")
+OLA, KUBA, EWA, TOMEK = (uuid4() for _ in range(4))
+
+
+def warsaw(day: int, hour: int, minute: int = 0):
+    return instant(datetime(2026, 10, day, hour, minute, tzinfo=WARSAW))
+
+
+def a_booked_game(**changes) -> BookedGame:
+    """Saturday 10 October at 17:00, 30 zł a seat, free to leave until Friday
+    17:00."""
+
+    fields = dict(
+        booking_id=uuid4(),
+        pool_id=uuid4(),
+        club_id=uuid4(),
+        court_name="Court 2",
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        start=warsaw(10, 17),
+        share_grosze=30_00,
+        first_side=(OLA, KUBA),
+        second_side=(EWA, TOMEK),
+        cut_off=warsaw(9, 17),
+        game_id=uuid4(),
+    )
+    fields.update(changes)
+    return BookedGame(**fields)
+
+
+ENTRY_OPEN = GameResult(stage=ResultStage.ENTRY_OPEN, awaits_your_agreement=False)
+
+
+# --------------------------------------------------------------------------- #
+# The status
+# --------------------------------------------------------------------------- #
+
+
+def test_a_booked_game_is_booked_until_its_hour():
+    game = a_booked_game()
+
+    assert status_of(game, ENTRY_OPEN, now=warsaw(5, 8)) is HomeStatus.BOOKED
+    assert status_of(game, ENTRY_OPEN, now=warsaw(10, 16, 59)) is HomeStatus.BOOKED
+
+
+def test_from_its_hour_a_game_nobody_said_happened_needs_its_result():
+    game = a_booked_game()
+
+    assert status_of(game, ENTRY_OPEN, now=warsaw(10, 17)) is HomeStatus.NEEDS_RESULT
+
+
+@pytest.mark.parametrize(
+    ("stage", "status"),
+    [
+        (ResultStage.SCORE_TO_ANSWER, HomeStatus.CONFIRM_THE_RESULT),
+        (ResultStage.CONFIRMED, HomeStatus.COUNTED),
+        (ResultStage.UNSCORED, HomeStatus.UNCOUNTED),
+        (ResultStage.NEVER_PLAYED, HomeStatus.NEVER_PLAYED),
+        (ResultStage.CALLED_OFF, HomeStatus.CALLED_OFF),
+    ],
+)
+def test_after_we_played_the_result_states_are_todays(stage, status):
+    game = a_booked_game()
+    result = GameResult(stage=stage, awaits_your_agreement=False)
+
+    assert status_of(game, result, now=warsaw(10, 19)) is status
+
+
+def test_a_game_whose_result_cannot_be_read_folds_on_the_clock_alone():
+    """A booking opens its Game in its own transaction, so a missing one is a
+    store that could not be read — the card stays drawn rather than dropped."""
+
+    game = a_booked_game()
+
+    assert status_of(game, None, now=warsaw(5, 8)) is HomeStatus.BOOKED
+    assert status_of(game, None, now=warsaw(10, 18)) is HomeStatus.NEEDS_RESULT
+
+
+# --------------------------------------------------------------------------- #
+# What needs the player
+# --------------------------------------------------------------------------- #
+
+
+def test_a_result_to_enter_needs_you():
+    assert needs_you(HomeStatus.NEEDS_RESULT, ENTRY_OPEN)
+
+
+def test_a_score_needs_you_only_when_it_waits_on_your_agreement():
+    theirs = GameResult(stage=ResultStage.SCORE_TO_ANSWER, awaits_your_agreement=True)
+    yours = GameResult(stage=ResultStage.SCORE_TO_ANSWER, awaits_your_agreement=False)
+
+    assert needs_you(HomeStatus.CONFIRM_THE_RESULT, theirs)
+    assert not needs_you(HomeStatus.CONFIRM_THE_RESULT, yours)
+
+
+def test_a_seat_open_in_your_game_needs_you():
+    assert needs_you(HomeStatus.SEAT_OPEN, ENTRY_OPEN)
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        HomeStatus.WAITING_FOR_THE_CLUB,
+        HomeStatus.BOOKED,
+        HomeStatus.COUNTED,
+        HomeStatus.UNCOUNTED,
+        HomeStatus.NEVER_PLAYED,
+        HomeStatus.CALLED_OFF,
+    ],
+)
+def test_nothing_else_needs_you(status):
+    assert not needs_you(status, ENTRY_OPEN)
+
+
+# --------------------------------------------------------------------------- #
+# The money line
+# --------------------------------------------------------------------------- #
+
+
+def test_before_the_cut_off_the_share_is_paid_and_free_to_leave_until_it():
+    money = money_of(a_booked_game(), now=warsaw(5, 8))
+
+    assert money.share_grosze == 30_00
+    assert money.paid
+    assert money.free_to_leave_until == warsaw(9, 17)
+
+
+def test_from_the_cut_off_on_it_is_only_paid():
+    money = money_of(a_booked_game(), now=warsaw(9, 17))
+
+    assert money.paid
+    assert money.free_to_leave_until is None
+
+
+def test_a_game_that_filled_inside_its_cut_off_was_never_free_to_leave():
+    game = a_booked_game(cut_off=warsaw(9, 17))
+
+    assert money_of(game, now=warsaw(10, 9)).free_to_leave_until is None
+
+
+# --------------------------------------------------------------------------- #
+# The forecast and the check-in code
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    ("status", "shown"),
+    [
+        (HomeStatus.BOOKED, True),
+        (HomeStatus.NEEDS_RESULT, True),
+        (HomeStatus.SEAT_OPEN, False),
+        (HomeStatus.WAITING_FOR_THE_CLUB, False),
+        (HomeStatus.CONFIRM_THE_RESULT, False),
+        (HomeStatus.COUNTED, False),
+        (HomeStatus.CALLED_OFF, False),
+    ],
+)
+def test_the_forecast_shows_while_a_full_game_awaits_its_entry(status, shown):
+    assert shows_forecast(status) is shown
+
+
+def test_the_check_in_code_shows_on_the_game_day_only():
+    start = warsaw(10, 17)
+
+    assert check_in_shown(HomeStatus.BOOKED, start=start, now=warsaw(10, 6))
+    assert check_in_shown(HomeStatus.NEEDS_RESULT, start=start, now=warsaw(10, 18))
+    assert not check_in_shown(HomeStatus.BOOKED, start=start, now=warsaw(9, 23, 59))
+    assert not check_in_shown(
+        HomeStatus.NEEDS_RESULT, start=start, now=warsaw(11, 0, 1)
+    )
+
+
+@pytest.mark.parametrize(
+    "status", [HomeStatus.WAITING_FOR_THE_CLUB, HomeStatus.CALLED_OFF]
+)
+def test_a_game_that_does_not_stand_has_no_check_in_code(status):
+    start = warsaw(10, 17)
+
+    assert not check_in_shown(status, start=start, now=warsaw(10, 9))
+
+
+def test_a_booked_game_names_its_players_side_by_side():
+    game = a_booked_game()
+
+    assert game.players == (OLA, KUBA, EWA, TOMEK)
+    assert game.has_a_seat_for(EWA)
+    assert not game.has_a_seat_for(UUID(int=7))
+
+
+def test_a_player_reads_their_own_side_first_with_themselves_first_on_it():
+    game = a_booked_game()
+
+    assert game.seen_by(KUBA).yours == (KUBA, OLA)
+    assert game.seen_by(KUBA).theirs == (EWA, TOMEK)
+    assert game.seen_by(TOMEK).yours == (TOMEK, EWA)
+    assert game.seen_by(TOMEK).theirs == (OLA, KUBA)

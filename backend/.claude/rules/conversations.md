@@ -152,5 +152,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
 - **A booked game's room is opened by its game** (#541). A booking's yeses are silent and open
   nothing, so `GamePlanned` with an hour on it opens the room (`_note_game`), filed under the
   booking's id, born about the game — its members the game's line-up, its end measured from the
-  booked hour (`GameNoted.starts_at`). The Chats tab finds rooms through challenges, so this room
-  is reached from its game's details, never from that list.
+  booked hour (`GameNoted.starts_at`). **The list finds it through the reader's games**
+  (`PlayedCourt.challenges_played_by`, #542): nobody accepted a seat on a booking, so the accepted
+  challenges never reach it, and the game details' chat door is ADR-0149 §3's join over this list
+  by `game_id`. Candidates only — membership is still the game's current line-up. With Classic
+  play on, the Chats tab lists a booked game's room too.
