@@ -16,3 +16,8 @@ paths:
   different time than you make the change.
 - `make migrate` runs `alembic upgrade head` inside the API container. With `make up`,
   migrations already run on container start.
+- **A revision id may be up to 64 characters, and only because `migrations/env.py` says so.**
+  Alembic sizes `alembic_version.version_num` at 32, and `0035_payment_customers_and_notices`
+  and `0037_a_card_can_lose_its_court_hour` are longer — Postgres refused to record them until
+  `env.py` widened the column before Alembic reads it (#541). SQLite enforces no length, so no
+  test sees a long id; prove a new migration on Postgres.

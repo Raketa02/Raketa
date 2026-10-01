@@ -4,7 +4,7 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import Connection, engine_from_config, pool, text
 
 # Make `app.*` importable whether alembic runs from the repo root or from the
 # /home/app working directory inside the container.
@@ -35,6 +35,36 @@ def _resolve_sync_url() -> str:
     return url
 
 
+#: How long a revision id may be. Alembic sizes its version column at 32
+#: characters, and two of this repository's ids are longer —
+#: ``0035_payment_customers_and_notices`` and
+#: ``0037_a_card_can_lose_its_court_hour`` — so Postgres refused to record them
+#: and ``alembic upgrade`` failed there on every database (SQLite enforces no
+#: ``VARCHAR`` length, which is why no test saw it). The column is made wide
+#: enough before Alembic reads it, rather than the ids renamed, so a database
+#: that holds either id already reads it as it is.
+_REVISION_ID_LENGTH = 64
+
+
+def _a_version_table_wide_enough(connection: Connection) -> None:
+    if connection.dialect.name != "postgresql":
+        return
+    connection.execute(
+        text(
+            "CREATE TABLE IF NOT EXISTS alembic_version ("
+            f"version_num VARCHAR({_REVISION_ID_LENGTH}) NOT NULL, "
+            "CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
+        )
+    )
+    connection.execute(
+        text(
+            "ALTER TABLE alembic_version ALTER COLUMN version_num "
+            f"TYPE VARCHAR({_REVISION_ID_LENGTH})"
+        )
+    )
+    connection.commit()
+
+
 def run_migrations_offline() -> None:
     context.configure(
         url=_resolve_sync_url(),
@@ -53,6 +83,7 @@ def run_migrations_online() -> None:
     connectable = engine_from_config(cfg, prefix="sqlalchemy.", poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
+        _a_version_table_wide_enough(connection)
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
