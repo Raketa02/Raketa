@@ -321,9 +321,10 @@ allow_indirect_imports = true
 # profile.
 #
 # It reads two *other* contexts on purpose and that is not what this fences: the
-# arrow runs `player_score -> games` and `player_score -> challenges`, the same
-# direction the matcher's own composing adapters take, and neither provider knows
-# this context exists.
+# arrow runs `player_score -> games` and `player_score -> bookings` (#544; it ran
+# to `challenges` while *answers challenges* stood), the same direction the
+# matcher's own composing adapters take, and neither provider knows this context
+# exists.
 #
 # `allow_indirect_imports = true`, for the reason its two neighbours set it: it
 # legitimately imports the Match Fit engine for `ReliabilityStrand`, which is the

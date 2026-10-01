@@ -252,12 +252,13 @@ class StrandRowSchema(BaseModel):
         ge=0,
         description=(
             "How many of those opportunities went the way the strand is named "
-            "for — a game that was played, a challenge that got an answer, a "
+            "for — a game that was played, a booked game that was kept, a "
             "score that got a reply.\n\n"
-            "**A no is a good outcome on `ANSWERS_CHALLENGES` and on "
-            "`ANSWERS_RESULTS`.** Turning somebody down inside your day *is* "
-            "answering them, and so is countering a score you believe is "
-            "wrong; what both strands price is silence."
+            "**A no is a good outcome on `ANSWERS_RESULTS`.** Countering a "
+            "score you believe is wrong *is* answering it; what the strand "
+            "prices is silence. **`KEEPS_PLANS` is broken only by leaving** a "
+            "booked game so that it is called off at its cut-off, or after the "
+            "cut-off with nobody taking the seat."
         ),
     )
     opportunities: int = Field(
@@ -265,8 +266,9 @@ class StrandRowSchema(BaseModel):
         ge=1,
         description=(
             "How many times this fell due. **An opportunity and never a "
-            "total**: a game still awaiting its entry, a seat still inside its "
-            "day and a score still inside its window are in neither half of "
+            "total**: a game still awaiting its entry, a booked game whose "
+            "hour has not come and a score still inside its window are in "
+            "neither half of "
             "this row, because publishing them either way would state a "
             "conclusion the clock has not reached.\n\n"
             "**`ANSWERS_RESULTS` counts the last twelve months and the other "

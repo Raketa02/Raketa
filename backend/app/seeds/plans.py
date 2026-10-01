@@ -657,8 +657,9 @@ def costs(seeded: SeededPlans) -> tuple[str, ...]:
         f"which is a state no other layer reaches and the only one a plan can be "
         f"written on. They count toward nothing — a game inside its entry window "
         f"is neither played nor a ghost — so no counterpart tally, no "
-        f"`counted_games` and no run of form moves because they exist. What does "
-        f"move is `answers challenges`: four more invitations were answered.",
+        f"`counted_games` and no run of form moves because they exist — and "
+        f"nor does the four invitations' answering, since *answers challenges* "
+        f"stood down (#544).",
         "the **held** arm of the four plan writes is unreachable here, and that "
         "is named rather than missed: nothing on this platform can open a case, "
         "so the hold query's only registered implementation is the null object "

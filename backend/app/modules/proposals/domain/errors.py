@@ -241,3 +241,29 @@ class RequestTimedOut(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("the time to answer this request has run out")
+
+
+# --------------------------------------------------------------------------- #
+# Leaving a booked game (#544)
+# --------------------------------------------------------------------------- #
+
+
+class GameHasStarted(ConflictError):
+    """*Leave the game* after its hour began (the mechanics §13: *after the
+    start, no button*). Nothing was recorded."""
+
+    code = "game_has_started"
+
+    def __init__(self) -> None:
+        super().__init__("this game has started; it can no longer be left")
+
+
+class BookingIsCalledOff(ConflictError):
+    """The game is off — refused, unanswered, or short at its cut-off — so
+    there is nothing to leave; everybody still in is refunded, or nobody paid.
+    Nothing was recorded."""
+
+    code = "booking_is_called_off"
+
+    def __init__(self) -> None:
+        super().__init__("this game is called off")

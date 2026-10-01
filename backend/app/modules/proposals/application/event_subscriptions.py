@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from app.application.events import EventCatalog, EventDispatcher
+from app.modules.bookings.domain.events import CalledOffAtCutOff, SeatLeft
 from app.modules.groups.domain.events import GroupDeleted, GroupLeft
 from app.modules.proposals.application.handlers import (
     LogGamesAndMoneySet,
     LogProposalEvent,
     MarkDueForProposing,
+    ResumeYesesOnAFreedWeek,
     WithdrawYesesOnLeaving,
 )
 from app.modules.proposals.application.handlers.mark_due_for_proposing import (
@@ -16,6 +18,7 @@ from app.modules.proposals.application.handlers.mark_due_for_proposing import (
 )
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.propose_games import DueForProposing
+from app.modules.proposals.application.resume_paused_yeses import ResumePausedYeses
 from app.modules.proposals.domain.events import (
     CourtHourLost,
     GamesAndMoneySet,
@@ -29,6 +32,7 @@ from app.modules.proposals.domain.events import (
     TurnedDown,
     VersionDealt,
     YesPaused,
+    YesResumed,
     YesSaid,
     YesWithdrawn,
 )
@@ -46,6 +50,7 @@ _EVENTS = (
     (ProposalFilled, "proposals.proposal_filled"),
     (SeatReopened, "proposals.seat_reopened"),
     (YesPaused, "proposals.yes_paused"),
+    (YesResumed, "proposals.yes_resumed"),
     (TurnedDown, "proposals.turned_down"),
     (Redealt, "proposals.redealt"),
 )
@@ -69,6 +74,7 @@ def subscribe_proposal_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(ProposalFilled, LogProposalEvent())
     dispatcher.subscribe(SeatReopened, LogProposalEvent())
     dispatcher.subscribe(YesPaused, LogProposalEvent())
+    dispatcher.subscribe(YesResumed, LogProposalEvent())
     dispatcher.subscribe(TurnedDown, LogProposalEvent())
     dispatcher.subscribe(Redealt, LogProposalEvent())
 
@@ -83,6 +89,19 @@ def subscribe_the_pool_leaver(
     leaver = WithdrawYesesOnLeaving(withdraw)
     dispatcher.subscribe(GroupLeft, leaver)
     dispatcher.subscribe(GroupDeleted, leaver)
+
+
+def subscribe_the_week_resumer(
+    dispatcher: EventDispatcher, resume: ResumePausedYeses
+) -> None:
+    """The subscriber that brings back the yeses a full week paused when a
+    booked game stops being a player's (#544). It **writes** — and may fill a
+    game, charging its seats over the run's provider — so it is added per
+    delivery run over that run's session and provider."""
+
+    resumer = ResumeYesesOnAFreedWeek(resume)
+    dispatcher.subscribe(SeatLeft, resumer)
+    dispatcher.subscribe(CalledOffAtCutOff, resumer)
 
 
 def subscribe_the_proposer_on_changes(

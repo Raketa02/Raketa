@@ -137,7 +137,11 @@ _STATING_REFUSALS: dict[int | str, dict[str, Any]] = {
             "let the window close.\n\n"
             "`the_game_was_called_off` — somebody ended it while a seat was "
             "open, so there is nothing to have played. The ending is on "
-            "`standing` and `called_off_at`."
+            "`standing` and `called_off_at`.\n\n"
+            "`the_game_started_short` — a booked game whose hour came with a "
+            "seat open: somebody left after the club's cut-off and nobody took "
+            "the seat. It ends uncounted (`standing` `STARTED_SHORT`), and "
+            "nothing about it can be recorded."
         ),
     },
 }

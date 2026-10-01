@@ -143,7 +143,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   hour — the plan's agreed point, or the horizon's end where no day was agreed — or already
   history. **Correctness depends on that loop**: the challenge's fold cannot read a plan, so
   a court past its hour reads *needs a player* until it runs. A ghosted court is called off
-  the same way and `CallOffGame` steps over that one end and no other. **The card's
+  the same way and `CallOffGame` steps over that end — and, since #544, a booked game's
+  *started short* — and no other. **The card's
   dismissal is the reader's own act on `games`** (ADR-0172 §5): `POST /games/{id}/dismissal`
   answers `204`, admitted on a `CALLED_OFF` game for somebody on its court and refused with
   `game_is_not_called_off` on every other standing; `GameDismissed` is recorded once per
@@ -221,3 +222,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   from that hour's end plus `ENTRY_GRACE` rather than `planned_at + PLAN_HORIZON`, because a
   booking a fortnight ahead would otherwise ghost before it was played; every other rule here
   is unchanged. *We played* is not yet refused before the hour (#544, #547).
+- **A booked game whose hour comes with a seat open has *started short*** (#544; the
+  mechanics §14.1, §19). `GameStanding.STARTED_SHORT` — the seventh standing, and the fourth
+  end the record and the clock reach — is folded from `starts_at` (only a booked game has
+  one) and a line-up with a seat open at `now >= starts_at`, asked right after a call-off and
+  before the entry window. It is in `SETTLED` and **in no tally** (not `PLAYED`, never a
+  ghost): the history walk answers `None` for it, so *shows up*, the pairwise read and
+  variety leave it out and nothing goes on the record of the players who stayed. A result is
+  refused `the_game_started_short`; a seat can no longer move; and `CallOffGame` **steps over
+  it** as it steps over a ghost, since a booking's cut-off call-off can arrive after the hour.
+  Bookings vacate and call off a booked game through games' own `VacateSeat` and
+  `CallOffGame` (`bookings/infrastructure/games_opening.py`), the booking's id where a
+  challenge's is.

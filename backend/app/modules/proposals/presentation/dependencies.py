@@ -23,6 +23,7 @@ from app.bootstrap.composition import (
     build_booked_games,
     build_confirm_payment,
     build_games_and_money_repository,
+    build_leave_the_game,
     build_proposal_club_names,
     build_proposal_directory,
     build_proposal_repository,
@@ -54,6 +55,7 @@ from app.modules.proposals.application.games_and_money import (
 )
 from app.modules.proposals.application.group_deck import ReadGroupDeck
 from app.modules.proposals.application.home import ReadHome
+from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
 from app.modules.proposals.application.payments_to_confirm import (
     ReadPaymentsToConfirm,
@@ -223,6 +225,17 @@ def get_read_booking_details(
 
 
 ReadBookingDetailsDep = Annotated[ReadBookingDetails, Depends(get_read_booking_details)]
+
+
+def get_leave_the_game(
+    db: DbSession, settings: SettingsDep, clock: ClockDep
+) -> LeaveTheGame:
+    """*Leave the game* (#544). Asks nothing of the provider: the refund follows
+    the commit, from the outbox."""
+    return build_leave_the_game(db, clock=clock, settings=settings)
+
+
+LeaveTheGameDep = Annotated[LeaveTheGame, Depends(get_leave_the_game)]
 
 
 def get_read_proposal_details(

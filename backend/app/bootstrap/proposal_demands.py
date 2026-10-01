@@ -7,8 +7,11 @@ what is asserted over**: a player's booked games and each seat's check-in code
 (``bookings``), where each booked game's result stands (``games``), how far a
 club is from a player (the Player profile and ``clubs``), and — for an On request
 club (#543) — the request a full game is put to it as and its answer
-(``bookings``) and what each player is called on it (``users``) — each a fact
-another context owns, read through a port declared in this context's words.
+(``bookings``) and what each player is called on it (``users``) — and, for
+leaving and the cut-off (#544), what happens to a booked game after the fill
+(``bookings``), a paid share given back and the card fee on one (``payments``)
+— each a fact another context owns, read through a port declared in this
+context's words.
 
 **Not yet the whole of the context's demands.** The deck's, the proposer's and
 the fill's ports (#538–#541) were contracted over HTTP and never registered; they
@@ -24,20 +27,26 @@ from __future__ import annotations
 from typing import TypeVar
 
 from app.bootstrap.composition import (
+    build_booked_game_changes,
+    build_card_fees,
     build_club_distances,
     build_club_requests,
     build_game_results,
     build_player_bookings,
     build_proposal_player_names,
+    build_seat_refunds,
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
 from app.modules.proposals.domain.ports import (
+    BookedGameChanges,
+    CardFees,
     ClubDistances,
     ClubRequests,
     GameResults,
     PlayerBookings,
     PlayerNames,
+    SeatRefunds,
 )
 
 P = TypeVar("P")
@@ -51,6 +60,9 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     ClubDistances,
     ClubRequests,
     PlayerNames,
+    BookedGameChanges,
+    SeatRefunds,
+    CardFees,
 )
 
 
@@ -79,6 +91,23 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=PlayerNames,
         name="UsersPlayerNames",
         build=build_proposal_player_names,
+    ),
+    RegisteredImplementation(
+        port=BookedGameChanges,
+        name="BookingsBookedGameChanges",
+        build=lambda session: build_booked_game_changes(
+            session, settings=get_settings()
+        ),
+    ),
+    RegisteredImplementation(
+        port=SeatRefunds,
+        name="PaymentsSeatRefunds",
+        build=lambda session: build_seat_refunds(session, settings=get_settings()),
+    ),
+    RegisteredImplementation(
+        port=CardFees,
+        name="PaymentsCardFees",
+        build=lambda session: build_card_fees(),
     ),
 )
 

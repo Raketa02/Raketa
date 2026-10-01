@@ -3911,7 +3911,7 @@
             }
           },
           "409": {
-            "description": "Everything above, plus:\n\n`your_side_has_already_answered` \u2014 one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.\n\n`the_other_side_has_answered` \u2014 correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.\n\n`the_court_has_an_open_seat` \u2014 somebody left and nobody has filled their seat, so there is no court to have played on. Fill it, or let the window close.\n\n`the_game_was_called_off` \u2014 somebody ended it while a seat was open, so there is nothing to have played. The ending is on `standing` and `called_off_at`.",
+            "description": "Everything above, plus:\n\n`your_side_has_already_answered` \u2014 one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.\n\n`the_other_side_has_answered` \u2014 correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.\n\n`the_court_has_an_open_seat` \u2014 somebody left and nobody has filled their seat, so there is no court to have played on. Fill it, or let the window close.\n\n`the_game_was_called_off` \u2014 somebody ended it while a seat was open, so there is nothing to have played. The ending is on `standing` and `called_off_at`.\n\n`the_game_started_short` \u2014 a booked game whose hour came with a seat open: somebody left after the club's cut-off and nobody took the seat. It ends uncounted (`standing` `STARTED_SHORT`), and nothing about it can be recorded.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7385,6 +7385,75 @@
           }
         }
       }
+    },
+    "/api/v1/bookings/{booking_id}/departure": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Leave a booked game",
+        "description": "*Leave the game* (the client shows the sheet first: the booking's `leaving` says what it costs). **Before the club's cut-off** the leaver is refunded at once, less the card fee, and the seat is offered to others \u2014 on their record only if the game is then called off because of it. **After the cut-off** the seat stays paid and is offered to others until the start; the leaver is refunded, less the fee, when somebody takes it, and it is on their record if nobody does. **While the club decides** nobody has paid: the yes and the request to the club are withdrawn, as `DELETE /proposals/{id}/yes` does. The leaver leaves the game's chat with their seat; everybody else's Home reads `SEAT_OPEN`. Refused once the hour has begun.",
+        "operationId": "leave_the_game_api_v1_bookings__booking_id__departure_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartureResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such game **for this player**: it does not exist, or they have no seat on it \u2014 including one they already left. One code for all three.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`game_has_started` \u2014 its hour has begun; there is nothing to leave. `booking_is_called_off` \u2014 the game is off (refused, unanswered, or short at its cut-off) and everybody still in is refunded, or nobody paid. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8010,13 +8079,26 @@
             ],
             "title": "Free To Leave Until",
             "description": "The club's cut-off while it is still ahead at `read_at` \u2014 leaving before it is refunded. `null` from the cut-off on, and for a game that filled after it. The line switches by itself at this instant."
+          },
+          "refunded_grosze": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded Grosze",
+            "description": "What everybody still in is given back \u2014 the whole share, on a game called off at its cut-off (*refunded 30 z\u0142*). `null` where nothing is."
           }
         },
         "type": "object",
         "required": [
           "share_grosze",
           "paid",
-          "free_to_leave_until"
+          "free_to_leave_until",
+          "refunded_grosze"
         ],
         "title": "BookedMoneySchema",
         "description": "The money line: *Paid \u00b7 30 z\u0142 \u00b7 free to leave until Sat 17:00*."
@@ -8186,7 +8268,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/HomeStatus",
-            "description": "`WAITING_FOR_THE_CLUB` \u2014 an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. One more arrives with the ticket that produces it: `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+            "description": "`WAITING_FOR_THE_CLUB` \u2014 an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. `SEAT_OPEN` \u2014 somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`."
           },
           "called_off_reason": {
             "anyOf": [
@@ -8197,7 +8279,23 @@
                 "type": "null"
               }
             ],
-            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) More arrive with the tickets that call a booked game off (#544, #547)."
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. More arrive with the club's cancel (#547)."
+          },
+          "uncounted_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UncountedReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score \u2014 `null` otherwise. `SEAT_EMPTY` \u2014 its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats",
+            "description": "Seats a leaver left open \u2014 the dashed tiles; nought unless `SEAT_OPEN`. The sides list the seats still held."
           },
           "needs_you": {
             "type": "boolean",
@@ -8250,6 +8348,17 @@
               }
             ],
             "description": "On the game's day \u2014 the club's calendar day \u2014 the reader's code to show at the desk. `null` on every other day, and for a game that will not be played."
+          },
+          "leaving": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeavingSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What *Leave the game* would cost now \u2014 the line under the button and its sheet (`POST /bookings/{id}/departure`). `null` where there is no button: once the hour has come, and on a game that is over."
           }
         },
         "type": "object",
@@ -8262,6 +8371,8 @@
           "read_at",
           "status",
           "called_off_reason",
+          "uncounted_reason",
+          "open_seats",
           "needs_you",
           "starts_at",
           "ends_at",
@@ -8270,7 +8381,8 @@
           "sides",
           "money",
           "shows_forecast",
-          "check_in"
+          "check_in",
+          "leaving"
         ],
         "title": "BookingDetailsResponse",
         "description": "A booked game's details, for a player in it."
@@ -8306,7 +8418,8 @@
         "type": "string",
         "enum": [
           "REFUSED",
-          "NO_ANSWER"
+          "NO_ANSWER",
+          "SHORT_AT_THE_CUT_OFF"
         ],
         "title": "CalledOffReason",
         "description": "Why a game will not be played (the mechanics \u00a714.1)."
@@ -10505,6 +10618,20 @@
         "title": "DegradedTermSchema",
         "description": "One term that stood down, and **whose gap that is**.\n\nA pair rather than a bare ``Term``, because the flat list held two different\nsentences as one fact: *reliability is not a thing on this platform yet* and\n*they have not said what kind of evening they want*. The engine draws that\nline to decide a number \u2014 the evidence gate counts person-specific gaps and\nnever platform-wide absence \u2014 and it now survives the wire.\n\n**The reason is a code and the client writes the sentence** (``docs/adr/0106``).\nA client deriving *\"they haven't declared\"* from ``INTENT_ALIGNMENT`` alone\nwould be an engine rule in TypeScript, and *\"nobody has a record yet\"* is a\nsentence that goes silently false the day ``matches`` ships. The term supplies\nthe other half: ``INTENT_ALIGNMENT`` and ``SOCIAL_VIBE`` under one code are two\ndifferent sentences.\n\n**The platform tier repeats on every row and is drawn once.** It is here\nbecause it is this candidate's renormalisation basis \u2014 a 78 built on four\nterms and a 78 built on seven are different readings of the same number, and\ndropping it would make the row's own arithmetic unreadable \u2014 and\n``NOT_YET_ON_THIS_PLATFORM`` is a fact about the platform rather than about\ntwenty people, so the sheet states it once beside the version stamps\n(``the-play-screens.md`` \u00a78). Suppressing it on the wire instead was refused:\nthe basis is not decoration."
       },
+      "DepartureResponse": {
+        "properties": {
+          "left": {
+            "$ref": "#/components/schemas/Leaving",
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again."
+          }
+        },
+        "type": "object",
+        "required": [
+          "left"
+        ],
+        "title": "DepartureResponse",
+        "description": "*Leave the game*, done."
+      },
       "DetailSeatSchema": {
         "properties": {
           "side": {
@@ -11388,10 +11515,11 @@
           "AWAITING_ANSWER",
           "CONFIRMED",
           "UNSCORED",
-          "CALLED_OFF"
+          "CALLED_OFF",
+          "STARTED_SHORT"
         ],
         "title": "GameStanding",
-        "description": "The six standings, as codes. A client's words are the client's own."
+        "description": "The seven standings, as codes. A client's words are the client's own."
       },
       "GamesAndMoneyRequest": {
         "properties": {
@@ -12070,7 +12198,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/HomeStatus",
-            "description": "`WAITING_FOR_THE_CLUB` \u2014 an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. One more arrives with the ticket that produces it: `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+            "description": "`WAITING_FOR_THE_CLUB` \u2014 an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. `SEAT_OPEN` \u2014 somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`."
           },
           "called_off_reason": {
             "anyOf": [
@@ -12081,7 +12209,23 @@
                 "type": "null"
               }
             ],
-            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) More arrive with the tickets that call a booked game off (#544, #547)."
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. More arrive with the club's cancel (#547)."
+          },
+          "uncounted_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UncountedReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score \u2014 `null` otherwise. `SEAT_EMPTY` \u2014 its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats",
+            "description": "Seats a leaver left open \u2014 the dashed tiles; nought unless `SEAT_OPEN`. The sides list the seats still held."
           },
           "needs_you": {
             "type": "boolean",
@@ -12125,6 +12269,8 @@
           "kind",
           "status",
           "called_off_reason",
+          "uncounted_reason",
+          "open_seats",
           "needs_you",
           "starts_at",
           "club",
@@ -12491,6 +12637,42 @@
           "read_as"
         ],
         "title": "JoinSearchResponse"
+      },
+      "Leaving": {
+        "type": "string",
+        "enum": [
+          "BEFORE_THE_CUT_OFF",
+          "AFTER_THE_CUT_OFF",
+          "WHILE_WAITING_FOR_THE_CLUB"
+        ],
+        "title": "Leaving",
+        "description": "What *Leave the game* does, by when it is pressed (the mechanics \u00a713) \u2014\nsaid on the details before, and answered by the act after."
+      },
+      "LeavingSchema": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/Leaving",
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 *You'll be refunded 38,40 z\u0142 now (the 1,60 z\u0142 card fee isn't returned). Your seat is offered to others. On your record only if the game is then called off.* `AFTER_THE_CUT_OFF` \u2014 *Your seat is offered to others. You'll be refunded 38,40 z\u0142 when someone takes it; if nobody does, you won't be. On your record if nobody takes it.* `WHILE_WAITING_FOR_THE_CLUB` \u2014 *Nobody has paid yet. Leaving withdraws your yes.* The same words the departure answers with."
+          },
+          "refund_grosze": {
+            "type": "integer",
+            "title": "Refund Grosze",
+            "description": "What comes back \u2014 the share less the card fee; nought when nobody paid."
+          },
+          "card_fee_grosze": {
+            "type": "integer",
+            "title": "Card Fee Grosze",
+            "description": "The card fee that isn't returned \u2014 the provider's standard price, an estimate; what it kept is on the receipt."
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "refund_grosze",
+          "card_fee_grosze"
+        ],
+        "title": "LeavingSchema",
+        "description": "What *Leave the game* would cost now (the mechanics \u00a713)."
       },
       "LevelDirection": {
         "type": "string",
@@ -14886,13 +15068,17 @@
           "seat_charge_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Seat Charge Id"
+            "title": "Seat Charge Id",
+            "description": "The payment. A share refunded has two rows under one id \u2014 the charge and the refund \u2014 told apart by `kind`."
           },
           "kind": {
             "type": "string",
-            "const": "CHARGE",
+            "enum": [
+              "CHARGE",
+              "REFUND"
+            ],
             "title": "Kind",
-            "description": "`CHARGE` \u2014 a share paid. Refunds join this list as their own kind with the leaving rules (#544)."
+            "description": "`CHARGE` \u2014 a share paid (\u2713). `REFUND` \u2014 a share given back (\u21a9): less the card fee to a player who left before the cut-off, whole on a game called off at its cut-off."
           },
           "club": {
             "$ref": "#/components/schemas/SellerSchema"
@@ -14908,12 +15094,25 @@
           "amount_grosze": {
             "type": "integer",
             "title": "Amount Grosze",
-            "description": "What was paid, in grosze."
+            "description": "What was paid, or what came back, in grosze \u2014 always positive."
+          },
+          "card_fee_grosze": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Fee Grosze",
+            "description": "On a `REFUND`, the card fee the provider kept back \u2014 nought on a refund in full. `null` on a `CHARGE`."
           },
           "paid_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Paid At"
+            "title": "Paid At",
+            "description": "When the money moved: taken, or \u2014 on a `REFUND` \u2014 given back."
           }
         },
         "type": "object",
@@ -14924,10 +15123,11 @@
           "sport",
           "starts_at",
           "amount_grosze",
+          "card_fee_grosze",
           "paid_at"
         ],
         "title": "ReceiptSchema",
-        "description": "One share the reader paid \u2014 *the club named as the seller*."
+        "description": "One share the reader paid, or got back \u2014 *the club named as the\nseller*."
       },
       "ReceiptsResponse": {
         "properties": {
@@ -16688,13 +16888,13 @@
             "type": "integer",
             "minimum": 0.0,
             "title": "Good",
-            "description": "How many of those opportunities went the way the strand is named for \u2014 a game that was played, a challenge that got an answer, a score that got a reply.\n\n**A no is a good outcome on `ANSWERS_CHALLENGES` and on `ANSWERS_RESULTS`.** Turning somebody down inside your day *is* answering them, and so is countering a score you believe is wrong; what both strands price is silence."
+            "description": "How many of those opportunities went the way the strand is named for \u2014 a game that was played, a booked game that was kept, a score that got a reply.\n\n**A no is a good outcome on `ANSWERS_RESULTS`.** Countering a score you believe is wrong *is* answering it; what the strand prices is silence. **`KEEPS_PLANS` is broken only by leaving** a booked game so that it is called off at its cut-off, or after the cut-off with nobody taking the seat."
           },
           "opportunities": {
             "type": "integer",
             "minimum": 1.0,
             "title": "Opportunities",
-            "description": "How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry, a seat still inside its day and a score still inside its window are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.\n\n**`ANSWERS_RESULTS` counts the last twelve months and the other rows count a career.** It is the one strand that forgets, so a player can work a bad month off it.\n\nNever `0` \u2014 a row with nothing behind it is not drawn at all."
+            "description": "How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry, a booked game whose hour has not come and a score still inside its window are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.\n\n**`ANSWERS_RESULTS` counts the last twelve months and the other rows count a career.** It is the one strand that forgets, so a player can work a bad month off it.\n\nNever `0` \u2014 a row with nothing behind it is not drawn at all."
           },
           "pct": {
             "type": "integer",
@@ -16902,6 +17102,14 @@
         ],
         "title": "UncertaintyFactorResponse",
         "description": "Something that widened the range instead of moving the estimate."
+      },
+      "UncountedReason": {
+        "type": "string",
+        "enum": [
+          "SEAT_EMPTY"
+        ],
+        "title": "UncountedReason",
+        "description": "Why a game ended uncounted without anybody disagreeing about a score."
       },
       "UnfilledReason": {
         "type": "string",

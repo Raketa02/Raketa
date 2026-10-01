@@ -195,6 +195,7 @@ async def test_a_full_game_waits_for_the_club_and_nobody_is_charged(
             "share_grosze": 30_00,
             "paid": False,
             "free_to_leave_until": None,
+            "refunded_grosze": None,
         }
         assert not any(
             tile["paid"] for tile in (*card["sides"]["yours"], *card["sides"]["theirs"])

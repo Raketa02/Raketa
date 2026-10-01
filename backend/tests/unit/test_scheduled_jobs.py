@@ -186,6 +186,7 @@ def _nothing_but(**overrides):
             "PROPOSAL_EXPIRY_ENABLED": False,
             "PROPOSER_ENABLED": False,
             "REQUEST_TIMEOUT_ENABLED": False,
+            "CUT_OFF_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }

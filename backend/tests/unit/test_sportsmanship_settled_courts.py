@@ -122,6 +122,26 @@ def _called_off():
     return game, instant(called + timedelta(hours=1))
 
 
+def _started_short():
+    """A booked game somebody left, whose hour came with the seat still open
+    (#544)."""
+
+    players = _four()
+    starts = instant(PLANNED_AT + timedelta(days=3))
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        kind=GameKind.COUNTED,
+        window=None,
+        line_up=a_doubles_game(*players).line_up,
+        occurred_at=PLANNED_AT,
+        starts_at=starts,
+    )
+    game.vacate(players[3], occurred_at=instant(starts - timedelta(hours=2)))
+    return game, instant(starts + timedelta(hours=1))
+
+
 def _awaiting_answer():
     players = _four()
     game = a_doubles_game(*players)
@@ -161,6 +181,7 @@ BUILDERS = {
     GameStanding.AWAITING_ANSWER: _awaiting_answer,
     GameStanding.CONFIRMED: _confirmed,
     GameStanding.UNSCORED: _unscored,
+    GameStanding.STARTED_SHORT: _started_short,
 }
 
 #: The two the card may be drawn for. Spelled out rather than derived, so this

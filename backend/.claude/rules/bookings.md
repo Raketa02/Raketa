@@ -6,13 +6,17 @@ paths:
   - "app/modules/proposals/application/home.py"
   - "app/modules/proposals/application/booking_details.py"
   - "app/modules/payments/application/seat_charges.py"
+  - "app/modules/payments/application/refunds.py"
   - "app/modules/payments/domain/seat_charge.py"
+  - "app/modules/proposals/application/leave_the_game.py"
+  - "app/modules/proposals/application/cut_off.py"
+  - "app/modules/proposals/application/resume_paused_yeses.py"
 ---
 
 # Bookings and the fill
 
-Decisions that are load-bearing and not obvious from the code (#541, #543; ADR-0189 §2–§5;
-the mechanics §11–§12.2, §13, §16.8).
+Decisions that are load-bearing and not obvious from the code (#541, #543, #544; ADR-0189
+§2–§5; the mechanics §11–§13, §15.4, §16.8, §16.12).
 
 - **The last yes books the game, in that yes's own transaction** (`proposals/application/fill.py`).
   `SayYes` loads the proposal **locked** (`load_for_update`, `FOR UPDATE` on its row — SQLite
@@ -117,8 +121,9 @@ the mechanics §11–§12.2, §13, §16.8).
   cut-off as the club's setting stood at the fill, and the Game it opened. Its projections —
   `bookings` (its `state`, and one court hour per booking held by a **partial** unique index:
   a called-off booking holds nothing, migration 0040) and `booking_seats` — answer the Club
-  context's `CourtBookings` (what a club can no longer sell: waiting or booked) and the
-  proposals' `BookedGames` (*games per week*, *one game per hour*: **booked only**) and
+  context's `CourtBookings` (what a club can no longer sell: waiting, booked, or booked with
+  a seat open) and the proposals' `BookedGames` (*games per week*, *one game per hour*:
+  **booked only**, whole or with a seat open, and never a seat the player left) and
   `PaymentCommitments.upcoming_games`; the club's *Games* figure counts booked ones only.
 - **A booked game is an ordinary Game, opened as a completed line-up opens one** — through
   `OpenPlannedGame`, the booking's id in the arrangement's slot (`challenge_id`), **with its hour**
@@ -134,8 +139,9 @@ the mechanics §11–§12.2, §13, §16.8).
 - **What the fill does to everybody's other yeses**: each player's other live yes at the booked
   hour is **withdrawn** (`YesWithdrawn`, as their own tap writes), and a player whose booked games
   this week reach their *games per week* has every other yes that week **paused** (`YesPaused`,
-  projected `PAUSED`) — counted nowhere, and back when one of those games is called off (#544).
-  The proposer is told everywhere (`ProposalFilled` is a club change: a court hour left).
+  projected `PAUSED`) — counted nowhere, and **back** when one of those games stops being
+  theirs (#544, below). The proposer is told everywhere (`ProposalFilled` is a club change: a
+  court hour left).
 - **Emails are the money's** (`payments/application/seat_charge_emails.py`): *It's a game! · you
   paid* to every player when the seats are taken, the club named as the seller and the cut-off
   line, and *Confirm your payment to keep your seat* to each refused player, worded by reason.
@@ -156,10 +162,58 @@ the mechanics §11–§12.2, §13, §16.8).
   `standing_at`); *waiting for the club* and *called off* with its `called_off_reason`
   (`REFUSED`, `NO_ANSWER`) are the booking's own (#543) — with `game_id` and `court_name`
   `null` until the club gives them, and nobody `paid`; a request taken back because a seat
-  opened is on nobody's Home; *seat open* and the other reasons are for #544–#547 to
-  produce. **The forecast is the Game's pairing** (`GET
-  /games/{id}/pairing`) — the details only say whether it is drawn. **A check-in code is derived,
+  opened is on nobody's Home; *seat open*, *called off · short at the cut-off* and
+  *uncounted · a seat was empty* are #544's (below); the club's cancel is #547's. **The
+  forecast is the Game's pairing** (`GET /games/{id}/pairing`) — the details only say
+  whether it is drawn. **A check-in code is derived,
   never stored** (`bookings/domain/check_in.py`): an HMAC of the booking and the player under a
   key drawn from `JWT_SECRET_KEY` with its own prefix (`KeyedCheckInCodes`), six characters in
   the typed-code alphabet plus a `RAKETA-CHECK-IN:1:<booking>:<player>:<code>` QR payload, shown
   on the club's calendar day of the game while it stands — #547's desk recomputes it.
+- **Leaving is free until the club's cut-off, and a game plays full or not at all** (#544;
+  `proposals/application/leave_the_game.py`, `cut_off.py`, `bookings/application/leaving.py`;
+  the mechanics §12.3, §13, §14.1, §15.4). `POST /bookings/{id}/departure` locks the game's
+  proposal row first, as every act on a game does. **Before the cut-off** the leaver's seat
+  opens (`SeatLeft` — the booking `SEAT_OPEN`, their `booking_seats` row kept with `left_at`,
+  the Game's seat vacated through games' own `VacateSeat`, so they drop out of the room, whose
+  members are the line-up) and their charge is refunded **less the card fee**; **after it**
+  the seat opens and stays paid — the refund on replacement is #545's; **while the club
+  decides** it is `WithdrawYes`' act (#543); **after the start** `game_has_started`. What
+  leaving would cost is on the details before the player leaves (`leaving`: the share less
+  `card_fee_on`, the payments' **estimate** — Stripe's EEA price, 1.5 % + 1 zł, which the
+  fake withholds exactly). **The cut-off job** (`cut-off`, see `jobs.md`) calls off every
+  game with a seat open since **before** its cut-off (`CalledOffAtCutOff`, naming everybody
+  still in): everybody still in is refunded **in full** (the club bears those fees), the
+  court is free (the partial index), the Game is called off by nobody (`CallOffGame`, which
+  steps over a game that already started short) and its room with it, the desk is emailed
+  *A game was called off at the cut-off*, each player *Game called off · with the refund*.
+  **Short at the cut-off is read off the clock** (`Booking.short_from`,
+  `BookedGame.called_off_reason`), so Home reads *called off · `SHORT_AT_THE_CUT_OFF`* with
+  `refunded_grosze` from the cut-off on, before the job runs. A seat left **after** the
+  cut-off lets the game go ahead short: at its hour the Game's standing is **`STARTED_SHORT`**
+  — derived from `starts_at` and the line-up, refusing a result (`the_game_started_short`),
+  in no tally — and Home reads *uncounted · `SEAT_EMPTY`*. **Until rescues (#545) every seat
+  that opened stays open**: `open_since`, `left_before_the_cut_off` and `keeping_of` all say
+  so in a comment, and are where #545's `SeatRescued` must reach.
+- **Refunds are decided in the act and made from the outbox** (`payments/application/refunds.py`,
+  `SeatCharge.refund`): `SeatChargeRefundDecided` (withhold the fee, or not) in the leaving's
+  or the call-off's transaction; `SettleSeatCharges` captures first if the capture's own
+  delivery has not run yet, then refunds under `raketa-refund-<charge>` and records
+  `SeatChargeRefunded` with the amount and **the fee the provider kept**. A receipt's refund row
+  is dated from the decision (`refund_decided_at`), not the provider's answer. **The fake's
+  payment ids carry their amount** (`pi_fake_3000g_…`) so a fake in another process — a seed
+  run, a laptop after a reload — adopts a taken payment for a refund at what it was for.
+- **The record: a booked game is a plan with a moment** (`bookings/domain/keeping.py`,
+  `BookingHistoryQuery`). *Keeps plans* (`ReliabilityStrand.KEEPS_PLANS`, live since #544)
+  replaces *answers challenges* in the Player Score: **kept** is a game whose hour came with
+  every seat held, for everybody in it; **broken** is leaving before the cut-off when the
+  game is then called off, or after it when nobody takes the seat by the start; leaving free
+  when the game still plays, a game never booked, and staying in a game that went ahead short
+  or was called off because of somebody else's seat (§14.1) are nothing.
+  A leaver is found through their kept `booking_seats` row (`ever_seated`).
+- **A paused week comes back** (`proposals/application/resume_paused_yeses.py`): an outbox
+  subscriber to `SeatLeft` (the leaver) and `CalledOffAtCutOff` (everybody still in), added
+  per delivery run over its session and provider, resumes each paused yes their week now has
+  room for (`YesResumed`, projected `YES`) — and a yes that comes back as a game's last seat
+  **fills it** through the fill. One that cannot come back (filled without them, an hour now
+  booked, a full week, no longer In) stays paused, silent.

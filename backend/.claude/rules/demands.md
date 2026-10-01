@@ -13,7 +13,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0098](../../../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Twelve registers, and they are twelve on purpose — one per kind of claim.**
+  **Fourteen registers, and they are fourteen on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
@@ -62,12 +62,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **The twelfth, `proposal_demands.py`, is Proposals' consumer register** (#542): Home's and the
   details' three demands — a player's bookings (`bookings`), a booked game's result (`games`), a
   club's distance (the Player profile and `clubs`) — and, since #543, an On request club's
-  requests and answers (`bookings`) and the players' Names on them (`users`). The deck's, the
-  proposer's and the fill's ports (#538–#541) were contracted over HTTP only and are owed rows
-  there.
+  requests and answers (`bookings`) and the players' Names on them (`users`), and since #544
+  what happens to a booked game after the fill (`BookedGameChanges`), a paid share given back
+  (`SeatRefunds`) and the card fee on one (`CardFees`). The deck's, the proposer's and the
+  fill's ports (#538–#541) were contracted over HTTP only and are owed rows there.
   **The thirteenth, `booking_demands.py`, is Bookings' consumer register** (#543): the first
   free court of a club at an hour with its cut-off and time to confirm, and a club's desk —
-  both the Club context's facts. `GameOpening` (#541) is owed a row there.
+  both the Club context's facts — and the Games context's: the ordinary Game a booking opens
+  (`GameOpening`, #541, registered by #544) and what leaving and the cut-off do to it
+  (`GameChanges`, #544).
+  **The fourteenth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
+  consumer register as `games_demands.py` stands beside `game_demands.py`: who kept the booked
+  games they held a seat on (`BookingHistoryQuery`), *keeps plans*' input.
   **A row carries a builder, and not always over a bare session.** `challenge_demands.py`'s
   takes the two seams the platform supplies from outside a request — the process's
   candidate index and the exposure ledger behind Redis — because the pairing it contracts

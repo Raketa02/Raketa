@@ -103,6 +103,12 @@ class ProposalDirectory(Protocol):
         """How many of those are in ``sport`` — what the cap counts."""
         ...
 
+    async def paused_for(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
+        """Every proposal still filling on which another booking paused this
+        player's yes — **soonest first** (#544). Candidates: the aggregate says
+        whether it can come back."""
+        ...
+
     async def reopened_for(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
         """Every proposal still filling on which this player's yes is gone and
         may come back — withdrawn, or reopened by the last yes — **soonest
@@ -466,6 +472,33 @@ class GameBookings(Protocol):
         ...
 
 
+@runtime_checkable
+class BookedGameChanges(Protocol):
+    """**A demand of the Bookings context**: what happens to a booked game
+    after the fill (#544) — a player leaving it, and the cut-off calling off
+    one still short (the mechanics §12.3, §13)."""
+
+    async def leave(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
+        """*Leave the game* (#544): this player's seat on the booked game
+        opens — on its Game too, whose room they leave. Whether they may is
+        the caller's question. In the caller's transaction."""
+        ...
+
+    async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
+        """Every booked game whose cut-off has come with a seat open since
+        before it — candidates, the earliest cut-off first."""
+        ...
+
+    async def call_off_at_the_cut_off(
+        self, booking_id: UUID, *, at: Instant
+    ) -> tuple[UUID, ...] | None:
+        """Short at its cut-off: the game is off, its court the club's again,
+        its Game and room ended, the club emailed — and everybody still in
+        answered. ``None`` for a game not short at its cut-off, which records
+        nothing. In the caller's transaction."""
+        ...
+
+
 # --------------------------------------------------------------------------- #
 # On request (#543)
 # --------------------------------------------------------------------------- #
@@ -656,6 +689,43 @@ class SeatCharges(Protocol):
         provider is asked, the charge is recorded as held if it is, and the game
         it was for is answered. Refused as the payments refuse it otherwise."""
         ...
+
+
+class RefundReason(StrEnum):
+    """Why a paid share is given back (the mechanics §12.3)."""
+
+    #: The player left before the club's cut-off: less the card fee.
+    LEFT_BEFORE_THE_CUT_OFF = "LEFT_BEFORE_THE_CUT_OFF"
+    #: The game was called off at the club's cut-off: in full.
+    CALLED_OFF_AT_THE_CUT_OFF = "CALLED_OFF_AT_THE_CUT_OFF"
+
+
+@runtime_checkable
+class SeatRefunds(Protocol):
+    """**A demand of the Payments context**: give a booked game's paid shares
+    back (#544) — less the card fee to a leaver before the cut-off, whole on a
+    game called off at its cut-off."""
+
+    async def refund(
+        self,
+        booking_id: UUID,
+        players: Collection[UUID],
+        *,
+        reason: RefundReason,
+        at: Instant,
+    ) -> None:
+        """Give back what each of these players paid for this game, emailing
+        each, in the caller's transaction — the money follows the commit."""
+        ...
+
+
+@runtime_checkable
+class CardFees(Protocol):
+    """**A demand of the Payments context**: what the card fee on a share
+    comes to — the estimate the *Leave the game* sheet quotes, since a leaver
+    before the cut-off is refunded their share less it (#544)."""
+
+    def card_fee_on(self, share_grosze: int) -> int: ...
 
 
 @runtime_checkable

@@ -8,9 +8,10 @@ sells, and the game counted in the player's week, the moment the fill commits.
 
 **What each read counts is the state's** (#543): a booking waiting for its club
 holds its court hour, as a booked one does, and a called-off one holds nothing;
-only a **booked** game is a game in a player's week or a group's *Games*; and a
-player's games are every booking they have a seat on, whatever it came to — and
-nobody keeps a seat on a request taken back because a seat opened.
+only a **booked** game is a game in a player's week or a group's *Games* — whole,
+or with a seat open (#544); and a player's games are every booking they have a
+seat on, whatever it came to — and nobody keeps a seat on a request taken back
+because a seat opened, and a leaver no longer has one.
 """
 
 from __future__ import annotations
@@ -35,7 +36,9 @@ from app.modules.bookings.domain.events import (
     BookingRefused,
     BookingRequested,
     BookingTimedOut,
+    CalledOffAtCutOff,
     RequestWithdrawn,
+    SeatLeft,
 )
 from app.modules.bookings.domain.ports import HeldCourtHour
 from app.modules.bookings.infrastructure.booking_models import (
@@ -44,6 +47,10 @@ from app.modules.bookings.infrastructure.booking_models import (
 )
 
 BOOKING_AGGREGATE = "booking"
+
+#: The states a booked game is in while it will be played: whole, or with a
+#: seat open (#544).
+_BOOKED = (BookingState.BOOKED.value, BookingState.SEAT_OPEN.value)
 
 
 @final
@@ -85,7 +92,7 @@ class EventSourcedBookingRepository:
         await self._events.publish_many(pending)
         try:
             for event in pending:
-                await self._project(event)
+                await self._project(event, booking)
             await self._session.flush()
         except IntegrityError as taken:
             # Two games at one hour that read one court free: the second claim
@@ -94,7 +101,7 @@ class EventSourcedBookingRepository:
         # Deliberately no commit: the transaction boundary is the use case's.
         self._versions[booking.booking_id] = booking.version
 
-    async def _project(self, event: object) -> None:
+    async def _project(self, event: object, booking: Booking) -> None:
         if isinstance(event, BookingConfirmed):
             self._session.add(
                 BookingORM(
@@ -130,6 +137,22 @@ class EventSourcedBookingRepository:
                     BookingSeatORM.booking_id == event.booking_id
                 )
             )
+        elif isinstance(event, SeatLeft):
+            await self._row(
+                event.booking_id,
+                state=BookingState.SEAT_OPEN.value,
+                open_since=booking.open_since,
+            )
+            await self._statement(
+                update(BookingSeatORM)
+                .where(
+                    BookingSeatORM.booking_id == event.booking_id,
+                    BookingSeatORM.player_id == event.player_id,
+                )
+                .values(left_at=event.occurred_at)
+            )
+        elif isinstance(event, CalledOffAtCutOff):
+            await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
         else:
             raise TypeError(f"Unsupported booking event {event!r}")
 
@@ -229,8 +252,9 @@ class SqlAlchemyBookingDirectory:
             .join(BookingSeatORM, BookingSeatORM.booking_id == BookingORM.id)
             .where(
                 BookingSeatORM.player_id == player_id,
+                BookingSeatORM.left_at.is_(None),
                 BookingORM.start >= start,
-                BookingORM.state == BookingState.BOOKED.value,
+                BookingORM.state.in_(_BOOKED),
             )
             .order_by(BookingORM.start)
         )
@@ -243,7 +267,10 @@ class SqlAlchemyBookingDirectory:
         rows = await self._session.scalars(
             select(BookingORM.id)
             .join(BookingSeatORM, BookingSeatORM.booking_id == BookingORM.id)
-            .where(BookingSeatORM.player_id == player_id)
+            .where(
+                BookingSeatORM.player_id == player_id,
+                BookingSeatORM.left_at.is_(None),
+            )
             .order_by(BookingORM.start, BookingORM.id)
         )
         return list(rows.all())
@@ -255,7 +282,7 @@ class SqlAlchemyBookingDirectory:
             select(BookingORM.pool_id, func.count(BookingORM.id))
             .where(
                 BookingORM.pool_id.in_(sorted(set(pool_ids))),
-                BookingORM.state == BookingState.BOOKED.value,
+                BookingORM.state.in_(_BOOKED),
             )
             .group_by(BookingORM.pool_id)
         )
@@ -282,3 +309,31 @@ class SqlAlchemyBookingDirectory:
             .order_by(BookingORM.answer_by, BookingORM.id)
         )
         return list(rows.all())
+
+    async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingORM.id)
+            .where(
+                BookingORM.state == BookingState.SEAT_OPEN.value,
+                BookingORM.cut_off <= now,
+                BookingORM.open_since < BookingORM.cut_off,
+            )
+            .order_by(BookingORM.cut_off, BookingORM.id)
+        )
+        return list(rows.all())
+
+    async def ever_seated(
+        self, player_ids: Collection[UUID]
+    ) -> Sequence[tuple[UUID, UUID]]:
+        if not player_ids:
+            return []
+        rows = await self._session.execute(
+            select(BookingSeatORM.player_id, BookingSeatORM.booking_id)
+            .join(BookingORM, BookingORM.id == BookingSeatORM.booking_id)
+            .where(
+                BookingSeatORM.player_id.in_(sorted(set(player_ids))),
+                BookingORM.booked_at.is_not(None),
+            )
+            .order_by(BookingSeatORM.player_id, BookingSeatORM.booking_id)
+        )
+        return [(player_id, booking_id) for player_id, booking_id in rows.all()]

@@ -24,6 +24,8 @@ from app.modules.payments.domain.events import (
     SeatChargeCaptured,
     SeatChargeConfirmed,
     SeatChargeFailed,
+    SeatChargeRefundDecided,
+    SeatChargeRefunded,
     SeatChargeReleased,
     SeatChargeTaken,
 )
@@ -70,6 +72,8 @@ SeatChargeEvent = (
     | SeatChargeReleased
     | SeatChargeCaptured
     | SeatChargeCancelled
+    | SeatChargeRefundDecided
+    | SeatChargeRefunded
 )
 
 _SEAT_CHARGE_LINES: dict[type, str] = {
@@ -80,6 +84,8 @@ _SEAT_CHARGE_LINES: dict[type, str] = {
     SeatChargeReleased: "payments.seat_charge.released",
     SeatChargeCaptured: "payments.seat_charge.captured",
     SeatChargeCancelled: "payments.seat_charge.cancelled",
+    SeatChargeRefundDecided: "payments.seat_charge.refund_decided",
+    SeatChargeRefunded: "payments.seat_charge.refunded",
 }
 
 

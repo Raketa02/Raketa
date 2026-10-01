@@ -36,6 +36,7 @@ from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import final
 from uuid import UUID
 
@@ -492,20 +493,61 @@ class ReadSeatCharge:
         )
 
 
+class ReceiptKind(StrEnum):
+    """Which way the money went."""
+
+    #: A share paid.
+    CHARGE = "CHARGE"
+    #: A share given back (#544).
+    REFUND = "REFUND"
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class Receipt:
-    """One payment the player made: to whom, for which game, how much, when."""
+    """Money that moved for the player: to whom, for which game, how much,
+    which way, when."""
 
     charge: SeatCharge
     club_name: str | None
+    kind: ReceiptKind = ReceiptKind.CHARGE
+
+    @property
+    def amount_grosze(self) -> int:
+        """What was paid, or what came back — always positive."""
+
+        if self.kind is ReceiptKind.REFUND:
+            assert self.charge.refund_given is not None
+            return self.charge.refund_given.amount_grosze
+        return self.charge.amount_grosze
+
+    @property
+    def card_fee_grosze(self) -> int | None:
+        """The card fee kept back from a refund; ``None`` on a charge."""
+
+        if self.kind is ReceiptKind.REFUND:
+            assert self.charge.refund_given is not None
+            return self.charge.refund_given.fee_withheld_grosze
+        return None
+
+    @property
+    def at(self) -> Instant:
+        """When the money moved: taken, or given back — the act that decided
+        the refund, a leaving or a call-off, rather than the provider's answer
+        moments later."""
+
+        if self.kind is ReceiptKind.REFUND:
+            assert self.charge.refund_decided_at is not None
+            return self.charge.refund_decided_at
+        return self.charge.taken_at or self.charge.opened_at
 
 
 @final
 class ReadReceipts:
-    """You › Payments' *RECEIPTS*: every share the reader paid, **the club named
-    as the seller**, the latest first. A hold let go is not a receipt — nobody
-    paid it."""
+    """You › Payments' *RECEIPTS*: every share the reader paid and every share
+    given back (#544), **the club named as the seller**, the latest first. A
+    hold let go is not a receipt — nobody paid it — and a refund is one once the
+    provider has given it, with the card fee it kept."""
 
     def __init__(self, *, charges: SeatChargeRepository, sellers: Sellers) -> None:
         self._charges = charges
@@ -518,12 +560,23 @@ class ReadReceipts:
             if charge.status in PAID
         ]
         sellers = await self._sellers.of({charge.club_id for charge in paid})
-        return tuple(
-            Receipt(
-                charge=charge,
-                club_name=(
-                    sellers[charge.club_id].name if charge.club_id in sellers else None
-                ),
+        receipts: list[Receipt] = []
+        for charge in paid:
+            club_name = (
+                sellers[charge.club_id].name if charge.club_id in sellers else None
             )
-            for charge in paid
+            receipts.append(Receipt(charge=charge, club_name=club_name))
+            if charge.refund_given is not None:
+                receipts.append(
+                    Receipt(
+                        charge=charge, club_name=club_name, kind=ReceiptKind.REFUND
+                    )
+                )
+        # Latest first; a refund given at the moment of its charge after it.
+        return tuple(
+            sorted(
+                receipts,
+                key=lambda receipt: (receipt.at, receipt.kind is ReceiptKind.REFUND),
+                reverse=True,
+            )
         )

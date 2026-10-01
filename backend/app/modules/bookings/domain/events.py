@@ -14,6 +14,11 @@ it back because a seat opened while it waited — nobody has a seat on it any
 more, the game is filling again, and full again it is ``BookingRequested`` once
 more on the same stream.
 
+**Then the booked game is lived** (#544): ``SeatLeft`` is a player leaving it —
+their seat open, the game still the others' — and ``CalledOffAtCutOff`` is a
+seat that opened before the club's cut-off still open at it: the game is off,
+and everybody still in is named, to be refunded in full.
+
 Every event carries ``booking_id``, the stream's own key. Sport and kind travel
 as their codes, as a proposal's do.
 """
@@ -134,6 +139,35 @@ class RequestWithdrawn:
     ``player_ids`` left, or could no longer be In — so the request is off and
     nobody paid. **Nobody keeps a seat on it**: the people still In are on the
     game, filling again, and when it is full the club is asked again."""
+
+    booking_id: UUID
+    player_ids: tuple[UUID, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "player_ids", _uuids(self.player_ids))
+
+
+@dataclass(frozen=True)
+class SeatLeft:
+    """A player left the booked game before it started — *Leave the game*
+    (#544; the mechanics §13). **Their seat is open**, and the game is still
+    the others'. Whether they left before the club's cut-off is read off this
+    instant against the booking's ``cut_off``; what it costs them is the
+    money's, recorded on their Seat charge."""
+
+    booking_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class CalledOffAtCutOff:
+    """**A game plays full or not at all** (#544; the mechanics §12.3): a seat
+    that opened before the club's cut-off was still open at it, so the game is
+    off, the court is the club's again, and everybody still in — ``player_ids``
+    — is refunded in full. Recorded by the cut-off job, at or after the
+    cut-off."""
 
     booking_id: UUID
     player_ids: tuple[UUID, ...]

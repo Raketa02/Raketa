@@ -3,7 +3,9 @@ an adapter **signed here**, so the arrow runs ``proposals → bookings`` only
 (#541, #542).
 
 ``BookingsGameBookings`` is the fill's demand — a court for a full game, and the
-booking that opens its Game — over the Bookings context's own use cases.
+booking that opens its Game — over the Bookings context's own use cases;
+``BookingsBookedGameChanges`` is what happens to a booked game after (#544): a
+player leaving it, and the cut-off calling off one still short.
 ``BookingsClubRequests`` is an On request club's (#543): the request a full game
 is put to the club as, the club's yes or no, and a seat opening while it waits.
 ``BookingsBookedGames`` answers *games per week* and *one game per hour* — the
@@ -28,6 +30,10 @@ from app.modules.bookings.application.book_the_game import (
     BookTheGame,
     FindACourt,
     GameToBook,
+)
+from app.modules.bookings.application.leaving import (
+    CallOffAtTheCutOff,
+    LeaveTheBooking,
 )
 from app.modules.bookings.application.requests import (
     BookTheRequest,
@@ -107,6 +113,31 @@ class BookingsGameBookings:
             at=at,
         )
         return invariant(booking.game_id, f"{booking.booking_id} booked with no game")
+
+
+@final
+class BookingsBookedGameChanges:
+    def __init__(
+        self,
+        *,
+        leave: LeaveTheBooking,
+        call_off: CallOffAtTheCutOff,
+        directory: BookingDirectory,
+    ) -> None:
+        self._leave = leave
+        self._call_off = call_off
+        self._directory = directory
+
+    async def leave(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
+        await self._leave.execute(booking_id, player_id, at=at)
+
+    async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
+        return await self._directory.short_at_the_cut_off(now=now)
+
+    async def call_off_at_the_cut_off(
+        self, booking_id: UUID, *, at: Instant
+    ) -> tuple[UUID, ...] | None:
+        return await self._call_off.execute(booking_id, at=at)
 
 
 @final
@@ -257,12 +288,14 @@ class BookingsPlayerBookings:
 _STAGES = {
     BookingState.WAITING_FOR_THE_CLUB: BookingStage.WAITING_FOR_THE_CLUB,
     BookingState.BOOKED: BookingStage.BOOKED,
+    BookingState.SEAT_OPEN: BookingStage.SEAT_OPEN,
     BookingState.CALLED_OFF: BookingStage.CALLED_OFF,
 }
 
 _CALLED_OFF = {
     CalledOff.REFUSED: CalledOffReason.REFUSED,
     CalledOff.NO_ANSWER: CalledOffReason.NO_ANSWER,
+    CalledOff.SHORT_AT_THE_CUT_OFF: CalledOffReason.SHORT_AT_THE_CUT_OFF,
 }
 
 
@@ -290,6 +323,7 @@ def _booked_game(booking: Booking) -> BookedGame | None:
         called_off=(
             None if booking.called_off is None else _CALLED_OFF[booking.called_off]
         ),
+        short_from=booking.short_from,
     )
 
 

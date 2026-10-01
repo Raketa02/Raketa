@@ -184,6 +184,7 @@ async def test_every_player_finds_the_booked_game_on_home_with_its_money_line(
             "share_grosze": 30_00,
             "paid": True,
             "free_to_leave_until": FRIDAY_FIVE_UTC,
+            "refunded_grosze": None,
         }
         yours, theirs = card["sides"]["yours"], card["sides"]["theirs"]
         assert yours[0]["player_id"] == str(player["id"])
@@ -380,6 +381,7 @@ async def test_a_player_in_the_game_reads_its_details(
         "share_grosze": 30_00,
         "paid": True,
         "free_to_leave_until": FRIDAY_FIVE_UTC,
+        "refunded_grosze": None,
     }
     yours, theirs = details["sides"]["yours"], details["sides"]["theirs"]
     assert yours[0]["player_id"] == str(four[0]["id"])

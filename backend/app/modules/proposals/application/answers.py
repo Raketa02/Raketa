@@ -291,11 +291,30 @@ class WithdrawYes:
     async def execute(self, command: AnswerProposalCommand) -> None:
         now = instant(self._clock.now())
         proposal = await _locked(self._proposals, command.proposal_id)
-        was_waiting = proposal.waiting_for_the_club
-        proposal.withdraw_yes(command.player_id, at=now)
-        await self._proposals.save(proposal)
-        if was_waiting and not proposal.waiting_for_the_club:
-            await self._requests.withdraw(
-                proposal.proposal_id, player_ids=(command.player_id,), at=now
-            )
+        await withdraw_a_yes(
+            proposal,
+            command.player_id,
+            proposals=self._proposals,
+            requests=self._requests,
+            at=now,
+        )
         await self._uow.commit()
+
+
+async def withdraw_a_yes(
+    proposal: Proposal,
+    player_id: UUID,
+    *,
+    proposals: ProposalRepository,
+    requests: ClubRequests,
+    at: Instant,
+) -> None:
+    """The yes taken back — and, when it was a seat of a game waiting for its
+    club, the request to the club with it (#543), so the held court is free the
+    moment the seat is. **No commit.**"""
+
+    was_waiting = proposal.waiting_for_the_club
+    proposal.withdraw_yes(player_id, at=at)
+    await proposals.save(proposal)
+    if was_waiting and not proposal.waiting_for_the_club:
+        await requests.withdraw(proposal.proposal_id, player_ids=(player_id,), at=at)

@@ -203,6 +203,18 @@ class YesPaused:
 
 
 @dataclass(frozen=True)
+class YesResumed:
+    """A yes another game's booking paused **comes back** (#544; the mechanics
+    §19): one of the games that filled the player's week was called off, or
+    they left it, so their week has room again and the yes counts once more —
+    as theirs, said before, not said again."""
+
+    proposal_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class TurnedDown:
     """**The club did not take it** (#543; the mechanics §16.8): every seat was
     In and the game waited for its On request club, which refused it or did not

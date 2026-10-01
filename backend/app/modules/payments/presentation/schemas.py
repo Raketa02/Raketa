@@ -218,20 +218,37 @@ class SeatChargeResponse(BaseModel):
 
 
 class ReceiptSchema(BaseModel):
-    """One share the reader paid — *the club named as the seller*."""
+    """One share the reader paid, or got back — *the club named as the
+    seller*."""
 
-    seat_charge_id: UUID
-    kind: Literal["CHARGE"] = Field(
+    seat_charge_id: UUID = Field(
         description=(
-            "`CHARGE` — a share paid. Refunds join this list as their own kind "
-            "with the leaving rules (#544)."
+            "The payment. A share refunded has two rows under one id — the "
+            "charge and the refund — told apart by `kind`."
+        )
+    )
+    kind: Literal["CHARGE", "REFUND"] = Field(
+        description=(
+            "`CHARGE` — a share paid (✓). `REFUND` — a share given back (↩): "
+            "less the card fee to a player who left before the cut-off, whole "
+            "on a game called off at its cut-off."
         )
     )
     club: SellerSchema
     sport: Sport
     starts_at: datetime
-    amount_grosze: int = Field(description="What was paid, in grosze.")
-    paid_at: datetime
+    amount_grosze: int = Field(
+        description="What was paid, or what came back, in grosze — always positive."
+    )
+    card_fee_grosze: int | None = Field(
+        description=(
+            "On a `REFUND`, the card fee the provider kept back — nought on a "
+            "refund in full. `null` on a `CHARGE`."
+        )
+    )
+    paid_at: datetime = Field(
+        description="When the money moved: taken, or — on a `REFUND` — given back."
+    )
 
 
 class ReceiptsResponse(BaseModel):
@@ -245,14 +262,15 @@ class ReceiptsResponse(BaseModel):
             receipts=[
                 ReceiptSchema(
                     seat_charge_id=receipt.charge.charge_id,
-                    kind="CHARGE",
+                    kind=receipt.kind.value,
                     club=SellerSchema(
                         id=receipt.charge.club_id, name=receipt.club_name
                     ),
                     sport=receipt.charge.sport,
                     starts_at=receipt.charge.starts_at,
-                    amount_grosze=receipt.charge.amount_grosze,
-                    paid_at=receipt.charge.taken_at or receipt.charge.opened_at,
+                    amount_grosze=receipt.amount_grosze,
+                    card_fee_grosze=receipt.card_fee_grosze,
+                    paid_at=receipt.at,
                 )
                 for receipt in receipts
             ]

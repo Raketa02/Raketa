@@ -71,11 +71,16 @@ class CallOffGame:
             f"a call-off of a court that has been a game, with no game behind "
             f"it: {command.challenge_id}",
         )
-        if game.standing_at(occurred_at) is GameStanding.NEVER_PLAYED:
+        if game.standing_at(occurred_at) in (
+            GameStanding.NEVER_PLAYED,
+            GameStanding.STARTED_SHORT,
+        ):
             # Already ended by its clock — the one end a reopened court's game
             # can have reached before the court is called off, stepped over
             # rather than re-ended. The act is about the challenge, and the
-            # game keeps the end it reached.
+            # game keeps the end it reached. A booked game short at its cut-off
+            # whose call-off arrives after its hour has the second such end
+            # (#544): it started short, and keeps that.
             return
         game.call_off(by=command.called_by, occurred_at=occurred_at)
         await self._games.save(game)

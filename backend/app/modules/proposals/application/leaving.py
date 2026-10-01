@@ -22,6 +22,7 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Instant
+from app.modules.proposals.application.answers import withdraw_a_yes
 from app.modules.proposals.domain.ports import (
     ClubRequests,
     ProposalDirectory,
@@ -55,12 +56,12 @@ class WithdrawALeaversYeses:
             proposal = await self._proposals.load(yes.proposal_id)
             if proposal is None or proposal.standing_at(at) is not Standing.FILLING:
                 continue
-            was_waiting = proposal.waiting_for_the_club
-            proposal.withdraw_yes(player_id, at=at)
-            await self._proposals.save(proposal)
-            if was_waiting and not proposal.waiting_for_the_club:
-                await self._requests.withdraw(
-                    proposal.proposal_id, player_ids=(player_id,), at=at
-                )
+            await withdraw_a_yes(
+                proposal,
+                player_id,
+                proposals=self._proposals,
+                requests=self._requests,
+                at=at,
+            )
             withdrawn += 1
         return withdrawn

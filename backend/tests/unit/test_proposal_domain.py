@@ -45,6 +45,7 @@ from app.modules.proposals.domain.events import (
     Redealt,
     TurnedDown,
     VersionDealt,
+    YesResumed,
     YesSaid,
     YesWithdrawn,
 )
@@ -568,6 +569,49 @@ def test_a_turned_down_game_owes_its_people_a_new_card_once():
 # --------------------------------------------------------------------------- #
 # The stream
 # --------------------------------------------------------------------------- #
+
+
+# --------------------------------------------------------------------------- #
+# A paused week comes back (#544)
+# --------------------------------------------------------------------------- #
+
+
+def test_a_paused_yes_comes_back_as_the_yes_it_was():
+    pick = a_pick()
+    pick.deal((B, C, D, E), at=MADE_AT)
+    pick.say_yes(B, at=MADE_AT)
+    pick.pause_yes(B, at=MADE_AT)
+    history = pick.pull_events()
+
+    assert pick.resume_yes(B, at=LATER) is True
+
+    assert (pick.yeses, pick.paused) == ((B,), ())
+    [event] = pick.pull_events()
+    assert isinstance(event, YesResumed)
+    assert Proposal.from_history([*history, event]).yeses == (B,)
+
+
+def test_a_paused_yes_does_not_come_back_to_a_seat_somebody_took():
+    pick = dealt(a_pick(Sport.TENNIS), (B, C))
+    pick.say_yes(B, at=MADE_AT)
+    pick.pause_yes(B, at=MADE_AT)
+    pick.say_yes(C, at=MADE_AT)
+
+    assert pick.open_seats == 1
+    pick.deal((D,), at=MADE_AT)
+    pick.say_yes(D, at=MADE_AT)
+
+    assert pick.resume_yes(B, at=LATER) is False
+    assert B in pick.paused
+
+
+def test_only_a_paused_yes_on_a_game_still_filling_comes_back():
+    pick = dealt(a_pick(), (B, C, D, E))
+    pick.say_yes(B, at=MADE_AT)
+
+    assert pick.resume_yes(B, at=LATER) is False
+    pick.pause_yes(B, at=MADE_AT)
+    assert pick.resume_yes(B, at=BOOK_BY) is False
 
 
 def test_the_stream_folds_back_into_the_proposal_it_recorded():

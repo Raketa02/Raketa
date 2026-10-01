@@ -129,9 +129,12 @@ from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.making import DealVersion, MakeProposal
 from app.modules.proposals.application.propose_games import ProposeGames
+from app.modules.proposals.application.resume_paused_yeses import ResumePausedYeses
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
+    BookedGameChanges,
     BookedGames,
+    CardFees,
     ClubDistances,
     ClubRequests,
     GameBookings,
@@ -139,6 +142,7 @@ from app.modules.proposals.domain.ports import (
     GameResults,
     PlayerBookings,
     SeatCharges,
+    SeatRefunds,
     UndecidedCharges,
     ClubNames as ProposalClubNames,
     ClubTerms,
@@ -176,9 +180,12 @@ from app.modules.proposals.application.club_requests import (
     ReadWaitingRequests,
     RefuseTheRequest,
 )
+from app.modules.proposals.application.cut_off import CallOffShortGames
 from app.modules.proposals.application.fill import Fill
+from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.infrastructure.bookings import (
     BookingsBookedGames,
+    BookingsBookedGameChanges,
     BookingsClubRequests,
     BookingsGameBookings,
     BookingsGroupBornGames,
@@ -188,6 +195,10 @@ from app.modules.proposals.infrastructure.users_names import UsersPlayerNames
 from app.modules.proposals.infrastructure.club_distances import ProfileClubDistances
 from app.modules.proposals.infrastructure.game_results import GamesGameResults
 from app.modules.bookings.application.book_the_game import BookTheGame, FindACourt
+from app.modules.bookings.application.leaving import (
+    CallOffAtTheCutOff,
+    LeaveTheBooking,
+)
 from app.modules.bookings.application.requests import (
     BookTheRequest,
     CallOffTheRequest,
@@ -196,11 +207,16 @@ from app.modules.bookings.application.requests import (
 )
 from app.modules.bookings.domain.ports import (
     BookingDirectory,
+    BookingHistoryQuery,
     BookingRepository,
     CheckInCodes,
     ClubCourtsAtTheHour,
     ClubDesks,
+    GameChanges,
     GameOpening,
+)
+from app.modules.bookings.infrastructure.booking_history import (
+    EventSourcedBookingHistory,
 )
 from app.modules.bookings.infrastructure.club_desks import AccountClubDesks
 from app.modules.bookings.infrastructure.check_in_codes import KeyedCheckInCodes
@@ -212,10 +228,14 @@ from app.modules.bookings.infrastructure.event_sourced_booking_repository import
     EventSourcedBookingRepository,
     SqlAlchemyBookingDirectory,
 )
-from app.modules.bookings.infrastructure.games_opening import OpenTheGame
+from app.modules.bookings.infrastructure.games_opening import (
+    LeaveAndCallOffTheGame,
+    OpenTheGame,
+)
 from app.modules.payments.application.handlers.settle_seat_charges import (
     SettleSeatCharges,
 )
+from app.modules.payments.application.refunds import RefundTheSeats
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
@@ -248,7 +268,9 @@ from app.modules.proposals.infrastructure.matcher_player_fit import MatcherPlaye
 from app.modules.proposals.infrastructure.payments import (
     LiveYesCommitments,
     PaymentsSavedMethods,
+    PaymentsCardFees,
     PaymentsSeatCharges,
+    PaymentsSeatRefunds,
     PaymentsUndecidedCharges,
 )
 from app.modules.proposals.infrastructure.sqlalchemy_proposal_directory import (
@@ -1345,6 +1367,40 @@ def build_withdraw_a_leavers_yeses(
     )
 
 
+def build_resume_paused_yeses(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ResumePausedYeses:
+    """A paused week back, when a booked game stops being a player's — built
+    per delivery run over its session and provider, since a yes that comes back
+    as a game's last seat fills it (#544)."""
+    proposals = build_proposal_repository(
+        session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    return ResumePausedYeses(
+        proposals=proposals,
+        directory=build_proposal_directory(session),
+        games_and_money=build_games_and_money_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        booked=build_booked_games(session),
+        guards=build_proposal_guards(session, runtime=runtime),
+        fill=build_fill(
+            session,
+            proposals=proposals,
+            provider=provider,
+            settings=settings,
+            runtime=runtime,
+        ),
+    )
+
+
 def build_expire_proposals(session: AsyncSession, *, clock: Clock) -> ExpireProposals:
     """One book-by sweep over this session — the job's, and a test's."""
     return ExpireProposals(
@@ -1564,6 +1620,100 @@ def build_game_bookings(
     return BookingsGameBookings(
         find=build_find_a_court(session, runtime=runtime),
         book=build_book_the_game(session, runtime=runtime),
+    )
+
+
+def build_booked_game_changes(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> BookedGameChanges:
+    """Leaving a booked game, and the cut-off — over the Bookings context's own
+    use cases, the cut-off's email to the club opening its Bookings page (#544)."""
+
+    def bookings() -> BookingRepository:
+        return build_booking_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+
+    return BookingsBookedGameChanges(
+        leave=LeaveTheBooking(
+            bookings=bookings(), games=build_game_changes(session, runtime=runtime)
+        ),
+        call_off=CallOffAtTheCutOff(
+            bookings=bookings(),
+            games=build_game_changes(session, runtime=runtime),
+            desks=build_club_desks(session, runtime=runtime),
+            mail=build_mail_queue(session),
+            bookings_page=f"{settings.CLUB_WEBSITE_URL.rstrip('/')}/bookings",
+        ),
+        directory=build_booking_directory(session),
+    )
+
+
+def build_card_fees() -> CardFees:
+    """What the card fee on a share comes to — the payments' estimate (#544)."""
+    return PaymentsCardFees()
+
+
+def build_seat_refunds(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> SeatRefunds:
+    """A booked game's paid shares given back — decided in the act, refunded
+    at the provider from the outbox — and each player emailed (#544)."""
+    return PaymentsSeatRefunds(
+        RefundTheSeats(
+            charges=_seat_charge_repository(session, runtime),
+            sellers=build_sellers(session, runtime=runtime),
+            payers=build_payers(session),
+            mail=build_mail_queue(session),
+            app_link=f"{settings.APP_SCHEME}://",
+        )
+    )
+
+
+def build_leave_the_game(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> LeaveTheGame:
+    """*Leave the game* — refunded at once before the cut-off, offered to
+    others after it, and the yes withdrawn while the club decides (#544)."""
+    return LeaveTheGame(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        games=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
+        refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_call_off_short_games(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> CallOffShortGames:
+    """One cut-off run over this session — the job's, and a test's (#544)."""
+    return CallOffShortGames(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        games=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
     )
 
 
@@ -1929,6 +2079,7 @@ def build_read_booking_details(
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
+        fees=build_card_fees(),
         clock=clock,
     )
 
@@ -1979,6 +2130,21 @@ def build_game_opening(
                 events=build_event_publisher(session, runtime=runtime),
             )
         )
+    )
+
+
+def build_game_changes(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GameChanges:
+    """What leaving and the cut-off do to a booked game's ordinary Game — the
+    Games context's own departure and call-off (#544)."""
+    games = build_game_repository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    return LeaveAndCallOffTheGame(
+        vacate=VacateSeat(games=games), call_off=CallOffGame(games=games)
     )
 
 
@@ -2838,7 +3004,8 @@ def build_account_status_query(session: AsyncSession) -> AccountStatusQuery:
 
 
 def build_published_score_query(session: AsyncSession) -> PublishedScoreQuery:
-    """``player_score``, over the two contexts that keep a record of anything.
+    """``player_score``, over the two contexts that keep a record of anything —
+    the games, and since #544 the bookings.
 
     It is built from the two providers' own published ports rather than from the
     session, so this line stays a choice of implementation and the folds behind
@@ -2846,7 +3013,20 @@ def build_published_score_query(session: AsyncSession) -> PublishedScoreQuery:
     """
     return ThreeStrandsFromTheRecord(
         games=build_game_history_query(session),
-        challenges=build_challenge_history_query(session),
+        bookings=build_booking_history(session),
+    )
+
+
+def build_booking_history(session: AsyncSession) -> BookingHistoryQuery:
+    """Who kept the booked games they held a seat on, and who broke them —
+    folded off each booking's stream (#544)."""
+    return EventSourcedBookingHistory(
+        directory=build_booking_directory(session),
+        bookings=build_booking_repository(
+            session,
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        ),
     )
 
 

@@ -16,7 +16,9 @@ from app.modules.bookings.domain.events import (
     BookingRefused,
     BookingRequested,
     BookingTimedOut,
+    CalledOffAtCutOff,
     RequestWithdrawn,
+    SeatLeft,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,8 @@ BookingEvent = (
     | BookingRefused
     | BookingTimedOut
     | RequestWithdrawn
+    | SeatLeft
+    | CalledOffAtCutOff
 )
 
 _NAMES = {
@@ -37,6 +41,8 @@ _NAMES = {
     BookingRefused: "bookings.booking.refused",
     BookingTimedOut: "bookings.booking.timed_out",
     RequestWithdrawn: "bookings.booking.request_withdrawn",
+    SeatLeft: "bookings.booking.seat_left",
+    CalledOffAtCutOff: "bookings.booking.called_off_at_cut_off",
 }
 
 

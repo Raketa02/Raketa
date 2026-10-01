@@ -11,6 +11,11 @@ every seat's share all or nothing, a refused payment its player confirmed, and
 the charges a game will not be paid with let go — over the Payments context's
 own use cases, its refusals translated into this context's words.
 
+``PaymentsSeatRefunds`` gives a booked game's paid shares back — a leaver's
+before the cut-off, less the card fee, and everybody's still in on a game
+called off at its cut-off, in full (#544) — and ``PaymentsCardFees`` says what
+the card fee on a share comes to, the estimate the leaving sheet quotes.
+
 ``LiveYesCommitments`` answers **payments'** demand — *could anything still be
 charged to this method* — with the player's live yeses, across pools and sports,
 and their booked games still ahead (the mechanics §12.4: *Remove only with
@@ -25,11 +30,16 @@ from uuid import UUID
 
 from app.kernel import Instant
 from app.modules.bookings.domain.ports import BookingDirectory
+from app.modules.payments.application.refunds import (
+    RefundReason as PaymentsRefundReason,
+)
+from app.modules.payments.application.refunds import RefundTheSeats
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
     ReleaseCharges,
 )
+from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.application.seat_charges import (
     GameToCharge as ChargedGame,
 )
@@ -38,6 +48,7 @@ from app.modules.proposals.domain.ports import (
     GameToCharge,
     PaymentRefusal,
     ProposalDirectory,
+    RefundReason,
     RefusedPayment,
     SeatsCharged,
 )
@@ -116,6 +127,39 @@ class PaymentsUndecidedCharges:
         await self._release.execute(
             proposal_id, keeping=keeping, of_player=of_player, at=at
         )
+
+
+_REASONS = {
+    RefundReason.LEFT_BEFORE_THE_CUT_OFF: PaymentsRefundReason.LEFT,
+    RefundReason.CALLED_OFF_AT_THE_CUT_OFF: (
+        PaymentsRefundReason.CALLED_OFF_AT_THE_CUT_OFF
+    ),
+}
+
+
+@final
+class PaymentsSeatRefunds:
+    def __init__(self, refund: RefundTheSeats) -> None:
+        self._refund = refund
+
+    async def refund(
+        self,
+        booking_id: UUID,
+        players: Collection[UUID],
+        *,
+        reason: RefundReason,
+        at: Instant,
+    ) -> None:
+        # A booking takes its proposal's id, which every charge was made for.
+        await self._refund.execute(
+            booking_id, players, reason=_REASONS[reason], at=at
+        )
+
+
+@final
+class PaymentsCardFees:
+    def card_fee_on(self, share_grosze: int) -> int:
+        return estimated_card_fee(share_grosze)
 
 
 @final

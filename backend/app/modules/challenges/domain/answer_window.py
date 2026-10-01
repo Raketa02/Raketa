@@ -24,9 +24,12 @@ first day and the second adds nothing, the second day is not being used and the
 number comes back down. The second reading is the **share of seats that lapse**,
 which is the figure this window was moved to move.
 
-**The lapse is still charged, and nothing here exempts an unseen invitation.**
-A fourth shape was available — keep the day and leave a seat nobody saw out of
-``answering_for``, as a withdrawn challenge already is. It is refused: once the
+**The lapse was still charged, and nothing here exempted an unseen invitation**
+— an argument about the *answers challenges* strand, which stood down with #544
+(the mechanics §15.4) and took its read, ``answering_for``, with it; kept as the
+reason the window is what it is. A fourth shape was available — keep the day and
+leave a seat nobody saw out of that read, as a withdrawn challenge already was.
+It was refused: once the
 window exceeds the gap between app opens, silence *is* the fact the strand exists
 to measure, and somebody who opens the app less often than every other day
 genuinely is slow to answer. The exemption would also need *did they see it*,

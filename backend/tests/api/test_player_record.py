@@ -23,17 +23,15 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.bootstrap.composition import (
-    build_challenge_repository,
+    build_booking_repository,
     build_domain_event_store,
     build_event_publisher,
     build_game_repository,
     build_sportsmanship_ledger,
 )
-from app.engines.matchfit.core import ReliabilityStrand
+from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Sport, instant
-from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.origins import SentFromSearch
-from app.modules.challenges.domain.seats import SeatPlan, court_sides
+from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
@@ -218,48 +216,33 @@ async def a_ghosted_plan(session_factory, a: UUID, b: UUID, *, sport: Sport):
         await session.commit()
 
 
-async def an_answered_invitation(
-    session_factory, organiser: UUID, invitee: UUID, *, sport: Sport
-):
-    """One send, answered inside its day — the good half of *answers challenges*.
+async def a_kept_booked_game(session_factory, player: UUID):
+    """A padel game the player stayed in until its hour — the good half of
+    *keeps plans* (#544). Booked five days before its hour, four days ago,
+    through the aggregate."""
 
-    Written through the aggregate, seat origins and empty seats and all, because
-    what the strand folds is the seat's own history and a row assembled by hand
-    is not one the platform could have written.
-    """
-
-    at = instant(datetime.now(timezone.utc) - timedelta(days=4))
-    sides = court_sides(sport)
-    occupants: list[UUID | None] = [organiser, invitee]
-    occupants += [None] * (len(sides) - len(occupants))
-    challenge = Challenge.sent(
-        challenge_id=new_uuid(),
-        sport=sport,
-        mode=None,
-        window=Window.THIS_WEEK,
-        organiser_id=organiser,
-        arrangement=[
-            SeatPlan(
-                side=side,
-                player_id=occupant,
-                origin=(
-                    SentFromSearch(search_id=new_uuid(), position=seat)
-                    if occupant == invitee
-                    else None
-                ),
-            )
-            for seat, (side, occupant) in enumerate(
-                zip(sides, occupants, strict=True), 1
-            )
-        ],
-        occurred_at=at,
+    starts = instant(datetime.now(timezone.utc) - timedelta(days=4))
+    booking = Booking.confirmed(
+        booking_id=new_uuid(),
+        pool_id=new_uuid(),
+        club_id=new_uuid(),
+        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        start=starts,
+        share_grosze=30_00,
+        first_side=(player, new_uuid()),
+        second_side=(new_uuid(), new_uuid()),
+        cut_off=instant(starts - timedelta(hours=24)),
+        game_id=new_uuid(),
+        at=instant(starts - timedelta(days=5)),
     )
-    challenge.accept(invitee, occurred_at=at)
     async with session_factory() as session:
-        await build_challenge_repository(
+        await build_booking_repository(
+            session,
             event_store=build_domain_event_store(session),
             events=build_event_publisher(session),
-        ).save(challenge)
+        ).save(booking)
         await session.commit()
 
 
@@ -876,9 +859,7 @@ async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
     await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
-    await an_answered_invitation(
-        session_factory, searcher["id"], subject, sport=Sport.PADEL
-    )
+    await a_kept_booked_game(session_factory, subject)
 
     reliability = (await record_of(client, searcher["token"], subject)).json()[
         "reliability"
@@ -886,7 +867,7 @@ async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
 
     assert [row["strand"] for row in reliability["strands"]] == [
         "SHOWS_UP",
-        "ANSWERS_CHALLENGES",
+        "KEEPS_PLANS",
     ]
     weighted = sum(
         PUBLISHED_WEIGHTS[ReliabilityStrand(row["strand"])] * row["pct"]
@@ -910,9 +891,7 @@ async def test_no_weight_crosses_on_this_response_in_any_shape(
     subject = await a_search_that_showed(
         client, session_factory, candidate_source, searcher
     )
-    await an_answered_invitation(
-        session_factory, searcher["id"], subject, sport=Sport.PADEL
-    )
+    await a_kept_booked_game(session_factory, subject)
 
     body = (await record_of(client, searcher["token"], subject)).json()
 
@@ -1197,9 +1176,7 @@ async def test_stars_move_no_part_of_the_reliability_pill(
         client, session_factory, candidate_source, searcher
     )
     await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
-    await an_answered_invitation(
-        session_factory, searcher["id"], subject, sport=Sport.PADEL
-    )
+    await a_kept_booked_game(session_factory, subject)
 
     before = (await record_of(client, searcher["token"], subject)).json()["reliability"]
 

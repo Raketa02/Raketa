@@ -57,6 +57,9 @@ from app.modules.proposals.domain.home import (
     CalledOffReason,
     CheckIn,
     HomeStatus,
+    LeaveTerms,
+    Leaving,
+    UncountedReason,
 )
 from app.modules.proposals.domain.ports import DeckPerson, PaymentRefusal
 
@@ -660,8 +663,11 @@ _HOME_STATUS = (
     "`CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is "
     "agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — "
     "nobody said it happened in time. `CALLED_OFF` — it will not be played; "
-    "`called_off_reason` says why. One more arrives with the ticket that "
-    "produces it: `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+    "`called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is "
+    "offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) "
+    "*fills by then or the game is off and everyone is refunded*, after it *the "
+    "game goes ahead*. A game whose hour comes with a seat still open is "
+    "`UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`."
 )
 
 _CALLED_OFF_REASON = (
@@ -669,8 +675,22 @@ _CALLED_OFF_REASON = (
     "`REFUSED` — the On request club refused it. `NO_ANSWER` — the club did not "
     "answer in time. In both nobody paid. (A seat opening while it waited takes "
     "the request back instead: it leaves Home, and the people still In find the "
-    "game filling again in their live yeses.) More arrive with the tickets that "
-    "call a booked game off (#544, #547)."
+    "game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` — a seat "
+    "that opened before the club's cut-off was still empty at it: everybody "
+    "still in is refunded in full (`money.refunded_grosze`); read off the clock "
+    "from the cut-off on. More arrive with the club's cancel (#547)."
+)
+
+_UNCOUNTED_REASON = (
+    "Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score "
+    "— `null` otherwise. `SEAT_EMPTY` — its hour came with a seat open: "
+    "somebody left after the cut-off and nobody took the seat. No Level moved, "
+    "and nothing is on the record of those who stayed."
+)
+
+_OPEN_SEATS = (
+    "Seats a leaver left open — the dashed tiles; nought unless `SEAT_OPEN`. "
+    "The sides list the seats still held."
 )
 
 
@@ -721,6 +741,13 @@ class BookedMoneySchema(BaseModel):
             "The club's cut-off while it is still ahead at `read_at` — leaving "
             "before it is refunded. `null` from the cut-off on, and for a game "
             "that filled after it. The line switches by itself at this instant."
+        )
+    )
+    refunded_grosze: int | None = Field(
+        description=(
+            "What everybody still in is given back — the whole share, on a game "
+            "called off at its cut-off (*refunded 30 zł*). `null` where nothing "
+            "is."
         )
     )
 
@@ -781,6 +808,7 @@ def _money(money: BookedMoney) -> BookedMoneySchema:
         share_grosze=money.share_grosze,
         paid=money.paid,
         free_to_leave_until=money.free_to_leave_until,
+        refunded_grosze=money.refunded_grosze,
     )
 
 
@@ -806,6 +834,8 @@ class HomeGameSchema(BaseModel):
     kind: SearchMode = Field(description="Competitive, or for fun (a friendly).")
     status: HomeStatus = Field(description=_HOME_STATUS)
     called_off_reason: CalledOffReason | None = Field(description=_CALLED_OFF_REASON)
+    uncounted_reason: UncountedReason | None = Field(description=_UNCOUNTED_REASON)
+    open_seats: int = Field(description=_OPEN_SEATS)
     needs_you: bool = Field(
         description=(
             "One of the games that need the reader: a result to enter, the other "
@@ -839,7 +869,9 @@ class HomeGameSchema(BaseModel):
             sport=game.sport,
             kind=game.kind,
             status=card.state.status,
-            called_off_reason=game.called_off,
+            called_off_reason=card.state.called_off,
+            uncounted_reason=card.state.uncounted,
+            open_seats=game.open_seats,
             needs_you=card.state.needs_you,
             starts_at=game.start,
             club=BookedClubSchema(id=game.club_id, name=card.club_name),
@@ -926,6 +958,58 @@ class CheckInSchema(BaseModel):
         return cls(short_code=code.short_code, qr_payload=code.qr_payload)
 
 
+class LeavingSchema(BaseModel):
+    """What *Leave the game* would cost now (the mechanics §13)."""
+
+    kind: Leaving = Field(
+        description=(
+            "`BEFORE_THE_CUT_OFF` — *You'll be refunded 38,40 zł now (the 1,60 zł "
+            "card fee isn't returned). Your seat is offered to others. On your "
+            "record only if the game is then called off.* `AFTER_THE_CUT_OFF` — "
+            "*Your seat is offered to others. You'll be refunded 38,40 zł when "
+            "someone takes it; if nobody does, you won't be. On your record if "
+            "nobody takes it.* `WHILE_WAITING_FOR_THE_CLUB` — *Nobody has paid "
+            "yet. Leaving withdraws your yes.* The same words the departure "
+            "answers with."
+        )
+    )
+    refund_grosze: int = Field(
+        description=(
+            "What comes back — the share less the card fee; nought when nobody "
+            "paid."
+        )
+    )
+    card_fee_grosze: int = Field(
+        description=(
+            "The card fee that isn't returned — the provider's standard price, "
+            "an estimate; what it kept is on the receipt."
+        )
+    )
+
+    @classmethod
+    def from_terms(cls, terms: LeaveTerms) -> "LeavingSchema":
+        return cls(
+            kind=terms.kind,
+            refund_grosze=terms.refund_grosze,
+            card_fee_grosze=terms.card_fee_grosze,
+        )
+
+
+class DepartureResponse(BaseModel):
+    """*Leave the game*, done."""
+
+    left: Leaving = Field(
+        description=(
+            "`BEFORE_THE_CUT_OFF` — refunded at once, less the card fee (the "
+            "receipt follows within moments); the seat is offered to others. "
+            "`AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others "
+            "until the start; refunded, less the card fee, when somebody takes it. "
+            "`WHILE_WAITING_FOR_THE_CLUB` — nobody had paid: the yes and the "
+            "request to the club are withdrawn, and the game is filling again."
+        )
+    )
+
+
 class BookingDetailsResponse(BaseModel):
     """A booked game's details, for a player in it."""
 
@@ -946,6 +1030,8 @@ class BookingDetailsResponse(BaseModel):
     )
     status: HomeStatus = Field(description=_HOME_STATUS)
     called_off_reason: CalledOffReason | None = Field(description=_CALLED_OFF_REASON)
+    uncounted_reason: UncountedReason | None = Field(description=_UNCOUNTED_REASON)
+    open_seats: int = Field(description=_OPEN_SEATS)
     needs_you: bool
     starts_at: datetime
     ends_at: datetime = Field(description="An hour after `starts_at`: TIME's *until*.")
@@ -972,6 +1058,13 @@ class BookingDetailsResponse(BaseModel):
             "will not be played."
         )
     )
+    leaving: LeavingSchema | None = Field(
+        description=(
+            "What *Leave the game* would cost now — the line under the button and "
+            "its sheet (`POST /bookings/{id}/departure`). `null` where there is "
+            "no button: once the hour has come, and on a game that is over."
+        )
+    )
 
     @classmethod
     def from_details(
@@ -986,7 +1079,9 @@ class BookingDetailsResponse(BaseModel):
             kind=game.kind,
             read_at=details.read_at,
             status=details.state.status,
-            called_off_reason=game.called_off,
+            called_off_reason=details.state.called_off,
+            uncounted_reason=details.state.uncounted,
+            open_seats=game.open_seats,
             needs_you=details.state.needs_you,
             starts_at=game.start,
             ends_at=_an_hour_after(game.start),
@@ -1009,6 +1104,11 @@ class BookingDetailsResponse(BaseModel):
                 None
                 if details.check_in is None
                 else CheckInSchema.from_code(details.check_in)
+            ),
+            leaving=(
+                None
+                if details.leaving is None
+                else LeavingSchema.from_terms(details.leaving)
             ),
         )
 

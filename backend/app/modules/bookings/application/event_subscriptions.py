@@ -8,7 +8,9 @@ from app.modules.bookings.domain.events import (
     BookingRefused,
     BookingRequested,
     BookingTimedOut,
+    CalledOffAtCutOff,
     RequestWithdrawn,
+    SeatLeft,
 )
 
 _EVENTS = (
@@ -18,6 +20,8 @@ _EVENTS = (
     (BookingRefused, "bookings.refused"),
     (BookingTimedOut, "bookings.timed_out"),
     (RequestWithdrawn, "bookings.request_withdrawn"),
+    (SeatLeft, "bookings.seat_left"),
+    (CalledOffAtCutOff, "bookings.called_off_at_cut_off"),
 )
 
 
@@ -33,3 +37,5 @@ def subscribe_booking_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(BookingRefused, LogBookingEvent())
     dispatcher.subscribe(BookingTimedOut, LogBookingEvent())
     dispatcher.subscribe(RequestWithdrawn, LogBookingEvent())
+    dispatcher.subscribe(SeatLeft, LogBookingEvent())
+    dispatcher.subscribe(CalledOffAtCutOff, LogBookingEvent())

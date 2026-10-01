@@ -37,7 +37,8 @@ Booking opened under this proposal's id. When a share could not be held,
 nobody paid, the game did not fill, and that player's **seat reopened** — open
 again until they confirm the payment, or somebody else takes it. And a
 player whose games per week another game just booked has their other yeses
-that week **paused**: not counted, and back if a game of theirs is called off.
+that week **paused**: not counted, and **resumed** when their week has room again
+— a game of theirs called off, or left (#544).
 
 **A full game still filling is waiting for its club** (#543): only an On request
 club leaves one so, and while it waits **its book-by no longer reads** — the
@@ -75,6 +76,7 @@ from app.modules.proposals.domain.events import (
     TurnedDown,
     VersionDealt,
     YesPaused,
+    YesResumed,
     YesSaid,
     YesWithdrawn,
 )
@@ -534,6 +536,26 @@ class Proposal:
         )
         return True
 
+    def resume_yes(self, player_id: UUID, *, at: Instant) -> bool:
+        """This player's week has room again: their paused yes counts once more
+        (#544). Answers whether anything was recorded — nothing for a player
+        whose yes is not paused, a game no longer filling, or one with no seat
+        left for it: somebody took it while the yes was paused. Whether their
+        week has room, and whether they may still be In, is the caller's."""
+
+        if (
+            player_id not in self.paused
+            or self.standing_at(at) is not Standing.FILLING
+            or self.open_seats == 0
+        ):
+            return False
+        self._record_that(
+            YesResumed(
+                proposal_id=self.proposal_id, player_id=player_id, occurred_at=at
+            )
+        )
+        return True
+
     def expire(self, *, now: Instant) -> bool:
         """Record that the book-by passed with the game unfilled. Answers
         whether anything was recorded: nothing before the book-by, and nothing
@@ -654,6 +676,11 @@ class Proposal:
                 player for player in self.yeses if player != event.player_id
             )
             self.paused = (*self.paused, event.player_id)
+        elif isinstance(event, YesResumed):
+            self.yeses = (*self.yeses, event.player_id)
+            self.paused = tuple(
+                player for player in self.paused if player != event.player_id
+            )
         elif isinstance(event, ProposalFilled):
             self.ending = Ending.FILLED
         elif isinstance(event, ProposalWithdrawn):

@@ -2,8 +2,9 @@
 
 Three rules decide everything below.
 
-**The standing is derived and travels as a code.** ``GameStanding`` is six values and
-the words for them are the client's (``docs/adr/0022``). It is on the response
+**The standing is derived and travels as a code.** ``GameStanding`` is seven values —
+``STARTED_SHORT`` arrived with leaving a booked game (#544) — and the words for them are
+the client's (``docs/adr/0022``). It is on the response
 because it is a fold of the record against the moment the list was read — and it
 is **not** on the aggregate, in the store, or anywhere a second copy could go
 stale. **The one thing a reader's own act changes about this list is which games

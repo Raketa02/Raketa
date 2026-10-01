@@ -60,6 +60,7 @@ from app.modules.proposals.domain.events import (
     ProposalFilled,
     SeatReopened,
     YesPaused,
+    YesResumed,
     YesSaid,
     YesWithdrawn,
 )
@@ -76,7 +77,14 @@ PLAYER_EVENTS = (
 )
 #: A swipe on a game still filling — or a yes that stopped counting, which
 #: opens a seat as a withdrawal does.
-SWIPE_EVENTS = (YesSaid, NoSaid, YesWithdrawn, SeatReopened, YesPaused)
+SWIPE_EVENTS = (
+    YesSaid,
+    NoSaid,
+    YesWithdrawn,
+    SeatReopened,
+    YesPaused,
+    YesResumed,
+)
 #: A change to what a club sells.
 CLUB_EVENTS = (
     CourtAdded,

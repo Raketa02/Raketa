@@ -1,8 +1,9 @@
 """The player surface's proposal routes: the three answers to a card, the
 reader's live yeses (#538; the mechanics §6, §10.2; the screens A2.4, A7.3), a
 group's deck and the reader's Games & money (#539; the mechanics §6.6, §8,
-§17.1; the screens A2, A7.1), and Home and a game's two details — still filling,
-or booked (#542; the mechanics §14; the screens A4, A8).
+§17.1; the screens A2, A7.1), Home and a game's two details — still filling,
+or booked (#542; the mechanics §14; the screens A4, A8) — and leaving a booked
+game (#544; the mechanics §12.3, §13).
 
 Mounted on the player surface (``app/api/v1/player.py``). Every route takes a
 player's token and answers for that player only.
@@ -27,11 +28,13 @@ from app.kernel import Sport
 from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
     ConfirmPaymentCommand,
+    LeaveTheGameCommand,
     ReadGroupDeckCommand,
     SetGamesAndMoneyCommand,
 )
 from app.modules.proposals.presentation.dependencies import (
     ConfirmPaymentDep,
+    LeaveTheGameDep,
     ReadBookingDetailsDep,
     ReadHomeDep,
     ReadPaymentsToConfirmDep,
@@ -46,6 +49,7 @@ from app.modules.proposals.presentation.dependencies import (
 )
 from app.modules.proposals.presentation.schemas import (
     BookingDetailsResponse,
+    DepartureResponse,
     GamesAndMoneyRequest,
     GamesAndMoneyResponse,
     GroupDeckResponse,
@@ -472,3 +476,50 @@ async def read_booking_details(
     return BookingDetailsResponse.from_details(
         await read.execute(booking_id, user.id), reader=user.id
     )
+
+
+@bookings_router.post(
+    "/{booking_id}/departure",
+    response_model=DepartureResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`booking_not_found` — no such game **for this player**: it does "
+                "not exist, or they have no seat on it — including one they "
+                "already left. One code for all three."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`game_has_started` — its hour has begun; there is nothing to "
+                "leave. `booking_is_called_off` — the game is off (refused, "
+                "unanswered, or short at its cut-off) and everybody still in is "
+                "refunded, or nobody paid. Nothing was recorded."
+            ),
+        },
+    },
+    summary="Leave a booked game",
+    description=(
+        "*Leave the game* (the client shows the sheet first: the booking's "
+        "`leaving` says what it costs). **Before the club's cut-off** the leaver "
+        "is refunded at once, less the card fee, and the seat is offered to "
+        "others — on their record only if the game is then called off because "
+        "of it. **After the cut-off** the seat stays paid and is offered to "
+        "others until the start; the leaver is refunded, less the fee, when "
+        "somebody takes it, and it is on their record if nobody does. **While "
+        "the club decides** nobody has paid: the yes and the request to the club "
+        "are withdrawn, as `DELETE /proposals/{id}/yes` does. The leaver leaves "
+        "the game's chat with their seat; everybody else's Home reads "
+        "`SEAT_OPEN`. Refused once the hour has begun."
+    ),
+)
+async def leave_the_game(
+    booking_id: UUID, user: CurrentUserDep, leave: LeaveTheGameDep
+) -> DepartureResponse:
+    left = await leave.execute(
+        LeaveTheGameCommand(booking_id=booking_id, player_id=user.id)
+    )
+    return DepartureResponse(left=left)

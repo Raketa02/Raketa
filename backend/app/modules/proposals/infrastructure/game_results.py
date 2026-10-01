@@ -55,5 +55,7 @@ def _stage(standing: GameStanding) -> ResultStage:
             return ResultStage.NEVER_PLAYED
         case GameStanding.CALLED_OFF:
             return ResultStage.CALLED_OFF
+        case GameStanding.STARTED_SHORT:
+            return ResultStage.STARTED_SHORT
         case _:
             exhaustive(standing)

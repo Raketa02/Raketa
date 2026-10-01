@@ -148,6 +148,7 @@ def build_lifespan(settings: Settings):
             or settings.PROPOSAL_EXPIRY_ENABLED
             or settings.PROPOSER_ENABLED
             or settings.REQUEST_TIMEOUT_ENABLED
+            or settings.CUT_OFF_ENABLED
         ):
             session_factory = build_background_session_factory(get_engine())
 

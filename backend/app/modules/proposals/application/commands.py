@@ -83,3 +83,11 @@ class SetGamesAndMoneyCommand:
     player_id: UUID
     games_per_week: int
     most_ill_pay_grosze: int | None
+
+
+@dataclass(frozen=True)
+class LeaveTheGameCommand:
+    """*Leave the game* on a booked game's details (#544)."""
+
+    booking_id: UUID
+    player_id: UUID

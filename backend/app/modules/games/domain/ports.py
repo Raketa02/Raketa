@@ -253,7 +253,7 @@ class ResultAnswering:
 
     **It is the same shape as ``Attendance`` above and is deliberately not the
     same type.** Three counts and a moment is what an opportunity record looks
-    like — ``challenges``' ``AnsweringRecord`` is a third one — and a shared
+    like — ``bookings``' ``KeepingRecord`` is a third one (#544) — and a shared
     ``Opportunity(good, missed, last_at)`` would be a type whose field names could
     not say *played* or *ghosted* or *ignored*. The words are the whole content of
     these rows: a reader of the fold has to know that a ghost is charged to a

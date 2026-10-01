@@ -6,11 +6,10 @@ enrolled here automatically, so a second one either satisfies the demand or turn
 the build red.
 
 **This context stores nothing, so every arrangement here is made through
-somebody else's aggregate** — a ``Challenge`` that was answered or left to lapse,
-a ``Game`` that was played or ghosted — and never an ``INSERT``
-(``docs/adr/0029``). That is not ceremony: the two folds under this port live in
-``games`` and ``challenges``, and the only honest way to exercise a fold is to
-make the history it folds.
+somebody else's aggregate** — a ``Booking`` that was kept or left, a ``Game``
+that was played or ghosted — and never an ``INSERT`` (``docs/adr/0029``). That
+is not ceremony: the folds under this port live in ``games`` and ``bookings``,
+and the only honest way to exercise a fold is to make the history it folds.
 
 **The rule the whole suite is written around is the absence rule.** A player with
 no record is *absent from the answer*, never ``0`` and never ``0.5``. It is the
@@ -18,12 +17,13 @@ one thing that cannot be checked by reading the code, because the failure looks
 like a perfectly ordinary dictionary comprehension — and it is the rule whose
 breach would turn *no record* into *a bad record* everywhere downstream at once.
 
-**Three strands and never four.** *Keeps plans* and *settles up* have no
-provider on this platform and *sportsmanship* is published in its own right
-rather than as a strand (``docs/adr/0158``), and the assertions below say so by
-name rather than by asserting a length: the day one of them lands, a named
-assertion says which, and a length assertion would only say that something
-changed.
+**Three strands and never four.** *Answers challenges* stood down with #544 —
+challenges no longer wait for answers, and *keeps plans* came up in its place —
+*settles up* has no provider on this platform, and *sportsmanship* is published
+in its own right rather than as a strand (``docs/adr/0158``), and the assertions
+below say so by name rather than by asserting a length: the day one of them
+lands, a named assertion says which, and a length assertion would only say that
+something changed.
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ import pytest
 import pytest_asyncio
 
 from app.bootstrap.composition import (
+    build_booking_repository,
     build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
@@ -45,8 +46,9 @@ from app.bootstrap.player_score_demands import (
     PLAYER_SCORE_IMPLEMENTATIONS,
     implementations_of,
 )
-from app.engines.matchfit.core import ReliabilityStrand
+from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Instant, Sport, instant
+from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.seats import SeatPlan, court_sides
 from app.modules.challenges.domain.origins import SentFromSearch
@@ -251,6 +253,46 @@ async def _withdraws(session, challenge: Challenge, *, at: Instant) -> None:
     await session.commit()
 
 
+def _bookings(session):
+    return build_booking_repository(
+        session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+
+
+async def _booked(
+    session,
+    players: tuple[UUID, UUID, UUID, UUID],
+    *,
+    starts: Instant,
+    leaving: tuple[tuple[UUID, Instant], ...] = (),
+) -> Booking:
+    """A padel game booked five days before its hour, through the aggregate,
+    with a 24-hour cut-off — and whoever left it, when they left."""
+
+    booking = Booking.confirmed(
+        booking_id=new_uuid(),
+        pool_id=new_uuid(),
+        club_id=new_uuid(),
+        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        start=starts,
+        share_grosze=30_00,
+        first_side=players[:2],
+        second_side=players[2:],
+        cut_off=instant(starts - timedelta(hours=24)),
+        game_id=new_uuid(),
+        at=instant(starts - timedelta(days=5)),
+    )
+    for player, at in leaving:
+        booking.leave(player, at=at)
+    await _bookings(session).save(booking)
+    await session.commit()
+    return booking
+
+
 async def _played(session, *, one: UUID, other: UUID, at: Instant) -> Game:
     """A plan that produced a game: somebody said *we played*, with a score."""
 
@@ -349,116 +391,23 @@ async def test_a_score_read_answers_only_about_players_it_was_asked_about(
 ):
     """One batched read per search, and it volunteers nobody.
 
-    The organiser of the challenge below has a record of their own and is
+    The other player on the game below has a record of their own and is
     deliberately not in the question: a read that answered about them would be
     answering about somebody the caller never asked after.
     """
 
     port = implementation.build(session)
-    organiser, invitee = new_uuid(), new_uuid()
-    challenge = await _invited(
-        session, organiser=organiser, invitee=invitee, at=_ago(days=2)
-    )
-    await _answers(session, challenge, invitee, yes=True, at=_ago(days=2))
+    one, other = new_uuid(), new_uuid()
+    await _played(session, one=one, other=other, at=_ago(days=3))
 
-    scores = await port.scores_for([invitee], now=_now())
+    scores = await port.scores_for([other], now=_now())
 
-    assert set(scores) == {invitee}
+    assert set(scores) == {other}
 
 
 # ---------------------------------------------------------------------------
 # The three strands that have a provider
 # ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_answering_inside_the_window_and_letting_one_lapse_are_one_strand(
-    implementation, session
-):
-    """Two invitations, one answered and one left to run out.
-
-    Both are opportunities and one is a good outcome, so the strand is a half —
-    and the lapse is counted **without any sweep having run**, because a seat
-    past its day is lapsed whether or not anything noticed.
-    """
-
-    port = implementation.build(session)
-    organiser, invitee = new_uuid(), new_uuid()
-    answered = await _invited(
-        session, organiser=organiser, invitee=invitee, at=_ago(days=4)
-    )
-    await _answers(session, answered, invitee, yes=True, at=_ago(days=4))
-    await _invited(session, organiser=organiser, invitee=invitee, at=_ago(days=3))
-
-    score = (await port.scores_for([invitee], now=_now()))[invitee]
-    strand = score.strands[ReliabilityStrand.ANSWERS_CHALLENGES]
-
-    assert (strand.good, strand.opportunities) == (1, 2)
-    assert strand.value == 50
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_turning_somebody_down_inside_your_day_is_answering_them(
-    implementation, session
-):
-    """**The one strand on this platform where a no is a good outcome.**
-
-    *Answers challenges* prices silence, not judgement — which is why a lapse and
-    a decline are different facts on the seat, and why a strand that filed them
-    alike would be unmeasurable.
-    """
-
-    port = implementation.build(session)
-    organiser, invitee = new_uuid(), new_uuid()
-    challenge = await _invited(
-        session, organiser=organiser, invitee=invitee, at=_ago(days=2)
-    )
-    await _answers(session, challenge, invitee, yes=False, at=_ago(days=2))
-
-    score = (await port.scores_for([invitee], now=_now()))[invitee]
-
-    assert score.strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 100
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_the_organisers_own_seat_is_not_an_invitation_they_answered(
-    implementation, session
-):
-    """A seat nobody was asked to take is not an opportunity.
-
-    The organiser accepts from birth because they are the one proposing, and a
-    strand that counted it would publish a hundred per cent for anybody who only
-    ever organises. They are absent here — their invitee's challenge tells us
-    nothing about *them*.
-    """
-
-    port = implementation.build(session)
-    organiser, invitee = new_uuid(), new_uuid()
-    challenge = await _invited(
-        session, organiser=organiser, invitee=invitee, at=_ago(days=2)
-    )
-    await _answers(session, challenge, invitee, yes=True, at=_ago(days=2))
-
-    scores = await port.scores_for([organiser, invitee], now=_now())
-
-    assert set(scores) == {invitee}
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_an_invitation_still_inside_its_day_is_not_yet_an_opportunity(
-    implementation, session
-):
-    """The answer is still wanted, so nothing has been observed about anybody.
-
-    Filing it either way would price somebody for an answer they still have time
-    to give — and the player is absent rather than sitting at ``0/0``.
-    """
-
-    port = implementation.build(session)
-    organiser, invitee = new_uuid(), new_uuid()
-    await _invited(session, organiser=organiser, invitee=invitee, at=_ago(hours=1))
-
-    assert await port.scores_for([invitee], now=_now()) == {}
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
@@ -556,44 +505,83 @@ async def test_only_this_strand_forgets_and_the_other_two_count_a_career(
     assert ReliabilityStrand.ANSWERS_RESULTS not in score.strands
 
 
+# ---------------------------------------------------------------------------
+# The three that stand down, and the blend over what is left
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_an_answer_survives_the_seat_being_offered_to_somebody_else(
+async def test_a_booked_game_kept_and_one_broken_after_its_cut_off_are_one_strand(
     implementation, session
 ):
-    """A refusal stays on the record of the person who made it.
+    """*Keeps plans*, both halves, on the same person (#544; the mechanics §15.4).
 
-    A declined seat can be re-offered, and the arrangement that results has
-    forgotten whoever left it — so a read that asked today's seats would erase a
-    real answer the day the organiser refilled the seat, and would hand the
-    replacement a deadline that was never theirs.
+    A booked game is a plan with a moment. They stayed in one until its hour,
+    which is keeping it; they left another after the club's cut-off and nobody
+    took the seat, which is breaking it — counted **without anything having
+    swept it**, since an hour that has come has come.
     """
 
     port = implementation.build(session)
-    organiser, decliner = new_uuid(), new_uuid()
-    staying, replacement = new_uuid(), new_uuid()
-    challenge = await _invited(
+    player, others = new_uuid(), (new_uuid(), new_uuid(), new_uuid())
+    await _booked(session, (player, *others), starts=_ago(days=5))
+    broken = _ago(days=2)
+    await _booked(
         session,
-        organiser=organiser,
-        invitee=decliner,
-        beside=staying,
-        at=_ago(days=3),
-    )
-    await _answers(session, challenge, staying, yes=True, at=_ago(days=3))
-    await _answers(session, challenge, decliner, yes=False, at=_ago(days=3))
-    await _refills(
-        session,
-        challenge,
-        organiser=organiser,
-        still_in=(staying,),
-        replacement=replacement,
-        at=_ago(hours=2),
+        (player, *others),
+        starts=broken,
+        leaving=((player, broken - timedelta(hours=3)),),
     )
 
-    scores = await port.scores_for([decliner, replacement], now=_now())
+    score = (await port.scores_for([player, others[0]], now=_now()))
+    strand = score[player].strands[ReliabilityStrand.KEEPS_PLANS]
 
-    assert scores[decliner].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 100
-    # The replacement's own day is still running, so nothing is owed about them.
-    assert replacement not in scores
+    assert (strand.good, strand.opportunities) == (1, 2)
+    assert strand.last_at == broken
+    # Those who stayed kept the first; the second, which went ahead short, is
+    # nothing on their record (the mechanics §14.1).
+    stayed = score[others[0]].strands[ReliabilityStrand.KEEPS_PLANS]
+    assert (stayed.good, stayed.opportunities) == (1, 1)
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_leaving_while_it_was_free_is_a_mark_once_the_game_is_called_off(
+    implementation, session
+):
+    """Leaving before the cut-off is on the record **only if the game is then
+    called off because of that seat** — and nothing is on the record of those
+    who stayed."""
+
+    port = implementation.build(session)
+    leaver, stayers = new_uuid(), (new_uuid(), new_uuid(), new_uuid())
+    starts = _ago(hours=12)
+    await _booked(
+        session,
+        (leaver, *stayers),
+        starts=starts,
+        leaving=((leaver, starts - timedelta(days=2)),),
+    )
+
+    scores = await port.scores_for([leaver, stayers[0]], now=_now())
+
+    assert scores[leaver].strands[ReliabilityStrand.KEEPS_PLANS].value == 0
+    assert stayers[0] not in scores
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_booked_game_still_ahead_is_not_yet_an_opportunity(
+    implementation, session
+):
+    """Nobody has kept or broken a game whose hour has not come — and the
+    player is absent rather than sitting at ``0/0``."""
+
+    port = implementation.build(session)
+    player = new_uuid()
+    await _booked(
+        session, (player, new_uuid(), new_uuid(), new_uuid()), starts=_ago(days=-3)
+    )
+
+    assert await port.scores_for([player], now=_now()) == {}
 
 
 # ---------------------------------------------------------------------------
@@ -607,19 +595,23 @@ async def test_the_three_strands_with_no_provider_are_absent_and_never_nought(
 ):
     """Named one by one, so the day one lands the assertion says which.
 
-    Nobody has failed to keep a plan, because no plan on this platform has a
-    moment to be late for; nobody owes a court share, because there is no court
-    money; and nobody has been rated, because there is no surface on which to
+    Nobody has failed to answer a challenge since challenges stopped waiting for
+    answers (#544) — an invitation answered, and one left to lapse, publish
+    nothing; nobody owes a court share, because a share is taken before the game
+    exists; and nobody has been rated, because there is no surface on which to
     rate anybody.
     """
 
     port = implementation.build(session)
     one, other = new_uuid(), new_uuid()
     await _played(session, one=one, other=other, at=_ago(days=3))
+    answered = await _invited(session, organiser=other, invitee=one, at=_ago(days=4))
+    await _answers(session, answered, one, yes=True, at=_ago(days=4))
+    await _invited(session, organiser=other, invitee=one, at=_ago(days=3))
 
     score = (await port.scores_for([one], now=_now()))[one]
 
-    assert ReliabilityStrand.KEEPS_PLANS not in score.strands
+    assert ReliabilityStrand.ANSWERS_CHALLENGES not in score.strands
     assert ReliabilityStrand.SETTLES_UP not in score.strands
     assert ReliabilityStrand.SPORTSMANSHIP not in score.strands
 
@@ -630,23 +622,23 @@ async def test_one_strand_is_a_score_and_the_two_records_are_independent(
 ):
     """A reading needs *a* strand, not all of them.
 
-    Somebody who has answered invitations and never had a game arranged has a
-    Player Score of one strand — and requiring both would make the score answer
-    about nobody until the platform held both records about the same person.
+    Somebody who has kept a booked game and never had a game ghost or a score
+    put to them has a Player Score of one strand — and requiring every record
+    would make the score answer about nobody until the platform held all of
+    them about the same person.
     """
 
     port = implementation.build(session)
-    organiser, answerer = new_uuid(), new_uuid()
-    challenge = await _invited(
-        session, organiser=organiser, invitee=answerer, at=_ago(days=2)
+    keeper = new_uuid()
+    await _booked(
+        session, (keeper, new_uuid(), new_uuid(), new_uuid()), starts=_ago(days=2)
     )
-    await _answers(session, challenge, answerer, yes=True, at=_ago(days=2))
     player, opponent = new_uuid(), new_uuid()
     await _played(session, one=player, other=opponent, at=_ago(days=3))
 
-    scores = await port.scores_for([answerer, player], now=_now())
+    scores = await port.scores_for([keeper, player], now=_now())
 
-    assert set(scores[answerer].strands) == {ReliabilityStrand.ANSWERS_CHALLENGES}
+    assert set(scores[keeper].strands) == {ReliabilityStrand.KEEPS_PLANS}
     assert set(scores[player].strands) == {ReliabilityStrand.SHOWS_UP}
 
 
@@ -654,20 +646,19 @@ async def test_one_strand_is_a_score_and_the_two_records_are_independent(
 async def test_the_published_number_is_the_blend_over_the_strands_that_are_there(
     implementation, session
 ):
-    """35, 20 and 15 over a basis of 70, and never over a hundred.
+    """35, 12 and 15 over a basis of 62, and never over a hundred.
 
     A player with all three live strands at a hundred is published at a hundred —
     which is the assertion that the three standing-down names cost the number
     nothing, because a blend over a basis of a hundred would have capped them at
-    70.
+    62.
     """
 
     port = implementation.build(session)
-    organiser, player = new_uuid(), new_uuid()
-    challenge = await _invited(
-        session, organiser=organiser, invitee=player, at=_ago(days=2)
+    player = new_uuid()
+    await _booked(
+        session, (player, new_uuid(), new_uuid(), new_uuid()), starts=_ago(days=2)
     )
-    await _answers(session, challenge, player, yes=True, at=_ago(days=2))
     await _played(session, one=player, other=new_uuid(), at=_ago(days=3))
     await _answered_a_score(
         session, opener=new_uuid(), answerer=player, at=_ago(days=3)
@@ -677,7 +668,7 @@ async def test_the_published_number_is_the_blend_over_the_strands_that_are_there
 
     assert set(score.strands) == {
         ReliabilityStrand.SHOWS_UP,
-        ReliabilityStrand.ANSWERS_CHALLENGES,
+        ReliabilityStrand.KEEPS_PLANS,
         ReliabilityStrand.ANSWERS_RESULTS,
     }
     assert score.published == 100
@@ -695,18 +686,15 @@ async def test_the_freshest_observation_is_one_moment_over_the_whole_score(
     """
 
     port = implementation.build(session)
-    organiser, player = new_uuid(), new_uuid()
-    challenge = await _invited(
-        session, organiser=organiser, invitee=player, at=_ago(days=9)
-    )
-    answered_at = _ago(days=9)
-    await _answers(session, challenge, player, yes=True, at=answered_at)
+    player = new_uuid()
+    kept_at = _ago(days=9)
+    await _booked(session, (player, new_uuid(), new_uuid(), new_uuid()), starts=kept_at)
     game = await _played(session, one=player, other=new_uuid(), at=_ago(days=3))
 
     score = (await port.scores_for([player], now=_now()))[player]
 
     assert score.last_at == game.played_at
-    assert score.last_at > answered_at
+    assert score.last_at > kept_at
 
 
 # ---------------------------------------------------------------------------
@@ -736,84 +724,3 @@ def test_every_registered_implementation_is_of_a_published_port():
     assert stray == []
 
 
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_a_day_that_ran_out_before_the_withdraw_is_still_silence(
-    implementation, session
-):
-    """**A withdrawal does not erase a lapse that had already happened.**
-
-    A padel four: one invitee accepts and later takes it back, the organiser
-    offers the seat they left on to somebody new, the other invitee says
-    nothing until their day runs out, and — with the newcomer still deciding
-    and nobody else on the court — the organiser removes it. The second invitee
-    was silent for the whole of their own window, and that is the fact
-    *answers challenges* exists to price. The exemption is narrow on purpose,
-    and this is the side of it that must not move.
-    """
-
-    port = implementation.build(session)
-    organiser, answerer, silent, newcomer = (new_uuid() for _ in range(4))
-    challenge = await _invited(
-        session,
-        organiser=organiser,
-        invitee=answerer,
-        beside=silent,
-        at=_ago(days=4),
-    )
-    await _answers(session, challenge, answerer, yes=True, at=_ago(days=4))
-    await _leaves(session, challenge, answerer, at=_ago(days=3))
-    await _refills(
-        session,
-        challenge,
-        organiser=organiser,
-        still_in=(silent,),
-        replacement=newcomer,
-        at=_ago(days=2, hours=12),
-    )
-    await _withdraws(session, challenge, at=_ago(days=1))
-
-    scores = await port.scores_for([answerer, silent], now=_now())
-
-    assert scores[silent].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 0
-    assert scores[answerer].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 100
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_a_challenge_that_stopped_existing_charges_nobody_a_lapse(
-    implementation, session
-):
-    """**Silence on a challenge that had stopped existing is not silence**
-    (`docs/adr/0142` §5).
-
-    An invitation is keyed by who was asked and when their day runs out, and a
-    lapse is decided on `now >= answer_by` alone — so a withdrawal that left the
-    seats exactly as they were, which is what a withdrawal does, would charge
-    somebody who was still deciding a lapse a day later, for a court nobody was
-    waiting on any more.
-
-    Absent, and not a nought: they were never given the chance to answer, so the
-    record they get for it is no record at all — exactly as the organiser's own
-    seat has none. The acceptance beside it is untouched — the answerer took it
-    back before the organiser could remove the court, since a court somebody
-    has joined is nobody's to remove, and a yes taken back is still an answer
-    given — which is what says the withdrawal dropped an invitation rather than
-    a challenge's whole history.
-    """
-
-    port = implementation.build(session)
-    organiser, answerer, deciding = new_uuid(), new_uuid(), new_uuid()
-    challenge = await _invited(
-        session,
-        organiser=organiser,
-        invitee=answerer,
-        beside=deciding,
-        at=_ago(days=4),
-    )
-    await _answers(session, challenge, answerer, yes=True, at=_ago(days=4))
-    await _leaves(session, challenge, answerer, at=_ago(days=3, hours=12))
-    await _withdraws(session, challenge, at=_ago(days=3))
-
-    scores = await port.scores_for([answerer, deciding], now=_now())
-
-    assert set(scores) == {answerer}
-    assert scores[answerer].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 100

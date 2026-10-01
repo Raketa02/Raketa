@@ -71,6 +71,20 @@ class TheCourtHasAnOpenSeat(ConflictError):
         )
 
 
+class TheGameStartedShort(ConflictError):
+    """*We played* said about a booked game whose hour came with a seat open
+    (#544; the mechanics §14.1). Somebody left after the club's cut-off and
+    nobody took the seat, so the game went ahead short — and it ends
+    **uncounted, a seat was empty**: nothing about it can be recorded."""
+
+    code = "the_game_started_short"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This game started with a seat empty, so it cannot be recorded as played."
+        )
+
+
 class NotAGameToCallOff(ConflictError):
     """A call-off asked of a game that is not awaiting its entry with a seat open.
 

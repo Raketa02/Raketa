@@ -34,6 +34,7 @@ from app.modules.proposals.domain.events import (
     TurnedDown,
     VersionDealt,
     YesPaused,
+    YesResumed,
     YesSaid,
     YesWithdrawn,
 )
@@ -179,6 +180,10 @@ class EventSourcedProposalRepository:
         elif isinstance(event, YesPaused):
             await self._answer(
                 event.proposal_id, event.player_id, "PAUSED", event.occurred_at
+            )
+        elif isinstance(event, YesResumed):
+            await self._answer(
+                event.proposal_id, event.player_id, "YES", event.occurred_at
             )
         elif isinstance(event, ProposalFilled):
             await self._end(event.proposal_id, Ending.FILLED)

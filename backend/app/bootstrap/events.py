@@ -81,6 +81,7 @@ from app.modules.proposals.application.event_subscriptions import (
     subscribe_proposal_handlers,
     subscribe_the_pool_leaver,
     subscribe_the_proposer_on_changes,
+    subscribe_the_week_resumer,
 )
 from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
@@ -203,6 +204,7 @@ class EventRuntime:
         """
 
         from app.bootstrap.composition import (
+            build_resume_paused_yeses,
             build_settle_seat_charges,
             build_tell_the_room,
             build_withdraw_a_leavers_yeses,
@@ -228,6 +230,15 @@ class EventRuntime:
             dispatcher,
             build_withdraw_a_leavers_yeses(
                 session, settings=get_settings(), runtime=self
+            ),
+        )
+        # A paused week comes back when a booked game stops being a player's —
+        # and a yes that comes back as a game's last seat fills it, over this
+        # run's provider (#544).
+        subscribe_the_week_resumer(
+            dispatcher,
+            build_resume_paused_yeses(
+                session, provider=payments, settings=get_settings(), runtime=self
             ),
         )
         # And what changed, for this process's proposer, when one is listening.

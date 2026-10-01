@@ -7,9 +7,10 @@ status field on the aggregate, no ``ResultConfirmed`` event, and this function i
 the only place a standing exists. It is ``challenges``' own rule, *nothing
 announces a conclusion the seats already imply*, applied to a result.
 
-Six values. Five of them are what the record and the clock can answer for — three
-ends and two waits — and **the sixth is the one exemption this module holds, and
-it is written down so it stays one** (``docs/adr/0163``). A game called off is a
+Seven values. Six of them are what the record and the clock can answer for — four
+ends and two waits, the fourth end a booked game's hour coming with a seat open
+(#544) — and **the seventh is the one exemption this module holds, and it is
+written down so it stays one** (``docs/adr/0163``). A game called off is a
 decision a person took, and there is nothing on the record to fold it out of, so
 it is the one standing an event announces — on the rule ``challenges`` wrote for
 ``WITHDRAWN``: *an event may announce a conclusion only when no arrangement of
@@ -44,7 +45,7 @@ from app.modules.games.domain.windows import (
 
 @final
 class GameStanding(str, Enum):
-    """The six standings, as codes. A client's words are the client's own."""
+    """The seven standings, as codes. A client's words are the client's own."""
 
     #: Arranged, and nobody has said it happened yet.
     AWAITING_ENTRY = "AWAITING_ENTRY"
@@ -67,9 +68,16 @@ class GameStanding(str, Enum):
     #: and neither an evening nor a ghost**: a ghost is silence, this was an
     #: act, and it is in no tally.
     CALLED_OFF = "CALLED_OFF"
+    #: A **booked** game whose hour came with a seat open (#544): somebody left
+    #: after the club's cut-off and nobody took the seat, so it went ahead
+    #: short — *uncounted, a seat was empty*. Read off the record and the clock
+    #: — the hour, and a line-up with a seat open — like the three ends above,
+    #: and **in no tally**, like a call-off: it is not an evening the people
+    #: who stayed had, and not a ghost anybody owes.
+    STARTED_SHORT = "STARTED_SHORT"
 
 
-#: The four standings that mean *nothing more will happen to this game*. A
+#: The five standings that mean *nothing more will happen to this game*. A
 #: settled game refuses every act, which is ADR-0048's *a settled result is
 #: final* with no support correction path and no reversal.
 #:
@@ -78,20 +86,23 @@ class GameStanding(str, Enum):
 #: closing on silence and this is a decision somebody took. They are one set here
 #: because the readers of this set — the mutual mint's idempotence key, the
 #: sportsmanship court, every act on the result — ask *is anything more going to
-#: happen*, and for both the answer is no.
+#: happen*, and for both the answer is no. **``STARTED_SHORT`` is the fifth**
+#: (#544): a booked game's hour came with a seat open, and nothing more can.
 SETTLED = frozenset(
     {
         GameStanding.NEVER_PLAYED,
         GameStanding.CONFIRMED,
         GameStanding.UNSCORED,
         GameStanding.CALLED_OFF,
+        GameStanding.STARTED_SHORT,
     }
 )
 
 #: The three standings that mean these people were on a court together. Read by
 #: the pairwise fold, and by ``counted_games``. **``CALLED_OFF`` is not here**,
 #: and neither is it read as a ghost anywhere: the history walk answers ``None``
-#: for it, as it does for a game still inside its window.
+#: for it, as it does for a game still inside its window — and nor is
+#: ``STARTED_SHORT`` (#544), for the same reason.
 PLAYED = frozenset(
     {
         GameStanding.AWAITING_ANSWER,
@@ -170,6 +181,7 @@ def standing_of(
     proposals: Mapping[GameSide, Proposal],
     acceptance: Acceptance | None,
     now: Instant,
+    line_up_complete: bool,
 ) -> GameStanding:
     """The game's standing, from its record and this instant.
 
@@ -183,7 +195,13 @@ def standing_of(
     just ended, and would turn a called-off game into a ghost the day its window
     closed. ``called_off_at`` is **stated by every caller and never defaulted**,
     so a second reader of this function has to say which game it is asking about
-    rather than inheriting an answer.
+    rather than inheriting an answer — and so is ``line_up_complete``, for the
+    same reason.
+
+    **Did its booked hour come with a seat open?** (#544) A booked game is
+    the one with an hour, and a seat nobody took by then is a game that went
+    ahead short: nothing more can happen to it. Asked before the entry,
+    because a court with a seat open refuses one.
 
     **Did it happen at all?** Nothing about a score matters until somebody says
     they played, and after the entry window nothing ever will.
@@ -201,6 +219,14 @@ def standing_of(
 
     if called_off_at is not None:
         return GameStanding.CALLED_OFF
+
+    if (
+        played_at is None
+        and starts_at is not None
+        and not line_up_complete
+        and now >= starts_at
+    ):
+        return GameStanding.STARTED_SHORT
 
     if played_at is None:
         return (

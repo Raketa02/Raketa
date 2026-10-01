@@ -33,7 +33,8 @@ class OpenPlannedGameCommand:
 @dataclass(frozen=True, slots=True)
 class VacateSeatCommand:
     """Somebody left the game this challenge became. ``challenges`` sends this
-    in the transaction of the departure, and nothing else does."""
+    in the transaction of the departure — and ``bookings`` in a booked game's,
+    its booking's id where a challenge's is (#544)."""
 
     challenge_id: UUID
     player_id: UUID
@@ -45,8 +46,9 @@ class CallOffGameCommand:
     off. ``challenges`` sends this in the transaction of the departure that
     left at most one player on the court (``docs/adr/0165`` §3), or of the
     hour that found the court still short of a player (``docs/adr/0175``
-    §3), and nothing else does. ``called_by`` is the leaver, or ``None`` for
-    the hour."""
+    §3) — and ``bookings`` when a booked game is short at its cut-off, its
+    booking's id where a challenge's is (#544). ``called_by`` is the leaver, or
+    ``None`` for the hour and the cut-off."""
 
     challenge_id: UUID
     called_by: UUID | None

@@ -1,6 +1,7 @@
 ---
 paths:
   - "app/modules/player_score/**"
+  - "app/modules/bookings/domain/keeping.py"
   - "app/modules/games/domain/answering.py"
 ---
 
@@ -17,10 +18,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   things about it are load-bearing. **Its port is `PublishedScoreQuery` and not
   `PlayerScoreQuery`** — the matcher's port of that name is the *demand* and this is the
   *publication*, and ADR-0137's rule applies: the cost of a shared word is paid by whoever
-  arrives second. **Three of six strands are live and three are absent, never nought** — *keeps
-  plans* and *settles up* have no provider, *sportsmanship* is published in its own right and
-  the matcher may not read it, and a player with no record at all is absent from the answer,
-  which is the one rule the demand suite is written around.
+  arrives second. **Three of six strands are live and three are absent, never nought** —
+  since #544 the live three are *shows up*, *answers about results* and **keeps plans**, folded
+  off `bookings`' `BookingHistoryQuery` (a booked game is a plan with a moment: kept when its
+  hour comes with every seat held, broken by leaving so that it is called off at the cut-off,
+  or after the cut-off with nobody taking the seat — `bookings/domain/keeping.py`), and *answers challenges* **stood down**
+  (challenges no longer wait for answers, the mechanics §15.4; challenges' `answering_for`
+  went with it). *Settles up* has no provider, *sportsmanship* is published in its own right
+  and the matcher may not read it, and a player with no record at all is absent from the
+  answer, which is the one rule the demand suite is written around. **No weight moved**: each
+  name keeps its published share, and the matcher's rulesets already weighed *keeps plans* —
+  so no ruleset release, no gate moved (no corpus has a Player Score), and no wire enum
+  changed; the client's label for `KEEPS_PLANS` is its own to rename.
   **The published weights live in the context and never in a ruleset**, because a weight release
   must not change what somebody's own profile says about them; they sum to a hundred by
   arithmetic and not by rule — 85 for as long as a name was missing — since the blend

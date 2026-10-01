@@ -768,11 +768,11 @@ SECOND_SPORT_BECAUSE_THEY_PLAYED: Final[frozenset[str]] = frozenset(
 #
 # Three properties are load-bearing and each is checked below:
 #
-# - **She is never the organiser**, and is always ``side_b[0]``. The organiser's
-#   own seat is accepted at birth, so an organiser answers no invitation and
-#   would have no *answers challenges* strand at all; and the side that *states*
-#   the score is asked nothing, so a protagonist on side A would have no *answers
-#   about results* strand either. Both strands exist because of where she sits.
+# - **She is never the organiser**, and is always ``side_b[0]``. The side that
+#   *states* the score is asked nothing, so a protagonist on side A would have no
+#   *answers about results* strand; it exists because of where she sits. (She
+#   was also never the organiser for *answers challenges*, whose organiser's own
+#   seat answered nothing — a strand that stood down with #544.)
 # - **Every opponent is a cohort member whose own drawn radius already reaches
 #   the centre**, so nothing here feeds ``_how_far_they_have_to_see`` and not one
 #   member's draw moves. That is the whole reason this list can be added without
@@ -841,9 +841,8 @@ PROTAGONISTS_ORGANISERS: Final = PROTAGONISTS_OPPONENTS
 #: - Six arrangements, five of them played: the oldest is **a ghost** — the
 #:   line-up completed, nobody ever said it happened, and the entry window closed
 #:   over it. *Shows up* reads 5 of 6.
-#: - Every invitation answered, so *answers challenges* reads 6 of 6. A lapsed
-#:   seat would dock it and there is no way to declare one here: a lapse is a
-#:   fact about a **challenge** nobody answered, and this file declares games.
+#: - Every invitation answered — once *answers challenges*' 6 of 6, a strand
+#:   that stood down with #544, so it is on her sheet no more.
 #: - Five scores put to her side and one of them ignored — the three-day-old
 #:   row, which confirms by silence anyway and still draws its square. *Answers
 #:   about results* reads 4 of 5.

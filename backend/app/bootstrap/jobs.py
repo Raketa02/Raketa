@@ -46,6 +46,7 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_expire_proposals,
     build_expire_unanswered_requests,
+    build_call_off_short_games,
     build_exposure_ledger,
     build_image_transcoder,
     build_interest_ledger,
@@ -193,6 +194,13 @@ PROPOSAL_EXPIRY_JOB = "proposal-expiry"
 #: the court the request held and makes its players due a new card first.
 REQUEST_TIMEOUT_JOB = "request-timeout"
 
+#: The cut-off (#544). It calls off every booked game whose cut-off came with
+#: a seat open since before it — **a game plays full or not at all** — and
+#: **correctness depends on it**: every read says *called off* from the cut-off
+#: on already, but only this gives everybody still in their money back, frees
+#: the court and emails the club.
+CUT_OFF_JOB = "cut-off"
+
 #: The proposer (#540) — **the engine that builds games**, and the second job
 #: on this list correctness depends on: nothing else deals a pick, re-deals a
 #: seat a no left or widens a pick at half In. It writes through the dealer's
@@ -260,6 +268,7 @@ def build_scheduled_jobs(
         or settings.PROPOSAL_EXPIRY_ENABLED
         or settings.PROPOSER_ENABLED
         or settings.REQUEST_TIMEOUT_ENABLED
+        or settings.CUT_OFF_ENABLED
     ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
@@ -337,6 +346,10 @@ def build_scheduled_jobs(
                 build_request_timeout_job(
                     session_factory=session_factory, settings=settings
                 )
+            )
+        if settings.CUT_OFF_ENABLED:
+            jobs.append(
+                build_cut_off_job(session_factory=session_factory, settings=settings)
             )
         if settings.PROPOSER_ENABLED:
             jobs.append(
@@ -605,6 +618,45 @@ def build_request_timeout_job(
     return PeriodicJob(
         name=REQUEST_TIMEOUT_JOB,
         interval_seconds=settings.REQUEST_TIMEOUT_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_cut_off_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Call off every booked game still short at its cut-off, and give
+    everybody still in their money back (the mechanics §12.3, §16.12).
+
+    **Idempotent and safe beside itself with no lock**: each game is one
+    transaction that locks it first, the aggregate records nothing on a game no
+    longer short, and a genuine race is caught by the stream version and
+    stepped over. **Correctness depends on it**: until it runs, the money of a
+    game called off at its cut-off has not been given back.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_call_off_short_games(
+                session, clock=clock, settings=settings
+            ).execute()
+        if done.games or done.conflicts:
+            logger.info(
+                "cut-off finished",
+                extra={
+                    "job": CUT_OFF_JOB,
+                    "games": done.games,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=CUT_OFF_JOB,
+        interval_seconds=settings.CUT_OFF_INTERVAL_SECONDS,
         run=run,
     )
 

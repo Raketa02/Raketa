@@ -15,7 +15,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Seventeen jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Eighteen jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -121,3 +121,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `answer_by`), each one transaction that locks its game first, a conflict counted and
   stepped over. The deadline is the club's time to confirm, a Raketa setting; only the
   cadence (thirty seconds — the window is minutes long) is a setting here.
+  The eighteenth is the **cut-off** (`cut-off`, #544), and **correctness depends on it** as
+  on the timeout: a booked game with a seat open since before its cut-off reads *called off ·
+  short at the cut-off* at every read from the cut-off on (`BookedGame.called_off_reason`,
+  `keeping_of`), but only this gives everybody still in their money back, frees the court
+  and emails the club. Its read names **candidates** (`short_at_the_cut_off`: `SEAT_OPEN`,
+  `open_since < cut_off`, `cut_off <= now` — **no upper bound on the hour**, so a run late
+  past a game's start still owes the money back), each one transaction that locks the
+  game's proposal row first, a conflict counted and stepped over. The cut-off is the
+  club's free-cancellation setting, kept on each booking as it stood at the fill; only the
+  cadence (thirty seconds) is a setting here.

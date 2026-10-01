@@ -26,7 +26,10 @@ a bug in the caller, and a fake that answered it would hide one.
 
 **A payment it never made is taken or let go as a hold** (``_on_account``): a
 seed run fills games through its own fake, and a laptop's server reloads, so the
-outbox that captures a seat may reach a fake that never held it.
+outbox that captures a seat may reach a fake that never held it — **or given
+back as a payment taken** (#544), since Raketa refunds only a share it recorded
+paid. **A fake's payment id carries its amount** (``pi_fake_3000g_…``), so a
+fake in another process adopts one for what it was made for.
 
 **A local run holds one for the process** (``build_payment_provider``), which
 confirms every setup with ``A_CARD`` as soon as it is read — the phone of a
@@ -36,6 +39,7 @@ onboarding the moment its link is made. A test's fake does neither unless told.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, replace
 from typing import Any, Mapping, final
 from uuid import UUID, uuid4
@@ -47,6 +51,7 @@ from app.modules.payments.domain.entered_cards import (
     EnteredCard,
 )
 from app.modules.payments.domain.errors import PaymentsUnavailable
+from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.provider import (
     AWAITING_THE_PLAYER,
     CardOnFile,
@@ -63,17 +68,6 @@ from app.modules.payments.domain.provider import (
     StartedSetup,
 )
 
-
-#: The fake's card fee: Stripe's for a standard EEA card in Poland, 1.5 % and
-#: 1,00 zł (the mechanics Appendix A) — about 1,60 zł on a 40 zł share.
-_FEE_PER_MILLE = 15
-_FEE_FIXED_GROSZE = 100
-
-
-def card_fee(amount_grosze: int) -> int:
-    """The fee the fake withholds on a refund of ``amount_grosze``."""
-
-    return (amount_grosze * _FEE_PER_MILLE + 500) // 1000 + _FEE_FIXED_GROSZE
 
 
 class FakeRefusal(Exception):
@@ -117,10 +111,30 @@ class _Payment:
     #: Taken at once when confirmed (``charge_now``), or held to be captured.
     captures: bool = False
     decline_code: str | None = None
+    #: Made by another process's fake, and answered here as it stands there.
+    adopted: bool = False
 
 
 def _id(prefix: str) -> str:
     return f"{prefix}_fake_{uuid4().hex[:24]}"
+
+
+def _payment_id(amount_grosze: int) -> str:
+    """A payment's id, carrying what it was made for — so a fake in another
+    process adopts it for its amount."""
+
+    return f"pi_fake_{amount_grosze}g_{uuid4().hex[:20]}"
+
+
+_AMOUNT_IN_AN_ID = re.compile(r"^pi_fake_(\d+)g_")
+
+
+def _amount_in(payment_id: str) -> int:
+    """What a payment another fake made was for — nought for an id that does
+    not say, which no fake of this version makes."""
+
+    found = _AMOUNT_IN_AN_ID.match(payment_id)
+    return 0 if found is None else int(found.group(1))
 
 
 @final
@@ -517,11 +531,18 @@ class FakePayments:
         )
 
         def refunded() -> Refund:
-            payment = self._payment(payment_id)
+            payment = self._on_account(payment_id, account_id)
+            if payment.adopted and payment.status is PaymentStatus.AUTHORISED:
+                # Raketa gives back only a share it recorded paid: the process
+                # that held this one took it, too.
+                payment.status = PaymentStatus.CAPTURED
             if payment.status is not PaymentStatus.CAPTURED:
                 raise FakeRefusal(f"{payment_id} was never taken; cancel it instead")
             paid = payment.amount_grosze
-            fee = card_fee(paid) if withhold_fee else 0
+            # The fake withholds exactly what the sheet estimated — never more
+            # than was paid, which an adopted payment of an id that does not
+            # say its amount (a fake older than #544) would otherwise be.
+            fee = min(estimated_card_fee(paid), paid) if withhold_fee else 0
             return Refund(
                 refund_id=_id("re"),
                 status=RefundStatus.SUCCEEDED,
@@ -565,7 +586,7 @@ class FakePayments:
         """A payment on this club's account. **One held by another process** —
         a seed run's fill, or this laptop's before its server reloaded — is one
         this fake never saw, and it answers as a hold it can take or let go,
-        for an amount it cannot know, as ``_method`` answers a card it never
+        for the amount its id carries, as ``_method`` answers a card it never
         saved."""
 
         payment = self._payments.get(payment_id)
@@ -573,9 +594,10 @@ class FakePayments:
             payment = self._payments[payment_id] = _Payment(
                 payment_id=payment_id,
                 account_id=account_id,
-                amount_grosze=0,
+                amount_grosze=_amount_in(payment_id),
                 status=PaymentStatus.AUTHORISED,
                 client_secret=f"{payment_id}_secret_adopted",
+                adopted=True,
             )
         if payment.account_id != account_id:
             raise FakeRefusal(f"{payment_id} is not on {account_id}")
@@ -619,7 +641,7 @@ class FakePayments:
     ) -> Payment:
         source = self._clones.get(method_id, method_id)
         behaviour = self._method(source).card.behaviour
-        payment_id = _id("pi")
+        payment_id = _payment_id(amount_grosze)
         payment = _Payment(
             payment_id=payment_id,
             account_id=account_id,

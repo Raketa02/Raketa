@@ -223,3 +223,32 @@ class SeatChargeCancelled:
     charge_id: UUID
     player_id: UUID
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatChargeRefundDecided:
+    """**The share is to be given back** (#544; the mechanics §12.3) — the
+    player left before the club's cut-off, and the card fee is withheld; or the
+    game was called off at its cut-off, and nothing is. Raketa's decision,
+    recorded with the act that caused it; refunded at the provider after the
+    commit, which says what it gave back."""
+
+    charge_id: UUID
+    player_id: UUID
+    #: The card fee the provider never returns is kept back — a leaver's — or
+    #: the share goes back whole.
+    withhold_fee: bool
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatChargeRefunded:
+    """The provider gave the share back: ``amount_grosze`` to the player, and
+    ``fee_withheld_grosze`` kept — the card fee, nought on a refund in full."""
+
+    charge_id: UUID
+    player_id: UUID
+    refund_id: str
+    amount_grosze: int
+    fee_withheld_grosze: int
+    occurred_at: datetime

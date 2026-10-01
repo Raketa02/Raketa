@@ -66,6 +66,7 @@ from app.modules.games.domain.errors import (
     TheCourtHasAnOpenSeat,
     TheEntryWindowHasClosed,
     TheGameIsNotOpenToSeating,
+    TheGameStartedShort,
     TheGameWasCalledOff,
     TheOtherSideHasAnswered,
     TheResultIsAlreadyAccepted,
@@ -374,6 +375,8 @@ class Game:
                 # before the open seat: the end this game met is the answer,
                 # and its window stopped mattering the moment it was called off.
                 raise TheGameWasCalledOff()
+            if self.standing_at(occurred_at) is GameStanding.STARTED_SHORT:
+                raise TheGameStartedShort()
             if occurred_at >= self.entry_closes_at:
                 raise TheEntryWindowHasClosed()
             if not self.line_up.is_complete:
@@ -476,6 +479,7 @@ class Game:
             proposals=self.proposals,
             acceptance=self.acceptance,
             now=now,
+            line_up_complete=self.line_up.is_complete,
         )
 
     def was_played_at(self, now: Instant) -> bool:
@@ -511,6 +515,9 @@ class Game:
             return self.called_off_at or now
         if standing is GameStanding.NEVER_PLAYED:
             return self.entry_closes_at
+        if standing is GameStanding.STARTED_SHORT:
+            # Set for exactly this standing, which only a booked game reaches.
+            return self.starts_at or now
         if standing in PLAYED:
             # ``played_at`` is set for every standing in ``PLAYED`` — the entry
             # that records *we played* is the only thing that can set it.

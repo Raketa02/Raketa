@@ -20,6 +20,8 @@ from app.modules.payments.domain.events import (
     SeatChargeCaptured,
     SeatChargeConfirmed,
     SeatChargeFailed,
+    SeatChargeRefundDecided,
+    SeatChargeRefunded,
     SeatChargeReleased,
     SeatChargeTaken,
 )
@@ -39,6 +41,8 @@ _EVENTS = (
     (SeatChargeReleased, "payments.seat_charge_released"),
     (SeatChargeCaptured, "payments.seat_charge_captured"),
     (SeatChargeCancelled, "payments.seat_charge_cancelled"),
+    (SeatChargeRefundDecided, "payments.seat_charge_refund_decided"),
+    (SeatChargeRefunded, "payments.seat_charge_refunded"),
 )
 
 
@@ -61,6 +65,8 @@ def subscribe_payment_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(SeatChargeReleased, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeCaptured, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeCancelled, LogSeatChargeEvent())
+    dispatcher.subscribe(SeatChargeRefundDecided, LogSeatChargeEvent())
+    dispatcher.subscribe(SeatChargeRefunded, LogSeatChargeEvent())
 
 
 def subscribe_the_method_releaser(
@@ -81,9 +87,10 @@ def subscribe_the_seat_charge_settler(
     dispatcher: EventDispatcher, settle: SettleSeatCharges
 ) -> None:
     """The subscriber that captures a taken hold and cancels a released one at
-    the provider (#541) — it **writes** the provider's answer onto the charge,
-    so it is added per delivery run over that run's session and provider, as the
-    method releaser is."""
+    the provider (#541), and gives a paid share back (#544) — it **writes** the
+    provider's answer onto the charge, so it is added per delivery run over that
+    run's session and provider, as the method releaser is."""
 
     dispatcher.subscribe(SeatChargeTaken, settle)
     dispatcher.subscribe(SeatChargeReleased, settle)
+    dispatcher.subscribe(SeatChargeRefundDecided, settle)

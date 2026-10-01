@@ -1,5 +1,6 @@
 """What ``proposals`` demands of the rest of the platform for Home and a game's
-details (#542), run against every registered implementation.
+details (#542), On request (#543), and leaving and the cut-off (#544), run
+against every registered implementation.
 
 **A demand nobody executes is a demand satisfied by accident** (``docs/adr/0098``).
 Every implementation registered in ``app/bootstrap/proposal_demands.py`` is
@@ -24,7 +25,9 @@ from app.bootstrap.composition import (
     build_booking_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_game_opening,
     build_game_repository,
+    build_seat_charge_repository,
 )
 from app.bootstrap.proposal_demands import (
     PROPOSAL_DEMANDS,
@@ -35,17 +38,23 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.games.domain.game import Game
+from app.modules.payments.domain.provider import Payment, PaymentStatus
+from app.modules.payments.domain.seat_charge import SeatCharge
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.proposals.domain.home import ResultStage
 from app.modules.proposals.domain.ports import (
     BookableCourt,
+    BookedGameChanges,
+    CardFees,
     ClubDistances,
     ClubRequests,
     GameResults,
     GameToAsk,
     PlayerBookings,
     PlayerNames,
+    RefundReason,
+    SeatRefunds,
 )
 from app.modules.proposals.domain.proposal import ClubAnswer
 from app.kernel import minutes
@@ -377,3 +386,165 @@ async def test_a_player_is_named_by_their_name_and_a_stranger_not_at_all(
 
     assert await names.names_of([player_id, new_uuid()]) == {player_id: "ola"}
     assert await names.names_of([]) == {}
+
+
+# --------------------------------------------------------------------------- #
+# BookedGameChanges — leaving a booked game, and the cut-off (#544)
+# --------------------------------------------------------------------------- #
+
+
+async def _booked_with_its_game(session, *, start: Instant) -> Booking:
+    """A booking, and the ordinary Game it opened — as the fill makes both."""
+
+    game_id = await build_game_opening(session).open(
+        booking_id=(booking_id := new_uuid()),
+        sport=Sport.PADEL,
+        counted=True,
+        first_side=(OLA, KUBA),
+        second_side=(EWA, TOMEK),
+        starts_at=start,
+        at=_at(),
+    )
+    booking = Booking.confirmed(
+        booking_id=booking_id,
+        pool_id=new_uuid(),
+        club_id=new_uuid(),
+        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        start=start,
+        share_grosze=30_00,
+        first_side=(OLA, KUBA),
+        second_side=(EWA, TOMEK),
+        cut_off=start - timedelta(hours=24),
+        game_id=game_id,
+        at=_at(),
+    )
+    await build_booking_repository(
+        session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    ).save(booking)
+    await session.commit()
+    return booking
+
+
+@pytest.mark.parametrize("implementation", registered(BookedGameChanges))
+async def test_a_seat_left_before_the_cut_off_calls_the_game_off_at_it(
+    implementation, session
+):
+    changes: BookedGameChanges = implementation.build(session)
+    start = _at(5 * 24)
+    booking = await _booked_with_its_game(session, start=start)
+
+    await changes.leave(booking.booking_id, KUBA, at=_at(1))
+    await session.commit()
+    cut_off = start - timedelta(hours=24)
+
+    assert booking.booking_id not in await changes.short_at_the_cut_off(
+        now=cut_off - timedelta(minutes=1)
+    )
+    assert booking.booking_id in await changes.short_at_the_cut_off(now=cut_off)
+    still_in = await changes.call_off_at_the_cut_off(booking.booking_id, at=cut_off)
+    await session.commit()
+    assert still_in == (OLA, EWA, TOMEK)
+    assert booking.booking_id not in await changes.short_at_the_cut_off(now=cut_off)
+
+
+@pytest.mark.parametrize("implementation", registered(BookedGameChanges))
+async def test_a_seat_left_after_the_cut_off_calls_nothing_off(implementation, session):
+    changes: BookedGameChanges = implementation.build(session)
+    start = _at(5 * 24)
+    booking = await _booked_with_its_game(session, start=start)
+
+    await changes.leave(booking.booking_id, KUBA, at=start - timedelta(hours=2))
+    await session.commit()
+
+    assert await changes.short_at_the_cut_off(now=start) == []
+    assert await changes.call_off_at_the_cut_off(booking.booking_id, at=start) is None
+
+
+# --------------------------------------------------------------------------- #
+# SeatRefunds and CardFees — a paid share given back, and the fee on one (#544)
+# --------------------------------------------------------------------------- #
+
+
+async def _a_paid_share(session, *, game_id: UUID, player_id: UUID) -> SeatCharge:
+    charge = SeatCharge.held(
+        charge_id=new_uuid(),
+        player_id=player_id,
+        game_id=game_id,
+        club_id=new_uuid(),
+        account_id="acct_fake_club",
+        payment=Payment(
+            payment_id="pi_fake_3000g_x",
+            status=PaymentStatus.AUTHORISED,
+            amount_grosze=30_00,
+        ),
+        sport=Sport.PADEL,
+        starts_at=_at(5 * 24),
+        at=_at(),
+    )
+    charge.take(booking_id=game_id, at=_at())
+    charge.captured(at=_at())
+    await _charges(session).save(charge)
+    await session.commit()
+    return charge
+
+
+def _charges(session):
+    return build_seat_charge_repository(
+        session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(SeatRefunds))
+async def test_a_leaver_s_share_is_given_back_less_the_card_fee_and_only_theirs(
+    implementation, session
+):
+    refunds: SeatRefunds = implementation.build(session)
+    game_id = new_uuid()
+    kubas = await _a_paid_share(session, game_id=game_id, player_id=KUBA)
+    olas = await _a_paid_share(session, game_id=game_id, player_id=OLA)
+
+    await refunds.refund(
+        game_id, [KUBA], reason=RefundReason.LEFT_BEFORE_THE_CUT_OFF, at=_at(1)
+    )
+    await session.commit()
+
+    kuba_now = await _charges(session).load(kubas.charge_id)
+    ola_now = await _charges(session).load(olas.charge_id)
+    assert kuba_now is not None and kuba_now.refund_withholds_fee is True
+    assert ola_now is not None and ola_now.refund_withholds_fee is None
+
+
+@pytest.mark.parametrize("implementation", registered(SeatRefunds))
+async def test_a_game_called_off_gives_everybody_still_in_everything_back(
+    implementation, session
+):
+    refunds: SeatRefunds = implementation.build(session)
+    game_id = new_uuid()
+    olas = await _a_paid_share(session, game_id=game_id, player_id=OLA)
+
+    await refunds.refund(
+        game_id, [OLA], reason=RefundReason.CALLED_OFF_AT_THE_CUT_OFF, at=_at(1)
+    )
+    await refunds.refund(
+        game_id, [OLA], reason=RefundReason.CALLED_OFF_AT_THE_CUT_OFF, at=_at(2)
+    )
+    await session.commit()
+
+    ola_now = await _charges(session).load(olas.charge_id)
+    assert ola_now is not None and ola_now.refund_withholds_fee is False
+    assert ola_now.refund_decided_at == _at(1)
+
+
+@pytest.mark.parametrize("implementation", registered(CardFees))
+def test_the_card_fee_on_a_share_is_the_provider_s_standard_price(implementation):
+    fees: CardFees = implementation.build(None)
+
+    # The mechanics §12.3: about 1,60 zł on a 40 zł share.
+    assert fees.card_fee_on(40_00) == 1_60
+    assert fees.card_fee_on(30_00) == 1_45

@@ -38,10 +38,12 @@ from app.modules.payments.domain.events import (
     SeatChargeCaptured,
     SeatChargeConfirmed,
     SeatChargeFailed,
+    SeatChargeRefundDecided,
+    SeatChargeRefunded,
     SeatChargeReleased,
     SeatChargeTaken,
 )
-from app.modules.payments.domain.provider import Payment, PaymentStatus
+from app.modules.payments.domain.provider import Payment, PaymentStatus, Refund
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
 
@@ -81,6 +83,16 @@ class FailureReason(StrEnum):
     NO_METHOD = "NO_METHOD"
 
 
+@dataclass(frozen=True, slots=True)
+class RefundGiven:
+    """What the provider gave back of a paid share, and the fee it kept."""
+
+    refund_id: str
+    amount_grosze: int
+    fee_withheld_grosze: int
+    at: Instant
+
+
 @dataclass
 class SeatCharge:
     """One payment for one player's share of one game."""
@@ -102,6 +114,14 @@ class SeatCharge:
     booking_id: UUID | None = None
     #: When it was taken — the moment the player paid.
     taken_at: Instant | None = None
+    #: Whether the refund decided on it keeps the card fee back — ``None``
+    #: while none was decided (#544).
+    refund_withholds_fee: bool | None = None
+    #: When it was decided — the leaving, or the call-off — which is when the
+    #: player was refunded, as their receipt says.
+    refund_decided_at: Instant | None = None
+    #: What the provider gave back, once it did.
+    refund_given: RefundGiven | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -237,6 +257,12 @@ class SeatCharge:
         return self.status is SeatChargeStatus.AUTHORISED
 
     @property
+    def owes_a_refund(self) -> bool:
+        """A refund was decided and the provider has not given it yet."""
+
+        return self.refund_withholds_fee is not None and self.refund_given is None
+
+    @property
     def awaits_its_player(self) -> bool:
         """Refused, with a payment the player can confirm in the app."""
 
@@ -280,6 +306,45 @@ class SeatCharge:
         self._record_that(
             SeatChargeReleased(
                 charge_id=self.charge_id, player_id=self.player_id, occurred_at=at
+            )
+        )
+        return True
+
+    def refund(self, *, withhold_fee: bool, at: Instant) -> bool:
+        """Give this paid share back — less the card fee, or whole. Answers
+        whether anything was recorded: nothing for a share nobody paid, and
+        nothing for one already being given back."""
+
+        if self.status not in PAID or self.refund_withholds_fee is not None:
+            return False
+        self._record_that(
+            SeatChargeRefundDecided(
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                withhold_fee=withhold_fee,
+                occurred_at=at,
+            )
+        )
+        return True
+
+    def refunded(self, refund: Refund, *, at: Instant) -> bool:
+        """The provider's answer to the refund decided on this share. Nothing
+        is recorded for one already answered."""
+
+        invariant(
+            self.refund_withholds_fee is not None,
+            f"{self.charge_id} refunded with no refund decided",
+        )
+        if self.refund_given is not None:
+            return False
+        self._record_that(
+            SeatChargeRefunded(
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                refund_id=refund.refund_id,
+                amount_grosze=refund.amount_grosze,
+                fee_withheld_grosze=refund.fee_withheld_grosze,
+                occurred_at=at,
             )
         )
         return True
@@ -348,6 +413,16 @@ class SeatCharge:
             self.status = SeatChargeStatus.CAPTURED
         elif isinstance(event, SeatChargeCancelled):
             self.status = SeatChargeStatus.CANCELLED
+        elif isinstance(event, SeatChargeRefundDecided):
+            self.refund_withholds_fee = event.withhold_fee
+            self.refund_decided_at = instant(event.occurred_at)
+        elif isinstance(event, SeatChargeRefunded):
+            self.refund_given = RefundGiven(
+                refund_id=event.refund_id,
+                amount_grosze=event.amount_grosze,
+                fee_withheld_grosze=event.fee_withheld_grosze,
+                at=instant(event.occurred_at),
+            )
         else:
             raise TypeError(f"Unsupported seat charge event {event!r}")
         self.version += 1

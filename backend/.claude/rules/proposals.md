@@ -119,3 +119,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   decides, `CONFIRM_PAYMENT` (with `your_payment`) for a refused share, nothing once it is over or
   the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **Home's badge counts the payments to
   confirm** beside the cards that need the reader (`owed_by`, shared with the TO CONFIRM read).
+- **Leaving a booked game, the cut-off and a paused week coming back are Proposals' too**
+  (#544; see `bookings.md`): `POST /bookings/{id}/departure` (`leave_the_game.py`), the
+  `cut-off` job (`cut_off.py`) and the outbox subscriber that resumes paused yeses
+  (`resume_paused_yeses.py`, `YesResumed`) — each locks the game's proposal row first, and
+  each reaches the booking through `GameBookings` and the money through `SeatRefunds`, ports
+  in this context's words signed in `infrastructure/`. The details carry `leaving` (what
+  *Leave the game* costs now) beside `open_seats`, `uncounted_reason` and
+  `money.refunded_grosze`.

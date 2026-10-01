@@ -444,6 +444,18 @@ class Settings(BaseSettings):
     REQUEST_TIMEOUT_ENABLED: bool = True
     REQUEST_TIMEOUT_INTERVAL_SECONDS: float = 30
 
+    # --- the cut-off (#544, the mechanics §12.3, §16.12)
+    #
+    # **Correctness depends on it**, as on the timeout: a booked game with a seat
+    # open since before its cut-off reads *called off* at every read from the
+    # cut-off on, but only this gives everybody still in their money back, frees
+    # the court and tells the club. **The cut-off itself is emphatically not
+    # here**: it is the club's free-cancellation setting, kept on each booking as
+    # it stood when the game filled. Every thirty seconds, because the money is
+    # owed from the cut-off on.
+    CUT_OFF_ENABLED: bool = True
+    CUT_OFF_INTERVAL_SECONDS: float = 30
+
     # --- the proposer (#540, the mechanics §5, §6.2–§6.3)
     #
     # **The engine that builds games, and correctness depends on it**: nothing

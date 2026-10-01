@@ -7,6 +7,9 @@ games a player has booked, and how many were booked in each pool. **A third is
 its own key**: each seat's check-in code, derived under the server's secret
 (#542).
 
+**And one is what it publishes**: the record of who kept their booked games
+(#544), which the Player Score reads.
+
 **Three are demands on contexts it does not write**: which courts a club still
 has for Raketa at an hour, its cut-off and its time to confirm (``clubs``, over
 what it sells); the ordinary Game a booking opens (``games``, over the use case
@@ -25,6 +28,7 @@ from uuid import UUID
 from app.kernel import Instant, Sport
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.bookings.domain.check_in import CheckInCode
+from app.modules.bookings.domain.keeping import KeepingRecord
 
 
 @runtime_checkable
@@ -63,23 +67,23 @@ class BookingDirectory(Protocol):
     ) -> Sequence[Instant]:
         """When each of this player's **booked** games starts, from ``start``
         until ``end`` — for ever when ``end`` is ``None`` — soonest first. A game
-        still waiting for its club is not booked yet, and one called off never
-        will be."""
+        still waiting for its club is not booked yet, one called off never will
+        be, and one they left is not theirs (#544); one with a seat open is."""
         ...
 
     async def of_player(self, player_id: UUID) -> Sequence[UUID]:
         """Every booking this player has a seat on, whenever it is and whatever
         it came to — **soonest game first**, and by id among games at one hour
-        (#542)."""
+        (#542). A seat they left is not theirs (#544)."""
         ...
 
     async def counted_in(self, pool_ids: Collection[UUID]) -> Mapping[UUID, int]:
         """How many games were booked in each of these pools — one question
         about the set. A pool absent from the answer has booked none (#542).
 
-        **Only a booked game counts**: one waiting for its club, or called off,
-        is not a game anybody will play there (#543; #544 and #547 leave theirs
-        out the same way)."""
+        **Only a booked game counts** — whole, or with a seat open (#544): one
+        waiting for its club, or called off, is not a game anybody will play
+        there (#543)."""
         ...
 
     async def waiting_at(self, club_id: UUID) -> Sequence[UUID]:
@@ -91,6 +95,37 @@ class BookingDirectory(Protocol):
         """Every booking still waiting for its club whose answer was due by
         ``now``, the longest overdue first — **candidates**: the aggregate
         decides."""
+        ...
+
+    async def ever_seated(
+        self, player_ids: Collection[UUID]
+    ) -> Sequence[tuple[UUID, UUID]]:
+        """Each ``(player, booking)`` of these players on a game that was ever
+        booked — **whether they left it or not**: the record's read (#544)."""
+        ...
+
+    async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
+        """Every booking with a seat open since before its cut-off whose cut-off
+        has come by ``now``, the earliest cut-off first — whether or not its
+        hour has come too, since everybody still in is owed their money either
+        way (#544). **Candidates**: the aggregate decides."""
+        ...
+
+
+@runtime_checkable
+class BookingHistoryQuery(Protocol):
+    """**What this context publishes about a player's record** (#544; the
+    mechanics §15.4): who kept the booked games they held a seat on, and who
+    broke them — the *keeps plans* strand's input, read by ``player_score``.
+
+    **A player with no settled booked game is absent from the answer**, never a
+    nought: nobody has failed to keep a game they never had. One question about
+    the set, as every record read is."""
+
+    async def keeping_for(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> Mapping[UUID, KeepingRecord]:
+        """Each of these players who has a settled booked game, at ``now``."""
         ...
 
 
@@ -149,6 +184,25 @@ class GameOpening(Protocol):
         at: Instant,
     ) -> UUID:
         """Open the game, in the caller's transaction, and answer its id."""
+        ...
+
+
+@runtime_checkable
+class GameChanges(Protocol):
+    """**A demand of the Games context**: what leaving and the cut-off do to
+    the ordinary Game a booking opened (#544) — exactly what a departure and a
+    call-off do to a completed line-up's game today."""
+
+    async def vacate(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
+        """This player left: their seat on the game is open — and they are out
+        of its room, whose members are its line-up. In the caller's
+        transaction."""
+        ...
+
+    async def call_off(self, booking_id: UUID, *, at: Instant) -> None:
+        """The game is off, called off by nobody — and its room with it. A game
+        whose hour has already come with the seat still open ended by its own
+        clock, and keeps that end. In the caller's transaction."""
         ...
 
 

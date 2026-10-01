@@ -13,6 +13,10 @@ for its club holds its court as a booked one does** (#543), and **a booking
 called off holds nothing**: the index is partial, so the hour is the club's to
 sell again the moment a request is refused, unanswered or withdrawn — and the
 called-off row stays, since its players still read why.
+
+**A leaver keeps their seat row, marked with when they left** (#544): the
+record reads who ever held a seat — a mark is a leaver's — while every read of
+the game as it stands now reads only the seats still held.
 """
 
 from __future__ import annotations
@@ -42,6 +46,8 @@ class BookingORM(Base):
         Index("ix_bookings_club_id_start", "club_id", "start"),
         # The requests whose answer is due — the timeout job's read.
         Index("ix_bookings_state_answer_by", "state", "answer_by"),
+        # The games whose cut-off came with a seat open — the cut-off job's.
+        Index("ix_bookings_state_cut_off", "state", "cut_off"),
     )
 
     id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
@@ -52,7 +58,7 @@ class BookingORM(Base):
     start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     share_grosze: Mapped[int] = mapped_column(Integer, nullable=False)
     cut_off: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    #: ``WAITING_FOR_THE_CLUB``, ``BOOKED`` or ``CALLED_OFF``.
+    #: ``WAITING_FOR_THE_CLUB``, ``BOOKED``, ``SEAT_OPEN`` or ``CALLED_OFF``.
     state: Mapped[str] = mapped_column(
         String(32), nullable=False, server_default="BOOKED"
     )
@@ -65,6 +71,12 @@ class BookingORM(Base):
         DateTime(timezone=True), nullable=True
     )
     booked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: When the first seat still open on it opened — ``NULL`` while every seat
+    #: is held (#544). A seat open since before the cut-off is what calls a
+    #: game off at it.
+    open_since: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -83,3 +95,7 @@ class BookingSeatORM(Base):
     player_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
     #: ``A`` — the first side — or ``B``.
     side: Mapped[str] = mapped_column(String(1), nullable=False)
+    #: When they left the booked game, or ``NULL`` while the seat is theirs.
+    left_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
