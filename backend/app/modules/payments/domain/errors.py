@@ -141,3 +141,28 @@ class PaymentNoticesNotConfigured(AppError):
 
     def __init__(self) -> None:
         super().__init__("no webhook secret is configured here")
+
+
+class SeatChargeNotFound(NotFoundError):
+    """No such charge **for this player**: it does not exist, or it is somebody
+    else's share. One code for both."""
+
+    code = "seat_charge_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("no such seat charge")
+
+
+class PaymentNotConfirmed(ConflictError):
+    """The payment still waits for its player at the provider — the bank's
+    check was not finished, or the other card was refused too. ``details.status``
+    says which; confirm it in the app and ask again. A charge that was never a
+    payment — terms to accept again, or no method — is ``NOTHING_TO_CONFIRM``,
+    and the remedy is the setup, then a yes."""
+
+    code = "payment_not_confirmed"
+
+    def __init__(self, *, status: str) -> None:
+        super().__init__(
+            "the payment has not been confirmed", details={"status": status}
+        )

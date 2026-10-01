@@ -1,0 +1,353 @@
+"""The Seat charge aggregate — event-sourced, one stream per payment for one
+player's share of one game (``docs/adr/0189`` §5; the mechanics §12.2).
+
+**Raketa's account of a payment; the provider is the ledger of record.** A
+charge is born at the fill and never before — a yes moves no money — either
+**held** on the player's card or **refused**, and is then moved by two kinds of
+fact. Three rules shape it.
+
+**The fill decides, the provider acts.** Whether a hold is *taken* or *released*
+is decided with the booking, in its transaction (``take``, ``release``); the
+capture or the cancellation at the provider follows the commit, from the
+outbox, and is recorded when the provider answers (``captured``,
+``cancelled``). So a crash between the two leaves a decision on the record and a
+subscriber that retries it, never money moved with nothing written.
+
+**A refused charge waits for its player.** The bank wanted them present, or
+refused the card: the player can confirm **this same payment** in the app, and
+once the provider holds it (``confirm``) it is held like any other — *your yes
+again*. A charge that needed nothing of the provider — no method, or terms to
+accept again — has no payment to confirm.
+
+**A notice moves it only forward** (``heard``). The provider's word arrives
+twice and out of order, so a reading that would take a charge backwards — a
+hold heard after its capture — is the past arriving late and records nothing.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import StrEnum
+from typing import Iterable
+from uuid import UUID
+
+from app.kernel import Instant, Sport, instant, invariant
+from app.modules.payments.domain.events import (
+    SeatChargeAuthorised,
+    SeatChargeCancelled,
+    SeatChargeCaptured,
+    SeatChargeConfirmed,
+    SeatChargeFailed,
+    SeatChargeReleased,
+    SeatChargeTaken,
+)
+from app.modules.payments.domain.provider import Payment, PaymentStatus
+from app.shared.domain import DomainEvent
+from app.shared.domain.events import EventRecorder
+
+
+class SeatChargeStatus(StrEnum):
+    """Where a charge stands, as its stream leaves it."""
+
+    #: Held on the card, and not yet decided.
+    AUTHORISED = "AUTHORISED"
+    #: Refused at the fill; waits for its player.
+    FAILED = "FAILED"
+    #: The game booked: to be captured.
+    TAKING = "TAKING"
+    #: Taken. **Paid.**
+    CAPTURED = "CAPTURED"
+    #: The game did not book on it: to be cancelled.
+    RELEASING = "RELEASING"
+    #: Released untaken. Nobody paid.
+    CANCELLED = "CANCELLED"
+
+
+#: The two a player has paid in: taken, or being taken.
+PAID = frozenset({SeatChargeStatus.TAKING, SeatChargeStatus.CAPTURED})
+
+
+class FailureReason(StrEnum):
+    """Why a share could not be held (the mechanics §12.2, §19)."""
+
+    #: The bank wants the player present — they confirm the payment in the app.
+    AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED"
+    #: The bank refused the card — they confirm the payment with another one.
+    DECLINED = "DECLINED"
+    #: The card's brand changed since the terms were accepted — they accept
+    #: them again. The provider was never asked.
+    TERMS_NEEDED = "TERMS_NEEDED"
+    #: There is no method to charge. The provider was never asked.
+    NO_METHOD = "NO_METHOD"
+
+
+@dataclass
+class SeatCharge:
+    """One payment for one player's share of one game."""
+
+    charge_id: UUID
+    player_id: UUID
+    game_id: UUID
+    club_id: UUID
+    account_id: str
+    payment_id: str | None
+    amount_grosze: int
+    sport: Sport
+    starts_at: Instant
+    status: SeatChargeStatus
+    failure: FailureReason | None
+    #: When it was born.
+    opened_at: Instant
+    #: The booking it was taken for, once it was.
+    booking_id: UUID | None = None
+    #: When it was taken — the moment the player paid.
+    taken_at: Instant | None = None
+    version: int = 0
+    _events: EventRecorder = field(
+        default_factory=EventRecorder, init=False, repr=False, compare=False
+    )
+
+    # ---------------------------------------------------------------- birth
+
+    @classmethod
+    def held(
+        cls,
+        *,
+        charge_id: UUID,
+        player_id: UUID,
+        game_id: UUID,
+        club_id: UUID,
+        account_id: str,
+        payment: Payment,
+        sport: Sport,
+        starts_at: Instant,
+        at: Instant,
+    ) -> "SeatCharge":
+        invariant(
+            payment.status is PaymentStatus.AUTHORISED,
+            f"a hold the provider answered {payment.status}",
+        )
+        authorised = SeatChargeAuthorised(
+            charge_id=charge_id,
+            player_id=player_id,
+            game_id=game_id,
+            club_id=club_id,
+            account_id=account_id,
+            payment_id=payment.payment_id,
+            amount_grosze=payment.amount_grosze,
+            sport=sport.value,
+            starts_at=starts_at,
+            occurred_at=at,
+        )
+        charge = cls._born(authorised)
+        charge._events.record(authorised)
+        return charge
+
+    @classmethod
+    def refused(
+        cls,
+        *,
+        charge_id: UUID,
+        player_id: UUID,
+        game_id: UUID,
+        club_id: UUID,
+        account_id: str,
+        amount_grosze: int,
+        sport: Sport,
+        starts_at: Instant,
+        reason: FailureReason,
+        payment: Payment | None,
+        at: Instant,
+    ) -> "SeatCharge":
+        """A share that could not be held: ``payment`` is the provider's answer,
+        or ``None`` where it was never asked."""
+
+        asked = reason in (
+            FailureReason.AUTHENTICATION_REQUIRED,
+            FailureReason.DECLINED,
+        )
+        invariant(
+            asked == (payment is not None),
+            f"a {reason} refusal with payment {payment!r}",
+        )
+        failed = SeatChargeFailed(
+            charge_id=charge_id,
+            player_id=player_id,
+            game_id=game_id,
+            club_id=club_id,
+            account_id=account_id,
+            payment_id=None if payment is None else payment.payment_id,
+            amount_grosze=amount_grosze,
+            sport=sport.value,
+            starts_at=starts_at,
+            reason=reason.value,
+            decline_code=None if payment is None else payment.decline_code,
+            occurred_at=at,
+        )
+        charge = cls._born(failed)
+        charge._events.record(failed)
+        return charge
+
+    @classmethod
+    def from_history(cls, events: Iterable[DomainEvent]) -> "SeatCharge":
+        history = iter(events)
+        opening = next(history)
+        invariant(
+            isinstance(opening, (SeatChargeAuthorised, SeatChargeFailed)),
+            f"a seat charge stream opens {opening!r}",
+        )
+        assert isinstance(opening, (SeatChargeAuthorised, SeatChargeFailed))
+        charge = cls._born(opening)
+        for event in history:
+            charge._apply(event)
+        return charge
+
+    @classmethod
+    def _born(cls, opening: SeatChargeAuthorised | SeatChargeFailed) -> "SeatCharge":
+        failed = isinstance(opening, SeatChargeFailed)
+        return cls(
+            charge_id=opening.charge_id,
+            player_id=opening.player_id,
+            game_id=opening.game_id,
+            club_id=opening.club_id,
+            account_id=opening.account_id,
+            payment_id=opening.payment_id,
+            amount_grosze=opening.amount_grosze,
+            sport=Sport(opening.sport),
+            starts_at=instant(opening.starts_at),
+            status=SeatChargeStatus.FAILED if failed else SeatChargeStatus.AUTHORISED,
+            failure=(
+                FailureReason(opening.reason)
+                if isinstance(opening, SeatChargeFailed)
+                else None
+            ),
+            opened_at=instant(opening.occurred_at),
+            version=1,
+        )
+
+    def pull_events(self) -> list[DomainEvent]:
+        return self._events.pull()
+
+    # ---------------------------------------------------------------- reads
+
+    @property
+    def held_now(self) -> bool:
+        """Held on the card and not yet decided — what a later fill may take."""
+
+        return self.status is SeatChargeStatus.AUTHORISED
+
+    @property
+    def awaits_its_player(self) -> bool:
+        """Refused, with a payment the player can confirm in the app."""
+
+        return self.status is SeatChargeStatus.FAILED and self.payment_id is not None
+
+    # ----------------------------------------------------------------- acts
+
+    def confirm(self, *, at: Instant) -> bool:
+        """The provider holds a payment that was refused: the player confirmed
+        it in the app. Answers whether anything was recorded — nothing for a
+        charge no longer waiting."""
+
+        if self.status is not SeatChargeStatus.FAILED or self.payment_id is None:
+            return False
+        self._record_that(
+            SeatChargeConfirmed(
+                charge_id=self.charge_id, player_id=self.player_id, occurred_at=at
+            )
+        )
+        return True
+
+    def take(self, *, booking_id: UUID, at: Instant) -> None:
+        """The game booked on this hold."""
+
+        invariant(self.held_now, f"taking {self.charge_id}, {self.status}")
+        self._record_that(
+            SeatChargeTaken(
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                booking_id=booking_id,
+                occurred_at=at,
+            )
+        )
+
+    def release(self, *, at: Instant) -> bool:
+        """The game will not book on this charge. Answers whether anything was
+        recorded — nothing for one already taken, released or settled."""
+
+        if self.status not in (SeatChargeStatus.AUTHORISED, SeatChargeStatus.FAILED):
+            return False
+        self._record_that(
+            SeatChargeReleased(
+                charge_id=self.charge_id, player_id=self.player_id, occurred_at=at
+            )
+        )
+        return True
+
+    def captured(self, *, at: Instant) -> bool:
+        if self.status is not SeatChargeStatus.TAKING:
+            return False
+        self._record_that(
+            SeatChargeCaptured(
+                charge_id=self.charge_id, player_id=self.player_id, occurred_at=at
+            )
+        )
+        return True
+
+    def cancelled(self, *, at: Instant) -> bool:
+        """The provider released the payment untaken — because it was let go,
+        or on its own: a hold it dropped, a payment nobody confirmed. Nothing
+        is recorded for one taken or already settled."""
+
+        if self.status not in (
+            SeatChargeStatus.RELEASING,
+            SeatChargeStatus.AUTHORISED,
+            SeatChargeStatus.FAILED,
+        ):
+            return False
+        self._record_that(
+            SeatChargeCancelled(
+                charge_id=self.charge_id, player_id=self.player_id, occurred_at=at
+            )
+        )
+        return True
+
+    def heard(self, payment: Payment, *, at: Instant) -> bool:
+        """The provider's reading of this charge's payment, after a notice.
+        **Only forward**: a reading this charge has already moved past is the
+        past arriving late. Answers whether anything was recorded."""
+
+        invariant(
+            payment.payment_id == self.payment_id,
+            f"{payment.payment_id} read for {self.charge_id}",
+        )
+        if payment.status is PaymentStatus.AUTHORISED:
+            return self.confirm(at=at)
+        if payment.status is PaymentStatus.CAPTURED:
+            return self.captured(at=at)
+        if payment.status is PaymentStatus.CANCELLED:
+            return self.cancelled(at=at)
+        return False
+
+    # ----------------------------------------------------------------- fold
+
+    def _record_that(self, event: DomainEvent) -> None:
+        self._apply(event)
+        self._events.record(event)
+
+    def _apply(self, event: DomainEvent) -> None:
+        if isinstance(event, SeatChargeConfirmed):
+            self.status = SeatChargeStatus.AUTHORISED
+        elif isinstance(event, SeatChargeTaken):
+            self.status = SeatChargeStatus.TAKING
+            self.booking_id = event.booking_id
+            self.taken_at = instant(event.occurred_at)
+        elif isinstance(event, SeatChargeReleased):
+            self.status = SeatChargeStatus.RELEASING
+        elif isinstance(event, SeatChargeCaptured):
+            self.status = SeatChargeStatus.CAPTURED
+        elif isinstance(event, SeatChargeCancelled):
+            self.status = SeatChargeStatus.CANCELLED
+        else:
+            raise TypeError(f"Unsupported seat charge event {event!r}")
+        self.version += 1

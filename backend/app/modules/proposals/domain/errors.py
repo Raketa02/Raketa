@@ -174,3 +174,30 @@ class MostIllPayNotOffered(BadRequestError):
             "most I'll pay is off or one of the offered ceilings",
             details={"choices": list(choices)},
         )
+
+
+class CourtJustTaken(ConflictError):
+    """Another full game at the same club and hour booked the court this one
+    read as free, a moment before it. The yes is tried once more, on the courts
+    left; only a second race in a row reaches a client, which retries. Nothing
+    was recorded and nobody paid."""
+
+    code = "court_just_taken"
+
+    def __init__(self) -> None:
+        super().__init__("the court was booked a moment ago; try again")
+
+
+class PaymentToConfirm(ConflictError):
+    """This player's seat reopened because their payment could not be held,
+    and **confirming that payment is their yes again** (the mechanics §12.2) —
+    ``details.seat_charge_id`` names it. A plain yes would ask the bank the same
+    question and be refused the same way. Nothing was recorded."""
+
+    code = "payment_to_confirm"
+
+    def __init__(self, *, seat_charge_id: str) -> None:
+        super().__init__(
+            "confirm the payment to keep this seat",
+            details={"seat_charge_id": seat_charge_id},
+        )

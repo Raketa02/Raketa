@@ -35,6 +35,10 @@ from app.modules.auth.application.event_subscriptions import (
     register_auth_events,
     subscribe_auth_handlers,
 )
+from app.modules.bookings.application.event_subscriptions import (
+    register_booking_events,
+    subscribe_booking_handlers,
+)
 from app.modules.blocks.application.event_subscriptions import (
     register_block_events,
     subscribe_block_handlers,
@@ -64,6 +68,7 @@ from app.modules.payments.application.event_subscriptions import (
     register_payment_events,
     subscribe_payment_handlers,
     subscribe_the_method_releaser,
+    subscribe_the_seat_charge_settler,
 )
 from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.plans.application.event_subscriptions import (
@@ -158,7 +163,11 @@ class EventRuntime:
             outbox=SqlAlchemyOutboxRepository(session),
             codec=self.codec,
             dispatcher=self._dispatcher_over(
-                session, nudges=nudges, payments=payments, proposer_due=proposer_due
+                session,
+                clock=clock,
+                nudges=nudges,
+                payments=payments,
+                proposer_due=proposer_due,
             ),
             uow=build_unit_of_work(session),
             clock=clock,
@@ -169,6 +178,7 @@ class EventRuntime:
         self,
         session: AsyncSession,
         *,
+        clock: Clock,
         nudges: NudgePublisher,
         payments: PaymentProvider,
         proposer_due: DueForProposing | None = None,
@@ -193,6 +203,7 @@ class EventRuntime:
         """
 
         from app.bootstrap.composition import (
+            build_settle_seat_charges,
             build_tell_the_room,
             build_withdraw_a_leavers_yeses,
         )
@@ -202,6 +213,14 @@ class EventRuntime:
             dispatcher, build_tell_the_room(session, nudges=nudges)
         )
         subscribe_the_method_releaser(dispatcher, payments)
+        # A fill's verdict, captured or cancelled at the provider — written onto
+        # the charge in the delivery's own transaction (#541).
+        subscribe_the_seat_charge_settler(
+            dispatcher,
+            build_settle_seat_charges(
+                session, provider=payments, clock=clock, runtime=self
+            ),
+        )
         # A leaver's yeses are withdrawn in the transaction that delivers the
         # leaving, so this one needs the batch's session too.
         subscribe_the_pool_leaver(
@@ -229,6 +248,7 @@ def build_event_runtime() -> EventRuntime:
     register_administrator_events(catalog)
     register_payment_events(catalog)
     register_proposal_events(catalog)
+    register_booking_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
@@ -245,6 +265,7 @@ def build_event_runtime() -> EventRuntime:
     subscribe_administrator_handlers(dispatcher)
     subscribe_payment_handlers(dispatcher)
     subscribe_proposal_handlers(dispatcher)
+    subscribe_booking_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),

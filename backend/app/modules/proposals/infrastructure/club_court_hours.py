@@ -32,7 +32,7 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.clubs.domain.ports import ClubDirectory, SellableCourtHours
-from app.modules.clubs.domain.raketa_terms import RELEASE_LEAD_DAYS, WayOfWorking
+from app.modules.clubs.domain.raketa_terms import WayOfWorking, before_any_deadline
 from app.modules.clubs.domain.sellable import SellableCourtHour
 from app.modules.proposals.domain.deck import SellingTerms
 from app.modules.proposals.domain.ports import OfferedCourtHour
@@ -40,11 +40,6 @@ from app.modules.proposals.domain.proposer import CourtHourOnSale
 
 #: Every game is one hour, for every sport (the mechanics §2).
 _A_GAME = timedelta(hours=1)
-
-#: Longer than any book-by can be ahead of its hour — the longest release lead,
-#: and a day — so an offer read this far before a window holds every hour in
-#: it whatever its deadline.
-_BEFORE_ANY_DEADLINE = timedelta(days=RELEASE_LEAD_DAYS[1] + 1)
 
 
 @final
@@ -124,7 +119,7 @@ class ClubCourtHours:
             list(dict.fromkeys(club_ids)),
             start=start,
             end=end,
-            now=start - _BEFORE_ANY_DEADLINE,
+            now=before_any_deadline(start),
         )
         return {
             (club_id, hour.sport, hour.start)

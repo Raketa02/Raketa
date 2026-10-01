@@ -77,6 +77,7 @@ class OpenPlannedGame:
             window=None if command.window is None else Window(command.window),
             line_up=line_up,
             occurred_at=occurred_at,
+            starts_at=command.starts_at,
         )
         await self._games.save(game)
         return game.id

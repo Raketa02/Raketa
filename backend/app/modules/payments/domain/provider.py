@@ -126,16 +126,28 @@ class PaymentStatus(StrEnum):
     #: is rare and allowed. The player confirms **this same payment** in the app,
     #: with ``client_secret`` on the club's account.
     AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED"
-    #: The bank refused. ``decline_code`` says why, when it said.
+    #: The bank refused. ``decline_code`` says why, when it said. The player can
+    #: still confirm **this same payment** in the app with another card, with
+    #: ``client_secret`` on the club's account (the mechanics Appendix A).
     DECLINED = "DECLINED"
     #: The provider is still deciding.
     PROCESSING = "PROCESSING"
 
 
+#: The two states a payment waits for its player in: the phone confirms it on
+#: the club's account, with the payment's ``client_secret``.
+AWAITING_THE_PLAYER = frozenset(
+    {PaymentStatus.AUTHENTICATION_REQUIRED, PaymentStatus.DECLINED}
+)
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class Payment:
-    """One payment on a club's account."""
+    """One payment on a club's account. ``client_secret`` is present exactly
+    while the payment waits for its player (``AWAITING_THE_PLAYER``) — a secret,
+    asked of the provider when it is handed out and never recorded
+    (``docs/adr/0184`` §4)."""
 
     payment_id: str
     status: PaymentStatus
@@ -295,6 +307,12 @@ class PaymentProvider(Protocol):
     ) -> Payment:
         """Hold ``amount_grosze`` on a cloned card, off-session, to be captured
         or cancelled — the first half of the all-or-nothing fill."""
+        ...
+
+    async def read_payment(self, *, account_id: str, payment_id: str) -> Payment:
+        """A payment on a club's account **as it stands now** — after its player
+        confirmed it in the app, say. A notice that one moved is a prompt to
+        read it, never the reading: notices arrive out of order (#541)."""
         ...
 
     async def capture(

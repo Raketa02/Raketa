@@ -7,12 +7,14 @@ this context keeps and what it asks of the rest of the platform.
 
 from __future__ import annotations
 
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant
 from app.modules.payments.domain.payment_method import PaymentMethod
+from app.modules.payments.domain.seat_charge import SeatCharge
 
 
 @runtime_checkable
@@ -82,4 +84,76 @@ class ConnectedAccounts(Protocol):
         """The provider said this account changed: read it as it stands and
         record it on the club that holds it — in the caller's transaction,
         without committing. ``False`` for an account no club here opened."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# Seat charges (#541)
+# --------------------------------------------------------------------------- #
+
+
+@runtime_checkable
+class SeatChargeRepository(Protocol):
+    """One stream per charge, and the ``seat_charges`` projection written by
+    ``save`` in the caller's transaction — what a notice finds its charge by,
+    what a later fill finds a confirmed hold by, and what receipts read."""
+
+    async def load(self, charge_id: UUID) -> SeatCharge | None: ...
+
+    async def save(self, charge: SeatCharge) -> None:
+        """Append what the charge recorded and write its row, in the caller's
+        transaction."""
+        ...
+
+    async def of_game(self, game_id: UUID) -> Sequence[SeatCharge]:
+        """Every charge ever made for this game, oldest first."""
+        ...
+
+    async def by_payment(self, payment_id: str) -> SeatCharge | None:
+        """The charge whose payment at the provider this is — how a notice,
+        which names a payment and never a player, finds its stream."""
+        ...
+
+    async def paid_by(self, player_id: UUID) -> Sequence[SeatCharge]:
+        """Every charge this player has paid — taken, or being taken — **the
+        latest taken first**. What their receipts list."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Seller:
+    """The club a share is paid to — the merchant of record, named on every
+    receipt — and its account at the provider."""
+
+    name: str
+    account_id: str | None
+
+
+@runtime_checkable
+class Sellers(Protocol):
+    """**A demand of the Club context**: what a club is called, and its account
+    at the provider (#537). Answered over the Club courts stream, so the arrow
+    runs ``payments → clubs``."""
+
+    async def of(self, club_ids: Collection[UUID]) -> Mapping[UUID, Seller]:
+        """Each of these clubs. A club that does not exist is absent."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Payer:
+    """Where a player's money emails go, and what they are called in them."""
+
+    email: str
+    name: str | None
+
+
+@runtime_checkable
+class Payers(Protocol):
+    """**A demand of the users context**: each player's address and Name."""
+
+    async def of(self, player_ids: Collection[UUID]) -> Mapping[UUID, Payer]:
+        """Each of these players. An account that no longer exists is absent."""
         ...

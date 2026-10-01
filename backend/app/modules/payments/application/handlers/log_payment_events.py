@@ -19,6 +19,13 @@ from app.modules.payments.domain.events import (
     PaymentMethodUpdated,
     PaymentSetupStarted,
     PaymentTermsAccepted,
+    SeatChargeAuthorised,
+    SeatChargeCancelled,
+    SeatChargeCaptured,
+    SeatChargeConfirmed,
+    SeatChargeFailed,
+    SeatChargeReleased,
+    SeatChargeTaken,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,6 +54,46 @@ class LogPaymentEvent:
         logger.info(
             _LINES[type(event)],
             extra={
+                "player_id": str(event.player_id),
+                "occurred_at": event.occurred_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+SeatChargeEvent = (
+    SeatChargeAuthorised
+    | SeatChargeFailed
+    | SeatChargeConfirmed
+    | SeatChargeTaken
+    | SeatChargeReleased
+    | SeatChargeCaptured
+    | SeatChargeCancelled
+)
+
+_SEAT_CHARGE_LINES: dict[type, str] = {
+    SeatChargeAuthorised: "payments.seat_charge.authorised",
+    SeatChargeFailed: "payments.seat_charge.failed",
+    SeatChargeConfirmed: "payments.seat_charge.confirmed",
+    SeatChargeTaken: "payments.seat_charge.taken",
+    SeatChargeReleased: "payments.seat_charge.released",
+    SeatChargeCaptured: "payments.seat_charge.captured",
+    SeatChargeCancelled: "payments.seat_charge.cancelled",
+}
+
+
+class LogSeatChargeEvent:
+    """A seat charge's line: whose share, which charge — never the amount, the
+    payment's id at the provider or why a bank refused it."""
+
+    async def __call__(
+        self, event: SeatChargeEvent, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            _SEAT_CHARGE_LINES[type(event)],
+            extra={
+                "charge_id": str(event.charge_id),
                 "player_id": str(event.player_id),
                 "occurred_at": event.occurred_at.isoformat(),
                 "event_id": str(context.event_id),

@@ -10,11 +10,19 @@ and when, are evidence on the player's stream and on no response.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from datetime import datetime
+from typing import Literal
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.kernel import Sport
+from app.modules.payments.application.seat_charges import Receipt, SeatChargeReading
 from app.modules.payments.application.setup import SetupOpened
 from app.modules.payments.domain.payment_method import PaymentMethod
 from app.modules.payments.domain.provider import Wallet
+from app.modules.payments.domain.seat_charge import FailureReason, SeatChargeStatus
 from app.modules.payments.domain.terms import PAYMENT_TERMS_VERSION
 
 
@@ -118,4 +126,134 @@ class PaymentMethodResponse(BaseModel):
             ),
             terms_needed=payment_method.terms_needed,
             terms_version=PAYMENT_TERMS_VERSION,
+        )
+
+
+# --------------------------------------------------------------------------- #
+# Seat charges and receipts (#541)
+# --------------------------------------------------------------------------- #
+
+
+class SellerSchema(BaseModel):
+    """The club a share is paid to — the seller, named on every receipt."""
+
+    id: UUID
+    name: str | None = Field(
+        description="The club's name; `null` for a club that no longer exists."
+    )
+
+
+class PaymentToConfirmSchema(BaseModel):
+    """What the phone confirms a refused payment with, on the club's account:
+    the provider's own confirmation, with ``client_secret`` and the seller's
+    account — **asked of the provider now and never recorded**."""
+
+    client_secret: str = Field(
+        description="The payment's secret. Confirm it in the provider's own fields."
+    )
+    connected_account_id: str = Field(
+        description=(
+            "The club's account at the provider — a direct charge is confirmed "
+            "on the seller's account."
+        )
+    )
+    publishable_key: str
+
+
+class SeatChargeResponse(BaseModel):
+    """One of the reader's own seat charges."""
+
+    seat_charge_id: UUID
+    proposal_id: UUID = Field(
+        description="The game it was for — a booking takes the same id."
+    )
+    status: SeatChargeStatus = Field(
+        description=(
+            "`AUTHORISED` held, `FAILED` refused and waiting for its player, "
+            "`TAKING`/`CAPTURED` paid, `RELEASING`/`CANCELLED` let go untaken."
+        )
+    )
+    refusal: FailureReason | None = Field(
+        description=(
+            "Why it was refused: `AUTHENTICATION_REQUIRED` — confirm it in the "
+            "app; `DECLINED` — confirm it with another card; `TERMS_NEEDED` — "
+            "accept the terms again, then say yes; `NO_METHOD` — save a method, "
+            "then say yes. `null` unless it was refused."
+        )
+    )
+    amount_grosze: int
+    sport: Sport
+    starts_at: datetime
+    club: SellerSchema
+    to_confirm: PaymentToConfirmSchema | None = Field(
+        description=(
+            "Present exactly while the payment waits for its player: confirm it "
+            "with this, then `POST /seat-charges/{id}/confirmation`."
+        )
+    )
+
+    @classmethod
+    def from_reading(cls, reading: SeatChargeReading) -> "SeatChargeResponse":
+        charge = reading.charge
+        confirm = reading.to_confirm
+        return cls(
+            seat_charge_id=charge.charge_id,
+            proposal_id=charge.game_id,
+            status=charge.status,
+            refusal=charge.failure,
+            amount_grosze=charge.amount_grosze,
+            sport=charge.sport,
+            starts_at=charge.starts_at,
+            club=SellerSchema(id=charge.club_id, name=reading.club_name),
+            to_confirm=(
+                None
+                if confirm is None
+                else PaymentToConfirmSchema(
+                    client_secret=confirm.client_secret,
+                    connected_account_id=confirm.account_id,
+                    publishable_key=confirm.publishable_key,
+                )
+            ),
+        )
+
+
+class ReceiptSchema(BaseModel):
+    """One share the reader paid — *the club named as the seller*."""
+
+    seat_charge_id: UUID
+    kind: Literal["CHARGE"] = Field(
+        description=(
+            "`CHARGE` — a share paid. Refunds join this list as their own kind "
+            "with the leaving rules (#544)."
+        )
+    )
+    club: SellerSchema
+    sport: Sport
+    starts_at: datetime
+    amount_grosze: int = Field(description="What was paid, in grosze.")
+    paid_at: datetime
+
+
+class ReceiptsResponse(BaseModel):
+    """You › Payments' *RECEIPTS*, the latest first."""
+
+    receipts: list[ReceiptSchema]
+
+    @classmethod
+    def from_receipts(cls, receipts: Sequence[Receipt]) -> "ReceiptsResponse":
+        return cls(
+            receipts=[
+                ReceiptSchema(
+                    seat_charge_id=receipt.charge.charge_id,
+                    kind="CHARGE",
+                    club=SellerSchema(
+                        id=receipt.charge.club_id, name=receipt.club_name
+                    ),
+                    sport=receipt.charge.sport,
+                    starts_at=receipt.charge.starts_at,
+                    amount_grosze=receipt.charge.amount_grosze,
+                    paid_at=receipt.charge.taken_at or receipt.charge.opened_at,
+                )
+                for receipt in receipts
+            ]
         )

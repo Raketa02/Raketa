@@ -1,4 +1,4 @@
-"""The Payments context's two tables: a projection, and the notice inbox.
+"""The Payments context's tables: two projections, and the notice inbox.
 
 **``payment_customers`` is a projection** of the Payment method streams, written
 by the repository's ``save`` in the caller's transaction, as a club's search row
@@ -15,9 +15,10 @@ is a table and not a stream (``docs/adr/0190``).
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import CheckConstraint, DateTime, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
@@ -43,3 +44,35 @@ class PaymentNoticeORM(Base):
     notice_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     kind: Mapped[str] = mapped_column(String(128), nullable=False)
     read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SeatChargeORM(Base):
+    """One seat charge, as receipts, notices and the next fill read it — a
+    **projection** of its stream, written by the repository's ``save`` in the
+    caller's transaction (#541). ``status`` is the stream's fold, kept here so a
+    list of receipts is one read; the stream stays the record."""
+
+    __tablename__ = "seat_charges"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('AUTHORISED', 'FAILED', 'TAKING', 'CAPTURED', 'RELEASING', "
+            "'CANCELLED')",
+            name="ck_seat_charges_status",
+        ),
+        Index("ix_seat_charges_game_id", "game_id"),
+        Index("ix_seat_charges_player_id_taken_at", "player_id", "taken_at"),
+        Index("ix_seat_charges_payment_id", "payment_id"),
+    )
+
+    charge_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
+    player_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), nullable=False)
+    #: The proposal that filled — its booking's id too.
+    game_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), nullable=False)
+    club_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), nullable=False)
+    payment_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    amount_grosze: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    taken_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

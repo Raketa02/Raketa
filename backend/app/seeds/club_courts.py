@@ -379,7 +379,7 @@ async def write_the_club_courts(
             session, event_store=event_store, events=events
         )
         uow = build_unit_of_work(session)
-        bookings = build_court_bookings()
+        bookings = build_court_bookings(session)
         # The run's own provider: a fake that finishes a club's onboarding when
         # told to, and knows nothing a laptop's API holds (``payments.py``).
         provider = build_fake_payments()

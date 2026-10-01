@@ -8,7 +8,8 @@ Marek's post while only Marek is In, B says yes, and E no longer meets a game
 of Marek alone (the mechanics §6.1, §7). Checking only the pairs the newcomer is
 in is deliberate: a pair already In that stopped fitting — two players who
 blocked each other after saying yes — is not the newcomer's refusal to carry,
-and it is the fill's to read (#541).
+and it is the fill's to read: the later of the two yeses stops counting
+(``fill.py``).
 
 **A yes needs three facts about the player's own account first**, in the order
 the phone meets them: a method to charge (the setup opens), a live yes to spare

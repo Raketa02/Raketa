@@ -13,7 +13,8 @@ may not share a court are never on one card** (§4.1): a card with somebody In I
 do not fit is withheld — my yes would be refused (``no_longer_fits``) — and a
 name that does not fit me, somebody In or a name already on the card, or who has
 left the pool, is left off for the next one. A pair *In* that stopped fitting is
-not mine to hide: it is the fill's to read (#541). A card that would show nobody
+not mine to hide: it is the fill's to read, which lets the later yes go
+(``application/fill.py``). A card that would show nobody
 but me is not dealt: there is no game on it.
 
 **A withdrawn yes is dealt again.** A no is final (§5.3); a yes taken back is no

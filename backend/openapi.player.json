@@ -6640,7 +6640,7 @@
           "proposals"
         ],
         "summary": "Say yes to a game",
-        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing**: no money moves, no court is held, nobody is told (the others see the player In on the card). Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.",
+        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** \u2014 no money moves, no court is held, nobody is told (the others see the player In on the card) \u2014 **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.\n\n**The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account and then all are taken, or none is \u2014 `booked` names the booking and its Game, and everybody is emailed *It's a game! \u00b7 you paid*. When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. At an On request club a full game waits for the club (#543): `open_seats` is nought and nothing is booked.",
         "operationId": "say_yes_api_v1_proposals__proposal_id__yes_post",
         "security": [
           {
@@ -6681,7 +6681,7 @@
             }
           },
           "409": {
-            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_already_answered` \u2014 this player said no: the card does not come back. `proposal_is_full` \u2014 every seat is In. `payment_method_required` \u2014 no saved payment method: save one, then say yes. `live_yeses_exhausted` \u2014 `details.cap` live yeses in `details.sport` already. `no_longer_fits` \u2014 somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded.",
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `payment_to_confirm` \u2014 this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` \u2014 this player said no: the card does not come back. `proposal_is_full` \u2014 every seat is In. `payment_method_required` \u2014 no saved payment method: save one, then say yes. `live_yeses_exhausted` \u2014 `details.cap` live yeses in `details.sport` already. `no_longer_fits` \u2014 somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded \u2014 except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6691,7 +6691,7 @@
             }
           },
           "503": {
-            "description": "`block_state_unavailable` \u2014 whether this player fits the people In could not be read. Nothing was recorded; retry.",
+            "description": "`block_state_unavailable` \u2014 whether this player fits the people In could not be read. `payments_unavailable` \u2014 the yes filled the game and the payment provider could not be reached to hold the shares. Nothing was recorded; retry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6850,6 +6850,33 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LiveYesesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/me/payments-to-confirm": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "My payments to confirm",
+        "description": "*Confirm your payment to keep your seat*: every game still filling whose last yes could not hold the reader's share \u2014 the bank wanted them, or declined \u2014 so their seat is open again until they confirm the payment (`POST /seat-charges/{id}/confirmation`) or somebody takes it. Across groups, soonest game first. A game that filled without them, or is no longer filling, is not here.",
+        "operationId": "read_payments_to_confirm_api_v1_players_me_payments_to_confirm_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentsToConfirmResponse"
                 }
               }
             }
@@ -7027,6 +7054,181 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/seat-charges/{seat_charge_id}": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "One of my seat charges",
+        "description": "A share of a game, as it stands \u2014 and, while its payment waits for the player (*Confirm your payment to keep your seat*), what the phone confirms it with on the club's account. Nothing is recorded.",
+        "operationId": "read_seat_charge_api_v1_seat_charges__seat_charge_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "seat_charge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Seat Charge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeatChargeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`seat_charge_not_found` \u2014 no such charge **for this player**: it does not exist, or it is somebody else's. One code for both.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`payments_unavailable` \u2014 the payment provider could not be reached for what the phone confirms with. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/seat-charges/{seat_charge_id}/confirmation": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "I confirmed my payment \u2014 my yes again",
+        "description": "*Confirm your payment to keep your seat.* The player confirmed, in the app, the payment that could not be held when the game filled. It is **asked of the provider**, never taken on the phone's word; held now, it is the player's yes again \u2014 and if theirs was the seat still open, the game books on it and everybody else is charged then. Answers as a yes does. Somebody else took the seat first: the payment is let go.",
+        "operationId": "confirm_payment_api_v1_seat_charges__seat_charge_id__confirmation_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "seat_charge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Seat Charge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YesAnswerResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`seat_charge_not_found` \u2014 no such charge **for this player**. `proposal_not_found` \u2014 they are no longer in the game's group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`payment_not_confirmed` \u2014 the provider still waits for the player (`details.status`), or the charge was never a payment to confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept the terms or save a method and say yes. `proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_is_full` \u2014 somebody else took the seat. On both, the payment the player confirmed is let go and nobody pays it. `live_yeses_exhausted` and `no_longer_fits` as a yes meets them.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`payments_unavailable` \u2014 `block_state_unavailable` \u2014 whether this player fits the people In could not be read. `payments_unavailable` \u2014 the yes filled the game and the payment provider could not be reached to hold the shares. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/me/receipts": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "My receipts",
+        "description": "You \u203a Payments' *RECEIPTS*: every share the reader paid, the latest first, **the club named as the seller**. A hold let go \u2014 a game that did not book \u2014 is not here: nobody paid it.",
+        "operationId": "read_receipts_api_v1_players_me_receipts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     }
   },
@@ -7601,6 +7803,29 @@
         ],
         "title": "BlockSurface",
         "description": "The four surfaces of `search-telemetry.md` \u00a72, as a block records them."
+      },
+      "BookedSchema": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id",
+            "description": "The booking \u2014 the same id the game had while it filled."
+          },
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The ordinary Game it opened."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "game_id"
+        ],
+        "title": "BookedSchema",
+        "description": "The game a yes booked \u2014 *It's a game!*"
       },
       "CalledOffBySchema": {
         "properties": {
@@ -10125,6 +10350,17 @@
         ],
         "title": "FactorResponse",
         "description": "One evidence category's row: what it says, and which way it pulled.\n\n``direction`` is one of ``up`` / ``down`` / ``neutral``, computed by the\nengine from that category's own evidence against the final estimate. The\nclient never derives it \u2014 a client-side arrow is a second opinion about the\narithmetic, and two clients would eventually hold two of them."
+      },
+      "FailureReason": {
+        "type": "string",
+        "enum": [
+          "AUTHENTICATION_REQUIRED",
+          "DECLINED",
+          "TERMS_NEEDED",
+          "NO_METHOD"
+        ],
+        "title": "FailureReason",
+        "description": "Why a share could not be held (the mechanics \u00a712.2, \u00a719)."
       },
       "FillSeatsRequest": {
         "properties": {
@@ -12728,6 +12964,17 @@
         "title": "PaymentMethodResponse",
         "description": "The player's payment method, as You \u203a Payments draws it."
       },
+      "PaymentRefusal": {
+        "type": "string",
+        "enum": [
+          "AUTHENTICATION_REQUIRED",
+          "DECLINED",
+          "TERMS_NEEDED",
+          "NO_METHOD"
+        ],
+        "title": "PaymentRefusal",
+        "description": "Why a seat's share could not be held \u2014 the payment's own words, spelled\nhere in this context's (the mechanics \u00a712.2, \u00a719)."
+      },
       "PaymentSetupResponse": {
         "properties": {
           "setup_id": {
@@ -12790,6 +13037,23 @@
           "client_secret"
         ],
         "title": "PaymentTermsResponse"
+      },
+      "PaymentsToConfirmResponse": {
+        "properties": {
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/app__modules__proposals__presentation__schemas__PaymentToConfirmSchema"
+            },
+            "type": "array",
+            "title": "Payments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payments"
+        ],
+        "title": "PaymentsToConfirmResponse",
+        "description": "*Confirm your payment to keep your seat*, every one the reader owes,\nsoonest game first."
       },
       "PendingInvitationSchema": {
         "properties": {
@@ -13817,6 +14081,71 @@
         "title": "ReadRadarRequest",
         "description": "What a reading is asked for. **The sport, and that is the whole\ncontract** (``the-radar.md`` \u00a72).\n\n**There is no `mode`**, because there is none: the radar scores every\npairing under the deck's ruler, and a mode on this body would be the field\nthe telemetry constraint refuses. **There is no radius**, because the reach\nis your own Search radius and there is no city; the slider on Find a game\nis where it moves. **There is no position**, because the server holds your\narea and puts it on a cold start. And **there is no week**: a reading ranks\nnobody, so there is nothing for a grid to rank on."
       },
+      "ReceiptSchema": {
+        "properties": {
+          "seat_charge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Seat Charge Id"
+          },
+          "kind": {
+            "type": "string",
+            "const": "CHARGE",
+            "title": "Kind",
+            "description": "`CHARGE` \u2014 a share paid. Refunds join this list as their own kind with the leaving rules (#544)."
+          },
+          "club": {
+            "$ref": "#/components/schemas/SellerSchema"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "amount_grosze": {
+            "type": "integer",
+            "title": "Amount Grosze",
+            "description": "What was paid, in grosze."
+          },
+          "paid_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Paid At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seat_charge_id",
+          "kind",
+          "club",
+          "sport",
+          "starts_at",
+          "amount_grosze",
+          "paid_at"
+        ],
+        "title": "ReceiptSchema",
+        "description": "One share the reader paid \u2014 *the club named as the seller*."
+      },
+      "ReceiptsResponse": {
+        "properties": {
+          "receipts": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptSchema"
+            },
+            "type": "array",
+            "title": "Receipts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "receipts"
+        ],
+        "title": "ReceiptsResponse",
+        "description": "You \u203a Payments' *RECEIPTS*, the latest first."
+      },
       "RecordLikelyRangeSchema": {
         "properties": {
           "low": {
@@ -14607,6 +14936,89 @@
         "title": "SeatCardSchema",
         "description": "The card for one seat: who they are, and what you make of them."
       },
+      "SeatChargeResponse": {
+        "properties": {
+          "seat_charge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Seat Charge Id"
+          },
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id",
+            "description": "The game it was for \u2014 a booking takes the same id."
+          },
+          "status": {
+            "$ref": "#/components/schemas/SeatChargeStatus",
+            "description": "`AUTHORISED` held, `FAILED` refused and waiting for its player, `TAKING`/`CAPTURED` paid, `RELEASING`/`CANCELLED` let go untaken."
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it was refused: `AUTHENTICATION_REQUIRED` \u2014 confirm it in the app; `DECLINED` \u2014 confirm it with another card; `TERMS_NEEDED` \u2014 accept the terms again, then say yes; `NO_METHOD` \u2014 save a method, then say yes. `null` unless it was refused."
+          },
+          "amount_grosze": {
+            "type": "integer",
+            "title": "Amount Grosze"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "club": {
+            "$ref": "#/components/schemas/SellerSchema"
+          },
+          "to_confirm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/app__modules__payments__presentation__schemas__PaymentToConfirmSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present exactly while the payment waits for its player: confirm it with this, then `POST /seat-charges/{id}/confirmation`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "seat_charge_id",
+          "proposal_id",
+          "status",
+          "refusal",
+          "amount_grosze",
+          "sport",
+          "starts_at",
+          "club",
+          "to_confirm"
+        ],
+        "title": "SeatChargeResponse",
+        "description": "One of the reader's own seat charges."
+      },
+      "SeatChargeStatus": {
+        "type": "string",
+        "enum": [
+          "AUTHORISED",
+          "FAILED",
+          "TAKING",
+          "CAPTURED",
+          "RELEASING",
+          "CANCELLED"
+        ],
+        "title": "SeatChargeStatus",
+        "description": "Where a charge stands, as its stream leaves it."
+      },
       "SeatChoiceSchema": {
         "properties": {
           "side": {
@@ -14734,6 +15146,34 @@
         ],
         "title": "SeatingSchema",
         "description": "One position on one side: a person, or a seat somebody has left.\n\n**The court is frozen until somebody leaves it** (``docs/adr/0162``). An\nopen seat is drawn, never dropped \u2014 `player_id` is `null` and the seat keeps\nits place \u2014 so a four with one seat open is still a four and the client\nfolds *Needs a player* from it. Nothing on the wire names that rung.\n\n**A name, and nothing else about them** (``docs/adr/0141``). A Level, a\nband, an area and a run of form are what a *searcher* reads to decide about a\ngame that might happen, and a gate decided they may see them; this is the\nrecord of a game that did, and it re-publishes nobody's profile off the back\nof it. The court is the whole of the permission \u2014 ``GET /games`` answers\nabout games you were on the court of \u2014 so nothing here is re-gated against\nwho is reading."
+      },
+      "SellerSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The club's name; `null` for a club that no longer exists."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "SellerSchema",
+        "description": "The club a share is paid to \u2014 the seller, named on every receipt."
       },
       "SendChallengeRequest": {
         "properties": {
@@ -15931,7 +16371,29 @@
           "open_seats": {
             "type": "integer",
             "title": "Open Seats",
-            "description": "Seats nobody is In on yet, this player's yes counted. Nought is a game every seat said yes to."
+            "description": "Seats nobody is In on yet, this player's yes counted. Nought on a game that booked \u2014 and on a full game an On request club has still to confirm. A payment that could not be held opens its seat again."
+          },
+          "booked": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookedSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when this yes booked the game: every seat was charged, and the booking and its Game are open. `null` otherwise."
+          },
+          "your_payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YourPaymentSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when **this player's** share could not be held: nobody paid and the game did not book. `null` otherwise \u2014 including when somebody else's could not, which leaves `open_seats` above nought."
           }
         },
         "type": "object",
@@ -15940,7 +16402,28 @@
           "open_seats"
         ],
         "title": "YesAnswerResponse",
-        "description": "What a yes left on the game."
+        "description": "What a yes left on the game \u2014 and, when it was the last, what the fill\ndid."
+      },
+      "YourPaymentSchema": {
+        "properties": {
+          "seat_charge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Seat Charge Id",
+            "description": "The refused payment: `GET /seat-charges/{id}` for what the phone confirms it with, then `POST /seat-charges/{id}/confirmation`."
+          },
+          "refusal": {
+            "$ref": "#/components/schemas/PaymentRefusal",
+            "description": "`AUTHENTICATION_REQUIRED` \u2014 the bank wants the player to confirm; `DECLINED` \u2014 confirm with another card; `TERMS_NEEDED` \u2014 accept the terms again, then say yes; `NO_METHOD` \u2014 save a method, then say yes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "seat_charge_id",
+          "refusal"
+        ],
+        "title": "YourPaymentSchema",
+        "description": "This player's share could not be held when the game filled: nobody paid,\nand their seat is open again until they confirm it or somebody takes it."
       },
       "app__modules__challenges__domain__seats__Side": {
         "type": "string",
@@ -15959,6 +16442,95 @@
         ],
         "title": "Side",
         "description": "Which side of the net. The searcher is always on ``A``."
+      },
+      "app__modules__payments__presentation__schemas__PaymentToConfirmSchema": {
+        "properties": {
+          "client_secret": {
+            "type": "string",
+            "title": "Client Secret",
+            "description": "The payment's secret. Confirm it in the provider's own fields."
+          },
+          "connected_account_id": {
+            "type": "string",
+            "title": "Connected Account Id",
+            "description": "The club's account at the provider \u2014 a direct charge is confirmed on the seller's account."
+          },
+          "publishable_key": {
+            "type": "string",
+            "title": "Publishable Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_secret",
+          "connected_account_id",
+          "publishable_key"
+        ],
+        "title": "PaymentToConfirmSchema",
+        "description": "What the phone confirms a refused payment with, on the club's account:\nthe provider's own confirmation, with ``client_secret`` and the seller's\naccount \u2014 **asked of the provider now and never recorded**."
+      },
+      "app__modules__proposals__presentation__schemas__PaymentToConfirmSchema": {
+        "properties": {
+          "seat_charge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Seat Charge Id",
+            "description": "The payment to confirm: `GET /seat-charges/{id}` for what the phone confirms it with, then `POST /seat-charges/{id}/confirmation`."
+          },
+          "refusal": {
+            "$ref": "#/components/schemas/PaymentRefusal",
+            "description": "`AUTHENTICATION_REQUIRED` \u2014 the bank wants the player to confirm; `DECLINED` \u2014 confirm with another card."
+          },
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id"
+          },
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "club": {
+            "$ref": "#/components/schemas/LiveYesClubSchema"
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze"
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By",
+            "description": "The latest moment the game can fill; past it the seat is gone."
+          }
+        },
+        "type": "object",
+        "required": [
+          "seat_charge_id",
+          "refusal",
+          "proposal_id",
+          "pool_id",
+          "sport",
+          "kind",
+          "starts_at",
+          "club",
+          "share_grosze",
+          "book_by"
+        ],
+        "title": "PaymentToConfirmSchema",
+        "description": "A game still filling whose last yes could not hold this player's share:\ntheir seat is open until they confirm the payment, or somebody takes it."
       }
     },
     "securitySchemes": {

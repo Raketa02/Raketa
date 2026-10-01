@@ -17,9 +17,9 @@ over HTTP as the phone answers it, and read back through
   the games-per-week cap and an hour already taken;
 - **the counts, the badge and the capped weeks** around the deck.
 
-Nothing can be booked yet (#541), so the tests that need booked games stand in
-for bookings by overriding ``get_booked_games`` — the one port that answers
-nought today.
+The tests that need booked games stand in for them by overriding
+``get_booked_games``, so the deck's filters are asserted without filling games —
+a fill's effect on the deck is ``test_the_fill.py``'s (#541).
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**.
 """

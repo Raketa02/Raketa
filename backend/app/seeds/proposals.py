@@ -53,10 +53,11 @@ from app.bootstrap.composition import (
     build_group_directory,
     build_home_clubs,
     build_player_fit,
+    build_fake_payments,
     build_propose_games,
     build_proposal_directory,
-    build_proposal_guards,
     build_proposal_repository,
+    build_say_yes,
     build_unit_of_work,
     build_user_repository,
     build_wanted_kinds,
@@ -68,7 +69,7 @@ from app.modules.clubs.domain.court_hours import CLUB_ZONE, local_day
 from app.modules.groups.application.commands import CreatePlayerGroupCommand
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.domain.value_objects import GroupName, JoinPolicy
-from app.modules.proposals.application.answers import SayYes
+from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.commands import AnswerProposalCommand
 from app.modules.proposals.application.propose_games import Proposed
 from app.modules.proposals.domain.proposal import Origin, Proposal
@@ -149,7 +150,7 @@ async def write_the_proposals(
     clock = FixedClock(at=now)
     async with session_factory() as session:
         her = await _protagonist(session)
-        club_id = await _club_id(session)
+        club_id = await games_club_id(session)
         crowd = await _the_crowd(session, her, [player for _, player in cohort], now)
         group_id, created = await _the_group(
             session, settings, her, club_id, crowd, now
@@ -173,7 +174,9 @@ async def write_the_proposals(
         for (proposal, named), in_count in zip(mine, IN_ON_EACH, strict=True):
             for player in named[:in_count]:
                 if player not in proposal.yeses:
-                    await _says_yes(session, clock, proposal.proposal_id, player)
+                    await _says_yes(
+                        session, clock, settings, proposal.proposal_id, player
+                    )
             picks.append(
                 SeededPick(
                     proposal.proposal_id,
@@ -199,7 +202,9 @@ async def _protagonist(session: AsyncSession) -> UUID:
     return user.id
 
 
-async def _club_id(session: AsyncSession) -> UUID:
+async def games_club_id(session: AsyncSession) -> UUID:
+    """The club the games are dealt at — its id, off its desk's account."""
+
     account = await build_club_account_repository(
         session,
         event_store=build_domain_event_store(session),
@@ -290,7 +295,7 @@ async def her_games_group(session: AsyncSession) -> tuple[UUID, UUID] | None:
     before a run has gathered it. What the screens read her deck from."""
 
     her = await _protagonist(session)
-    group_id = await _games_group_of(session, her, await _club_id(session))
+    group_id = await _games_group_of(session, her, await games_club_id(session))
     return None if group_id is None else (her, group_id)
 
 
@@ -337,17 +342,17 @@ async def _her_picks(
 
 
 async def _says_yes(
-    session: AsyncSession, clock: FixedClock, proposal_id: UUID, player: UUID
-) -> None:
-    await SayYes(
-        proposals=build_proposal_repository(
-            session,
-            event_store=build_domain_event_store(session),
-            events=build_event_publisher(session),
-        ),
-        guards=build_proposal_guards(session),
-        uow=build_unit_of_work(session),
-        clock=clock,
+    session: AsyncSession,
+    clock: FixedClock,
+    settings: Settings,
+    proposal_id: UUID,
+    player: UUID,
+) -> YesAnswer:
+    """The swipe the phone's yes runs — and, when it is the last, the fill,
+    through the run's own fake (``payments.py``)."""
+
+    return await build_say_yes(
+        session, clock=clock, provider=build_fake_payments(), settings=settings
     ).execute(AnswerProposalCommand(proposal_id=proposal_id, player_id=player))
 
 

@@ -20,21 +20,30 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_booked_games,
+    build_confirm_payment,
     build_games_and_money_repository,
     build_proposal_club_names,
     build_proposal_directory,
-    build_proposal_guards,
     build_proposal_repository,
     build_read_group_deck,
+    build_say_yes,
 )
-from app.modules.proposals.application.answers import SayNo, SayYes, WithdrawYes
+from app.modules.payments.presentation.dependencies import PaymentProviderDep
+from app.modules.proposals.application.answers import (
+    ConfirmPayment,
+    SayNo,
+    SayYes,
+    WithdrawYes,
+)
 from app.modules.proposals.application.games_and_money import (
     ReadGamesAndMoney,
     SetGamesAndMoney,
 )
 from app.modules.proposals.application.group_deck import ReadGroupDeck
-from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
+from app.modules.proposals.application.payments_to_confirm import (
+    ReadPaymentsToConfirm,
+)
 from app.modules.proposals.domain.ports import (
     BookedGames,
     ClubNames,
@@ -67,23 +76,30 @@ def get_proposal_club_names(db: DbSession) -> ClubNames:
 ProposalClubNamesDep = Annotated[ClubNames, Depends(get_proposal_club_names)]
 
 
-def get_guards(db: DbSession) -> Guards:
-    return build_proposal_guards(db)
-
-
-GuardsDep = Annotated[Guards, Depends(get_guards)]
-
-
 def get_say_yes(
-    proposals: ProposalRepositoryDep,
-    guards: GuardsDep,
-    uow: UnitOfWorkDep,
+    db: DbSession,
     clock: ClockDep,
+    provider: PaymentProviderDep,
+    settings: SettingsDep,
 ) -> SayYes:
-    return SayYes(proposals=proposals, guards=guards, uow=uow, clock=clock)
+    """A yes — and, when it is the last, the fill over the provider this
+    process moves money through (#541)."""
+    return build_say_yes(db, clock=clock, provider=provider, settings=settings)
 
 
 SayYesDep = Annotated[SayYes, Depends(get_say_yes)]
+
+
+def get_confirm_payment(
+    db: DbSession,
+    clock: ClockDep,
+    provider: PaymentProviderDep,
+    settings: SettingsDep,
+) -> ConfirmPayment:
+    return build_confirm_payment(db, clock=clock, provider=provider, settings=settings)
+
+
+ConfirmPaymentDep = Annotated[ConfirmPayment, Depends(get_confirm_payment)]
 
 
 def get_say_no(
@@ -111,6 +127,22 @@ def get_read_live_yeses(
 
 
 ReadLiveYesesDep = Annotated[ReadLiveYeses, Depends(get_read_live_yeses)]
+
+
+def get_read_payments_to_confirm(
+    proposals: ProposalRepositoryDep,
+    directory: ProposalDirectoryDep,
+    clubs: ProposalClubNamesDep,
+    clock: ClockDep,
+) -> ReadPaymentsToConfirm:
+    return ReadPaymentsToConfirm(
+        proposals=proposals, directory=directory, clubs=clubs, clock=clock
+    )
+
+
+ReadPaymentsToConfirmDep = Annotated[
+    ReadPaymentsToConfirm, Depends(get_read_payments_to_confirm)
+]
 
 
 def get_games_and_money_repository(
@@ -142,10 +174,10 @@ def get_set_games_and_money(
 SetGamesAndMoneyDep = Annotated[SetGamesAndMoney, Depends(get_set_games_and_money)]
 
 
-def get_booked_games() -> BookedGames:
-    """The games a player has booked — none until bookings exist (#541); a test
-    stands in for them by overriding this."""
-    return build_booked_games()
+def get_booked_games(db: DbSession) -> BookedGames:
+    """The games a player has booked, off the bookings (#541); a test may stand
+    in for them by overriding this."""
+    return build_booked_games(db)
 
 
 BookedGamesDep = Annotated[BookedGames, Depends(get_booked_games)]

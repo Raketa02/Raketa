@@ -11,11 +11,16 @@ The layers under it are run as the runner runs them — the named accounts, the
 clubs and their courts, the cards — with a small crowd standing in for the
 cohort: players at the protagonist's own padel Level, free on her evenings, who
 want competitive padel as she does.
+
+**Her booked games** (#541, ``app/seeds/bookings.py``) are seeded on top of the
+same world — two games filled by four yeses, hers last — and read back where
+she would look: her receipts, the club named as the seller, and her games.
 """
 
 from __future__ import annotations
 
 import re
+from datetime import timedelta
 from uuid import UUID
 
 import pytest
@@ -23,6 +28,13 @@ import pytest
 from app.bootstrap.composition import build_clock, build_rated_player_query
 from app.core.config import get_settings
 from app.kernel import Sport
+from app.modules.clubs.domain.court_hours import local_day
+from app.seeds.bookings import (
+    AFTER_THE_CUT_OFF,
+    BEFORE_THE_CUT_OFF,
+    ON_THE_DAY,
+    book_her_games,
+)
 from app.seeds.catalog import SEED_PASSWORD, THE_POPULATED_PLAYER
 from app.seeds.club_courts import write_the_club_courts
 from app.seeds.clubs import write_the_clubs
@@ -256,3 +268,68 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
 
     assert [pick.in_count for pick in seeded.picks] == list(IN_ON_EACH)
     assert all(len(pick.named) == 3 for pick in seeded.picks)
+
+
+# ---------------------------------------------------------------------------
+# Her booked games (#541)
+# ---------------------------------------------------------------------------
+
+
+async def seeded_world(client, session_factory, payments, now):
+    her = await signed_in_as_her(client)
+    her_id = UUID(
+        (await client.get("/api/v1/users/me", headers=her["headers"])).json()["id"]
+    )
+    crowd, _ = await a_crowd(
+        client,
+        session_factory,
+        payments,
+        12,
+        mu=await her_padel_level(session_factory, her_id),
+    )
+    proposals = await write_the_proposals(
+        session_factory, settings=get_settings(), now=now, cohort=crowd
+    )
+    return her, proposals
+
+
+async def test_she_has_a_game_on_the_day_and_one_before_its_cut_off_and_paid_both(
+    client, session_factory, payments, now, under_it
+):
+    her, proposals = await seeded_world(client, session_factory, payments, now)
+
+    seeded = await book_her_games(
+        session_factory, settings=get_settings(), now=now, seeded=proposals
+    )
+
+    soon, later = seeded.bookings
+    assert soon.state in (ON_THE_DAY, AFTER_THE_CUT_OFF)
+    if soon.state == ON_THE_DAY:
+        assert local_day(soon.start) == local_day(now)
+    assert soon.start < now + timedelta(hours=24)
+    assert later.state == BEFORE_THE_CUT_OFF
+    assert later.start > now + timedelta(hours=24)
+    assert [booking.made for booking in seeded.bookings] == [True, True]
+    receipts = (
+        await client.get("/api/v1/players/me/receipts", headers=her["headers"])
+    ).json()["receipts"]
+    assert seeded.receipts == len(receipts) == 2
+    assert {receipt["club"]["name"] for receipt in receipts} == {"Bonarka Arena"}
+    games = (await client.get("/api/v1/games", headers=her["headers"])).json()
+    assert len(games["games"]) == 2
+
+
+async def test_a_second_run_books_nothing_twice(
+    client, session_factory, payments, now, under_it
+):
+    _, proposals = await seeded_world(client, session_factory, payments, now)
+    await book_her_games(
+        session_factory, settings=get_settings(), now=now, seeded=proposals
+    )
+
+    again = await book_her_games(
+        session_factory, settings=get_settings(), now=now, seeded=proposals
+    )
+
+    assert [booking.made for booking in again.bookings] == [False, False]
+    assert again.receipts == 2

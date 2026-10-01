@@ -41,8 +41,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   notices arrive out of order; a notice finds its player through `payment_customers`, a
   projection the repository writes. *Remove* asks
   `PaymentCommitments`, answered by `proposals` with the player's live yeses (an adapter
-  signed in `proposals/infrastructure/`, so the arrow runs `proposals → payments`); booked
-  games are nought until bookings exist (#541). Seeded by `app/seeds/payments.py`: every named account and cohort member saves a fake
+  signed in `proposals/infrastructure/`, so the arrow runs `proposals → payments`), and the
+  booked games still ahead, off the bookings (#541). **The port grew one read for #541**,
+  `read_payment` — a refused payment confirmed on the phone, and a notice about a seat's
+  payment, are both read as they stand — and a payment **waiting for its player** answers its
+  secret (`AWAITING_THE_PLAYER`: the bank's check, or a decline confirmed with another card).
+  The **Seat charge** — one stream per payment for one share, its verdict and the provider's
+  answers — is `bookings.md`'s. Seeded by `app/seeds/payments.py`: every named account and cohort member saves a fake
   card through the three use cases — the protagonist the mock's Visa •••• 4312, two through the
   wallets — and `brand-new-player` has none.
 - **A club connects payments through the provider's pages, and the arrow runs

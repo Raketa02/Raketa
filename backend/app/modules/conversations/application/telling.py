@@ -270,7 +270,8 @@ TELLINGS: tuple[Telling, ...] = (
         why_nothing=(
             "the seats already imply it, so there is no *Game on* line — but the "
             "room is told, because this is where it learns its game and where "
-            "its own end is anchored"
+            "its own end is anchored; and a **booked** game's room is opened by "
+            "it, since a booking's yeses are silent and open nothing"
         ),
     ),
     Telling(

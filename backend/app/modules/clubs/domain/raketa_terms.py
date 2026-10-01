@@ -17,6 +17,7 @@ club's answer is always due before its game could start.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import timedelta
 from enum import StrEnum
 from typing import Final, final
 
@@ -118,3 +119,17 @@ def book_by(start: Instant, *, way: WayOfWorking, settings: RaketaSettings) -> I
     if way is WayOfWorking.ONLY_RAKETA:
         return shifted(start, minutes(-settings.release_lead_days * _MINUTES_PER_DAY))
     return shifted(start, hours(-settings.minimum_notice_hours))
+
+
+#: Longer than any book-by can be ahead of its hour — the longest release lead,
+#: and a day.
+_BEFORE_ANY_DEADLINE: Final = timedelta(days=RELEASE_LEAD_DAYS[1] + 1)
+
+
+def before_any_deadline(start: Instant) -> Instant:
+    """A moment early enough that what a club sells, read at it, holds every
+    hour from ``start`` **whatever deadline its settings give the hour** — the
+    reading a card's held court hour and a full game's free court are made at,
+    since a card keeps the book-by it was made with (#540, #541)."""
+
+    return start - _BEFORE_ANY_DEADLINE

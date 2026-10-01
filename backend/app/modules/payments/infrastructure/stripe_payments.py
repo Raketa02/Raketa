@@ -39,6 +39,7 @@ import stripe
 from app.kernel import instant, invariant
 from app.modules.payments.domain.errors import PaymentsUnavailable
 from app.modules.payments.domain.provider import (
+    AWAITING_THE_PLAYER,
     CardOnFile,
     ClubAccountReading,
     ClubAccountStatus,
@@ -482,7 +483,9 @@ class StripePayments:
                     else PaymentStatus.DECLINED
                 ),
                 amount_grosze=refused.amount,
-                client_secret=refused.client_secret if wanted else None,
+                # Either way the player can confirm this same payment in the
+                # app — with the bank's check, or with another card.
+                client_secret=refused.client_secret,
                 decline_code=(
                     None
                     if wanted
@@ -490,6 +493,14 @@ class StripePayments:
                     or refusal.code
                 ),
             )
+        return self._payment_of(intent)
+
+    async def read_payment(self, *, account_id: str, payment_id: str) -> Payment:
+        intent = await self._call(
+            self._client.v1.payment_intents.retrieve_async(
+                payment_id, options={"stripe_account": account_id}
+            )
+        )
         return self._payment_of(intent)
 
     async def capture(
@@ -585,9 +596,7 @@ class StripePayments:
             status=status,
             amount_grosze=intent.amount,
             client_secret=(
-                intent.client_secret
-                if status is PaymentStatus.AUTHENTICATION_REQUIRED
-                else None
+                intent.client_secret if status in AWAITING_THE_PLAYER else None
             ),
             decline_code=(
                 (

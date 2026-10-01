@@ -17,8 +17,7 @@ A notice arrives signed, **twice** as often as not, and **out of order**
 
 **Translated at the edge.** ``PaymentNotices`` reads the provider's own shape
 and answers one of the notices below, in Raketa's words; a kind nothing here
-listens to yet is ``Unheeded`` and is acknowledged all the same — the later
-tickets wire the kinds they need (#541).
+listens to is ``Unheeded`` and is acknowledged all the same.
 
 **Two endpoints, one reading.** The platform's notices — a setup, a card — and
 the **Connected accounts** notices — a club's account, and later the payments
@@ -72,6 +71,20 @@ class ConnectedAccountChanged:
 
 @final
 @dataclass(frozen=True, slots=True)
+class SeatPaymentChanged:
+    """A payment on a club's account moved — held, taken, released, refused, or
+    confirmed by its player in the app (#541). It names the payment and the
+    account and carries nothing of it: two moves arrive in either order, so the
+    payment is read from the provider as it stands, and folded onto its seat
+    charge only forward."""
+
+    notice_id: str
+    account_id: str
+    payment_id: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class Unheeded:
     """A notice of a kind nothing here acts on yet."""
 
@@ -79,7 +92,13 @@ class Unheeded:
     kind: str
 
 
-Notice = SetupSucceeded | CardUpdatedByBank | ConnectedAccountChanged | Unheeded
+Notice = (
+    SetupSucceeded
+    | CardUpdatedByBank
+    | ConnectedAccountChanged
+    | SeatPaymentChanged
+    | Unheeded
+)
 
 
 @runtime_checkable

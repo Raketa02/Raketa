@@ -25,11 +25,13 @@ the live yeses ``payments`` asks about before a method is removed.
 proposal to its reader as their own version, ordered and filtered by
 ``domain/deck.py``, through five more demands — what a card draws of a person,
 how even the engine forecasts it, which clubs still sell and their cut-off, the
-reader's Play intent, and the games they have booked (nought until #541). A
+reader's Play intent, and the games they have booked. A
 player's **Games & money** — games per week and most I'll pay — is the context's
 second aggregate, one stream per player.
 
-**What it does not do yet** is the engine that builds proposals (#540) and the
-fill that books one (#541): ``MakeProposal`` and ``DealVersion`` are the use
-cases the engine will drive, and seeds and tests drive them today.
+**The engine builds the proposals** (#540): ``MakeProposal`` and ``DealVersion``
+are the dealer's use cases, driven by the proposer, seeds and tests. **And the
+last yes books one** (#541, ``application/fill.py``): every seat charged
+together or nobody, a Booking and its Game, through the Payments and Bookings
+contexts' own use cases.
 """

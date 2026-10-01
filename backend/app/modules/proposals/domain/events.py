@@ -146,6 +146,63 @@ class CourtHourLost:
 
 
 @dataclass(frozen=True)
+class ProposalFilled:
+    """**The last yes booked the game** (the mechanics §11; #541): every seat's
+    share was held and taken, and a Booking opened under this proposal's own
+    id. Every version disappears with it.
+
+    ``first_side`` and ``second_side`` are the people whose yeses filled it,
+    **drawn for the most even game** — which is what a yes means: E said yes to
+    a card showing Marek, E, F and G, and plays with Marek, B and C (§7)."""
+
+    proposal_id: UUID
+    first_side: tuple[UUID, ...]
+    second_side: tuple[UUID, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        for side in ("first_side", "second_side"):
+            object.__setattr__(
+                self,
+                side,
+                tuple(UUID(str(player_id)) for player_id in getattr(self, side)),
+            )
+
+
+@dataclass(frozen=True)
+class SeatReopened:
+    """The last yes came and **this player's yes could not be counted**, so
+    nothing was booked and their seat is open again — *your seat reopens* (the
+    mechanics §12.2). Not their act: their share could not be held — the bank
+    wanted them present, or refused, or their method cannot be charged — or
+    they and somebody In may no longer share a court (§7). ``reason`` is the
+    ``ReopenReason`` code.
+
+    ``seat_charge_id`` is the refused payment, which they confirm in the app —
+    *confirming is your yes again*; ``None`` where nothing was asked of the
+    provider. Like a withdrawn yes, it is no verdict on the card: they may say
+    yes again while the game fills."""
+
+    proposal_id: UUID
+    player_id: UUID
+    seat_charge_id: UUID | None
+    reason: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class YesPaused:
+    """Another game of this player's filled, and **their games per week are
+    booked** for the week this one is in: the yes stops counting, and they are
+    never booked more games than they asked for (the mechanics §6.6). It comes
+    back if one of those games is called off (#544)."""
+
+    proposal_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class GamesAndMoneySet:
     """A player changed their **Games & money** (the mechanics §6.6, §17.1): how
     many games a week they will play, and the most one may cost them. The only

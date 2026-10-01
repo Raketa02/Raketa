@@ -27,7 +27,11 @@ from app.bootstrap.composition import (
 )
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
-from app.modules.payments.domain.entered_cards import A_CARD
+from app.modules.payments.domain.entered_cards import (
+    A_CARD,
+    CardBehaviour,
+    EnteredCard,
+)
 from app.modules.proposals.application.commands import (
     DealVersionCommand,
     MakeProposalCommand,
@@ -119,13 +123,22 @@ async def a_club_and_its_desk(
     return club_id, desk
 
 
-async def saves_a_card(client, payments, headers: dict) -> None:
+async def saves_a_card(
+    client, payments, headers: dict, card: EnteredCard = A_CARD
+) -> None:
     """The whole setup, in its order: start, the phone types the card, the
-    terms, the bank."""
+    terms, the bank — whose one-time check the phone passes for a card it
+    checks."""
 
     started = await client.post(f"{PAYMENT_METHODS}/setup", headers=headers)
     assert started.status_code == 201, started.text
-    payments.phone_enters(started.json()["setup_id"], A_CARD)
+    setup_id = started.json()["setup_id"]
+    payments.phone_enters(setup_id, card)
+    if card.behaviour in (
+        CardBehaviour.CHECKED_AT_SETUP,
+        CardBehaviour.CHECKED_EVERY_TIME,
+    ):
+        payments.phone_authenticates(setup_id)
     accepted = await client.post(
         f"{PAYMENT_METHODS}/terms",
         json={"terms_version": TERMS_IN_FORCE},
@@ -143,6 +156,7 @@ async def a_player(
     *,
     sports: tuple[Sport, ...] = (Sport.PADEL,),
     card: bool = True,
+    entered: EnteredCard = A_CARD,
     gender: str = "WOMAN",
     gender_preference: str | None = None,
 ) -> dict:
@@ -158,7 +172,7 @@ async def a_player(
         await world.rate(client, token, sport)
     headers = world.auth(token)
     if card:
-        await saves_a_card(client, payments, headers)
+        await saves_a_card(client, payments, headers, entered)
     return {"id": player_id, "token": token, "headers": headers}
 
 

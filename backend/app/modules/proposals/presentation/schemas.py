@@ -15,7 +15,7 @@ codes and values here.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import date, datetime
 from uuid import UUID
 
@@ -26,6 +26,7 @@ from app.kernel import Sport
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.group_deck import GroupDeck
 from app.modules.proposals.application.live_yeses import LiveYeses, NamedLiveYes
+from app.modules.proposals.application.payments_to_confirm import PaymentToConfirm
 from app.modules.proposals.domain.deck import CardType, CourtState, DeckCard
 from app.modules.proposals.domain.games_and_money import (
     GAMES_PER_WEEK,
@@ -38,23 +39,85 @@ from app.modules.proposals.domain.overlap import (
     OverlapGrade,
     OverlapShade,
 )
-from app.modules.proposals.domain.ports import DeckPerson
+from app.modules.proposals.domain.ports import DeckPerson, PaymentRefusal
+
+
+class BookedSchema(BaseModel):
+    """The game a yes booked — *It's a game!*"""
+
+    booking_id: UUID = Field(
+        description="The booking — the same id the game had while it filled."
+    )
+    game_id: UUID = Field(description="The ordinary Game it opened.")
+
+
+class YourPaymentSchema(BaseModel):
+    """This player's share could not be held when the game filled: nobody paid,
+    and their seat is open again until they confirm it or somebody takes it."""
+
+    seat_charge_id: UUID = Field(
+        description=(
+            "The refused payment: `GET /seat-charges/{id}` for what the phone "
+            "confirms it with, then `POST /seat-charges/{id}/confirmation`."
+        )
+    )
+    refusal: PaymentRefusal = Field(
+        description=(
+            "`AUTHENTICATION_REQUIRED` — the bank wants the player to confirm; "
+            "`DECLINED` — confirm with another card; `TERMS_NEEDED` — accept the "
+            "terms again, then say yes; `NO_METHOD` — save a method, then say yes."
+        )
+    )
 
 
 class YesAnswerResponse(BaseModel):
-    """What a yes left on the game."""
+    """What a yes left on the game — and, when it was the last, what the fill
+    did."""
 
     proposal_id: UUID
     open_seats: int = Field(
         description=(
-            "Seats nobody is In on yet, this player's yes counted. Nought is a "
-            "game every seat said yes to."
+            "Seats nobody is In on yet, this player's yes counted. Nought on a "
+            "game that booked — and on a full game an On request club has still "
+            "to confirm. A payment that could not be held opens its seat again."
         )
+    )
+    booked: BookedSchema | None = Field(
+        default=None,
+        description=(
+            "Present when this yes booked the game: every seat was charged, and "
+            "the booking and its Game are open. `null` otherwise."
+        ),
+    )
+    your_payment: YourPaymentSchema | None = Field(
+        default=None,
+        description=(
+            "Present when **this player's** share could not be held: nobody paid "
+            "and the game did not book. `null` otherwise — including when "
+            "somebody else's could not, which leaves `open_seats` above nought."
+        ),
     )
 
     @classmethod
     def from_answer(cls, answer: YesAnswer) -> "YesAnswerResponse":
-        return cls(proposal_id=answer.proposal_id, open_seats=answer.open_seats)
+        booked = answer.booked
+        mine = answer.your_payment
+        return cls(
+            proposal_id=answer.proposal_id,
+            open_seats=answer.open_seats,
+            booked=(
+                None
+                if booked is None
+                else BookedSchema(booking_id=booked.booking_id, game_id=booked.game_id)
+            ),
+            your_payment=(
+                None
+                if mine is None
+                else YourPaymentSchema(
+                    seat_charge_id=mine.seat_charge_id, refusal=mine.refusal
+                )
+            ),
+        )
 
 
 class LiveYesClubSchema(BaseModel):
@@ -476,4 +539,63 @@ class GroupDeckResponse(BaseModel):
                 )
                 for card in deck.cards
             ],
+        )
+
+
+class PaymentToConfirmSchema(BaseModel):
+    """A game still filling whose last yes could not hold this player's share:
+    their seat is open until they confirm the payment, or somebody takes it."""
+
+    seat_charge_id: UUID = Field(
+        description=(
+            "The payment to confirm: `GET /seat-charges/{id}` for what the phone "
+            "confirms it with, then `POST /seat-charges/{id}/confirmation`."
+        )
+    )
+    refusal: PaymentRefusal = Field(
+        description=(
+            "`AUTHENTICATION_REQUIRED` — the bank wants the player to confirm; "
+            "`DECLINED` — confirm with another card."
+        )
+    )
+    proposal_id: UUID
+    pool_id: UUID
+    sport: Sport
+    kind: SearchMode
+    starts_at: datetime
+    club: LiveYesClubSchema
+    share_grosze: int
+    book_by: datetime = Field(
+        description="The latest moment the game can fill; past it the seat is gone."
+    )
+
+
+class PaymentsToConfirmResponse(BaseModel):
+    """*Confirm your payment to keep your seat*, every one the reader owes,
+    soonest game first."""
+
+    payments: list[PaymentToConfirmSchema]
+
+    @classmethod
+    def from_owed(
+        cls, owed: Sequence[PaymentToConfirm]
+    ) -> "PaymentsToConfirmResponse":
+        return cls(
+            payments=[
+                PaymentToConfirmSchema(
+                    seat_charge_id=one.seat_charge_id,
+                    refusal=PaymentRefusal(one.reason.value),
+                    proposal_id=one.proposal.proposal_id,
+                    pool_id=one.proposal.pool.id,
+                    sport=one.proposal.sport,
+                    kind=one.proposal.kind,
+                    starts_at=one.proposal.start,
+                    club=LiveYesClubSchema(
+                        id=one.proposal.club_id, name=one.club_name
+                    ),
+                    share_grosze=one.proposal.share_grosze,
+                    book_by=one.proposal.book_by,
+                )
+                for one in owed
+            ]
         )

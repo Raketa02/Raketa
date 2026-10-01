@@ -48,6 +48,10 @@ from app.modules.matchmaking.presentation.prompt_decline_routes import (
 from app.modules.matchmaking.presentation.radar_routes import router as radar_router
 from app.modules.matchmaking.presentation.routes import router as searches_router
 from app.modules.payments.presentation.routes import router as payments_router
+from app.modules.payments.presentation.seat_charge_routes import (
+    receipts_router,
+    seat_charges_router,
+)
 from app.modules.plans.presentation.routes import router as plans_router
 from app.modules.player_profile.presentation.photo_routes import (
     router as photos_router,
@@ -70,6 +74,9 @@ from app.modules.player_record.presentation.routes import (
 from app.modules.proposals.presentation.routes import (
     players_router as proposal_players_router,
     pools_router,
+)
+from app.modules.proposals.presentation.routes import (
+    seat_charges_router as seat_charge_confirmation_router,
 )
 from app.modules.proposals.presentation.routes import router as proposals_router
 from app.modules.rating.presentation.routes import ratings_router
@@ -115,3 +122,6 @@ player_api_router.include_router(payments_router)
 player_api_router.include_router(proposals_router)
 player_api_router.include_router(proposal_players_router)
 player_api_router.include_router(pools_router)
+player_api_router.include_router(seat_charges_router)
+player_api_router.include_router(seat_charge_confirmation_router)
+player_api_router.include_router(receipts_router)

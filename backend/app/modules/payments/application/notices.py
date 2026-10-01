@@ -10,6 +10,12 @@ stake in, and a retry would tell it again for three days.
 **A club's account is the club's to record** (#537): the notice that one
 changed is passed to ``ConnectedAccounts``, which records it in this same
 transaction and leaves the commit here.
+
+**A seat's payment is folded onto its charge, only forward** (#541): read from
+the provider as it stands — a hold, a capture, a cancellation, or a refused
+payment its player confirmed in the app — and a reading the charge has already
+moved past records nothing. A payment no charge here holds is read and changes
+nothing.
 """
 
 from __future__ import annotations
@@ -23,6 +29,7 @@ from app.modules.payments.domain.notices import (
     CardUpdatedByBank,
     ConnectedAccountChanged,
     Notice,
+    SeatPaymentChanged,
     SetupSucceeded,
     Unheeded,
 )
@@ -30,6 +37,7 @@ from app.modules.payments.domain.ports import (
     ConnectedAccounts,
     NoticeInbox,
     PaymentMethodRepository,
+    SeatChargeRepository,
 )
 from app.modules.payments.domain.provider import PaymentProvider
 
@@ -46,6 +54,8 @@ def kind_of(notice: Notice) -> str:
             return "card_updated_by_bank"
         case ConnectedAccountChanged():
             return "connected_account_changed"
+        case SeatPaymentChanged():
+            return "seat_payment_changed"
         case Unheeded():
             return notice.kind
 
@@ -57,6 +67,7 @@ class ReceivePaymentNotice:
         inbox: NoticeInbox,
         methods: PaymentMethodRepository,
         accounts: ConnectedAccounts,
+        charges: SeatChargeRepository,
         provider: PaymentProvider,
         uow: UnitOfWork,
         clock: Clock,
@@ -64,6 +75,7 @@ class ReceivePaymentNotice:
         self._inbox = inbox
         self._methods = methods
         self._accounts = accounts
+        self._charges = charges
         self._provider = provider
         self._uow = uow
         self._clock = clock
@@ -88,6 +100,8 @@ class ReceivePaymentNotice:
                         "payments.notice.account_of_nobody",
                         extra={"notice_id": notice.notice_id},
                     )
+            case SeatPaymentChanged():
+                await self._seat_payment_changed(notice, at=now)
             case Unheeded():
                 pass
         await self._uow.commit()
@@ -125,3 +139,19 @@ class ReceivePaymentNotice:
         card = await self._provider.read_card(notice.method_id)
         payment_method.bank_updated(card, at=at)
         await self._methods.save(payment_method)
+
+    async def _seat_payment_changed(
+        self, notice: SeatPaymentChanged, *, at: Instant
+    ) -> None:
+        charge = await self._charges.by_payment(notice.payment_id)
+        if charge is None or charge.account_id != notice.account_id:
+            logger.info(
+                "payments.notice.payment_of_no_seat",
+                extra={"notice_id": notice.notice_id},
+            )
+            return
+        payment = await self._provider.read_payment(
+            account_id=notice.account_id, payment_id=notice.payment_id
+        )
+        if charge.heard(payment, at=at):
+            await self._charges.save(charge)

@@ -110,3 +110,116 @@ class PaymentMethodUpdated:
     brand: str
     last_four: str
     occurred_at: datetime
+
+
+# --------------------------------------------------------------------------- #
+# The Seat charge stream: one per payment for one player's share of one game
+# --------------------------------------------------------------------------- #
+#
+# **Born at the fill** (#541; the mechanics §12.2), held or refused, and never
+# before: a yes moves no money. Every event carries ``charge_id``, the stream's
+# own key, and ``player_id``, whose share it is, so a record read alone still
+# says whose money it is about. **No secret is on it**: the secret a phone
+# confirms a payment with is asked of the provider when it is handed out.
+#
+# Two kinds of event, and the difference is load-bearing. **What the provider
+# said** — ``Authorised``, ``Failed``, ``Confirmed``, ``Captured``,
+# ``Cancelled`` — is read off the provider, by the fill or from a notice. **What
+# Raketa decided** — ``Taken`` and ``Released`` — is the fill's verdict on the
+# hold, recorded in the transaction that books the game or does not, and acted
+# on at the provider **after** the commit by a subscriber, retried until it
+# lands (``docs/adr/0190`` §4).
+
+
+@dataclass(frozen=True)
+class SeatChargeAuthorised:
+    """A player's share was held on their card, off-session, on the club's
+    account — the first half of the all-or-nothing fill. ``game_id`` is the
+    proposal that filled, whose id its booking takes."""
+
+    charge_id: UUID
+    player_id: UUID
+    game_id: UUID
+    club_id: UUID
+    #: The club's account at the provider — the seller's.
+    account_id: str
+    payment_id: str
+    amount_grosze: int
+    sport: str
+    starts_at: datetime
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatChargeFailed:
+    """A player's share could not be held when the game filled: the bank
+    refused, the bank wants the player present, or the player's method cannot
+    be charged — no method, or a brand the terms were not accepted for, which
+    asks the provider nothing (``payment_id`` is ``None``). **Nobody paid**, and
+    the player is asked to confirm this payment to keep their seat."""
+
+    charge_id: UUID
+    player_id: UUID
+    game_id: UUID
+    club_id: UUID
+    account_id: str
+    payment_id: str | None
+    amount_grosze: int
+    sport: str
+    starts_at: datetime
+    #: ``AUTHENTICATION_REQUIRED``, ``DECLINED``, ``TERMS_NEEDED`` or
+    #: ``NO_METHOD``.
+    reason: str
+    decline_code: str | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatChargeConfirmed:
+    """The player confirmed a failed payment in the app, and the provider holds
+    it now — *confirming the same payment is your yes again* (§12.2)."""
+
+    charge_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatChargeTaken:
+    """**The game booked, so the hold is taken.** Raketa's decision, recorded
+    with the booking; captured at the provider after the commit."""
+
+    charge_id: UUID
+    player_id: UUID
+    booking_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatChargeReleased:
+    """**The game did not book on it, so the hold is let go** — another seat
+    failed, or somebody else took this one. Raketa's decision; cancelled at the
+    provider after the commit, which costs nothing."""
+
+    charge_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatChargeCaptured:
+    """The provider took the share — the player paid, the club the seller."""
+
+    charge_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatChargeCancelled:
+    """The provider released the payment untaken, or there was nothing there to
+    release."""
+
+    charge_id: UUID
+    player_id: UUID
+    occurred_at: datetime

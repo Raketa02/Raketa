@@ -474,6 +474,7 @@ allow_indirect_imports = false
 name = No context knows the Conversation exists
 type = forbidden
 source_modules =
+    app.modules.bookings
     app.modules.challenges
     app.modules.games
     app.modules.matchmaking
@@ -593,6 +594,43 @@ forbidden_modules =
     app.modules.proposals
 allow_indirect_imports = true
 
+# A booking does not know the card it was, or the money that paid for it (#541).
+# `proposals` books a full game — the court, then the booking — and reads a
+# player's booked games back, through ports of its own **signed in
+# `proposals/infrastructure/`**; the money is `payments`', taken in the same
+# transaction by the fill, which is `proposals`'. So the arrows run
+# `proposals → bookings` and `proposals → payments`, and `bookings` reads only
+# what it books on: the club's courts and the game it opens.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:bookings-does-not-know-proposals-or-payments]
+name = The Bookings context imports neither Proposals nor Payments
+type = forbidden
+source_modules =
+    app.modules.bookings
+forbidden_modules =
+    app.modules.proposals
+    app.modules.payments
+allow_indirect_imports = true
+
+# And nothing a booking is made of knows a booking exists. A club sells the court
+# hours a booking holds — the Club context asks for them through its own
+# `CourtBookings`, **signed in `bookings/infrastructure/`** — and a booked game
+# is an ordinary Game, opened through the use case a completed line-up opens
+# one with; neither reads back, and nor does the money that paid for it.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:clubs-games-and-payments-do-not-know-bookings]
+name = Neither Clubs, Games nor Payments imports Bookings
+type = forbidden
+source_modules =
+    app.modules.clubs
+    app.modules.games
+    app.modules.payments
+forbidden_modules =
+    app.modules.bookings
+allow_indirect_imports = true
+
 # Nor does an administratorship know which groups it runs. `groups` reads
 # `administrators` — who runs an official group now, the guard every
 # administrator operation passes — and the one thing `administrators` asks back,
@@ -657,6 +695,7 @@ forbidden_modules =
     app.modules.administrators
     app.modules.auth
     app.modules.blocks
+    app.modules.bookings
     app.modules.challenges
     app.modules.clubs
     app.modules.conversations

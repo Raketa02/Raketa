@@ -80,6 +80,11 @@ class Conversation:
     #: agreed point: a plan is editable by any member at any time, and an end
     #: dated from it would be one two people could walk forward by tapping a chip.
     planned_at: Instant | None
+    #: The hour a **booked** game is played (#541), or ``None`` — every game a
+    #: completed line-up opened, and a room with no game. Carried on the same
+    #: telling as ``planned_at`` and read beside it: a booked game's room ends
+    #: on its hour, not on a week from its booking.
+    starts_at: Instant | None
     sport: Sport
     opened_at: Instant
     #: Every entry, oldest first. A room is destroyed within days of the evening
@@ -170,7 +175,13 @@ class Conversation:
 
     # -- being told -------------------------------------------------------
 
-    def note_game(self, *, game_id: UUID, occurred_at: Instant) -> None:
+    def note_game(
+        self,
+        *,
+        game_id: UUID,
+        occurred_at: Instant,
+        starts_at: Instant | None = None,
+    ) -> None:
         """The line-up completed. **Told, and drawn rather than announced.**
 
         ``occurred_at`` is the moment the game became a game, and it is kept:
@@ -192,6 +203,7 @@ class Conversation:
                 conversation_id=self.conversation_id,
                 game_id=game_id,
                 occurred_at=occurred_at,
+                starts_at=starts_at,
             )
         )
 
@@ -321,6 +333,7 @@ class Conversation:
         room.version = 0
         room.game_id = None
         room.planned_at = None
+        room.starts_at = None
         room.entries = ()
         room._told_by = {}
         room._events = EventRecorder()
@@ -341,6 +354,9 @@ class Conversation:
         elif isinstance(event, GameNoted):
             self.game_id = event.game_id
             self.planned_at = instant(event.occurred_at)
+            self.starts_at = (
+                None if event.starts_at is None else instant(event.starts_at)
+            )
         elif isinstance(event, MessageSent):
             self.entries += (
                 Message(

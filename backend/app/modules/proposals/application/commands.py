@@ -57,6 +57,15 @@ class AnswerProposalCommand:
 
 
 @dataclass(frozen=True)
+class ConfirmPaymentCommand:
+    """*I confirmed this refused payment in the app* — the yes again.
+    ``player_id`` comes from the session."""
+
+    seat_charge_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True)
 class ReadGroupDeckCommand:
     """One reader's deck in one pool, sport and segment. ``player_id`` comes
     from the session."""

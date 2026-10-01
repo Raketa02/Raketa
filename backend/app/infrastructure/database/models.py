@@ -6,6 +6,10 @@ from app.infrastructure.mail.mail_queue_model import MailQueueORM
 from app.modules.administrators.infrastructure.administrator_model import (
     AdministratorORM,
 )
+from app.modules.bookings.infrastructure.booking_models import (
+    BookingORM,
+    BookingSeatORM,
+)
 from app.modules.auth.infrastructure.one_time_credential_model import (
     OneTimeCredentialORM,
 )
@@ -31,6 +35,7 @@ from app.modules.matchmaking.infrastructure.interest_model import InterestORM
 from app.modules.payments.infrastructure.payment_models import (
     PaymentCustomerORM,
     PaymentNoticeORM,
+    SeatChargeORM,
 )
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
@@ -49,6 +54,8 @@ from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
     "AdministratorORM",
+    "BookingORM",
+    "BookingSeatORM",
     "CandidateIndexCursorORM",
     "CandidatePlayerFactsORM",
     "CandidateRowORM",
@@ -72,6 +79,7 @@ __all__ = [
     "RefreshTokenORM",
     "SearchCandidateORM",
     "SearchORM",
+    "SeatChargeORM",
     "SportsmanshipCardORM",
     "SportsmanshipRatingORM",
     "UserORM",

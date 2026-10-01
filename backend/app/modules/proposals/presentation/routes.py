@@ -7,10 +7,10 @@ Mounted on the player surface (``app/api/v1/player.py``). Every route takes a
 player's token and answers for that player only.
 
 **A yes and a no are silent**: nothing here tells anybody anything, and a
-repeated tap records nothing. **Nothing is charged by a yes** — the fill that
-charges every seat together is the next ticket's (#541); this route's answer
-already says how many seats are still open, so a nought is where it will hand
-over.
+repeated tap records nothing. **Nothing is charged by a yes — except the last**
+(#541): the yes that leaves no seat open books the game, every seat charged
+together or nobody, and its answer says which. Confirming a refused payment is
+that player's yes again, ``POST /seat-charges/{id}/confirmation``.
 """
 
 from __future__ import annotations
@@ -25,10 +25,13 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport
 from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
+    ConfirmPaymentCommand,
     ReadGroupDeckCommand,
     SetGamesAndMoneyCommand,
 )
 from app.modules.proposals.presentation.dependencies import (
+    ConfirmPaymentDep,
+    ReadPaymentsToConfirmDep,
     ReadGamesAndMoneyDep,
     ReadGroupDeckDep,
     ReadLiveYesesDep,
@@ -42,6 +45,7 @@ from app.modules.proposals.presentation.schemas import (
     GamesAndMoneyResponse,
     GroupDeckResponse,
     LiveYesesResponse,
+    PaymentsToConfirmResponse,
     YesAnswerResponse,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
@@ -49,6 +53,7 @@ from app.modules.users.presentation.dependencies import CurrentUserDep
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 players_router = APIRouter(prefix="/players/me", tags=["proposals"])
 pools_router = APIRouter(prefix="/pools", tags=["proposals"])
+seat_charges_router = APIRouter(prefix="/seat-charges", tags=["proposals"])
 
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {
@@ -69,6 +74,27 @@ _OVER = (
 )
 
 
+_YES_REFUSED = (
+    " `payment_to_confirm` — this player's seat reopened because their payment "
+    "could not be held: confirming it (`details.seat_charge_id`) is their yes "
+    "again. `proposal_already_answered` — this player said no: the card does not come "
+    "back. `proposal_is_full` — every seat is In. `payment_method_required` — no "
+    "saved payment method: save one, then say yes. `live_yeses_exhausted` — "
+    "`details.cap` live yeses in `details.sport` already. `no_longer_fits` — "
+    "somebody In now is somebody this player does not fit; the card has gone, "
+    "and who is not said. Nothing was recorded — except on `proposal_is_over` "
+    "with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the "
+    "club and hour, the card is over, and nobody paid."
+)
+
+_FILL_UNAVAILABLE = (
+    "`block_state_unavailable` — whether this player fits the people In could "
+    "not be read. `payments_unavailable` — the yes filled the game and the "
+    "payment provider could not be reached to hold the shares. Nothing was "
+    "recorded; retry."
+)
+
+
 @router.post(
     "/{proposal_id}/yes",
     response_model=YesAnswerResponse,
@@ -77,32 +103,28 @@ _OVER = (
         **_NOT_FOUND,
         status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,
-            "description": (
-                _OVER + " `proposal_already_answered` — this player said no: the "
-                "card does not come back. "
-                "`proposal_is_full` — every seat is In. "
-                "`payment_method_required` — no saved payment method: save one, "
-                "then say yes. `live_yeses_exhausted` — `details.cap` live yeses "
-                "in `details.sport` already. `no_longer_fits` — somebody In now is "
-                "somebody this player does not fit; the card has gone, and who is "
-                "not said. Nothing was recorded."
-            ),
+            "description": _OVER + _YES_REFUSED,
         },
         status.HTTP_503_SERVICE_UNAVAILABLE: {
             "model": ErrorResponse,
-            "description": (
-                "`block_state_unavailable` — whether this player fits the people "
-                "In could not be read. Nothing was recorded; retry."
-            ),
+            "description": _FILL_UNAVAILABLE,
         },
     },
     summary="Say yes to a game",
     description=(
         "*I'm in — if everybody is, book it and charge my share.* **Silent, free, "
-        "and it holds nothing**: no money moves, no court is held, nobody is told "
-        "(the others see the player In on the card). Yeses are the game's, not a "
-        "version's: a yes on any version counts toward the one game. A yes "
-        "already said records nothing and answers the same."
+        "and it holds nothing** — no money moves, no court is held, nobody is told "
+        "(the others see the player In on the card) — **unless it is the last**. "
+        "Yeses are the game's, not a version's: a yes on any version counts toward "
+        "the one game. A yes already said records nothing and answers the same.\n\n"
+        "**The last yes books the game** (the client gives its ten seconds of "
+        "*Undo* before sending it): every seat's share is held on the club's "
+        "account and then all are taken, or none is — `booked` names the booking "
+        "and its Game, and everybody is emailed *It's a game! · you paid*. When a "
+        "share could not be held, **nobody paid**: that player's seat is open "
+        "again (`open_seats`), and when it is this player's own, `your_payment` "
+        "names the refused payment to confirm. At an On request club a full game "
+        "waits for the club (#543): `open_seats` is nought and nothing is booked."
     ),
 )
 async def say_yes(
@@ -181,6 +203,25 @@ async def read_live_yeses(
     user: CurrentUserDep, read: ReadLiveYesesDep
 ) -> LiveYesesResponse:
     return LiveYesesResponse.from_live(await read.execute(user.id))
+
+
+@players_router.get(
+    "/payments-to-confirm",
+    response_model=PaymentsToConfirmResponse,
+    summary="My payments to confirm",
+    description=(
+        "*Confirm your payment to keep your seat*: every game still filling whose "
+        "last yes could not hold the reader's share — the bank wanted them, or "
+        "declined — so their seat is open again until they confirm the payment "
+        "(`POST /seat-charges/{id}/confirmation`) or somebody takes it. Across "
+        "groups, soonest game first. A game that filled without them, or is no "
+        "longer filling, is not here."
+    ),
+)
+async def read_payments_to_confirm(
+    user: CurrentUserDep, read: ReadPaymentsToConfirmDep
+) -> PaymentsToConfirmResponse:
+    return PaymentsToConfirmResponse.from_owed(await read.execute(user.id))
 
 
 @pools_router.get(
@@ -275,3 +316,51 @@ async def set_games_and_money(
         )
     )
     return GamesAndMoneyResponse.from_settings(saved)
+
+
+@seat_charges_router.post(
+    "/{seat_charge_id}/confirmation",
+    response_model=YesAnswerResponse,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`seat_charge_not_found` — no such charge **for this player**. "
+                "`proposal_not_found` — they are no longer in the game's group."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`payment_not_confirmed` — the provider still waits for the "
+                "player (`details.status`), or the charge was never a payment to "
+                "confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept "
+                "the terms or save a method and say yes. "
+                + _OVER
+                + " `proposal_is_full` — somebody else took the seat. On both, "
+                "the payment the player confirmed is let go and nobody pays it. "
+                "`live_yeses_exhausted` and `no_longer_fits` as a yes meets them."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": "`payments_unavailable` — " + _FILL_UNAVAILABLE,
+        },
+    },
+    summary="I confirmed my payment — my yes again",
+    description=(
+        "*Confirm your payment to keep your seat.* The player confirmed, in the "
+        "app, the payment that could not be held when the game filled. It is "
+        "**asked of the provider**, never taken on the phone's word; held now, it "
+        "is the player's yes again — and if theirs was the seat still open, the "
+        "game books on it and everybody else is charged then. Answers as a yes "
+        "does. Somebody else took the seat first: the payment is let go."
+    ),
+)
+async def confirm_payment(
+    seat_charge_id: UUID, user: CurrentUserDep, confirm: ConfirmPaymentDep
+) -> YesAnswerResponse:
+    answer = await confirm.execute(
+        ConfirmPaymentCommand(seat_charge_id=seat_charge_id, player_id=user.id)
+    )
+    return YesAnswerResponse.from_answer(answer)

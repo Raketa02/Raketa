@@ -164,6 +164,7 @@ def live_acceptance(
 def standing_of(
     *,
     planned_at: Instant,
+    starts_at: Instant | None,
     played_at: Instant | None,
     called_off_at: Instant | None,
     proposals: Mapping[GameSide, Proposal],
@@ -204,7 +205,7 @@ def standing_of(
     if played_at is None:
         return (
             GameStanding.AWAITING_ENTRY
-            if now < entry_closes_at(planned_at)
+            if now < entry_closes_at(planned_at, starts_at=starts_at)
             else GameStanding.NEVER_PLAYED
         )
 

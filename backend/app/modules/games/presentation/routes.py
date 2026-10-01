@@ -52,7 +52,6 @@ from app.modules.games.domain.results import Score, SetScore
 from app.modules.games.domain.standing import GameStanding
 from app.modules.games.domain.windows import (
     acceptance_settles_at,
-    entry_closes_at,
     proposal_closes_at,
 )
 from app.modules.games.presentation.dependencies import (
@@ -455,7 +454,7 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
         planned_at=game.planned_at,
         played_at=game.played_at,
         entry_closes_at=(
-            entry_closes_at(game.planned_at)
+            game.entry_closes_at
             if game.played_at is None and game.called_off_at is None
             else None
         ),

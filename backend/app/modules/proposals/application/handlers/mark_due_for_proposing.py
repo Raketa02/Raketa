@@ -14,7 +14,9 @@ games they may be dealt in every pool they are in — a swipe, which may leave a
 seat for the next best fits or a pick at half In, and **anything a club changes
 about what it sells**, which is everywhere: a club's courts may be in reach of
 any group near it. Its payments account going ready — or ready no longer — is
-one of those, since it is what makes a club live (#537).
+one of those, since it is what makes a club live (#537). **A game filling is
+one too** (#541): its booking took a court hour from every card at that club
+and hour, in any pool — and a seat reopened, or a yes paused, left a seat open.
 """
 
 from __future__ import annotations
@@ -45,6 +47,9 @@ from app.modules.proposals.application.propose_games import DueForProposing
 from app.modules.proposals.domain.events import (
     GamesAndMoneySet,
     NoSaid,
+    ProposalFilled,
+    SeatReopened,
+    YesPaused,
     YesSaid,
     YesWithdrawn,
 )
@@ -59,8 +64,9 @@ PLAYER_EVENTS = (
     RatingInitialised,
     GamesAndMoneySet,
 )
-#: A swipe on a game still filling.
-SWIPE_EVENTS = (YesSaid, NoSaid, YesWithdrawn)
+#: A swipe on a game still filling — or a yes that stopped counting, which
+#: opens a seat as a withdrawal does.
+SWIPE_EVENTS = (YesSaid, NoSaid, YesWithdrawn, SeatReopened, YesPaused)
 #: A change to what a club sells.
 CLUB_EVENTS = (
     CourtAdded,
@@ -78,6 +84,8 @@ CLUB_EVENTS = (
     RaketaResumed,
     # Ready is the checklist's first step: a club goes live on it, and off.
     PaymentsStatusChanged,
+    # A booking holds a court hour the club no longer sells (#541).
+    ProposalFilled,
 )
 
 

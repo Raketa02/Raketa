@@ -13,7 +13,7 @@ one of them plays (``docs/adr/0182`` §5) and that is a fact about groups;
 which court hours a booking holds (``CourtBookings``), because a court with a
 booking ahead cannot be deleted, an hour a booking holds cannot be closed, and
 what a club can sell is its pattern **less** what is booked — facts about
-bookings, which have no context yet (#541) and one adapter that says so; and
+bookings, answered by the Bookings context over its own projection (#541); and
 the club's account at the payment provider (``PaymentsAccounts``, #537), opened,
 onboarded and read there — **answered by the Payments context**, which holds
 the provider, so the arrow runs ``payments → clubs`` only.

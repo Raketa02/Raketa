@@ -14,9 +14,10 @@ answered ``payment_notices_not_configured``.
 **One reader per endpoint, each over its own secret.** The platform endpoint
 notifies about the platform's own objects — a setup that succeeded, a card its
 bank updated. The **Connected accounts** endpoint (#537) notifies about each
-club's account, and later the payments made on it (#541): a notice there names
-the connected account **at its top level** (``account``), and
-``account.updated`` is the one kind read from it yet. Stripe still sends that
+club's account and the payments made on it: a notice there names the connected
+account **at its top level** (``account``) — ``account.updated``, and the
+``payment_intent.*`` kinds of a seat's payment (#541), which name the
+PaymentIntent and nothing of its state. Stripe still sends that
 v1 notice for an Accounts v2 account, to a Connected accounts endpoint and never
 to the platform's — where an ``account.updated`` names no connected account and
 is about the platform itself, so it is read as nothing. Every other kind is
@@ -38,6 +39,7 @@ from app.modules.payments.domain.notices import (
     CardUpdatedByBank,
     ConnectedAccountChanged,
     Notice,
+    SeatPaymentChanged,
     SetupSucceeded,
     Unheeded,
 )
@@ -45,6 +47,18 @@ from app.modules.payments.domain.notices import (
 #: How old a signed notice may be, in seconds: the libraries' own default,
 #: which their verifier applies only when it is passed.
 TOLERANCE_SECONDS = 300
+
+#: The kinds that say a seat's payment moved (the mechanics Appendix A): held,
+#: taken, released, refused, or waiting for its player. Each is only a prompt.
+SEAT_PAYMENT_KINDS = frozenset(
+    {
+        "payment_intent.amount_capturable_updated",
+        "payment_intent.succeeded",
+        "payment_intent.canceled",
+        "payment_intent.payment_failed",
+        "payment_intent.requires_action",
+    }
+)
 
 
 @final
@@ -88,6 +102,12 @@ class StripeNotices:
             # Stripe as it stands, because two updates arrive in either order.
             return CardUpdatedByBank(
                 notice_id=notice_id, customer_id=customer, method_id=subject["id"]
+            )
+        if kind in SEAT_PAYMENT_KINDS and isinstance(connected, str):
+            # A direct charge lives on the club's account, so its notice comes
+            # through the Connected accounts endpoint naming that account.
+            return SeatPaymentChanged(
+                notice_id=notice_id, account_id=connected, payment_id=subject["id"]
             )
         if kind == "account.updated" and isinstance(connected, str):
             # The account's id and nothing of its state: it is read from

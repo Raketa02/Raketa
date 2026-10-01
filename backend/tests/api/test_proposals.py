@@ -116,7 +116,12 @@ async def test_a_yes_lands_on_the_game_and_in_the_player_s_live_yeses(
     said = await says_yes(client, ola, proposal)
 
     assert said.status_code == 200, said.text
-    assert said.json() == {"proposal_id": str(proposal), "open_seats": 3}
+    assert said.json() == {
+        "proposal_id": str(proposal),
+        "open_seats": 3,
+        "booked": None,
+        "your_payment": None,
+    }
     assert await live_yeses(client, ola) == {
         "cap_per_sport": 10,
         "yeses": [
@@ -381,13 +386,17 @@ async def test_yeses_on_two_versions_fill_the_one_game(
 
     assert (await says_yes(client, b, post)).json()["open_seats"] == 2
     assert (await says_yes(client, c, post)).json()["open_seats"] == 1
-    assert (await says_yes(client, e, post)).json()["open_seats"] == 0
+    last = (await says_yes(client, e, post)).json()
+    assert last["open_seats"] == 0
 
+    # Marek, B, C and E filled it — across two versions — so it booked (#541).
+    assert last["booked"]["booking_id"] == str(post)
     for player in (marek, b, c, e):
-        assert await live_ids(client, player) == [str(post)]
-    full = await says_yes(client, f, post)
-    assert full.status_code == 409
-    assert full.json()["code"] == "proposal_is_full"
+        assert await live_ids(client, player) == []
+    late = await says_yes(client, f, post)
+    assert late.status_code == 409
+    assert late.json()["code"] == "proposal_is_over"
+    assert late.json()["details"] == {"standing": "FILLED"}
 
 
 async def test_a_version_dealt_later_counts_toward_the_same_game(

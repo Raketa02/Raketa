@@ -55,6 +55,8 @@ class Phone(Protocol):
 
     async def authenticates(self, setup_id: str) -> None: ...
 
+    async def confirms_payment(self, payment_id: str) -> None: ...
+
 
 class FakePhone:
     def __init__(self, provider: FakePayments) -> None:
@@ -65,6 +67,9 @@ class FakePhone:
 
     async def authenticates(self, setup_id: str) -> None:
         self._provider.phone_authenticates(setup_id)
+
+    async def confirms_payment(self, payment_id: str) -> None:
+        self._provider.phone_confirms_payment(payment_id)
 
 
 #: Stripe's test PaymentMethods, one per test card the fake mirrors.
@@ -112,6 +117,9 @@ class StripeTestPhone:
             pass
 
     async def authenticates(self, setup_id: str) -> None:
+        pytest.skip("a bank's 3-D Secure check needs a browser in Stripe test mode")
+
+    async def confirms_payment(self, payment_id: str) -> None:
         pytest.skip("a bank's 3-D Secure check needs a browser in Stripe test mode")
 
 
@@ -527,6 +535,8 @@ async def test_a_card_that_declines_later_is_declined_off_session(
 
     assert declined.status is PaymentStatus.DECLINED
     assert declined.decline_code
+    # The player can still confirm it in the app, with another card.
+    assert declined.client_secret
 
 
 async def test_a_bank_that_wants_the_player_present_says_so(
@@ -548,6 +558,88 @@ async def test_a_bank_that_wants_the_player_present_says_so(
 
     assert wanted.status is PaymentStatus.AUTHENTICATION_REQUIRED
     assert wanted.client_secret
+
+
+async def test_a_payment_is_read_as_it_stands(provider, phone, club_account):
+    """**A notice is a prompt, never a reading** (#541): what a payment is now is
+    read from the provider, held and then taken."""
+
+    clone = await _cloned(provider, phone, club_account, A_CARD)
+    held = await provider.authorise(
+        account_id=club_account,
+        method_id=clone,
+        amount_grosze=4000,
+        description="Padel · Bonarka Arena",
+        metadata={},
+        idempotency_key=_key(),
+    )
+
+    read_held = await provider.read_payment(
+        account_id=club_account, payment_id=held.payment_id
+    )
+    await provider.capture(
+        account_id=club_account, payment_id=held.payment_id, idempotency_key=_key()
+    )
+    read_taken = await provider.read_payment(
+        account_id=club_account, payment_id=held.payment_id
+    )
+
+    assert read_held.status is PaymentStatus.AUTHORISED
+    assert read_held.client_secret is None
+    assert read_taken.status is PaymentStatus.CAPTURED
+    assert read_taken.amount_grosze == 4000
+
+
+async def test_a_payment_waiting_for_its_player_is_read_with_its_secret(
+    provider, phone, club_account
+):
+    """The secret is asked of the provider when the phone needs it, and never
+    recorded — so a read must answer it while the payment waits."""
+
+    clone = await _cloned(provider, phone, club_account, A_CARD_THE_BANK_ALWAYS_CHECKS)
+    wanted = await provider.authorise(
+        account_id=club_account,
+        method_id=clone,
+        amount_grosze=4000,
+        description="Padel · Bonarka Arena",
+        metadata={},
+        idempotency_key=_key(),
+    )
+
+    read = await provider.read_payment(
+        account_id=club_account, payment_id=wanted.payment_id
+    )
+
+    assert read.status is PaymentStatus.AUTHENTICATION_REQUIRED
+    assert read.client_secret
+
+
+async def test_a_payment_its_player_confirmed_is_held_to_be_taken(
+    provider, phone, club_account
+):
+    """**Confirming in the app is the yes again** (the mechanics §12.2): the same
+    payment, held now, and taken like any other."""
+
+    clone = await _cloned(provider, phone, club_account, A_CARD_THE_BANK_ALWAYS_CHECKS)
+    wanted = await provider.authorise(
+        account_id=club_account,
+        method_id=clone,
+        amount_grosze=4000,
+        description="Padel · Bonarka Arena",
+        metadata={},
+        idempotency_key=_key(),
+    )
+
+    await phone.confirms_payment(wanted.payment_id)
+    held = await provider.read_payment(
+        account_id=club_account, payment_id=wanted.payment_id
+    )
+    taken = await provider.capture(
+        account_id=club_account, payment_id=wanted.payment_id, idempotency_key=_key()
+    )
+
+    assert held.status is PaymentStatus.AUTHORISED
+    assert taken.status is PaymentStatus.CAPTURED
 
 
 async def test_a_rescue_is_charged_at_once(provider, phone, club_account):

@@ -26,7 +26,11 @@ from uuid import UUID
 from app.application.events import EventStreamVersionConflict
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, Instant, instant, invariant
-from app.modules.proposals.domain.ports import ProposalDirectory, ProposalRepository
+from app.modules.proposals.domain.ports import (
+    ProposalDirectory,
+    ProposalRepository,
+    UndecidedCharges,
+)
 
 
 @final
@@ -52,11 +56,13 @@ class ExpireProposals:
         clock: Clock,
         proposals: ProposalRepository,
         directory: ProposalDirectory,
+        undecided: UndecidedCharges,
         unit_of_work: UnitOfWork,
     ) -> None:
         self._clock = clock
         self._proposals = proposals
         self._directory = directory
+        self._undecided = undecided
         self._uow = unit_of_work
 
     async def execute(self) -> Expired:
@@ -82,6 +88,10 @@ class ExpireProposals:
             return False
         try:
             await self._proposals.save(proposal)
+            # A payment a player confirmed for a game that never filled again
+            # is let go with it (#541): nobody pays for a game that did not
+            # happen.
+            await self._undecided.release(proposal_id, keeping=(), at=now)
             await self._uow.commit()
         except EventStreamVersionConflict:
             await self._uow.rollback()

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Sequence
 from uuid import UUID
 
-from app.kernel import Sport
+from app.kernel import Instant, Sport
 from app.modules.games.domain.results import Score
 
 
@@ -25,6 +25,9 @@ class OpenPlannedGameCommand:
     counted: bool
     window: str | None
     line_up: Sequence[tuple[str, UUID]]
+    #: The hour a booking opens it for (#541) — then ``challenge_id`` is the
+    #: booking's id. ``None`` from a completed line-up.
+    starts_at: Instant | None = None
 
 
 @dataclass(frozen=True, slots=True)

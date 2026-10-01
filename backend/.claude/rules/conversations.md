@@ -148,3 +148,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   heartbeat, because it is a courtesy read on the **command** client — the one with a two-second
   deadline, asked once a second by every open stream — and failing it loud would let a merely slow
   store close every healthy stream on the platform.
+
+- **A booked game's room is opened by its game** (#541). A booking's yeses are silent and open
+  nothing, so `GamePlanned` with an hour on it opens the room (`_note_game`), filed under the
+  booking's id, born about the game — its members the game's line-up, its end measured from the
+  booked hour (`GameNoted.starts_at`). The Chats tab finds rooms through challenges, so this room
+  is reached from its game's details, never from that list.

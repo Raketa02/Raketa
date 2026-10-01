@@ -104,8 +104,11 @@ from app.modules.payments.domain.notices import PaymentNotices
 from app.modules.payments.domain.ports import (
     ConnectedAccounts,
     NoticeInbox,
+    Payers,
     PaymentCommitments,
     PaymentMethodRepository,
+    SeatChargeRepository,
+    Sellers,
 )
 from app.modules.payments.infrastructure.club_accounts import (
     ClubsConnectedAccounts,
@@ -126,6 +129,9 @@ from app.modules.proposals.application.propose_games import ProposeGames
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
     BookedGames,
+    GameBookings,
+    SeatCharges,
+    UndecidedCharges,
     ClubNames as ProposalClubNames,
     ClubTerms,
     CourtHours,
@@ -151,7 +157,45 @@ from app.modules.proposals.infrastructure.event_sourced_games_and_money_reposito
 from app.modules.proposals.infrastructure.matcher_balance_forecasts import (
     MatcherBalanceForecasts,
 )
-from app.modules.proposals.infrastructure.no_booked_games import NoBookedGamesYet
+from app.modules.proposals.application.answers import ConfirmPayment, SayYes
+from app.modules.proposals.application.fill import Fill
+from app.modules.proposals.infrastructure.bookings import (
+    BookingsBookedGames,
+    BookingsGameBookings,
+)
+from app.modules.bookings.application.book_the_game import BookTheGame, FindACourt
+from app.modules.bookings.domain.ports import (
+    BookingDirectory,
+    BookingRepository,
+    ClubCourtsAtTheHour,
+    GameOpening,
+)
+from app.modules.bookings.infrastructure.club_courts import (
+    BookedCourtHours,
+    SellableClubCourts,
+)
+from app.modules.bookings.infrastructure.event_sourced_booking_repository import (
+    EventSourcedBookingRepository,
+    SqlAlchemyBookingDirectory,
+)
+from app.modules.bookings.infrastructure.games_opening import OpenTheGame
+from app.modules.payments.application.handlers.settle_seat_charges import (
+    SettleSeatCharges,
+)
+from app.modules.payments.application.seat_charges import (
+    ChargeTheSeats,
+    ConfirmSeatCharge,
+    ReadReceipts,
+    ReadSeatCharge,
+    ReleaseCharges,
+)
+from app.modules.payments.infrastructure.event_sourced_seat_charge_repository import (  # noqa: E501
+    EventSourcedSeatChargeRepository,
+)
+from app.modules.payments.infrastructure.sellers_and_payers import (
+    ClubSellers,
+    UserPayers,
+)
 from app.modules.proposals.infrastructure.profile_deck_people import (
     ProfileDeckPeople,
 )
@@ -170,6 +214,8 @@ from app.modules.proposals.infrastructure.matcher_player_fit import MatcherPlaye
 from app.modules.proposals.infrastructure.payments import (
     LiveYesCommitments,
     PaymentsSavedMethods,
+    PaymentsSeatCharges,
+    PaymentsUndecidedCharges,
 )
 from app.modules.proposals.infrastructure.sqlalchemy_proposal_directory import (
     SqlAlchemyProposalDirectory,
@@ -239,7 +285,6 @@ from app.modules.clubs.infrastructure.event_sourced_club_repository import (
 from app.modules.clubs.infrastructure.club_courts_sellable_hours import (
     ClubCourtsSellableHours,
 )
-from app.modules.clubs.infrastructure.no_court_bookings import NoCourtBookings
 from app.modules.clubs.infrastructure.sqlalchemy_club_directory import (
     SqlAlchemyClubDirectory,
 )
@@ -818,11 +863,10 @@ def build_club_courts_repository(
     )
 
 
-def build_court_bookings() -> CourtBookings:
-    """The court hours bookings hold: none, while nothing can be booked
-    (#541) — so nought, and the day a booking exists an adapter over the
-    bookings is built here instead."""
-    return NoCourtBookings()
+def build_court_bookings(session: AsyncSession) -> CourtBookings:
+    """The court hours bookings hold (#541) — answered by the Bookings context
+    over its own projection, so the arrow runs ``bookings → clubs`` only."""
+    return BookedCourtHours(build_booking_directory(session))
 
 
 def build_sellable_court_hours(
@@ -837,7 +881,7 @@ def build_sellable_court_hours(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        bookings=build_court_bookings(),
+        bookings=build_court_bookings(session),
     )
 
 
@@ -997,12 +1041,129 @@ def build_payment_method_repository(
 
 
 def build_payment_commitments(session: AsyncSession) -> PaymentCommitments:
-    """What could still be charged to a method: the player's live yeses,
-    answered by the Proposals context over its own directory so the arrow runs
-    ``proposals → payments`` only. Booked games ahead are nought until a
-    booking can hold one (#541), and then its adapter joins this one."""
+    """What could still be charged to a method: the player's live yeses and
+    booked games still ahead, answered by the Proposals context over its own
+    directory and the bookings', so the arrow runs ``proposals → payments``."""
 
-    return LiveYesCommitments(build_proposal_directory(session))
+    return LiveYesCommitments(
+        directory=build_proposal_directory(session),
+        bookings=build_booking_directory(session),
+    )
+
+
+def build_seat_charge_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> SeatChargeRepository:
+    """One stream per seat charge (``docs/adr/0189`` §5). Takes the session as
+    well, because its ``save`` writes the ``seat_charges`` row beside it."""
+    return EventSourcedSeatChargeRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def _seat_charge_repository(
+    session: AsyncSession, runtime: EventRuntime | None
+) -> SeatChargeRepository:
+    return build_seat_charge_repository(
+        session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+
+
+def build_sellers(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> Sellers:
+    """A club's name and its account at the provider — the seller."""
+    return ClubSellers(
+        directory=build_club_directory(session),
+        courts=build_club_courts_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+    )
+
+
+def build_payers(session: AsyncSession) -> Payers:
+    return UserPayers(build_user_repository(session))
+
+
+def build_charge_the_seats(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ChargeTheSeats:
+    """Every seat's share, all or nothing, over ``provider``; its emails open
+    the app (``APP_SCHEME``)."""
+    return ChargeTheSeats(
+        methods=build_payment_method_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        charges=_seat_charge_repository(session, runtime),
+        sellers=build_sellers(session, runtime=runtime),
+        payers=build_payers(session),
+        provider=provider,
+        mail=build_mail_queue(session),
+        app_link=f"{settings.APP_SCHEME}://",
+    )
+
+
+def build_release_charges(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReleaseCharges:
+    return ReleaseCharges(charges=_seat_charge_repository(session, runtime))
+
+
+def build_confirm_seat_charge(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    runtime: EventRuntime | None = None,
+) -> ConfirmSeatCharge:
+    return ConfirmSeatCharge(
+        charges=_seat_charge_repository(session, runtime), provider=provider
+    )
+
+
+def build_read_seat_charge(
+    session: AsyncSession, *, provider: PaymentProvider
+) -> ReadSeatCharge:
+    return ReadSeatCharge(
+        charges=_seat_charge_repository(session, None),
+        sellers=build_sellers(session),
+        provider=provider,
+    )
+
+
+def build_read_receipts(session: AsyncSession) -> ReadReceipts:
+    return ReadReceipts(
+        charges=_seat_charge_repository(session, None),
+        sellers=build_sellers(session),
+    )
+
+
+def build_settle_seat_charges(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> SettleSeatCharges:
+    """What a fill's verdict leaves at the provider — built per delivery run,
+    over the session the delivery commits in and the provider it holds."""
+    return SettleSeatCharges(
+        charges=_seat_charge_repository(session, runtime),
+        provider=provider,
+        clock=clock,
+    )
 
 
 def build_notice_inbox(session: AsyncSession) -> NoticeInbox:
@@ -1159,6 +1320,7 @@ def build_expire_proposals(session: AsyncSession, *, clock: Clock) -> ExpireProp
             events=build_event_publisher(session),
         ),
         directory=build_proposal_directory(session),
+        undecided=build_undecided_charges(session),
         unit_of_work=build_unit_of_work(session),
     )
 
@@ -1173,11 +1335,10 @@ def build_games_and_money_repository(
     return EventSourcedGamesAndMoneyRepository(event_store=event_store, events=events)
 
 
-def build_booked_games() -> BookedGames:
-    """The games a player has booked: none, while nothing can be booked (#541)
-    — the day a booking can hold a game, an adapter over the bookings is built
-    here instead, and games per week start counting."""
-    return NoBookedGamesYet()
+def build_booked_games(session: AsyncSession) -> BookedGames:
+    """The games a player has booked — what *games per week* and *one game per
+    hour* count — off the bookings' own projection (#541)."""
+    return BookingsBookedGames(build_booking_directory(session))
 
 
 def build_deck_people(
@@ -1253,7 +1414,7 @@ def build_read_group_deck(
             events=build_event_publisher(session, runtime=runtime),
         ),
         wanted=build_wanted_kinds(session, runtime=runtime),
-        booked=booked if booked is not None else build_booked_games(),
+        booked=booked if booked is not None else build_booked_games(session),
         terms=build_club_terms(session, runtime=runtime),
         fit=build_player_fit(session, runtime=runtime),
         forecasts=build_balance_forecasts(session, runtime=runtime),
@@ -1312,7 +1473,7 @@ def build_propose_games(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        booked=booked if booked is not None else build_booked_games(),
+        booked=booked if booked is not None else build_booked_games(session),
         directory=build_proposal_directory(session),
         proposals=build_proposal_repository(
             session,
@@ -1322,9 +1483,213 @@ def build_propose_games(
         fit=build_player_fit(session, runtime=runtime),
         make=build_make_proposal(session, clock=clock, runtime=runtime),
         deal=build_deal_version(session, clock=clock, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
         balance=build_ruleset().balance,
+    )
+
+
+# --------------------------------------------------------------------------
+# The fill (docs/adr/0189 §2, §4–§5; #541)
+# --------------------------------------------------------------------------
+
+
+def build_seat_charges(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> SeatCharges:
+    """Every seat's share all or nothing, and a refused payment confirmed —
+    the Payments context's use cases over the provider this caller holds, so
+    a request charges where its requests save cards and a seed at its fake."""
+    return PaymentsSeatCharges(
+        charge=build_charge_the_seats(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+        confirm=build_confirm_seat_charge(session, provider=provider, runtime=runtime),
+    )
+
+
+def build_undecided_charges(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> UndecidedCharges:
+    """The charges a game will not be paid with, let go — asks nothing of the
+    provider: the cancellation follows the commit, from the outbox."""
+    return PaymentsUndecidedCharges(build_release_charges(session, runtime=runtime))
+
+
+def build_game_bookings(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GameBookings:
+    """A full game's court and its booking, over the Bookings context's own
+    use cases."""
+    return BookingsGameBookings(
+        find=build_find_a_court(session, runtime=runtime),
+        book=build_book_the_game(session, runtime=runtime),
+    )
+
+
+def build_fill(
+    session: AsyncSession,
+    *,
+    proposals: ProposalRepository,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> Fill:
+    """What the last yes does. ``proposals`` is the yes's own repository, so the
+    other yeses it withdraws or pauses are appended through the one that loaded
+    the game."""
+    return Fill(
+        proposals=proposals,
+        directory=build_proposal_directory(session),
+        terms=build_club_terms(session, runtime=runtime),
+        bookings=build_game_bookings(session, runtime=runtime),
+        charges=build_seat_charges(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        forecasts=build_balance_forecasts(session, runtime=runtime),
+        games_and_money=build_games_and_money_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        booked=build_booked_games(session),
+        fit=build_player_fit(session, runtime=runtime),
+    )
+
+
+def build_say_yes(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> SayYes:
+    """A swipe right — the phone's, a seed's — and, when it is the last, the
+    fill over this caller's provider."""
+    proposals = build_proposal_repository(
+        session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    return SayYes(
+        proposals=proposals,
+        guards=build_proposal_guards(session, runtime=runtime),
+        fill=build_fill(
+            session,
+            proposals=proposals,
+            provider=provider,
+            settings=settings,
+            runtime=runtime,
+        ),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_confirm_payment(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ConfirmPayment:
+    """*I confirmed my payment in the app* — the yes again."""
+    proposals = build_proposal_repository(
+        session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    return ConfirmPayment(
+        proposals=proposals,
+        guards=build_proposal_guards(session, runtime=runtime),
+        fill=build_fill(
+            session,
+            proposals=proposals,
+            provider=provider,
+            settings=settings,
+            runtime=runtime,
+        ),
+        charges=build_seat_charges(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+# --------------------------------------------------------------------------
+# Bookings (docs/adr/0189 §5; #541)
+# --------------------------------------------------------------------------
+
+
+def build_booking_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> BookingRepository:
+    """One stream per filled proposal. Takes the session as well, because its
+    ``save`` writes the bookings and booking-seats projections beside it."""
+    return EventSourcedBookingRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_booking_directory(session: AsyncSession) -> BookingDirectory:
+    return SqlAlchemyBookingDirectory(session)
+
+
+def build_club_courts_at_the_hour(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ClubCourtsAtTheHour:
+    """The courts a club still has for Raketa at an hour, off what the Club
+    context publishes it sells."""
+    return SellableClubCourts(build_sellable_court_hours(session, runtime=runtime))
+
+
+def build_game_opening(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GameOpening:
+    """The ordinary Game a booking opens, through the Games context's own
+    opening — in the fill's transaction."""
+    return OpenTheGame(
+        OpenPlannedGame(
+            games=build_game_repository(
+                session=session,
+                event_store=build_domain_event_store(session, runtime=runtime),
+                events=build_event_publisher(session, runtime=runtime),
+            )
+        )
+    )
+
+
+def build_find_a_court(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> FindACourt:
+    """The first free court of a full game's sport at its hour."""
+    return FindACourt(courts=build_club_courts_at_the_hour(session, runtime=runtime))
+
+
+def build_book_the_game(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> BookTheGame:
+    """The booking, and the ordinary Game it opens — in the fill's
+    transaction."""
+    return BookTheGame(
+        bookings=build_booking_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        games=build_game_opening(session, runtime=runtime),
     )
 
 

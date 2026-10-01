@@ -11,7 +11,8 @@ is told which card was typed — one of the five in ``domain/entered_cards.py``,
 which are Stripe's own test cards down to the last four digits — and behaves as
 that card would: saved, refused at the setup, checked by the bank once or every
 time, or declining every payment once saved. ``card_behaves`` changes a saved
-card's mind later, ``club_account_is`` sets an account's state,
+card's mind later, ``phone_confirms_payment`` is a player confirming a payment
+that waited for them in the app, ``club_account_is`` sets an account's state,
 ``onboarding_completes`` finishes every club's onboarding the moment its link
 is made, and ``unreachable`` makes every call fail as an outage does.
 
@@ -22,6 +23,10 @@ is made, and ``unreachable`` makes every call fail as an outage does.
 reused with other arguments, capturing what is not held, cancelling what was
 taken, refunding what was never taken, cloning a card that was released. Each is
 a bug in the caller, and a fake that answered it would hide one.
+
+**A payment it never made is taken or let go as a hold** (``_on_account``): a
+seed run fills games through its own fake, and a laptop's server reloads, so the
+outbox that captures a seat may reach a fake that never held it.
 
 **A local run holds one for the process** (``build_payment_provider``), which
 confirms every setup with ``A_CARD`` as soon as it is read — the phone of a
@@ -43,6 +48,7 @@ from app.modules.payments.domain.entered_cards import (
 )
 from app.modules.payments.domain.errors import PaymentsUnavailable
 from app.modules.payments.domain.provider import (
+    AWAITING_THE_PLAYER,
     CardOnFile,
     ClubAccountReading,
     ClubAccountStatus,
@@ -108,6 +114,8 @@ class _Payment:
     amount_grosze: int
     status: PaymentStatus
     client_secret: str
+    #: Taken at once when confirmed (``charge_now``), or held to be captured.
+    captures: bool = False
     decline_code: str | None = None
 
 
@@ -166,6 +174,30 @@ class FakePayments:
         setup.authenticated = True
         if setup.card is not None:
             self._save_if_confirmed(setup, setup.card)
+
+    def phone_confirms_payment(
+        self, payment_id: str, *, with_card: EnteredCard | None = None
+    ) -> None:
+        """The player confirmed, in the app, a payment that waited for them: the
+        bank's check passed — or, for a declined one, ``with_card`` was typed
+        instead and its bank agreed. Held, or taken if it was a charge now; a
+        payment that waited for nobody confirms nothing."""
+
+        payment = self._payment(payment_id)
+        if payment.status not in AWAITING_THE_PLAYER:
+            raise FakeRefusal(f"{payment_id} is {payment.status}: nothing to confirm")
+        if payment.status is PaymentStatus.DECLINED:
+            if with_card is None:
+                raise FakeRefusal(f"{payment_id} was declined: confirm another card")
+            if with_card.behaviour in (
+                CardBehaviour.DECLINED_AT_SETUP,
+                CardBehaviour.DECLINES_PAYMENTS,
+            ):
+                return
+        payment.status = (
+            PaymentStatus.CAPTURED if payment.captures else PaymentStatus.AUTHORISED
+        )
+        payment.decline_code = None
 
     def card_behaves(self, method_id: str, behaviour: CardBehaviour) -> None:
         """A saved card changes its mind — a later decline, say."""
@@ -414,13 +446,17 @@ class FakePayments:
             lambda: self._paid(account_id, method_id, amount_grosze, capture=False),
         )
 
+    async def read_payment(self, *, account_id: str, payment_id: str) -> Payment:
+        self._record("read_payment", account_id=account_id, payment_id=payment_id)
+        return self._answer(self._on_account(payment_id, account_id))
+
     async def capture(
         self, *, account_id: str, payment_id: str, idempotency_key: str
     ) -> Payment:
         self._record(
             "capture", account_id=account_id, payment_id=payment_id, key=idempotency_key
         )
-        payment = self._payment(payment_id)
+        payment = self._on_account(payment_id, account_id)
         if payment.status is PaymentStatus.AUTHORISED:
             payment.status = PaymentStatus.CAPTURED
         elif payment.status is not PaymentStatus.CAPTURED:
@@ -433,7 +469,7 @@ class FakePayments:
         self._record(
             "cancel", account_id=account_id, payment_id=payment_id, key=idempotency_key
         )
-        payment = self._payment(payment_id)
+        payment = self._on_account(payment_id, account_id)
         if payment.status is PaymentStatus.CAPTURED:
             raise FakeRefusal(f"{payment_id} was taken; refund it instead")
         payment.status = PaymentStatus.CANCELLED
@@ -525,6 +561,26 @@ class FakePayments:
             raise FakeRefusal(f"no such payment: {payment_id}")
         return payment
 
+    def _on_account(self, payment_id: str, account_id: str) -> _Payment:
+        """A payment on this club's account. **One held by another process** —
+        a seed run's fill, or this laptop's before its server reloaded — is one
+        this fake never saw, and it answers as a hold it can take or let go,
+        for an amount it cannot know, as ``_method`` answers a card it never
+        saved."""
+
+        payment = self._payments.get(payment_id)
+        if payment is None:
+            payment = self._payments[payment_id] = _Payment(
+                payment_id=payment_id,
+                account_id=account_id,
+                amount_grosze=0,
+                status=PaymentStatus.AUTHORISED,
+                client_secret=f"{payment_id}_secret_adopted",
+            )
+        if payment.account_id != account_id:
+            raise FakeRefusal(f"{payment_id} is not on {account_id}")
+        return payment
+
     @staticmethod
     def _saves(card: EnteredCard, *, authenticated: bool) -> bool:
         if card.behaviour is CardBehaviour.DECLINED_AT_SETUP:
@@ -570,6 +626,7 @@ class FakePayments:
             amount_grosze=amount_grosze,
             status=PaymentStatus.CAPTURED if capture else PaymentStatus.AUTHORISED,
             client_secret=f"{payment_id}_secret_{uuid4().hex[:12]}",
+            captures=capture,
         )
         if behaviour is CardBehaviour.DECLINES_PAYMENTS:
             payment.status = PaymentStatus.DECLINED
@@ -587,7 +644,7 @@ class FakePayments:
             amount_grosze=payment.amount_grosze,
             client_secret=(
                 payment.client_secret
-                if payment.status is PaymentStatus.AUTHENTICATION_REQUIRED
+                if payment.status in AWAITING_THE_PLAYER
                 else None
             ),
             decline_code=payment.decline_code,

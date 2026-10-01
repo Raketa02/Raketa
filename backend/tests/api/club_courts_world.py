@@ -121,11 +121,12 @@ async def connects_payments(client, desk: dict) -> None:
 
 @dataclass
 class BookedCourts:
-    """``CourtBookings`` while no booking can be made yet (#541 makes them):
-    the court hours a test says are booked, answered as the port answers them.
+    """``CourtBookings`` stood in for: the court hours a test says are booked,
+    answered as the port answers them — so a club's refusals are asserted
+    without filling a game (that is ``test_the_fill.py``'s, #541).
 
     Installed on the running application, so a refusal is asserted over HTTP
-    exactly as the desk will meet it once bookings exist."""
+    exactly as the desk meets it."""
 
     taken_hours: list[TakenCourtHour] = field(default_factory=list)
 

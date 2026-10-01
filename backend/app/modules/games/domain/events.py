@@ -85,6 +85,12 @@ class GamePlanned:
     #: ``A|<uuid>`` per person. See ``lineup.py`` for the code.
     seatings: tuple[str, ...]
     occurred_at: datetime
+    #: The hour it is booked for, on a game **a booking** opened (#541) — and
+    #: then ``challenge_id`` is the booking's id, the arrangement it came from.
+    #: ``None`` on a game a completed line-up opened, which has no hour: a
+    #: default rather than a version 2, since every row written without it is
+    #: exactly such a game.
+    starts_at: datetime | None = None
 
     def __post_init__(self) -> None:
         _retuple(self, "seatings")

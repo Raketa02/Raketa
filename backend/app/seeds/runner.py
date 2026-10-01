@@ -190,6 +190,7 @@ from app.seeds.club_courts import (
 )
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.groups import SeededGroups, group_lines, write_the_groups
+from app.seeds.bookings import SeededBookings, book_her_games, booking_lines
 from app.seeds.proposals import (
     SeededProposals,
     proposal_lines,
@@ -1237,6 +1238,9 @@ class SeedReport:
     #: The games still filling in the protagonist's games group — picks with
     #: nought to three In. ``None`` on the same callers and for the same reason.
     proposals: SeededProposals | None = None
+    #: Her booked games and receipts (#541). ``None`` on the same callers as
+    #: the proposals.
+    bookings: SeededBookings | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1375,6 +1379,12 @@ async def run(settings: Settings | None = None) -> SeedReport:
             now=now,
             cohort=[(member.member.handle, member.player_id) for member in members],
         )
+        # **Her booked games, after the games still filling** (#541): seated
+        # from the crowd that layer gathered, out of the way of the yeses it
+        # seeded, and booked by the last yes as a phone's is.
+        bookings = await book_her_games(
+            session_factory, settings=settings, now=now, seeded=proposals
+        )
         # **After every layer that writes and before the screens.** A room is
         # *told* through the outbox by contexts that do not know it exists
         # (``docs/adr/0146`` §5), so nothing above this line opened one — the
@@ -1427,6 +1437,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             official_groups=official_groups,
             payment_methods=payment_methods,
             proposals=proposals,
+            bookings=bookings,
             photographs=photographs,
         )
     finally:
@@ -1519,6 +1530,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *payment_method_lines(run_report.payment_methods)])
     if run_report.proposals is not None:
         lines.extend(["", *proposal_lines(run_report.proposals)])
+    if run_report.bookings is not None:
+        lines.extend(["", *booking_lines(run_report.bookings)])
     if run_report.clubs is not None:
         lines.extend(["", *club_lines(run_report.clubs)])
     if run_report.club_courts is not None:

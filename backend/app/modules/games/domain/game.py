@@ -122,6 +122,10 @@ class Game:
     window: Window | None
     line_up: LineUp
     planned_at: Instant
+    #: The hour a **booking** opened this game for (#541), or ``None`` on a game
+    #: a completed line-up opened, which has none. Its entry window runs from
+    #: the hour when there is one (``windows.entry_closes_at``).
+    starts_at: Instant | None
     #: When somebody said it happened, and ``None`` while nobody has. **This is
     #: the moment**, and there is no other one anywhere in this context.
     played_at: Instant | None
@@ -184,6 +188,7 @@ class Game:
         window: Window | None,
         line_up: LineUp,
         occurred_at: Instant,
+        starts_at: Instant | None = None,
     ) -> "Game":
         """Open a game from a line-up that has just completed.
 
@@ -203,6 +208,7 @@ class Game:
                 window=None if window is None else window.value,
                 seatings=line_up.codes,
                 occurred_at=occurred_at,
+                starts_at=starts_at,
             )
         )
         return game
@@ -368,7 +374,7 @@ class Game:
                 # before the open seat: the end this game met is the answer,
                 # and its window stopped mattering the moment it was called off.
                 raise TheGameWasCalledOff()
-            if occurred_at >= entry_closes_at(self.planned_at):
+            if occurred_at >= self.entry_closes_at:
                 raise TheEntryWindowHasClosed()
             if not self.line_up.is_complete:
                 # **A score on a court with a seat open is refused**
@@ -452,11 +458,19 @@ class Game:
 
     # -- reading ----------------------------------------------------------
 
+    @property
+    def entry_closes_at(self) -> Instant:
+        """When *we played* stops being sayable — from the booked hour's end
+        when a booking opened this game, from its week otherwise."""
+
+        return entry_closes_at(self.planned_at, starts_at=self.starts_at)
+
     def standing_at(self, now: Instant) -> GameStanding:
         """What this game is, at this instant. **The only place a standing exists.**"""
 
         return standing_of(
             planned_at=self.planned_at,
+            starts_at=self.starts_at,
             played_at=self.played_at,
             called_off_at=self.called_off_at,
             proposals=self.proposals,
@@ -496,7 +510,7 @@ class Game:
             # stream somebody else wrote.
             return self.called_off_at or now
         if standing is GameStanding.NEVER_PLAYED:
-            return entry_closes_at(self.planned_at)
+            return self.entry_closes_at
         if standing in PLAYED:
             # ``played_at`` is set for every standing in ``PLAYED`` — the entry
             # that records *we played* is the only thing that can set it.
@@ -656,6 +670,9 @@ class Game:
             self.window = None if event.window is None else Window(event.window)
             self.line_up = LineUp.from_codes(event.seatings)
             self.planned_at = instant(event.occurred_at)
+            self.starts_at = (
+                None if event.starts_at is None else instant(event.starts_at)
+            )
         elif isinstance(event, SeatVacated):
             self.line_up = self.line_up.vacated_by(event.player_id)
             self.departed |= {event.player_id}

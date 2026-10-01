@@ -199,7 +199,10 @@ AGGREGATE_WRITERS = {
     "build_group_repository": "groups",
     # The games still filling: a pick made by `MakeProposal` — the use case the
     # engine will drive (#540) — and its yeses said by `SayYes`, the swipe's own
-    # use case, over the one repository both take (#538).
+    # use case, over the one repository both take (#538). **The last yes books
+    # the game** (#541): the booking, its Game and every seat's charge are
+    # written inline by that same `SayYes`, as an acceptance opens a game inside
+    # `challenges` — so `app/seeds/bookings.py` takes no repository of its own.
     "build_proposal_repository": "proposals",
     # An Administrator, invited by its club and let in the way that person
     # would get in — `InviteAdministrator`, then `SetInvitationPassword` or
@@ -299,6 +302,7 @@ def test_the_walk_has_something_to_walk():
         "__init__.py",
         "__main__.py",
         "administrators.py",
+        "bookings.py",
         "catalog.py",
         "clock.py",
         "club_courts.py",

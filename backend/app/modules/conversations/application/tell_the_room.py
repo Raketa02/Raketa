@@ -77,7 +77,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from app.application.events import DeliveryContext
-from app.kernel import Instant, instant, minute_of_day
+from app.kernel import Instant, Sport, instant, minute_of_day
 from app.modules.challenges.domain.events import (
     ChallengeCalledOff,
     ChallengeOpenedFromMutualInterest,
@@ -400,12 +400,30 @@ class TellTheRoom:
         A room that does not exist yet is one whose opening acceptance has not
         been delivered, which is the coin flip ``_open`` answers: that opening
         reads the game for itself, so dropping here loses nothing.
+
+        **A booked game's room is opened here** (#541; the mechanics §14.3:
+        *the chat opens when the game is booked*). A booking has no acceptances
+        to open a room by — its yeses are silent — so the game it opened is the
+        opening, and the room is born already about it, its hour on it, its
+        members the game's line-up. It is filed under the arrangement the game
+        names, the booking, so a redelivery finds it and records nothing.
         """
 
         room = await self._conversations.for_challenge(event.challenge_id)
         if room is None:
-            return
-        room.note_game(game_id=event.game_id, occurred_at=instant(event.occurred_at))
+            if event.starts_at is None:
+                return
+            room = Conversation.opened(
+                conversation_id=uuid4(),
+                challenge_id=event.challenge_id,
+                sport=Sport(event.sport),
+                occurred_at=instant(event.occurred_at),
+            )
+        room.note_game(
+            game_id=event.game_id,
+            occurred_at=instant(event.occurred_at),
+            starts_at=None if event.starts_at is None else instant(event.starts_at),
+        )
         await self._conversations.save(room)
 
     async def _said_they_played(

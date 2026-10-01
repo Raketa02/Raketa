@@ -30,6 +30,9 @@ from app.bootstrap.composition import (
     build_payment_method_repository,
     build_payment_notices,
     build_payment_provider,
+    build_read_receipts,
+    build_read_seat_charge,
+    build_seat_charge_repository,
 )
 from app.modules.clubs.application.payments_account import ConnectPayments
 from app.modules.clubs.presentation.dependencies import (
@@ -41,6 +44,10 @@ from app.modules.payments.application.method import (
     RemovePaymentMethod,
 )
 from app.modules.payments.application.notices import ReceivePaymentNotice
+from app.modules.payments.application.seat_charges import (
+    ReadReceipts,
+    ReadSeatCharge,
+)
 from app.modules.payments.application.setup import (
     AcceptPaymentTerms,
     ConfirmPaymentSetup,
@@ -52,6 +59,7 @@ from app.modules.payments.domain.ports import (
     NoticeInbox,
     PaymentCommitments,
     PaymentMethodRepository,
+    SeatChargeRepository,
 )
 from app.modules.payments.domain.provider import PaymentProvider
 
@@ -186,10 +194,22 @@ def get_connected_accounts(
 ConnectedAccountsDep = Annotated[ConnectedAccounts, Depends(get_connected_accounts)]
 
 
+def get_seat_charge_repository(
+    db: DbSession, event_store: DomainEventStoreDep, events: EventPublisherDep
+) -> SeatChargeRepository:
+    return build_seat_charge_repository(db, event_store=event_store, events=events)
+
+
+SeatChargeRepositoryDep = Annotated[
+    SeatChargeRepository, Depends(get_seat_charge_repository)
+]
+
+
 def get_receive_payment_notice(
     inbox: NoticeInboxDep,
     methods: PaymentMethodRepositoryDep,
     accounts: ConnectedAccountsDep,
+    charges: SeatChargeRepositoryDep,
     provider: PaymentProviderDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
@@ -198,6 +218,7 @@ def get_receive_payment_notice(
         inbox=inbox,
         methods=methods,
         accounts=accounts,
+        charges=charges,
         provider=provider,
         uow=uow,
         clock=clock,
@@ -231,3 +252,22 @@ def get_connect_payments(
 
 
 ConnectPaymentsDep = Annotated[ConnectPayments, Depends(get_connect_payments)]
+
+
+# --- A player's seat charges and receipts (#541) -----------------------------
+
+
+def get_read_seat_charge(
+    db: DbSession, provider: PaymentProviderDep
+) -> ReadSeatCharge:
+    return build_read_seat_charge(db, provider=provider)
+
+
+ReadSeatChargeDep = Annotated[ReadSeatCharge, Depends(get_read_seat_charge)]
+
+
+def get_read_receipts(db: DbSession) -> ReadReceipts:
+    return build_read_receipts(db)
+
+
+ReadReceiptsDep = Annotated[ReadReceipts, Depends(get_read_receipts)]

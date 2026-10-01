@@ -12,7 +12,8 @@ by being used**, as a Payment method and a club's courts are: a player who never
 opened the screen is at the defaults and has written nothing. It lives in
 Proposals because every rule that reads it is a rule about which games are dealt
 and which yeses stand — the deck here, the proposer (#540), posting (#546) and
-the fill's pause (#541).
+the fill's pause (#541), which pauses a player's other yeses in a week their
+booked games fill.
 
 **A preference, so the same answer records nothing** — the rule a Play intent
 follows beside it (``player_profile/domain/play_intent_declaration.py``), for the

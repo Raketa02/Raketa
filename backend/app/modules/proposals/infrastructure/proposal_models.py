@@ -57,7 +57,8 @@ class ProposalORM(Base):
     __tablename__ = "proposals"
     __table_args__ = (
         CheckConstraint(
-            "ended IS NULL OR ended IN ('EXPIRED', 'WITHDRAWN', 'COURT_HOUR_LOST')",
+            "ended IS NULL OR ended IN ('FILLED', 'EXPIRED', 'WITHDRAWN', "
+            "'COURT_HOUR_LOST')",
             name="ck_proposals_ended",
         ),
         # The sweep's read: unrecorded endings, by book-by.
@@ -89,13 +90,15 @@ class ProposalORM(Base):
 
 class ProposalPersonORM(Base):
     """One person on one proposed game: the version they were dealt, and their
-    answer — ``YES`` while In, ``NO`` or ``WITHDRAWN`` once gone, ``NULL`` while
-    they have not swiped."""
+    answer — ``YES`` while In, ``NO`` or ``WITHDRAWN`` once gone (a yes whose
+    payment lapsed is ``WITHDRAWN`` too: gone, and free to come back),
+    ``PAUSED`` while another booking holds their week, ``NULL`` while they have
+    not swiped."""
 
     __tablename__ = "proposal_people"
     __table_args__ = (
         CheckConstraint(
-            "answer IS NULL OR answer IN ('YES', 'NO', 'WITHDRAWN')",
+            "answer IS NULL OR answer IN ('YES', 'NO', 'WITHDRAWN', 'PAUSED')",
             name="ck_proposal_people_answer",
         ),
         Index("ix_proposal_people_player_id_answer", "player_id", "answer"),

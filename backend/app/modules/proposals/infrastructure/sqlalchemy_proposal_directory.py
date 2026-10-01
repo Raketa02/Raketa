@@ -77,6 +77,23 @@ class SqlAlchemyProposalDirectory:
         )
         return int(counted or 0)
 
+    async def reopened_for(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
+        return (
+            await self._session.scalars(
+                select(ProposalORM.id)
+                .join(
+                    ProposalPersonORM,
+                    and_(
+                        ProposalPersonORM.proposal_id == ProposalORM.id,
+                        ProposalPersonORM.player_id == player_id,
+                        ProposalPersonORM.answer == "WITHDRAWN",
+                    ),
+                )
+                .where(_filling(now))
+                .order_by(ProposalORM.start, ProposalORM.id)
+            )
+        ).all()
+
     async def past_book_by(self, *, now: Instant) -> Sequence[UUID]:
         return (
             await self._session.scalars(

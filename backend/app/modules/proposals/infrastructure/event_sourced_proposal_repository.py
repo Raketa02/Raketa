@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import final
 from uuid import UUID
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Executable
 
@@ -26,9 +26,12 @@ from app.modules.proposals.domain.events import (
     CourtHourLost,
     NoSaid,
     ProposalExpired,
+    ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
     VersionDealt,
+    SeatReopened,
+    YesPaused,
     YesSaid,
     YesWithdrawn,
 )
@@ -68,6 +71,18 @@ class EventSourcedProposalRepository:
         proposal = Proposal.from_history(record.event for record in stored)
         self._versions[proposal_id] = proposal.version
         return proposal
+
+    async def load_for_update(self, proposal_id: UUID) -> Proposal | None:
+        """The same proposal, with its row locked until the transaction ends —
+        so two last yeses arriving together fill it once, the second finding
+        it full. SQLite renders no ``FOR UPDATE``; Postgres holds the lock."""
+
+        locked = await self._session.scalar(
+            select(ProposalORM.id)
+            .where(ProposalORM.id == proposal_id)
+            .with_for_update()
+        )
+        return None if locked is None else await self.load(proposal_id)
 
     async def save(self, proposal: Proposal) -> None:
         pending = proposal.pull_events()
@@ -146,6 +161,17 @@ class EventSourcedProposalRepository:
             await self._answer(
                 event.proposal_id, event.player_id, "WITHDRAWN", event.occurred_at
             )
+        elif isinstance(event, SeatReopened):
+            # Gone, and free to come back — as a yes taken back is.
+            await self._answer(
+                event.proposal_id, event.player_id, "WITHDRAWN", event.occurred_at
+            )
+        elif isinstance(event, YesPaused):
+            await self._answer(
+                event.proposal_id, event.player_id, "PAUSED", event.occurred_at
+            )
+        elif isinstance(event, ProposalFilled):
+            await self._end(event.proposal_id, Ending.FILLED)
         elif isinstance(event, ProposalWithdrawn):
             await self._end(event.proposal_id, Ending.WITHDRAWN)
         elif isinstance(event, ProposalExpired):

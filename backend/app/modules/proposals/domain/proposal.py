@@ -30,7 +30,14 @@ every act asks ``standing_at`` with the caller's instant; ``expire`` writes the
 record for whoever sweeps. A post whose poster withdrew with nobody else In is
 *withdrawn*. A card whose last court at its club and hour went has *lost its
 court hour* — read off the club, not the clock, so it is recorded by the
-proposer that reads the club (#540). *Filled* arrives with the fill (#541).
+proposer that reads the club (#540).
+
+**Filled is the last yes booking it** (#541): every seat's share was taken and a
+Booking opened under this proposal's id. When a share could not be held,
+nobody paid, the game did not fill, and that player's **seat reopened** — open
+again until they confirm the payment, or somebody else takes it. And a
+player whose games per week another game just booked has their other yeses
+that week **paused**: not counted, and back if a game of theirs is called off.
 """
 
 from __future__ import annotations
@@ -52,9 +59,12 @@ from app.modules.proposals.domain.events import (
     CourtHourLost,
     NoSaid,
     ProposalExpired,
+    ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
     VersionDealt,
+    SeatReopened,
+    YesPaused,
     YesSaid,
     YesWithdrawn,
 )
@@ -79,18 +89,56 @@ class Origin(StrEnum):
 class Ending(StrEnum):
     """How a proposal stopped filling, as its stream records it."""
 
+    #: The last yes booked it (#541).
+    FILLED = "FILLED"
     EXPIRED = "EXPIRED"
     WITHDRAWN = "WITHDRAWN"
     COURT_HOUR_LOST = "COURT_HOUR_LOST"
+
+
+class ReopenReason(StrEnum):
+    """Why the last yes could not count somebody's yes, and reopened their seat."""
+
+    #: Their share could not be held: the bank wants them to confirm it.
+    AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED"
+    #: Their share could not be held: the bank refused it.
+    DECLINED = "DECLINED"
+    #: Their card's brand changed since they accepted the terms.
+    TERMS_NEEDED = "TERMS_NEEDED"
+    #: They have no method to charge.
+    NO_METHOD = "NO_METHOD"
+    #: They and somebody In may no longer share a court (§7).
+    NO_LONGER_FITS = "NO_LONGER_FITS"
 
 
 class Standing(StrEnum):
     """Where a proposal stands at an instant — derived, never stored."""
 
     FILLING = "FILLING"
+    FILLED = "FILLED"
     EXPIRED = "EXPIRED"
     WITHDRAWN = "WITHDRAWN"
     COURT_HOUR_LOST = "COURT_HOUR_LOST"
+
+
+@dataclass(frozen=True, slots=True)
+class Reopened:
+    """Why the last yes reopened somebody's seat, and the refused payment they
+    may confirm — ``None`` where nothing was asked of the provider."""
+
+    reason: ReopenReason
+    seat_charge_id: UUID | None
+
+    @property
+    def payment_to_confirm(self) -> UUID | None:
+        """The payment confirming which is their yes again (§12.2)."""
+
+        return (
+            self.seat_charge_id
+            if self.reason
+            in (ReopenReason.AUTHENTICATION_REQUIRED, ReopenReason.DECLINED)
+            else None
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +175,12 @@ class Proposal:
     declined: tuple[UUID, ...] = ()
     #: Everybody who took their yes back and has not said it again.
     withdrawn: tuple[UUID, ...] = ()
+    #: Everybody whose seat the last yes reopened, and who has not said yes
+    #: again — each with why, and the refused payment they may confirm.
+    reopened: dict[UUID, Reopened] = field(default_factory=dict)
+    #: Everybody whose yes another game's booking paused, and has not said it
+    #: again.
+    paused: tuple[UUID, ...] = ()
     ending: Ending | None = None
     version: int = 0
     _events: EventRecorder = field(
@@ -265,6 +319,8 @@ class Proposal:
             player_id in self.yeses
             or player_id in self.declined
             or player_id in self.withdrawn
+            or player_id in self.reopened
+            or player_id in self.paused
             or self.version_of(player_id) is not None
         )
 
@@ -377,6 +433,68 @@ class Proposal:
                 )
             )
 
+    def fill(
+        self,
+        *,
+        first_side: tuple[UUID, ...],
+        second_side: tuple[UUID, ...],
+        at: Instant,
+    ) -> None:
+        """**The last yes booked it**: every seat was taken, and these are the
+        sides the people In were drawn on. Called by the fill once the money
+        is held — never before."""
+
+        self._refuse_unless_filling(at)
+        invariant(self.open_seats == 0, f"filling {self.proposal_id} with seats open")
+        invariant(
+            sorted((*first_side, *second_side)) == sorted(self.yeses),
+            f"sides {first_side} {second_side} for the people In {self.yeses}",
+        )
+        self._record_that(
+            ProposalFilled(
+                proposal_id=self.proposal_id,
+                first_side=first_side,
+                second_side=second_side,
+                occurred_at=at,
+            )
+        )
+
+    def reopen_seat(
+        self,
+        player_id: UUID,
+        *,
+        reason: ReopenReason,
+        seat_charge_id: UUID | None,
+        at: Instant,
+    ) -> None:
+        """The last yes could not count this player's: their seat is open
+        again."""
+
+        invariant(
+            player_id in self.yeses, f"{player_id} is not In on {self.proposal_id}"
+        )
+        self._record_that(
+            SeatReopened(
+                proposal_id=self.proposal_id,
+                player_id=player_id,
+                seat_charge_id=seat_charge_id,
+                reason=reason.value,
+                occurred_at=at,
+            )
+        )
+
+    def pause_yes(self, player_id: UUID, *, at: Instant) -> bool:
+        """This player's games per week are booked for this game's week: their
+        yes stops counting. Answers whether anything was recorded — nothing for
+        a player not In, or a game no longer filling."""
+
+        if self.standing_at(at) is not Standing.FILLING or player_id not in self.yeses:
+            return False
+        self._record_that(
+            YesPaused(proposal_id=self.proposal_id, player_id=player_id, occurred_at=at)
+        )
+        return True
+
     def expire(self, *, now: Instant) -> bool:
         """Record that the book-by passed with the game unfilled. Answers
         whether anything was recorded: nothing before the book-by, and nothing
@@ -446,6 +564,10 @@ class Proposal:
             self.withdrawn = tuple(
                 player for player in self.withdrawn if player != event.player_id
             )
+            self.reopened.pop(event.player_id, None)
+            self.paused = tuple(
+                player for player in self.paused if player != event.player_id
+            )
         elif isinstance(event, NoSaid):
             self.declined = (*self.declined, event.player_id)
             self.withdrawn = tuple(
@@ -456,6 +578,21 @@ class Proposal:
                 player for player in self.yeses if player != event.player_id
             )
             self.withdrawn = (*self.withdrawn, event.player_id)
+        elif isinstance(event, SeatReopened):
+            self.yeses = tuple(
+                player for player in self.yeses if player != event.player_id
+            )
+            self.reopened[event.player_id] = Reopened(
+                reason=ReopenReason(event.reason),
+                seat_charge_id=event.seat_charge_id,
+            )
+        elif isinstance(event, YesPaused):
+            self.yeses = tuple(
+                player for player in self.yeses if player != event.player_id
+            )
+            self.paused = (*self.paused, event.player_id)
+        elif isinstance(event, ProposalFilled):
+            self.ending = Ending.FILLED
         elif isinstance(event, ProposalWithdrawn):
             self.ending = Ending.WITHDRAWN
         elif isinstance(event, ProposalExpired):

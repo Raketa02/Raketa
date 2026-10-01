@@ -66,23 +66,25 @@ class SetupOpened:
     terms_version: str
 
 
-def _hour(at: Instant) -> str:
+def key_hour(at: Instant) -> str:
+    """The hour a key is asked in (``docs/adr/0190`` §4)."""
+
     return at.strftime("%Y%m%d%H")
 
 
 def customer_key(player_id: UUID, *, at: Instant) -> str:
-    return f"raketa-customer-{player_id}-{_hour(at)}"
+    return f"raketa-customer-{player_id}-{key_hour(at)}"
 
 
 def setup_key(player_id: UUID, ordinal: int, *, at: Instant) -> str:
-    return f"raketa-setup-{player_id}-{ordinal}-{_hour(at)}"
+    return f"raketa-setup-{player_id}-{ordinal}-{key_hour(at)}"
 
 
 def club_account_key(club_id: UUID, *, at: Instant) -> str:
     """A club's account at the provider: opened once, so the club and the hour
     are the whole key (#537)."""
 
-    return f"raketa-club-account-{club_id}-{_hour(at)}"
+    return f"raketa-club-account-{club_id}-{key_hour(at)}"
 
 
 class StartPaymentSetup:

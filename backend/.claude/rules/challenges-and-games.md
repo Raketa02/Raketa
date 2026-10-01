@@ -213,3 +213,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **Two providers stand behind the one port and fail on their own**: a process with no index
   draws no forecast and still names every Level and prices the court. `GET /games` is
   untouched: a seat there still carries a name and nothing else.
+
+- **A booked game is a game with an hour** (#541, `bookings.md`). A Booking opens it through
+  `OpenPlannedGame` exactly as a completed line-up does — the booking's id in `challenge_id`,
+  the arrangement it came from — and `GamePlanned.starts_at` carries the booked hour
+  (nullable, defaulted: every older row is a game with no hour). `Game.entry_closes_at` runs
+  from that hour's end plus `ENTRY_GRACE` rather than `planned_at + PLAN_HORIZON`, because a
+  booking a fortnight ahead would otherwise ghost before it was played; every other rule here
+  is unchanged. *We played* is not yet refused before the hour (#544, #547).

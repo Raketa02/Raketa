@@ -107,8 +107,9 @@ def game_ends_it_at(room: Conversation) -> Instant | None:
 
     The **earliest** of the anchors it actually has:
 
-    - ``entry_closes_at(planned_at)`` — the instant *we played* stops being
-      sayable and the game becomes a ghost;
+    - ``entry_closes_at(planned_at, starts_at=…)`` — the instant *we played*
+      stops being sayable and the game becomes a ghost, measured from a booked
+      game's hour when it has one;
     - the moment somebody said they played, plus :data:`CONVERSATION_GRACE`.
 
     ``None`` is a real answer and not an omission, and it is **the answer for
@@ -123,7 +124,9 @@ def game_ends_it_at(room: Conversation) -> Instant | None:
     anchors = [
         anchor
         for anchor in (
-            None if room.planned_at is None else entry_closes_at(room.planned_at),
+            None
+            if room.planned_at is None
+            else entry_closes_at(room.planned_at, starts_at=room.starts_at),
             _after(_played_at(room)),
         )
         if anchor is not None

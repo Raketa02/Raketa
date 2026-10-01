@@ -166,8 +166,8 @@ def get_add_court(
 AddCourtDep = Annotated[AddCourt, Depends(get_add_court)]
 
 
-def get_court_bookings() -> CourtBookings:
-    return build_court_bookings()
+def get_court_bookings(db: DbSession) -> CourtBookings:
+    return build_court_bookings(db)
 
 
 CourtBookingsDep = Annotated[CourtBookings, Depends(get_court_bookings)]

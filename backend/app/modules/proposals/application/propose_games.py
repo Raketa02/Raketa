@@ -64,17 +64,18 @@ from app.modules.proposals.domain.limits import (
 )
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.ports import (
-    BookedGames,
+BookedGames,
     CourtHours,
     GamesAndMoneyRepository,
     InPlay,
     PlayerFit,
     PlayersInPlay,
-    WherePoolsPlay,
     Pools,
     ProposalDirectory,
     ProposalRepository,
+    UndecidedCharges,
     WantedKinds,
+    WherePoolsPlay,
 )
 from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
 from app.modules.proposals.domain.proposer import (
@@ -137,10 +138,12 @@ class ProposeGames:
         fit: PlayerFit,
         make: MakeProposal,
         deal: DealVersion,
+        undecided: UndecidedCharges,
         uow: UnitOfWork,
         clock: Clock,
         balance: BalanceRules,
     ) -> None:
+        self._undecided = undecided
         self._pools = pools
         self._where = where
         self._court_hours = court_hours
@@ -338,6 +341,8 @@ class ProposeGames:
         if proposal is None or not proposal.lose_court_hour(at=now):
             return False
         await self._proposals.save(proposal)
+        # A payment a player confirmed for it is let go with the card (#541).
+        await self._undecided.release(proposal_id, keeping=(), at=now)
         await self._uow.commit()
         return True
 

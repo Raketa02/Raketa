@@ -14,16 +14,18 @@ whether a player has a method their share could be charged to (payments) — and
 for the deck (#539), what a card draws of a person (users, the Player profile,
 rating), how even a card's game is forecast (the matcher's engine over rating),
 which kinds of game a player wants (their Play intent), which games they have
-booked (bookings, #541), and a club's cut-off and way of working (clubs) — and,
+booked (bookings), and a club's cut-off and way of working (clubs) — and,
 for the proposer (#540), where a pool may play (groups and clubs), every hour a
 club sells (clubs), and each member's Level and week (rating, the Player
-profile).
+profile) — and, for the fill (#541), a court for a full game and its booking
+(bookings), and every seat's share, all or nothing (payments).
 """
 
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
@@ -45,6 +47,11 @@ from app.modules.proposals.domain.proposer import CourtHourOnSale, PoolClubs
 @runtime_checkable
 class ProposalRepository(Protocol):
     async def load(self, proposal_id: UUID) -> Proposal | None: ...
+
+    async def load_for_update(self, proposal_id: UUID) -> Proposal | None:
+        """The same proposal, **locked until the transaction ends** — the read
+        before a yes, so the last two yeses on a game fill it once."""
+        ...
 
     async def save(self, proposal: Proposal) -> None:
         """Append what the aggregate recorded and write both projections, in the
@@ -88,6 +95,13 @@ class ProposalDirectory(Protocol):
         self, player_id: UUID, *, sport: Sport, now: Instant
     ) -> int:
         """How many of those are in ``sport`` — what the cap counts."""
+        ...
+
+    async def reopened_for(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
+        """Every proposal still filling on which this player's yes is gone and
+        may come back — withdrawn, or reopened by the last yes — **soonest
+        first**. Candidates: the aggregate says whose seat reopened on a payment
+        to confirm."""
         ...
 
     async def past_book_by(self, *, now: Instant) -> Sequence[UUID]:
@@ -381,4 +395,147 @@ class WantedKinds(Protocol):
     ) -> frozenset[SearchMode] | None:
         """``None`` while they have declared nothing for the sport — the one
         question the deck asks before it deals (the mechanics §4.1)."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# The fill's demands (#541)
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class BookableCourt:
+    """The court a full game would be booked on — the first free one of its
+    sport at its hour — and when the club's free cancellation ends for it."""
+
+    court_id: UUID
+    name: str
+    cut_off: Instant
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class FullGame:
+    """A full game, every seat paid: what its booking is born with."""
+
+    proposal_id: UUID
+    pool_id: UUID
+    club_id: UUID
+    sport: Sport
+    kind: SearchMode
+    start: Instant
+    share_grosze: int
+    first_side: tuple[UUID, ...]
+    second_side: tuple[UUID, ...]
+    court: BookableCourt
+
+
+@runtime_checkable
+class GameBookings(Protocol):
+    """**A demand of the Bookings context**: a court for a full game, and the
+    booking that opens its Game and its chat (the mechanics §11)."""
+
+    async def court_for(
+        self, club_id: UUID, *, sport: Sport, start: Instant
+    ) -> BookableCourt | None:
+        """The first free court of ``sport`` at the club from ``start``, or
+        ``None`` when none is left — the card's court hour is gone."""
+        ...
+
+    async def book(self, game: FullGame, *, at: Instant) -> UUID:
+        """Book it, in the caller's transaction, and answer the Game it
+        opened. The booking takes the proposal's id. ``CourtJustTaken`` when
+        another game claimed the court a moment before — the transaction is
+        spent, and the caller tries again from the start."""
+        ...
+
+
+class PaymentRefusal(StrEnum):
+    """Why a seat's share could not be held — the payment's own words, spelled
+    here in this context's (the mechanics §12.2, §19)."""
+
+    AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED"
+    DECLINED = "DECLINED"
+    TERMS_NEEDED = "TERMS_NEEDED"
+    NO_METHOD = "NO_METHOD"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class RefusedPayment:
+    """A seat whose share could not be held, and the charge that says so."""
+
+    seat_charge_id: UUID
+    refusal: PaymentRefusal
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class GameToCharge:
+    """A full game's seats, as the payments take them."""
+
+    proposal_id: UUID
+    club_id: UUID
+    sport: Sport
+    start: Instant
+    share_grosze: int
+    court_name: str
+    #: The club's cut-off, or ``None`` for a game that filled after it.
+    free_to_leave_until: Instant | None
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SeatsCharged:
+    """Every seat taken — ``refused`` empty — or nobody paid, and ``refused``
+    names whose share could not be held."""
+
+    taken: Mapping[UUID, UUID]
+    refused: Mapping[UUID, RefusedPayment]
+
+
+@runtime_checkable
+class SeatCharges(Protocol):
+    """**A demand of the Payments context**: every seat's share, **all or
+    nothing**, on the club's account — and a refused payment its player has
+    since confirmed (the mechanics §12.2)."""
+
+    async def charge(
+        self,
+        game: GameToCharge,
+        players: Sequence[UUID],
+        *,
+        attempt: int,
+        at: Instant,
+    ) -> SeatsCharged:
+        """Hold every seat, then take them all, or let every hold go — asked of
+        the provider now, and recorded in the caller's transaction."""
+        ...
+
+    async def confirmed(
+        self, seat_charge_id: UUID, *, player_id: UUID, at: Instant
+    ) -> UUID:
+        """This player says they confirmed this refused payment in the app: the
+        provider is asked, the charge is recorded as held if it is, and the game
+        it was for is answered. Refused as the payments refuse it otherwise."""
+        ...
+
+
+@runtime_checkable
+class UndecidedCharges(Protocol):
+    """**A demand of the Payments context**: let go of the charges on a game it
+    will not be paid with."""
+
+    async def release(
+        self,
+        proposal_id: UUID,
+        *,
+        keeping: Collection[UUID],
+        of_player: UUID | None = None,
+        at: Instant,
+    ) -> None:
+        """Release every charge on this game that is not taken and not one of
+        ``keeping`` — only ``of_player``'s, when one is named — in the caller's
+        transaction."""
         ...

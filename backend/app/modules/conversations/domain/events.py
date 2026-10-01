@@ -71,6 +71,10 @@ class GameNoted:
     conversation_id: UUID
     game_id: UUID
     occurred_at: datetime
+    #: The hour the game is booked for, on a booked game's room (#541) — what
+    #: its end is measured from. ``None`` on a game with no hour, which is every
+    #: row written before it.
+    starts_at: datetime | None = None
 
 
 @dataclass(frozen=True)

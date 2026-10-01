@@ -413,8 +413,8 @@ async def test_remove_is_refused_while_the_card_is_still_needed(
     app, client, payments, tomek
 ):
     """A live yes charges when its game fills, and a booked game ahead may yet
-    be refunded to it (the mechanics §12.5, Q83). Neither exists yet (#540,
-    #541), so what they will answer is stood in for."""
+    be refunded to it (the mechanics §12.5, Q83). What they answer is stood in
+    for here; a booked game holding a method is ``test_the_fill.py``'s (#541)."""
 
     class StillNeeded:
         async def of(self, player_id, *, at):

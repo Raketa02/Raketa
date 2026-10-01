@@ -38,8 +38,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   pools, soonest first, with `cap_per_sport`. A yes needs a saved method
   (`payment_method_required`) and a live yes to spare (`live_yeses_exhausted`, ten per sport).
   **No route makes a proposal**: `MakeProposal` and `DealVersion` are the dealer's, built by
-  the composition root for the proposer (#540), seeds and tests; the fill (#541) is where a
-  yes that leaves `open_seats` at nought books. Seeded by `app/seeds/proposals.py`, which
+  the composition root for the proposer (#540), seeds and tests; **the yes that leaves
+  `open_seats` at nought books the game** — `FILLED`, every version gone — or reopens the seat
+  of whoever could not pay or no longer fits, and pauses or withdraws the players' other yeses
+  (#541, see `bookings.md`). Seeded by `app/seeds/proposals.py`, which
   **runs the proposer for every pool**: the protagonist's *Padel po pracy* at Bonarka Arena,
   gathered from the cohort members who want competitive padel and fit her and each other,
   and four of her picks answered — nought, one, two and three In.
@@ -58,7 +60,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   cancellation* and *the club confirms* come from), and the reader's **Games & money** — its own event-sourced aggregate, one stream
   per player, born by being used (`GET/PUT /players/me/games-and-money`,
   `proposals.games_and_money_set` / v1). Games per week and *one game per hour* read
-  **`BookedGames`, whose only adapter answers nothing until #541**; API tests override
+  **`BookedGames`**, answered off the bookings (#541); API tests may override
   `get_booked_games`. A withdrawn yes is dealt again. The seed fails if her deck would be
   empty (`assert_the_group_deck`, beside the screens battery).
 - **The proposer builds the games, and its rules are one pure batch** (#540, the mechanics

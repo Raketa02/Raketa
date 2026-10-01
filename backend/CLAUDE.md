@@ -138,6 +138,7 @@ changing code that calls into another context, read its rule.**
 | `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record |
 | `clubs.md`, `groups.md` | clubs, token audiences, club courts; groups and official groups |
 | `payments.md`, `proposals.md` | the payments port and webhook; proposals and the group deck |
+| `bookings.md` | the fill: all-or-nothing seat charges, the booking, its game and chat |
 | `accounts-and-mail.md` | the mail queue, administrators, signing out everywhere |
 
 ## The API contract
