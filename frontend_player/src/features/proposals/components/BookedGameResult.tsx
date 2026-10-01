@@ -11,15 +11,11 @@
  * booking's own read, which the details have just made.
  */
 
-import { router } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { GameScreen } from '@/features/games/types';
-import { Note, ScreenHeader, theme } from '@/shared/ui';
 
-import { useBooking } from '../hooks/useHome';
+import { bookingReadState, useBooking } from '../hooks/useHome';
 
+import { BookingAbsent } from './BookingAbsent';
 import { HOME_GAME_COPY } from './homeCopy';
 
 const COPY = HOME_GAME_COPY.details;
@@ -33,34 +29,25 @@ export function BookedGameResult({ bookingId }: BookedGameResultProps) {
   const read = useBooking(bookingId);
   const game = read.data ?? undefined;
 
-  if (game !== undefined) {
+  if (game === undefined) {
     return (
-      <GameScreen
-        gameId={game.gameId}
-        entryLead="the-score"
-        card={null}
-        court={null}
-        plan={null}
-        fill={null}
+      <BookingAbsent
+        read={bookingReadState(read)}
+        gone={COPY.gone}
+        waiting={COPY.reading}
+        edges={['top']}
       />
     );
   }
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
-      <ScreenHeader compact onBack={() => router.back()} backLabel={COPY.back} />
-      <View style={s.body}>
-        {read.isPending ? (
-          <ActivityIndicator accessibilityLabel={COPY.reading} color={theme.color.muted} />
-        ) : (
-          <Note>{COPY.gone}</Note>
-        )}
-      </View>
-    </SafeAreaView>
+    <GameScreen
+      gameId={game.gameId}
+      entryLead="the-score"
+      card={null}
+      court={null}
+      plan={null}
+      fill={null}
+    />
   );
 }
-
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.color.paper },
-  body: { padding: theme.size.gutter, gap: theme.space.sm },
-});

@@ -263,12 +263,16 @@ spoken a character at a time). The filling details and the booked ones share `Ga
 `OthersFaces`.
 
 **The chat is reached from the details and nowhere else** (A4.4, §14.3). _Chat_ is drawn while the
-status still has a room (`chatIsOpen`: booked, a seat open, or a result being told) and the join
-keyed by the game finds one (`conversations`' `useGameRoom`, the join `GET /bookings/{id}`
-documents). It pushes `/booking/[id]/chat` (`BookedGameChat`), which mounts `ConversationScreen` in
+join keyed by the game finds the room (`conversations`' `useGameRoom`, the join `GET /bookings/{id}`
+documents) and the status can have one (`chatIsOpen`: not while the club decides, not once called
+off). **The room's own life decides the rest**: it closes as today — 48 hours after _we played_,
+when the result window closes — so a counted game keeps its door for as long as its room does,
+rather than leaving a room open with no way in. It pushes `/booking/[id]/chat` (`BookedGameChat`), which mounts `ConversationScreen` in
 its booked form — no plan card, no plan chips, no _Details_ door, the header's second line the
 booking's word — over the details, so the back chevron returns to them; the bar stands down there as
-in every room.
+in every room. Before there is a game or a room to draw, the details, the room and the result say
+the same four things (`BookingAbsent`): offline it resumes, the spinner, a refusal with the retry,
+or the one terminal sentence.
 
 **Calls made here, open for the product owner** (Part 16 has the drawings'):
 
@@ -277,9 +281,19 @@ in every room.
   card's spoken name.
 - **_Chat · n_ has no number, and is always volt.** No read carries an unread count; the number and
   the lit-when-unread state are owed to the backend.
-- **_New until opened_ is the phone's memory**, a fourth value in ADR-0188's table, whose amendment
-  is owed from a root session. A reinstall, a second phone or a sign-out shows every live game as
-  new once.
+- **_New until opened_ is the phone's memory** — a fourth value in `shared/lib/preferences`, which
+  **ADR-0188 §5 says is a new record, not an edit to its table**, and the value is a record of what
+  was opened rather than a choice. Decide: a new ADR admitting it (a root session writes it), or
+  _new_ held for the session only, or a server-side _seen_. A reinstall, a second phone or a
+  sign-out shows every live game as new once.
+- **_Chat_ follows the room's life, not the result** (§14.3 _closes as today_), where A4.1 says
+  _while the game isn't over_ — the details are the only way in, so a door that went at the result
+  would leave a room nobody can reach.
+- **The title names the others whole** (_Piotr Sowa, Inés Díaz, Bartek Lis_), where details 7 draws
+  first names: ADR-0171 — a name is said whole, never a first name derived from it — as the filling
+  details already do.
+- **_Waiting for the club_ names no court** on the card and the details (A4.2), ahead of #543
+  producing the status.
 - **Booked cards first on the rail**, Classic cards after; one heading counts both.
 - **An ended booking stays a day after its hour**, so a result settled later than that is not drawn
   (the Classic rail's own cost for a score counted by silence).
@@ -292,7 +306,12 @@ in every room.
 - **The status colours**: amber for waiting, a seat open and the two result acts; mint for booked
   and counted; `gameRed` for called off.
 
-**Owed**: ADR-0188 §2's fourth row (root); the unread count for _Chat · n_ (backend); the seat-open
-count, its fills-by and the called-off reason on the money line (#544, then #557); `CLAUDE.md`'s
-_three per-account choices_ now reads four (agent config, left for the user). **Nothing here has
+**Owed**: the record for the fourth phone value (root, above); the unread count for _Chat · n_
+(backend); the seat-open count, its fills-by and the called-off reason on the money line (#544, then
+#557); **the filling details onto `GET /proposals/{id}`**, which replaces the live-yes view and
+carries _Waiting for the club_ with its _Leave the game_ (#557); with Classic play on, the Chats tab
+lists a booked game's room and opens it in the Classic form, plan card and _Details_ included
+(#542's call 8 — the shell could leave booked rooms out of Chats, or open them in their booked
+form); `CLAUDE.md`'s _three per-account choices_ now reads four (agent config, left for the
+user). **Nothing here has
 been seen on a device**, the QR least of all: it is drawn from `qrcode`'s matrix and never scanned.

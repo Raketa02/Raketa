@@ -1,7 +1,9 @@
 import type { DeckPerson } from './deck';
 import {
   ENDED_HOME_SHELF_LIFE_MS,
+  bookedGameIds,
   chatIsOpen,
+  courtIsGiven,
   isNew,
   moneyLineOf,
   onHome,
@@ -191,19 +193,40 @@ describe('openedFrom / openedToKeep — what the phone keeps', () => {
   });
 });
 
-describe('chatIsOpen — the Chat door while you are in the game and it is not over', () => {
+describe('chatIsOpen — the room lives its own life once booked, and closes as today (§14.3)', () => {
   it.each<[HomeStatus, boolean]>([
     ['WAITING_FOR_THE_CLUB', false],
     ['BOOKED', true],
     ['SEAT_OPEN', true],
     ['NEEDS_RESULT', true],
     ['CONFIRM_THE_RESULT', true],
-    ['COUNTED', false],
-    ['UNCOUNTED', false],
-    ['NEVER_PLAYED', false],
+    // 48 hours after *we played*: a counted game's room can outlive the result by a day or two.
+    ['COUNTED', true],
+    ['UNCOUNTED', true],
+    ['NEVER_PLAYED', true],
     ['CALLED_OFF', false],
   ])('%s → %s', (status, open) => {
     expect(chatIsOpen(status)).toBe(open);
+  });
+});
+
+describe('courtIsGiven — a court number once the club has said yes (A4.2)', () => {
+  it.each<[HomeStatus, boolean]>([
+    ['WAITING_FOR_THE_CLUB', false],
+    ['BOOKED', true],
+    ['SEAT_OPEN', true],
+    ['NEEDS_RESULT', true],
+    ['CALLED_OFF', true],
+  ])('%s → %s', (status, given) => {
+    expect(courtIsGiven(status)).toBe(given);
+  });
+});
+
+describe('bookedGameIds — the Games Home’s cards stand for', () => {
+  it('is every card’s Game, the shelved ones too', () => {
+    expect(
+      bookedGameIds([game({ gameId: 'g-1' }), game({ gameId: 'g-2', status: 'COUNTED' })]),
+    ).toEqual(new Set(['g-1', 'g-2']));
   });
 });
 

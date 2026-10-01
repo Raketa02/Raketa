@@ -2,7 +2,16 @@ import { setDeviceZone } from '@/test-support/deviceZone';
 
 import type { BookedGame, HomeGame } from '../domain/home';
 
-import { homeCardLabel, moneyRow, moneyWords, statusSubline, whereAside } from './homePresentation';
+import {
+  homeCardLabel,
+  moneyRow,
+  moneySpoken,
+  moneyWords,
+  shortCodeSpoken,
+  sportWords,
+  statusSubline,
+  whereAside,
+} from './homePresentation';
 
 /** Friday 2 October 2026, 16:00 in Warsaw — the club's cut-off. */
 const CUT_OFF = '2026-10-02T14:00:00Z';
@@ -48,9 +57,41 @@ describe('statusSubline — the details’ second line', () => {
 });
 
 describe('whereAside — the court and how far it is (details 8)', () => {
+  const at = { status: 'BOOKED', courtName: 'Court 2' } as const;
+
   it('is the court, with the distance when the reader has a Location area', () => {
-    expect(whereAside('Court 2', 3.1)).toBe('Court 2 · 3,1 km');
-    expect(whereAside('Court 2', undefined)).toBe('Court 2');
+    expect(whereAside(at, 3.1)).toBe('Court 2 · 3,1 km');
+    expect(whereAside(at, undefined)).toBe('Court 2');
+  });
+
+  it('names no court while the club has still to say yes (A4.2)', () => {
+    const waiting = { ...at, status: 'WAITING_FOR_THE_CLUB' } as const;
+    expect(whereAside(waiting, 3.1)).toBe('3,1 km');
+    expect(whereAside(waiting, undefined)).toBeUndefined();
+  });
+});
+
+describe('moneySpoken — the line aloud, its dots commas', () => {
+  it('says each clause the line draws, and nothing it does not', () => {
+    expect(
+      moneySpoken({ kind: 'booked', shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF }),
+    ).toBe('Paid, 30 zł, free to leave until Fri 16:00');
+    expect(moneySpoken({ kind: 'seatOpen', seats: 1 })).toBe(
+      '1 seat open, offered to others, the game goes ahead',
+    );
+  });
+});
+
+describe('sportWords — a card’s sport word', () => {
+  it('says the kind only when the game is a friendly', () => {
+    expect(sportWords('padel', 'competitive')).toBe('Padel');
+    expect(sportWords('padel', 'forFun')).toBe('Padel · For fun');
+  });
+});
+
+describe('shortCodeSpoken — the code for the desk, aloud', () => {
+  it('is said a character at a time', () => {
+    expect(shortCodeSpoken('K7M2QX')).toBe('Your check-in code: K 7 M 2 Q X');
   });
 });
 
@@ -75,12 +116,12 @@ const booked = (extra: Partial<BookedGame> = {}): BookedGame => ({
 
 describe('moneyRow — the details’ money row (A4.1)', () => {
   it('is PAID · 28 zł · your share · to the club, free to leave until the cut-off while ahead', () => {
-    expect(moneyRow(booked(), BEFORE)).toEqual({
+    expect(moneyRow(booked(), 4, BEFORE)).toEqual({
       label: 'Paid',
       value: '28 zł',
       aside: 'your share · to the club · free to leave until Fri 16:00',
     });
-    expect(moneyRow(booked(), Date.parse(CUT_OFF))).toEqual({
+    expect(moneyRow(booked(), 4, Date.parse(CUT_OFF))).toEqual({
       label: 'Paid',
       value: '28 zł',
       aside: 'your share · to the club',
@@ -91,6 +132,7 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     expect(
       moneyRow(
         booked({ status: 'WAITING_FOR_THE_CLUB', money: { shareGrosze: 2800, paid: false } }),
+        4,
         BEFORE,
       ),
     ).toEqual({
@@ -101,12 +143,16 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
   });
 
   it('is refunded, or nobody paid, once the game is called off', () => {
-    expect(moneyRow(booked({ status: 'CALLED_OFF' }), BEFORE)).toEqual({
+    expect(moneyRow(booked({ status: 'CALLED_OFF' }), 4, BEFORE)).toEqual({
       label: 'Refunded',
       value: '28 zł',
     });
     expect(
-      moneyRow(booked({ status: 'CALLED_OFF', money: { shareGrosze: 2800, paid: false } }), BEFORE),
+      moneyRow(
+        booked({ status: 'CALLED_OFF', money: { shareGrosze: 2800, paid: false } }),
+        4,
+        BEFORE,
+      ),
     ).toEqual({ label: 'Your share', value: '28 zł', aside: 'nobody paid' });
   });
 });
@@ -132,8 +178,8 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
       homeCardLabel({
         game,
         fresh: true,
-        day: 'Saturday',
-        money: 'Paid · 30 zł · free to leave until Fri 16:00',
+        day: { kind: 'weekday', weekday: 6 },
+        money: { kind: 'booked', shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF },
         chat: true,
       }),
     ).toBe(

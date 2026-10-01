@@ -79,6 +79,7 @@ import { useGamesNeedingYou } from '@/features/plans/types';
 import { bookedGameRoute, FillProvider, useHomeBadge } from '@/features/proposals/types';
 import { TAB_BAR_HEIGHT, TabBar, theme } from '@/shared/ui';
 
+import { homeBadge } from '../domain/homeBadge';
 import { barStandsDown, tabForPathname } from '../domain/shellTabs';
 
 import { landOnHome, openTab } from './shellNavigation';
@@ -92,17 +93,6 @@ import { landOnHome, openTab } from './shellNavigation';
 function openGame(bookingId: string) {
   landOnHome();
   router.push(bookedGameRoute(bookingId));
-}
-
-/**
- * **Home's badge** — the Classic games that need you and the booked ones, added (#556). The booked
- * half is the server's (`needing_you`: a result, a score to agree, a seat open, a payment to
- * confirm); the Classic half leaves out every Game a booking stands for, since Home draws and
- * counts it as its booking. Nothing to draw is `undefined`, as each half already answers.
- */
-function homeBadge(classic: number | undefined, booked: number): number | undefined {
-  const sum = (classic ?? 0) + booked;
-  return sum === 0 ? undefined : sum;
 }
 
 /**

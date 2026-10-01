@@ -26,19 +26,18 @@ import { gamesNeedingYou } from '../domain/gameCard';
 
 import { usePlans } from './usePlans';
 
-export function useGamesNeedingYou(
-  drawnElsewhere: ReadonlySet<string> = NONE_ELSEWHERE,
-): number | undefined {
+export function useGamesNeedingYou(drawnElsewhere?: ReadonlySet<string>): number | undefined {
   const games = useGames();
   const plans = usePlans();
   const me = useCurrentUser().data?.id;
 
   if (games.data === undefined || me === undefined) return undefined;
 
-  const ours = games.data.filter((game) => !drawnElsewhere.has(game.gameId));
-  const waiting = gamesNeedingYou(ours, plans.data, (game) => awaitsYourAgreement(game, me));
+  const waiting = gamesNeedingYou(
+    games.data,
+    plans.data,
+    (game) => awaitsYourAgreement(game, me),
+    drawnElsewhere,
+  );
   return waiting === 0 ? undefined : waiting;
 }
-
-/** Nothing drawn elsewhere: one empty set rather than one per call. */
-const NONE_ELSEWHERE: ReadonlySet<string> = new Set();

@@ -16,7 +16,7 @@ import { currentUserQuery } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 
-import { openedToKeep, type BookedGame, type Home } from '../domain/home';
+import { bookedGameIds, openedToKeep, type BookedGame, type Home } from '../domain/home';
 import { keepOpenedGames, readBooking, readHome, readOpenedGames } from '../use-cases/home';
 
 import { proposalKeys } from './proposalKeys';
@@ -37,6 +37,16 @@ export function useBooking(bookingId: string) {
   });
 }
 
+/** The booking's read, as `BookingAbsent` asks about it. */
+export function bookingReadState(read: ReturnType<typeof useBooking>) {
+  return {
+    paused: read.fetchStatus === 'paused',
+    pending: read.isPending && read.fetchStatus !== 'paused',
+    error: read.error,
+    retry: () => void read.refetch(),
+  };
+}
+
 /**
  * **Home's badge, and the Games its cards stand for** — what the shell reads for the bar. The count
  * is the server's (`needing_you`: the cards that need the reader and every payment they have to
@@ -48,10 +58,7 @@ export function useHomeBadge(): {
   readonly gameIds: ReadonlySet<string>;
 } {
   const { data } = useHome();
-  return {
-    needingYou: data?.needingYou ?? 0,
-    gameIds: new Set((data?.games ?? []).map((game) => game.gameId)),
-  };
+  return { needingYou: data?.needingYou ?? 0, gameIds: bookedGameIds(data?.games ?? []) };
 }
 
 /**

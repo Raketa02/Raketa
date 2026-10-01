@@ -75,7 +75,7 @@ import { useGames } from '@/features/games/types';
 import { recoveryMessage, type AppError } from '@/shared/errors';
 import { Note, PagerDots, theme } from '@/shared/ui';
 
-import { belongsOnTheRail, planOf } from '../domain/gameCard';
+import { planOf, railGames } from '../domain/gameCard';
 import { usePlans } from '../hooks/usePlans';
 
 import { GameCard } from './GameCard';
@@ -128,9 +128,7 @@ export function GamesRail({ empty, booked }: GamesRailProps) {
   const step = cardWidth + STRIP_GAP;
 
   // A booked game's Game is drawn by its booking's card, never a second time here (#556).
-  const rows = (games.data ?? [])
-    .filter(belongsOnTheRail)
-    .filter((game) => booked?.gameIds.has(game.gameId) !== true);
+  const rows = railGames(games.data ?? [], booked?.gameIds);
   const bookedCount = booked?.count ?? 0;
   const count = bookedCount + rows.length;
   const failure = games.error ?? booked?.error ?? null;

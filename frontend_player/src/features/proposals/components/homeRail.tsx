@@ -16,24 +16,18 @@
  */
 
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
 
 import { useGameRooms } from '@/features/conversations/types';
-import type { AppError } from '@/shared/errors';
+import type { BookedOnTheRail } from '@/features/plans/types';
 
-import { chatIsOpen, isNew, onHome } from '../domain/home';
+import { bookedGameIds, chatIsOpen, isNew, onHome } from '../domain/home';
 import { useHome, useOpenedGames, useReadClock } from '../hooks/useHome';
 
 import { HomeGameCard } from './HomeGameCard';
 import { bookedGameRoute } from './proposalRoutes';
 
-/** What the rail takes from this feature: `plans`' `BookedOnTheRail`, matched by shape. */
-export interface BookedCards {
-  readonly gameIds: ReadonlySet<string>;
-  readonly count: number;
-  readonly error: AppError | null;
-  readonly cards: (width: number) => ReactNode;
-}
+/** What the rail takes from this feature — `plans`' own slot type, crossed as a type alone. */
+export type BookedCards = BookedOnTheRail;
 
 export function useBookedCards(): BookedCards {
   const home = useHome();
@@ -47,7 +41,7 @@ export function useBookedCards(): BookedCards {
   const games = all.filter((game) => onHome(game, now));
 
   return {
-    gameIds: new Set(all.map((game) => game.gameId)),
+    gameIds: bookedGameIds(all),
     count: games.length,
     // A failure is said only while there is nothing to draw: a re-read that failed behind cards
     // already on screen leaves them, as every list here does.

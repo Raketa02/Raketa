@@ -11,7 +11,12 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/shared/ui';
 
-import type { FactWords } from './homePresentation';
+/** One fact of the accent line: its label, its value and the words after it. */
+export interface FactWords {
+  readonly label: string;
+  readonly value: string;
+  readonly aside?: string;
+}
 
 export interface GameFactsProps {
   readonly facts: readonly FactWords[];

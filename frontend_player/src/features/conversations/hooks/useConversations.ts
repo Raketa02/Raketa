@@ -264,17 +264,29 @@ export function useChatDoors(): ReadonlyMap<string, RoomDoor> {
  * game's*. No read carries a conversation id, and none should (ADR-0149 §3).
  *
  * `listed` says whether the list has been heard from, because the chat screen behind the details
- * has two different things to say while it has no room: *still finding it*, and *there is none*.
+ * has two different things to say while it has no room: *still finding it*, and *there is none* —
+ * and `paused` and `error` the two others every read has: offline, and refused.
  * Fails soft as the door above does — no room is no door.
  */
 export function useGameRoom(gameId: string | undefined): {
   readonly conversationId: string | undefined;
   readonly listed: boolean;
+  /** The list is held while offline, to resume on reconnect. */
+  readonly paused: boolean;
+  /** The list's read was refused, and nothing was listed before it. */
+  readonly error: AppError | null;
+  readonly retry: () => void;
 } {
-  const { data } = useConversations();
+  const { data, error, fetchStatus, refetch } = useConversations();
   const room =
     gameId === undefined ? undefined : data?.find((conversation) => conversation.gameId === gameId);
-  return { conversationId: room?.conversationId, listed: data !== undefined };
+  return {
+    conversationId: room?.conversationId,
+    listed: data !== undefined,
+    paused: fetchStatus === 'paused',
+    error: data === undefined ? error : null,
+    retry: () => void refetch(),
+  };
 }
 
 /**

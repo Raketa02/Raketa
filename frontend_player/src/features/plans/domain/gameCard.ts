@@ -214,12 +214,29 @@ export function gamesNeedingYou(
   games: readonly Game[],
   plans: readonly Plan[] | undefined,
   scoreAwaitsYou: (game: Game) => boolean,
+  drawnElsewhere?: ReadonlySet<string>,
 ): number {
-  return games
-    .filter(belongsOnTheRail)
-    .filter((game) => needsYou(gameCardName(game, planOf(game, plans)), () => scoreAwaitsYou(game)))
-    .length;
+  return railGames(games, drawnElsewhere).filter((game) =>
+    needsYou(gameCardName(game, planOf(game, plans)), () => scoreAwaitsYou(game)),
+  ).length;
 }
+
+/**
+ * **The rail's own cards** — the games on the rail (`belongsOnTheRail`) that no other card stands
+ * for. A game booked through a group is on `GET /games` too, and its booking's card is drawn first
+ * on the rail and counted on Home's column by its own read
+ * ([#556](https://github.com/Raketa02/Raketa/issues/556)), so the rail and the badge leave every
+ * Game in `drawnElsewhere` out: one game is one card and one count.
+ */
+export function railGames(
+  games: readonly Game[],
+  drawnElsewhere: ReadonlySet<string> = NOTHING_ELSEWHERE,
+): readonly Game[] {
+  return games.filter((game) => belongsOnTheRail(game) && !drawnElsewhere.has(game.gameId));
+}
+
+/** Nothing drawn elsewhere: one empty set rather than one per call. */
+const NOTHING_ELSEWHERE: ReadonlySet<string> = new Set();
 
 /**
  * **What the game screen's entry arm leads with** — the card's own door, read as a landing.

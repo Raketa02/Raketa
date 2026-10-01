@@ -28,9 +28,9 @@
  * ## The chat is reached from here, and only from here
  *
  * **Chat** in the top bar opens the game's room (the mechanics §14.3) — found by the room join
- * keyed by the game (`useGameRoom`), drawn while you are in the game and it is not over
- * (`chatIsOpen`) and the join finds a room. The room is pushed over this screen, so its back
- * chevron returns here. **Chat · 2's count, and its volt lit only when something is unread, are
+ * keyed by the game (`useGameRoom`), drawn while the join finds the room and the status can have
+ * one (`chatIsOpen`) — the room's own life closes it as today, after the result as well (§14.3). The
+ * room is pushed over this screen, so its back chevron returns here. **Chat · 2's count, and its volt lit only when something is unread, are
  * owed**: no read carries an unread count, so the door is drawn volt, as the mock draws it, with
  * no number (Part 16).
  *
@@ -52,25 +52,25 @@
 
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { OPEN_THE_CHAT, useGameRoom } from '@/features/conversations/types';
 import { GameForecast } from '@/features/games/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
-import { offlineMessage } from '@/shared/errors';
-import { behindOverlay, Button, courtSeatCount, Note, ScreenHeader, theme } from '@/shared/ui';
+import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/shared/ui';
 
-import { rowsOf, type DeckPerson } from '../domain/deck';
+import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
 import { chatIsOpen, resultActOf, type BookedGame } from '../domain/home';
 import { gameDayOf } from '../domain/when';
-import { useBooking, useOpenedGames, useReadClock } from '../hooks/useHome';
+import { bookingReadState, useBooking, useOpenedGames, useReadClock } from '../hooks/useHome';
 
 import { CardTag } from './CardTag';
+import { BookingAbsent } from './BookingAbsent';
 import { CheckInCard } from './CheckInCard';
 import { clubName, detailsDay, othersTitle } from './deckPresentation';
-import { GameFacts } from './GameFacts';
+import { GameFacts, type FactWords } from './GameFacts';
 import { GameGround } from './GameGround';
 import { GameTiles } from './GameTiles';
 import { HOME_GAME_COPY } from './homeCopy';
@@ -81,11 +81,9 @@ import {
   statusSubline,
   statusWord,
   whereAside,
-  type FactWords,
 } from './homePresentation';
 import { OthersFaces } from './OthersFaces';
 import { bookedChatRoute, bookedResultRoute } from './proposalRoutes';
-import { ReadFailed } from './ReadFailed';
 
 const COPY = HOME_GAME_COPY.details;
 
@@ -106,22 +104,14 @@ export function BookedGameScreen({ bookingId }: BookedGameScreenProps) {
   }, [drawn, open]);
 
   if (game === undefined) {
+    // Not this player's game — or one in a sport this build cannot name — is the one sentence.
     return (
-      <SafeAreaView style={s.screen} edges={['top']}>
-        <ScreenHeader compact onBack={() => router.back()} backLabel={COPY.back} />
-        <View style={s.body}>
-          {read.fetchStatus === 'paused' ? (
-            <Note variant="amber">{offlineMessage('resumes')}</Note>
-          ) : read.isPending ? (
-            <ActivityIndicator accessibilityLabel={COPY.reading} color={theme.color.muted} />
-          ) : read.error !== null && read.error.code !== 'booking_not_found' ? (
-            <ReadFailed error={read.error} onRetry={() => void read.refetch()} />
-          ) : (
-            // Not this player's game — or one in a sport this build cannot name.
-            <Note>{COPY.gone}</Note>
-          )}
-        </View>
-      </SafeAreaView>
+      <BookingAbsent
+        read={bookingReadState(read)}
+        gone={COPY.gone}
+        waiting={COPY.reading}
+        edges={['top']}
+      />
     );
   }
 
@@ -142,15 +132,16 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   const day = gameDayOf(game.startsAt, now);
   const when = day === undefined ? undefined : detailsDay(day, game.startsAt);
   const time = bookedTime(game.startsAt, game.endsAt);
+  const where = whereAside(game, game.where.distanceKm);
   const facts: readonly FactWords[] = [
     {
       label: COPY.where,
       value: clubName({ club: game.where }),
-      aside: whereAside(game.courtName, game.where.distanceKm),
+      ...(where === undefined ? {} : { aside: where }),
     },
     ...(when === undefined ? [] : [{ label: COPY.day, ...when }]),
     { label: COPY.time, value: time.from, aside: time.until },
-    moneyRow(game, now),
+    moneyRow(game, seats, now),
   ];
 
   const chat = chatIsOpen(game.status) ? room.conversationId : undefined;
@@ -163,7 +154,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
           compact
           onBack={() => router.back()}
           backLabel={COPY.back}
-          lead={<OthersFaces people={[...game.sides.yours, ...game.sides.theirs]} />}
+          lead={<OthersFaces people={peopleOn(game)} />}
           title={othersTitle(game)}
           subline={statusSubline(game.sport, game.status)}
           {...(chat === undefined
@@ -201,7 +192,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
 
           {act === undefined ? null : (
             <Button
-              label={act === 'we-played' ? COPY.wePlayed : COPY.confirmTheResult}
+              label={COPY.resultAct[act]}
               size="lg"
               onPress={() => router.push(bookedResultRoute(game.bookingId))}
             />

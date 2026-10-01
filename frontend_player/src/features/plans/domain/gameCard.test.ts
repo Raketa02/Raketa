@@ -17,6 +17,7 @@ import {
   gameCardName,
   gamesNeedingYou,
   needsYou,
+  railGames,
 } from './gameCard';
 import type { Plan } from './slots';
 
@@ -166,11 +167,30 @@ describe('how many games need you', () => {
     expect(gamesNeedingYou([game()], undefined, nobodysScore)).toBe(0);
   });
 
+  it('leaves out a game a booking’s card stands for — drawn and counted there (#556)', () => {
+    expect(gamesNeedingYou([SHORT_GAME], [], nobodysScore, new Set([SHORT_GAME.gameId]))).toBe(0);
+    expect(gamesNeedingYou([SHORT_GAME], [], nobodysScore, new Set(['another']))).toBe(1);
+  });
+
   it('counts a confirm card only where a score is waiting on your agreement', () => {
     const answering = game({ standing: 'AWAITING_ANSWER', entryClosesAt: undefined });
 
     expect(gamesNeedingYou([answering], [], (one) => one === answering)).toBe(1);
     expect(gamesNeedingYou([answering], [], nobodysScore)).toBe(0);
+  });
+});
+
+describe('the rail’s own cards', () => {
+  it('are the games on the rail that no booking’s card stands for (#556)', () => {
+    const booked = game({ gameId: '11111111-0000-4000-8000-00000000000b' });
+    const longGone = game({
+      gameId: '11111111-0000-4000-8000-00000000000c',
+      standing: 'NEVER_PLAYED',
+      entryClosesAt: '2026-09-01T09:00:00Z',
+    });
+
+    expect(railGames([game(), booked, longGone], new Set([booked.gameId]))).toEqual([game()]);
+    expect(railGames([game(), booked])).toEqual([game(), booked]);
   });
 });
 

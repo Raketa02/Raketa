@@ -16,18 +16,26 @@ import { dayLabel } from '@/shared/vocabulary/availabilityPresentation';
 import { theme, type ButtonVariant } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { BookedGame, HomeGame, MoneyLine } from '../domain/home';
-import type { HomeStatus } from '../domain/vocabulary';
-import { weekdayAt } from '../domain/when';
+import {
+  courtIsGiven,
+  cutOffAhead,
+  moneyLineOf,
+  type BookedGame,
+  type HomeGame,
+  type MoneyLine,
+} from '../domain/home';
+import type { GameKind, HomeStatus } from '../domain/vocabulary';
+import { weekdayAt, type GameDay } from '../domain/when';
 
+import { clubName, gameDayWords, LINE_JOIN, timeWords } from './deckPresentation';
+import type { FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
-import { clubName, timeWords } from './deckPresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = HOME_GAME_COPY;
 
-/** The mocks' middle dot. */
-const DOT = ' · ';
+/** A drawn line's parts aloud: the mocks' dots are commas to a listener. */
+const SPOKEN_JOIN = ', ';
 
 /** *Fri 16:00* — a moment the line names, on the club's calendar. */
 function shortMoment(instant: string): string {
@@ -78,43 +86,82 @@ export function statusWord(status: HomeStatus): string {
 }
 
 /**
- * **The line under a Home card** — the mechanics §14.1's table, word for word: *Paid · 30 zł · free
- * to leave until Sat 17:00*, *Nobody pays until Bonarka confirms*, *1 seat open · fills by Sat 17:00
- * or the game is off and everyone is refunded*, *Refunded 30 zł*.
+ * **The money line's parts** — the mechanics §14.1's table, word for word, one clause a part: drawn
+ * joined by the mocks' dots (`moneyWords`), spoken joined by commas (`moneySpoken`), so neither is
+ * cut out of the other.
  */
-export function moneyWords(line: MoneyLine): string {
+function moneyParts(line: MoneyLine): readonly string[] {
   const money = COPY.money;
   switch (line.kind) {
     case 'booked': {
       const share = formatZloty(line.shareGrosze);
-      const paid = line.paid ? `${money.paid}${DOT}${share}` : share;
-      return line.freeToLeaveUntil === undefined
-        ? paid
-        : `${paid}${DOT}${money.freeToLeaveUntil} ${shortMoment(line.freeToLeaveUntil)}`;
+      return [
+        ...(line.paid ? [money.paid] : []),
+        share,
+        ...(line.freeToLeaveUntil === undefined
+          ? []
+          : [`${money.freeToLeaveUntil} ${shortMoment(line.freeToLeaveUntil)}`]),
+      ];
     }
     case 'waiting':
-      return `${money.nobodyPaysUntil} ${line.club ?? money.theClub} ${money.confirms}`;
+      return [`${money.nobodyPaysUntil} ${line.club ?? money.theClub} ${money.confirms}`];
     case 'seatOpen': {
       const open = counted(line.seats, money.seatOpen, money.seatsOpen);
       return line.fillsBy === undefined
-        ? `${open}${DOT}${money.offeredToOthers}`
-        : `${open}${DOT}${money.fillsBy} ${shortMoment(line.fillsBy)} ${money.orTheGameIsOff}`;
+        ? [open, money.offeredToOthers, money.goesAhead]
+        : [open, `${money.fillsBy} ${shortMoment(line.fillsBy)} ${money.orTheGameIsOff}`];
     }
     case 'calledOff':
-      return line.refundedGrosze === undefined
-        ? money.nobodyPaid
-        : `${money.refunded} ${formatZloty(line.refundedGrosze)}`;
+      return [
+        line.refundedGrosze === undefined
+          ? money.nobodyPaid
+          : `${money.refunded} ${formatZloty(line.refundedGrosze)}`,
+      ];
   }
+}
+
+/**
+ * **The line under a Home card**: *Paid · 30 zł · free to leave until Sat 17:00*, *Nobody pays until
+ * Bonarka confirms*, *1 seat open · fills by Sat 17:00 or the game is off and everyone is refunded*,
+ * *Refunded 30 zł*.
+ */
+export function moneyWords(line: MoneyLine): string {
+  return moneyParts(line).join(LINE_JOIN);
+}
+
+/** The same line aloud: *Paid, 30 zł, free to leave until Fri 16:00*. */
+export function moneySpoken(line: MoneyLine): string {
+  return moneyParts(line).join(SPOKEN_JOIN);
+}
+
+/** The sport, and the kind only when it is a friendly — a card's sport word in parts. */
+function sportParts(sport: Sport, kind: GameKind): readonly string[] {
+  return kind === 'forFun' ? [sportLabel(sport), PROPOSALS_COPY.kind.forFun] : [sportLabel(sport)];
+}
+
+/** *Padel* · *Padel · For fun* — a card's sport word. */
+export function sportWords(sport: Sport, kind: GameKind): string {
+  return sportParts(sport, kind).join(LINE_JOIN);
 }
 
 /** *Padel · booked* — the details' second line: the sport, and the status in lower case. */
 export function statusSubline(sport: Sport, status: HomeStatus): string {
-  return `${sportLabel(sport)}${DOT}${statusWord(status).toLowerCase()}`;
+  return `${sportLabel(sport)}${LINE_JOIN}${COPY.statusInLine[status]}`;
 }
 
-/** *Court 2 · 3,1 km* — WHERE's aside: the court, and how far the club is when that is known. */
-export function whereAside(courtName: string, distanceKm: number | undefined): string {
-  return distanceKm === undefined ? courtName : `${courtName}${DOT}${formatDistanceKm(distanceKm)}`;
+/**
+ * *Court 2 · 3,1 km* — WHERE's aside: the court once it is given, and how far the club is when that
+ * is known. Nothing when neither is.
+ */
+export function whereAside(
+  game: Pick<HomeGame, 'status' | 'courtName'>,
+  distanceKm: number | undefined,
+): string | undefined {
+  const parts = [
+    ...(courtIsGiven(game.status) ? [game.courtName] : []),
+    ...(distanceKm === undefined ? [] : [formatDistanceKm(distanceKm)]),
+  ];
+  return parts.length === 0 ? undefined : parts.join(LINE_JOIN);
 }
 
 /** *10:00* and *until 11:00* — a booked game's TIME, its end the read's own `ends_at`. */
@@ -128,59 +175,55 @@ export function bookedTime(
   };
 }
 
-/** One fact of the details' accent line: its label, its value and the words after it. */
-export interface FactWords {
-  readonly label: string;
-  readonly value: string;
-  readonly aside?: string;
-}
-
 /**
- * **The details' money row** (the screens A4.1): *PAID · 28 zł · your share · to the club*, with
- * *· free to leave until Sat 10:00* while the cut-off is ahead of `now`; the share nobody pays yet
- * while the club decides; *Refunded*, or *nobody paid*, once the game is called off.
+ * **The details' money row** (the screens A4.1), read off the card's own money line
+ * (`moneyLineOf`): *PAID · 28 zł · your share · to the club*, with *· free to leave until Sat 10:00*
+ * while the cut-off is ahead (`cutOffAhead`, the line's own fold); the share nobody pays yet while
+ * the club decides; *Refunded*, or *nobody paid*, once the game is called off.
  */
 export function moneyRow(
-  game: Pick<BookedGame, 'status' | 'money' | 'where'>,
+  game: Pick<BookedGame, 'status' | 'money' | 'where' | 'sides'>,
+  seats: number,
   now: number,
 ): FactWords {
   const { money } = game;
   const words = COPY.details;
   const value = formatZloty(money.shareGrosze);
+  const line = moneyLineOf({ ...game, club: game.where }, seats, now);
 
-  if (game.status === 'CALLED_OFF') {
-    return money.paid
-      ? { label: words.refunded, value }
-      : { label: words.yourShare, value, aside: words.nobodyPaid };
+  if (line?.kind === 'calledOff') {
+    return line.refundedGrosze === undefined
+      ? { label: words.yourShare, value, aside: words.nobodyPaid }
+      : { label: words.refunded, value };
   }
-  if (game.status === 'WAITING_FOR_THE_CLUB') {
-    const waiting = moneyWords({
-      kind: 'waiting',
-      ...(game.where.name === undefined ? {} : { club: game.where.name }),
-    });
+  if (line?.kind === 'waiting') {
     return {
       label: words.yourShare,
       value,
-      aside: waiting.charAt(0).toLowerCase() + waiting.slice(1),
+      aside: `${words.nobodyPaysUntil} ${line.club ?? COPY.money.theClub} ${COPY.money.confirms}`,
     };
   }
 
-  const until = money.freeToLeaveUntil;
-  const free =
-    until !== undefined && Date.parse(until) > now
-      ? `${DOT}${COPY.money.freeToLeaveUntil} ${shortMoment(until)}`
-      : '';
+  const until = cutOffAhead(money, now);
   return {
     label: money.paid ? words.paid : words.yourShare,
     value,
-    aside: `${words.toTheClub}${free}`,
+    aside: [
+      words.toTheClub,
+      ...(until === undefined ? [] : [`${COPY.money.freeToLeaveUntil} ${shortMoment(until)}`]),
+    ].join(LINE_JOIN),
   };
+}
+
+/** *Your check-in code: K 7 M 2 Q X* — the short code aloud, a character at a time. */
+export function shortCodeSpoken(code: string): string {
+  return `${COPY.details.codeSpoken}: ${[...code].join(' ')}`;
 }
 
 /**
  * **A Home card, spoken** — one element with no action, as the Classic card's body is: *Booked,
- * new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł. Chat open.* The
- * mocks' dots are commas aloud. *Open game* is an element of its own, so its verb is not here.
+ * new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł. Chat open.* *Open
+ * game* is an element of its own, so its verb is not here.
  */
 export function homeCardLabel({
   game,
@@ -189,25 +232,29 @@ export function homeCardLabel({
   money,
   chat,
 }: {
-  readonly game: Pick<HomeGame, 'status' | 'sport' | 'club' | 'courtName' | 'startsAt'>;
+  readonly game: Pick<HomeGame, 'status' | 'sport' | 'kind' | 'club' | 'courtName' | 'startsAt'>;
   /** Marked *new*. */
   readonly fresh: boolean;
-  /** DAY's words, or nothing for an instant that names no day. */
-  readonly day: string | undefined;
-  /** The money line as drawn, or nothing. */
-  readonly money: string | undefined;
+  /** The game's day, or nothing for an instant that names no day. */
+  readonly day: GameDay | undefined;
+  /** The money line, or nothing. */
+  readonly money: MoneyLine | undefined;
   /** The game's chat is open. */
   readonly chat: boolean;
 }): string {
   const time = timeWords(game.startsAt);
-  const when = [day, `${time.from} ${time.until}`].filter((part) => part !== undefined).join(', ');
+  const where = courtIsGiven(game.status)
+    ? `${clubName(game)}${SPOKEN_JOIN}${game.courtName}`
+    : clubName(game);
   return [
-    fresh ? `${statusWord(game.status)}, ${COPY.newSpoken}` : statusWord(game.status),
-    sportLabel(game.sport),
-    `${clubName(game)}, ${game.courtName}`,
-    when,
-    ...(money === undefined ? [] : [money.split(DOT).join(', ')]),
-    ...(chat ? [COPY.chatOpen.charAt(0).toUpperCase() + COPY.chatOpen.slice(1)] : []),
+    fresh ? `${statusWord(game.status)}${SPOKEN_JOIN}${COPY.newSpoken}` : statusWord(game.status),
+    sportParts(game.sport, game.kind).join(SPOKEN_JOIN),
+    where,
+    [...(day === undefined ? [] : [gameDayWords(day)]), `${time.from} ${time.until}`].join(
+      SPOKEN_JOIN,
+    ),
+    ...(money === undefined ? [] : [moneySpoken(money)]),
+    ...(chat ? [COPY.chatOpenSpoken] : []),
   ]
     .map((sentence) => `${sentence}.`)
     .join(' ');

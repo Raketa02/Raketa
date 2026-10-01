@@ -39,6 +39,7 @@ import {
   stubHomeGames,
 } from '@/test-support/home';
 import {
+  CONVERSATIONS_PATH,
   GATE_USER,
   HOME_PATH,
   bookingPath,
@@ -179,8 +180,25 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
   });
 
-  it('has no bubble with no room, nor once the game is over', async () => {
+  it('has no bubble with no room', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    await launchSignedIn();
+
+    await card();
+    expect(screen.queryByTestId('home-game-chat')).toBeNull();
+  });
+
+  it('keeps the bubble past the result while the room lives (§14.3: it closes as today)', async () => {
     stubHomeGames(transport, [homeGame({ status: 'COUNTED' })]);
+    stubConversations(transport, [bookedRoomRow()]);
+    await launchSignedIn();
+
+    await card();
+    expect(await screen.findByTestId('home-game-chat')).toBeTruthy();
+  });
+
+  it('has no bubble on a called-off game, whatever the list still holds', async () => {
+    stubHomeGames(transport, [homeGame({ status: 'CALLED_OFF' })]);
     stubConversations(transport, [bookedRoomRow()]);
     await launchSignedIn();
 
@@ -369,7 +387,7 @@ describe('a booked game’s details (A4.1)', () => {
     stubGames(transport, [bookedGameOnTheList()], HOME_READ_AT);
     await openDetails(bookingDetails({ status: 'NEEDS_RESULT', needs_you: true }));
 
-    fireEvent.press(await screen.findByRole('button', { name: DETAILS.wePlayed }));
+    fireEvent.press(await screen.findByRole('button', { name: DETAILS.resultAct['we-played'] }));
 
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/result`));
     // Today's score grid, led with — the game screen's own button for it.
@@ -382,8 +400,8 @@ describe('a booked game’s details (A4.1)', () => {
     await openDetails();
 
     await screen.findByText('Padel · booked');
-    expect(screen.queryByRole('button', { name: DETAILS.wePlayed })).toBeNull();
-    expect(screen.queryByRole('button', { name: DETAILS.confirmTheResult })).toBeNull();
+    expect(screen.queryByRole('button', { name: DETAILS.resultAct['we-played'] })).toBeNull();
+    expect(screen.queryByRole('button', { name: DETAILS.resultAct.confirm })).toBeNull();
   });
 
   it('says so in one sentence for a game that is not the reader’s', async () => {
@@ -421,7 +439,7 @@ describe('the chat — reached from the details only (A4.4)', () => {
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
   });
 
-  it('has no Chat while the game waits for the club', async () => {
+  it('names no court while the game waits for the club, and has no Chat', async () => {
     await openDetails(
       bookingDetails({
         status: 'WAITING_FOR_THE_CLUB',
@@ -432,12 +450,36 @@ describe('the chat — reached from the details only (A4.4)', () => {
 
     await screen.findByText('Padel · waiting for the club');
     expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
+    expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
   });
 
-  it('has no Chat once the game is over, though the room is still listed', async () => {
+  it('keeps Chat past the result while the room lives, and has none once it has closed', async () => {
     await openDetails(bookingDetails({ status: 'COUNTED', shows_forecast: false }));
 
     await screen.findByText('Padel · counted');
+    expect(screen.getByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
+  });
+
+  it('has no Chat once the room has closed', async () => {
+    await openDetails(bookingDetails({ status: 'COUNTED', shows_forecast: false }), []);
+
+    await screen.findByText('Padel · counted');
     expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
+  });
+
+  it('says why the rooms could not be read, with the retry, rather than that there is no chat', async () => {
+    // The rooms refused: the details draw no door, and a way straight into the room says why.
+    stubHomeGames(transport, [homeGame()]);
+    stubBooking(transport, bookingDetails());
+    transport.on('GET', CONVERSATIONS_PATH, () => errorResponse(429, 'rate_limited'));
+    await launchSignedIn();
+    fireEvent.press(await screen.findByRole('button', { name: HOME.openGame }));
+    await screen.findByText('Padel · booked');
+    expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
+    act(() => router.push(`/booking/${BOOKING}/chat`));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/chat`));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.queryByText(DETAILS.noRoom)).toBeNull();
   });
 });

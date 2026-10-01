@@ -11,6 +11,7 @@
 
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 
+import type { ResultAct } from '../domain/home';
 import type { HomeStatus } from '../domain/vocabulary';
 
 export const HOME_GAME_COPY = {
@@ -26,12 +27,24 @@ export const HOME_GAME_COPY = {
     NEVER_PLAYED: 'Never played',
     CALLED_OFF: 'Called off',
   } satisfies Readonly<Record<HomeStatus, string>>,
+  /** The same words mid-line — the details' second line, *Padel · booked*, and the room's. */
+  statusInLine: {
+    WAITING_FOR_THE_CLUB: 'waiting for the club',
+    BOOKED: 'booked',
+    SEAT_OPEN: 'seat open',
+    NEEDS_RESULT: 'needs result',
+    CONFIRM_THE_RESULT: 'confirm the result',
+    COUNTED: 'counted',
+    UNCOUNTED: 'uncounted',
+    NEVER_PLAYED: 'never played',
+    CALLED_OFF: 'called off',
+  } satisfies Readonly<Record<HomeStatus, string>>,
   /** A game that filled since the player last looked, until its details are opened. */
   new: 'New',
   newSpoken: 'new',
   openGame: 'Open game',
   /** The card's bubble, spoken — it says the chat is open, and is not a door (A8). */
-  chatOpen: 'chat open',
+  chatOpenSpoken: 'Chat open',
   /** The money line's words (§14.1). */
   money: {
     paid: 'Paid',
@@ -43,7 +56,8 @@ export const HOME_GAME_COPY = {
     seatsOpen: 'seats open',
     fillsBy: 'fills by',
     orTheGameIsOff: 'or the game is off and everyone is refunded',
-    offeredToOthers: 'offered to others · the game goes ahead',
+    offeredToOthers: 'offered to others',
+    goesAhead: 'the game goes ahead',
     refunded: 'Refunded',
     nobodyPaid: 'Nobody paid',
   },
@@ -60,12 +74,17 @@ export const HOME_GAME_COPY = {
     refunded: 'Refunded',
     toTheClub: 'your share · to the club',
     nobodyPaid: 'nobody paid',
+    /** The money row's aside while the club decides — the card's line, mid-sentence. */
+    nobodyPaysUntil: 'nobody pays until',
     showAtTheDesk: 'Show at the desk',
     deskLine: 'Show this at the club’s desk when you arrive — or read them the code.',
     qrSpoken: 'Your check-in code as a QR code',
     codeSpoken: 'Your check-in code',
-    wePlayed: WE_PLAYED,
-    confirmTheResult: 'Confirm the result',
+    /** Today's result act, once the hour has come — the button under the game card. */
+    resultAct: {
+      'we-played': WE_PLAYED,
+      confirm: 'Confirm the result',
+    } satisfies Readonly<Record<ResultAct, string>>,
     reading: 'Reading the game',
     gone: 'This game isn’t one of yours any more.',
     noRoom: 'This game’s chat isn’t open.',

@@ -31,7 +31,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { sportLabel } from '@/features/onboarding/types';
 import { courtSeatCount, DarkCard, Button, theme } from '@/shared/ui';
 
 import { peopleOn } from '../domain/deck';
@@ -40,18 +39,18 @@ import { gameDayOf } from '../domain/when';
 
 import { CardTag } from './CardTag';
 import { clubName, detailsDay, timeWords } from './deckPresentation';
-import { GameFacts } from './GameFacts';
+import { GameFacts, type FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
 import {
   OPEN_GAME_VARIANT,
   STATUS_INK,
   homeCardLabel,
   moneyWords,
+  sportWords,
   statusWord,
-  type FactWords,
+  whereAside,
 } from './homePresentation';
 import { OthersFaces } from './OthersFaces';
-import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = HOME_GAME_COPY;
 
@@ -71,21 +70,20 @@ export interface HomeGameCardProps {
 export function HomeGameCard({ game, now, fresh, chat, width, onOpen }: HomeGameCardProps) {
   const ink = STATUS_INK[game.status];
   const line = moneyLineOf(game, courtSeatCount(game.sport), now);
-  const money = line === undefined ? undefined : moneyWords(line);
 
   const day = gameDayOf(game.startsAt, now);
   const when = day === undefined ? undefined : detailsDay(day, game.startsAt);
   const time = timeWords(game.startsAt);
+  const where = whereAside(game, undefined);
   const facts: readonly FactWords[] = [
-    { label: COPY.details.where, value: clubName(game), aside: game.courtName },
+    {
+      label: COPY.details.where,
+      value: clubName(game),
+      ...(where === undefined ? {} : { aside: where }),
+    },
     ...(when === undefined ? [] : [{ label: COPY.details.day, ...when }]),
     { label: COPY.details.time, value: time.from, aside: time.until },
   ];
-
-  const sport =
-    game.kind === 'forFun'
-      ? `${sportLabel(game.sport)} · ${PROPOSALS_COPY.kind.forFun}`
-      : sportLabel(game.sport);
 
   return (
     <DarkCard style={[s.card, { width }]}>
@@ -94,8 +92,8 @@ export function HomeGameCard({ game, now, fresh, chat, width, onOpen }: HomeGame
         accessibilityLabel={homeCardLabel({
           game,
           fresh,
-          day: when === undefined ? undefined : [when.value, when.aside].filter(Boolean).join(' '),
-          money,
+          day,
+          money: line,
           chat,
         })}
         style={s.body}
@@ -105,7 +103,7 @@ export function HomeGameCard({ game, now, fresh, chat, width, onOpen }: HomeGame
           <CardTag label={statusWord(game.status)} tone="grey" dot={ink} />
           {fresh ? <CardTag label={COPY.new} tone="volt" /> : null}
           <Text style={s.sport} numberOfLines={1}>
-            {sport}
+            {sportWords(game.sport, game.kind)}
           </Text>
         </View>
 
@@ -116,7 +114,7 @@ export function HomeGameCard({ game, now, fresh, chat, width, onOpen }: HomeGame
           <OthersFaces people={peopleOn(game)} />
         </View>
 
-        {money === undefined ? null : <Text style={s.line}>{money}</Text>}
+        {line === undefined ? null : <Text style={s.line}>{moneyWords(line)}</Text>}
       </View>
 
       <View style={s.footer}>

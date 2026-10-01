@@ -35,15 +35,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * **The values the phone may keep** (ADR-0188 §2): the Play segment (#512), the sport last picked
- * in a group's fast filter (#513) and the profile an account with two wore last (#518). A value not
- * listed here cannot be stored.
+ * in a group's fast filter (#513) and the profile an account with two wore last (#518). The table
+ * is full: a value not listed here cannot be stored, and a fourth is a new record.
  *
  * **A fourth since [#556](https://github.com/Raketa02/Raketa/issues/556)**: the booked games whose
  * details this account has opened, which is what keeps a game on Home *new until opened* (the
  * mechanics §11.4). It is what the player did on this phone rather than a copy of anything the
  * server knows — no read says whether a game was opened — and it obeys the table's two rules, per
- * account and forgotten at sign-out. **Owed, from a root session**: ADR-0188 §2's table, whose
- * fourth row this is.
+ * account and forgotten at sign-out. **That record is owed, from a root session** — or the product
+ * owner's ruling that *new* lives elsewhere — and until it exists this value stands outside the
+ * table ADR-0188 §2 accepted.
  */
 export type PhonePreference = 'playSegment' | 'lastSport' | 'lastProfile' | 'openedGames';
 

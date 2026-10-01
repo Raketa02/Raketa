@@ -17,6 +17,7 @@ import { Card, theme } from '@/shared/ui';
 import type { CheckIn } from '../domain/home';
 
 import { HOME_GAME_COPY } from './homeCopy';
+import { shortCodeSpoken } from './homePresentation';
 import { qrDrawing } from './qrPath';
 
 const COPY = HOME_GAME_COPY.details;
@@ -44,10 +45,7 @@ export function CheckInCard({ checkIn }: { readonly checkIn: CheckIn }) {
           <Path d={drawing.path} fill={theme.color.ink} />
         </Svg>
       </View>
-      <Text
-        style={s.short}
-        accessibilityLabel={`${COPY.codeSpoken}: ${checkIn.shortCode.split('').join(' ')}`}
-      >
+      <Text style={s.short} accessibilityLabel={shortCodeSpoken(checkIn.shortCode)}>
         {checkIn.shortCode}
       </Text>
       <Text style={s.line}>{COPY.deskLine}</Text>

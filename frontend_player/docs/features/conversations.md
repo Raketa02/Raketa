@@ -296,7 +296,8 @@ mechanics §14.3). `ConversationScreen` takes `booked: { state }` and draws the 
 no plan card, no plan quick chips, no _Details_ door (`ConversationHeader`'s `onOpenGame` is
 optional for it) — with the header's second line the booking's word, because the Classic fold names
 a booked Game by a rung it never stands on. The room is found by the join keyed by the **game**:
-`useGameRoom(gameId)` (with `listed`, so the screen can tell _not yet_ from _none_) and
+`useGameRoom(gameId)` (with `listed`, `paused` and `error`, so the screen can tell _not yet_,
+_offline_ and _refused_ from _none_) and
 `useGameRooms()` for Home's cards — the join `GET /bookings/{id}` documents, since a booked game's
 room is filed under its booking and is about its game from its first moment. No read carries a
 conversation id.

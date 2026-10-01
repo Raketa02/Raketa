@@ -113,8 +113,11 @@ export type MoneyLine =
   | { readonly kind: 'seatOpen'; readonly seats: number; readonly fillsBy?: string }
   | { readonly kind: 'calledOff'; readonly refundedGrosze?: number };
 
-/** The cut-off, while it is still ahead of `now` — the instant the line switches at. */
-function cutOffAhead(money: BookedMoney, now: number): string | undefined {
+/**
+ * **The cut-off, while it is still ahead of `now`** — the instant *free to leave until …* leaves
+ * the card's line and the details' money row, both off this one fold.
+ */
+export function cutOffAhead(money: BookedMoney, now: number): string | undefined {
   const until = money.freeToLeaveUntil;
   return until !== undefined && Date.parse(until) > now ? until : undefined;
 }
@@ -173,17 +176,40 @@ export function moneyLineOf(
 /** How long an ended game keeps its card — **a day, the Classic rail's number** (`plans`). */
 export const ENDED_HOME_SHELF_LIFE_MS = 24 * 60 * 60 * 1000;
 
-/** The four ends — a game that will not be played, or whose result is settled. */
-const ENDED: Readonly<Record<HomeStatus, boolean>> = {
-  WAITING_FOR_THE_CLUB: false,
-  BOOKED: false,
-  SEAT_OPEN: false,
-  NEEDS_RESULT: false,
-  CONFIRM_THE_RESULT: false,
-  COUNTED: true,
-  UNCOUNTED: true,
-  NEVER_PLAYED: true,
-  CALLED_OFF: true,
+/**
+ * **What each status says about a booked game** — one table, so a tenth status is one row and every
+ * rule below answers for it at once:
+ *
+ * - `ended` — one of the four ends: a game that will not be played, or whose result is settled.
+ * - `fresh` — filled and not yet past its hour, which is when a game can be *new*.
+ * - `room` — the game can have a room. **Its own life decides past that** (the mechanics §14.3): a
+ *   booked game's room opens with the booking and closes as today — 48 hours after *we played*,
+ *   when the result window closes, or when the game is called off — so the door is drawn while the
+ *   join finds the room, and a counted game's room outlives the result by a day or two. A game
+ *   waiting for the club has none yet, and a called-off one none any more.
+ * - `court` — the court is given: an On request club gives it with its yes (A4.2: *no court
+ *   number* while waiting).
+ */
+const STATUS: Readonly<
+  Record<
+    HomeStatus,
+    {
+      readonly ended: boolean;
+      readonly fresh: boolean;
+      readonly room: boolean;
+      readonly court: boolean;
+    }
+  >
+> = {
+  WAITING_FOR_THE_CLUB: { ended: false, fresh: true, room: false, court: false },
+  BOOKED: { ended: false, fresh: true, room: true, court: true },
+  SEAT_OPEN: { ended: false, fresh: true, room: true, court: true },
+  NEEDS_RESULT: { ended: false, fresh: false, room: true, court: true },
+  CONFIRM_THE_RESULT: { ended: false, fresh: false, room: true, court: true },
+  COUNTED: { ended: true, fresh: false, room: true, court: true },
+  UNCOUNTED: { ended: true, fresh: false, room: true, court: true },
+  NEVER_PLAYED: { ended: true, fresh: false, room: true, court: true },
+  CALLED_OFF: { ended: true, fresh: false, room: false, court: true },
 };
 
 /**
@@ -197,23 +223,10 @@ const ENDED: Readonly<Record<HomeStatus, boolean>> = {
  * after the hour is not drawn, which is the Classic rail's own cost for a score counted by silence.
  */
 export function onHome(game: Pick<HomeGame, 'status' | 'startsAt'>, now: number): boolean {
-  if (!ENDED[game.status]) return true;
+  if (!STATUS[game.status].ended) return true;
   const hourEnds = Date.parse(game.startsAt) + GAME_LENGTH_MS;
   return Number.isNaN(hourEnds) || now - hourEnds < ENDED_HOME_SHELF_LIFE_MS;
 }
-
-/** The statuses a fresh game can be in — filled, and not yet past its hour. */
-const FRESH: Readonly<Record<HomeStatus, boolean>> = {
-  WAITING_FOR_THE_CLUB: true,
-  BOOKED: true,
-  SEAT_OPEN: true,
-  NEEDS_RESULT: false,
-  CONFIRM_THE_RESULT: false,
-  COUNTED: false,
-  UNCOUNTED: false,
-  NEVER_PLAYED: false,
-  CALLED_OFF: false,
-};
 
 /**
  * **Marked *new* until opened** (the mechanics §11.4; the screens A8) — a game that filled since you
@@ -228,7 +241,7 @@ export function isNew(
   game: Pick<HomeGame, 'bookingId' | 'status'>,
   opened: ReadonlySet<string> | undefined,
 ): boolean {
-  return opened !== undefined && FRESH[game.status] && !opened.has(game.bookingId);
+  return opened !== undefined && STATUS[game.status].fresh && !opened.has(game.bookingId);
 }
 
 /**
@@ -264,24 +277,25 @@ export function openedToKeep(
 // ---------------------------------------------------------------------------
 
 /**
- * **The Chat door is open** while you are in the game and it is not over (the mechanics §14.2,
- * §14.3) — from the booking, when the room opens, to the result, when it closes as today. A game
- * waiting for the club has no room yet; an ended one has none any more.
+ * **Whether the game can have a room** — the Chat door's status half (the mechanics §14.2, §14.3);
+ * the other half is the join finding the room, whose own life closes it as today (`STATUS`).
  */
-const CHAT_OPEN: Readonly<Record<HomeStatus, boolean>> = {
-  WAITING_FOR_THE_CLUB: false,
-  BOOKED: true,
-  SEAT_OPEN: true,
-  NEEDS_RESULT: true,
-  CONFIRM_THE_RESULT: true,
-  COUNTED: false,
-  UNCOUNTED: false,
-  NEVER_PLAYED: false,
-  CALLED_OFF: false,
-};
-
 export function chatIsOpen(status: HomeStatus): boolean {
-  return CHAT_OPEN[status];
+  return STATUS[status].room;
+}
+
+/** **Whether the court is given** — WHERE names it once the club has said yes (A4.2). */
+export function courtIsGiven(status: HomeStatus): boolean {
+  return STATUS[status].court;
+}
+
+/**
+ * **The Games Home's cards stand for** — every booked game's, the shelved ones too. Each is on
+ * `GET /games` as well (#542), and the Classic rail and its half of the badge leave them out, so a
+ * game is drawn and counted once, as its booking.
+ */
+export function bookedGameIds(games: readonly Pick<HomeGame, 'gameId'>[]): ReadonlySet<string> {
+  return new Set(games.map((game) => game.gameId));
 }
 
 /** The result act the details lead to — today's game screen, which tells and agrees a result. */

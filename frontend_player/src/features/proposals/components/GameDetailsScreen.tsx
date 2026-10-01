@@ -21,8 +21,8 @@
  *
  * ## What it draws is the card the deck dealt
  *
- * There is no read of one proposal: the deck is the reader's view of every game dealt to them, and
- * the details are one card of it, found by id in the read for this group, sport and kind. **Once a
+ * The details are one card of the deck — the reader's view of every game dealt to them — found by
+ * id in the read for this group, sport and kind. **Once a
  * yes is said here the deck stops dealing the card** — a card you are In on is in *You're In*, not
  * the deck — so the screen keeps the card it last found for as long as it is open, with your tile
  * In and the game one yes further on (`withYourYes`), and *Withdraw* where the two answers were. A
@@ -35,13 +35,18 @@
  * ## A game you are already In on is drawn from your yes
  *
  * You › Payments' *LIVE YESES* open this screen too (#554), for games the deck **never** deals —
- * every one of them is a yes of yours. There is no read of one proposal yet (#542 serves it), so
- * when the deck has answered without the card the screen reads your live yeses and, finding the
+ * every one of them is a yes of yours. When the deck has answered without the card the screen reads
+ * your live yeses and, finding the
  * game there, draws what the yes knows: the club as the title, *Filling*, WHERE · DAY · TIME · YOUR
  * SHARE, and *Withdraw*. No tiles, no forecast and no grid — who else is In is not on the yes, and
  * the screen draws nothing it cannot vouch for. A withdraw puts the answers back, and the deck,
  * read again, deals the game with everything on it. The yes found is kept while the screen is open,
  * as the card is.
+ *
+ * **Owed: `GET /proposals/{id}`** (#542 serves one proposal's details — the reader's card, everybody
+ * In once they are, the status, and what they may do). Moving this screen onto it replaces the
+ * live-yes view with the full card, and brings *Waiting for the club* with its *Leave the game* and
+ * a payment to confirm (A4.2) — #557's, which builds On request and leaving on it.
  *
  * **A game this screen never found** — a link into a card the deck no longer deals and no yes of
  * yours names, a read that forgot it — says so in one sentence rather than drawing a game it cannot
@@ -125,9 +130,8 @@ import {
 import { FILL_COPY } from './fillCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { CardTag } from './CardTag';
-import { GameFacts } from './GameFacts';
+import { GameFacts, type FactWords } from './GameFacts';
 import { GameGround } from './GameGround';
-import type { FactWords } from './homePresentation';
 import { GameTiles } from './GameTiles';
 import { OthersFaces } from './OthersFaces';
 import { OverlapGrid } from './OverlapGrid';
