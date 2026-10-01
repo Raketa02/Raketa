@@ -65,7 +65,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   requests and answers (`bookings`) and the players' Names on them (`users`), and since #544
   what happens to a booked game after the fill (`BookedGameChanges`), a paid share given back
   (`SeatRefunds`) and the card fee on one (`CardFees`) — and since #545 a pool's rescues
-  (`PlayerBookings.rescues_in`), a seat taken or declined, and a seat-taken refund. The deck's, the proposer's and the
+  (`PlayerBookings.rescues_in`), a seat taken or declined, and a seat-taken refund — and since
+  #546 the pair rule and a player's level window (`PlayerFit`) and each member's Level, week,
+  gender and preference (`PlayersInPlay`). The rest of the deck's, the proposer's and the
   fill's ports (#538–#541) were contracted over HTTP only and are owed rows there.
   **The thirteenth, `booking_demands.py`, is Bookings' consumer register** (#543): the first
   free court of a club at an hour with its cut-off and time to confirm, and a club's desk —

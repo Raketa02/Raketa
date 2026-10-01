@@ -1,6 +1,6 @@
 """What ``proposals`` demands of the rest of the platform for Home and a game's
-details (#542), On request (#543), leaving and the cut-off (#544), and rescues
-(#545), run against every registered implementation.
+details (#542), On request (#543), leaving and the cut-off (#544), rescues
+(#545) and posting (#546), run against every registered implementation.
 
 **A demand nobody executes is a demand satisfied by accident** (``docs/adr/0098``).
 Every implementation registered in ``app/bootstrap/proposal_demands.py`` is
@@ -23,6 +23,7 @@ import pytest_asyncio
 
 from app.bootstrap.composition import (
     build_booking_repository,
+    build_clock,
     build_domain_event_store,
     build_event_publisher,
     build_game_opening,
@@ -52,10 +53,15 @@ from app.modules.proposals.domain.ports import (
     GameResults,
     GameToAsk,
     PlayerBookings,
+    PlayerFit,
     PlayerNames,
+    PlayersInPlay,
     RefundReason,
     SeatRefunds,
 )
+from app.modules.player_profile.domain.gender import Gender, GenderPreference
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
+from app.modules.proposals.domain.post import LevelRange
 from app.modules.proposals.domain.proposal import ClubAnswer
 from app.kernel import minutes
 from app.shared.ids import new_uuid
@@ -640,3 +646,124 @@ def test_the_card_fee_on_a_share_is_the_provider_s_standard_price(implementation
     # The mechanics §12.3: about 1,60 zł on a 40 zł share.
     assert fees.card_fee_on(40_00) == 1_60
     assert fees.card_fee_on(30_00) == 1_45
+
+
+# --------------------------------------------------------------------------- #
+# PlayerFit — whether two people may share a court, and a player's window
+# --------------------------------------------------------------------------- #
+
+
+async def _rated(client, session_factory, name: str, *, mu: float, **profile) -> UUID:
+    player_id, token = await world.register(client, name)
+    await world.commit_profile(client, token, **profile)
+    await world.rate_in(session_factory, player_id, Sport.PADEL, mu=mu)
+    return player_id
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerFit))
+async def test_two_people_fit_by_the_matchers_own_pair_rule(
+    implementation, client, session_factory, session
+):
+    """Levels inside the kind's window fit; a gap past it, a preference that
+    excludes, and somebody unrated in the sport do not."""
+
+    ola = await _rated(client, session_factory, "ola", mu=2.5)
+    ewa = await _rated(client, session_factory, "ewa", mu=2.9)
+    far = await _rated(client, session_factory, "zosia", mu=3.4)
+    picky = await _rated(
+        client, session_factory, "ania", mu=2.5, gender_preference="MEN_ONLY"
+    )
+    unrated, token = await world.register(client, "kuba")
+    await world.commit_profile(client, token)
+    fit: PlayerFit = implementation.build(session)
+
+    unfit = await fit.unfit_pairs(
+        [ola, ewa, far, picky, unrated],
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        at=_at(),
+    )
+
+    assert frozenset((ola, ewa)) not in unfit
+    assert frozenset((ola, far)) in unfit
+    assert frozenset((ola, picky)) in unfit
+    assert frozenset((ola, unrated)) in unfit
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerFit))
+async def test_a_players_window_is_the_kinds_tolerance_around_their_level(
+    implementation, client, session_factory, session
+):
+    """The competitive window, 0,55 either side, rounded inward — and nothing
+    for somebody unrated in the sport (#546)."""
+
+    ola = await _rated(client, session_factory, "ola", mu=2.5)
+    unrated, token = await world.register(client, "kuba")
+    await world.commit_profile(client, token)
+    fit: PlayerFit = implementation.build(session)
+
+    window = await fit.level_window(
+        ola, sport=Sport.PADEL, kind=SearchMode.COMPETITIVE, at=_at()
+    )
+    nothing = await fit.level_window(
+        unrated, sport=Sport.PADEL, kind=SearchMode.COMPETITIVE, at=_at()
+    )
+
+    assert window == LevelRange(low=1.95, high=3.05)
+    assert nothing is None
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerFit))
+async def test_a_players_window_narrows_to_the_competitive_one_while_they_are_new(
+    implementation, client, session_factory, session
+):
+    """For fun is 0,9 either side once settled, and the competitive 0,55 while
+    the player is new — the pair gate's own rule (``docs/adr/0113``)."""
+
+    ola = await _rated(client, session_factory, "ola", mu=2.5)
+    fit: PlayerFit = implementation.build(session)
+    today = instant(build_clock().now())
+
+    new = await fit.level_window(
+        ola, sport=Sport.PADEL, kind=SearchMode.FOR_FUN, at=today
+    )
+    settled = await fit.level_window(
+        ola, sport=Sport.PADEL, kind=SearchMode.FOR_FUN, at=today + timedelta(days=60)
+    )
+
+    assert new == LevelRange(low=1.95, high=3.05)
+    assert settled == LevelRange(low=1.6, high=3.4)
+
+
+# --------------------------------------------------------------------------- #
+# PlayersInPlay — a member's Level, week, gender and preference
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(PlayersInPlay))
+async def test_a_member_in_play_is_their_level_week_gender_and_preference(
+    implementation, client, session_factory, session
+):
+    ola = await _rated(
+        client,
+        session_factory,
+        "ola",
+        mu=2.75,
+        gender="MAN",
+        gender_preference="ANY",
+        weekly_hours=[{"day": 6, "hour": 18}],
+    )
+    nobody = new_uuid()
+    players: PlayersInPlay = implementation.build(session)
+
+    read = await players.of([ola, nobody], sport=Sport.PADEL)
+
+    assert read[ola].level is not None and read[ola].level.mu == 2.75
+    assert read[ola].week == WeeklyHours.of_cells([(6, 18)])
+    assert (read[ola].gender, read[ola].preference) == (
+        Gender.MAN,
+        GenderPreference.ANY,
+    )
+    assert read[nobody].level is None
+    assert read[nobody].week == WeeklyHours.blank()
+    assert (read[nobody].gender, read[nobody].preference) == (None, None)

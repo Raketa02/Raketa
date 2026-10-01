@@ -75,6 +75,7 @@ from app.bootstrap.composition import (
     build_candidate_source,
     build_read_fill_in,
     build_read_group_deck,
+    build_read_posting_grid,
 )
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode, Term
@@ -105,10 +106,17 @@ from app.modules.matchmaking.domain.searches import (
     SearchSurface,
 )
 from app.modules.matchmaking.domain.shortlist import run as run_the_pipeline
+from app.modules.clubs.domain.court_hours import local_hour
 from app.modules.proposals.application.commands import (
+    PostingCommand,
     ReadFillInCommand,
     ReadGroupDeckCommand,
+    ReadPostingGridCommand,
 )
+from app.modules.player_profile.domain.weekly_hours import DAY_RANGES
+from app.modules.proposals.domain.overlap import DayRange
+from app.modules.proposals.domain.post import Who
+from app.modules.proposals.domain.posting_grid import WEEKS, GridCell
 from app.seeds.catalog import (
     THE_BLANK_WEEK_PLAYER,
     THE_NEWCOMER,
@@ -336,6 +344,100 @@ async def assert_the_fill_in(
     return (
         f"{where}: {board.badge} seat(s) to fill — {before} by the cut-off, "
         f"{after} until the start"
+    )
+
+
+#: The looks of a posting grid cell the server decides (the screens A5.2) —
+#: *your pick* is the client's own.
+POSTING_LOOKS: tuple[str, ...] = (
+    "dead",
+    "few · no court",
+    "enough · no court",
+    "court, thin",
+    "hot",
+    "outside your hours",
+    "past",
+    "happening here",
+)
+
+
+def looks_of(cell: GridCell) -> frozenset[str]:
+    """Which of the grid's looks a cell takes, as the client draws them from
+    its values."""
+
+    if cell.past:
+        return frozenset({"past"})
+    looks: set[str] = set()
+    if cell.fits_free == 0:
+        looks.add("dead")
+    elif not cell.court_free:
+        looks.add("enough · no court" if cell.full_game else "few · no court")
+    else:
+        looks.add("hot" if cell.full_game else "court, thin")
+    if cell.outside_your_hours:
+        looks.add("outside your hours")
+    if cell.happening:
+        looks.add("happening here")
+    return frozenset(looks)
+
+
+async def assert_the_posting_grid(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    settings: Settings,
+    now: Instant,
+) -> str:
+    """*The protagonist's posting grid draws every look* (#546; the screens
+    A5.2, Part D).
+
+    Read through ``ReadPostingGrid`` — the WHEN grid's own read — as her, in the
+    games group, over **both weeks, for anybody and for women**: the controls
+    as the screen opens them, and one tap on *Who*. Every look the server
+    decides must be drawn somewhere among the four — *earlier today* only once
+    the morning is over — or the run fails by name with the looks missing:
+    the cohort's weeks moved, a club's hours moved, or her intent did.
+    """
+
+    async with session_factory() as session:
+        found = await her_games_group(session)
+        if found is None:
+            raise ScreenIsEmpty(
+                f"the posting grid · {THE_POPULATED_PLAYER.slug} has no "
+                f"{GAMES_GROUP} to read — the proposals layer runs first"
+            )
+        her, group_id = found
+        reader = build_read_posting_grid(
+            session, settings=settings, clock=FixedClock(at=now)
+        )
+        drawn: set[str] = set()
+        for who in (Who.ANYONE, Who.WOMEN):
+            for week in WEEKS:
+                read = await reader.execute(
+                    ReadPostingGridCommand(
+                        posting=PostingCommand(
+                            player_id=her,
+                            pool_id=group_id,
+                            sport=GAMES_SPORT,
+                            kind=GAMES_KIND,
+                            who=who,
+                        ),
+                        week=week,
+                    )
+                )
+                for cell in read.cells:
+                    drawn |= looks_of(cell)
+    where = f"posting grid · {THE_POPULATED_PLAYER.slug} · {GAMES_GROUP}"
+    # Earlier today is drawn once the morning's last hour has begun.
+    morning_over = local_hour(now) >= DAY_RANGES[DayRange.MORNING.value][-1]
+    expected = [look for look in POSTING_LOOKS if look != "past" or morning_over]
+    missing = [look for look in expected if look not in drawn]
+    if missing:
+        raise ScreenIsEmpty(
+            f"{where} draws no {', no '.join(missing)} over two weeks for anybody "
+            f"or for women"
+        )
+    return f"{where}: every look over two weeks for anybody and for women" + (
+        "" if morning_over else " (earlier today: not yet, the morning is not over)"
     )
 
 

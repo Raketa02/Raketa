@@ -9,10 +9,13 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport
+from app.modules.proposals.domain.overlap import DayRange
+from app.modules.proposals.domain.post import PostedFor, Who
 from app.modules.proposals.domain.proposal import Origin
 
 
@@ -24,7 +27,8 @@ class MakeProposalCommand:
     ``versions`` are the names for the open seats, one tuple per version —
     none at all is a proposal nobody has been dealt yet. ``proposal_id`` is the
     stream to make it in — the proposer's ``pick_id``, so two processes cannot
-    make one game twice — and a fresh one when ``None``."""
+    make one game twice — and a fresh one when ``None``. ``posted_for`` is who
+    a post is for (#546); ``None`` on a pick, and on a post for anybody."""
 
     pool_id: UUID
     origin: Origin
@@ -35,6 +39,7 @@ class MakeProposalCommand:
     start: Instant
     versions: Sequence[Sequence[UUID]] = ()
     proposal_id: UUID | None = None
+    posted_for: PostedFor | None = None
 
 
 @dataclass(frozen=True)
@@ -109,3 +114,44 @@ class ReadFillInCommand:
     player_id: UUID
     pool_id: UUID
     sport: Sport
+
+
+@dataclass(frozen=True)
+class PostingCommand:
+    """What every step of posting a game is asked in (#546; the screens A5.1):
+    the poster — from the session — the group, and the four controls. A level
+    bound left out is the engine's own."""
+
+    player_id: UUID
+    pool_id: UUID
+    sport: Sport
+    kind: SearchMode
+    who: Who
+    level_low: float | None = None
+    level_high: float | None = None
+
+
+@dataclass(frozen=True)
+class ReadPostingGridCommand:
+    """One week of the posting grid — ``1`` starts today, ``2`` the week after."""
+
+    posting: PostingCommand
+    week: int
+
+
+@dataclass(frozen=True)
+class ReadPostingSlotCommand:
+    """One cell's sheet: a day on the club's clock and a third of it."""
+
+    posting: PostingCommand
+    day: date
+    day_range: DayRange
+
+
+@dataclass(frozen=True)
+class PostAGameCommand:
+    """*Post — you're In*: the court hour picked on a sheet."""
+
+    posting: PostingCommand
+    club_id: UUID
+    start: Instant

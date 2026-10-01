@@ -52,6 +52,12 @@ class ProposalMade:
     #: The latest moment the game can still fill (the mechanics §5.4).
     book_by: datetime
     occurred_at: datetime
+    #: Who a post is for — ``ANYONE``, ``MEN``, ``WOMEN`` or ``MIXED_PAIRS`` —
+    #: and the range the others' Levels are in (#546). ``None`` on a pick, and
+    #: on a post made before posts had either, which is for anybody.
+    who: str | None = None
+    level_low: float | None = None
+    level_high: float | None = None
 
 
 @dataclass(frozen=True)
@@ -79,7 +85,9 @@ class VersionDealt:
 @dataclass(frozen=True)
 class YesSaid:
     """A swipe right: *if everybody is in, book it and charge my share.*
-    Silent, free, and it holds nothing (the mechanics §6.1)."""
+    Silent, free, and it holds nothing (the mechanics §6.1). On a post it may
+    come from a member it was never dealt to, joining it from the slot sheet
+    (#546)."""
 
     proposal_id: UUID
     player_id: UUID

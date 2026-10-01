@@ -3,9 +3,10 @@ reader's live yeses (#538; the mechanics §6, §10.2; the screens A2.4, A7.3), a
 group's deck and the reader's Games & money (#539; the mechanics §6.6, §8,
 §17.1; the screens A2, A7.1), Home and a game's two details — still filling,
 or booked (#542; the mechanics §14; the screens A4, A8) — leaving a booked
-game (#544; the mechanics §12.3, §13), and rescues: a group's *Fill in*, taking
+game (#544; the mechanics §12.3, §13), rescues: a group's *Fill in*, taking
 an open seat and saying no to one (#545; the mechanics §10.1; the screens A3,
-A4.3).
+A4.3), and posting a game: the grid, a cell's sheet and the post (#546; the
+mechanics §9; the screens A5).
 
 Mounted on the player surface (``app/api/v1/player.py``). Every route takes a
 player's token and answers for that player only.
@@ -19,32 +20,42 @@ that player's yes again, ``POST /seat-charges/{id}/confirmation``.
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import date
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Query, Response, status
 
 from app.core.exception_handlers import ErrorResponse
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Sport
+from app.kernel import Sport, instant
 from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
     ConfirmPaymentCommand,
     LeaveTheGameCommand,
+    PostAGameCommand,
+    PostingCommand,
     ReadFillInCommand,
     ReadGroupDeckCommand,
+    ReadPostingGridCommand,
+    ReadPostingSlotCommand,
     RescueCommand,
     SetGamesAndMoneyCommand,
 )
+from app.modules.proposals.domain.overlap import DayRange
+from app.modules.proposals.domain.post import Who
 from app.modules.proposals.presentation.dependencies import (
     ConfirmPaymentDep,
     SayNoToARescueDep,
     JoinARescueDep,
     LeaveTheGameDep,
+    PostAGameDep,
     ReadBookingDetailsDep,
     ReadFillInDep,
     ReadHomeDep,
     ReadPaymentsToConfirmDep,
+    ReadPostingGridDep,
+    ReadPostingSlotDep,
     ReadGamesAndMoneyDep,
     ReadGroupDeckDep,
     ReadLiveYesesDep,
@@ -64,6 +75,10 @@ from app.modules.proposals.presentation.schemas import (
     HomeResponse,
     LiveYesesResponse,
     PaymentsToConfirmResponse,
+    PostedResponse,
+    PostingGridResponse,
+    PostingSlotResponse,
+    PostRequest,
     ProposalDetailsResponse,
     YesAnswerResponse,
 )
@@ -81,8 +96,9 @@ _NOT_FOUND: dict[int | str, dict[str, Any]] = {
         "model": ErrorResponse,
         "description": (
             "`proposal_not_found` — no such game **for this player**: it does not "
-            "exist, it was never dealt to them, or (for a yes) they are no longer "
-            "in its group. One code for all three."
+            "exist, it was never dealt to them (a yes on a post is the exception: "
+            "a member may join one they were never dealt, #546), or (for a yes) "
+            "they are no longer in its group. One code for all three."
         ),
     },
 }
@@ -103,8 +119,11 @@ _YES_REFUSED = (
     "back. `proposal_is_full` — every seat is In. `payment_method_required` — no "
     "saved payment method: save one, then say yes. `live_yeses_exhausted` — "
     "`details.cap` live yeses in `details.sport` already. `no_longer_fits` — "
-    "somebody In now is somebody this player does not fit; the card has gone, "
-    "and who is not said. Nothing was recorded — except on `proposal_is_over` "
+    "somebody In now is somebody this player does not fit, or a post is not "
+    "for them (#546); the card has gone, and who or why is not said. "
+    "`post_not_open_to_you` — joining a post they were never dealt, they could "
+    "not be dealt it now (#546). Nothing was recorded — except on "
+    "`proposal_is_over` "
     "with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the "
     "club and hour, the card is over, and nobody paid."
 )
@@ -139,6 +158,11 @@ _FILL_UNAVAILABLE = (
         "(the others see the player In on the card) — **unless it is the last**. "
         "Yeses are the game's, not a version's: a yes on any version counts toward "
         "the one game. A yes already said records nothing and answers the same.\n\n"
+        "**A member may join a post they were never dealt** (#546) — *I'm in* on a "
+        "sheet's *Already happening here*: a yes like any other, held to who the "
+        "post is for (`no_longer_fits` otherwise) and to what dealing it would ask "
+        "of them now — free for its hour, no game then, within their Games & "
+        "money (`post_not_open_to_you`, which is not said).\n\n"
         "**The last yes books the game** (the client gives its ten seconds of "
         "*Undo* before sending it): every seat's share is held on the club's "
         "account and then all are taken, or none is — `booked` names the booking "
@@ -691,3 +715,225 @@ async def say_no_to_a_rescue(
 ) -> Response:
     await say_no.execute(RescueCommand(booking_id=booking_id, player_id=user.id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --------------------------------------------------------------------------- #
+# Posting a game (#546)
+# --------------------------------------------------------------------------- #
+
+_POSTING_BAD = (
+    "`level_range_too_wide` — a bound outside the engine's window, "
+    "`details.low`–`details.high`: narrow it, never widen it. "
+    "`level_range_inverted` — the lower bound is above the upper. "
+    "`mixed_pairs_only_in_doubles` — `MIXED_PAIRS` in a sport played one a side."
+)
+_POSTING_REFUSED = (
+    "`not_rated_in_the_sport` — the poster holds no Level in it. "
+    "`who_leaves_you_out` — the game's *Who* is everybody's on it, and not the "
+    "poster's own (which is not said)."
+)
+_POSTING_RESPONSES: dict[int | str, dict[str, Any]] = {
+    status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse, "description": _POSTING_BAD},
+    status.HTTP_404_NOT_FOUND: {
+        "model": ErrorResponse,
+        "description": (
+            "`pool_not_found` — no such group, or the reader is not in it. One code "
+            "for both."
+        ),
+    },
+    status.HTTP_409_CONFLICT: {"model": ErrorResponse, "description": _POSTING_REFUSED},
+    status.HTTP_503_SERVICE_UNAVAILABLE: {
+        "model": ErrorResponse,
+        "description": (
+            "`block_state_unavailable` — whether the poster fits the members could "
+            "not be read. Retry."
+        ),
+    },
+}
+
+_LevelLow = Annotated[
+    float | None,
+    Query(description="The narrowed lower Level bound; left out is the engine's."),
+]
+_LevelHigh = Annotated[
+    float | None,
+    Query(description="The narrowed upper Level bound; left out is the engine's."),
+]
+
+
+def _posting(
+    user_id: UUID,
+    pool_id: UUID,
+    *,
+    sport: Sport,
+    kind: SearchMode,
+    who: Who,
+    level_low: float | None,
+    level_high: float | None,
+) -> PostingCommand:
+    return PostingCommand(
+        player_id=user_id,
+        pool_id=pool_id,
+        sport=sport,
+        kind=kind,
+        who=who,
+        level_low=level_low,
+        level_high=level_high,
+    )
+
+
+@pools_router.get(
+    "/{pool_id}/posting-grid",
+    response_model=PostingGridResponse,
+    responses=_POSTING_RESPONSES,
+    summary="The posting grid",
+    description=(
+        "**WHEN** on *Post a game*: one week of 7 days × Morning 07–12 / Afternoon "
+        "12–17 / Evening 17–23, for the sport, kind, *Who* and Level range the "
+        "controls hold. A cell's number is **how many of the poster's best fits "
+        "are free together with them at the best hour in its range that has a "
+        "free court** — never people who overlap them at different hours — and "
+        "around it whether a court is free, whether a full game's worth are, "
+        "whether the poster's week covers it, whether it is earlier today, and "
+        "whether a game is already happening there. A best fit is a member the "
+        "post would be dealt to then: rated, wanting the kind, free for the whole "
+        "hour, no game then, within their Games & money, fitting the poster, and "
+        "whom it is for. **Week 1 starts today.** The Level range starts as the "
+        "engine's own window for the kind (`engine_level_range`) and may only be "
+        "narrowed. Nothing is recorded."
+    ),
+)
+async def read_posting_grid(
+    pool_id: UUID,
+    sport: Sport,
+    kind: SearchMode,
+    who: Who,
+    user: CurrentUserDep,
+    read: ReadPostingGridDep,
+    level_low: _LevelLow = None,
+    level_high: _LevelHigh = None,
+    week: Annotated[int, Query(ge=1, le=2)] = 1,
+) -> PostingGridResponse:
+    grid = await read.execute(
+        ReadPostingGridCommand(
+            posting=_posting(
+                user.id,
+                pool_id,
+                sport=sport,
+                kind=kind,
+                who=who,
+                level_low=level_low,
+                level_high=level_high,
+            ),
+            week=week,
+        )
+    )
+    return PostingGridResponse.from_week(grid)
+
+
+@pools_router.get(
+    "/{pool_id}/posting-grid/slot",
+    response_model=PostingSlotResponse,
+    responses=_POSTING_RESPONSES,
+    summary="A posting grid cell's sheet",
+    description=(
+        "Tapping a cell: the headline (its cell again), **the best fits free "
+        "then** — at the cell's best hour, best fit first, each with how even a "
+        "game with the poster is forecast — **the free courts** in the range, "
+        "home club first, each with its hour, club, distance, share, book-by and "
+        "**its own count** of fits free then; and **already happening here**: "
+        "rescues the poster is offered, then somebody else's posts still filling "
+        "the poster could join. Nothing is recorded."
+    ),
+)
+async def read_posting_slot(
+    pool_id: UUID,
+    sport: Sport,
+    kind: SearchMode,
+    who: Who,
+    day: date,
+    range_: Annotated[
+        DayRange, Query(alias="range", description="A third of the day.")
+    ],
+    user: CurrentUserDep,
+    read: ReadPostingSlotDep,
+    level_low: _LevelLow = None,
+    level_high: _LevelHigh = None,
+) -> PostingSlotResponse:
+    slot = await read.execute(
+        ReadPostingSlotCommand(
+            posting=_posting(
+                user.id,
+                pool_id,
+                sport=sport,
+                kind=kind,
+                who=who,
+                level_low=level_low,
+                level_high=level_high,
+            ),
+            day=day,
+            day_range=range_,
+        )
+    )
+    return PostingSlotResponse.from_slot(slot)
+
+
+@pools_router.post(
+    "/{pool_id}/posts",
+    response_model=PostedResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        **_POSTING_RESPONSES,
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                _POSTING_REFUSED
+                + " `court_hour_not_for_sale` — no court the grid offers at that "
+                "club and hour: not one of the group's clubs, no longer selling, or "
+                "past its book-by. **The button's three, in its order**: "
+                "`payment_method_required` — no saved method (the setup opens); "
+                "`live_yeses_exhausted` — `details.cap` live yeses in the sport; "
+                "`live_posts_exhausted` — `details.cap` posts live already; "
+                "`games_per_week_booked` — the poster's games per week are booked "
+                "for the week from Monday `details.week`. Then "
+                "`you_play_then` — the poster has a game at that hour; "
+                "`nobody_fits_then` — none of their best fits is free then. "
+                "Nothing was posted."
+            ),
+        },
+    },
+    summary="Post a game",
+    description=(
+        "*Post — you're In*: **posting is the poster's yes**. The game is made at "
+        "the court hour picked — its share and book-by read off the club — for "
+        "the *Who* and Level range the controls hold, both stored on it, and "
+        "**dealt as up to three versions** to the poster's best fits free then: "
+        "one per full set of them, the evenest first (in doubles 9 or more fits "
+        "are three, 6–8 two, 3–5 one; fewer, one version with seats open). They "
+        "see it as a *Challenge* (`CHALLENGE`), and until its book-by it keeps "
+        "being dealt to anybody who becomes a fit. It is in the poster's *You're "
+        "In* (`GET /players/me/live-yeses`), withdrawn there (`DELETE "
+        "/proposals/{id}/yes`): with others In the game carries on without them; "
+        "with nobody, the post is gone. Not full by its book-by, it disappears "
+        "and nobody paid."
+    ),
+)
+async def post_a_game(
+    pool_id: UUID, body: PostRequest, user: CurrentUserDep, post: PostAGameDep
+) -> PostedResponse:
+    posted = await post.execute(
+        PostAGameCommand(
+            posting=_posting(
+                user.id,
+                pool_id,
+                sport=body.sport,
+                kind=body.kind,
+                who=body.who,
+                level_low=body.level_low,
+                level_high=body.level_high,
+            ),
+            club_id=body.club_id,
+            start=instant(body.starts_at),
+        )
+    )
+    return PostedResponse.from_posted(posted)

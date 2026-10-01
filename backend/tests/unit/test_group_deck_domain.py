@@ -34,6 +34,7 @@ from app.modules.proposals.domain.deck import (
     dealt_in_order,
     evenest,
     hour_taken,
+    standing_for,
     view_of,
     week_of,
     weeks_ahead,
@@ -44,7 +45,9 @@ from app.modules.proposals.domain.overlap import (
     Overlap,
     OverlapGrade,
 )
+from app.modules.player_profile.domain.gender import Gender
 from app.modules.proposals.domain.pool import Pool, PoolKind
+from app.modules.proposals.domain.post import Who, stand_together
 from app.modules.proposals.domain.proposal import Origin, Proposal
 
 WARSAW = ZoneInfo("Europe/Warsaw")
@@ -462,3 +465,73 @@ def test_no_free_cancellation_once_the_club_s_cut_off_has_passed():
     assert not cut_off_passed(START, cut_off_hours=24, now=START - timedelta(hours=25))
     assert cut_off_passed(START, cut_off_hours=24, now=START - timedelta(hours=24))
     assert not cut_off_passed(START, cut_off_hours=0, now=START - timedelta(minutes=1))
+
+
+# --------------------------------------------------------------------------- #
+# Mixed pairs (#546)
+# --------------------------------------------------------------------------- #
+
+GENDERS = {
+    ME: Gender.MAN,
+    A: Gender.MAN,
+    B: Gender.MAN,
+    C: Gender.WOMAN,
+    D: Gender.WOMAN,
+}
+
+
+def two_of_each(people) -> bool:
+    return stand_together(Who.MIXED_PAIRS, GENDERS, people, seats=4)
+
+
+def test_a_mixed_pairs_card_is_withheld_from_a_third_of_one_gender():
+    post = a_post(D, (ME, A, C))
+    post.say_yes(A, at=NOW)
+    post.deal((B,), at=NOW)
+    post.say_yes(B, at=NOW)
+
+    assert (
+        view_of(
+            post,
+            ME,
+            unfit=frozenset(),
+            in_the_pool=EVERYBODY,
+            now=NOW,
+            may_stand=two_of_each,
+        )
+        is None
+    )
+
+
+def test_a_name_a_mixed_pairs_card_has_no_seat_for_is_left_off():
+    post = a_post(D, (ME, A, B))
+    post.deal((E,), at=NOW, into=1)
+    genders = {**GENDERS, E: Gender.WOMAN}
+
+    seen = view_of(
+        post,
+        ME,
+        unfit=frozenset(),
+        in_the_pool=EVERYBODY | {E},
+        now=NOW,
+        may_stand=lambda people: stand_together(
+            Who.MIXED_PAIRS, genders, people, seats=4
+        ),
+    )
+
+    assert seen is not None
+    # D and me a woman and a man; A is the other man; B would be a third.
+    assert seen.others == (A, E)
+
+
+def test_a_mixed_pairs_game_stands_a_man_and_a_woman_a_side():
+    options = arrangements(ME, (C, A, D), seats_per_side=2)
+
+    kept = standing_for(options, who=Who.MIXED_PAIRS, genders=GENDERS)
+
+    assert kept == (
+        Sides(yours=(ME, C), theirs=(A, D)),
+        Sides(yours=(ME, D), theirs=(C, A)),
+    )
+    assert standing_for(options, who=Who.ANYONE, genders=GENDERS) == options
+    assert standing_for(options, who=None, genders={}) == options

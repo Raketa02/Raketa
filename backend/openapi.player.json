@@ -6640,7 +6640,7 @@
           "proposals"
         ],
         "summary": "Say yes to a game",
-        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** \u2014 no money moves, no court is held, nobody is told (the others see the player In on the card) \u2014 **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.\n\n**The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account and then all are taken, or none is \u2014 `booked` names the booking and its Game, and everybody is emailed *It's a game! \u00b7 you paid*. When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. **At an On request club the last yes puts the game to the club** (#543): `waiting_for_the_club`, `open_seats` nought, nothing booked and nobody charged \u2014 the court is held, the club is emailed, and the charge and *It's a game!* follow its yes.",
+        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** \u2014 no money moves, no court is held, nobody is told (the others see the player In on the card) \u2014 **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.\n\n**A member may join a post they were never dealt** (#546) \u2014 *I'm in* on a sheet's *Already happening here*: a yes like any other, held to who the post is for (`no_longer_fits` otherwise) and to what dealing it would ask of them now \u2014 free for its hour, no game then, within their Games & money (`post_not_open_to_you`, which is not said).\n\n**The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account and then all are taken, or none is \u2014 `booked` names the booking and its Game, and everybody is emailed *It's a game! \u00b7 you paid*. When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. **At an On request club the last yes puts the game to the club** (#543): `waiting_for_the_club`, `open_seats` nought, nothing booked and nobody charged \u2014 the court is held, the club is emailed, and the charge and *It's a game!* follow its yes.",
         "operationId": "say_yes_api_v1_proposals__proposal_id__yes_post",
         "security": [
           {
@@ -6671,7 +6671,7 @@
             }
           },
           "404": {
-            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them, or (for a yes) they are no longer in its group. One code for all three.",
+            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them (a yes on a post is the exception: a member may join one they were never dealt, #546), or (for a yes) they are no longer in its group. One code for all three.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6681,7 +6681,7 @@
             }
           },
           "409": {
-            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `payment_to_confirm` \u2014 this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` \u2014 this player said no: the card does not come back. `proposal_is_full` \u2014 every seat is In. `payment_method_required` \u2014 no saved payment method: save one, then say yes. `live_yeses_exhausted` \u2014 `details.cap` live yeses in `details.sport` already. `no_longer_fits` \u2014 somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded \u2014 except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid.",
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `payment_to_confirm` \u2014 this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` \u2014 this player said no: the card does not come back. `proposal_is_full` \u2014 every seat is In. `payment_method_required` \u2014 no saved payment method: save one, then say yes. `live_yeses_exhausted` \u2014 `details.cap` live yeses in `details.sport` already. `no_longer_fits` \u2014 somebody In now is somebody this player does not fit, or a post is not for them (#546); the card has gone, and who or why is not said. `post_not_open_to_you` \u2014 joining a post they were never dealt, they could not be dealt it now (#546). Nothing was recorded \u2014 except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6741,7 +6741,7 @@
             "description": "Successful Response"
           },
           "404": {
-            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them, or (for a yes) they are no longer in its group. One code for all three.",
+            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them (a yes on a post is the exception: a member may join one they were never dealt, #546), or (for a yes) they are no longer in its group. One code for all three.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6803,7 +6803,7 @@
             "description": "Successful Response"
           },
           "404": {
-            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them, or (for a yes) they are no longer in its group. One code for all three.",
+            "description": "`proposal_not_found` \u2014 no such game **for this player**: it does not exist, it was never dealt to them (a yes on a post is the exception: a member may join one they were never dealt, #546), or (for a yes) they are no longer in its group. One code for all three.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7181,6 +7181,435 @@
           },
           "503": {
             "description": "`block_state_unavailable` \u2014 whether the reader fits the people on a game could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pools/{pool_id}/posting-grid": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "The posting grid",
+        "description": "**WHEN** on *Post a game*: one week of 7 days \u00d7 Morning 07\u201312 / Afternoon 12\u201317 / Evening 17\u201323, for the sport, kind, *Who* and Level range the controls hold. A cell's number is **how many of the poster's best fits are free together with them at the best hour in its range that has a free court** \u2014 never people who overlap them at different hours \u2014 and around it whether a court is free, whether a full game's worth are, whether the poster's week covers it, whether it is earlier today, and whether a game is already happening there. A best fit is a member the post would be dealt to then: rated, wanting the kind, free for the whole hour, no game then, within their Games & money, fitting the poster, and whom it is for. **Week 1 starts today.** The Level range starts as the engine's own window for the kind (`engine_level_range`) and may only be narrowed. Nothing is recorded.",
+        "operationId": "read_posting_grid_api_v1_pools__pool_id__posting_grid_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SearchMode"
+            }
+          },
+          {
+            "name": "who",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Who"
+            }
+          },
+          {
+            "name": "level_low",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The narrowed lower Level bound; left out is the engine's.",
+              "title": "Level Low"
+            },
+            "description": "The narrowed lower Level bound; left out is the engine's."
+          },
+          {
+            "name": "level_high",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The narrowed upper Level bound; left out is the engine's.",
+              "title": "Level High"
+            },
+            "description": "The narrowed upper Level bound; left out is the engine's."
+          },
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2,
+              "minimum": 1,
+              "default": 1,
+              "title": "Week"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostingGridResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`level_range_too_wide` \u2014 a bound outside the engine's window, `details.low`\u2013`details.high`: narrow it, never widen it. `level_range_inverted` \u2014 the lower bound is above the upper. `mixed_pairs_only_in_doubles` \u2014 `MIXED_PAIRS` in a sport played one a side.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`pool_not_found` \u2014 no such group, or the reader is not in it. One code for both.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`not_rated_in_the_sport` \u2014 the poster holds no Level in it. `who_leaves_you_out` \u2014 the game's *Who* is everybody's on it, and not the poster's own (which is not said).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the poster fits the members could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pools/{pool_id}/posting-grid/slot": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "A posting grid cell's sheet",
+        "description": "Tapping a cell: the headline (its cell again), **the best fits free then** \u2014 at the cell's best hour, best fit first, each with how even a game with the poster is forecast \u2014 **the free courts** in the range, home club first, each with its hour, club, distance, share, book-by and **its own count** of fits free then; and **already happening here**: rescues the poster is offered, then somebody else's posts still filling the poster could join. Nothing is recorded.",
+        "operationId": "read_posting_slot_api_v1_pools__pool_id__posting_grid_slot_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SearchMode"
+            }
+          },
+          {
+            "name": "who",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Who"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Day"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DayRange",
+              "description": "A third of the day."
+            },
+            "description": "A third of the day."
+          },
+          {
+            "name": "level_low",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The narrowed lower Level bound; left out is the engine's.",
+              "title": "Level Low"
+            },
+            "description": "The narrowed lower Level bound; left out is the engine's."
+          },
+          {
+            "name": "level_high",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The narrowed upper Level bound; left out is the engine's.",
+              "title": "Level High"
+            },
+            "description": "The narrowed upper Level bound; left out is the engine's."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostingSlotResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`level_range_too_wide` \u2014 a bound outside the engine's window, `details.low`\u2013`details.high`: narrow it, never widen it. `level_range_inverted` \u2014 the lower bound is above the upper. `mixed_pairs_only_in_doubles` \u2014 `MIXED_PAIRS` in a sport played one a side.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`pool_not_found` \u2014 no such group, or the reader is not in it. One code for both.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`not_rated_in_the_sport` \u2014 the poster holds no Level in it. `who_leaves_you_out` \u2014 the game's *Who* is everybody's on it, and not the poster's own (which is not said).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the poster fits the members could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pools/{pool_id}/posts": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Post a game",
+        "description": "*Post \u2014 you're In*: **posting is the poster's yes**. The game is made at the court hour picked \u2014 its share and book-by read off the club \u2014 for the *Who* and Level range the controls hold, both stored on it, and **dealt as up to three versions** to the poster's best fits free then: one per full set of them, the evenest first (in doubles 9 or more fits are three, 6\u20138 two, 3\u20135 one; fewer, one version with seats open). They see it as a *Challenge* (`CHALLENGE`), and until its book-by it keeps being dealt to anybody who becomes a fit. It is in the poster's *You're In* (`GET /players/me/live-yeses`), withdrawn there (`DELETE /proposals/{id}/yes`): with others In the game carries on without them; with nobody, the post is gone. Not full by its book-by, it disappears and nobody paid.",
+        "operationId": "post_a_game_api_v1_pools__pool_id__posts_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`level_range_too_wide` \u2014 a bound outside the engine's window, `details.low`\u2013`details.high`: narrow it, never widen it. `level_range_inverted` \u2014 the lower bound is above the upper. `mixed_pairs_only_in_doubles` \u2014 `MIXED_PAIRS` in a sport played one a side.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`pool_not_found` \u2014 no such group, or the reader is not in it. One code for both.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`not_rated_in_the_sport` \u2014 the poster holds no Level in it. `who_leaves_you_out` \u2014 the game's *Who* is everybody's on it, and not the poster's own (which is not said). `court_hour_not_for_sale` \u2014 no court the grid offers at that club and hour: not one of the group's clubs, no longer selling, or past its book-by. **The button's three, in its order**: `payment_method_required` \u2014 no saved method (the setup opens); `live_yeses_exhausted` \u2014 `details.cap` live yeses in the sport; `live_posts_exhausted` \u2014 `details.cap` posts live already; `games_per_week_booked` \u2014 the poster's games per week are booked for the week from Monday `details.week`. Then `you_play_then` \u2014 the poster has a game at that hour; `nobody_fits_then` \u2014 none of their best fits is free then. Nothing was posted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the poster fits the members could not be read. Retry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11415,6 +11844,69 @@
         "title": "ForgotPasswordRequest",
         "description": "*Forgot password?*: the address to send a link and a code to."
       },
+      "FreeCourtSchema": {
+        "properties": {
+          "club": {
+            "$ref": "#/components/schemas/BookedClubSchema"
+          },
+          "home_club": {
+            "type": "boolean",
+            "title": "Home Club",
+            "description": "The group's home club, listed first."
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km",
+            "description": "How far it is from the poster; `null` with no Location area."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "*27 z\u0142 if it fills*, each."
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By",
+            "description": "The latest the post can fill."
+          },
+          "courts": {
+            "type": "integer",
+            "title": "Courts",
+            "description": "How many courts of the sport are free then."
+          },
+          "fits_free": {
+            "type": "integer",
+            "title": "Fits Free",
+            "description": "Its own *n free*: the poster's best fits free at this hour."
+          }
+        },
+        "type": "object",
+        "required": [
+          "club",
+          "home_club",
+          "distance_km",
+          "starts_at",
+          "share_grosze",
+          "book_by",
+          "courts",
+          "fits_free"
+        ],
+        "title": "FreeCourtSchema",
+        "description": "One *Free courts* row: a club and hour the post could be made at."
+      },
       "GameKind": {
         "type": "string",
         "enum": [
@@ -13023,6 +13515,25 @@
         ],
         "title": "LevelFitEvidence",
         "description": "How far apart the two levels are, and which way.\n\nThe tolerance behind the curve is absolute on \u03bc and never reads a band: the\nshipped bands are deliberately uneven because *evidence* is unevenly\navailable down the scale, not because a tenth of a point means less at the\ntop."
+      },
+      "LevelRangeSchema": {
+        "properties": {
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          }
+        },
+        "type": "object",
+        "required": [
+          "low",
+          "high"
+        ],
+        "title": "LevelRangeSchema",
+        "description": "A range of Levels, both bounds included."
       },
       "LikelyRangeSchema": {
         "properties": {
@@ -14836,6 +15347,416 @@
         ],
         "title": "PoolSchema",
         "description": "What the searcher is told about the pool this answer came from.\n\nSent on **every** search and not only on empty ones: a thin pool and a broken\nfloor are indistinguishable without it."
+      },
+      "PostRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "who": {
+            "$ref": "#/components/schemas/Who"
+          },
+          "level_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Low",
+            "description": "The narrowed lower bound; `null` is the engine's own."
+          },
+          "level_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level High",
+            "description": "The narrowed upper bound; `null` is the engine's own."
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start, as listed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "kind",
+          "who",
+          "club_id",
+          "starts_at"
+        ],
+        "title": "PostRequest",
+        "description": "*Post \u2014 you're In*: the four controls and the court hour picked on a\nsheet. **Types only**: who it may be for and which court hours are offered\nare the domain's to refuse, each with its own code."
+      },
+      "PostStillFillingSchema": {
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "club": {
+            "$ref": "#/components/schemas/BookedClubSchema"
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "What a seat costs if it fills."
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By"
+          },
+          "challenger": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckChallengerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who posted it \u2014 `null` once they withdrew."
+          },
+          "people_in": {
+            "items": {
+              "$ref": "#/components/schemas/DeckTileSchema"
+            },
+            "type": "array",
+            "title": "People In",
+            "description": "Everybody In, in the order they said yes. No court number."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "kind",
+          "starts_at",
+          "club",
+          "share_grosze",
+          "book_by",
+          "challenger",
+          "people_in",
+          "open_seats"
+        ],
+        "title": "PostStillFillingSchema",
+        "description": "Somebody else's post still filling that the poster could join \u2014 **I'm\nin** is `POST /proposals/{proposal_id}/yes`, free until it fills."
+      },
+      "PostedResponse": {
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id"
+          },
+          "versions": {
+            "type": "integer",
+            "title": "Versions",
+            "description": "How many versions it was dealt in, up to 3."
+          },
+          "dealt_to": {
+            "type": "integer",
+            "title": "Dealt To",
+            "description": "How many best fits were dealt it."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats",
+            "description": "The seats open beside the poster."
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "versions",
+          "dealt_to",
+          "open_seats"
+        ],
+        "title": "PostedResponse",
+        "description": "The post, In with its poster \u2014 its id is the game's, in *You're In*."
+      },
+      "PostingCellSchema": {
+        "properties": {
+          "range": {
+            "$ref": "#/components/schemas/DayRange",
+            "description": "Morning 07\u201312, Afternoon 12\u201317, Evening 17\u201323."
+          },
+          "fits_free": {
+            "type": "integer",
+            "title": "Fits Free",
+            "description": "How many of the poster's best fits are free **together with them** at `best_starts_at` \u2014 the best hour in the range that has a free court, or with none, the best hour of the range \u2014 never people who overlap the poster at different hours. The client caps it at *5+*."
+          },
+          "best_starts_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Starts At",
+            "description": "The hour the number is read at; `null` with no hour ahead."
+          },
+          "court_free": {
+            "type": "boolean",
+            "title": "Court Free",
+            "description": "A court the post could be made at is free in the range \u2014 the cell can be picked when somebody fits too."
+          },
+          "full_game": {
+            "type": "boolean",
+            "title": "Full Game",
+            "description": "A full game's worth are free: `fits_free` reaches `open_seats`. Pickable with a court but not full is *only 2 fit \u00b7 may not fill*."
+          },
+          "outside_your_hours": {
+            "type": "boolean",
+            "title": "Outside Your Hours",
+            "description": "The poster's own week covers no hour the number could be read at: dimmed and dashed, still pickable."
+          },
+          "past": {
+            "type": "boolean",
+            "title": "Past",
+            "description": "Earlier today: inert."
+          },
+          "happening": {
+            "type": "boolean",
+            "title": "Happening",
+            "description": "The red dot: a rescue the poster is offered, or somebody else's post still filling they could join, starts in the range."
+          }
+        },
+        "type": "object",
+        "required": [
+          "range",
+          "fits_free",
+          "best_starts_at",
+          "court_free",
+          "full_game",
+          "outside_your_hours",
+          "past",
+          "happening"
+        ],
+        "title": "PostingCellSchema",
+        "description": "One day's range on the posting grid. **The client draws the nine looks\nfrom these values** (the screens A5.2): *dead* is `fits_free` nought; *few*\nor *enough* by `full_game`; a court glyph by `court_free`; *outside your\nhours*, *past* and the red dot by their own flags. *Your pick* is the\nclient's."
+      },
+      "PostingDaySchema": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day",
+            "description": "The day on the club's clock."
+          },
+          "is_today": {
+            "type": "boolean",
+            "title": "Is Today",
+            "description": "*Today*, in coral, with its date."
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/PostingCellSchema"
+            },
+            "type": "array",
+            "title": "Cells",
+            "description": "Three: morning first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "is_today",
+          "cells"
+        ],
+        "title": "PostingDaySchema"
+      },
+      "PostingGridResponse": {
+        "properties": {
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "who": {
+            "$ref": "#/components/schemas/Who"
+          },
+          "week": {
+            "type": "integer",
+            "title": "Week",
+            "description": "`1` starts today; `2` is the seven days after."
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At",
+            "description": "The instant every cell was read against."
+          },
+          "level_range": {
+            "$ref": "#/components/schemas/LevelRangeSchema",
+            "description": "The range the others' Levels were counted in."
+          },
+          "engine_level_range": {
+            "$ref": "#/components/schemas/LevelRangeSchema",
+            "description": "The engine's own window for the kind around the poster's Level \u2014 the steppers' starting bounds, which may be narrowed in 0,05 steps and never widened."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats",
+            "description": "The seats besides the poster: three in doubles, one in singles."
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/PostingDaySchema"
+            },
+            "type": "array",
+            "title": "Days",
+            "description": "Seven, the first first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pool_id",
+          "sport",
+          "kind",
+          "who",
+          "week",
+          "read_at",
+          "level_range",
+          "engine_level_range",
+          "open_seats",
+          "days"
+        ],
+        "title": "PostingGridResponse",
+        "description": "**WHEN** \u2014 one week of the posting grid (the mechanics \u00a79.1 step 5)."
+      },
+      "PostingSlotResponse": {
+        "properties": {
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "who": {
+            "$ref": "#/components/schemas/Who"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "range": {
+            "$ref": "#/components/schemas/DayRange"
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At"
+          },
+          "level_range": {
+            "$ref": "#/components/schemas/LevelRangeSchema"
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats"
+          },
+          "cell": {
+            "$ref": "#/components/schemas/PostingCellSchema",
+            "description": "The headline's cell."
+          },
+          "fits": {
+            "items": {
+              "$ref": "#/components/schemas/SlotFitSchema"
+            },
+            "type": "array",
+            "title": "Fits",
+            "description": "The best fits free at the cell's best hour, best fit first."
+          },
+          "free_courts": {
+            "items": {
+              "$ref": "#/components/schemas/FreeCourtSchema"
+            },
+            "type": "array",
+            "title": "Free Courts",
+            "description": "**Home club first**, then by hour. Tapping one picks it."
+          },
+          "rescues": {
+            "items": {
+              "$ref": "#/components/schemas/SeatToFillSchema"
+            },
+            "type": "array",
+            "title": "Rescues",
+            "description": "**Already happening here**, first: booked games in the range with a seat offered to the poster \u2014 *I'm in \u00b7 `share_grosze`* pays at once (`POST /bookings/{id}/seats`)."
+          },
+          "posts": {
+            "items": {
+              "$ref": "#/components/schemas/PostStillFillingSchema"
+            },
+            "type": "array",
+            "title": "Posts",
+            "description": "Then: posts still filling in the range the poster could join."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pool_id",
+          "sport",
+          "kind",
+          "who",
+          "day",
+          "range",
+          "read_at",
+          "level_range",
+          "open_seats",
+          "cell",
+          "fits",
+          "free_courts",
+          "rescues",
+          "posts"
+        ],
+        "title": "PostingSlotResponse",
+        "description": "A cell's sheet (the mechanics \u00a79.1 step 6; the screens A5.3)."
       },
       "PredictedBalanceEvidence": {
         "properties": {
@@ -16871,6 +17792,84 @@
         "title": "SkillPanelSchema",
         "description": "The skill card, for the one sport this sheet is about.\n\n**The sport is resolved by the server and stated back.** You asked with\n`?sport=`; what you get is that sport where they are rated in it, and\notherwise the one they have played most \u2014 so read `sport` here rather than\nassuming the answer is what you sent."
       },
+      "SlotFitSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their Name, whole; `null` for an account that can no longer be named."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level",
+            "description": "Their published Level in the sport."
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckForecastSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How even a game of the poster and them is forecast \u2014 `null` where it cannot be read."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "photo_id",
+          "photo_url",
+          "level",
+          "forecast"
+        ],
+        "title": "SlotFitSchema",
+        "description": "One of the poster's best fits free then \u2014 *2,75 \u00b7 93*."
+      },
       "SocialTag": {
         "type": "string",
         "enum": [
@@ -17772,6 +18771,17 @@
         ],
         "title": "WhereSchema",
         "description": "WHERE: the club, and how far it is from the reader."
+      },
+      "Who": {
+        "type": "string",
+        "enum": [
+          "ANYONE",
+          "MEN",
+          "WOMEN",
+          "MIXED_PAIRS"
+        ],
+        "title": "Who",
+        "description": "Who a post is for (the mechanics \u00a79.1 step 3)."
       },
       "Window": {
         "type": "string",

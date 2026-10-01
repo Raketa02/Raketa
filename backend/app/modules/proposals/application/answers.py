@@ -20,6 +20,10 @@ club, puts the full game to the club, and nobody pays until it says yes (#543).
 player's share is held now, so the game fills on it if the seat is still theirs
 to take.
 
+**A member may join a post from the slot sheet** (#546; Q79): their yes on a
+post they were never dealt — held to everything a yes is, and to who the post
+is for. Only a post: a pick is a stranger's to nobody but the people it names.
+
 **Withdrawing is leaving, while the club decides** (the mechanics §13): a yes
 taken back from a game waiting for its club takes the request with it — called
 off with nobody paid, the court free, and the game filling again with that seat
@@ -61,7 +65,7 @@ from app.modules.proposals.domain.ports import (
     SeatCharges,
     UndecidedCharges,
 )
-from app.modules.proposals.domain.proposal import Proposal, Standing
+from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
 
 
 @final
@@ -109,7 +113,11 @@ class SayYes:
         player_id = command.player_id
         proposal = await _locked(self._proposals, command.proposal_id)
         outcome = FillOutcome()
-        if proposal.may_say_yes(player_id, at=now):
+        # Joining a post from the slot sheet: a yes from somebody it was never
+        # dealt to.
+        joining = proposal.origin is Origin.POST and not proposal.is_on_it(player_id)
+        may = proposal.may_join if joining else proposal.may_say_yes
+        if may(player_id, at=now):
             reopened = proposal.reopened.get(player_id)
             if reopened is not None and reopened.payment_to_confirm is not None:
                 # Their seat reopened on a payment the bank wants confirmed, or
@@ -119,7 +127,12 @@ class SayYes:
                     seat_charge_id=str(reopened.payment_to_confirm)
                 )
             outcome = await _yes(
-                proposal, player_id, guards=self._guards, fill=self._fill, now=now
+                proposal,
+                player_id,
+                guards=self._guards,
+                fill=self._fill,
+                now=now,
+                joining=joining,
             )
             await self._proposals.save(proposal)
             await self._uow.commit()
@@ -280,16 +293,25 @@ async def _yes(
     guards: Guards,
     fill: Fill,
     now: Instant,
+    joining: bool = False,
 ) -> FillOutcome:
-    """The yes itself, after its guards — and the fill, when it was the last."""
+    """The yes itself, after its guards — and the fill, when it was the last.
+    ``joining`` a post from the slot sheet, it is a yes from outside its
+    versions."""
 
     # Somebody who has left the group has left its pool: the card is nothing to
     # them any more, which is the stranger's answer.
     if not await guards.in_the_pool(proposal.pool, [player_id]):
         raise ProposalNotFound()
-    await guards.refuse_an_unchargeable_yes(player_id, proposal, now=now)
+    await guards.refuse_an_unchargeable_yes(player_id, sport=proposal.sport, now=now)
+    if joining:
+        await guards.refuse_a_join_dealing_would_not_make(player_id, proposal, now=now)
     await guards.refuse_a_yes_that_does_not_fit(player_id, proposal, at=now)
-    proposal.say_yes(player_id, at=now)
+    await guards.refuse_a_yes_the_post_is_not_for(player_id, proposal)
+    if joining:
+        proposal.join(player_id, at=now)
+    else:
+        proposal.say_yes(player_id, at=now)
     if proposal.open_seats > 0:
         return FillOutcome()
     return await fill.run(proposal, now=now)

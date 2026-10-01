@@ -85,11 +85,12 @@ class ResumePausedYeses:
                 if not await self._guards.in_the_pool(proposal.pool, [player_id]):
                     continue
                 await self._guards.refuse_an_unchargeable_yes(
-                    player_id, proposal, now=at
+                    player_id, sport=proposal.sport, now=at
                 )
                 await self._guards.refuse_a_yes_that_does_not_fit(
                     player_id, proposal, at=at
                 )
+                await self._guards.refuse_a_yes_the_post_is_not_for(player_id, proposal)
             except (PaymentMethodRequired, LiveYesesExhausted, NoLongerFits):
                 # They can no longer be In; an unavailability, unlike these,
                 # fails the delivery, which is tried again.

@@ -19,6 +19,11 @@ nobody: the level gate cannot be evaluated, and *a gate that cannot be evaluated
 excludes*. A block read that cannot be answered **raises**
 (``BlockStateUnavailable``) rather than calling every pair unfit, because
 *unfit* would take a card away for good and an outage is not a verdict.
+
+**And the window one person's level rule makes** (#546): the Levels somebody
+beside them may hold — the same tolerance, through the same function, narrowed
+while they are new — around their Level off the same read. A post's range
+starts there, so a post cannot promise a level the pair rule would refuse.
 """
 
 from __future__ import annotations
@@ -32,12 +37,13 @@ from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import Instant, Sport
 from app.modules.blocks.domain.ports import BlockQuery
-from app.modules.matchmaking.domain.gates import level_close_enough
+from app.modules.matchmaking.domain.gates import level_close_enough, level_tolerance
 from app.modules.player_profile.domain.mutual_preference import (
     preferences_are_mutual,
 )
 from app.modules.player_profile.domain.ports import PlayerProfileRepository
 from app.modules.player_profile.domain.profile import PlayerProfile
+from app.modules.proposals.domain.post import LevelRange
 from app.modules.rating.domain.ports import RatedPlayerQuery
 
 
@@ -101,3 +107,22 @@ class MatcherPlayerFit:
             ):
                 unfit.add(pair)
         return frozenset(unfit)
+
+    async def level_window(
+        self, player_id: UUID, *, sport: Sport, kind: SearchMode, at: Instant
+    ) -> LevelRange | None:
+        profile = await self._profiles.load(player_id)
+        level = (await self._ratings.estimates_for([player_id], sport=sport)).get(
+            player_id
+        )
+        if profile is None or level is None:
+            return None
+        return LevelRange.around(
+            level.mu,
+            tolerance=level_tolerance(
+                mode=kind,
+                ruleset=self._ruleset,
+                now=at,
+                created_at=(profile.created_at,),
+            ),
+        )

@@ -20,7 +20,7 @@ from app.engines.matchfit.core import SearchMode
 from app.infrastructure.database.stored_time import stored_instant
 from app.kernel import Instant, Sport
 from app.modules.proposals.domain.ports import LiveYes
-from app.modules.proposals.domain.proposal import Ending
+from app.modules.proposals.domain.proposal import Ending, Origin
 from app.modules.proposals.infrastructure.proposal_models import (
     ProposalORM,
     ProposalPersonORM,
@@ -166,6 +166,19 @@ class SqlAlchemyProposalDirectory:
                 .order_by(ProposalORM.start, ProposalORM.id)
             )
         ).all()
+
+    async def live_posts_of(self, poster_id: UUID, *, now: Instant) -> int:
+        counted = await self._session.scalar(
+            select(func.count())
+            .select_from(ProposalORM)
+            .join(ProposalPersonORM, _saying_yes(poster_id))
+            .where(
+                _filling(now),
+                ProposalORM.origin == Origin.POST.value,
+                ProposalORM.poster_id == poster_id,
+            )
+        )
+        return int(counted or 0)
 
     async def turned_down_in(self, pool_id: UUID, *, now: Instant) -> Sequence[UUID]:
         return (

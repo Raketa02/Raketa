@@ -36,6 +36,7 @@ from app.modules.proposals.application.commands import (
     DealVersionCommand,
     MakeProposalCommand,
 )
+from app.modules.proposals.domain.post import PostedFor
 from app.modules.proposals.domain.proposal import Origin
 from tests.api import matchmaking_world as world
 from tests.api.club_courts_world import (
@@ -196,18 +197,25 @@ async def a_member(
     intent: str | None = "COMPETITIVE",
     week: list[dict] = EVERY_HOUR,
     gender: str = "WOMAN",
+    gender_preference: str | None = None,
+    card: bool = True,
 ) -> dict:
     """A member rated at ``mu`` in ``sports``, free every hour of the week
-    unless told otherwise, with a declared intent and a saved card."""
+    unless told otherwise, with a declared intent and — unless told otherwise
+    — a saved card."""
 
     player_id, token = await world.register(client, name)
-    await world.commit_profile(client, token, weekly_hours=week, gender=gender)
+    profile: dict = {"weekly_hours": week, "gender": gender}
+    if gender_preference is not None:
+        profile["gender_preference"] = gender_preference
+    await world.commit_profile(client, token, **profile)
     for sport in sports:
         await world.rate_in(session_factory, player_id, sport, mu=mu)
         if intent is not None:
             await world.declare_intent(client, token, intent=intent, sport=sport)
     headers = world.auth(token)
-    await saves_a_card(client, payments, headers)
+    if card:
+        await saves_a_card(client, payments, headers)
     return {"id": player_id, "token": token, "headers": headers, "name": name}
 
 
@@ -245,9 +253,10 @@ async def makes(
     kind: SearchMode = SearchMode.COMPETITIVE,
     poster: dict | None = None,
     versions: tuple[tuple[dict, ...], ...] = (),
+    posted_for: PostedFor | None = None,
 ) -> UUID:
     """A game proposed the way the engine will propose one. A pick unless a
-    poster is named."""
+    poster is named — for anybody, unless it says whom (#546)."""
 
     async with session_factory() as session:
         return await build_make_proposal(session, clock=clock).execute(
@@ -260,6 +269,7 @@ async def makes(
                 club_id=UUID(club_id),
                 start=instant(start),
                 versions=[[player["id"] for player in version] for version in versions],
+                posted_for=posted_for,
             )
         )
 

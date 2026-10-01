@@ -34,4 +34,9 @@ are the dealer's use cases, driven by the proposer, seeds and tests. **And the
 last yes books one** (#541, ``application/fill.py``): every seat charged
 together or nobody, a Booking and its Game, through the Payments and Bookings
 contexts' own use cases.
+
+**And a member posts one** (#546, ``application/posting.py``): the posting grid
+and a cell's sheet are reads over the proposer's own reading of the pool, and
+the post is the poster's yes, made and dealt through ``MakeProposal`` — for the
+*Who* and Level range stored on it (``domain/post.py``).
 """

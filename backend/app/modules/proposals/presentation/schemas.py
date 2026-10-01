@@ -31,6 +31,11 @@ from app.modules.proposals.application.home import Home, HomeGame
 from app.modules.proposals.application.live_yeses import LiveYeses, NamedLiveYes
 from app.modules.proposals.application.payments_to_confirm import PaymentToConfirm
 from app.modules.proposals.application.proposal_details import ProposalDetails
+from app.modules.proposals.application.posting import (
+    Posted,
+    PostingSlot,
+    PostingWeek,
+)
 from app.modules.proposals.application.rescues import FillIn
 from app.modules.proposals.domain.deck import (
     GAME_LENGTH,
@@ -63,6 +68,8 @@ from app.modules.proposals.domain.home import (
     UncountedReason,
 )
 from app.modules.proposals.domain.ports import DeckPerson, PaymentRefusal
+from app.modules.proposals.domain.post import LevelRange, Who
+from app.modules.proposals.domain.posting_grid import GridCell
 
 
 class BookedSchema(BaseModel):
@@ -1390,6 +1397,34 @@ class SeatToFillSchema(BaseModel):
         )
     )
 
+    @classmethod
+    def of(
+        cls,
+        game: BookedGame,
+        *,
+        deadline: Instant,
+        fills_by_the_cut_off: bool,
+        club_name: str | None,
+        reader: UUID,
+        people: Mapping[UUID, DeckPerson],
+    ) -> "SeatToFillSchema":
+        return cls(
+            booking_id=game.booking_id,
+            sport=game.sport,
+            kind=game.kind,
+            starts_at=game.start,
+            club=BookedClubSchema(id=game.club_id, name=club_name),
+            court_name=game.court_name,
+            share_grosze=game.share_grosze,
+            open_seats=game.open_seats,
+            deadline=deadline,
+            fills_by_the_cut_off=fills_by_the_cut_off,
+            players=[
+                _tile(player, reader=reader, sport_people=people, paid=True)
+                for player in game.players
+            ],
+        )
+
 
 class FillInResponse(BaseModel):
     """A group's **Fill in** tab for one sport: *Seats to fill* (#545)."""
@@ -1418,27 +1453,353 @@ class FillInResponse(BaseModel):
             read_at=fill_in.read_at,
             badge=fill_in.badge,
             seats_to_fill=[
-                SeatToFillSchema(
-                    booking_id=row.game.booking_id,
-                    sport=row.game.sport,
-                    kind=row.game.kind,
-                    starts_at=row.game.start,
-                    club=BookedClubSchema(id=row.game.club_id, name=row.club_name),
-                    court_name=row.game.court_name,
-                    share_grosze=row.game.share_grosze,
-                    open_seats=row.game.open_seats,
+                SeatToFillSchema.of(
+                    row.game,
                     deadline=row.deadline,
                     fills_by_the_cut_off=row.fills_by_the_cut_off,
-                    players=[
-                        _tile(
-                            player,
-                            reader=reader,
-                            sport_people=fill_in.people,
-                            paid=True,
-                        )
-                        for player in row.game.players
-                    ],
+                    club_name=row.club_name,
+                    reader=reader,
+                    people=fill_in.people,
                 )
                 for row in fill_in.seats_to_fill
             ],
+        )
+
+
+# --------------------------------------------------------------------------- #
+# Posting a game (#546)
+# --------------------------------------------------------------------------- #
+
+
+class LevelRangeSchema(BaseModel):
+    """A range of Levels, both bounds included."""
+
+    low: float
+    high: float
+
+    @classmethod
+    def of(cls, levels: LevelRange) -> "LevelRangeSchema":
+        return cls(low=levels.low, high=levels.high)
+
+
+class PostingCellSchema(BaseModel):
+    """One day's range on the posting grid. **The client draws the nine looks
+    from these values** (the screens A5.2): *dead* is `fits_free` nought; *few*
+    or *enough* by `full_game`; a court glyph by `court_free`; *outside your
+    hours*, *past* and the red dot by their own flags. *Your pick* is the
+    client's."""
+
+    range: DayRange = Field(
+        description="Morning 07–12, Afternoon 12–17, Evening 17–23."
+    )
+    fits_free: int = Field(
+        description=(
+            "How many of the poster's best fits are free **together with them** "
+            "at `best_starts_at` — the best hour in the range that has a free "
+            "court, or with none, the best hour of the range — never people who "
+            "overlap the poster at different hours. The client caps it at *5+*."
+        )
+    )
+    best_starts_at: datetime | None = Field(
+        description="The hour the number is read at; `null` with no hour ahead."
+    )
+    court_free: bool = Field(
+        description=(
+            "A court the post could be made at is free in the range — the cell "
+            "can be picked when somebody fits too."
+        )
+    )
+    full_game: bool = Field(
+        description=(
+            "A full game's worth are free: `fits_free` reaches `open_seats`. "
+            "Pickable with a court but not full is *only 2 fit · may not fill*."
+        )
+    )
+    outside_your_hours: bool = Field(
+        description=(
+            "The poster's own week covers no hour the number could be read at: "
+            "dimmed and dashed, still pickable."
+        )
+    )
+    past: bool = Field(description="Earlier today: inert.")
+    happening: bool = Field(
+        description=(
+            "The red dot: a rescue the poster is offered, or somebody else's "
+            "post still filling they could join, starts in the range."
+        )
+    )
+
+    @classmethod
+    def of(cls, cell: GridCell) -> "PostingCellSchema":
+        return cls(
+            range=cell.range,
+            fits_free=cell.fits_free,
+            best_starts_at=cell.best_start,
+            court_free=cell.court_free,
+            full_game=cell.full_game,
+            outside_your_hours=cell.outside_your_hours,
+            past=cell.past,
+            happening=cell.happening,
+        )
+
+
+class PostingDaySchema(BaseModel):
+    day: date = Field(description="The day on the club's clock.")
+    is_today: bool = Field(description="*Today*, in coral, with its date.")
+    cells: list[PostingCellSchema] = Field(description="Three: morning first.")
+
+
+class PostingGridResponse(BaseModel):
+    """**WHEN** — one week of the posting grid (the mechanics §9.1 step 5)."""
+
+    pool_id: UUID
+    sport: Sport
+    kind: SearchMode
+    who: Who
+    week: int = Field(description="`1` starts today; `2` is the seven days after.")
+    read_at: datetime = Field(description="The instant every cell was read against.")
+    level_range: LevelRangeSchema = Field(
+        description="The range the others' Levels were counted in."
+    )
+    engine_level_range: LevelRangeSchema = Field(
+        description=(
+            "The engine's own window for the kind around the poster's Level — "
+            "the steppers' starting bounds, which may be narrowed in 0,05 steps "
+            "and never widened."
+        )
+    )
+    open_seats: int = Field(
+        description="The seats besides the poster: three in doubles, one in singles."
+    )
+    days: list[PostingDaySchema] = Field(description="Seven, the first first.")
+
+    @classmethod
+    def from_week(cls, week: PostingWeek) -> "PostingGridResponse":
+        read = week.read
+        today = read.grid.days(1)[0]
+        days = read.grid.days(week.week)
+        return cls(
+            pool_id=read.pool.id,
+            sport=read.sport,
+            kind=read.kind,
+            who=read.posted_for.who,
+            week=week.week,
+            read_at=read.read_at,
+            level_range=LevelRangeSchema.of(read.posted_for.levels),
+            engine_level_range=LevelRangeSchema.of(read.window),
+            open_seats=read.open_seats,
+            days=[
+                PostingDaySchema(
+                    day=day,
+                    is_today=day == today,
+                    cells=[
+                        PostingCellSchema.of(cell)
+                        for cell in week.cells
+                        if cell.day == day
+                    ],
+                )
+                for day in days
+            ],
+        )
+
+
+class SlotFitSchema(BaseModel):
+    """One of the poster's best fits free then — *2,75 · 93*."""
+
+    player_id: UUID
+    name: str | None = Field(
+        description=(
+            "Their Name, whole; `null` for an account that can no longer be named."
+        )
+    )
+    photo_id: UUID | None
+    photo_url: str | None
+    level: float | None = Field(description="Their published Level in the sport.")
+    forecast: DeckForecastSchema | None = Field(
+        description=(
+            "How even a game of the poster and them is forecast — `null` where "
+            "it cannot be read."
+        )
+    )
+
+
+class FreeCourtSchema(BaseModel):
+    """One *Free courts* row: a club and hour the post could be made at."""
+
+    club: BookedClubSchema
+    home_club: bool = Field(description="The group's home club, listed first.")
+    distance_km: float | None = Field(
+        description="How far it is from the poster; `null` with no Location area."
+    )
+    starts_at: datetime
+    share_grosze: int = Field(description="*27 zł if it fills*, each.")
+    book_by: datetime = Field(description="The latest the post can fill.")
+    courts: int = Field(description="How many courts of the sport are free then.")
+    fits_free: int = Field(
+        description="Its own *n free*: the poster's best fits free at this hour."
+    )
+
+
+class PostStillFillingSchema(BaseModel):
+    """Somebody else's post still filling that the poster could join — **I'm
+    in** is `POST /proposals/{proposal_id}/yes`, free until it fills."""
+
+    proposal_id: UUID
+    kind: SearchMode
+    starts_at: datetime
+    club: BookedClubSchema
+    share_grosze: int = Field(description="What a seat costs if it fills.")
+    book_by: datetime
+    challenger: DeckChallengerSchema | None = Field(
+        description="Who posted it — `null` once they withdrew."
+    )
+    people_in: list[DeckTileSchema] = Field(
+        description="Everybody In, in the order they said yes. No court number."
+    )
+    open_seats: int
+
+
+class PostingSlotResponse(BaseModel):
+    """A cell's sheet (the mechanics §9.1 step 6; the screens A5.3)."""
+
+    pool_id: UUID
+    sport: Sport
+    kind: SearchMode
+    who: Who
+    day: date
+    range: DayRange
+    read_at: datetime
+    level_range: LevelRangeSchema
+    open_seats: int
+    cell: PostingCellSchema = Field(description="The headline's cell.")
+    fits: list[SlotFitSchema] = Field(
+        description="The best fits free at the cell's best hour, best fit first."
+    )
+    free_courts: list[FreeCourtSchema] = Field(
+        description="**Home club first**, then by hour. Tapping one picks it."
+    )
+    rescues: list[SeatToFillSchema] = Field(
+        description=(
+            "**Already happening here**, first: booked games in the range with a "
+            "seat offered to the poster — *I'm in · `share_grosze`* pays at once "
+            "(`POST /bookings/{id}/seats`)."
+        )
+    )
+    posts: list[PostStillFillingSchema] = Field(
+        description="Then: posts still filling in the range the poster could join."
+    )
+
+    @classmethod
+    def from_slot(cls, slot: PostingSlot) -> "PostingSlotResponse":
+        read = slot.read
+        reader = read.poster.player_id
+        people = slot.people
+
+        def fit_of(player_id: UUID, forecast: CardForecast | None) -> SlotFitSchema:
+            person = people.get(player_id)
+            return SlotFitSchema(
+                player_id=player_id,
+                name=None if person is None else person.name,
+                photo_id=None if person is None else person.photo_id,
+                photo_url=None if person is None else person.photo_url,
+                level=None if person is None else person.level,
+                forecast=_forecast(forecast),
+            )
+
+        return cls(
+            pool_id=read.pool.id,
+            sport=read.sport,
+            kind=read.kind,
+            who=read.posted_for.who,
+            day=slot.cell.day,
+            range=slot.cell.range,
+            read_at=read.read_at,
+            level_range=LevelRangeSchema.of(read.posted_for.levels),
+            open_seats=read.open_seats,
+            cell=PostingCellSchema.of(slot.cell),
+            fits=[fit_of(fit.player_id, fit.forecast) for fit in slot.fits],
+            free_courts=[
+                FreeCourtSchema(
+                    club=BookedClubSchema(
+                        id=court.hour.club_id,
+                        name=slot.club_names.get(court.hour.club_id),
+                    ),
+                    home_club=court.home,
+                    distance_km=slot.distances.get(court.hour.club_id),
+                    starts_at=court.hour.start,
+                    share_grosze=court.hour.share_grosze,
+                    book_by=court.hour.book_by,
+                    courts=court.hour.courts,
+                    fits_free=court.fits_free,
+                )
+                for court in slot.free_courts
+            ],
+            rescues=[
+                SeatToFillSchema.of(
+                    row.game,
+                    deadline=row.deadline,
+                    fills_by_the_cut_off=row.fills_by_the_cut_off,
+                    club_name=row.club_name,
+                    reader=reader,
+                    people=people,
+                )
+                for row in slot.rescues
+            ],
+            posts=[
+                PostStillFillingSchema(
+                    proposal_id=row.proposal.proposal_id,
+                    kind=row.proposal.kind,
+                    starts_at=row.proposal.start,
+                    club=BookedClubSchema(id=row.proposal.club_id, name=row.club_name),
+                    share_grosze=row.proposal.share_grosze,
+                    book_by=row.proposal.book_by,
+                    challenger=_challenger(row.challenger_id, people),
+                    people_in=_deck_sides(
+                        Sides(yours=row.proposal.yeses, theirs=()),
+                        reader=reader,
+                        people=people,
+                        in_=row.proposal.yeses,
+                    ).yours,
+                    open_seats=row.proposal.open_seats,
+                )
+                for row in slot.posts
+            ],
+        )
+
+
+class PostRequest(BaseModel):
+    """*Post — you're In*: the four controls and the court hour picked on a
+    sheet. **Types only**: who it may be for and which court hours are offered
+    are the domain's to refuse, each with its own code."""
+
+    sport: Sport
+    kind: SearchMode
+    who: Who
+    level_low: float | None = Field(
+        default=None,
+        description="The narrowed lower bound; `null` is the engine's own.",
+    )
+    level_high: float | None = Field(
+        default=None,
+        description="The narrowed upper bound; `null` is the engine's own.",
+    )
+    club_id: UUID
+    starts_at: datetime = Field(description="The court hour's start, as listed.")
+
+
+class PostedResponse(BaseModel):
+    """The post, In with its poster — its id is the game's, in *You're In*."""
+
+    proposal_id: UUID
+    versions: int = Field(description="How many versions it was dealt in, up to 3.")
+    dealt_to: int = Field(description="How many best fits were dealt it.")
+    open_seats: int = Field(description="The seats open beside the poster.")
+
+    @classmethod
+    def from_posted(cls, posted: Posted) -> "PostedResponse":
+        return cls(
+            proposal_id=posted.proposal_id,
+            versions=posted.versions,
+            dealt_to=posted.dealt_to,
+            open_seats=posted.open_seats,
         )

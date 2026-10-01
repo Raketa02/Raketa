@@ -53,12 +53,8 @@ from app.modules.proposals.application.commands import (
     MakeProposalCommand,
 )
 from app.modules.proposals.application.making import DealVersion, MakeProposal
-from app.modules.proposals.domain.deck import (
-    GAME_LENGTH,
-    named_on,
-    week_window,
-    weeks_ahead,
-)
+from app.modules.proposals.application.members import ReadMembers
+from app.modules.proposals.domain.deck import GAME_LENGTH, named_on
 from app.modules.proposals.domain.ids import pick_id
 from app.modules.proposals.domain.limits import (
     NEXT_BEST_FITS_PER_SEAT,
@@ -66,17 +62,12 @@ from app.modules.proposals.domain.limits import (
 )
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.ports import (
-    BookedGames,
     CourtHours,
-    GamesAndMoneyRepository,
-    InPlay,
     PlayerFit,
-    PlayersInPlay,
     Pools,
     ProposalDirectory,
     ProposalRepository,
     UndecidedCharges,
-    WantedKinds,
     WherePoolsPlay,
 )
 from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
@@ -137,10 +128,7 @@ class ProposeGames:
         pools: Pools,
         where: WherePoolsPlay,
         court_hours: CourtHours,
-        players: PlayersInPlay,
-        wanted: WantedKinds,
-        settings: GamesAndMoneyRepository,
-        booked: BookedGames,
+        members: ReadMembers,
         directory: ProposalDirectory,
         proposals: ProposalRepository,
         fit: PlayerFit,
@@ -155,10 +143,7 @@ class ProposeGames:
         self._pools = pools
         self._where = where
         self._court_hours = court_hours
-        self._players = players
-        self._wanted = wanted
-        self._settings = settings
-        self._booked = booked
+        self._members_in_play = members
         self._directory = directory
         self._proposals = proposals
         self._fit = fit
@@ -220,30 +205,14 @@ class ProposeGames:
         done = Proposed(pools=1)
         if not sports:
             return done
-        limits = {player: await self._settings.load(player) for player in members}
-        start, stop = week_window(weeks_ahead(now))
-        booked = {
-            player: tuple(await self._booked.starts_of(player, start=start, end=stop))
-            for player in members
-        }
+        limits, booked = await self._members_in_play.limits_and_games(members, now=now)
         for sport in sports:
             in_sport = [proposal for proposal in filling if proposal.sport is sport]
             batch = await self._batch(
                 sport,
-                members=[
-                    Member(
-                        player_id=player,
-                        level=facts.level,
-                        week=facts.week,
-                        wants=wanted,
-                        limits=limits[player],
-                        booked=booked[player],
-                        live_yeses=live,
-                    )
-                    for player, facts, wanted, live in await self._members(
-                        members, sport, now
-                    )
-                ],
+                members=await self._members_in_play.in_sport(
+                    members, sport=sport, now=now, limits=limits, booked=booked
+                ),
                 clubs=clubs,
                 hours=[hour for hour in hours if hour.sport is sport],
                 held=[(club, at) for club, of, at in held if of is sport],
@@ -274,20 +243,6 @@ class ProposeGames:
             if proposal is not None and proposal.owes_a_new_card:
                 owed.append(proposal)
         return owed
-
-    async def _members(
-        self, members: Sequence[UUID], sport: Sport, now: Instant
-    ) -> list[tuple[UUID, InPlay, frozenset[SearchMode], int]]:
-        """Each member's Level and week, the kinds they want and their live
-        yeses in the sport, in the pool's order."""
-
-        in_play = await self._players.of(members, sport=sport)
-        answer: list[tuple[UUID, InPlay, frozenset[SearchMode], int]] = []
-        for player in members:
-            wanted = await self._wanted.of(player, sport=sport)
-            live = await self._directory.live_yes_count(player, sport=sport, now=now)
-            answer.append((player, in_play[player], wanted or frozenset(), live))
-        return answer
 
     async def _batch(
         self,

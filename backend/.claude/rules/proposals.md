@@ -134,3 +134,54 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `BookedGameChanges.rescue`/`say_no_to_the_seat`, `SeatCharges` (`rescue=True`, `to_confirm`) and
   `SeatRefunds` (`SEAT_TAKEN`). The Games badge still counts cards with somebody **In**: a
   rescue's players have paid, and are not In.
+- **A member posts a game; posting is their yes** (#546; the mechanics §9; the screens A5):
+  `application/posting.py` over `domain/post.py` (*Who* and the Level range) and
+  `domain/posting_grid.py` (the grid's and the sheet's rules). Six things are load-bearing.
+  **One reading, the proposer's**: `ReadMembers` (`application/members.py`) is how both the
+  proposer and posting read a pool's members — Level, week, **gender and preference** (now on
+  `InPlay`), intent, Games & money, booked games, live yeses — and a best fit is the
+  proposer's own `may_play` at the hour, so the grid's number is who the post would be dealt
+  to. **A cell counts at one hour**: the best hour in its range that has a free court (else
+  the best of the range), an hour the poster is free for first — never people overlapping the
+  poster at different hours (Q92). A free court is one `MakeProposal` would accept: a pool
+  club, taking new cards, before its book-by. **Who it is for is stored on it**
+  (`ProposalMade.who`, `level_low`, `level_high`, defaulted for older streams, which read as
+  *for anybody*): the range starts as **the engine's own window** around the poster —
+  `PlayerFit.level_window`, the matcher's `level_tolerance` through the same
+  `gates.level_tolerance` the pair gate uses, narrowed while new — rounded **inward** to the
+  hundredth, narrowed never widened (`level_range_too_wide` names the window). *Who* is
+  everybody's on the game, the poster's too (`who_leaves_you_out`); only somebody with a
+  gender set counts for Men/Women/Mixed, and a preference that excludes the game excludes
+  them. **Mixed pairs keeps two of each**: a grid cell is a *full game* only with the men and
+  the women beside the poster a mixed game needs; versions are dealt 2 + 2, a yes that would be a
+  third of a gender is `no_longer_fits` (`Guards.refuse_a_yes_the_post_is_not_for`, on every
+  yes and resumed yes on a post), the deck and the details withhold a card from a reader who
+  would be one and leave such a name off (`view_of(may_stand=…)`), and **the sides — on the
+  card, in the details and at the fill — stand a man and a woman each** (`standing_for`),
+  genders read through `PlayersInPlay` only where a mixed post is on the table and never
+  said. **Dealing**: at posting, one version per full set of best fits free then, evenest
+  first, up to three, or one version with seats open (`versions_of_a_post`); after, every
+  proposer batch keeps dealing it until its book-by with **no half-In condition** — a
+  version naming fewer than its open seats takes whoever became a fit, a new full set is a
+  new version while fewer than three, and a no's seat goes to next best fits of the gender
+  it left. **Joining from the sheet** is a yes on a post the member was never dealt
+  (`Proposal.join`, `SayYes`; version `NULL` in `proposal_people`, so a withdrawn joiner is
+  not dealt it back) — only a post: a stranger's yes on a pick is still `proposal_not_found`.
+  A join is held to what dealing would have asked of them now — the proposer's `may_play`:
+  free for the hour, **no game then** (a join is never a second game at one hour), a week
+  and a price within their Games & money, the kind they want
+  (`Guards.refuse_a_join_dealing_would_not_make`, `post_not_open_to_you`) — so what the
+  sheet lists (`open_to_join`) and what the yes accepts are one rule.
+  The guards on *Post — you're In*, in the button's order: a method and a live yes
+  (`payment_method_required`, `live_yeses_exhausted`), `LIVE_POSTS` (two,
+  `live_posts_exhausted`, counted by `ProposalDirectory.live_posts_of` — filling, poster In),
+  `games_per_week_booked`; then `you_play_then` and `nobody_fits_then`. **Telling the
+  poster *your post didn't fill* is #549's push**, from `proposals.proposal_expired` on a
+  post whose poster is still In (`not proposal.poster_withdrew`); the sweep records it.
+  **Seeded by `app/seeds/posts.py`**: her post at the first Bonarka padel hour of her week
+  from two days out with somebody who fits free, clear of every game and yes the layers above
+  seeded — and `assert_the_posting_grid` fails the run unless her two weeks, read for anybody
+  and for women, draw every look the server decides (*earlier today* once the morning is
+  over). No people are added for it: Monday afternoon, the one third of a day none of her
+  group's clubs sells padel, is *enough · no court* and *few · no court* off the cohort's
+  committed weeks.

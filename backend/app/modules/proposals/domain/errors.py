@@ -11,6 +11,12 @@ the engine (#540), a seed, a test — and by no player, since no route makes one
 
 The last two are **Games & money**'s: a value its form does not offer, each
 naming what it does, so the screen can say both.
+
+**Posting a game** (#546) adds the post's own: a Level range wider than the
+engine's window or upside down, *Mixed pairs* in a singles sport, a poster
+with no Level in the sport or left out by their own *Who*, and the button's
+guards — two live posts, a week already booked, a game at that hour, and
+nobody who fits free then.
 """
 
 from __future__ import annotations
@@ -290,3 +296,121 @@ class RescueNotOffered(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("this seat is not offered to this player")
+
+
+# --------------------------------------------------------------------------- #
+# Posting a game (#546)
+# --------------------------------------------------------------------------- #
+
+
+class LevelRangeTooWide(BadRequestError):
+    """A level bound outside the engine's window for the kind around the
+    poster's Level — *you can narrow it, not widen it* (the mechanics §9.1
+    step 4, Q78). ``details`` carries the window, ``low`` to ``high``.
+    Nothing was read or posted."""
+
+    code = "level_range_too_wide"
+
+    def __init__(self, *, low: float, high: float) -> None:
+        super().__init__(
+            "a post's level range can be narrowed, never widened",
+            details={"low": low, "high": high},
+        )
+
+
+class LevelRangeInverted(BadRequestError):
+    """The lower level bound is above the upper one: nobody is between them."""
+
+    code = "level_range_inverted"
+
+    def __init__(self) -> None:
+        super().__init__("the lower level bound is above the upper one")
+
+
+class MixedPairsOnlyInDoubles(BadRequestError):
+    """*Mixed pairs* is a doubles game — each side one man and one woman — and
+    ``details.sport`` is played one a side."""
+
+    code = "mixed_pairs_only_in_doubles"
+
+    def __init__(self, *, sport: str) -> None:
+        super().__init__("mixed pairs is only for doubles", details={"sport": sport})
+
+
+class NotRatedInTheSport(ConflictError):
+    """The poster holds no Level in ``details.sport``: there is no window to
+    deal a game in, and nobody to fit (*Get rated in padel to post here*)."""
+
+    code = "not_rated_in_the_sport"
+
+    def __init__(self, *, sport: str) -> None:
+        super().__init__(
+            "rate yourself in this sport to post a game in it",
+            details={"sport": sport},
+        )
+
+
+class WhoLeavesYouOut(ConflictError):
+    """The game's *Who* is everybody's on it, the poster's too, and the
+    poster's own gender or preference is not one it takes. Which is not said."""
+
+    code = "who_leaves_you_out"
+
+    def __init__(self) -> None:
+        super().__init__("you would not be on a game for these players")
+
+
+class LivePostsExhausted(ConflictError):
+    """``details.cap`` posts of this player's are live already — until one
+    fills, is withdrawn, or reaches its book-by (the mechanics §9.3)."""
+
+    code = "live_posts_exhausted"
+
+    def __init__(self, *, cap: int) -> None:
+        super().__init__(f"{cap} live posts already", details={"cap": cap})
+
+
+class GamesPerWeekBooked(ConflictError):
+    """The poster's games per week are already booked for the week the hour is
+    in (Monday ``details.week``) — the deck deals nothing in that week either
+    (the mechanics §6.6, Q73)."""
+
+    code = "games_per_week_booked"
+
+    def __init__(self, *, games_per_week: int, week: str) -> None:
+        super().__init__(
+            "your games this week are booked",
+            details={"games_per_week": games_per_week, "week": week},
+        )
+
+
+class YouPlayThen(ConflictError):
+    """The poster already has a game at that hour (*one game per hour*, the
+    mechanics §6.6)."""
+
+    code = "you_play_then"
+
+    def __init__(self) -> None:
+        super().__init__("you already have a game at that hour")
+
+
+class NobodyFitsThen(ConflictError):
+    """None of the poster's best fits is free at that hour: a cell that cannot
+    be picked (the mechanics §9.1 step 5). Nothing was posted."""
+
+    code = "nobody_fits_then"
+
+    def __init__(self) -> None:
+        super().__init__("nobody who fits is free then")
+
+
+class PostNotOpenToYou(ConflictError):
+    """A member joining a post they were never dealt could not be dealt it
+    now: not free for its hour, a game of theirs then, their week booked, its
+    share above their *most I'll pay*, or a kind they do not want. **Which is
+    not said**, as a rescue's is not (``docs/adr/0130``). Nothing was recorded."""
+
+    code = "post_not_open_to_you"
+
+    def __init__(self) -> None:
+        super().__init__("this post is not one you could join")

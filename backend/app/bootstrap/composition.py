@@ -135,6 +135,13 @@ from app.modules.proposals.application.rescues import (
 from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.making import DealVersion, MakeProposal
+from app.modules.proposals.application.members import ReadMembers
+from app.modules.proposals.application.posting import (
+    PostAGame,
+    ReadPosting,
+    ReadPostingGrid,
+    ReadPostingSlot,
+)
 from app.modules.proposals.application.propose_games import ProposeGames
 from app.modules.proposals.application.resume_paused_yeses import ResumePausedYeses
 from app.modules.proposals.domain.ports import (
@@ -1311,7 +1318,8 @@ def build_proposal_guards(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> Guards:
     """The checks a version and a yes are held to outside the aggregate: the
-    pool, the fit, a method to charge and a live yes to spare."""
+    pool, the fit, a method to charge, a live yes to spare — and, on a post,
+    who it is for (#546)."""
     return Guards(
         pools=build_pools(session),
         fit=build_player_fit(session, runtime=runtime),
@@ -1321,6 +1329,8 @@ def build_proposal_guards(
             events=build_event_publisher(session, runtime=runtime),
         ),
         directory=build_proposal_directory(session),
+        players=build_players_in_play(session, runtime=runtime),
+        members=build_read_members(session, runtime=runtime),
     )
 
 
@@ -1524,6 +1534,7 @@ def build_read_group_deck(
         offers=build_rescue_offers(
             session, settings=settings, booked=booked, runtime=runtime
         ),
+        players=build_players_in_play(session, runtime=runtime),
         clock=clock,
     )
 
@@ -1571,13 +1582,7 @@ def build_propose_games(
         pools=build_pools(session),
         where=build_where_pools_play(session, runtime=runtime),
         court_hours=build_court_hours(session, runtime=runtime),
-        players=build_players_in_play(session, runtime=runtime),
-        wanted=build_wanted_kinds(session, runtime=runtime),
-        settings=build_games_and_money_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        ),
-        booked=booked if booked is not None else build_booked_games(session),
+        members=build_read_members(session, booked=booked, runtime=runtime),
         directory=build_proposal_directory(session),
         proposals=build_proposal_repository(
             session,
@@ -1818,6 +1823,7 @@ def build_fill(
         ),
         booked=build_booked_games(session),
         fit=build_player_fit(session, runtime=runtime),
+        players=build_players_in_play(session, runtime=runtime),
     )
 
 
@@ -2136,6 +2142,119 @@ def build_read_fill_in(
 
 
 # --------------------------------------------------------------------------
+# Posting a game (#546)
+# --------------------------------------------------------------------------
+
+
+def build_read_members(
+    session: AsyncSession,
+    *,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ReadMembers:
+    """A pool's members as the proposer reads them — posting's best fits are
+    counted from the same reading. ``booked`` as the deck's."""
+    return ReadMembers(
+        players=build_players_in_play(session, runtime=runtime),
+        wanted=build_wanted_kinds(session, runtime=runtime),
+        settings=build_games_and_money_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        booked=booked if booked is not None else build_booked_games(session),
+        directory=build_proposal_directory(session),
+    )
+
+
+def build_read_posting(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ReadPosting:
+    """What every step of posting a game reads: who it is for, the poster's
+    best fits and the pool's courts, and the games already happening (#546)."""
+    return ReadPosting(
+        pools=build_pools(session),
+        where=build_where_pools_play(session, runtime=runtime),
+        court_hours=build_court_hours(session, runtime=runtime),
+        members=build_read_members(session, booked=booked, runtime=runtime),
+        fit=build_player_fit(session, runtime=runtime),
+        directory=build_proposal_directory(session),
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        offers=build_rescue_offers(
+            session, settings=settings, booked=booked, runtime=runtime
+        ),
+    )
+
+
+def build_read_posting_grid(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ReadPostingGrid:
+    """The posting grid — a week of a poster's best fits and courts (#546)."""
+    return ReadPostingGrid(
+        posting=build_read_posting(
+            session, settings=settings, booked=booked, runtime=runtime
+        ),
+        clock=clock,
+    )
+
+
+def build_read_posting_slot(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ReadPostingSlot:
+    """One cell's sheet: the fits free then, the free courts, and what is
+    already happening there (#546)."""
+    return ReadPostingSlot(
+        posting=build_read_posting(
+            session, settings=settings, booked=booked, runtime=runtime
+        ),
+        forecasts=build_balance_forecasts(session, runtime=runtime),
+        people=build_deck_people(session, settings=settings, runtime=runtime),
+        clubs=build_proposal_club_names(session),
+        distances=build_club_distances(session, runtime=runtime),
+        clock=clock,
+    )
+
+
+def build_post_a_game(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> PostAGame:
+    """*Post — you're In* — the phone's, a seed's (#546): the post made and
+    dealt through the dealer's own act, weighed by the live ruleset."""
+    return PostAGame(
+        posting=build_read_posting(
+            session, settings=settings, booked=booked, runtime=runtime
+        ),
+        guards=build_proposal_guards(session, runtime=runtime),
+        directory=build_proposal_directory(session),
+        make=build_make_proposal(session, clock=clock, runtime=runtime),
+        balance=build_ruleset().balance,
+        clock=clock,
+    )
+
+
+# --------------------------------------------------------------------------
 # Bookings (docs/adr/0189 §5; #541)
 # --------------------------------------------------------------------------
 
@@ -2270,6 +2389,7 @@ def build_read_proposal_details(
         terms=build_club_terms(session, runtime=runtime),
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
+        players=build_players_in_play(session, runtime=runtime),
         clock=clock,
     )
 

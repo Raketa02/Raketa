@@ -29,6 +29,7 @@ from uuid import UUID
 
 from app.kernel import Clock, Instant, instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
+from app.modules.proposals.application.members import genders_on
 from app.modules.proposals.domain.deck import (
     CardForecast,
     CardType,
@@ -38,7 +39,9 @@ from app.modules.proposals.domain.deck import (
     challenger_of,
     cut_off_passed,
     evenest,
+    may_stand_on,
     named_on,
+    standing_for,
 )
 from app.modules.proposals.domain.details import (
     DetailsView,
@@ -58,6 +61,7 @@ from app.modules.proposals.domain.ports import (
     DeckPeople,
     DeckPerson,
     PlayerFit,
+    PlayersInPlay,
     Pools,
     ProposalRepository,
 )
@@ -104,8 +108,10 @@ class ReadProposalDetails:
         terms: ClubTerms,
         clubs: ClubNames,
         distances: ClubDistances,
+        players: PlayersInPlay,
         clock: Clock,
     ) -> None:
+        self._players = players
         self._pools = pools
         self._proposals = proposals
         self._fit = fit
@@ -133,14 +139,26 @@ class ReadProposalDetails:
             kind=proposal.kind,
             at=now,
         )
+        genders = await genders_on(
+            self._players, proposal, {reader, *proposal.yeses, *named}
+        )
         view = details_view(
-            proposal, reader, unfit=unfit, in_the_pool=in_the_pool, now=now
+            proposal,
+            reader,
+            unfit=unfit,
+            in_the_pool=in_the_pool,
+            now=now,
+            may_stand=may_stand_on(proposal, genders),
         )
         if view is None:
             raise ProposalNotFound()
 
-        options = arrangements(
-            reader, view.beside_the_reader, seats_per_side=proposal.seats_per_side
+        options = standing_for(
+            arrangements(
+                reader, view.beside_the_reader, seats_per_side=proposal.seats_per_side
+            ),
+            who=proposal.who,
+            genders=genders,
         )
         sides, forecast = evenest(
             options, await self._forecasts.forecasts(options, sport=proposal.sport)

@@ -19,7 +19,9 @@ they already have a game at, and a club that no longer sells are never dealt;
 **blocks, gender preferences and the level gates** are the matcher's pair rule,
 through ``PlayerFit`` — a card with somebody In the reader does not fit is
 withheld, and a name that does not fit them or anybody on the card is left off
-it (``domain/deck.py``).
+it (``domain/deck.py``). On a *Mixed pairs* post (#546) a reader who would be
+a third of their gender is not dealt it, and the sides stand a man and a woman
+each — the genders read only for such a card, and never said.
 
 **Seat open cards** (#545; the mechanics §8.1, §10.1): a booked game in the
 pool that lost a player is dealt to its **best fits** — the members it is offered
@@ -45,6 +47,7 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.modules.proposals.application.commands import ReadGroupDeckCommand
+from app.modules.proposals.application.members import genders_of
 from app.modules.proposals.application.rescues import RescueOffers
 from app.modules.proposals.domain.deck import (
     CappedWeek,
@@ -57,7 +60,9 @@ from app.modules.proposals.domain.deck import (
     dealt_in_order,
     evenest,
     hour_taken,
+    may_stand_on,
     named_on,
+    standing_for,
     view_of,
     week_of,
     week_window,
@@ -75,12 +80,15 @@ from app.modules.proposals.domain.ports import (
     DeckPerson,
     GamesAndMoneyRepository,
     PlayerFit,
+    PlayersInPlay,
     Pools,
     ProposalDirectory,
     ProposalRepository,
     WantedKinds,
 )
+from app.modules.player_profile.domain.gender import Gender
 from app.modules.proposals.domain.pool import Pool
+from app.modules.proposals.domain.post import Who
 from app.modules.proposals.domain.proposal import Proposal
 
 
@@ -131,9 +139,11 @@ class ReadGroupDeck:
         people: DeckPeople,
         clubs: ClubNames,
         offers: RescueOffers,
+        players: PlayersInPlay,
         clock: Clock,
     ) -> None:
         self._offers = offers
+        self._players = players
         self._pools = pools
         self._directory = directory
         self._proposals = proposals
@@ -177,12 +187,16 @@ class ReadGroupDeck:
             and proposal.club_id in terms
         ]
 
-        views = await self._views(pool, reader, sport, candidates, now)
+        views, genders = await self._views(pool, reader, sport, candidates, now)
         options = [
-            arrangements(
-                reader,
-                (*view.in_, *view.others),
-                seats_per_side=proposal.seats_per_side,
+            standing_for(
+                arrangements(
+                    reader,
+                    (*view.in_, *view.others),
+                    seats_per_side=proposal.seats_per_side,
+                ),
+                who=proposal.who,
+                genders=genders,
             )
             for proposal, view in views
         ]
@@ -285,9 +299,10 @@ class ReadGroupDeck:
         sport: Sport,
         candidates: Sequence[Proposal],
         now: Instant,
-    ) -> list[tuple[Proposal, ReadersView]]:
-        """Each candidate as the reader would see it, with the two live reads
-        every card shares: who is still in the pool, and which pairs fit."""
+    ) -> tuple[list[tuple[Proposal, ReadersView]], dict[UUID, Gender | None]]:
+        """Each candidate as the reader would see it, with the live reads every
+        card shares: who is still in the pool, which pairs fit — and, where a
+        *Mixed pairs* post is among them, everybody's gender on it."""
 
         in_the_pool = await self._pools.members_among(
             pool, {player for proposal in candidates for player in named_on(proposal)}
@@ -309,6 +324,16 @@ class ReadGroupDeck:
             unfit[kind] = await self._fit.unfit_pairs(
                 sorted(everybody), sport=sport, kind=kind, at=now
             )
+        genders = await genders_of(
+            self._players,
+            {
+                player
+                for proposal in candidates
+                if proposal.who is Who.MIXED_PAIRS
+                for player in (reader, *proposal.yeses, *named_on(proposal))
+            },
+            sport=sport,
+        )
         views: list[tuple[Proposal, ReadersView]] = []
         for proposal in candidates:
             view = view_of(
@@ -317,7 +342,8 @@ class ReadGroupDeck:
                 unfit=unfit[proposal.kind],
                 in_the_pool=in_the_pool,
                 now=now,
+                may_stand=may_stand_on(proposal, genders),
             )
             if view is not None:
                 views.append((proposal, view))
-        return views
+        return views, genders

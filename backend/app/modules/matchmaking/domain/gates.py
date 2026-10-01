@@ -41,6 +41,7 @@ means *we do not know*, and the availability term stands down.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
 from enum import Enum
 from typing import final
@@ -361,9 +362,27 @@ def level_close_enough(
     line-up to get it wrong.
     """
 
+    tolerance = level_tolerance(
+        mode=mode, ruleset=ruleset, now=now, created_at=(a_created_at, b_created_at)
+    )
+    return abs(mu_a - mu_b) < tolerance
+
+
+def level_tolerance(
+    *,
+    mode: SearchMode,
+    ruleset: Ruleset,
+    now: datetime,
+    created_at: Iterable[datetime],
+) -> float:
+    """The level gate's tolerance for a pairing of people made at
+    ``created_at`` — the mode's, or the competitive one while **any** of them
+    is new (``docs/adr/0113``). One answer for :func:`level_close_enough` and
+    for a post's window around its poster (#546), which asks it of one."""
+
     tolerance = ruleset.modes[mode].level_tolerance
-    if is_new_at(a_created_at, now) or is_new_at(b_created_at, now):
+    if any(is_new_at(at, now) for at in created_at):
         tolerance = min(
             tolerance, ruleset.modes[SearchMode.COMPETITIVE].level_tolerance
         )
-    return abs(mu_a - mu_b) < tolerance
+    return tolerance

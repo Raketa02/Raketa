@@ -28,7 +28,9 @@ from app.modules.proposals.domain.details import (
     details_view,
     status_of_proposal,
 )
+from app.modules.player_profile.domain.gender import Gender
 from app.modules.proposals.domain.pool import Pool, PoolKind
+from app.modules.proposals.domain.post import Who, stand_together
 from app.modules.proposals.domain.proposal import Origin, Proposal, ReopenReason
 
 WARSAW = ZoneInfo("Europe/Warsaw")
@@ -300,3 +302,52 @@ def test_a_game_that_is_over_offers_nothing():
     pick.say_yes(ME, at=NOW)
 
     assert actions_for(pick, ME, now=BOOK_BY) == ()
+
+
+# --------------------------------------------------------------------------- #
+# Mixed pairs (#546)
+# --------------------------------------------------------------------------- #
+
+GENDERS = {ME: Gender.MAN, A: Gender.MAN, B: Gender.MAN, C: Gender.WOMAN}
+
+
+def two_of_each(people) -> bool:
+    return stand_together(Who.MIXED_PAIRS, GENDERS, people, seats=4)
+
+
+def test_a_reader_who_would_be_a_third_of_their_gender_sees_no_details():
+    """The deck withholds the card from a third man, and its details are the
+    same card."""
+
+    pick = a_pick((ME, A, B, C))
+    pick.say_yes(A, at=NOW)
+    pick.say_yes(B, at=NOW)
+
+    assert (
+        details_view(
+            pick,
+            ME,
+            unfit=frozenset(),
+            in_the_pool=EVERYBODY,
+            now=NOW,
+            may_stand=two_of_each,
+        )
+        is None
+    )
+
+
+def test_a_name_a_mixed_game_has_no_seat_for_is_left_off_the_details():
+    pick = a_pick((ME, A, B, C))
+    pick.say_yes(C, at=NOW)
+
+    seen = details_view(
+        pick,
+        ME,
+        unfit=frozenset(),
+        in_the_pool=EVERYBODY,
+        now=NOW,
+        may_stand=two_of_each,
+    )
+
+    assert seen is not None
+    assert seen.others == (A,)

@@ -26,6 +26,7 @@ from app.bootstrap.composition import (
     build_games_and_money_repository,
     build_join_a_rescue,
     build_leave_the_game,
+    build_post_a_game,
     build_proposal_club_names,
     build_proposal_directory,
     build_proposal_repository,
@@ -33,6 +34,8 @@ from app.bootstrap.composition import (
     build_read_fill_in,
     build_read_group_deck,
     build_read_home,
+    build_read_posting_grid,
+    build_read_posting_slot,
     build_read_proposal_details,
     build_read_waiting_requests,
     build_refuse_the_request,
@@ -62,6 +65,11 @@ from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
 from app.modules.proposals.application.payments_to_confirm import (
     ReadPaymentsToConfirm,
+)
+from app.modules.proposals.application.posting import (
+    PostAGame,
+    ReadPostingGrid,
+    ReadPostingSlot,
 )
 from app.modules.proposals.application.proposal_details import ReadProposalDetails
 from app.modules.proposals.application.rescues import (
@@ -329,3 +337,36 @@ def get_refuse_the_request(
 
 
 RefuseTheRequestDep = Annotated[RefuseTheRequest, Depends(get_refuse_the_request)]
+
+
+# --------------------------------------------------------------------------- #
+# Posting a game (#546)
+# --------------------------------------------------------------------------- #
+
+
+def get_read_posting_grid(
+    db: DbSession, settings: SettingsDep, clock: ClockDep, booked: BookedGamesDep
+) -> ReadPostingGrid:
+    return build_read_posting_grid(db, settings=settings, clock=clock, booked=booked)
+
+
+ReadPostingGridDep = Annotated[ReadPostingGrid, Depends(get_read_posting_grid)]
+
+
+def get_read_posting_slot(
+    db: DbSession, settings: SettingsDep, clock: ClockDep, booked: BookedGamesDep
+) -> ReadPostingSlot:
+    return build_read_posting_slot(db, settings=settings, clock=clock, booked=booked)
+
+
+ReadPostingSlotDep = Annotated[ReadPostingSlot, Depends(get_read_posting_slot)]
+
+
+def get_post_a_game(
+    db: DbSession, settings: SettingsDep, clock: ClockDep, booked: BookedGamesDep
+) -> PostAGame:
+    """*Post — you're In*: made and dealt through the dealer's own act."""
+    return build_post_a_game(db, settings=settings, clock=clock, booked=booked)
+
+
+PostAGameDep = Annotated[PostAGame, Depends(get_post_a_game)]

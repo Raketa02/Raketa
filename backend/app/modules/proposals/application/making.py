@@ -1,9 +1,9 @@
 """Making a proposal and dealing it — **the dealer's two acts**, which no route
 exposes (#538).
 
-The engine that builds picks (#540) and posting (#546) will drive these; until
-they exist, seeds and tests drive them directly, so a deck can be exercised
-without waiting for an engine. Nothing here chooses *who* is dealt a game: the
+The engine that builds picks (#540) and posting (#546) drive these, and seeds
+and tests drive them directly, so a deck can be exercised without waiting for
+an engine. Nothing here chooses *who* is dealt a game: the
 caller names them, and this refuses what a game may not be dealt.
 
 **The court hour is read, never supplied.** The share and the book-by come off
@@ -88,9 +88,12 @@ class MakeProposal:
             share_grosze=offered.share_grosze,
             book_by=offered.book_by,
             at=now,
+            posted_for=command.posted_for,
         )
         if poster is not None:
-            await self._guards.refuse_an_unchargeable_yes(poster, proposal, now=now)
+            await self._guards.refuse_an_unchargeable_yes(
+                poster, sport=proposal.sport, now=now
+            )
         for named in command.versions:
             await _deal(self._guards, proposal, named, at=now)
         await self._proposals.save(proposal)

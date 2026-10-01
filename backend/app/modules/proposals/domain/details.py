@@ -29,14 +29,14 @@ week, which comes back by itself.
 
 from __future__ import annotations
 
-from collections.abc import Collection
+from collections.abc import Callable, Collection, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import final
 from uuid import UUID
 
 from app.kernel import Instant, exhaustive
-from app.modules.proposals.domain.deck import ReadersView, view_of
+from app.modules.proposals.domain.deck import ReadersView, anybody, view_of
 from app.modules.proposals.domain.proposal import Proposal, ReopenReason, Standing
 
 
@@ -129,10 +129,12 @@ def details_view(
     unfit: Collection[frozenset[UUID]],
     in_the_pool: Collection[UUID],
     now: Instant,
+    may_stand: Callable[[Sequence[UUID]], bool] = anybody,
 ) -> DetailsView | None:
     """Who the reader's details draw — ``None`` for a proposal that is nothing
-    to them, and for one with somebody In they may not share a court with while
-    they are not In themselves. ``unfit`` is every pair that may not."""
+    to them, and for one with somebody In they may not share a court with, or
+    not stand with on a *Mixed pairs* post, while they are not In themselves.
+    ``unfit`` is every pair that may not."""
 
     if not proposal.is_on_it(reader):
         return None
@@ -140,8 +142,15 @@ def details_view(
         return DetailsView(reader=reader, in_=proposal.yeses, others=())
     if any(frozenset((reader, player)) in unfit for player in proposal.yeses):
         return None
+    if not may_stand((*proposal.yeses, reader)):
+        return None
     dealt: ReadersView | None = view_of(
-        proposal, reader, unfit=unfit, in_the_pool=in_the_pool, now=now
+        proposal,
+        reader,
+        unfit=unfit,
+        in_the_pool=in_the_pool,
+        now=now,
+        may_stand=may_stand,
     )
     # Nothing beside the reader's tile but the people In: a game that is over,
     # full, answered with a no, or with nobody else left on the reader's version.

@@ -192,6 +192,7 @@ from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.groups import SeededGroups, group_lines, write_the_groups
 from app.seeds.bookings import SeededBookings, book_her_games, booking_lines
 from app.seeds.rescues import SeededRescues, rescue_lines, seed_the_rescues
+from app.seeds.posts import SeededPost, post_her_game, post_lines
 from app.seeds.proposals import (
     SeededProposals,
     proposal_lines,
@@ -234,6 +235,7 @@ from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import (
     assert_the_fill_in,
     assert_the_group_deck,
+    assert_the_posting_grid,
     assert_the_screens,
 )
 from app.seeds.sportsmanship import SeededOpinions, write_what_players_said
@@ -1248,6 +1250,8 @@ class SeedReport:
     bookings: SeededBookings | None = None
     #: The rescues on her board (#545). ``None`` on the same callers.
     rescues: SeededRescues | None = None
+    #: Her own post (#546). ``None`` on the same callers.
+    post: SeededPost | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1402,6 +1406,16 @@ async def run(settings: Settings | None = None) -> SeedReport:
             seeded=proposals,
             bookings=bookings,
         )
+        # **Her post, after her rescues** (#546): the last game she is on, at an
+        # hour of her week clear of every game and yes the layers above seeded.
+        post = await post_her_game(
+            session_factory,
+            settings=settings,
+            now=now,
+            seeded=proposals,
+            bookings=bookings,
+            rescues=rescues,
+        )
         # **After every layer that writes and before the screens.** A room is
         # *told* through the outbox by contexts that do not know it exists
         # (``docs/adr/0146`` §5), so nothing above this line opened one — the
@@ -1441,6 +1455,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
                 now=now,
                 expects_after_the_cut_off=rescues.skipped is None,
             ),
+            await assert_the_posting_grid(session_factory, settings=settings, now=now),
         )
         return SeedReport(
             accounts=accounts,
@@ -1462,6 +1477,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             proposals=proposals,
             bookings=bookings,
             rescues=rescues,
+            post=post,
             photographs=photographs,
         )
     finally:
@@ -1558,6 +1574,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *booking_lines(run_report.bookings)])
     if run_report.rescues is not None:
         lines.extend(["", *rescue_lines(run_report.rescues)])
+    if run_report.post is not None:
+        lines.extend(["", *post_lines(run_report.post)])
     if run_report.clubs is not None:
         lines.extend(["", *club_lines(run_report.clubs)])
     if run_report.club_courts is not None:

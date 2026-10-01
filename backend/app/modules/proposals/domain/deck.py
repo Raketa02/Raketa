@@ -17,6 +17,10 @@ not mine to hide: it is the fill's to read, which lets the later yes go
 (``application/fill.py``). A card that would show nobody
 but me is not dealt: there is no game on it.
 
+**A mixed pairs post keeps two of each** (#546): a card is withheld from a
+reader who would be a third of their gender among the people In, a name that
+would be is left off, and the sides stand a man and a woman each.
+
 **A withdrawn yes is dealt again.** A no is final (§5.3); a yes taken back is no
 verdict on the card and may be said again while it fills, and the deck is where
 a card is answered — so a card I withdrew from comes back to me.
@@ -46,7 +50,7 @@ a card and the hour it sells would come to disagree.
 
 from __future__ import annotations
 
-from collections.abc import Collection, Iterable, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import StrEnum
@@ -56,8 +60,10 @@ from uuid import UUID
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, exhaustive, hours, invariant, shifted
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, hour_start, local_day
+from app.modules.player_profile.domain.gender import Gender
 from app.modules.player_profile.domain.weekly_hours import FIRST_HOUR, WeeklyHours
 from app.modules.proposals.domain.overlap import Overlap, overlap_of
+from app.modules.proposals.domain.post import Who, stand_together
 from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
 
 #: How far ahead the engine deals, and so how far ahead a deck can hold a card
@@ -132,6 +138,23 @@ class ReadersView:
         return (*self.in_, self.reader, *self.others)
 
 
+def anybody(people: Sequence[UUID]) -> bool:
+    """Every set of people may stand on a game for anybody."""
+
+    return True
+
+
+def may_stand_on(
+    proposal: Proposal, genders: Mapping[UUID, Gender | None]
+) -> Callable[[Sequence[UUID]], bool]:
+    """Whether a set of people may all be on this game — two of each on a
+    *Mixed pairs* post, anybody on any other."""
+
+    return lambda people: stand_together(
+        proposal.who, genders, people, seats=proposal.seats
+    )
+
+
 def view_of(
     proposal: Proposal,
     reader: UUID,
@@ -139,11 +162,13 @@ def view_of(
     unfit: Collection[frozenset[UUID]],
     in_the_pool: Collection[UUID],
     now: Instant,
+    may_stand: Callable[[Sequence[UUID]], bool] = anybody,
 ) -> ReadersView | None:
     """The reader's card — ``None`` for a proposal that is not in their deck:
     never dealt to them, answered by them, no longer filling or full, withheld
     for somebody In they do not fit, or showing nobody but them. ``unfit`` is
-    every pair on it that may not share a court."""
+    every pair on it that may not share a court; ``may_stand`` whether a set
+    of people may all be on the game — two of each on *Mixed pairs*."""
 
     version = proposal.version_of(reader)
     if (
@@ -156,6 +181,8 @@ def view_of(
         return None
     if any(frozenset((reader, player)) in unfit for player in proposal.yeses):
         return None
+    if not may_stand((*proposal.yeses, reader)):
+        return None
     seats_beside = proposal.seats - len(proposal.yeses) - 1
     on_the_card = [reader, *proposal.yeses]
     others: list[UUID] = []
@@ -167,6 +194,7 @@ def view_of(
             or player in proposal.declined
             or player not in in_the_pool
             or any(frozenset((player, there)) in unfit for there in on_the_card)
+            or not may_stand((*on_the_card, player))
         ):
             continue
         others.append(player)
@@ -253,6 +281,24 @@ def arrangements(
         option for option in options if 1 <= len(option.theirs) <= seats_per_side
     )
     return fitting or (Sides(yours=(reader,), theirs=tuple(others)),)
+
+
+def standing_for(
+    options: Sequence[Sides], *, who: Who | None, genders: Mapping[UUID, Gender | None]
+) -> tuple[Sides, ...]:
+    """The arrangements a game for ``who`` may stand in: on *Mixed pairs*, a
+    man and a woman a side — never more than one of either on one — and every
+    arrangement otherwise, or when none could stand so."""
+
+    if who is not Who.MIXED_PAIRS:
+        return tuple(options)
+    kept = tuple(
+        option
+        for option in options
+        if stand_together(who, genders, option.yours, seats=2)
+        and stand_together(who, genders, option.theirs, seats=2)
+    )
+    return kept or tuple(options)
 
 
 def evenest(

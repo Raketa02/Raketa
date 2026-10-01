@@ -20,6 +20,11 @@ she would look: her receipts, the club named as the seller, and her games.
 fills by the cut-off on every run, and one offered until the start whenever the
 calendar puts an hour of her week inside the club's cut-off — read back on her
 *Fill in*.
+
+**Her post** (#546, ``app/seeds/posts.py``) last: a game of hers at an hour of her
+week clear of all of those, dealt to her best fits as a challenge — and **the
+posting grid's every look**, asserted over the real cohort the way ``make seed``
+runs it, failing by name on a crowd that cannot draw one.
 """
 
 from __future__ import annotations
@@ -45,6 +50,7 @@ from app.seeds.catalog import SEED_PASSWORD, THE_POPULATED_PLAYER
 from app.seeds.club_courts import write_the_club_courts
 from app.seeds.clubs import write_the_clubs
 from app.seeds.payments import write_the_payment_methods
+from app.seeds.posts import post_her_game
 from app.seeds.proposals import IN_ON_EACH, NotEnoughToDeal, write_the_proposals
 from app.seeds.rescues import (
     FILLS_BY_THE_CUT_OFF,
@@ -56,6 +62,7 @@ from app.seeds.screens import (
     ScreenIsEmpty,
     assert_the_fill_in,
     assert_the_group_deck,
+    assert_the_posting_grid,
 )
 from tests.api import matchmaking_world as world
 from tests.api.proposals_world import live_ids, saves_a_card, says_yes
@@ -436,3 +443,140 @@ async def test_on_a_sunday_only_the_seat_that_fills_by_the_cut_off_is_seeded(
         now=sunday,
         expects_after_the_cut_off=False,
     )
+
+
+# ---------------------------------------------------------------------------
+# Her post, and the posting grid (#546)
+# ---------------------------------------------------------------------------
+
+
+async def test_she_posts_a_game_her_crowd_is_dealt_as_a_challenge_once(
+    client, session_factory, payments, now, under_it
+):
+    her = await signed_in_as_her(client)
+    her_id = UUID(
+        (await client.get("/api/v1/users/me", headers=her["headers"])).json()["id"]
+    )
+    crowd, headers = await a_crowd(
+        client,
+        session_factory,
+        payments,
+        12,
+        mu=await her_padel_level(session_factory, her_id),
+    )
+    proposals = await write_the_proposals(
+        session_factory, settings=get_settings(), now=now, cohort=crowd
+    )
+    bookings = await book_her_games(
+        session_factory, settings=get_settings(), now=now, seeded=proposals
+    )
+    rescues = await seed_the_rescues(
+        session_factory,
+        settings=get_settings(),
+        now=now,
+        seeded=proposals,
+        bookings=bookings,
+    )
+
+    post = await post_her_game(
+        session_factory,
+        settings=get_settings(),
+        now=now,
+        seeded=proposals,
+        bookings=bookings,
+        rescues=rescues,
+    )
+    again = await post_her_game(
+        session_factory,
+        settings=get_settings(),
+        now=now,
+        seeded=proposals,
+        bookings=bookings,
+        rescues=rescues,
+    )
+
+    assert post.made and post.dealt_to and post.dealt_to >= 3
+    assert (again.made, again.proposal_id) == (False, post.proposal_id)
+    assert str(post.proposal_id) in await live_ids(client, her)
+    challenged = []
+    for _, player_id in crowd:
+        deck = await client.get(
+            f"/api/v1/pools/{proposals.group_id}/deck",
+            params={"sport": "PADEL", "kind": "COMPETITIVE"},
+            headers=headers[player_id],
+        )
+        challenged += [
+            card
+            for card in deck.json()["cards"]
+            if card["proposal_id"] == str(post.proposal_id)
+        ]
+    assert len(challenged) == post.dealt_to
+    assert all(card["type"] == "CHALLENGE" for card in challenged)
+
+
+async def test_a_crowd_that_cannot_draw_every_look_fails_the_run_by_name(
+    client, session_factory, payments, now, under_it
+):
+    """A crowd free only when she is draws no third of a day with no court —
+    the run says which looks are missing."""
+
+    await seeded_world(client, session_factory, payments, now)
+
+    with pytest.raises(ScreenIsEmpty, match="few · no court"):
+        await assert_the_posting_grid(session_factory, settings=get_settings(), now=now)
+
+
+async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_it(
+    session_factory,
+):
+    """**The real crowd, in the runner's order**, through her post: every look
+    the server decides is drawn on her two weeks, for anybody and for women."""
+
+    from app.seeds.clock import FixedClock
+    from app.seeds.games import write_the_played_history
+    from app.seeds.pairs import write_the_relationships
+    from app.seeds.runner import seed_the_cohort
+    from tests.unit.fake_photo_storage import InMemoryPhotoStorage
+
+    settings = get_settings()
+    now = build_clock().now()
+    photos = InMemoryPhotoStorage()
+    async with session_factory() as session:
+        await seed(session, clock=FixedClock(at=now), settings=settings, photos=photos)
+        members = await seed_the_cohort(
+            session, clock=FixedClock(at=now), settings=settings, photos=photos
+        )
+    cohort = [(member.member.handle, member.player_id) for member in members]
+    await write_the_payment_methods(session_factory, now=now, cohort=cohort)
+    clubs = await write_the_clubs(session_factory, settings=settings, now=now)
+    await write_the_club_courts(
+        session_factory, settings=settings, now=now, clubs=clubs
+    )
+    await write_the_played_history(
+        session_factory, settings=settings, now=now, photos=photos
+    )
+    await write_the_relationships(
+        session_factory, settings=settings, now=now, photos=photos
+    )
+    proposals = await write_the_proposals(
+        session_factory, settings=settings, now=now, cohort=cohort
+    )
+    bookings = await book_her_games(
+        session_factory, settings=settings, now=now, seeded=proposals
+    )
+    rescues = await seed_the_rescues(
+        session_factory, settings=settings, now=now, seeded=proposals, bookings=bookings
+    )
+    post = await post_her_game(
+        session_factory,
+        settings=settings,
+        now=now,
+        seeded=proposals,
+        bookings=bookings,
+        rescues=rescues,
+    )
+
+    line = await assert_the_posting_grid(session_factory, settings=settings, now=now)
+
+    assert post.made
+    assert "every look over two weeks for anybody and for women" in line

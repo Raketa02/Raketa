@@ -25,7 +25,9 @@ a player (the Player profile and clubs) — and, for an On request club (#543), 
 request a full game is put to it as, and its answer (bookings), and what each
 player is called on the club's list of them (users) — and, for rescues (#545), a
 pool's booked games with a seat open and somebody taking one (bookings), and a
-refused payment waiting for its player (payments).
+refused payment waiting for its player (payments) — and, for posting (#546),
+each member's gender and preference (the Player profile) and the engine's level
+window around a poster (the matcher's pair rule).
 """
 
 from __future__ import annotations
@@ -39,6 +41,7 @@ from uuid import UUID
 from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.scorable import LevelReading
 from app.kernel import SPORT_SPECS, Instant, Minutes, Sport, invariant
+from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.deck import CardForecast, SellingTerms, Sides
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
@@ -49,6 +52,7 @@ from app.modules.proposals.domain.home import (
     OpenSeat,
 )
 from app.modules.proposals.domain.pool import Pool
+from app.modules.proposals.domain.post import LevelRange
 from app.modules.proposals.domain.proposal import ClubAnswer, Proposal
 from app.modules.proposals.domain.proposer import CourtHourOnSale, PoolClubs
 
@@ -146,6 +150,11 @@ class ProposalDirectory(Protocol):
         this player and that they have not answered — or took their yes back
         from — **soonest first**, and by id among games at one hour. Candidates
         for their deck: the aggregate says which are cards."""
+        ...
+
+    async def live_posts_of(self, poster_id: UUID, *, now: Instant) -> int:
+        """How many of this player's posts are live: still filling — or waiting
+        for their club — with the poster still In (#546; the mechanics §9.3)."""
         ...
 
 
@@ -295,6 +304,15 @@ class PlayerFit(Protocol):
         """Every pair among these players that may not share a court."""
         ...
 
+    async def level_window(
+        self, player_id: UUID, *, sport: Sport, kind: SearchMode, at: Instant
+    ) -> LevelRange | None:
+        """**The engine's own window for the kind around this player's Level**
+        — the Levels somebody may hold and pass the level rule beside them,
+        narrowed while they are new — rounded inward to the hundredth (#546).
+        ``None`` for somebody with no profile or no rating in the sport."""
+        ...
+
 
 @runtime_checkable
 class SavedMethods(Protocol):
@@ -396,12 +414,17 @@ class InPlay:
     level: LevelReading | None
     #: Blank for somebody with no Player profile: free for nothing.
     week: WeeklyHours
+    #: Their gender and gender preference — read only for whom a post is for
+    #: (#546), never said to anybody — ``None`` where it cannot be read.
+    gender: Gender | None = None
+    preference: GenderPreference | None = None
 
 
 @runtime_checkable
 class PlayersInPlay(Protocol):
     """Each member's Level and week, for the proposer (#540) — **the engine's
-    currency**, rating's estimates, as ``PlayerFit`` and the forecasts read."""
+    currency**, rating's estimates, as ``PlayerFit`` and the forecasts read —
+    and their gender and preference, for whom a post is for (#546)."""
 
     async def of(
         self, player_ids: Collection[UUID], *, sport: Sport

@@ -1,4 +1,5 @@
-"""``PlayersInPlay`` — a Level from rating, a week from the Player profile.
+"""``PlayersInPlay`` — a Level from rating, a week, a gender and a preference
+from the Player profile.
 
 **The engine's currency**: rating's estimates, Level and Uncertainty, the ones
 ``PlayerFit`` gates on and the forecasts read — never the candidate index, so
@@ -47,5 +48,7 @@ class ProfilePlayersInPlay:
                 week=profile.weekly_hours
                 if profile is not None
                 else WeeklyHours.blank(),
+                gender=None if profile is None else profile.gender,
+                preference=None if profile is None else profile.gender_preference,
             )
         return answer

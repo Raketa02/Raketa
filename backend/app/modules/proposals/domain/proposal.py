@@ -32,6 +32,12 @@ record for whoever sweeps. A post whose poster withdrew with nobody else In is
 court hour* — read off the club, not the clock, so it is recorded by the
 proposer that reads the club (#540).
 
+**A post is for somebody** (#546): its *Who* and the range of the others'
+Levels travel on ``ProposalMade``, so every fit it is ever dealt to is held to
+the same two — and a member it was never dealt to may **join** it from the slot
+sheet, which is their yes. Only a post: a pick is the engine's four, dealt by
+name.
+
 **Filled is the last yes booking it** (#541): every seat's share was taken and a
 Booking opened under this proposal's id. When a share could not be held,
 nobody paid, the game did not fill, and that player's **seat reopened** — open
@@ -85,6 +91,7 @@ from app.modules.proposals.domain.limits import (
     VERSIONS_PER_PROPOSAL,
 )
 from app.modules.proposals.domain.pool import Pool, PoolKind
+from app.modules.proposals.domain.post import LevelRange, PostedFor, Who
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
 
@@ -190,6 +197,9 @@ class Proposal:
     share_grosze: int
     book_by: Instant
     made_at: Instant
+    #: Who a post is for — ``None`` on a pick, and on a post made before posts
+    #: had a *Who*, which is for anybody.
+    posted_for: PostedFor | None = None
     versions: tuple[DealtVersion, ...] = ()
     #: Everybody In, in the order they said yes.
     yeses: tuple[UUID, ...] = ()
@@ -227,6 +237,7 @@ class Proposal:
         share_grosze: int,
         book_by: Instant,
         at: Instant,
+        posted_for: PostedFor | None = None,
     ) -> "Proposal":
         """A game proposed at a court hour. **A post is its poster's yes**, so
         it is born with them In."""
@@ -234,6 +245,10 @@ class Proposal:
         invariant(
             (origin is Origin.POST) == (poster_id is not None),
             f"a {origin} names a poster exactly when it is a post: {poster_id}",
+        )
+        invariant(
+            origin is Origin.POST or posted_for is None,
+            f"a pick is for nobody in particular: {posted_for}",
         )
         invariant(share_grosze > 0, f"a share of {share_grosze} grosze")
         invariant(
@@ -253,6 +268,9 @@ class Proposal:
             share_grosze=share_grosze,
             book_by=book_by,
             occurred_at=at,
+            who=None if posted_for is None else posted_for.who.value,
+            level_low=None if posted_for is None else posted_for.levels.low,
+            level_high=None if posted_for is None else posted_for.levels.high,
         )
         proposal = cls._born(made)
         proposal._events.record(made)
@@ -287,6 +305,7 @@ class Proposal:
             share_grosze=made.share_grosze,
             book_by=instant(made.book_by),
             made_at=instant(made.occurred_at),
+            posted_for=_posted_for(made),
             version=1,
         )
 
@@ -313,6 +332,12 @@ class Proposal:
         which the fill turns into a booking (#541)."""
 
         return self.seats - len(self.yeses)
+
+    @property
+    def who(self) -> Who | None:
+        """Who a post is for — ``None`` on a pick and on a post for anybody."""
+
+        return None if self.posted_for is None else self.posted_for.who
 
     @property
     def poster_withdrew(self) -> bool:
@@ -420,22 +445,30 @@ class Proposal:
         it is the caller's."""
 
         self._refuse_a_stranger(player_id)
-        self._refuse_unless_filling(at)
-        if player_id in self.yeses:
-            return False
-        if player_id in self.declined:
-            raise ProposalAlreadyAnswered()
-        if self.open_seats == 0:
-            raise ProposalIsFull()
-        return True
+        return self._may_take_a_seat(player_id, at=at)
 
     def say_yes(self, player_id: UUID, *, at: Instant) -> None:
         if self.may_say_yes(player_id, at=at):
-            self._record_that(
-                YesSaid(
-                    proposal_id=self.proposal_id, player_id=player_id, occurred_at=at
-                )
-            )
+            self._record_a_yes(player_id, at=at)
+
+    def may_join(self, player_id: UUID, *, at: Instant) -> bool:
+        """Whether a member's *I'm in* from the slot sheet would be recorded
+        (#546; the mechanics §9.1 step 6, Q79) — ``False`` for one already In.
+        **Only a post is joined**: a pick is dealt to the people it names, and
+        anybody else is a stranger to it. Whether the member may be on it —
+        the pool, the post's *Who* and range, the people In — is the
+        caller's."""
+
+        if self.origin is not Origin.POST:
+            self._refuse_a_stranger(player_id)
+        return self._may_take_a_seat(player_id, at=at)
+
+    def join(self, player_id: UUID, *, at: Instant) -> None:
+        """A member's yes on a post they may never have been dealt — a yes
+        like any other, In on the one game with no version of their own."""
+
+        if self.may_join(player_id, at=at):
+            self._record_a_yes(player_id, at=at)
 
     def say_no(self, player_id: UUID, *, at: Instant) -> None:
         """A swipe left. A second one records nothing."""
@@ -608,6 +641,24 @@ class Proposal:
 
     # ------------------------------------------------------------------- fold
 
+    def _may_take_a_seat(self, player_id: UUID, *, at: Instant) -> bool:
+        """What this game refuses of any yes: it is over, the player said no,
+        or every seat is In. ``False`` for somebody already In."""
+
+        self._refuse_unless_filling(at)
+        if player_id in self.yeses:
+            return False
+        if player_id in self.declined:
+            raise ProposalAlreadyAnswered()
+        if self.open_seats == 0:
+            raise ProposalIsFull()
+        return True
+
+    def _record_a_yes(self, player_id: UUID, *, at: Instant) -> None:
+        self._record_that(
+            YesSaid(proposal_id=self.proposal_id, player_id=player_id, occurred_at=at)
+        )
+
     def _refuse_a_stranger(self, player_id: UUID) -> None:
         if not self.is_on_it(player_id):
             raise ProposalNotFound()
@@ -696,3 +747,20 @@ class Proposal:
         else:
             raise TypeError(f"Unsupported proposal event {event!r}")
         self.version += 1
+
+
+def _posted_for(made: ProposalMade) -> PostedFor | None:
+    """Who a post is for, as its first event recorded it — ``None`` on a pick
+    and on a post made before posts had a *Who*."""
+
+    if made.who is None:
+        return None
+    invariant(
+        made.level_low is not None and made.level_high is not None,
+        f"a post for {made.who} with no level range: {made.proposal_id}",
+    )
+    assert made.level_low is not None and made.level_high is not None
+    return PostedFor(
+        who=Who(made.who),
+        levels=LevelRange(low=made.level_low, high=made.level_high),
+    )

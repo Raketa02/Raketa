@@ -50,6 +50,17 @@ go out as new versions, up to three in all. A next best fit fits everybody In
 and everybody dealt with them, which is what the dealer refuses otherwise; they
 are ranked by the forecast of the card they would see.
 
+**A post** (#546; §7, §9.2) is dealt **to whom it is for** — its *Who* and
+the range of the others' Levels, and on *Mixed pairs* never more than two of
+either gender on a card. At posting it goes to the poster's best fits free at
+its hour, one version per **full set** of them, the evenest first, up to three
+— or, short of a set, one version with seats open (``versions_of_a_post``).
+After, **it keeps being dealt until its book-by** and needs nobody In to widen:
+a version naming fewer than its open seats takes whoever **becomes** a fit, a
+new full set of fits is a new version while there are fewer than three, and a
+seat a no left goes to the next best fits as a pick's does — of the gender it
+left, on *Mixed pairs*.
+
 **A lost court hour** (§5.2, §19): a card is lost when **no court is left** at
 its club and hour — booked, closed, no longer offered, or the club no longer
 selling — and never because the club moved its deadlines, since a card keeps
@@ -84,6 +95,7 @@ from app.engines.matchfit.v1 import forecast
 from app.kernel import SPORT_SPECS, Instant, Sport, invariant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.modules.matchmaking.domain.fence import combine_group_sigma
+from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import (
     WeeklyHours,
     free_for_the_hour,
@@ -102,6 +114,7 @@ from app.modules.proposals.domain.limits import (
     NEXT_BEST_FITS_PER_SEAT,
     VERSIONS_PER_PROPOSAL,
 )
+from app.modules.proposals.domain.post import PostedFor, Who, stand_together
 from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
 
 #: How far ahead the engine deals (the mechanics §4.3) — the deck's horizon,
@@ -141,6 +154,58 @@ class Member:
     booked: tuple[Instant, ...] = ()
     #: Their yeses in the sport on games still filling.
     live_yeses: int = 0
+    #: Their gender and gender preference, read only for whom a post is for
+    #: (#546) — ``None`` where it cannot be read, which a post for anybody but
+    #: *Anyone* does not take.
+    gender: Gender | None = None
+    preference: GenderPreference | None = None
+
+
+def capped_weeks_of(member: Member, *, now: Instant) -> frozenset[date]:
+    """The Mondays of the weeks a card dealt now could be in that hold as many
+    of this member's games as they allow."""
+
+    return frozenset(
+        week.starts_on
+        for week in capped_weeks(
+            weeks_ahead(now), member.booked, games_per_week=member.limits.games_per_week
+        )
+    )
+
+
+def may_play(
+    member: Member,
+    kind: SearchMode,
+    *,
+    start: Instant,
+    share_grosze: int | None,
+    capped: frozenset[date],
+) -> bool:
+    """Whether this member may be dealt a game of ``kind`` from ``start`` at
+    ``share_grosze`` a seat — ``None`` where no court, and so no price, is
+    asked about: rated, wanting the kind, a live yes to spare, the share within
+    their *most I'll pay*, a week under their cap (``capped``), no game then,
+    and free for the whole hour."""
+
+    return (
+        member.level is not None
+        and kind in member.wants
+        and member.live_yeses < LIVE_YESES_PER_SPORT
+        and (share_grosze is None or member.limits.shows(share_grosze=share_grosze))
+        and week_of(start) not in capped
+        and not hour_taken(start, member.booked)
+        and free_for_the_hour(member.week, start=start, zone=CLUB_ZONE)
+    )
+
+
+def admitted(posted_for: PostedFor | None, member: Member) -> bool:
+    """Whether a post is for this member — every member, on a pick."""
+
+    return posted_for is None or posted_for.admits(
+        level=None if member.level is None else member.level.mu,
+        gender=member.gender,
+        preference=member.preference,
+    )
 
 
 @final
@@ -278,6 +343,39 @@ def propose(
     ).run()
 
 
+def versions_of_a_post(
+    *,
+    sport: Sport,
+    members: Sequence[Member],
+    unfit: Collection[frozenset[UUID]],
+    poster: UUID,
+    kind: SearchMode,
+    hour: CourtHourOnSale,
+    posted_for: PostedFor,
+    balance: BalanceRules,
+    now: Instant,
+) -> tuple[tuple[UUID, ...], ...]:
+    """The names a post is dealt to when it is posted (the mechanics §9.2):
+    **one version per full set** of the poster's best fits free at ``hour``,
+    the evenest first, up to three — each fitting the poster and each other —
+    or, with no full set, **one version with as many as fit**, its other seats
+    open. ``members`` the pool in its own order, the poster among them;
+    ``unfit`` every pair that may not share a court in ``kind``."""
+
+    return _Batching(
+        sport=sport,
+        members=members,
+        unfit={kind: unfit},
+        clubs=PoolClubs(home_club_id=hour.club_id),
+        hours=(),
+        held=(),
+        filling=(),
+        owed=(),
+        balance=balance,
+        now=now,
+    ).versions_of_a_post(poster, kind, hour=hour, posted_for=posted_for)
+
+
 # --------------------------------------------------------------------------- #
 # The batch
 # --------------------------------------------------------------------------- #
@@ -330,18 +428,10 @@ class _Batching:
             self._fitting[kind] = fitting
         self._clubs = clubs
         self._balance = balance
-        weeks = weeks_ahead(now)
         self._capped: dict[UUID, frozenset[date]] = {
-            member.player_id: frozenset(
-                week.starts_on
-                for week in capped_weeks(
-                    weeks,
-                    member.booked,
-                    games_per_week=member.limits.games_per_week,
-                )
-            )
-            for member in members
+            member.player_id: capped_weeks_of(member, now=now) for member in members
         }
+        self._genders = {member.player_id: member.gender for member in members}
 
         for hour in hours:
             invariant(hour.sport is sport, f"a {hour.sport} hour in a {sport} batch")
@@ -563,8 +653,13 @@ class _Batching:
             return
         kind, in_ = proposal.kind, proposal.yeses
         dealt: set[UUID] = set()
+        #: Who this batch dealt into each version.
+        dealt_into: dict[int, list[UUID]] = {}
 
-        def may_be_dealt(player: UUID) -> bool:
+        def may_be_dealt(player: UUID, *, beside: Sequence[UUID] = ()) -> bool:
+            """Whether this member may be dealt the game, beside ``beside`` on
+            their version."""
+
             return (
                 player not in dealt
                 and not proposal.is_on_it(player)
@@ -574,7 +669,9 @@ class _Batching:
                     start=proposal.start,
                     share_grosze=proposal.share_grosze,
                 )
+                and self._admitted(proposal.posted_for, player)
                 and all(self._fits(kind, player, there) for there in in_)
+                and self._stand_together(proposal, (*in_, *beside, player))
             )
 
         # In singles each fit is a version of their own: one per seat a no
@@ -599,43 +696,143 @@ class _Batching:
             wanted = fits_per_seat * left - len(waiting)
             if wanted <= 0:
                 continue
-            holders = [
-                player
-                for player in version.players
-                if player not in in_ and not self._gone(proposal, player)
-            ]
-            ranked = sorted(
-                (player for player in self._ids if may_be_dealt(player)),
-                key=lambda player: (
-                    _descending(
-                        self._score(self._mask(self._view(kind, in_, player, holders)))
-                    ),
-                    self._index[player],
-                ),
+            holders = self._holders(proposal, version.players)
+            # The seats it was dealt for still held: a next best fit stands
+            # beside them, so a mixed pair's seat goes to the gender it lost.
+            standing = self._holders(proposal, first)
+            chosen = self._next_best(
+                proposal,
+                [p for p in self._ids if may_be_dealt(p, beside=standing)],
+                holders=holders,
+                wanted=wanted,
             )
-            chosen: list[UUID] = []
-            for player in ranked:
-                if len(chosen) == wanted:
-                    break
-                if all(self._fits(kind, player, other) for other in chosen):
-                    chosen.append(player)
             if chosen:
-                self._deal(proposal, tuple(chosen), into=version.number)
+                self._deal(proposal, chosen, into=version.number)
                 dealt.update(chosen)
+                dealt_into.setdefault(version.number, []).extend(chosen)
 
-        if not self._widens(proposal):
-            return
-        in_the_pool = tuple(player for player in in_ if player in self._members)
+        if proposal.origin is Origin.POST:
+            self._deal_on_a_post(proposal, may_be_dealt, dealt, dealt_into)
+        elif self._widens(proposal):
+            self._new_versions(
+                proposal,
+                may_be_dealt,
+                dealt,
+                sizes=lambda versions: range(proposal.open_seats, 0, -1),
+            )
+
+    def _deal_on_a_post(
+        self,
+        proposal: Proposal,
+        may_be_dealt: Callable[..., bool],
+        dealt: set[UUID],
+        dealt_into: Mapping[int, Sequence[UUID]],
+    ) -> None:
+        """A post keeps being dealt until its book-by (the mechanics §9.2):
+        a version naming fewer than its open seats takes whoever **became** a
+        fit, and a full set of fits is a new version while there are fewer
+        than three — or, on a post nobody was dealt, as many as fit."""
+
+        for version in proposal.versions:
+            holders = [
+                *self._holders(proposal, version.players),
+                *dealt_into.get(version.number, ()),
+            ]
+            room = proposal.open_seats - len(holders)
+            if room <= 0:
+                continue
+            chosen = self._next_best(
+                proposal,
+                [
+                    player
+                    for player in self._ids
+                    if may_be_dealt(player, beside=holders)
+                    and all(
+                        self._fits(proposal.kind, player, there) for there in holders
+                    )
+                ],
+                holders=holders,
+                wanted=room,
+                beside=holders,
+            )
+            if chosen:
+                self._deal(proposal, chosen, into=version.number)
+                dealt.update(chosen)
+        self._new_versions(
+            proposal,
+            may_be_dealt,
+            dealt,
+            sizes=lambda versions: (
+                (proposal.open_seats,)
+                if versions
+                else range(proposal.open_seats, 0, -1)
+            ),
+        )
+
+    def _next_best(
+        self,
+        proposal: Proposal,
+        candidates: Iterable[UUID],
+        *,
+        holders: Sequence[UUID],
+        wanted: int,
+        beside: Sequence[UUID] | None = None,
+    ) -> tuple[UUID, ...]:
+        """Up to ``wanted`` of ``candidates`` for a version still held by
+        ``holders``, the best card first — each fitting the others chosen and,
+        given ``beside``, standing with the people In, them and each other."""
+
+        kind, in_ = proposal.kind, proposal.yeses
+        ranked = sorted(
+            candidates,
+            key=lambda player: (
+                _descending(
+                    self._score(self._mask(self._view(kind, in_, player, holders)))
+                ),
+                self._index[player],
+            ),
+        )
+        chosen: list[UUID] = []
+        for player in ranked:
+            if len(chosen) == wanted:
+                break
+            if all(self._fits(kind, player, other) for other in chosen) and (
+                beside is None
+                or self._stand_together(proposal, (*in_, *beside, *chosen, player))
+            ):
+                chosen.append(player)
+        return tuple(chosen)
+
+    def _new_versions(
+        self,
+        proposal: Proposal,
+        may_be_dealt: Callable[..., bool],
+        dealt: set[UUID],
+        *,
+        sizes: Callable[[int], Iterable[int]],
+    ) -> None:
+        """New versions of the game while there are fewer than three: each the
+        evenest set of members who may be dealt it, with everybody In, of the
+        first of ``sizes`` — given how many versions there are — that finds
+        one."""
+
+        kind = proposal.kind
+        in_the_pool = tuple(p for p in proposal.yeses if p in self._members)
+        refused = self._refused_by(proposal.posted_for)
         versions = len(proposal.versions)
         while versions < VERSIONS_PER_PROPOSAL:
             pool = self._mask(player for player in self._ids if may_be_dealt(player))
             people = next(
                 (
                     found
-                    for size in range(proposal.open_seats, 0, -1)
+                    for size in sizes(versions)
                     if (
                         found := self._evenest(
-                            kind, pool, len(in_the_pool) + size, must=in_the_pool
+                            kind,
+                            pool,
+                            len(in_the_pool) + size,
+                            must=in_the_pool,
+                            refused=refused,
                         )
                     )
                     is not None
@@ -648,6 +845,82 @@ class _Batching:
             self._deal(proposal, fits, into=None)
             dealt.update(fits)
             versions += 1
+
+    def versions_of_a_post(
+        self,
+        poster: UUID,
+        kind: SearchMode,
+        *,
+        hour: CourtHourOnSale,
+        posted_for: PostedFor,
+    ) -> tuple[tuple[UUID, ...], ...]:
+        pool = self._mask(
+            player
+            for player in self._ids
+            if player != poster
+            and self._may_play(
+                player, kind, start=hour.start, share_grosze=hour.share_grosze
+            )
+            and self._admitted(posted_for, player)
+        )
+        refused = self._refused_by(posted_for)
+        versions: list[tuple[UUID, ...]] = []
+        while len(versions) < VERSIONS_PER_PROPOSAL:
+            people = self._evenest(
+                kind, pool, self._seats, must=(poster,), refused=refused
+            )
+            if people is None:
+                break
+            versions.append(people[1:])
+            pool &= ~self._mask(people)
+        if not versions:
+            # Short of a full set: one version, its other seats open.
+            for size in range(self._seats - 1, 1, -1):
+                people = self._evenest(
+                    kind, pool, size, must=(poster,), refused=refused
+                )
+                if people is not None:
+                    versions.append(people[1:])
+                    break
+        return tuple(versions)
+
+    def _holders(self, proposal: Proposal, named: Sequence[UUID]) -> list[UUID]:
+        """Who of ``named`` still holds a seat on the game's version: not In,
+        and not gone."""
+
+        return [
+            player
+            for player in named
+            if player not in proposal.yeses and not self._gone(proposal, player)
+        ]
+
+    def _admitted(self, posted_for: PostedFor | None, player: UUID) -> bool:
+        member = self._members.get(player)
+        return member is not None and admitted(posted_for, member)
+
+    def _stand_together(self, proposal: Proposal, people: Iterable[UUID]) -> bool:
+        return stand_together(
+            proposal.who,
+            self._genders,
+            people,
+            seats=self._seats,
+        )
+
+    def _refused_by(self, posted_for: PostedFor | None) -> Callable[[_Members], bool]:
+        """A set of people who may not stand on one game the post is for — on
+        *Mixed pairs*, more than two of a gender."""
+
+        who = None if posted_for is None else posted_for.who
+        if who is not Who.MIXED_PAIRS:
+            return lambda people: False
+        return lambda people: (
+            not stand_together(
+                who,
+                self._genders,
+                (self._ids[index] for index in _indices(people)),
+                seats=self._seats,
+            )
+        )
 
     def _gone(self, proposal: Proposal, player: UUID) -> bool:
         """Whether a name on the game holds no seat on it any more: they said
@@ -712,15 +985,12 @@ class _Batching:
         at ``share_grosze`` a seat."""
 
         member = self._members.get(player)
-        return (
-            member is not None
-            and member.level is not None
-            and kind in member.wants
-            and member.live_yeses < LIVE_YESES_PER_SPORT
-            and member.limits.shows(share_grosze=share_grosze)
-            and week_of(start) not in self._capped[player]
-            and not hour_taken(start, member.booked)
-            and free_for_the_hour(member.week, start=start, zone=CLUB_ZONE)
+        return member is not None and may_play(
+            member,
+            kind,
+            start=start,
+            share_grosze=share_grosze,
+            capped=self._capped[player],
         )
 
     def _fits(self, kind: SearchMode, one: UUID, other: UUID) -> bool:

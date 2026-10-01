@@ -2,7 +2,7 @@
 game's details (#542), and who signs each demand.
 
 **A register of its own**, on the rule every register here states: a new consumer
-gets a new register, not a row in somebody else's. **Five rows, and the tuple is
+gets a new register, not a row in somebody else's. **Ten rows, and the tuple is
 what is asserted over**: a player's booked games and each seat's check-in code
 (``bookings``), where each booked game's result stands (``games``), how far a
 club is from a player (the Player profile and ``clubs``), and — for an On request
@@ -10,12 +10,16 @@ club (#543) — the request a full game is put to it as and its answer
 (``bookings``) and what each player is called on it (``users``) — and, for
 leaving and the cut-off (#544), what happens to a booked game after the fill
 (``bookings``), a paid share given back and the card fee on one (``payments``)
-— each a fact another context owns, read through a port declared in this
-context's words.
+— and, for posting (#546), whether two people may share a court and the window
+a player's Level makes (the matcher's pair rule over blocks, the Player profile
+and rating) and each member's Level, week, gender and preference (rating and
+the Player profile) — each a fact another context owns, read through a port
+declared in this context's words.
 
-**Not yet the whole of the context's demands.** The deck's, the proposer's and
-the fill's ports (#538–#541) were contracted over HTTP and never registered; they
-belong on this list, and the first ticket to touch one adds its row here.
+**Not yet the whole of the context's demands.** The rest of the deck's, the
+proposer's and the fill's ports (#538–#541) were contracted over HTTP and never
+registered; they belong on this list, and the first ticket to touch one adds its
+row here — as posting (#546) did for ``PlayerFit`` and ``PlayersInPlay``.
 
 **A row carries a builder over a session**, as the conversation register's do;
 the bookings' row also reads the settings, because a check-in code is keyed by
@@ -33,6 +37,8 @@ from app.bootstrap.composition import (
     build_club_requests,
     build_game_results,
     build_player_bookings,
+    build_player_fit,
+    build_players_in_play,
     build_proposal_player_names,
     build_seat_refunds,
 )
@@ -45,7 +51,9 @@ from app.modules.proposals.domain.ports import (
     ClubRequests,
     GameResults,
     PlayerBookings,
+    PlayerFit,
     PlayerNames,
+    PlayersInPlay,
     SeatRefunds,
 )
 
@@ -63,6 +71,8 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     BookedGameChanges,
     SeatRefunds,
     CardFees,
+    PlayerFit,
+    PlayersInPlay,
 )
 
 
@@ -108,6 +118,16 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=CardFees,
         name="PaymentsCardFees",
         build=lambda session: build_card_fees(),
+    ),
+    RegisteredImplementation(
+        port=PlayerFit,
+        name="MatcherPlayerFit",
+        build=build_player_fit,
+    ),
+    RegisteredImplementation(
+        port=PlayersInPlay,
+        name="ProfilePlayersInPlay",
+        build=build_players_in_play,
     ),
 )
 

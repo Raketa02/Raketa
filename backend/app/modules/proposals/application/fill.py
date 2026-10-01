@@ -51,10 +51,12 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Instant, invariant, shifted
+from app.modules.proposals.application.members import genders_on
 from app.modules.proposals.domain.deck import (
     arrangements,
     evenest,
     hour_taken,
+    standing_for,
     week_of,
     week_window,
 )
@@ -71,6 +73,7 @@ from app.modules.proposals.domain.ports import (
     GameToAsk,
     GameToCharge,
     PlayerFit,
+    PlayersInPlay,
     ProposalDirectory,
     ProposalRepository,
     RefusedPayment,
@@ -127,8 +130,10 @@ class Fill:
         games_and_money: GamesAndMoneyRepository,
         booked: BookedGames,
         fit: PlayerFit,
+        players: PlayersInPlay,
     ) -> None:
         self._fit = fit
+        self._players = players
         self._proposals = proposals
         self._directory = directory
         self._terms = terms
@@ -341,10 +346,15 @@ class Fill:
     ) -> tuple[tuple[UUID, ...], tuple[UUID, ...]]:
         """The most even way the people In could stand — the engine's forecast
         over every arrangement, the first among equals — as a card draws its
-        sides (``domain/deck.py``)."""
+        sides (``domain/deck.py``): on a *Mixed pairs* post, a man and a woman
+        a side (#546)."""
 
         first, *others = proposal.yeses
-        options = arrangements(first, others, seats_per_side=proposal.seats_per_side)
+        options = standing_for(
+            arrangements(first, others, seats_per_side=proposal.seats_per_side),
+            who=proposal.who,
+            genders=await genders_on(self._players, proposal, proposal.yeses),
+        )
         sides, _ = evenest(
             options, await self._forecasts.forecasts(options, sport=proposal.sport)
         )

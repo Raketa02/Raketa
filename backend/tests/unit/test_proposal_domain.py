@@ -50,6 +50,7 @@ from app.modules.proposals.domain.events import (
     YesWithdrawn,
 )
 from app.modules.proposals.domain.pool import Pool, PoolKind
+from app.modules.proposals.domain.post import LevelRange, PostedFor, Who
 from app.modules.proposals.domain.proposal import (
     ClubAnswer,
     Origin,
@@ -640,3 +641,113 @@ def test_the_stream_folds_back_into_the_proposal_it_recorded():
         BOOK_BY,
         27_50,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Posting a game (#546)
+# --------------------------------------------------------------------------- #
+
+WOMEN_AROUND_TWO_SEVENTY_FIVE = PostedFor(
+    who=Who.WOMEN, levels=LevelRange(low=2.5, high=3.0)
+)
+
+
+def a_post_for(posted_for: PostedFor) -> Proposal:
+    return Proposal.make(
+        proposal_id=uuid4(),
+        pool=Pool(id=uuid4(), kind=PoolKind.GROUP),
+        origin=Origin.POST,
+        poster_id=MAREK,
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        club_id=uuid4(),
+        start=START,
+        share_grosze=30_00,
+        book_by=BOOK_BY,
+        at=MADE_AT,
+        posted_for=posted_for,
+    )
+
+
+def test_a_post_records_who_it_is_for_and_its_level_range():
+    proposal = a_post_for(WOMEN_AROUND_TWO_SEVENTY_FIVE)
+
+    made, _ = proposal.pull_events()
+
+    assert isinstance(made, ProposalMade)
+    assert (made.who, made.level_low, made.level_high) == ("WOMEN", 2.5, 3.0)
+    assert proposal.posted_for == WOMEN_AROUND_TWO_SEVENTY_FIVE
+    assert Proposal.from_history([made]).posted_for == WOMEN_AROUND_TWO_SEVENTY_FIVE
+
+
+def test_a_pick_is_for_nobody_in_particular():
+    assert a_pick().posted_for is None
+    with pytest.raises(InvariantViolated):
+        Proposal.make(
+            proposal_id=uuid4(),
+            pool=Pool(id=uuid4(), kind=PoolKind.GROUP),
+            origin=Origin.PICK,
+            poster_id=None,
+            sport=Sport.PADEL,
+            kind=SearchMode.COMPETITIVE,
+            club_id=uuid4(),
+            start=START,
+            share_grosze=30_00,
+            book_by=BOOK_BY,
+            at=MADE_AT,
+            posted_for=WOMEN_AROUND_TWO_SEVENTY_FIVE,
+        )
+
+
+def test_a_post_made_before_posts_had_a_who_reads_as_for_nobody_in_particular():
+    proposal = a_post()
+    made, _ = proposal.pull_events()
+
+    assert isinstance(made, ProposalMade)
+    assert (made.who, made.level_low, made.level_high) == (None, None, None)
+    assert Proposal.from_history([made]).posted_for is None
+
+
+def test_a_member_never_dealt_a_post_joins_it_with_a_yes():
+    proposal = dealt(a_post(), (B, C, D))
+
+    assert proposal.may_join(F, at=LATER) is True
+    proposal.join(F, at=LATER)
+
+    assert proposal.pull_events() == [
+        YesSaid(proposal_id=proposal.proposal_id, player_id=F, occurred_at=LATER)
+    ]
+    assert proposal.yeses == (MAREK, F)
+    assert proposal.version_of(F) is None
+
+
+def test_joining_twice_records_nothing():
+    proposal = dealt(a_post(), (B, C, D))
+    proposal.join(F, at=LATER)
+    proposal.pull_events()
+
+    assert proposal.may_join(F, at=LATER) is False
+    proposal.join(F, at=LATER)
+
+    assert proposal.pull_events() == []
+
+
+def test_only_a_post_is_joined_from_outside_its_versions():
+    proposal = dealt(a_pick(), (B, C, D, E))
+
+    with pytest.raises(ProposalNotFound):
+        proposal.join(F, at=LATER)
+
+
+def test_a_no_stands_against_joining_and_a_full_or_ended_post_takes_nobody():
+    declined = dealt(a_post(), (B, C, D))
+    declined.say_no(B, at=LATER)
+    full = dealt(a_post(sport=Sport.TENNIS), (B,))
+    full.say_yes(B, at=LATER)
+
+    with pytest.raises(ProposalAlreadyAnswered):
+        declined.join(B, at=LATER)
+    with pytest.raises(ProposalIsFull):
+        full.join(F, at=LATER)
+    with pytest.raises(ProposalIsOver):
+        dealt(a_post(), (B, C, D)).join(F, at=BOOK_BY)
