@@ -9,7 +9,8 @@
  * {@link StubBackend.requests}. An operation is named by its path as the contract writes it,
  * `{administrator_id}` and all, and a handler reads the ids it was called with in `params`.
  *
- * It also serves the map's tiles, so no test fetches OpenStreetMap.
+ * It also serves the map's tiles and answers the address search as Nominatim's `jsonv2` search
+ * does, so no test fetches OpenStreetMap.
  */
 
 import http from 'node:http';
@@ -111,12 +112,31 @@ export function refusal(code: string, field?: string, more?: Record<string, stri
   };
 }
 
+/** One place the address search answers with, as Nominatim's `jsonv2` search writes it. */
+export interface GeocodedPlace {
+  readonly lat: string;
+  readonly lon: string;
+  readonly display_name: string;
+}
+
+/** One address search that arrived: its query string, and who said they were asking. */
+export interface AddressSearch {
+  readonly query: URLSearchParams;
+  readonly agent: string | undefined;
+}
+
 export class StubBackend {
   private readonly handlers = new Map<string, AnyHandler>();
   private readonly log: Received[] = [];
   private readonly started = Date.now();
   /** Tiles served since the last reset. */
   tiles = 0;
+  /** What the address search answers, best first; nothing found until a test says otherwise. */
+  places: GeocodedPlace[] = [];
+  /** The address search's status; a `503` is a geocoder that is down. */
+  geocoderStatus = 200;
+  /** Every address search since the last reset, oldest first. */
+  readonly searches: AddressSearch[] = [];
 
   private constructor(private readonly server: http.Server) {}
 
@@ -146,6 +166,9 @@ export class StubBackend {
     this.handlers.clear();
     this.log.length = 0;
     this.tiles = 0;
+    this.places = [];
+    this.geocoderStatus = 200;
+    this.searches.length = 0;
   }
 
   on<P extends Path, M extends MethodOf<P>>(
@@ -195,6 +218,13 @@ export class StubBackend {
       this.tiles += 1;
       response.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
       response.end(TILE);
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/geocoder/search') {
+      const agent = request.headers['user-agent'];
+      this.searches.push({ query: url.searchParams, agent });
+      response.writeHead(this.geocoderStatus, { 'content-type': 'application/json' });
+      response.end(JSON.stringify(this.geocoderStatus === 200 ? this.places : { error: 'down' }));
       return;
     }
 

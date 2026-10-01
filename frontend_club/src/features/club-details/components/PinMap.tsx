@@ -15,7 +15,8 @@ import styles from './PinMap.module.css';
  *
  * A click or a tap drops the pin, and dragging it moves it. The map is focusable and pans with
  * the arrow keys, and the handle's `centre` puts the pin in the middle, so a keyboard can place
- * it too.
+ * it too. The handle's `show` takes the map to a point at the pin's own zoom: the address search
+ * moves the view there and the owner moves the pin.
  *
  * Loaded in the browser only (`ssr: false`): Leaflet reads `window` when it is imported. The
  * container says `data-ready="true"` once the map is drawn, for anything that waits on it.
@@ -40,6 +41,8 @@ function fromLatLng(latlng: L.LatLng): MapPoint {
 
 export interface PinMapHandle {
   centre(): void;
+  /** Take the view to `point`, close enough to see the street. The pin is the owner's to move. */
+  show(point: MapPoint): void;
 }
 
 export function PinMap({
@@ -104,7 +107,10 @@ export function PinMap({
     created.on('click', (event: L.LeafletMouseEvent) => place(fromLatLng(event.latlng)));
     map.current = created;
     pinTo(pinned);
-    announce({ centre: () => place(fromLatLng(created.getCenter())) });
+    announce({
+      centre: () => place(fromLatLng(created.getCenter())),
+      show: (point) => created.setView(toLatLng(point), PINNED_ZOOM),
+    });
     element.dataset.ready = 'true';
     return () => {
       delete element.dataset.ready;

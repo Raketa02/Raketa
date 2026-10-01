@@ -85,7 +85,7 @@ a migration or a seed run — not only for a process serving HTTP.
 | backend | a deployed environment with `BCRYPT_ROUNDS` below production's 12 | Nothing fails at a weak cost — every login still works — so the stored passwords would just be cheaper to crack, and nobody would notice. The default is 12 everywhere, and only a laptop may lower it; the test suite uses bcrypt's minimum, 4. |
 | player | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
 | player | a deployed `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_FEATURES_URL` that is not `https://` | The scheme rule, below. |
-| club | any of `APP_ENV`, `API_URL`, `SESSION_SECRET`, `MAP_TILE_URL` or `MAP_START` missing, blank or malformed | `src/instrumentation.ts` validates them before the server takes a request and **exits** naming each. Next alone would log the error and serve 500s. `SESSION_SECRET` is at least 32 characters, because iron-session refuses a shorter one at the first seal — a refused sign-in instead of a refused start. |
+| club | any of `APP_ENV`, `API_URL`, `SESSION_SECRET`, `MAP_TILE_URL`, `MAP_START` or `GEOCODER_URL` missing, blank or malformed | `src/instrumentation.ts` validates them before the server takes a request and **exits** naming each. Next alone would log the error and serve 500s. `SESSION_SECRET` is at least 32 characters, because iron-session refuses a shorter one at the first seal — a refused sign-in instead of a refused start. |
 | club | a deployed `MAP_TILE_URL` that is not `https://` | The browser fetches the tiles. The scheme rule, below. |
 | public | any of `APP_ENV`, `API_URL`, `PUBLIC_SITE_URL`, `APP_STORE_URL`, `GOOGLE_PLAY_URL`, `APP_SCHEME`, `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`, `ANDROID_PACKAGE` or `ANDROID_CERT_FINGERPRINTS` missing, blank or malformed | The same exit at start, for the same reason. The last four are what the app-link files are made from, so a malformed one would publish an association no phone accepts. |
 | public | an `APP_SCHEME` that is a web or script scheme (`http`, `https`, `javascript`, `data`, `vbscript`, `file`, `blob`) | *Open in Raketa* goes to `<APP_SCHEME>://<route>`, and from one of those it would open a page or run a script instead of the app. |
@@ -455,7 +455,8 @@ The day a domain is registered, this is a configuration task rather than a redes
    first time, because there is finally a second backend to point a second variant at.
 5. **Set the club website's variables**: `APP_ENV`, `API_URL` (server to server, so any scheme
    the topology needs), `SESSION_SECRET` (`openssl rand -hex 32`; changing it later signs every
-   club out), `MAP_TILE_URL` (`https://`, from the tile provider in step 7) and `MAP_START`.
+   club out), `MAP_TILE_URL` (`https://`, from the tile provider in step 7), `MAP_START` and
+   `GEOCODER_URL` (server to server, from the geocoder in step 7).
 6. **Set the public site's variables**: `APP_ENV`, `API_URL`, `PUBLIC_SITE_URL` (`https://`, the
    backend's own value), `APP_STORE_URL` and `GOOGLE_PLAY_URL` (`https://`), `APP_SCHEME` (the
    app's), and the four the app-link files are made from: `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`,
@@ -483,6 +484,10 @@ The day a domain is registered, this is a configuration task rather than a redes
      keeps that provider's attribution
      ([ADR-0187](adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
      §3).
+   - **A geocoder** for `GEOCODER_URL`, the club website's address search over the map: anything
+     answering Nominatim's `/search` in its `jsonv2` shape. Nominatim's own server allows light
+     use only — one request a second, the caller identified, which the website keeps — so
+     production needs a provider that allows its traffic, chosen with the tile provider.
 8. **Point every external service at its sandbox credentials**, per rule 9. Live keys go to
    `production` and nowhere else.
 9. **Seed it** — `development` and `staging` are seedable, and the accounts are the same edges

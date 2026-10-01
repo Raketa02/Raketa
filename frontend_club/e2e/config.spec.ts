@@ -42,6 +42,38 @@ function start(env: Record<string, string>): Promise<{ code: number | null; outp
   });
 }
 
+/**
+ * Start the built site with `env` and hand back the HTML `path` answers with, then stop it. The
+ * site was built by the suite's web server with `SUITE_ENV`; what this starts it with is what a
+ * deployment would run it with.
+ */
+async function servedBy(env: Record<string, string>, path: string): Promise<string> {
+  const child: ChildProcess = spawn(NEXT, ['start', '--hostname', '127.0.0.1', '--port', '3101'], {
+    cwd: ROOT,
+    env: {
+      PATH: process.env.PATH ?? '',
+      HOME: process.env.HOME ?? '',
+      NODE_ENV: 'production',
+      ...env,
+    },
+  });
+  try {
+    const url = `http://127.0.0.1:3101${path}`;
+    const deadline = Date.now() + 20_000;
+    for (;;) {
+      try {
+        const response = await fetch(url);
+        return await response.text();
+      } catch (error) {
+        if (Date.now() > deadline) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+    }
+  } finally {
+    child.kill('SIGKILL');
+  }
+}
+
 test.describe('Configuration', () => {
   test('a missing variable stops the server at start, named, with no value repeated', async () => {
     const { code, output } = await start({
@@ -49,11 +81,13 @@ test.describe('Configuration', () => {
       API_URL: 'http://desk:hunter2-in-the-url@127.0.0.1:4010',
       SESSION_SECRET: '',
       MAP_START: '',
+      GEOCODER_URL: '',
     });
 
     expect(code).toBe(1);
     expect(output).toContain('SESSION_SECRET: is required');
     expect(output).toContain('MAP_START: is required');
+    expect(output).toContain('GEOCODER_URL: is required');
     expect(output).not.toContain('hunter2');
   });
 
@@ -86,5 +120,30 @@ test.describe('Configuration', () => {
     expect(code).toBe(1);
     expect(output).toContain('SESSION_SECRET: is required');
     expect(output).toContain('MAP_TILE_URL: must start with https:// when APP_ENV is staging');
+  });
+
+  /**
+   * **The map reads the running server's configuration, never the build's.** A page that reads
+   * the configuration and nothing else about the request was prerendered at build time, with the
+   * build's tile URL frozen into it: a build made by this suite, then started with a real
+   * `.env.local`, drew no map at all, because every tile went to the stub's port.
+   */
+  test('the sign-up map takes its tiles and start point from the server it runs on', async () => {
+    const html = await servedBy(
+      {
+        ...SUITE_ENV,
+        MAP_TILE_URL: 'http://127.0.0.1:4011/elsewhere/{z}/{x}/{y}.png',
+        MAP_START: '52.2297,21.0122',
+      },
+      '/sign-up',
+    );
+
+    // The page hands the map its settings in the flight data, escaped once per layer of string.
+    const tileUrl = /tileUrl\\*":\\*"([^"\\]+)/.exec(html)?.[1];
+    const latitude = /latitude\\*":([\d.]+)/.exec(html)?.[1];
+    expect({ tileUrl, latitude }).toEqual({
+      tileUrl: 'http://127.0.0.1:4011/elsewhere/{z}/{x}/{y}.png',
+      latitude: '52.2297',
+    });
   });
 });

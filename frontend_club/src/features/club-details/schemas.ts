@@ -90,3 +90,14 @@ export function detailsOf(draft: DetailsDraft & { readonly point: MapPoint }): C
     point: draft.point,
   };
 }
+
+/** An address to search for: long enough to mean a place, short enough to be one line. */
+export const ADDRESS_QUERY = { min: 3, max: 200 } as const;
+
+/**
+ * **The address search's one check**, on the browser and again on the server: the tidied query,
+ * or `null` where it is too short or too long to send. Two letters match half a country.
+ */
+export function addressQuery(raw: string): string | null {
+  return between(raw, ADDRESS_QUERY.min, ADDRESS_QUERY.max) ? tidy(raw) : null;
+}

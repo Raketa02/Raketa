@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { connection } from 'next/server';
 import { cache } from 'react';
 
 import { readAsClub } from '@/server/club';
@@ -17,7 +18,17 @@ export const getClub = cache(async (): Promise<Club> => {
   return toClub(outcome.data);
 });
 
-export function mapSettings(): MapSettings {
+/**
+ * **What the map needs, from the server it runs on** — the tile URL and where it opens.
+ *
+ * `connection()` makes the page that asks render per request. Without it, a page that reads the
+ * configuration and nothing else about the request (sign-up) is prerendered at build time, and
+ * the build's values are frozen into its HTML: a site built by the e2e suite and started with a
+ * real `.env.local` sent every tile to the stub's port and drew a blank map. Configuration is the
+ * running server's (docs/environments.md), so the read waits for a request.
+ */
+export async function mapSettings(): Promise<MapSettings> {
+  await connection();
   const config = loadConfig();
   return { tileUrl: config.mapTileUrl, start: config.mapStart };
 }

@@ -139,8 +139,9 @@ sentence the desk reads is this site's, chosen by code.
 
 ## 6. Configuration
 
-Five variables, all required, none with a default, none `NEXT_PUBLIC_*`: `APP_ENV`, `API_URL`,
-`SESSION_SECRET`, `MAP_TILE_URL` and `MAP_START` (`.env.example` says what each is for).
+Six variables, all required, none with a default, none `NEXT_PUBLIC_*`: `APP_ENV`, `API_URL`,
+`SESSION_SECRET`, `MAP_TILE_URL`, `MAP_START` and `GEOCODER_URL` (`.env.example` says what each
+is for).
 `src/server/config.ts` parses them purely and names every bad one and why, never its value, and
 a variable set to nothing counts as missing.
 
@@ -154,6 +155,23 @@ The map's tiles are OpenStreetMap's, with its attribution, and **the tile URL is
 OpenStreetMap's own servers are not for production traffic, and choosing a provider that allows
 it is a deploy-time item (ADR-0187 §3).
 
+**The address over the map is found by this server**, never the browser
+(`src/server/geocoder.ts`, behind Club details' `findAddress` action): the desk types where the
+club is, and the geocoder at `GEOCODER_URL` — Nominatim's `/search` for development — answers the
+best match, which the map takes the pin to. Nominatim's usage policy asks a caller to name itself
+and to ask at most once a second; a browser cannot set the `User-Agent`, and this server queues its
+searches a second apart. The search prefers places around `MAP_START` without being bounded to
+them. It answers with an outcome and its own codes (`place_query_invalid`, `place_not_found`,
+`geocoder_unreachable`), and logs a failure by kind, never with the address. A geocoder for
+production traffic is a deploy-time item, as the tiles' provider is.
+
+**A render reads the configuration per request, never at build time.** A page that reads the
+configuration and nothing else about the request — no cookie, no header — is one Next prerenders
+when it builds, and the build's values are frozen into its HTML. `mapSettings()` awaits
+`connection()` before it reads, so a page that draws the map renders per request: a site built by
+the suite and started with a real `.env.local` once drew a blank sign-up map, every tile sent to
+the stub's port. Anything else a render reads from the configuration takes the same step.
+
 ## 7. The test seam
 
 **A real browser in front, a stand-in backend behind**, and nothing in between replaced
@@ -164,7 +182,8 @@ points.
 - The stub answers each operation with a handler whose reply the compiler checks against that
   operation's declared responses in the generated contract. It also accepts the envelope-bearing
   statuses the backend sends without declaring per route (a `401`, a `5xx`), and `drop`, which
-  closes the connection unanswered. It records every request, and it serves the map's tiles.
+  closes the connection unanswered. It records every request, and it serves the map's tiles
+  and answers the address search (`stub.places`, `stub.geocoderStatus`, `stub.searches`).
   An operation is named by its path as the contract writes it,
   `/api/v1/club/administrators/{administrator_id}`, and its handler and `stub.requests` read
   the ids in `params`.
@@ -180,7 +199,9 @@ points.
   contents or a module's state.
 - **One worker**, because the one server talks to the one stub, which each test resets.
 - **Start-up refusal is tested at the process**: `e2e/config.spec.ts` spawns `next start` with a
-  bad configuration and reads its exit code and output.
+  bad configuration and reads its exit code and output. It also starts the suite's build with a
+  **different** tile URL and start point and reads them back off `/sign-up`, which is what
+  catches a page that froze the build's configuration (§6).
 - **Every page is checked at 360 px** for sideways scrolling.
 
 No automated test crosses apps. The journey through the backend, the app and this site is a QA

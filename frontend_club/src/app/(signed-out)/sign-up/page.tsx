@@ -7,10 +7,10 @@ import { AuthCard } from '@/ui/AuthCard';
 
 export const metadata: Metadata = { title: 'Sign up' };
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
   return (
     <AuthCard wide title={SIGN_UP_COPY.title} lead={SIGN_UP_COPY.lead}>
-      <SignUpForm map={mapSettings()} />
+      <SignUpForm map={await mapSettings()} />
     </AuthCard>
   );
 }

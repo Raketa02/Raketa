@@ -3,10 +3,25 @@
 import { revalidatePath } from 'next/cache';
 
 import { writeAsClub } from '@/server/club';
+import { geocode } from '@/server/geocoder';
 import { hasRefusals, placeRefusal, type FormState } from '@/ui/forms';
 
-import { toClub, toDetailsBody, toSportInUse, type Club, type SportInUse } from './mappers';
-import { checkDetails, DETAILS_FIELDS, detailsOf, readDetails, type DetailsField } from './schemas';
+import {
+  toClub,
+  toDetailsBody,
+  toSportInUse,
+  type Club,
+  type MapPoint,
+  type SportInUse,
+} from './mappers';
+import {
+  addressQuery,
+  checkDetails,
+  DETAILS_FIELDS,
+  detailsOf,
+  readDetails,
+  type DetailsField,
+} from './schemas';
 
 export interface DetailsFormState extends FormState<DetailsField> {
   /** The details as the backend recorded them, after a save that landed. */
@@ -44,4 +59,27 @@ export async function saveClubDetails(
 
   revalidatePath('/', 'layout');
   return { refusals: {}, formRefusal: null, saved: toClub(outcome.data), sportInUse: null };
+}
+
+/** What the address search answers the map with: the place, or the code the box says. */
+export type AddressSearch =
+  | { readonly found: true; readonly point: MapPoint; readonly name: string }
+  | {
+      readonly found: false;
+      readonly code: 'place_query_invalid' | 'place_not_found' | 'geocoder_unreachable';
+    };
+
+/**
+ * **Find the club by its address**: the best match for what the desk typed over the map, for the
+ * map to put the pin on. Sign-up and Club details both ask, so it needs no session, and it sends
+ * nothing to the backend: the pin is still only saved with the form. The query is checked again
+ * here, because an action is a public endpoint whatever the form in front of it checked.
+ */
+export async function findAddress(raw: string): Promise<AddressSearch> {
+  const query = typeof raw === 'string' ? addressQuery(raw) : null;
+  if (query === null) return { found: false, code: 'place_query_invalid' };
+  const outcome = await geocode(query);
+  return outcome.ok
+    ? { found: true, point: outcome.place.point, name: outcome.place.name }
+    : { found: false, code: outcome.code };
 }

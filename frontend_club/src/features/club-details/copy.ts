@@ -15,6 +15,11 @@ export const DETAILS_COPY = {
   pinNone: 'No pin yet.',
   pinAt: 'Pin at',
   map: 'Map of where the club is',
+  address: 'Address',
+  addressHint: 'Type the street and number, then press Enter. You can still move the pin.',
+  find: 'Find',
+  finding: 'Finding…',
+  found: 'Found:',
   save: 'Save',
   saving: 'Saving…',
   saved: 'Club details saved.',
@@ -30,6 +35,13 @@ export const DETAILS_REFUSALS: Readonly<Record<string, string>> = {
   club_point_invalid: "That pin isn't on the map. Drop it again where the club is.",
   // Said with the group's name when the backend gave it (sportInUseRefusal).
   club_sport_declared_by_group: 'One of your official groups plays a sport you unticked.',
+};
+
+/** The address search's refusals, by the codes `findAddress` answers with. */
+export const ADDRESS_REFUSALS: Readonly<Record<string, string>> = {
+  place_query_invalid: 'Type at least 3 characters of the address.',
+  place_not_found: 'Nothing found for that address. Try adding the city.',
+  geocoder_unreachable: "The address search isn't answering. Drop the pin on the map instead.",
 };
 
 /**

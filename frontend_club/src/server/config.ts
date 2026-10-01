@@ -11,7 +11,7 @@
  *
  * Server-side only: nothing here is a `NEXT_PUBLIC_*` variable, so nothing is inlined into the
  * browser's bundle. The one value the browser needs, the tile URL, reaches it as a prop the
- * server hands the map.
+ * server hands the map; the address search's URL never leaves the server.
  */
 
 import 'server-only';
@@ -77,6 +77,13 @@ const Fields = z.object({
   MAP_TILE_URL: httpUrl.refine((url) => ['{z}', '{x}', '{y}'].every((part) => url.includes(part)), {
     error: 'must contain {z}, {x} and {y}',
   }),
+  /**
+   * The address search's endpoint: Nominatim's `/search`, or anything answering its `jsonv2`
+   * shape. Called from this server and never from the browser, so it carries no scheme rule,
+   * as `API_URL` does not. Nominatim's own server is for light use under its usage policy; a
+   * provider for production traffic is a deploy-time item, as the tiles' is (ADR-0187 §3).
+   */
+  GEOCODER_URL: httpUrl,
   /** Where the map opens before a pin is dropped: `latitude,longitude` in decimal degrees. */
   MAP_START: z
     .string({ error: required('must be "latitude,longitude" in decimal degrees') })
@@ -115,6 +122,7 @@ export interface Config {
   readonly sessionSecret: string;
   readonly mapTileUrl: string;
   readonly mapStart: Point;
+  readonly geocoderUrl: string;
 }
 
 export class ConfigError extends Error {
@@ -165,6 +173,7 @@ export function parseConfig(raw: RawConfig): Config {
     sessionSecret: data.SESSION_SECRET,
     mapTileUrl: data.MAP_TILE_URL,
     mapStart: parsePoint(data.MAP_START)!,
+    geocoderUrl: data.GEOCODER_URL,
   };
 }
 
@@ -178,6 +187,7 @@ export function loadConfig(): Config {
     SESSION_SECRET: process.env.SESSION_SECRET,
     MAP_TILE_URL: process.env.MAP_TILE_URL,
     MAP_START: process.env.MAP_START,
+    GEOCODER_URL: process.env.GEOCODER_URL,
   });
   return loaded;
 }

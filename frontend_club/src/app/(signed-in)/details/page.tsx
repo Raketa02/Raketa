@@ -12,7 +12,7 @@ export default async function ClubDetailsPage() {
   return (
     <>
       <PageHeader caption={DETAILS_COPY.caption} title={DETAILS_COPY.title} />
-      <ClubDetailsForm club={club} map={mapSettings()} />
+      <ClubDetailsForm club={club} map={await mapSettings()} />
     </>
   );
 }

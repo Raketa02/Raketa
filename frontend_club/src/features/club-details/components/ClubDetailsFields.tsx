@@ -12,6 +12,7 @@ import { DETAILS_COPY } from '../copy';
 import { SPORT_OPTIONS, SPORTS, type MapPoint, type MapSettings, type Sport } from '../mappers';
 import type { DetailsDraft, DetailsField } from '../schemas';
 
+import { AddressSearch } from './AddressSearch';
 import styles from './ClubDetailsFields.module.css';
 import type { PinMapHandle } from './PinMap';
 
@@ -28,6 +29,9 @@ function formatPoint(point: MapPoint): string {
  * **The five details as boxes, chips and a map**: Club details' whole form, and the top of the
  * sign-up form. Controlled by its owner, who holds the draft; `onEdit` names the field that
  * changed, so the owner can take that field's refusal away.
+ *
+ * **The pin can be found by its address** (`AddressSearch`, over the map): the best match moves
+ * the pin, as a click would, and takes the map there.
  */
 export function ClubDetailsFields({
   draft,
@@ -89,6 +93,12 @@ export function ClubDetailsFields({
       <fieldset className={fieldStyles.group}>
         <legend className={fieldStyles.legend}>{DETAILS_COPY.pin}</legend>
         <div className={styles.pin}>
+          <AddressSearch
+            onFound={(point) => {
+              onChange({ ...draft, point }, 'point');
+              handle.current?.show(point);
+            }}
+          />
           <p id={hintId} className={fieldStyles.hint}>
             {DETAILS_COPY.pinHint}
           </p>

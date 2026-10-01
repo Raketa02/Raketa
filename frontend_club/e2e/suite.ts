@@ -18,5 +18,6 @@ export const SUITE_ENV = {
   SESSION_SECRET: 'e2e-only-session-secret-0123456789abcdef',
   MAP_TILE_URL: `${STUB}/tiles/{z}/{x}/{y}.png`,
   MAP_START: `${MAP_START.latitude},${MAP_START.longitude}`,
+  GEOCODER_URL: `${STUB}/geocoder/search`,
   NEXT_TELEMETRY_DISABLED: '1',
 };
