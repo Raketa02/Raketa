@@ -285,3 +285,10 @@ agreement exactly when agreeing is an act the screen would offer you — the oth
 unanswered, or two scores standing with nobody agreed. Your own score waiting on them does not, and
 neither does an agreement running out its grace. Read off `actsOffered`, so the badge and the screen
 cannot disagree about a state; what crosses is the boolean, never the argument.
+
+**`GameForecast` — the forecast block alone** ([#556](https://github.com/Raketa02/Raketa/issues/556)).
+A booked game's details draw their own people, with _paid_ on each, so they take this feature's
+forecast without the players card: the same `usePairing` read of the Game the booking opened and the
+same `ForecastBlock`, absent on the same ground. And a booked game's result is told on `GameScreen`
+itself, composed by `proposals` with the score leading and the `card`, `court`, `plan` and `fill`
+slots empty — a booking is its own plan, and a seat open on one is a rescue (#557).

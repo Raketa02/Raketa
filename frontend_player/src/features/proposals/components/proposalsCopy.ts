@@ -39,6 +39,8 @@ export const PROPOSALS_COPY = {
   youCompleteIt: 'You complete it',
   in: 'IN',
   inSpoken: 'In',
+  /** A booked game's seat whose share was taken — beside the Level (details 8, #556). */
+  paid: 'paid',
   versus: 'vs',
   /** The two answers, as the stamps and the buttons say them. */
   yes: 'I’m in',

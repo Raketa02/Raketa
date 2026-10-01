@@ -15,6 +15,7 @@ import type {
   CardType,
   CourtState,
   DayRange,
+  HomeStatus,
   OverlapGrade,
   OverlapShade,
   PaymentRefusal,
@@ -29,6 +30,7 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   readonly shade: Exact<OverlapShade, Schemas['OverlapShade']>;
   readonly range: Exact<DayRange, Schemas['DayRange']>;
   readonly paymentRefusal: Exact<PaymentRefusal, Schemas['PaymentRefusal']>;
+  readonly homeStatus: Exact<HomeStatus, Schemas['HomeStatus']>;
 } = {
   cardType: true,
   courtState: true,
@@ -36,4 +38,5 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   shade: true,
   range: true,
   paymentRefusal: true,
+  homeStatus: true,
 };

@@ -42,3 +42,20 @@ export type GameKind = 'competitive' | 'forFun';
  * terms to accept again for a card whose brand changed, and no method at all.
  */
 export type PaymentRefusal = 'AUTHENTICATION_REQUIRED' | 'DECLINED' | 'TERMS_NEEDED' | 'NO_METHOD';
+
+/**
+ * **What a game on Home is, right now** (the mechanics §14.1; #542, #556) — one status per card,
+ * folded by the server at its `read_at` from the booking, its Game's result and the clock. The
+ * wire's own spelling, because the copy is keyed by it: *Waiting for the club*, *Booked*, *Seat
+ * open*, the five result states as today's cards name them, and *Called off*.
+ */
+export type HomeStatus =
+  | 'WAITING_FOR_THE_CLUB'
+  | 'BOOKED'
+  | 'SEAT_OPEN'
+  | 'NEEDS_RESULT'
+  | 'CONFIRM_THE_RESULT'
+  | 'COUNTED'
+  | 'UNCOUNTED'
+  | 'NEVER_PLAYED'
+  | 'CALLED_OFF';

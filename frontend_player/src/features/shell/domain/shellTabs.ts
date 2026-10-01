@@ -68,6 +68,8 @@ export const PLAY_STACK = [SHELL_TAB_ROOT.home, SHELL_TAB_ROOT.play] as const;
  */
 const INSIDE_A_TAB: Readonly<Partial<Record<string, TabBarKey>>> = {
   games: 'home',
+  // A booked game's details, its chat and its result (#556) — pushed over Home, as a game is.
+  booking: 'home',
 };
 
 /**
@@ -103,7 +105,7 @@ export function tabForPathname(pathname: string): TabBarKey {
 /**
  * Whether the bar **stands down** on a pathname — drawn nowhere, rather than drawn and hidden.
  *
- * Two routes do this, and each is named in full. The first is the conversation, where the
+ * Three routes do this, and each is named in full. The first is the conversation, where the
  * composer replaces the bar so the keyboard and the stream get the whole screen
  * ([#400](https://github.com/Raketa02/Raketa/issues/400),
  * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §3). The
@@ -124,11 +126,25 @@ export function tabForPathname(pathname: string): TabBarKey {
  * after — and exactly the yes screen: `chats`, `challenge`, the challenge's id, `yes`, and
  * nothing after. The builder at `…/fill` beside it keeps its bar.
  *
+ * **A booked game's room is the third** ([#556](https://github.com/Raketa02/Raketa/issues/556)):
+ * the same room, reached from the game's details under Home — `booking`, the booking's id, `chat`,
+ * and nothing after — so the bar stands down there for the room's own reason, and stays on the
+ * details and the result beside it.
+ *
  * **The column stays lit while the bar is down.** `tabForPathname` still answers `chats` for
  * both, and that is deliberate: standing the bar down is a fact about the chrome, not about
  * where the player is, and the two answers are read by two different callers.
  */
 export function barStandsDown(pathname: string): boolean {
+  // A booked game's room (#556): `booking`, the booking's id, `chat`, and nothing after — the room
+  // is a room wherever it is reached from, and the composer replaces the bar in every one.
+  const [, first, bookingId, room, ...after] = pathname.split('/');
+  if (first === BOOKING_SEGMENT) {
+    return (
+      bookingId !== undefined && bookingId !== '' && room === ROOM_SEGMENT && after.length === 0
+    );
+  }
+
   // The first segment is read through the rule that already reads it, so *inside the Chats tab*
   // is one answer and not a second spelling of `SHELL_TAB_ROOT.chats`. What follows it is §0.2's
   // vocabulary: the static **kind** above the id, then the id, then nothing — or, for the yes
@@ -142,3 +158,7 @@ export function barStandsDown(pathname: string): boolean {
 
 /** The yes screen's own segment under a challenge — `/chats/challenge/{id}/yes`. */
 const YES_SCREEN_SEGMENT = 'yes';
+
+/** A booked game's segment over Home, and its room's under it — `/booking/{id}/chat` (#556). */
+const BOOKING_SEGMENT = 'booking';
+const ROOM_SEGMENT = 'chat';

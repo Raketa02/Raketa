@@ -432,3 +432,12 @@ draw; it is tested with no renderer. `useGamesNeedingYou` only hands it the two 
 and games' answer, and answers `undefined` for zero, in flight or failed, as the Chats badge does.
 The shell mounts it for the session, which makes both lists live everywhere (see
 [`shell.md`](shell.md)). _A payment to confirm_ joins when the booked game does (#555, #556).
+
+**Home's rail carries the booked games too, as a slot** ([#556](https://github.com/Raketa02/Raketa/issues/556);
+the Games & Fill in screens A8: _today's Now rail of game cards, renamed Home_). `GamesRail` takes
+`booked` — `features/proposals`' cards at the rail's width, how many, a failed read, and the Games
+they stand for — which the shell fills; this feature learns nothing about a booking. The booked
+cards come first, then this feature's own; one heading counts both and one row of dots pages
+through both. **A booked game's Game is on `GET /games` as well**, and the rail leaves every one of
+them out of its cards, so a game is drawn once — as its booking — and `useGamesNeedingYou` takes the
+same set (`drawnElsewhere`) so the Classic half of Home's badge does not count it either.

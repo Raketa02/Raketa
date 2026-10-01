@@ -85,7 +85,6 @@ import {
   Card,
   courtSeatCount,
   Note,
-  PlayerPhoto,
   ScreenHeader,
   theme,
 } from '@/shared/ui';
@@ -126,15 +125,15 @@ import {
 import { FILL_COPY } from './fillCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { CardTag } from './CardTag';
+import { GameFacts } from './GameFacts';
 import { GameGround } from './GameGround';
+import type { FactWords } from './homePresentation';
 import { GameTiles } from './GameTiles';
+import { OthersFaces } from './OthersFaces';
 import { OverlapGrid } from './OverlapGrid';
 import { ReadFailed } from './ReadFailed';
 
 const COPY = PROPOSALS_COPY;
-
-/** How many of the other players' faces the header overlaps (details 7). */
-const HEADER_FACES = 3;
 
 export interface GameDetailsScreenProps {
   readonly groupId: string;
@@ -310,7 +309,7 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
       compact
       onBack={() => router.back()}
       backLabel={COPY.game.back}
-      lead={card === undefined ? undefined : <Faces card={card} />}
+      lead={card === undefined ? undefined : <OthersFaces people={peopleOn(card)} />}
       title={card === undefined ? undefined : othersTitle(card)}
       subline={card === undefined ? undefined : detailsSubline(sport)}
     />
@@ -401,31 +400,7 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
   );
 }
 
-/** The other players' faces, overlapping, up to three (details 7). Decorative: the title names them. */
-function Faces({ card }: { readonly card: DeckCard }) {
-  const others = peopleOn(card)
-    .filter((person) => !person.isYou)
-    .slice(0, HEADER_FACES);
-  return (
-    <View
-      style={s.faces}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
-      {others.map((person, at) => (
-        <View key={person.playerId} style={at > 0 ? s.overlap : undefined}>
-          <PlayerPhoto
-            playerId={person.playerId}
-            {...(person.photoUrl === undefined ? {} : { photoUrl: person.photoUrl })}
-            box={{ kind: 'face', size: theme.size.groupPage.stackFace }}
-          />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-/** WHERE · DAY · TIME · YOUR SHARE, on an accent line (details 8), each one element to a listener. */
+/** WHERE · DAY · TIME · YOUR SHARE, on the stage's accent line (details 8). */
 function Facts({
   card,
   day,
@@ -438,27 +413,17 @@ function Facts({
 }) {
   const time = timeWords(card.startsAt);
   const when = day === undefined ? undefined : detailsDay(day, card.startsAt);
-  const fact = (label: string, value: string, aside?: string) => (
-    <View
-      style={s.fact}
-      accessible
-      accessibilityLabel={[label, value, aside].filter((part) => part !== undefined).join(', ')}
-    >
-      <Text style={s.factLabel}>{label}</Text>
-      <Text style={s.factLine}>
-        <Text style={s.factValue}>{value}</Text>
-        {aside === undefined ? null : <Text style={s.factAside}> {aside}</Text>}
-      </Text>
-    </View>
-  );
-  return (
-    <View style={s.facts}>
-      {fact(COPY.game.where, clubName(card))}
-      {when === undefined ? null : fact(COPY.game.day, when.value, when.aside)}
-      {fact(COPY.game.time, time.from, time.until)}
-      {fact(COPY.game.share, shareWords(card), shareAside(card.deadline, deadlineDay))}
-    </View>
-  );
+  const facts: readonly FactWords[] = [
+    { label: COPY.game.where, value: clubName(card) },
+    ...(when === undefined ? [] : [{ label: COPY.game.day, ...when }]),
+    { label: COPY.game.time, value: time.from, aside: time.until },
+    {
+      label: COPY.game.share,
+      value: shareWords(card),
+      aside: shareAside(card.deadline, deadlineDay),
+    },
+  ];
+  return <GameFacts facts={facts} accent={theme.color.arranging} />;
 }
 
 /** BALANCE FORECAST on paper — the bar, your side left, and the figure with its word (details 9). */
@@ -501,21 +466,6 @@ const s = StyleSheet.create({
     padding: theme.space.md,
     gap: theme.space.md,
   },
-  facts: {
-    borderLeftWidth: theme.size.gameCard.courtStroke,
-    borderLeftColor: theme.color.arranging,
-    paddingLeft: theme.space.md,
-    gap: theme.space.sm,
-  },
-  fact: { gap: theme.space.xxs },
-  factLabel: {
-    ...theme.type.eyebrow,
-    color: theme.color.onDarkEyebrow,
-    textTransform: 'uppercase',
-  },
-  factLine: { ...theme.type.h1, color: theme.color.surface },
-  factValue: { ...theme.type.h1, color: theme.color.surface },
-  factAside: { ...theme.type.tiny, color: theme.color.onDarkTiny },
   forecast: { gap: theme.space.sm },
   eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
   reading: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
@@ -524,6 +474,4 @@ const s = StyleSheet.create({
   grid: { borderRadius: theme.radius.cardDark, overflow: 'hidden', padding: theme.space.md },
   meaning: { ...theme.type.tiny, color: theme.color.muted },
   answers: { gap: theme.space.sm },
-  faces: { flexDirection: 'row' },
-  overlap: { marginLeft: -theme.size.groupPage.stackOverlap },
 });

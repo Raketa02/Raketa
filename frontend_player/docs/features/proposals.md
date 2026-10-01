@@ -215,3 +215,84 @@ way back until Home and the notices, #556 and #559); and a confirmation from it 
 in a toast.
 **Owed**: the backend's laptop provider never confirms a payment (payments.md). **Nothing here has
 been seen on a device.**
+
+**Home's booked games and a booked game's details are this feature's**
+([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.1, A4.4, A8; the mechanics
+§11.4, §14, §15.1). Two reads, both #542's and both the backend's Proposals context: `GET /home` (the
+reader's booked games, soonest first, the ended ones too, and Home's badge) and `GET /bookings/{id}`
+(one booked game in detail, with the check-in code on its day). `useHome`, `useBooking`, keys
+`proposalKeys.home()` and `booking(id)` (under `bookings()`); rules in `domain/home.ts`, words in
+`homeCopy.ts` and `homePresentation.ts`.
+
+**Home is one rail, and the rail is `plans`'.** A8 says _today's Now rail of game cards, renamed_, so
+a booked game is a card on that rail rather than a second list: the shell fills the rail's `booked`
+slot with `useBookedCards` — the cards at the rail's width, how many, a failed read, and **the Games
+they stand for**. A booked game's Game is in `GET /games` too, so the rail leaves every one of them
+out of its own cards and `useGamesNeedingYou` leaves them out of the Classic half of the badge; the
+bar's Home count is the two halves added (`useHomeBadge`: the server's `needing_you`, which counts
+the cards that need you and every payment to confirm). Booked cards come first, in their read's
+order. **_TO CONFIRM_ is on Home too**, above the rail: the badge counts a payment to confirm, and a
+count with nothing on the tab to answer it would be a dead end.
+
+**A card is the Now card's shell with a booking's content** (`HomeGameCard`): the status as a grey
+tag with the status's dot, _New_ until opened, the sport word; WHERE (club + court), DAY and TIME on
+the status's accent line beside the others' faces; the money line (`moneyLineOf` + `moneyWords`, the
+mechanics §14.1's table); _Open game_, which pushes the details over Home. **Every fold runs on the
+read's clock** (`useReadClock`: `read_at` moved on by how long the phone has held the read, ticking
+while a cut-off is ahead), so _free to leave until Fri 16:00_ leaves the line at that instant by
+itself. **An ended card stays a day after its hour** (`onHome`) — the wire dates no ending of a
+booking, and the hour's end is the one instant every ending has.
+
+**_New until opened_ is kept by the phone** (`useOpenedGames`, the fourth value of
+`shared/lib/preferences`, per account and forgotten at sign-out): the booked games whose details
+this account has opened, pruned to Home's own read. A game is new while it is waiting, booked or a
+seat is open and has never been opened here; nothing is new until the phone has said, so the tag
+never flashes. Opening the details — from a card, or _It's a game!_'s _Open game_, which now opens
+them rather than the Classic game screen — is what marks it.
+
+**The details are one read and nothing re-derived** (`BookedGameScreen`, `/booking/[bookingId]`): the
+top bar (the others' faces, their names whole, _Padel · booked_, **Chat**); the game card — status,
+tiles with _2,71 · paid_ (`GameTiles` draws _paid_ where a filling game says IN), the vs line, WHERE
+with the court and the distance, DAY, TIME to the read's `ends_at`, and the money row
+(`moneyRow`); once the hour has come, today's **We played** / **Confirm the result**, which opens
+today's game screen at the Game the booking opened (`BookedGameResult`, `/booking/[id]/result`:
+`GameScreen` with the score leading and its three Classic slots empty); the Game's own forecast
+(`games`' `GameForecast`) while the booking says to draw it; and **Show at the desk** on the game's
+day (`CheckInCard`: the QR drawn by `qrPath.ts` over `qrcode`'s core as one path, the short code
+spoken a character at a time). The filling details and the booked ones share `GameFacts` and
+`OthersFaces`.
+
+**The chat is reached from the details and nowhere else** (A4.4, §14.3). _Chat_ is drawn while the
+status still has a room (`chatIsOpen`: booked, a seat open, or a result being told) and the join
+keyed by the game finds one (`conversations`' `useGameRoom`, the join `GET /bookings/{id}`
+documents). It pushes `/booking/[id]/chat` (`BookedGameChat`), which mounts `ConversationScreen` in
+its booked form — no plan card, no plan chips, no _Details_ door, the header's second line the
+booking's word — over the details, so the back chevron returns to them; the bar stands down there as
+in every room.
+
+**Calls made here, open for the product owner** (Part 16 has the drawings'):
+
+- **The Home card's bubble is a mark, not a door.** The ticket asks for _the chat bubble_; A8 and
+  §14.3 say a Home card has no chat door. It says the game's chat is open, silent, its words in the
+  card's spoken name.
+- **_Chat · n_ has no number, and is always volt.** No read carries an unread count; the number and
+  the lit-when-unread state are owed to the backend.
+- **_New until opened_ is the phone's memory**, a fourth value in ADR-0188's table, whose amendment
+  is owed from a root session. A reinstall, a second phone or a sign-out shows every live game as
+  new once.
+- **Booked cards first on the rail**, Classic cards after; one heading counts both.
+- **An ended booking stays a day after its hour**, so a result settled later than that is not drawn
+  (the Classic rail's own cost for a score counted by silence).
+- **_Seat open_ counts the seats off the sides, one at the least**, and _Called off_ says _Refunded
+  28 zł_ or _Nobody paid_ without the reason: neither is on the wire yet (#544), and #557 owns both
+  lines once it is.
+- **The result is today's screen**, opened from the details by _We played_ / _Confirm the result_ —
+  no mock draws where the act sits on a booked game.
+- **_TO CONFIRM_ above Home's rail**, because the badge counts it.
+- **The status colours**: amber for waiting, a seat open and the two result acts; mint for booked
+  and counted; `gameRed` for called off.
+
+**Owed**: ADR-0188 §2's fourth row (root); the unread count for _Chat · n_ (backend); the seat-open
+count, its fills-by and the called-off reason on the money line (#544, then #557); `CLAUDE.md`'s
+_three per-account choices_ now reads four (agent config, left for the user). **Nothing here has
+been seen on a device**, the QR least of all: it is drawn from `qrcode`'s matrix and never scanned.

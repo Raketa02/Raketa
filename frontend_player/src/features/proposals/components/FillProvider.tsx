@@ -96,8 +96,8 @@ interface Counting extends BookAsk {
 export interface FillProviderProps {
   /** How far above the bottom inset the toast sits — the bar's height while the bar is drawn. */
   readonly toastAbove: number;
-  /** *Open game* — the shell's move: Home laid down, the game pushed over it. */
-  readonly openGame: (gameId: string) => void;
+  /** *Open game* — the shell's move: Home laid down, the booked game's details over it (#556). */
+  readonly openGame: (bookingId: string) => void;
   readonly children: ReactNode;
 }
 
@@ -112,7 +112,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
   const [confirming, setConfirming] = useState<ConfirmAsk | null>(null);
   const [celebrating, setCelebrating] = useState<{
     readonly card: DeckCard;
-    readonly gameId: string;
+    readonly bookingId: string;
   } | null>(null);
 
   const book = useCallback<Fill['book']>((ask) => {
@@ -131,7 +131,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
         if (ask.card === undefined) {
           showToast({ message: FILL_COPY.bookedFromPayments, tone: 'ok' });
         } else {
-          setCelebrating({ card: ask.card, gameId: outcome.gameId });
+          setCelebrating({ card: ask.card, bookingId: outcome.bookingId });
         }
         return;
       case 'confirm':
@@ -278,7 +278,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
           onLater={() => setCelebrating(null)}
           onOpenGame={() => {
             setCelebrating(null);
-            openGame(celebrating.gameId);
+            openGame(celebrating.bookingId);
           }}
         />
       )}

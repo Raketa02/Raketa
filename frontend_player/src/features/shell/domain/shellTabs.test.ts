@@ -58,6 +58,13 @@ describe('which tab a route is inside', () => {
     expect(tabForPathname('/games/8f14e45f-ceea-467a-9dd1-4bd9c39d4a58')).toBe('home');
   });
 
+  it('keeps Home lit on a booked game, its chat and its result (#556)', () => {
+    const booking = '/booking/3f2b8c1e-0000-4000-8000-0000000000b1';
+    expect(tabForPathname(booking)).toBe('home');
+    expect(tabForPathname(`${booking}/chat`)).toBe('home');
+    expect(tabForPathname(`${booking}/result`)).toBe('home');
+  });
+
   it('answers the root for a path the shell does not own', () => {
     // Nothing outside `(tabs)` draws a bar at all, so this is the answer to a question
     // that is never asked rather than a claim that /sign-in is the Home tab.
@@ -66,7 +73,8 @@ describe('which tab a route is inside', () => {
 });
 
 /**
- * **Two routes stand the bar down, and each is named in full.** The conversation is the screen
+ * **Three routes stand the bar down, and each is named in full** — the third a booked game's room
+ * (#556), the same room reached from its details over Home. The conversation is the screen
  * whose composer replaces the bar ([#400](https://github.com/Raketa02/Raketa/issues/400)), and
  * the yes screen under a challenge is the one the bar would be a way out of that the record
  * says it does not have ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
@@ -97,6 +105,25 @@ describe('where the bar stands down', () => {
     ['a game over Home', '/games/8f14e45f-ceea-467a-9dd1-4bd9c39d4a58'],
     ['the shell root', '/'],
     ['a path the shell does not own', '/sign-in'],
+  ])('is not %s', (_, pathname) => {
+    expect(barStandsDown(pathname)).toBe(false);
+  });
+
+  /** The third ([#556](https://github.com/Raketa02/Raketa/issues/556)): a booked game's room. */
+  it('is inside a booked game’s room, and Home stays lit while it does', () => {
+    const chat = '/booking/3f2b8c1e-0000-4000-8000-0000000000b1/chat';
+    expect(barStandsDown(chat)).toBe(true);
+    expect(tabForPathname(chat)).toBe('home');
+  });
+
+  it.each([
+    ['a booked game’s details', '/booking/3f2b8c1e-0000-4000-8000-0000000000b1'],
+    ['a booked game’s result', '/booking/3f2b8c1e-0000-4000-8000-0000000000b1/result'],
+    ['a room with no booking', '/booking//chat'],
+    [
+      'anything under a booked game’s room',
+      '/booking/3f2b8c1e-0000-4000-8000-0000000000b1/chat/more',
+    ],
   ])('is not %s', (_, pathname) => {
     expect(barStandsDown(pathname)).toBe(false);
   });

@@ -73,6 +73,8 @@ export function useConfirmPaymentYes(handlers: FillHandlers<ConfirmAsk>) {
       Promise.all([
         reread(client, dealtIn.groupId, { yeses: true }),
         client.invalidateQueries({ queryKey: proposalKeys.paymentsToConfirm() }),
+        // Home's badge counts every payment to confirm (#556).
+        client.invalidateQueries({ queryKey: proposalKeys.home() }),
       ]),
   });
 }
@@ -80,10 +82,12 @@ export function useConfirmPaymentYes(handlers: FillHandlers<ConfirmAsk>) {
 /**
  * **What a booked game changes, re-read** (the mechanics §11.5): every version and card of it leaves
  * every deck, the players' other yeses at that hour are withdrawn and a capped week's paused — so
- * every deck and the live yeses — and the game is in Home and a receipt in Payments.
+ * every deck and the live yeses — and the game is in Home (its booking, #556, and its Game) and a
+ * receipt in Payments.
  */
 export function rereadAfterFill(client: QueryClient) {
   return Promise.all([
+    client.invalidateQueries({ queryKey: proposalKeys.home() }),
     client.invalidateQueries({ queryKey: proposalKeys.decks() }),
     client.invalidateQueries({ queryKey: proposalKeys.liveYeses() }),
     client.invalidateQueries({ queryKey: proposalKeys.paymentsToConfirm() }),

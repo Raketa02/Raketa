@@ -54,16 +54,25 @@
  * A failed read is a sentence rather than an emptiness — a rail that vanished on an error would be
  * indistinguishable from a player with no games, which is the one thing a list of your own games
  * must not be.
+ *
+ * ## Booked games come first, and are not this feature's
+ *
+ * Since [#556](https://github.com/Raketa02/Raketa/issues/556) a game booked through a group is on
+ * this rail too (the screens A8: *today's Now rail of game cards, renamed Home*) — drawn by
+ * `features/proposals`, which the shell hands in as a slot (`booked`): the cards first, soonest
+ * first as their read orders them, then the Classic games in theirs. One heading counts both and
+ * one row of dots pages through both. **A booked game's Game is in `GET /games` as well**, and the
+ * rail leaves every one of them out of its own cards, so a game is drawn once — as its booking.
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { useChatDoors } from '@/features/conversations/types';
 import { useGames } from '@/features/games/types';
-import { recoveryMessage } from '@/shared/errors';
+import { recoveryMessage, type AppError } from '@/shared/errors';
 import { Note, PagerDots, theme } from '@/shared/ui';
 
 import { belongsOnTheRail, planOf } from '../domain/gameCard';
@@ -71,6 +80,25 @@ import { usePlans } from '../hooks/usePlans';
 
 import { GameCard } from './GameCard';
 import { gamesHeading } from './nowPresentation';
+
+/**
+ * **The booked games, drawn first** ([#556](https://github.com/Raketa02/Raketa/issues/556)) — Home's
+ * other half, which `features/proposals` draws and the shell hands in: this feature knows nothing
+ * about a booking, and the cards come as a slot.
+ *
+ * `gameIds` is every Game the booked cards stand for: a booked game's Game is in `GET /games` too,
+ * and the rail leaves those out of its own cards — and of the badge — rather than drawing one game
+ * twice.
+ */
+export interface BookedOnTheRail {
+  readonly gameIds: ReadonlySet<string>;
+  /** How many cards `cards` draws — the heading counts them and the dots page through them. */
+  readonly count: number;
+  /** The booked games' read failed with nothing to draw — said here, as the games list's is. */
+  readonly error: AppError | null;
+  /** The cards, at the rail's card width, in their own order. */
+  readonly cards: (width: number) => ReactNode;
+}
 
 export interface GamesRailProps {
   /**
@@ -82,9 +110,11 @@ export interface GamesRailProps {
    * screen is the shell's.
    */
   readonly empty: { readonly line: string; readonly act: string };
+  /** Home's booked games (#556), first on the rail. Absent is a rail of Classic games alone. */
+  readonly booked?: BookedOnTheRail;
 }
 
-export function GamesRail({ empty }: GamesRailProps) {
+export function GamesRail({ empty, booked }: GamesRailProps) {
   const games = useGames();
   const plans = usePlans();
   const rooms = useChatDoors();
@@ -97,7 +127,13 @@ export function GamesRail({ empty }: GamesRailProps) {
   const cardWidth = screen - 2 * theme.size.gutter;
   const step = cardWidth + STRIP_GAP;
 
-  const rows = (games.data ?? []).filter(belongsOnTheRail);
+  // A booked game's Game is drawn by its booking's card, never a second time here (#556).
+  const rows = (games.data ?? [])
+    .filter(belongsOnTheRail)
+    .filter((game) => booked?.gameIds.has(game.gameId) !== true);
+  const bookedCount = booked?.count ?? 0;
+  const count = bookedCount + rows.length;
+  const failure = games.error ?? booked?.error ?? null;
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setCurrent(Math.round(event.nativeEvent.contentOffset.x / step));
@@ -106,16 +142,16 @@ export function GamesRail({ empty }: GamesRailProps) {
   return (
     <View style={s.section}>
       <Text style={s.heading} accessibilityRole="header">
-        {gamesHeading(rows.length)}
+        {gamesHeading(count)}
       </Text>
 
-      {games.error !== null ? (
+      {failure !== null ? (
         <Note variant="coral" accessibilityRole="alert">
-          {recoveryMessage(games.error)}
+          {recoveryMessage(failure)}
         </Note>
       ) : null}
 
-      {games.error === null && rows.length === 0 ? (
+      {failure === null && count === 0 ? (
         <>
           <Text style={s.empty}>{empty.line}</Text>
           <Text style={s.empty}>{empty.act}</Text>
@@ -127,7 +163,7 @@ export function GamesRail({ empty }: GamesRailProps) {
           true whoever is reading. `useCurrentUser` is seeded by bootstrap and answers before this
           list does, so the gap is a frame; hiding the heading for it would make the section itself
           flicker in, which is the larger of the two wrongs. */}
-      {playerId === undefined || rows.length === 0 ? null : (
+      {playerId === undefined || count === 0 ? null : (
         <>
           <ScrollView
             horizontal
@@ -139,6 +175,7 @@ export function GamesRail({ empty }: GamesRailProps) {
             style={s.strip}
             contentContainerStyle={s.stripContent}
           >
+            {bookedCount === 0 ? null : booked?.cards(cardWidth)}
             {rows.map((game) => {
               // The same key the door uses, and the same soft failure: no room is no bubble
               // and no faces, and the seats draw their posters. The plan is keyed by it too
@@ -161,7 +198,7 @@ export function GamesRail({ empty }: GamesRailProps) {
             })}
           </ScrollView>
 
-          <PagerDots count={rows.length} current={current} />
+          <PagerDots count={count} current={current} />
         </>
       )}
     </View>

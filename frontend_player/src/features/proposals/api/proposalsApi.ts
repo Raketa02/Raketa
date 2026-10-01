@@ -15,6 +15,8 @@
  * | `putGamesAndMoney` | `PUT /players/me/games-and-money` — both limits, on every tap |
  * | `getPaymentsToConfirm` | `GET /players/me/payments-to-confirm` — every refused share of the reader's still waiting for them (#555) |
  * | `postPaymentConfirmation` | `POST /seat-charges/{id}/confirmation` — *I confirmed my payment*: the yes again (#555) |
+ * | `getHome` | `GET /home` — the reader's booked games, soonest first, and Home's badge (#542, #556) |
+ * | `getBooking` | `GET /bookings/{id}` — one booked game in detail, for a player in it (#542, #556) |
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -144,6 +146,30 @@ export function postPaymentConfirmation(
     method: 'POST',
     path: `/api/v1/seat-charges/${encodeURIComponent(seatChargeId)}/confirmation`,
     authenticated: true,
+  });
+}
+
+/**
+ * **Home** — every game the reader booked, soonest first, the ended ones too (the client shelves
+ * them), each with its status and money line folded at `read_at`, and how many need them.
+ */
+export function getHome({ signal }: Cancellable = {}): Promise<Schemas['HomeResponse']> {
+  return httpRequest({ method: 'GET', path: '/api/v1/home', authenticated: true, signal });
+}
+
+/**
+ * **A booked game in detail**, for a player in it — with the reader's check-in code on the game's
+ * day. `booking_not_found` (404) for a booking that does not exist and for one they have no seat on.
+ */
+export function getBooking(
+  bookingId: string,
+  { signal }: Cancellable = {},
+): Promise<Schemas['BookingDetailsResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: `/api/v1/bookings/${encodeURIComponent(bookingId)}`,
+    authenticated: true,
+    signal,
   });
 }
 

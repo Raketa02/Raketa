@@ -209,3 +209,15 @@ screens A7), which the paragraph above predates. It holds _Games & money_ (`prop
 [#554](https://github.com/Raketa02/Raketa/issues/554)) then _Payments_ (`payments`, #552);
 _Notifications_ (#559) joins under them. Both screens are pushed under `you/` and listed in
 `TabShell`'s `YOU_SCREENS`, so they take the push transition and keep the You column lit.
+
+**Home is one rail of both loops' games, and its badge adds both** ([#556](https://github.com/Raketa02/Raketa/issues/556);
+the Games & Fill in screens A8). `HomeScreen` fills `plans`' rail's `booked` slot with
+`proposals`' `useBookedCards` and puts `proposals`' _TO CONFIRM_ above it (drawn only while a payment
+waits). The bar's Home count is `homeBadge(classic, booked)`: `useGamesNeedingYou(drawnElsewhere)`
+over the Classic games a booking does not stand for, plus `useHomeBadge`'s `needing_you` — so the
+shell holds `GET /home` for the session as it holds `GET /games`, and a fill or a confirmation that
+invalidates it re-reads at once. **A booked game is pushed over Home** under a `booking` segment
+`INSIDE_A_TAB` counts as Home's — its details, its chat and its result, each a `Stack.Screen` with the
+push transition — and **the bar stands down in its room** (`/booking/{id}/chat`, the third route
+`barStandsDown` names), for the room's own reason. _It's a game!_'s _Open game_ lays Home down and
+pushes the booking's details (`openGame(bookingId)`), not the Classic game screen.

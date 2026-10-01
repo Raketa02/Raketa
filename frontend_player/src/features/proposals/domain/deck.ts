@@ -35,8 +35,13 @@ export interface DeckPerson {
   readonly photoUrl?: string;
   /** Their published Level in the card's sport — omitted while unrated. */
   readonly level?: number;
-  /** They said yes: the **IN** tag, the only tag a tile carries (Q69). */
+  /** They said yes: the **IN** tag, the only tag a dealt card's tile carries (Q69). */
   readonly isIn: boolean;
+  /**
+   * **Their share was taken** — the *paid* beside a booked game's Level (details 8, #556). Absent on
+   * a card still dealt, where nobody has paid anything and the tile says IN or nothing.
+   */
+  readonly paid?: boolean;
 }
 
 /** One cell of the overlap grid. */

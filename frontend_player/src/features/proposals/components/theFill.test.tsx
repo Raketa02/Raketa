@@ -32,8 +32,10 @@ import {
   youTile,
   ZOFIA,
 } from '@/test-support/groupDeck';
+import { bookingDetails, stubBooking } from '@/test-support/home';
 import {
   GAMES_PATH,
+  HOME_PATH,
   PAYMENTS_TO_CONFIRM_PATH,
   PAYMENT_TERMS_IN_FORCE,
   launchSignedIn,
@@ -367,9 +369,11 @@ describe('It’s a game! — for the player whose yes filled the game (§11.3)',
     sayYes();
     theRestOfTheTenSeconds();
 
+    stubBooking(transport, bookingDetails({ booking_id: card.proposal_id, game_id: GAME_ID }));
     fireEvent.press(await screen.findByRole('button', { name: FILL.itsAGame.open }));
 
-    await waitFor(() => expect(screen).toHavePathname(`/games/${GAME_ID}`));
+    // The booked game's details (#556), not the Classic game screen.
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${card.proposal_id}`));
     expect(screen.queryByTestId('its-a-game')).toBeNull();
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/'));
@@ -388,6 +392,7 @@ describe('It’s a game! — for the player whose yes filled the game (§11.3)',
     const card = bookItNow();
     await openGames([card], booked);
     const before = transport.requestsTo('GET', GAMES_PATH).length;
+    const homeBefore = transport.requestsTo('GET', HOME_PATH).length;
 
     sayYes();
     theRestOfTheTenSeconds();
@@ -395,6 +400,10 @@ describe('It’s a game! — for the player whose yes filled the game (§11.3)',
 
     await waitFor(() =>
       expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(before),
+    );
+    // The booking itself is Home's own read (#556).
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(homeBefore),
     );
   });
 });

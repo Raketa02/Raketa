@@ -8,7 +8,8 @@
  * sit under one root too**, because Games & money bounds them all: a changed limit re-reads it.
  *
  * Beside the decks, the player's own two reads (#554): their live yeses, which every answer and
- * withdraw changes, and Games & money.
+ * withdraw changes, and Games & money. And Home's two (#556): the booked games, which a fill
+ * changes, and one booked game in detail.
  */
 
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -30,4 +31,10 @@ export const proposalKeys = {
   paymentsToConfirm: () => [...proposalKeys.all, 'payments-to-confirm'] as const,
   /** `GET /players/me/games-and-money` — the two limits. */
   gamesAndMoney: () => [...proposalKeys.all, 'games-and-money'] as const,
+  /** `GET /home` — the reader's booked games and Home's badge, held by the shell all session (#556). */
+  home: () => [...proposalKeys.all, 'home'] as const,
+  /** Every booked game read in detail — the root a fill re-reads. */
+  bookings: () => [...proposalKeys.all, 'booking'] as const,
+  /** `GET /bookings/{id}` — one booked game in detail (#556). */
+  booking: (bookingId: string) => [...proposalKeys.bookings(), bookingId] as const,
 };

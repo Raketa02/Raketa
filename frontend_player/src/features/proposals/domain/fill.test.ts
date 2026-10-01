@@ -89,7 +89,7 @@ describe('fillOutcome — what a yes did, read off the server’s answer', () =>
   it('is It’s a game! when the yes booked the game', () => {
     expect(
       fillOutcome(answer({ openSeats: 0, booked: { bookingId: 'p-1', gameId: 'g-1' } })),
-    ).toEqual({ kind: 'booked', gameId: 'g-1' });
+    ).toEqual({ kind: 'booked', bookingId: 'p-1' });
   });
 
   it('is a payment to confirm when this player’s share could not be held', () => {

@@ -28,6 +28,9 @@ import NewOfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/
 import OfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/group/[groupId]';
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
+import BookedGameRoute from '@/app/(app)/(tabs)/booking/[bookingId]/index';
+import BookedGameChatRoute from '@/app/(app)/(tabs)/booking/[bookingId]/chat';
+import BookedGameResultRoute from '@/app/(app)/(tabs)/booking/[bookingId]/result';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
 import ChallengeFillRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/fill';
 import YesRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/yes';
@@ -156,6 +159,12 @@ export const ONBOARDING_ROUTES = {
   // A game is pushed over the Home tab and is a `games/` route rather than a `now/` one,
   // because the Home tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,
+  // A booked game (#556) — its details pushed over Home, its chat and its result over the details,
+  // under a `booking` segment for `games/`' reason. Spelled `…/index` as the file tree spells it,
+  // because the shell names the details to give them the push transition.
+  '(app)/(tabs)/booking/[bookingId]/index': BookedGameRoute,
+  '(app)/(tabs)/booking/[bookingId]/chat': BookedGameChatRoute,
+  '(app)/(tabs)/booking/[bookingId]/result': BookedGameResultRoute,
   '(app)/(tabs)/chats': ChatsRoute,
   // A challenge is pushed over the Chats tab, and the static `challenge` above the id is the
   // decision that keeps a challenge id and a conversation id from sharing one segment.
@@ -1144,6 +1153,9 @@ export const GATE_USER: Wire['MeResponse'] = {
  * is every flag at its code default — the app as it ships. A suite about a flag calls
  * `stubDatafile` again afterwards to serve one.
  *
+ * **So is Home's booked-games read** (#556): the bar's Home badge is its count, so the shell makes it
+ * the moment the tabs are up. Defaulted to no games.
+ *
  * **The cards read is not made on that tab at all**, and it is still stubbed here. The card
  * asking how the other players were is drawn at the end of the **game screen**, one push in,
  * so landing in the app never asks for the list — but a suite that opens a game does, and
@@ -1195,6 +1207,28 @@ export function stubGate(
   stubLiveYeses(transport);
   stubPaymentsToConfirm(transport);
   stubReceipts(transport);
+  stubHome(transport);
+}
+
+export const HOME_PATH = '/api/v1/home';
+
+/** One booked game's details — `GET /bookings/{id}` (#556). */
+export const bookingPath = (bookingId: string) => `/api/v1/bookings/${bookingId}`;
+
+/**
+ * **Home's booked games** (#542, #556) — none by default, at a fixed read: the shell holds the read
+ * all session for the bar's badge, so every suite that lands in the app makes it. A suite about
+ * Home serves its own, and `test-support/home.ts` builds them.
+ */
+export function stubHome(transport: Transport, home: Partial<Wire['HomeResponse']> = {}) {
+  transport.on('GET', HOME_PATH, () =>
+    json<Wire['HomeResponse']>({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 0,
+      games: [],
+      ...home,
+    }),
+  );
 }
 
 export const PAYMENT_METHOD_PATH = '/api/v1/players/me/payment-methods/current';

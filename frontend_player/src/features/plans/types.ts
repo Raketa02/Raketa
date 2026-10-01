@@ -36,7 +36,7 @@
  * and ADR-0149 §1's arrow runs one way
  * ([`the-loop-components.md`](../../../../docs/specs/the-loop/the-loop-components.md) §3.4).
  */
-export { GamesRail, type GamesRailProps } from './components/GamesRail';
+export { GamesRail, type BookedOnTheRail, type GamesRailProps } from './components/GamesRail';
 
 /**
  * **The plan card, pinned under a room's header from its opening** — the counter, the three slot

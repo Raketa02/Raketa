@@ -89,7 +89,7 @@ export interface YesAnswer {
  *   game an On request club has still to confirm.
  */
 export type FillOutcome =
-  | { readonly kind: 'booked'; readonly gameId: string }
+  | { readonly kind: 'booked'; readonly bookingId: string }
   | { readonly kind: 'confirm'; readonly seatChargeId: string }
   | { readonly kind: 'setUp' }
   | { readonly kind: 'termsAgain' }
@@ -117,7 +117,7 @@ export function fillRefusal(
 }
 
 export function fillOutcome(answer: YesAnswer): FillOutcome {
-  if (answer.booked !== null) return { kind: 'booked', gameId: answer.booked.gameId };
+  if (answer.booked !== null) return { kind: 'booked', bookingId: answer.booked.bookingId };
   const refused = answer.yourPayment;
   if (refused === null) return { kind: 'counted' };
   switch (refused.refusal) {

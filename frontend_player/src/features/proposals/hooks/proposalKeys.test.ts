@@ -50,4 +50,14 @@ describe('proposalKeys', () => {
     expect(startsWith(proposalKeys.liveYeses(), proposalKeys.decks())).toBe(false);
     expect(startsWith(proposalKeys.gamesAndMoney(), proposalKeys.decks())).toBe(false);
   });
+
+  it('keeps Home and a booked game out of the decks, and each booking under the bookings (#556)', () => {
+    const one = proposalKeys.booking(GROUP);
+    expect(startsWith(one, proposalKeys.bookings())).toBe(true);
+    expect(startsWith(proposalKeys.booking(OTHER), proposalKeys.bookings())).toBe(true);
+    expect(JSON.stringify(one)).not.toBe(JSON.stringify(proposalKeys.booking(OTHER)));
+    expect(startsWith(proposalKeys.home(), proposalKeys.decks())).toBe(false);
+    expect(startsWith(one, proposalKeys.decks())).toBe(false);
+    expect(startsWith(one, proposalKeys.home())).toBe(false);
+  });
 });

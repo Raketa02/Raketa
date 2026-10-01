@@ -76,7 +76,7 @@ import { StyleSheet, View } from 'react-native';
 import { useChallengesWaiting } from '@/features/challenges/types';
 import { useFollowedFeature } from '@/features/feature_flags/types';
 import { useGamesNeedingYou } from '@/features/plans/types';
-import { FillProvider } from '@/features/proposals/types';
+import { bookedGameRoute, FillProvider, useHomeBadge } from '@/features/proposals/types';
 import { TAB_BAR_HEIGHT, TabBar, theme } from '@/shared/ui';
 
 import { barStandsDown, tabForPathname } from '../domain/shellTabs';
@@ -84,15 +84,25 @@ import { barStandsDown, tabForPathname } from '../domain/shellTabs';
 import { landOnHome, openTab } from './shellNavigation';
 
 /**
- * *It's a game!*'s *Open game* (#555): Home laid down and the booked game pushed over it, so back
- * from the game is Home, where a booked game lives (the screens A2.4). The shell's move, handed to
- * the fill rather than imported by it — `proposals` never imports the shell that mounts it. The
- * route is the one this stack names below (`games/[gameId]`), spelled here rather than imported
- * from `games`, which imports the shell.
+ * *It's a game!*'s *Open game* (#555): Home laid down and the booked game's details pushed over it,
+ * so back from the game is Home, where a booked game lives (the screens A2.4). The shell's move,
+ * handed to the fill rather than imported by it — `proposals` never imports the shell that mounts
+ * it. The details are a booking's (#556, A4.1), at the route `proposals` spells.
  */
-function openGame(gameId: string) {
+function openGame(bookingId: string) {
   landOnHome();
-  router.push({ pathname: '/games/[gameId]', params: { gameId } });
+  router.push(bookedGameRoute(bookingId));
+}
+
+/**
+ * **Home's badge** — the Classic games that need you and the booked ones, added (#556). The booked
+ * half is the server's (`needing_you`: a result, a score to agree, a seat open, a payment to
+ * confirm); the Classic half leaves out every Game a booking stands for, since Home draws and
+ * counts it as its booking. Nothing to draw is `undefined`, as each half already answers.
+ */
+function homeBadge(classic: number | undefined, booked: number): number | undefined {
+  const sum = (classic ?? 0) + booked;
+  return sum === 0 ? undefined : sum;
 }
 
 /**
@@ -123,7 +133,8 @@ export function TabShell() {
   // for the session, so a read at mount would be the code default on every launch
   // ([#550](https://github.com/Raketa02/Raketa/issues/550)). The screens under it still read once.
   const classicPlay = useFollowedFeature('classic_play');
-  const gamesNeedingYou = useGamesNeedingYou();
+  const booked = useHomeBadge();
+  const gamesNeedingYou = homeBadge(useGamesNeedingYou(booked.gameIds), booked.needingYou);
   // Chats' count is read only while Chats is drawn: it is Classic play's, column and read.
   const challengesWaiting = useChallengesWaiting(classicPlay);
   const barShown = !barStandsDown(pathname);
@@ -167,6 +178,12 @@ export function TabShell() {
             ([#314](https://github.com/Raketa02/Raketa/issues/314)). It is the first exception
             outside Play, which is why `shellTabs` had to say which tab it is inside. */}
           <Stack.Screen name="games/[gameId]" options={{ animation: 'default' }} />
+          {/* And so is a booked game (#556): its details pushed over Home, its chat and its
+            result pushed over the details — each comes back out to the screen it was opened from.
+            The chat is the second room the bar stands down in (`shellTabs`). */}
+          <Stack.Screen name="booking/[bookingId]/index" options={{ animation: 'default' }} />
+          <Stack.Screen name="booking/[bookingId]/chat" options={{ animation: 'default' }} />
+          <Stack.Screen name="booking/[bookingId]/result" options={{ animation: 'default' }} />
           {/* And so is a challenge: it is pushed over the Chats inbox, the list stays underneath,
             and backing out returns to the row it was tapped from
             ([#360](https://github.com/Raketa02/Raketa/issues/360)). It needs no `INSIDE_A_TAB`

@@ -39,6 +39,13 @@ export { GameScreen, type GameScreenProps } from './components/GameScreen';
 export { CourtPairing, type CourtPairingProps } from './components/CourtPairing';
 
 /**
+ * **The forecast block alone**, for a surface that draws its own people — a booked game's details
+ * (#556), whose tiles come from the booking with *paid* on each. The same pairing read and the
+ * same block as `CourtPairing`'s, absent on the same ground.
+ */
+export { GameForecast, type GameForecastProps } from './components/GameForecast';
+
+/**
  * **The pairing's own words, exported for the suite that walks the plan lead from `plans`.**
  *
  * `gamePlan.test.tsx` asserts which lead draws the court's pairing, and a test spelling *Balance

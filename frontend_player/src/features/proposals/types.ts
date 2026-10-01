@@ -15,6 +15,9 @@
  * `you/` mounts its screen. `LiveYeses` is You › Payments' section, **handed to that screen by its
  * route file** rather than imported by `payments`: the deck will open the payment setup as a sheet
  * (A2.4), so the edge between the two features points from here to there.
+ *
+ * Since #556 it is Home's too: the booked games on the rail, a booked game's details, its chat and
+ * its result — see the last block below.
  */
 
 export { GamesDeck, type GamesDeckProps } from './components/GamesDeck';
@@ -37,3 +40,23 @@ export { PROPOSALS_COPY } from './components/proposalsCopy';
  */
 export { FillProvider, type FillProviderProps } from './components/FillProvider';
 export { FILL_COPY } from './components/fillCopy';
+
+/**
+ * **Home's booked games, and a booked game in detail** (#556; the screens A4.1, A4.4, A8) — over
+ * `GET /home` and `GET /bookings/{id}` (#542).
+ *
+ * Home is one rail and the rail is `plans`': the shell fills its booked slot with `useBookedCards`
+ * — the cards, and the Games they stand for, which the Classic half leaves out — and adds
+ * `useHomeBadge`'s count to the Classic one on the bar. The details, the game's chat and its result
+ * are each mounted by a route file under `booking/[bookingId]/`, which checks its param here first;
+ * the routes themselves are this feature's to spell.
+ */
+export { useBookedCards, type BookedCards } from './components/homeRail';
+export { useHomeBadge } from './hooks/useHome';
+export { BookedGameScreen, type BookedGameScreenProps } from './components/BookedGameScreen';
+export { BookedGameChat, type BookedGameChatProps } from './components/BookedGameChat';
+export { BookedGameResult, type BookedGameResultProps } from './components/BookedGameResult';
+export { parseBookingParams } from './schemas/bookingParams';
+export { bookedGameRoute } from './components/proposalRoutes';
+/** The words the Home and details suites hold the screens to. */
+export { HOME_GAME_COPY } from './components/homeCopy';

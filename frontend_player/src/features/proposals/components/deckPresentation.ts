@@ -192,9 +192,18 @@ export function barLabels(rows: readonly [DeckRow, DeckRow]): readonly [string, 
 export function tileLabel(person: DeckPerson, completes: boolean): string {
   const level = person.level === undefined ? [] : [`level ${formatLevel(person.level)}`];
   if (person.isYou) {
-    return [COPY.you, ...(completes ? [COPY.youCompleteIt.toLowerCase()] : level)].join(', ');
+    const paid = person.paid === true ? [COPY.paid] : [];
+    return [
+      COPY.you,
+      ...(completes ? [COPY.youCompleteIt.toLowerCase()] : [...level, ...paid]),
+    ].join(', ');
   }
-  const parts = [person.name ?? 'Somebody', ...level, ...(person.isIn ? [COPY.inSpoken] : [])];
+  const parts = [
+    person.name ?? 'Somebody',
+    ...level,
+    ...(person.isIn ? [COPY.inSpoken] : []),
+    ...(person.paid === true ? [COPY.paid] : []),
+  ];
   return parts.join(', ');
 }
 

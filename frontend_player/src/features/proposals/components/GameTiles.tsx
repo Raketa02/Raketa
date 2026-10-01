@@ -29,6 +29,12 @@
  * tail cut — rather than drawing *Karol T.*, which is the mocks' own data and not a rule. Only the
  * *vs* line stems a name, because it holds four in one line.
  *
+ * ## A booked game's tiles say *paid*
+ *
+ * The same tiles draw a booked game's people (#556; details 8): nobody on a booked court is *In* —
+ * that word is a game still filling's — and each tile carries *paid* after its Level instead, the
+ * share the club took.
+ *
  * ## Two heights
  *
  * On the deck the tiles take the height the card leaves them (`fill`), down to `tileMin` on a short
@@ -44,7 +50,7 @@ import { PlayerPhoto, theme } from '@/shared/ui';
 import type { DeckPerson, DeckRow, DeckSeat } from '../domain/deck';
 
 import { CardTag } from './CardTag';
-import { EMPTY_SEAT, TILE_HINT, tileLabel, tileName, vsLine } from './deckPresentation';
+import { EMPTY_SEAT, LINE_JOIN, TILE_HINT, tileLabel, tileName, vsLine } from './deckPresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = PROPOSALS_COPY;
@@ -149,8 +155,8 @@ function GameTile({
           <Text style={s.completes} numberOfLines={1}>
             {COPY.youCompleteIt}
           </Text>
-        ) : person.level === undefined ? null : (
-          <Text style={s.level}>{formatLevel(person.level)}</Text>
+        ) : (
+          <TileLine person={person} />
         )}
       </View>
     </>
@@ -181,6 +187,19 @@ function GameTile({
       {drawing}
     </Pressable>
   );
+}
+
+/**
+ * Under the name: the Level, and on a booked game *paid* beside it — *2,71 · paid*, in the Level's
+ * own mono (details 8). Nothing for an unrated player on a card still dealt.
+ */
+function TileLine({ person }: { readonly person: DeckPerson }) {
+  const parts = [
+    ...(person.level === undefined ? [] : [formatLevel(person.level)]),
+    ...(person.paid === true ? [COPY.paid] : []),
+  ];
+  if (parts.length === 0) return null;
+  return <Text style={s.level}>{parts.join(LINE_JOIN)}</Text>;
 }
 
 const s = StyleSheet.create({

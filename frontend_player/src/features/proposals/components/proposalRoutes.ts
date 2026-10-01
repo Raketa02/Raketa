@@ -24,3 +24,23 @@ export function gameRoute(groupId: string, proposalId: string, sport: Sport, kin
  * segment so the You column stays lit (`paymentRoutes`' reason, #554).
  */
 export const YOU_GAMES_AND_MONEY_ROUTE = '/you/games-and-money';
+
+/**
+ * **A booked game's details, its room and its result** — pushed over Home (#556), under a `booking`
+ * segment the shell counts as Home's (`shellTabs`' `INSIDE_A_TAB`), so the Home column stays lit
+ * and *back* is Home, then the details. The id is the booking's — the same id the game had while it
+ * filled — and everything else is read.
+ */
+export function bookedGameRoute(bookingId: string) {
+  return { pathname: '/booking/[bookingId]', params: { bookingId } } as const;
+}
+
+/** The game's chat, over its details — *back* is the details (A4.4). */
+export function bookedChatRoute(bookingId: string) {
+  return { pathname: '/booking/[bookingId]/chat', params: { bookingId } } as const;
+}
+
+/** The result, told and agreed on today's game screen, over the details. */
+export function bookedResultRoute(bookingId: string) {
+  return { pathname: '/booking/[bookingId]/result', params: { bookingId } } as const;
+}

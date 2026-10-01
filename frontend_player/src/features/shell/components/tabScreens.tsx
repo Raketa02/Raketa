@@ -21,6 +21,7 @@
  */
 
 import { GamesRail } from '@/features/plans/types';
+import { PaymentsToConfirm, useBookedCards } from '@/features/proposals/types';
 
 import { ShellScreen } from './ShellScreen';
 import { HOME_COPY } from './shellCopy';
@@ -39,11 +40,20 @@ import { HOME_COPY } from './shellCopy';
  *
  * **It still never says nothing is happening.** The line says what the tab **is** and the one under
  * it names the act, which is true whether or not a game is on screen.
+ *
+ * **The booked games ride the same rail** ([#556](https://github.com/Raketa02/Raketa/issues/556);
+ * the screens A8): `features/proposals` draws them and the rail takes them as a slot, first, so
+ * Home is one rail of your games whichever loop made them. **And a payment to confirm is above it**
+ * — proposals' *TO CONFIRM*, which draws nothing while there is none: the bar's Home badge counts
+ * every payment the player has to confirm, and a count with nothing on the tab to answer it would
+ * be a dead end.
  */
 export function HomeScreen() {
+  const booked = useBookedCards();
   return (
     <ShellScreen title={HOME_COPY.title}>
-      <GamesRail empty={HOME_COPY.empty} />
+      <PaymentsToConfirm />
+      <GamesRail empty={HOME_COPY.empty} booked={booked} />
     </ShellScreen>
   );
 }

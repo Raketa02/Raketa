@@ -289,3 +289,14 @@ on a conversation row is the sheet behind the door the shell composes onto it: `
 calls the game off — for {name} too. Your chat goes with it._ where the reader is the last other
 player on a game, and _closes this court for {name}_ where the court never became one. The row
 hands it the same `challengeId` it always did and learns nothing about the line.
+
+**A booked game's room is the same screen, reached from its details**
+([#556](https://github.com/Raketa02/Raketa/issues/556); the Games & Fill in screens A4.4, the
+mechanics §14.3). `ConversationScreen` takes `booked: { state }` and draws the conversation alone —
+no plan card, no plan quick chips, no _Details_ door (`ConversationHeader`'s `onOpenGame` is
+optional for it) — with the header's second line the booking's word, because the Classic fold names
+a booked Game by a rung it never stands on. The room is found by the join keyed by the **game**:
+`useGameRoom(gameId)` (with `listed`, so the screen can tell _not yet_ from _none_) and
+`useGameRooms()` for Home's cards — the join `GET /bookings/{id}` documents, since a booked game's
+room is filed under its booking and is about its game from its first moment. No read carries a
+conversation id.
