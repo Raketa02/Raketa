@@ -7,10 +7,12 @@ games a player has booked, and how many were booked in each pool. **A third is
 its own key**: each seat's check-in code, derived under the server's secret
 (#542).
 
-**Two are demands on contexts it does not write**: which courts a club still
-has for Raketa at an hour, and its cut-off (``clubs``, over what it sells), and
-the ordinary Game a booking opens (``games``, over the use case a completed
-line-up opens one with).
+**Three are demands on contexts it does not write**: which courts a club still
+has for Raketa at an hour, its cut-off and its time to confirm (``clubs``, over
+what it sells); the ordinary Game a booking opens (``games``, over the use case
+a completed line-up opens one with); and, for an On request club, whom to tell
+that a game waits for its answer and what the club is called (``clubs``, over
+its own account and details — #543).
 """
 
 from __future__ import annotations
@@ -59,22 +61,36 @@ class BookingDirectory(Protocol):
     async def starts_for(
         self, player_id: UUID, *, start: Instant, end: Instant | None
     ) -> Sequence[Instant]:
-        """When each of this player's booked games starts, from ``start`` until
-        ``end`` — for ever when ``end`` is ``None`` — soonest first."""
+        """When each of this player's **booked** games starts, from ``start``
+        until ``end`` — for ever when ``end`` is ``None`` — soonest first. A game
+        still waiting for its club is not booked yet, and one called off never
+        will be."""
         ...
 
     async def of_player(self, player_id: UUID) -> Sequence[UUID]:
-        """Every booking this player has a seat on, whenever it is — **soonest
-        game first**, and by id among games at one hour (#542)."""
+        """Every booking this player has a seat on, whenever it is and whatever
+        it came to — **soonest game first**, and by id among games at one hour
+        (#542)."""
         ...
 
     async def counted_in(self, pool_ids: Collection[UUID]) -> Mapping[UUID, int]:
         """How many games were booked in each of these pools — one question
         about the set. A pool absent from the answer has booked none (#542).
 
-        **Every booking counts**, because every booking today is a booked game;
-        a booking refused or called off (#543, #544, #547) is its ticket's to
-        leave out, or the club's *Games* would count a game nobody played."""
+        **Only a booked game counts**: one waiting for its club, or called off,
+        is not a game anybody will play there (#543; #544 and #547 leave theirs
+        out the same way)."""
+        ...
+
+    async def waiting_at(self, club_id: UUID) -> Sequence[UUID]:
+        """Every booking at this club waiting for its answer — **the one due
+        first, first** (#543)."""
+        ...
+
+    async def unanswered(self, *, now: Instant) -> Sequence[UUID]:
+        """Every booking still waiting for its club whose answer was due by
+        ``now``, the longest overdue first — **candidates**: the aggregate
+        decides."""
         ...
 
 
@@ -91,11 +107,13 @@ class CheckInCodes(Protocol):
 @dataclass(frozen=True, slots=True)
 class CourtForTheGame:
     """The court a full game is booked on — **the first free court of its
-    sport at its hour**, in the club's own order (the mechanics §11.2) — and
-    how many hours before the game the club's free cancellation ends."""
+    sport at its hour**, in the club's own order (the mechanics §11.2) — how
+    many hours before the game the club's free cancellation ends, and how many
+    minutes an On request club has to answer."""
 
     court: BookedCourt
     cut_off_hours: int
+    time_to_confirm_minutes: int
 
 
 @runtime_checkable
@@ -131,4 +149,24 @@ class GameOpening(Protocol):
         at: Instant,
     ) -> UUID:
         """Open the game, in the caller's transaction, and answer its id."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ClubDesk:
+    """Whom an email to a club is addressed to — its one sign-in — and what the
+    club is called."""
+
+    email: str
+    club_name: str
+
+
+@runtime_checkable
+class ClubDesks(Protocol):
+    """**A demand of the Club context**: the desk a request is sent to (the
+    mechanics §16.12 — *a request is waiting for you*, at once)."""
+
+    async def of(self, club_id: UUID) -> ClubDesk | None:
+        """The club's desk, or ``None`` for a club that no longer exists."""
         ...

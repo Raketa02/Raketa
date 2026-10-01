@@ -15,7 +15,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Sixteen jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Seventeen jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -113,3 +113,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   process collides on the stream, and whatever the world moved past is refused and counted.
   One pool failing is logged and passed over. What is dealt is domain
   (`proposals/domain/proposer.py`); only the two cadences are settings.
+  The seventeenth is the **On request timeout** (`request-timeout`, #543), and **correctness
+  depends on it**: every read already refuses a club's answer past its deadline
+  (`request_timed_out`) and drops the request from the club's list, but only this calls the
+  game off — *Called off · no answer* — frees the court the request held and makes its
+  players owed a new card first. Its read names **candidates** (`unanswered`, by state and
+  `answer_by`), each one transaction that locks its game first, a conflict counted and
+  stepped over. The deadline is the club's time to confirm, a Raketa setting; only the
+  cadence (thirty seconds — the window is minutes long) is a setting here.

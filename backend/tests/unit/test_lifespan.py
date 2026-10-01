@@ -214,6 +214,7 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         MAIL_DELIVERY_ENABLED=False,
         PROPOSAL_EXPIRY_ENABLED=False,
         PROPOSER_ENABLED=False,
+        REQUEST_TIMEOUT_ENABLED=False,
     )
     app = FastAPI()
     app.state.event_runtime = object()

@@ -52,6 +52,8 @@ class ProposalStatus(StrEnum):
     EXPIRED = "EXPIRED"
     WITHDRAWN = "WITHDRAWN"
     COURT_HOUR_LOST = "COURT_HOUR_LOST"
+    #: Its On request club refused it or did not answer (#543).
+    TURNED_DOWN = "TURNED_DOWN"
 
 
 class ReaderAction(StrEnum):
@@ -64,8 +66,8 @@ class ReaderAction(StrEnum):
     #: *Withdraw* — ``DELETE /proposals/{id}/yes``.
     WITHDRAW = "WITHDRAW"
     #: *Leave the game* while the club decides: leaving withdraws the yes —
-    #: ``DELETE /proposals/{id}/yes`` — with its sheet (the mechanics §13).
-    #: Cancelling the club's request is #543's, when the request exists.
+    #: ``DELETE /proposals/{id}/yes`` — with its sheet (the mechanics §13), and
+    #: the request to the club with it (#543).
     LEAVE = "LEAVE"
     #: *Confirm your payment to keep your seat*.
     CONFIRM_PAYMENT = "CONFIRM_PAYMENT"
@@ -114,6 +116,8 @@ def status_of_proposal(proposal: Proposal, *, now: Instant) -> ProposalStatus:
             return ProposalStatus.WITHDRAWN
         case Standing.COURT_HOUR_LOST:
             return ProposalStatus.COURT_HOUR_LOST
+        case Standing.TURNED_DOWN:
+            return ProposalStatus.TURNED_DOWN
         case _:
             exhaustive(standing)
 

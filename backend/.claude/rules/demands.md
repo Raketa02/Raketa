@@ -61,8 +61,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   where a person placed a test key, and is skipped by name otherwise (ADR-0190 §1).
   **The twelfth, `proposal_demands.py`, is Proposals' consumer register** (#542): Home's and the
   details' three demands — a player's bookings (`bookings`), a booked game's result (`games`), a
-  club's distance (the Player profile and `clubs`). The deck's, the proposer's and the fill's
-  ports (#538–#541) were contracted over HTTP only and are owed rows there.
+  club's distance (the Player profile and `clubs`) — and, since #543, an On request club's
+  requests and answers (`bookings`) and the players' Names on them (`users`). The deck's, the
+  proposer's and the fill's ports (#538–#541) were contracted over HTTP only and are owed rows
+  there.
+  **The thirteenth, `booking_demands.py`, is Bookings' consumer register** (#543): the first
+  free court of a club at an hour with its cut-off and time to confirm, and a club's desk —
+  both the Club context's facts. `GameOpening` (#541) is owed a row there.
   **A row carries a builder, and not always over a bare session.** `challenge_demands.py`'s
   takes the two seams the platform supplies from outside a request — the process's
   candidate index and the exposure ledger behind Redis — because the pairing it contracts

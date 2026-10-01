@@ -133,7 +133,9 @@ from app.modules.proposals.domain.ports import (
     BalanceForecasts,
     BookedGames,
     ClubDistances,
+    ClubRequests,
     GameBookings,
+    PlayerNames as ProposalPlayerNames,
     GameResults,
     PlayerBookings,
     SeatCharges,
@@ -163,24 +165,44 @@ from app.modules.proposals.infrastructure.event_sourced_games_and_money_reposito
 from app.modules.proposals.infrastructure.matcher_balance_forecasts import (
     MatcherBalanceForecasts,
 )
-from app.modules.proposals.application.answers import ConfirmPayment, SayYes
+from app.modules.proposals.application.answers import (
+    ConfirmPayment,
+    SayYes,
+    WithdrawYes,
+)
+from app.modules.proposals.application.club_requests import (
+    AcceptTheRequest,
+    ExpireUnansweredRequests,
+    ReadWaitingRequests,
+    RefuseTheRequest,
+)
 from app.modules.proposals.application.fill import Fill
 from app.modules.proposals.infrastructure.bookings import (
     BookingsBookedGames,
+    BookingsClubRequests,
     BookingsGameBookings,
     BookingsGroupBornGames,
     BookingsPlayerBookings,
 )
+from app.modules.proposals.infrastructure.users_names import UsersPlayerNames
 from app.modules.proposals.infrastructure.club_distances import ProfileClubDistances
 from app.modules.proposals.infrastructure.game_results import GamesGameResults
 from app.modules.bookings.application.book_the_game import BookTheGame, FindACourt
+from app.modules.bookings.application.requests import (
+    BookTheRequest,
+    CallOffTheRequest,
+    RequestTheGame,
+    WithdrawTheRequest,
+)
 from app.modules.bookings.domain.ports import (
     BookingDirectory,
     BookingRepository,
     CheckInCodes,
     ClubCourtsAtTheHour,
+    ClubDesks,
     GameOpening,
 )
+from app.modules.bookings.infrastructure.club_desks import AccountClubDesks
 from app.modules.bookings.infrastructure.check_in_codes import KeyedCheckInCodes
 from app.modules.bookings.infrastructure.club_courts import (
     BookedCourtHours,
@@ -1307,10 +1329,11 @@ def build_deal_version(
 
 
 def build_withdraw_a_leavers_yeses(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
 ) -> WithdrawALeaversYeses:
     """What leaving a group does to the leaver's yeses in its pool — built per
-    delivery run, over the session the delivery commits in."""
+    delivery run, over the session the delivery commits in — and to a request
+    a game of theirs had put to its club (#543)."""
     return WithdrawALeaversYeses(
         proposals=build_proposal_repository(
             session,
@@ -1318,6 +1341,7 @@ def build_withdraw_a_leavers_yeses(
             events=build_event_publisher(session, runtime=runtime),
         ),
         directory=build_proposal_directory(session),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
     )
 
 
@@ -1543,6 +1567,57 @@ def build_game_bookings(
     )
 
 
+def build_club_desks(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ClubDesks:
+    """Whom an email to a club goes to — its one sign-in — and its name."""
+    return AccountClubDesks(
+        accounts=build_club_account_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        directory=build_club_directory(session),
+    )
+
+
+def build_club_requests(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> ClubRequests:
+    """A full game put to its On request club, and the club's answer, over the
+    Bookings context's own use cases (#543). The desk's email opens the club
+    website's Overview, where what waits for an answer is."""
+
+    def bookings() -> BookingRepository:
+        return build_booking_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+
+    return BookingsClubRequests(
+        bookings=bookings(),
+        directory=build_booking_directory(session),
+        ask=RequestTheGame(
+            bookings=bookings(),
+            desks=build_club_desks(session, runtime=runtime),
+            mail=build_mail_queue(session),
+            answer_page=f"{settings.CLUB_WEBSITE_URL.rstrip('/')}/overview",
+        ),
+        accept=BookTheRequest(
+            bookings=bookings(), games=build_game_opening(session, runtime=runtime)
+        ),
+        turn_down=CallOffTheRequest(bookings=bookings()),
+        withdraw=WithdrawTheRequest(bookings=bookings()),
+    )
+
+
+def build_proposal_player_names(session: AsyncSession) -> ProposalPlayerNames:
+    """What each player is called — the club's only view of a player on a
+    request (#543)."""
+    return UsersPlayerNames(build_user_repository(session))
+
+
 def build_fill(
     session: AsyncSession,
     *,
@@ -1551,14 +1626,15 @@ def build_fill(
     settings: Settings,
     runtime: EventRuntime | None = None,
 ) -> Fill:
-    """What the last yes does. ``proposals`` is the yes's own repository, so the
-    other yeses it withdraws or pauses are appended through the one that loaded
-    the game."""
+    """What the last yes does — and the club's yes, at an On request club.
+    ``proposals`` is the yes's own repository, so the other yeses it withdraws
+    or pauses are appended through the one that loaded the game."""
     return Fill(
         proposals=proposals,
         directory=build_proposal_directory(session),
         terms=build_club_terms(session, runtime=runtime),
         bookings=build_game_bookings(session, runtime=runtime),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
         charges=build_seat_charges(
             session, provider=provider, settings=settings, runtime=runtime
         ),
@@ -1598,6 +1674,115 @@ def build_say_yes(
             settings=settings,
             runtime=runtime,
         ),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_withdraw_yes(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> WithdrawYes:
+    """*Withdraw* — and *Leave the game* while its club decides, which takes
+    the request with it (#543)."""
+    return WithdrawYes(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_read_waiting_requests(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadWaitingRequests:
+    """What waits for a club's answer (#543)."""
+    return ReadWaitingRequests(
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
+        names=build_proposal_player_names(session),
+        clock=clock,
+    )
+
+
+def build_accept_the_request(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> AcceptTheRequest:
+    """The club's yes: every seat charged over this caller's provider, and the
+    game booked (#543)."""
+    proposals = build_proposal_repository(
+        session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    return AcceptTheRequest(
+        proposals=proposals,
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
+        fill=build_fill(
+            session,
+            proposals=proposals,
+            provider=provider,
+            settings=settings,
+            runtime=runtime,
+        ),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_refuse_the_request(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> RefuseTheRequest:
+    """The club's no (#543)."""
+    return RefuseTheRequest(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_expire_unanswered_requests(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ExpireUnansweredRequests:
+    """One On request timeout run over this session — the job's, and a test's
+    (#543)."""
+    return ExpireUnansweredRequests(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )

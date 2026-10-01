@@ -10,11 +10,13 @@ the yes's own transaction:
    people In (``guards.py``), so such a pair is two earlier yeses, and the later
    of them stops counting — their **seat reopens** (``NO_LONGER_FITS``) — and
    nobody is asked for money.
-2. **The club.** An On request club confirms each full game itself — that is
-   #543's, and until then a full game there waits as it is. A club that no
-   longer sells, or has no court of the sport left at the hour, has taken the
-   card's court hour: the card is over, nobody paid, and a payment a player
-   had confirmed for it is let go.
+2. **The club.** A club that no longer sells, or has no court of the sport
+   left at the hour, has taken the card's court hour: the card is over, nobody
+   paid, and a payment a player had confirmed for it is let go. **An On request
+   club is asked** (#543; the mechanics §16.8): the first free court is held
+   for its answer, the sides are drawn, the desk is emailed, and nobody pays —
+   the game waits, full, until the club says yes (``accept``, steps 3–5 then)
+   or no.
 3. **The money, all or nothing.** Every seat's share is held on the club's
    account; only when every one is held is any taken. When one is not, nobody
    pays, and **that player's seat reopens** — they are asked to confirm the
@@ -32,16 +34,23 @@ the yes's own transaction:
 **Nothing here commits, and nothing here saves the proposal it was handed**: the
 yes that filled it is the caller's, and so is the transaction — the money's
 verdict, the booking, the game and every withdrawn yes stand or fall together.
+The club's yes is the same: its transaction is the caller's.
+
+**A seat opening on a game that waits for its club withdraws the request**:
+whoever takes the yes away — the fill's own *one game per hour* and *games per
+week* here, the player's *Leave*, a leaver of the group — tells the club it is
+off (``ClubRequests.withdraw``), in the same transaction, so the held court is
+free the moment the seat is.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Collection, Mapping
 from dataclasses import dataclass, field
 from typing import final
 from uuid import UUID
 
-from app.kernel import Instant, invariant
+from app.kernel import Instant, invariant, shifted
 from app.modules.proposals.domain.deck import (
     arrangements,
     evenest,
@@ -51,11 +60,15 @@ from app.modules.proposals.domain.deck import (
 )
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
+    BookableCourt,
     BookedGames,
+    ClubRequest,
+    ClubRequests,
     ClubTerms,
     FullGame,
     GameBookings,
     GamesAndMoneyRepository,
+    GameToAsk,
     GameToCharge,
     PlayerFit,
     ProposalDirectory,
@@ -83,10 +96,12 @@ class Booked:
 @final
 @dataclass(frozen=True, slots=True)
 class FillOutcome:
-    """What the fill did. At most one of the four is set; none at all is a full
-    game waiting for its club (#543)."""
+    """What the fill did. At most one of the five is set."""
 
     booked: Booked | None = None
+    #: Put to its On request club, which has until then to answer — nobody
+    #: paid.
+    waiting_until: Instant | None = None
     #: Whose share could not be held — nobody paid.
     refused: Mapping[UUID, RefusedPayment] = field(default_factory=dict)
     #: No court was left: the card is over.
@@ -105,6 +120,7 @@ class Fill:
         directory: ProposalDirectory,
         terms: ClubTerms,
         bookings: GameBookings,
+        requests: ClubRequests,
         charges: SeatCharges,
         undecided: UndecidedCharges,
         forecasts: BalanceForecasts,
@@ -117,6 +133,7 @@ class Fill:
         self._directory = directory
         self._terms = terms
         self._bookings = bookings
+        self._requests = requests
         self._charges = charges
         self._undecided = undecided
         self._forecasts = forecasts
@@ -131,8 +148,6 @@ class Fill:
         terms = (await self._terms.of([proposal.club_id], now=now)).get(
             proposal.club_id
         )
-        if terms is not None and terms.confirms_each_game:
-            return FillOutcome()
         court = (
             None
             if terms is None
@@ -140,10 +155,104 @@ class Fill:
                 proposal.club_id, sport=proposal.sport, start=proposal.start
             )
         )
-        if court is None:
+        if terms is None or court is None:
             proposal.lose_court_hour(at=now)
             await self._undecided.release(proposal.proposal_id, keeping=(), at=now)
             return FillOutcome(court_lost=True)
+        if terms.confirms_each_game:
+            return await self._ask_the_club(proposal, court, now=now)
+        return await self._paid_and_booked(
+            proposal,
+            court_name=court.name,
+            cut_off=court.cut_off,
+            sides=None,
+            book=lambda first, second: self._bookings.book(
+                FullGame(
+                    proposal_id=proposal.proposal_id,
+                    pool_id=proposal.pool.id,
+                    club_id=proposal.club_id,
+                    sport=proposal.sport,
+                    kind=proposal.kind,
+                    start=proposal.start,
+                    share_grosze=proposal.share_grosze,
+                    first_side=first,
+                    second_side=second,
+                    court=court,
+                ),
+                at=now,
+            ),
+            now=now,
+        )
+
+    async def accept(
+        self, proposal: Proposal, request: ClubRequest, *, now: Instant
+    ) -> FillOutcome:
+        """**The club said yes** (the mechanics §16.8): everybody is charged
+        now, all together or not at all, on the court held for the answer and
+        with the sides the players have been reading — and the game is booked.
+        A pair In that stopped fitting while it waited, or a share that cannot
+        be held, opens a seat instead: nobody pays, the request is off, and the
+        game is filling again."""
+
+        invariant(
+            proposal.waiting_for_the_club and request.waiting,
+            f"{proposal.proposal_id} is accepted while not waiting for its club",
+        )
+        unfit = await self._no_longer_fit(proposal, now=now)
+        if unfit:
+            await self._withdraw_the_request(proposal, unfit, now=now)
+            return FillOutcome(no_longer_fit=unfit)
+        return await self._paid_and_booked(
+            proposal,
+            court_name=request.court_name,
+            cut_off=request.cut_off,
+            sides=(request.first_side, request.second_side),
+            book=lambda first, second: self._requests.accept(
+                proposal.proposal_id, at=now
+            ),
+            now=now,
+            asked=True,
+        )
+
+    async def _ask_the_club(
+        self, proposal: Proposal, court: BookableCourt, *, now: Instant
+    ) -> FillOutcome:
+        """An On request club: the court is held for its answer and its desk is
+        told; nobody pays until it says yes."""
+
+        first_side, second_side = await self._sides(proposal)
+        answer_by = shifted(now, court.time_to_confirm)
+        await self._requests.ask(
+            GameToAsk(
+                proposal_id=proposal.proposal_id,
+                pool_id=proposal.pool.id,
+                club_id=proposal.club_id,
+                sport=proposal.sport,
+                kind=proposal.kind,
+                start=proposal.start,
+                share_grosze=proposal.share_grosze,
+                first_side=first_side,
+                second_side=second_side,
+                court=court,
+                answer_by=answer_by,
+            ),
+            at=now,
+        )
+        return FillOutcome(waiting_until=answer_by)
+
+    async def _paid_and_booked(
+        self,
+        proposal: Proposal,
+        *,
+        court_name: str,
+        cut_off: Instant,
+        sides: tuple[tuple[UUID, ...], tuple[UUID, ...]] | None,
+        book: Callable[[tuple[UUID, ...], tuple[UUID, ...]], Awaitable[UUID]],
+        now: Instant,
+        asked: bool = False,
+    ) -> FillOutcome:
+        """Every seat's share, all or nothing; then the booking — ``book``,
+        handed the sides — and what it does to everybody's other yeses."""
 
         players = proposal.yeses
         charged = await self._charges.charge(
@@ -153,8 +262,8 @@ class Fill:
                 sport=proposal.sport,
                 start=proposal.start,
                 share_grosze=proposal.share_grosze,
-                court_name=court.name,
-                free_to_leave_until=court.cut_off if now < court.cut_off else None,
+                court_name=court_name,
+                free_to_leave_until=cut_off if now < cut_off else None,
             ),
             players,
             # The game's own record of its tries, so a retried request asks for
@@ -170,25 +279,16 @@ class Fill:
                     seat_charge_id=refused.seat_charge_id,
                     at=now,
                 )
+            if asked:
+                # The club's yes came, and seats opened under it.
+                await self._withdraw_the_request(proposal, charged.refused, now=now)
             return FillOutcome(refused=charged.refused)
 
-        first_side, second_side = await self._sides(proposal)
-        proposal.fill(first_side=first_side, second_side=second_side, at=now)
-        game_id = await self._bookings.book(
-            FullGame(
-                proposal_id=proposal.proposal_id,
-                pool_id=proposal.pool.id,
-                club_id=proposal.club_id,
-                sport=proposal.sport,
-                kind=proposal.kind,
-                start=proposal.start,
-                share_grosze=proposal.share_grosze,
-                first_side=first_side,
-                second_side=second_side,
-                court=court,
-            ),
-            at=now,
+        first_side, second_side = (
+            sides if sides is not None else await self._sides(proposal)
         )
+        proposal.fill(first_side=first_side, second_side=second_side, at=now)
+        game_id = await book(first_side, second_side)
         # A refused payment somebody since took the seat from, or a hold a
         # player confirmed and this game was paid without, is let go.
         await self._undecided.release(
@@ -197,6 +297,15 @@ class Fill:
         await self._other_yeses(proposal, now=now)
         return FillOutcome(
             booked=Booked(booking_id=proposal.proposal_id, game_id=game_id)
+        )
+
+    async def _withdraw_the_request(
+        self, proposal: Proposal, opened: Collection[UUID], *, now: Instant
+    ) -> None:
+        """Seats opened on a game that waited for its club: the request is off."""
+
+        await self._requests.withdraw(
+            proposal.proposal_id, player_ids=tuple(sorted(opened, key=str)), at=now
         )
 
     async def _no_longer_fit(
@@ -264,8 +373,12 @@ class Fill:
                 if other is None or other.standing_at(now) is not Standing.FILLING:
                     continue
                 loaded[yes.proposal_id] = other
+                was_waiting = other.waiting_for_the_club
                 if same_hour:
                     other.withdraw_yes(player, at=now)
                 else:
                     other.pause_yes(player, at=now)
                 await self._proposals.save(other)
+                if was_waiting and not other.waiting_for_the_club:
+                    # A game of theirs that waited for its club is off.
+                    await self._withdraw_the_request(other, (player,), now=now)

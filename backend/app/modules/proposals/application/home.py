@@ -90,14 +90,21 @@ class ReadHome:
     async def execute(self, reader: UUID) -> Home:
         now = instant(self._clock.now())
         booked = await self._bookings.of_player(reader)
+        # A game still waiting for its club, or never booked by it, has none.
         results = await self._results.of(
-            [game.game_id for game in booked], reader=reader, now=now
+            [game.game_id for game in booked if game.game_id is not None],
+            reader=reader,
+            now=now,
         )
         names = await self._clubs.names_of({game.club_id for game in booked})
         cards = [
             HomeGame(
                 game=game,
-                state=state_of(game, results.get(game.game_id), now=now),
+                state=state_of(
+                    game,
+                    None if game.game_id is None else results.get(game.game_id),
+                    now=now,
+                ),
                 club_name=names.get(game.club_id),
             )
             for game in booked

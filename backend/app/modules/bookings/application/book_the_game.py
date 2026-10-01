@@ -15,7 +15,7 @@ from typing import final
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Instant, Sport, hours, shifted
+from app.kernel import Instant, Minutes, Sport, hours, minutes, shifted
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.bookings.domain.ports import (
     BookingRepository,
@@ -27,11 +27,12 @@ from app.modules.bookings.domain.ports import (
 @final
 @dataclass(frozen=True, slots=True)
 class CourtOffered:
-    """The court a full game would be booked on, and the moment its free
-    cancellation ends."""
+    """The court a full game would be booked on, the moment its free
+    cancellation ends, and how long an On request club has to answer."""
 
     court: BookedCourt
     cut_off: Instant
+    time_to_confirm: Minutes
 
 
 @final
@@ -49,6 +50,7 @@ class FindACourt:
         return CourtOffered(
             court=found.court,
             cut_off=shifted(start, hours(-found.cut_off_hours)),
+            time_to_confirm=minutes(found.time_to_confirm_minutes),
         )
 
 

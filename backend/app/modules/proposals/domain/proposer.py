@@ -58,6 +58,14 @@ people who were In are dealt a new card first**, at the nearest hour they are
 all free, the same hour at another club it plays at before any other hour,
 completed by their best fits. Nobody's yes carries over: a yes is to a court at
 an hour.
+
+**On request** (#543; the mechanics §16.8): a full game waiting for its club
+**holds its own court** through its request — so it is never lost because that
+court is gone from the hour, and never counted as a second card on it — and a
+game its club **turned down** is *owed*: its people are dealt a new card first,
+exactly as a lost card's are, **never at the club and hour that turned them
+down** — by the first batch that finds them an hour, until its own hour has
+passed.
 """
 
 from __future__ import annotations
@@ -219,11 +227,15 @@ class Deal:
 @dataclass(frozen=True, slots=True)
 class Batch:
     """One pool's batch, in the order it is applied: the cards that lost their
-    court hour, the picks — those dealt to the people In on a lost card first —
-    and the deals."""
+    court hour, the picks — those dealt to the people In on a lost card or a
+    turned-down game first — the turned-down games now done with, and the
+    deals."""
 
     lost: tuple[UUID, ...] = ()
     picks: tuple[Pick, ...] = ()
+    #: Every owed game whose people this batch dealt a new card first. One it
+    #: found no hour for stays owed, for the next batch to look again.
+    redealt: tuple[UUID, ...] = ()
     deals: tuple[Deal, ...] = ()
 
 
@@ -238,6 +250,7 @@ def propose(
     filling: Sequence[Proposal],
     balance: BalanceRules,
     now: Instant,
+    owed: Sequence[Proposal] = (),
 ) -> Batch:
     """The batch for one pool in one sport at ``now``.
 
@@ -246,8 +259,10 @@ def propose(
     the clubs the pool plays at sell in the sport now (a paused club's
     included); ``held`` every club and hour of the sport a court is still there
     for, **whatever deadline the club's settings now give it** — a card lives to
-    its own book-by, and loses its court hour only when no court is left; and
-    ``filling`` this pool's proposals in the sport still filling at ``now``."""
+    its own book-by, and loses its court hour only when no court is left;
+    ``filling`` this pool's proposals in the sport still filling at ``now``; and
+    ``owed`` its games in the sport a club turned down whose people have not
+    been dealt a new card yet."""
 
     return _Batching(
         sport=sport,
@@ -257,6 +272,7 @@ def propose(
         hours=hours,
         held=held,
         filling=filling,
+        owed=owed,
         balance=balance,
         now=now,
     ).run()
@@ -287,6 +303,7 @@ class _Batching:
         hours: Sequence[CourtHourOnSale],
         held: Collection[tuple[UUID, Instant]],
         filling: Sequence[Proposal],
+        owed: Sequence[Proposal],
         balance: BalanceRules,
         now: Instant,
     ) -> None:
@@ -334,10 +351,22 @@ class _Batching:
                 and proposal.standing_at(now) is Standing.FILLING,
                 f"{proposal.proposal_id} is not a {sport} game filling at {now}",
             )
+        for proposal in owed:
+            invariant(
+                proposal.sport is sport and proposal.owes_a_new_card,
+                f"{proposal.proposal_id} owes no {sport} card",
+            )
         ordered = sorted(filling, key=lambda p: (p.start, str(p.proposal_id)))
         still_held = frozenset(held)
-        self._lost = tuple(p for p in ordered if (p.club_id, p.start) not in still_held)
+        # A game waiting for its club holds its court through its request, so
+        # the court gone from the hour is its own.
+        self._lost = tuple(
+            p
+            for p in ordered
+            if not p.waiting_for_the_club and (p.club_id, p.start) not in still_held
+        )
         self._live = tuple(p for p in ordered if p not in self._lost)
+        self._owed = tuple(sorted(owed, key=lambda p: (p.start, str(p.proposal_id))))
 
         horizon = now + HORIZON
         self._selling = tuple(
@@ -395,6 +424,14 @@ class _Batching:
     def run(self) -> Batch:
         for proposal in self._lost:
             self._deal_again_to_those_in(proposal)
+        redealt = tuple(
+            proposal.proposal_id
+            for proposal in self._owed
+            # Anywhere but where the club turned them down.
+            if self._deal_again_to_those_in(
+                proposal, not_at=(proposal.club_id, proposal.start)
+            )
+        )
         for proposal in self._live:
             self._deal_on(proposal)
         # Hour by hour, and within an hour the kinds in the enum's order and
@@ -407,6 +444,7 @@ class _Batching:
         return Batch(
             lost=tuple(proposal.proposal_id for proposal in self._lost),
             picks=tuple(self._picks),
+            redealt=redealt,
             deals=tuple(self._deals),
         )
 
@@ -427,17 +465,20 @@ class _Batching:
             pool &= ~self._mask(people)
             free_courts -= 1
 
-    def _deal_again_to_those_in(self, lost: Proposal) -> None:
-        """The people In on a card that lost its court hour, dealt a new card
-        first: the nearest hour they are all free, completed by their best
-        fits — or as many of them as there are."""
+    def _deal_again_to_those_in(
+        self, lost: Proposal, *, not_at: tuple[UUID, Instant] | None = None
+    ) -> bool:
+        """The people In on a card that lost its court hour — or a game its
+        club turned down — dealt a new card first: the nearest hour they are
+        all free, completed by their best fits — or as many of them as there
+        are — and never ``not_at``. Whether a card was dealt."""
 
         kind = lost.kind
         in_ = tuple(player for player in lost.yeses if player in self._members)
         if not in_ or not all(
             self._fits(kind, one, other) for one, other in combinations(in_, 2)
         ):
-            return
+            return False
         nearest = sorted(
             self._selling,
             key=lambda hour: (
@@ -447,6 +488,8 @@ class _Batching:
             ),
         )
         for hour in nearest:
+            if (hour.club_id, hour.start) == not_at:
+                continue
             if self._picks_at(hour) >= hour.courts or not all(
                 self._may_play(
                     player, kind, start=hour.start, share_grosze=hour.share_grosze
@@ -460,7 +503,8 @@ class _Batching:
                 people = self._evenest(kind, pool, size, must=in_, refused=refused)
                 if people is not None:
                     self._pick(kind, hour, people, after=lost.proposal_id)
-                    return
+                    return True
+        return False
 
     def _pick(
         self,
@@ -714,6 +758,8 @@ class _Batching:
             1
             for proposal in self._live
             if proposal.origin is Origin.PICK
+            # A request's court is off the hour's already: it holds it.
+            and not proposal.waiting_for_the_club
             and (proposal.club_id, proposal.start) == (hour.club_id, hour.start)
         ) + sum(
             1

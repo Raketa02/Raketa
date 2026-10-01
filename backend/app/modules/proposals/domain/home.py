@@ -8,10 +8,15 @@ the booking, its ordinary Game's result and the clock — derived, never stored:
 say them, since after the fill everything that happens to a game today happens to
 it unchanged (Q6).
 
-**The statuses the later tickets produce are named here already** — *waiting for
-the club* (#543), *seat open* (#544/#545), *called off* by the booking (#543,
-#544, #547) — so a client can draw every one of them from the first build, as the
-deck's *Seat open* card was named before rescues existed.
+**Home holds a game its club has still to answer too** (#543): at an On request
+club a full game is a booking *waiting for the club* — nobody has paid, there is
+no Game yet and no court given — and the club's no, or its silence, calls it
+off, with nobody paid and the reason said. A seat opening while it waited takes
+the request back: it leaves Home, and the people still In find the game filling
+again in You're In.
+*Seat open* (#544/#545) and the booking's other ways of being called off (#544,
+#547) are named on the enum already, so a client draws every status from the
+first build.
 
 **One borrow, pure**: ``is_the_game_day`` from the Bookings domain, whose desk the
 check-in code is for — *on the day* is the club's calendar day, one rule for the
@@ -52,6 +57,24 @@ class HomeStatus(StrEnum):
     NEVER_PLAYED = "NEVER_PLAYED"
     #: The game will not be played.
     CALLED_OFF = "CALLED_OFF"
+
+
+class BookingStage(StrEnum):
+    """Where the booking itself stands, in this context's words."""
+
+    #: Its On request club has not answered yet: no Game, nobody paid.
+    WAITING_FOR_THE_CLUB = "WAITING_FOR_THE_CLUB"
+    BOOKED = "BOOKED"
+    CALLED_OFF = "CALLED_OFF"
+
+
+class CalledOffReason(StrEnum):
+    """Why a game will not be played (the mechanics §14.1)."""
+
+    #: Its On request club refused it.
+    REFUSED = "REFUSED"
+    #: Its On request club did not answer in time.
+    NO_ANSWER = "NO_ANSWER"
 
 
 class ResultStage(StrEnum):
@@ -96,12 +119,24 @@ class BookedGame:
     second_side: tuple[UUID, ...]
     #: When free leaving ends — the club's setting when the game filled.
     cut_off: Instant
-    #: The ordinary Game the booking opened.
-    game_id: UUID
+    #: The ordinary Game the booking opened — ``None`` until its On request
+    #: club said yes, and for good if it never did.
+    game_id: UUID | None
+    stage: BookingStage = BookingStage.BOOKED
+    #: Why it will not be played, once called off.
+    called_off: CalledOffReason | None = None
 
     @property
     def players(self) -> tuple[UUID, ...]:
         return (*self.first_side, *self.second_side)
+
+    @property
+    def court_given(self) -> bool:
+        """Whether the players have a court number: an On request club gives it
+        with its yes (the screens A4.2), and a request it never answered with
+        one gave none."""
+
+        return self.game_id is not None
 
     def has_a_seat_for(self, player_id: UUID) -> bool:
         return player_id in self.players
@@ -156,8 +191,13 @@ def status_of(
     game: BookedGame, result: GameResult | None, *, now: Instant
 ) -> HomeStatus:
     """The card's status. ``result`` is ``None`` for a Game that could not be
-    read — folded on the clock alone, so the card stays drawn."""
+    read — folded on the clock alone, so the card stays drawn — and for a
+    booking that has no Game."""
 
+    if game.stage is BookingStage.WAITING_FOR_THE_CLUB:
+        return HomeStatus.WAITING_FOR_THE_CLUB
+    if game.stage is BookingStage.CALLED_OFF:
+        return HomeStatus.CALLED_OFF
     stage = ResultStage.ENTRY_OPEN if result is None else result.stage
     match stage:
         case ResultStage.ENTRY_OPEN:
@@ -200,12 +240,14 @@ def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
 
 
 def money_of(game: BookedGame, *, now: Instant) -> BookedMoney:
-    """A booked game's money line: every seat paid its share."""
+    """The money line: every seat paid its share of a booked game — and
+    nobody anything while its club decides, or once it turned it down."""
 
+    paid = game.stage is BookingStage.BOOKED
     return BookedMoney(
         share_grosze=game.share_grosze,
-        paid=True,
-        free_to_leave_until=game.cut_off if now < game.cut_off else None,
+        paid=paid,
+        free_to_leave_until=game.cut_off if paid and now < game.cut_off else None,
     )
 
 

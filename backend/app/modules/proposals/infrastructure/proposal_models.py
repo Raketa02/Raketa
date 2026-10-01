@@ -12,7 +12,9 @@ there is.
 events in the act's own transaction, as a group's are (``docs/adr/0183`` §1) —
 the stream is the record. ``proposals.ended`` is the recorded ending and never
 the whole answer: a proposal past its ``book_by`` is over whether or not the
-sweep has written it, so every live read compares ``book_by`` with its clock too.
+sweep has written it, so every live read compares ``book_by`` with its clock too
+— **unless it is ``waiting_for_the_club``** (#543): every seat In and its On
+request club still to answer, which the book-by no longer ends.
 
 ``proposal_people`` is **one row per person the game is anything to** — dealt a
 version, In, or gone — keyed by the game and the person, since each person is on
@@ -27,6 +29,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -58,7 +61,7 @@ class ProposalORM(Base):
     __table_args__ = (
         CheckConstraint(
             "ended IS NULL OR ended IN ('FILLED', 'EXPIRED', 'WITHDRAWN', "
-            "'COURT_HOUR_LOST')",
+            "'COURT_HOUR_LOST', 'TURNED_DOWN')",
             name="ck_proposals_ended",
         ),
         # The sweep's read: unrecorded endings, by book-by.
@@ -86,6 +89,10 @@ class ProposalORM(Base):
     book_by: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     made_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ended: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    #: Every seat is In and its On request club has not answered (#543).
+    waiting_for_the_club: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False
+    )
 
 
 class ProposalPersonORM(Base):

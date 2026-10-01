@@ -21,6 +21,8 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
 from app.modules.proposals.domain.home import (
     BookedGame,
+    BookingStage,
+    CalledOffReason,
     GameResult,
     HomeStatus,
     ResultStage,
@@ -227,3 +229,48 @@ def test_a_player_reads_their_own_side_first_with_themselves_first_on_it():
     assert game.seen_by(KUBA).theirs == (EWA, TOMEK)
     assert game.seen_by(TOMEK).yours == (TOMEK, EWA)
     assert game.seen_by(TOMEK).theirs == (OLA, KUBA)
+
+
+# --------------------------------------------------------------------------- #
+# Waiting for the club, and called off by it (#543)
+# --------------------------------------------------------------------------- #
+
+
+def a_request(**changes) -> BookedGame:
+    """The same game, put to an On request club: no Game yet."""
+
+    return a_booked_game(
+        game_id=None, stage=BookingStage.WAITING_FOR_THE_CLUB, **changes
+    )
+
+
+def test_a_game_its_club_has_not_answered_is_waiting_and_nobody_paid():
+    game = a_request()
+
+    assert status_of(game, None, now=warsaw(5, 8)) is HomeStatus.WAITING_FOR_THE_CLUB
+    money = money_of(game, now=warsaw(5, 8))
+    assert (money.paid, money.free_to_leave_until) == (False, None)
+    assert game.court_given is False
+    assert needs_you(HomeStatus.WAITING_FOR_THE_CLUB, None) is False
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [CalledOffReason.REFUSED, CalledOffReason.NO_ANSWER],
+)
+def test_a_request_turned_down_or_withdrawn_is_called_off_with_nobody_paid(reason):
+    game = a_booked_game(game_id=None, stage=BookingStage.CALLED_OFF, called_off=reason)
+
+    assert status_of(game, None, now=warsaw(5, 8)) is HomeStatus.CALLED_OFF
+    assert money_of(game, now=warsaw(5, 8)).paid is False
+    assert game.court_given is False
+    shown = check_in_shown(HomeStatus.CALLED_OFF, start=game.start, now=game.start)
+    assert shown is False
+
+
+def test_a_game_its_club_accepted_is_booked_on_the_court_it_gave():
+    game = a_booked_game()
+
+    assert game.stage is BookingStage.BOOKED
+    assert game.court_given is True
+    assert money_of(game, now=warsaw(5, 8)).paid is True

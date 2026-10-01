@@ -185,6 +185,7 @@ def _nothing_but(**overrides):
             "MAIL_DELIVERY_ENABLED": False,
             "PROPOSAL_EXPIRY_ENABLED": False,
             "PROPOSER_ENABLED": False,
+            "REQUEST_TIMEOUT_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }

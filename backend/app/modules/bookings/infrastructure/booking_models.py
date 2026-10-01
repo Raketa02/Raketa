@@ -8,15 +8,20 @@ stream is the record.
 
 **A court hour is held by one booking**, and the unique index says so: two
 cards filling at once on the last court of an hour cannot both book it — the
-second's transaction fails, and nothing it held is taken.
+second's transaction fails, and nothing it held is taken. **A booking waiting
+for its club holds its court as a booked one does** (#543), and **a booking
+called off holds nothing**: the index is partial, so the hour is the club's to
+sell again the moment a request is refused, unanswered or withdrawn — and the
+called-off row stays, since its players still read why.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
@@ -26,8 +31,17 @@ from app.infrastructure.database.base import Base
 class BookingORM(Base):
     __tablename__ = "bookings"
     __table_args__ = (
-        Index("ux_bookings_court_id_start", "court_id", "start", unique=True),
+        Index(
+            "ux_bookings_court_id_start",
+            "court_id",
+            "start",
+            unique=True,
+            postgresql_where=text("state <> 'CALLED_OFF'"),
+            sqlite_where=text("state <> 'CALLED_OFF'"),
+        ),
         Index("ix_bookings_club_id_start", "club_id", "start"),
+        # The requests whose answer is due — the timeout job's read.
+        Index("ix_bookings_state_answer_by", "state", "answer_by"),
     )
 
     id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
@@ -38,8 +52,21 @@ class BookingORM(Base):
     start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     share_grosze: Mapped[int] = mapped_column(Integer, nullable=False)
     cut_off: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    game_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), nullable=False)
-    booked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: ``WAITING_FOR_THE_CLUB``, ``BOOKED`` or ``CALLED_OFF``.
+    state: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="BOOKED"
+    )
+    #: The Game it opened — ``NULL`` until an On request club says yes.
+    game_id: Mapped[Optional[UUID]] = mapped_column(
+        UUIDType(binary=False), nullable=True
+    )
+    #: When the club's answer is due, on a booking that was ever put to it.
+    answer_by: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    booked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class BookingSeatORM(Base):

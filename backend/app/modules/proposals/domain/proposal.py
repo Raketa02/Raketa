@@ -38,6 +38,14 @@ nobody paid, the game did not fill, and that player's **seat reopened** — open
 again until they confirm the payment, or somebody else takes it. And a
 player whose games per week another game just booked has their other yeses
 that week **paused**: not counted, and back if a game of theirs is called off.
+
+**A full game still filling is waiting for its club** (#543): only an On request
+club leaves one so, and while it waits **its book-by no longer reads** — the
+game filled in time, and the club's time to confirm may run past the book-by,
+never past the start. Its club's yes fills it; its no, or no answer, **turns it
+down**: over, nobody paid, and the people In owed a new card first, until the
+proposer deals it (``Redealt``). A seat opening while it waits — a yes taken
+back, paused or reopened — leaves it filling again, the book-by reading again.
 """
 
 from __future__ import annotations
@@ -62,8 +70,10 @@ from app.modules.proposals.domain.events import (
     ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
-    VersionDealt,
+    Redealt,
     SeatReopened,
+    TurnedDown,
+    VersionDealt,
     YesPaused,
     YesSaid,
     YesWithdrawn,
@@ -94,6 +104,15 @@ class Ending(StrEnum):
     EXPIRED = "EXPIRED"
     WITHDRAWN = "WITHDRAWN"
     COURT_HOUR_LOST = "COURT_HOUR_LOST"
+    #: Its On request club refused it, or did not answer in time (#543).
+    TURNED_DOWN = "TURNED_DOWN"
+
+
+class ClubAnswer(StrEnum):
+    """How an On request club turned a full game down (the mechanics §16.8)."""
+
+    REFUSED = "REFUSED"
+    NO_ANSWER = "NO_ANSWER"
 
 
 class ReopenReason(StrEnum):
@@ -119,6 +138,7 @@ class Standing(StrEnum):
     EXPIRED = "EXPIRED"
     WITHDRAWN = "WITHDRAWN"
     COURT_HOUR_LOST = "COURT_HOUR_LOST"
+    TURNED_DOWN = "TURNED_DOWN"
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,6 +202,9 @@ class Proposal:
     #: again.
     paused: tuple[UUID, ...] = ()
     ending: Ending | None = None
+    #: The people In on a game its club turned down have been dealt a new card
+    #: first.
+    redealt: bool = False
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -296,10 +319,26 @@ class Proposal:
 
         return self.poster_id is not None and self.poster_id not in self.yeses
 
+    @property
+    def waiting_for_the_club(self) -> bool:
+        """Every seat is In and the game has not ended: its On request club has
+        it, and has not answered (#543). Only such a club leaves a full game
+        filling — any other books it, or reopens a seat, in the same act."""
+
+        return self.ending is None and self.open_seats == 0
+
+    @property
+    def owes_a_new_card(self) -> bool:
+        """Its club turned it down, and the people In have not been dealt a new
+        card first yet."""
+
+        return self.ending is Ending.TURNED_DOWN and not self.redealt
+
     def standing_at(self, now: Instant) -> Standing:
         if self.ending is not None:
             return Standing(self.ending.value)
-        if now >= self.book_by:
+        # A full game filled in time: its club's answer is its deadline now.
+        if now >= self.book_by and not self.waiting_for_the_club:
             return Standing.EXPIRED
         return Standing.FILLING
 
@@ -500,11 +539,35 @@ class Proposal:
         whether anything was recorded: nothing before the book-by, and nothing
         on a proposal that already ended."""
 
-        if self.ending is not None or now < self.book_by:
+        if self.standing_at(now) is not Standing.EXPIRED or self.ending is not None:
             return False
         self._record_that(
             ProposalExpired(proposal_id=self.proposal_id, occurred_at=now)
         )
+        return True
+
+    def turn_down(self, answer: ClubAnswer, *, at: Instant) -> None:
+        """Its On request club refused it, or did not answer in time. **The
+        people In stay on the record**: they are who the proposer deals a new
+        card first."""
+
+        invariant(
+            self.waiting_for_the_club,
+            f"{self.proposal_id} is turned down while not waiting for its club",
+        )
+        self._record_that(
+            TurnedDown(
+                proposal_id=self.proposal_id, answer=answer.value, occurred_at=at
+            )
+        )
+
+    def redeal(self, *, at: Instant) -> bool:
+        """Record that the people In were dealt a new card first. Answers whether
+        anything was recorded: nothing on a game that owes nothing."""
+
+        if not self.owes_a_new_card:
+            return False
+        self._record_that(Redealt(proposal_id=self.proposal_id, occurred_at=at))
         return True
 
     def lose_court_hour(self, *, at: Instant) -> bool:
@@ -599,6 +662,10 @@ class Proposal:
             self.ending = Ending.EXPIRED
         elif isinstance(event, CourtHourLost):
             self.ending = Ending.COURT_HOUR_LOST
+        elif isinstance(event, TurnedDown):
+            self.ending = Ending.TURNED_DOWN
+        elif isinstance(event, Redealt):
+            self.redealt = True
         else:
             raise TypeError(f"Unsupported proposal event {event!r}")
         self.version += 1

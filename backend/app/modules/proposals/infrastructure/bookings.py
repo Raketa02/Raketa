@@ -4,6 +4,8 @@ an adapter **signed here**, so the arrow runs ``proposals → bookings`` only
 
 ``BookingsGameBookings`` is the fill's demand — a court for a full game, and the
 booking that opens its Game — over the Bookings context's own use cases.
+``BookingsClubRequests`` is an On request club's (#543): the request a full game
+is put to the club as, the club's yes or no, and a seat opening while it waits.
 ``BookingsBookedGames`` answers *games per week* and *one game per hour* — the
 deck's, the proposer's and the fill's — with a player's booked games, replacing
 the stand-in that answered nothing while no game could be booked.
@@ -21,13 +23,25 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
-from app.kernel import Instant, Sport
+from app.kernel import Instant, Sport, invariant
 from app.modules.bookings.application.book_the_game import (
     BookTheGame,
     FindACourt,
     GameToBook,
 )
-from app.modules.bookings.domain.booking import BookedCourt, Booking
+from app.modules.bookings.application.requests import (
+    BookTheRequest,
+    GameToRequest,
+    RequestTheGame,
+    CallOffTheRequest,
+    WithdrawTheRequest,
+)
+from app.modules.bookings.domain.booking import (
+    BookedCourt,
+    Booking,
+    BookingState,
+    CalledOff,
+)
 from app.modules.bookings.domain.errors import CourtTaken
 from app.modules.bookings.domain.ports import (
     BookingDirectory,
@@ -35,8 +49,19 @@ from app.modules.bookings.domain.ports import (
     CheckInCodes,
 )
 from app.modules.proposals.domain.errors import CourtJustTaken
-from app.modules.proposals.domain.home import BookedGame, CheckIn
-from app.modules.proposals.domain.ports import BookableCourt, FullGame
+from app.modules.proposals.domain.home import (
+    BookedGame,
+    BookingStage,
+    CalledOffReason,
+    CheckIn,
+)
+from app.modules.proposals.domain.ports import (
+    BookableCourt,
+    ClubRequest,
+    FullGame,
+    GameToAsk,
+)
+from app.modules.proposals.domain.proposal import ClubAnswer
 
 
 @final
@@ -55,6 +80,7 @@ class BookingsGameBookings:
             court_id=offered.court.court_id,
             name=offered.court.name,
             cut_off=offered.cut_off,
+            time_to_confirm=offered.time_to_confirm,
         )
 
     async def book(self, game: FullGame, *, at: Instant) -> UUID:
@@ -80,7 +106,110 @@ class BookingsGameBookings:
             ),
             at=at,
         )
-        return booking.game_id
+        return invariant(booking.game_id, f"{booking.booking_id} booked with no game")
+
+
+@final
+class BookingsClubRequests:
+    def __init__(
+        self,
+        *,
+        bookings: BookingRepository,
+        directory: BookingDirectory,
+        ask: RequestTheGame,
+        accept: BookTheRequest,
+        turn_down: CallOffTheRequest,
+        withdraw: WithdrawTheRequest,
+    ) -> None:
+        self._bookings = bookings
+        self._directory = directory
+        self._ask = ask
+        self._accept = accept
+        self._turn_down = turn_down
+        self._withdraw = withdraw
+
+    async def ask(self, game: GameToAsk, *, at: Instant) -> None:
+        try:
+            await self._ask.execute(
+                GameToRequest(
+                    booking_id=game.proposal_id,
+                    pool_id=game.pool_id,
+                    club_id=game.club_id,
+                    sport=game.sport,
+                    kind=game.kind,
+                    start=game.start,
+                    share_grosze=game.share_grosze,
+                    first_side=game.first_side,
+                    second_side=game.second_side,
+                    court=BookedCourt(
+                        court_id=game.court.court_id, name=game.court.name
+                    ),
+                    cut_off=game.court.cut_off,
+                    answer_by=game.answer_by,
+                ),
+                at=at,
+            )
+        except CourtTaken as taken:
+            raise CourtJustTaken() from taken
+
+    async def find(self, booking_id: UUID) -> ClubRequest | None:
+        booking = await self._bookings.load(booking_id)
+        return None if booking is None else _request(booking)
+
+    async def waiting_at(self, club_id: UUID) -> Sequence[ClubRequest]:
+        found: list[ClubRequest] = []
+        for booking_id in await self._directory.waiting_at(club_id):
+            request = await self.find(booking_id)
+            if request is not None and request.waiting:
+                found.append(request)
+        return found
+
+    async def unanswered(self, *, now: Instant) -> Sequence[UUID]:
+        return await self._directory.unanswered(now=now)
+
+    async def accept(self, booking_id: UUID, *, at: Instant) -> UUID:
+        booking = await self._accept.execute(booking_id, at=at)
+        return invariant(booking.game_id, f"{booking_id} accepted with no game")
+
+    async def turn_down(
+        self,
+        booking_id: UUID,
+        *,
+        answer: ClubAnswer,
+        reason: str | None,
+        at: Instant,
+    ) -> None:
+        if answer is ClubAnswer.REFUSED:
+            await self._turn_down.refused(booking_id, reason=reason, at=at)
+        else:
+            await self._turn_down.unanswered(booking_id, at=at)
+
+    async def withdraw(
+        self, booking_id: UUID, *, player_ids: tuple[UUID, ...], at: Instant
+    ) -> bool:
+        return await self._withdraw.execute(booking_id, player_ids=player_ids, at=at)
+
+
+def _request(booking: Booking) -> ClubRequest | None:
+    """The request a booking was put to its club as — ``None`` for one born
+    booked, which no club was asked about."""
+
+    if booking.answer_by is None:
+        return None
+    return ClubRequest(
+        booking_id=booking.booking_id,
+        club_id=booking.club_id,
+        sport=booking.sport,
+        kind=booking.kind,
+        start=booking.start,
+        share_grosze=booking.share_grosze,
+        court_name=booking.court.name,
+        first_side=booking.first_side,
+        second_side=booking.second_side,
+        cut_off=booking.cut_off,
+        answer_by=booking.answer_by,
+        waiting=booking.is_waiting,
+    )
 
 
 @final
@@ -111,8 +240,9 @@ class BookingsPlayerBookings:
         found: list[BookedGame] = []
         for booking_id in await self._directory.of_player(player_id):
             booking = await self._bookings.load(booking_id)
-            if booking is not None:
-                found.append(_booked_game(booking))
+            game = None if booking is None else _booked_game(booking)
+            if game is not None:
+                found.append(game)
         return found
 
     async def find(self, booking_id: UUID) -> BookedGame | None:
@@ -124,7 +254,25 @@ class BookingsPlayerBookings:
         return CheckIn(short_code=code.short_code, qr_payload=code.qr_payload)
 
 
-def _booked_game(booking: Booking) -> BookedGame:
+_STAGES = {
+    BookingState.WAITING_FOR_THE_CLUB: BookingStage.WAITING_FOR_THE_CLUB,
+    BookingState.BOOKED: BookingStage.BOOKED,
+    BookingState.CALLED_OFF: BookingStage.CALLED_OFF,
+}
+
+_CALLED_OFF = {
+    CalledOff.REFUSED: CalledOffReason.REFUSED,
+    CalledOff.NO_ANSWER: CalledOffReason.NO_ANSWER,
+}
+
+
+def _booked_game(booking: Booking) -> BookedGame | None:
+    """The game a booking is to its players — ``None`` for a request taken
+    back because a seat opened, which is nobody's game: the people still In
+    find it filling again."""
+
+    if booking.called_off is CalledOff.SEAT_OPENED:
+        return None
     return BookedGame(
         booking_id=booking.booking_id,
         pool_id=booking.pool_id,
@@ -138,6 +286,10 @@ def _booked_game(booking: Booking) -> BookedGame:
         second_side=booking.second_side,
         cut_off=booking.cut_off,
         game_id=booking.game_id,
+        stage=_STAGES[booking.state],
+        called_off=(
+            None if booking.called_off is None else _CALLED_OFF[booking.called_off]
+        ),
     )
 
 

@@ -226,6 +226,9 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
             SeedPrice(Sport.PADEL, 100_00, PriceBand(BandDays.WEEKEND, 7, 23, 120_00)),
         ),
         exception=SeedException("Holiday", days_ahead=12),
+        # The longest time to confirm: the protagonist's game waiting for its
+        # answer (``bookings.py``) stays waiting for an hour after a run.
+        settings=RaketaSettings(time_to_confirm_minutes=60),
     ),
     SeedClubCourts(
         club="Bonarka Arena",

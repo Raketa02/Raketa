@@ -54,6 +54,7 @@ from app.modules.proposals.domain.overlap import (
 from app.modules.proposals.domain.home import (
     BookedGame,
     BookedMoney,
+    CalledOffReason,
     CheckIn,
     HomeStatus,
 )
@@ -107,6 +108,15 @@ class YesAnswerResponse(BaseModel):
             "the booking and its Game are open. `null` otherwise."
         ),
     )
+    waiting_for_the_club: bool = Field(
+        default=False,
+        description=(
+            "This yes filled the game at an **On request** club: it went to the "
+            "club, which confirms it within its time to confirm, and nobody pays "
+            "until it does — the charge and *It's a game!* follow its yes. The "
+            "game is on Home as `WAITING_FOR_THE_CLUB`."
+        ),
+    )
     your_payment: YourPaymentSchema | None = Field(
         default=None,
         description=(
@@ -128,6 +138,7 @@ class YesAnswerResponse(BaseModel):
                 if booked is None
                 else BookedSchema(booking_id=booked.booking_id, game_id=booked.game_id)
             ),
+            waiting_for_the_club=answer.waiting_until is not None,
             your_payment=(
                 None
                 if mine is None
@@ -642,13 +653,24 @@ class PaymentsToConfirmResponse(BaseModel):
 # --------------------------------------------------------------------------- #
 
 _HOME_STATUS = (
-    "`BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour "
-    "has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is "
-    "on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and "
-    "no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. "
-    "`CALLED_OFF` — it will not be played. Two more arrive with the tickets that "
-    "produce them: `WAITING_FOR_THE_CLUB` (an On request club has not confirmed "
-    "yet, #543) and `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+    "`WAITING_FOR_THE_CLUB` — an On request club has the full game and has not "
+    "answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no "
+    "court given. `BOOKED` — full and booked, its hour still ahead. "
+    "`NEEDS_RESULT` — its hour has come and nobody has said it happened. "
+    "`CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is "
+    "agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — "
+    "nobody said it happened in time. `CALLED_OFF` — it will not be played; "
+    "`called_off_reason` says why. One more arrives with the ticket that "
+    "produces it: `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+)
+
+_CALLED_OFF_REASON = (
+    "Why a `CALLED_OFF` game will not be played — `null` on every other status. "
+    "`REFUSED` — the On request club refused it. `NO_ANSWER` — the club did not "
+    "answer in time. In both nobody paid. (A seat opening while it waited takes "
+    "the request back instead: it leaves Home, and the people still In find the "
+    "game filling again in their live yeses.) More arrive with the tickets that "
+    "call a booked game off (#544, #547)."
 )
 
 
@@ -673,7 +695,12 @@ class BookedTileSchema(BaseModel):
     level: float | None = Field(
         description="Their published Level in the game's sport; `null` if unrated."
     )
-    paid: bool = Field(description="Their share was taken — the *paid* tag.")
+    paid: bool = Field(
+        description=(
+            "Their share was taken — the *paid* tag. `false` while the game "
+            "waits for its club, and on a request that was never booked."
+        )
+    )
 
 
 class BookedSidesSchema(BaseModel):
@@ -710,6 +737,7 @@ def _tile(
     *,
     reader: UUID,
     sport_people: Mapping[UUID, DeckPerson],
+    paid: bool,
 ) -> BookedTileSchema:
     person = sport_people.get(player_id)
     return BookedTileSchema(
@@ -719,7 +747,7 @@ def _tile(
         photo_id=None if person is None else person.photo_id,
         photo_url=None if person is None else person.photo_url,
         level=None if person is None else person.level,
-        paid=True,
+        paid=paid,
     )
 
 
@@ -729,6 +757,7 @@ def _booked_sides(
     game: BookedGame,
     reader: UUID,
     people: Mapping[tuple[Sport, UUID], DeckPerson],
+    paid: bool,
 ) -> BookedSidesSchema:
     sport_people = {
         player: person
@@ -737,11 +766,11 @@ def _booked_sides(
     }
     return BookedSidesSchema(
         yours=[
-            _tile(player, reader=reader, sport_people=sport_people)
+            _tile(player, reader=reader, sport_people=sport_people, paid=paid)
             for player in sides.yours
         ],
         theirs=[
-            _tile(player, reader=reader, sport_people=sport_people)
+            _tile(player, reader=reader, sport_people=sport_people, paid=paid)
             for player in sides.theirs
         ],
     )
@@ -764,17 +793,19 @@ class HomeGameSchema(BaseModel):
             "`GET /bookings/{id}` for its details."
         )
     )
-    game_id: UUID = Field(
+    game_id: UUID | None = Field(
         description=(
             "The ordinary Game it opened: the result is told and agreed on "
             "`/games/{id}/result`, and its room in `GET /conversations` carries "
-            "this id."
+            "this id. `null` while it waits for its On request club, and on a "
+            "request the club never booked — there is no Game, and no room."
         )
     )
     pool_id: UUID = Field(description="The pool it filled in — a group's id.")
     sport: Sport
     kind: SearchMode = Field(description="Competitive, or for fun (a friendly).")
     status: HomeStatus = Field(description=_HOME_STATUS)
+    called_off_reason: CalledOffReason | None = Field(description=_CALLED_OFF_REASON)
     needs_you: bool = Field(
         description=(
             "One of the games that need the reader: a result to enter, the other "
@@ -783,7 +814,12 @@ class HomeGameSchema(BaseModel):
     )
     starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
     club: BookedClubSchema
-    court_name: str = Field(description="What the club calls the court — *Court 2*.")
+    court_name: str | None = Field(
+        description=(
+            "What the club calls the court — *Court 2*. `null` until the club "
+            "gives it: an On request club gives it with its yes."
+        )
+    )
     sides: BookedSidesSchema
     money: BookedMoneySchema
 
@@ -803,12 +839,17 @@ class HomeGameSchema(BaseModel):
             sport=game.sport,
             kind=game.kind,
             status=card.state.status,
+            called_off_reason=game.called_off,
             needs_you=card.state.needs_you,
             starts_at=game.start,
             club=BookedClubSchema(id=game.club_id, name=card.club_name),
-            court_name=game.court_name,
+            court_name=game.court_name if game.court_given else None,
             sides=_booked_sides(
-                game.seen_by(reader), game=game, reader=reader, people=people
+                game.seen_by(reader),
+                game=game,
+                reader=reader,
+                people=people,
+                paid=card.state.money.paid,
             ),
             money=_money(card.state.money),
         )
@@ -833,7 +874,8 @@ class HomeResponse(BaseModel):
     )
     games: list[HomeGameSchema] = Field(
         description=(
-            "Every game the reader booked, **soonest first** — the ones that are "
+            "Every game the reader booked — and every game of theirs an On request "
+            "club has, or had, to answer — **soonest first**, the ones that are "
             "over too; a client shelves an ended card as it chooses. A game a "
             "Classic play challenge opened is not here."
         )
@@ -888,11 +930,12 @@ class BookingDetailsResponse(BaseModel):
     """A booked game's details, for a player in it."""
 
     booking_id: UUID
-    game_id: UUID = Field(
+    game_id: UUID | None = Field(
         description=(
             "The ordinary Game it opened: its result acts, its balance forecast "
             "(`GET /games/{id}/pairing`) and its room in `GET /conversations` are "
-            "all reached by this id."
+            "all reached by this id. `null` while it waits for its On request "
+            "club, and on a request the club never booked."
         )
     )
     pool_id: UUID
@@ -902,11 +945,17 @@ class BookingDetailsResponse(BaseModel):
         description="The instant the status and money line were folded against."
     )
     status: HomeStatus = Field(description=_HOME_STATUS)
+    called_off_reason: CalledOffReason | None = Field(description=_CALLED_OFF_REASON)
     needs_you: bool
     starts_at: datetime
     ends_at: datetime = Field(description="An hour after `starts_at`: TIME's *until*.")
     where: WhereSchema
-    court_name: str = Field(description="The court the game was given — *Court 2*.")
+    court_name: str | None = Field(
+        description=(
+            "The court the game was given — *Court 2*. `null` until the club "
+            "gives it: an On request club gives it with its yes."
+        )
+    )
     sides: BookedSidesSchema
     money: BookedMoneySchema
     shows_forecast: bool = Field(
@@ -937,6 +986,7 @@ class BookingDetailsResponse(BaseModel):
             kind=game.kind,
             read_at=details.read_at,
             status=details.state.status,
+            called_off_reason=game.called_off,
             needs_you=details.state.needs_you,
             starts_at=game.start,
             ends_at=_an_hour_after(game.start),
@@ -945,9 +995,13 @@ class BookingDetailsResponse(BaseModel):
                 name=details.club_name,
                 distance_km=details.distance_km,
             ),
-            court_name=game.court_name,
+            court_name=game.court_name if game.court_given else None,
             sides=_booked_sides(
-                details.sides, game=game, reader=reader, people=details.people
+                details.sides,
+                game=game,
+                reader=reader,
+                people=details.people,
+                paid=details.state.money.paid,
             ),
             money=_money(details.state.money),
             shows_forecast=details.shows_forecast,
@@ -989,9 +1043,11 @@ class ProposalDetailsResponse(BaseModel):
         description=(
             "`FILLING` — seats are open: *Filling · `in_count` of `seats` in*. "
             "`WAITING_FOR_THE_CLUB` — every seat is In and an On request club has "
-            "still to say yes; nobody pays until it does. `FILLED` — booked: "
-            "`GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, "
-            "`COURT_HOUR_LOST` — it ended unfilled."
+            "still to say yes; nobody pays until it does, and the book-by no "
+            "longer ends it. `FILLED` — booked: `GET /bookings/{proposal_id}`. "
+            "`EXPIRED`, `WITHDRAWN`, `COURT_HOUR_LOST` — it ended unfilled. "
+            "`TURNED_DOWN` — its On request club refused it or did not answer: "
+            "nobody paid, and the people In are dealt a new card first."
         )
     )
     actions: list[ReaderAction] = Field(
@@ -999,7 +1055,8 @@ class ProposalDetailsResponse(BaseModel):
             "What the reader may do now, in the screen's order: `YES` and `NO` "
             "(*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in "
             "its place while the club decides — *Leave the game* with its sheet, "
-            "sent as the withdrawal, `DELETE /proposals/{id}/yes` — and "
+            "sent as the withdrawal, `DELETE /proposals/{id}/yes`, which also "
+            "calls off the request to the club — and "
             "`CONFIRM_PAYMENT` when their seat waits on a refused payment "
             "(`your_payment`). Empty once the game is over or their answer is "
             "final."

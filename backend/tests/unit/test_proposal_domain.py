@@ -42,12 +42,15 @@ from app.modules.proposals.domain.events import (
     ProposalExpired,
     ProposalMade,
     ProposalWithdrawn,
+    Redealt,
+    TurnedDown,
     VersionDealt,
     YesSaid,
     YesWithdrawn,
 )
 from app.modules.proposals.domain.pool import Pool, PoolKind
 from app.modules.proposals.domain.proposal import (
+    ClubAnswer,
     Origin,
     Proposal,
     Standing,
@@ -480,6 +483,86 @@ def test_a_court_hour_is_lost_once_and_never_by_a_card_already_over():
     assert lost.expire(now=BOOK_BY) is False
     assert expired.lose_court_hour(at=BOOK_BY) is False
     assert lost.pull_events() == expired.pull_events() == []
+
+
+# --------------------------------------------------------------------------- #
+# Waiting for the club (#543)
+# --------------------------------------------------------------------------- #
+
+
+def a_full_game() -> Proposal:
+    proposal = dealt(a_pick(), (B, C, D, E))
+    for player in (B, C, D, E):
+        proposal.say_yes(player, at=LATER)
+    proposal.pull_events()
+    return proposal
+
+
+def test_a_full_game_still_filling_is_waiting_for_its_club():
+    proposal = a_full_game()
+
+    assert proposal.waiting_for_the_club is True
+    assert dealt(a_pick(), (B, C, D, E)).waiting_for_the_club is False
+
+
+def test_a_game_waiting_for_its_club_outlives_its_book_by():
+    proposal = a_full_game()
+
+    assert proposal.standing_at(BOOK_BY + timedelta(minutes=20)) is Standing.FILLING
+    assert proposal.expire(now=BOOK_BY + timedelta(minutes=20)) is False
+    assert proposal.pull_events() == []
+
+
+def test_a_seat_opening_after_its_book_by_leaves_a_game_that_expired():
+    proposal = a_full_game()
+    late = BOOK_BY + timedelta(minutes=5)
+
+    proposal.withdraw_yes(C, at=late)
+
+    assert proposal.waiting_for_the_club is False
+    assert proposal.standing_at(late) is Standing.EXPIRED
+    assert proposal.expire(now=late) is True
+
+
+def test_the_club_turning_it_down_ends_it_and_keeps_who_was_in():
+    proposal = a_full_game()
+
+    proposal.turn_down(ClubAnswer.REFUSED, at=LATER)
+
+    assert proposal.pull_events() == [
+        TurnedDown(
+            proposal_id=proposal.proposal_id, answer="REFUSED", occurred_at=LATER
+        )
+    ]
+    assert proposal.standing_at(LATER) is Standing.TURNED_DOWN
+    assert proposal.waiting_for_the_club is False
+    assert proposal.yeses == (B, C, D, E)
+    with pytest.raises(ProposalIsOver) as over:
+        proposal.withdraw_yes(C, at=LATER)
+    assert over.value.details == {"standing": "TURNED_DOWN"}
+
+
+def test_only_a_game_waiting_for_its_club_is_turned_down():
+    proposal = dealt(a_pick(), (B, C, D, E))
+    proposal.say_yes(B, at=LATER)
+
+    with pytest.raises(InvariantViolated):
+        proposal.turn_down(ClubAnswer.NO_ANSWER, at=LATER)
+
+
+def test_a_turned_down_game_owes_its_people_a_new_card_once():
+    proposal = a_full_game()
+    proposal.turn_down(ClubAnswer.NO_ANSWER, at=LATER)
+    proposal.pull_events()
+
+    assert proposal.owes_a_new_card is True
+    assert proposal.redeal(at=LATER) is True
+    assert proposal.pull_events() == [
+        Redealt(proposal_id=proposal.proposal_id, occurred_at=LATER)
+    ]
+    assert proposal.owes_a_new_card is False
+    assert proposal.redeal(at=LATER) is False
+    assert a_full_game().owes_a_new_card is False
 
 
 # --------------------------------------------------------------------------- #

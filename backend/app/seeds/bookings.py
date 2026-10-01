@@ -22,8 +22,17 @@ and its chat — and a receipt for each of the four. Nothing here opens a table.
 hours, and each crowd member it seats is booked once — so neither *one game per
 hour* nor anybody's *games per week* moves a yes the proposals layer seeded.
 
+**And one game waiting for an On request club** (#543): Kazimierz Padel, a
+kilometre from Bonarka and so one of the clubs her group plays at, is put a full
+game of hers at the first padel hour it sells that holds none of her games — the
+same ``MakeProposal`` and four ``SayYes``, the last answered *waiting for the
+club*: nobody charged, the court held, the desk emailed. **It waits the club's
+time to confirm** — an hour at Kazimierz — from the run's now, and then the
+timeout job calls it off as unanswered; a re-run puts a fresh one.
+
 **Re-running books nothing twice**: an hour she already has a booked game at is
-left as it is, and a later run on a later day books later hours.
+left as it is, a game of hers still waiting for Kazimierz is left waiting, and a
+later run on a later day books later hours.
 """
 
 from __future__ import annotations
@@ -37,10 +46,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
     build_booked_games,
+    build_club_account_repository,
     build_club_terms,
     build_court_hours,
+    build_domain_event_store,
+    build_event_publisher,
     build_fake_payments,
     build_make_proposal,
+    build_player_bookings,
     build_pools,
     build_read_receipts,
     build_say_yes,
@@ -49,14 +62,18 @@ from app.core.config import Settings
 from app.kernel import Instant, hours, shifted
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, local_day
 from app.modules.payments.domain.provider import PaymentProvider
+from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
     MakeProposalCommand,
 )
 from app.modules.proposals.domain.deck import DECK_HORIZON, GAME_LENGTH, week_of
+from app.modules.proposals.domain.home import BookingStage
 from app.modules.proposals.domain.proposal import Origin
 from app.modules.proposals.domain.proposer import CourtHourOnSale
+from app.modules.users.domain.value_objects import Email
 from app.seeds.clock import FixedClock
+from app.seeds.clubs import SEED_CLUBS, SeedClub, desk_email
 from app.seeds.proposals import (
     GAMES_CLUB,
     GAMES_KIND,
@@ -64,6 +81,12 @@ from app.seeds.proposals import (
     SeededProposals,
     games_club_id,
     her_games_group,
+)
+
+#: The On request club her waiting game is put to — a kilometre from Bonarka,
+#: so one of the clubs her group plays at.
+WAITING_CLUB: Final = next(
+    club for club in SEED_CLUBS if club.name == "Kazimierz Padel"
 )
 
 #: The two states, in the order they are booked.
@@ -83,10 +106,21 @@ class SeededBooking:
 
 @final
 @dataclass(frozen=True, slots=True)
+class SeededWaiting:
+    """Her game waiting for an On request club."""
+
+    start: Instant
+    #: Whether this run put it to the club, or found it waiting already.
+    made: bool
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class SeededBookings:
     bookings: tuple[SeededBooking, ...]
     #: Her receipts once the games were booked.
     receipts: int
+    waiting: SeededWaiting | None = None
 
 
 class NotEnoughToBook(RuntimeError):
@@ -143,8 +177,97 @@ async def book_her_games(
                 players=(*three, her),
             )
             bookings.append(SeededBooking(state, start, made=True))
+        waiting = await _put_to_the_club(
+            session,
+            settings=settings,
+            clock=clock,
+            provider=provider,
+            her=her,
+            pool_id=group_id,
+            partners=partners[3 * len(targets) : 3 * len(targets) + 3],
+            seeded=seeded,
+            now=now,
+        )
         receipts = await build_read_receipts(session).execute(her)
-    return SeededBookings(bookings=tuple(bookings), receipts=len(receipts))
+    return SeededBookings(
+        bookings=tuple(bookings), receipts=len(receipts), waiting=waiting
+    )
+
+
+async def _put_to_the_club(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: FixedClock,
+    provider: PaymentProvider,
+    her: UUID,
+    pool_id: UUID,
+    partners: Sequence[UUID],
+    seeded: SeededProposals,
+    now: Instant,
+) -> SeededWaiting:
+    """Her full game at Kazimierz Padel, answered *waiting for the club* — or
+    the one still waiting from an earlier run."""
+
+    club_id = await _club_of(session, WAITING_CLUB)
+    hers = await build_player_bookings(session, settings=settings).of_player(her)
+    already = next(
+        (
+            game
+            for game in hers
+            if game.stage is BookingStage.WAITING_FOR_THE_CLUB
+            and game.club_id == club_id
+        ),
+        None,
+    )
+    if already is not None:
+        return SeededWaiting(start=already.start, made=False)
+    if len(partners) < 3:
+        raise NotEnoughToBook(
+            f"the crowd has no three left to wait for {WAITING_CLUB.name} with her"
+        )
+    taken = [game.start for game in hers] + [pick.start for pick in seeded.picks]
+    start = next(
+        (
+            hour.start
+            for hour in await _hours_on_sale(session, club_id, now=now)
+            if not any(abs(hour.start - game) < GAME_LENGTH for game in taken)
+        ),
+        None,
+    )
+    if start is None:
+        raise NotEnoughToBook(
+            f"{WAITING_CLUB.name} sells no padel hour clear of her games from "
+            f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
+        )
+    answer = await _four_say_yes(
+        session,
+        settings=settings,
+        clock=clock,
+        provider=provider,
+        pool_id=pool_id,
+        club_id=club_id,
+        start=start,
+        players=(*partners, her),
+    )
+    if answer is None or answer.waiting_until is None:
+        raise NotEnoughToBook(
+            f"her game at {WAITING_CLUB.name} on "
+            f"{start.astimezone(CLUB_ZONE):%a %d %b %H:%M} did not go to the club: "
+            f"{answer!r}"
+        )
+    return SeededWaiting(start=start, made=True)
+
+
+async def _club_of(session: AsyncSession, club: SeedClub) -> UUID:
+    account = await build_club_account_repository(
+        session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    ).get_by_email(Email(desk_email(club)))
+    if account is None:
+        raise RuntimeError(f"{club.name} has not signed up — the clubs run first")
+    return account.club_id
 
 
 async def _hours_on_sale(
@@ -242,6 +365,37 @@ async def _book(
     start: Instant,
     players: tuple[UUID, ...],
 ) -> None:
+    answer = await _four_say_yes(
+        session,
+        settings=settings,
+        clock=clock,
+        provider=provider,
+        pool_id=pool_id,
+        club_id=club_id,
+        start=start,
+        players=players,
+    )
+    if answer is None or answer.booked is None:
+        raise NotEnoughToBook(
+            f"her game at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} filled and "
+            f"did not book: {answer!r}"
+        )
+
+
+async def _four_say_yes(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: FixedClock,
+    provider: PaymentProvider,
+    pool_id: UUID,
+    club_id: UUID,
+    start: Instant,
+    players: tuple[UUID, ...],
+) -> YesAnswer | None:
+    """A pick at the hour for these four, each saying yes in turn — the last
+    one's answer."""
+
     proposal_id = await build_make_proposal(session, clock=clock).execute(
         MakeProposalCommand(
             pool_id=pool_id,
@@ -259,11 +413,7 @@ async def _book(
         answer = await build_say_yes(
             session, clock=clock, provider=provider, settings=settings
         ).execute(AnswerProposalCommand(proposal_id=proposal_id, player_id=player))
-    if answer is None or answer.booked is None:
-        raise NotEnoughToBook(
-            f"her game at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} filled and "
-            f"did not book: {answer!r}"
-        )
+    return answer
 
 
 def booking_lines(seeded: SeededBookings) -> list[str]:
@@ -277,4 +427,10 @@ def booking_lines(seeded: SeededBookings) -> list[str]:
             f"{booking.state} · {state}"
         )
     lines.append(f"  her receipts: {seeded.receipts}")
+    if seeded.waiting is not None:
+        state = "put to the club" if seeded.waiting.made else "still waiting"
+        lines.append(
+            f"Her game waiting for {WAITING_CLUB.name} (On request): "
+            f"{seeded.waiting.start.astimezone(CLUB_ZONE):%a %d %b %H:%M} · {state}"
+        )
     return lines

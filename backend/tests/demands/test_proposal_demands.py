@@ -39,10 +39,16 @@ from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.proposals.domain.home import ResultStage
 from app.modules.proposals.domain.ports import (
+    BookableCourt,
     ClubDistances,
+    ClubRequests,
     GameResults,
+    GameToAsk,
     PlayerBookings,
+    PlayerNames,
 )
+from app.modules.proposals.domain.proposal import ClubAnswer
+from app.kernel import minutes
 from app.shared.ids import new_uuid
 from tests.api import matchmaking_world as world
 from tests.api.administration_world import club_signs_up
@@ -273,3 +279,101 @@ async def test_a_player_with_no_location_area_is_nowhere(
     distances: ClubDistances = implementation.build(session)
 
     assert await distances.from_player(new_uuid(), [UUID(club_id)]) == {}
+
+
+# --------------------------------------------------------------------------- #
+# ClubRequests — a full game put to its On request club, and its answer (#543)
+# --------------------------------------------------------------------------- #
+
+
+def _a_game_to_ask(club_id: UUID, *, start: Instant, at: Instant) -> GameToAsk:
+    return GameToAsk(
+        proposal_id=new_uuid(),
+        pool_id=new_uuid(),
+        club_id=club_id,
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        start=start,
+        share_grosze=30_00,
+        first_side=(OLA, KUBA),
+        second_side=(EWA, TOMEK),
+        court=BookableCourt(
+            court_id=new_uuid(),
+            name="Court 1",
+            cut_off=start - timedelta(hours=24),
+            time_to_confirm=minutes(30),
+        ),
+        answer_by=at + timedelta(minutes=30),
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(ClubRequests))
+async def test_a_request_waits_at_its_club_until_its_answer_is_due(
+    implementation, session
+):
+    club_id = new_uuid()
+    game = _a_game_to_ask(club_id, start=_at(48), at=_at())
+    requests: ClubRequests = implementation.build(session)
+
+    await requests.ask(game, at=_at())
+    await session.commit()
+
+    found = await requests.find(game.proposal_id)
+    assert found is not None and found.waiting is True
+    assert (found.club_id, found.court_name, found.answer_by) == (
+        club_id,
+        "Court 1",
+        game.answer_by,
+    )
+    assert found.players == (OLA, KUBA, EWA, TOMEK)
+    assert [r.booking_id for r in await requests.waiting_at(club_id)] == [
+        game.proposal_id
+    ]
+    assert await requests.waiting_at(new_uuid()) == []
+    assert await requests.unanswered(now=_at()) == []
+    assert await requests.unanswered(now=game.answer_by) == [game.proposal_id]
+    assert await requests.find(new_uuid()) is None
+
+
+@pytest.mark.parametrize("implementation", registered(ClubRequests))
+async def test_a_request_is_answered_once_and_a_withdrawn_one_asked_again(
+    implementation, session
+):
+    club_id = new_uuid()
+    refused = _a_game_to_ask(club_id, start=_at(48), at=_at())
+    accepted = _a_game_to_ask(club_id, start=_at(72), at=_at())
+    requests: ClubRequests = implementation.build(session)
+    await requests.ask(refused, at=_at())
+    await requests.ask(accepted, at=_at())
+
+    await requests.turn_down(
+        refused.proposal_id, answer=ClubAnswer.REFUSED, reason=None, at=_at()
+    )
+    assert await requests.withdraw(accepted.proposal_id, player_ids=(KUBA,), at=_at())
+    await requests.ask(accepted, at=_at())
+    game_id = await requests.accept(accepted.proposal_id, at=_at())
+    await session.commit()
+
+    gone = await requests.find(refused.proposal_id)
+    booked = await requests.find(accepted.proposal_id)
+    assert gone is not None and gone.waiting is False
+    assert booked is not None and booked.waiting is False
+    assert game_id is not None
+    assert await requests.waiting_at(club_id) == []
+    assert not await requests.withdraw(refused.proposal_id, player_ids=(OLA,), at=_at())
+
+
+# --------------------------------------------------------------------------- #
+# PlayerNames — what the club sees of a player
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerNames))
+async def test_a_player_is_named_by_their_name_and_a_stranger_not_at_all(
+    implementation, client, session
+):
+    player_id, _ = await world.register(client, "ola")
+    names: PlayerNames = implementation.build(session)
+
+    assert await names.names_of([player_id, new_uuid()]) == {player_id: "ola"}
+    assert await names.names_of([]) == {}

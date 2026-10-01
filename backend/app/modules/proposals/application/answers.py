@@ -14,9 +14,16 @@ other people.
 **The yes that leaves no seat open books the game** (#541, ``fill.py``): every
 seat charged together or nobody, in this yes's own transaction — and the game's
 row is locked first, so two last yeses arriving together fill it once. The
-client gave its ten seconds of *Undo* before sending it. **Confirming a refused
-payment is the yes again** (``ConfirmPayment``): the player's share is held
-now, so the game fills on it if the seat is still theirs to take.
+client gave its ten seconds of *Undo* before sending it — or, at an On request
+club, puts the full game to the club, and nobody pays until it says yes (#543).
+**Confirming a refused payment is the yes again** (``ConfirmPayment``): the
+player's share is held now, so the game fills on it if the seat is still theirs
+to take.
+
+**Withdrawing is leaving, while the club decides** (the mechanics §13): a yes
+taken back from a game waiting for its club takes the request with it — called
+off with nobody paid, the court free, and the game filling again with that seat
+open.
 """
 
 from __future__ import annotations
@@ -43,6 +50,7 @@ from app.modules.proposals.domain.errors import (
     ProposalNotFound,
 )
 from app.modules.proposals.domain.ports import (
+    ClubRequests,
     ProposalRepository,
     RefusedPayment,
     SeatCharges,
@@ -61,6 +69,9 @@ class YesAnswer:
     open_seats: int
     #: The game this yes booked — *It's a game!*
     booked: Booked | None = None
+    #: This yes filled the game at an On request club, which has until then to
+    #: answer — nobody pays until it says yes.
+    waiting_until: Instant | None = None
     #: This player's own share could not be held: nobody paid, and the payment
     #: is theirs to confirm.
     your_payment: RefusedPayment | None = None
@@ -233,6 +244,7 @@ def _answer(proposal: Proposal, player_id: UUID, outcome: FillOutcome) -> YesAns
         proposal_id=proposal.proposal_id,
         open_seats=proposal.open_seats,
         booked=outcome.booked,
+        waiting_until=outcome.waiting_until,
         your_payment=outcome.refused.get(player_id),
     )
 
@@ -255,19 +267,35 @@ class SayNo:
 
 @final
 class WithdrawYes:
-    """*Withdraw* on a You're In row: free and silent until the game fills.
-    **Not asked of the pool** — somebody who left the group can still take a
-    yes back that is theirs."""
+    """*Withdraw* on a You're In row: free and silent until the game fills —
+    and *Leave the game* while its club decides, which takes the request to the
+    club with it. **Not asked of the pool** — somebody who left the group can
+    still take a yes back that is theirs.
+
+    The game is read **locked**, as a yes reads it, so a leaving and the club's
+    yes arriving together are one after the other."""
 
     def __init__(
-        self, *, proposals: ProposalRepository, uow: UnitOfWork, clock: Clock
+        self,
+        *,
+        proposals: ProposalRepository,
+        requests: ClubRequests,
+        uow: UnitOfWork,
+        clock: Clock,
     ) -> None:
         self._proposals = proposals
+        self._requests = requests
         self._uow = uow
         self._clock = clock
 
     async def execute(self, command: AnswerProposalCommand) -> None:
-        proposal = await loaded(self._proposals, command.proposal_id)
-        proposal.withdraw_yes(command.player_id, at=instant(self._clock.now()))
+        now = instant(self._clock.now())
+        proposal = await _locked(self._proposals, command.proposal_id)
+        was_waiting = proposal.waiting_for_the_club
+        proposal.withdraw_yes(command.player_id, at=now)
         await self._proposals.save(proposal)
+        if was_waiting and not proposal.waiting_for_the_club:
+            await self._requests.withdraw(
+                proposal.proposal_id, player_ids=(command.player_id,), at=now
+            )
         await self._uow.commit()

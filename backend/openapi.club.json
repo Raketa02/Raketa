@@ -1573,10 +1573,230 @@
           }
         ]
       }
+    },
+    "/api/v1/club/bookings/waiting": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "What is waiting for your answer",
+        "description": "Every Raketa game at this club waiting for its answer \u2014 an **On request** club's full games, each asking for a court \u2014 with the players, the hour, the sport, the price and the countdown. Nobody has paid. A request whose time to confirm has run out is not listed.",
+        "operationId": "waiting_api_v1_club_bookings_waiting_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitingBookingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/club/bookings/{booking_id}/acceptance": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Accept a request",
+        "description": "**Accept** books the game: everybody is charged at this moment, all together or not at all, on your account \u2014 you are the seller \u2014 and the players are given the court that was reserved for them. Their game, its chat and their receipts open; *It's a game! \u00b7 you paid* is emailed to each.",
+        "operationId": "accept_api_v1_club_bookings__booking_id__acceptance_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptanceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such booking at this club.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`request_not_waiting` \u2014 the game is not waiting for your answer: you already answered, a player left and it is looking for a player again, or it was called off as unanswered. `request_timed_out` \u2014 your time to confirm ran out: it is called off as unanswered. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`payments_unavailable` \u2014 the payment provider could not be reached to charge the players. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/bookings/{booking_id}/refusal": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Refuse a request",
+        "description": "**Refuse**, with a note for your own records if you like: nobody paid, the hour is yours to sell again, and the players read *Called off \u00b7 refused* and are dealt a new card first \u2014 never this court hour again.",
+        "operationId": "refuse_api_v1_club_bookings__booking_id__refusal_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RefusalRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such booking at this club.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`request_not_waiting` \u2014 the game is not waiting for your answer: you already answered, a player left and it is looking for a player again, or it was called off as unanswered. `request_timed_out` \u2014 your time to confirm ran out: it is called off as unanswered. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AcceptOutcome": {
+        "type": "string",
+        "enum": [
+          "BOOKED",
+          "SEAT_OPENED"
+        ],
+        "title": "AcceptOutcome",
+        "description": "What the club's yes came to."
+      },
+      "AcceptanceResponse": {
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/AcceptOutcome",
+            "description": "`BOOKED` \u2014 everybody paid, the game is booked on `court_name` and the players are told. `SEAT_OPENED` \u2014 a player's payment did not go through, or a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name",
+            "description": "The court the players were given \u2014 on a booked game only."
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome",
+          "court_name"
+        ],
+        "title": "AcceptanceResponse"
+      },
       "AdministratorGroupSchema": {
         "properties": {
           "id": {
@@ -2814,6 +3034,34 @@
         ],
         "title": "RefreshRequest"
       },
+      "RefusalRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why, for your own records \u2014 **never shown to the players**, who read *Called off \u00b7 refused*. Blank is no reason."
+          }
+        },
+        "type": "object",
+        "title": "RefusalRequest"
+      },
+      "SearchMode": {
+        "type": "string",
+        "enum": [
+          "COMPETITIVE",
+          "FOR_FUN"
+        ],
+        "title": "SearchMode",
+        "description": "What kind of evening this search is for. **Two values, never three.**\n\n``PlayIntent`` is the *candidate's* declaration and has three values;\n``SearchMode`` is the *searcher's* setting \u2014 which tab they are on, right\nnow \u2014 and has two. ``app/modules/player_profile/domain/play_intent.py`` says\nwhere this type belongs when it arrives: *\"it belongs to the matcher and not\nto this module\"*. Here it is.\n\n**There is never a ``NO_PREFERENCE`` weight vector.** A candidate who\ndeclared ``NO_PREFERENCE`` is indifferent about the kind of evening, so their\nreverse fit runs under the *searcher's* mode: ``NO_PREFERENCE`` never selects\na weight vector, it inherits one (``ranking-weights.md`` \u00a79). The arities\ndiffer on purpose, so the likeliest bug in the matcher is a type error rather\nthan a paragraph in a document."
+      },
       "SetupResponse": {
         "properties": {
           "steps": {
@@ -3041,6 +3289,129 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WaitingBookingSchema": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Competitive, or for fun (a friendly)."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start; games are 1 h."
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At"
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name",
+            "description": "The court reserved for the game while you decide \u2014 given to the players with your yes."
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/WaitingPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Everybody on the game. Nobody has paid yet."
+          },
+          "price_grosze": {
+            "type": "integer",
+            "title": "Price Grosze",
+            "description": "The court's price for the hour."
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "Each player's share of it."
+          },
+          "answer_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Answer By",
+            "description": "When your time to confirm runs out \u2014 the countdown. Past it the request is called off as unanswered: nobody pays and the hour is yours to sell again."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "sport",
+          "kind",
+          "starts_at",
+          "ends_at",
+          "court_name",
+          "players",
+          "price_grosze",
+          "share_grosze",
+          "answer_by"
+        ],
+        "title": "WaitingBookingSchema",
+        "description": "A full game asking for a court \u2014 **Waiting for you**."
+      },
+      "WaitingBookingsResponse": {
+        "properties": {
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At",
+            "description": "The instant the list was read at \u2014 what each countdown runs from."
+          },
+          "bookings": {
+            "items": {
+              "$ref": "#/components/schemas/WaitingBookingSchema"
+            },
+            "type": "array",
+            "title": "Bookings",
+            "description": "The one due first, first. Empty: *Nothing is waiting for you.*"
+          }
+        },
+        "type": "object",
+        "required": [
+          "read_at",
+          "bookings"
+        ],
+        "title": "WaitingBookingsResponse",
+        "description": "Everything waiting for the club's answer \u2014 the Overview's *waiting for\nyour answer*, the Bookings page's *Waiting for you*, and its badge."
+      },
+      "WaitingPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their Name, whole. `null` for an account that can no longer be named."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name"
+        ],
+        "title": "WaitingPlayerSchema"
       },
       "WayOfWorking": {
         "type": "string",

@@ -24,8 +24,10 @@ from app.modules.proposals.domain.events import (
     ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
-    VersionDealt,
+    Redealt,
     SeatReopened,
+    TurnedDown,
+    VersionDealt,
     YesPaused,
     YesSaid,
     YesWithdrawn,
@@ -44,6 +46,8 @@ _EVENTS = (
     (ProposalFilled, "proposals.proposal_filled"),
     (SeatReopened, "proposals.seat_reopened"),
     (YesPaused, "proposals.yes_paused"),
+    (TurnedDown, "proposals.turned_down"),
+    (Redealt, "proposals.redealt"),
 )
 
 
@@ -65,6 +69,8 @@ def subscribe_proposal_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(ProposalFilled, LogProposalEvent())
     dispatcher.subscribe(SeatReopened, LogProposalEvent())
     dispatcher.subscribe(YesPaused, LogProposalEvent())
+    dispatcher.subscribe(TurnedDown, LogProposalEvent())
+    dispatcher.subscribe(Redealt, LogProposalEvent())
 
 
 def subscribe_the_pool_leaver(

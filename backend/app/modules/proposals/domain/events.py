@@ -203,6 +203,32 @@ class YesPaused:
 
 
 @dataclass(frozen=True)
+class TurnedDown:
+    """**The club did not take it** (#543; the mechanics §16.8): every seat was
+    In and the game waited for its On request club, which refused it or did not
+    answer by its deadline. Nobody paid; *Called off · refused / no answer* is
+    the booking's to say. ``answer`` is ``REFUSED`` or ``NO_ANSWER``.
+
+    **The people who were In stay on the record** and are dealt a new card
+    first — never at this club and hour, which the club turned down."""
+
+    proposal_id: UUID
+    answer: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class Redealt:
+    """The proposer has dealt the people In on a game its club turned down a
+    new card first. What makes a turned-down game owe nothing more; until it,
+    every proposer run looks for an hour again, while the game's own hour is
+    still ahead."""
+
+    proposal_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class GamesAndMoneySet:
     """A player changed their **Games & money** (the mechanics §6.6, §17.1): how
     many games a week they will play, and the most one may cost them. The only

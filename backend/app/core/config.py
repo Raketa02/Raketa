@@ -430,6 +430,20 @@ class Settings(BaseSettings):
     PROPOSAL_EXPIRY_ENABLED: bool = True
     PROPOSAL_EXPIRY_INTERVAL_SECONDS: float = 60
 
+    # --- the On request timeout (#543, the mechanics §16.8, §16.16)
+    #
+    # **Correctness depends on it**, unlike the book-by sweep: an unanswered
+    # request already refuses the club's answer past its deadline at every read,
+    # but only this calls the game off — *Called off · no answer* — frees the
+    # court it held and makes its players due a new card first.
+    #
+    # **The deadline itself is emphatically not here**: it is the club's time to
+    # confirm, a Raketa setting in `clubs/domain/raketa_terms.py`. Every thirty
+    # seconds, because that window is minutes long and a court held past it is
+    # an hour nobody can sell.
+    REQUEST_TIMEOUT_ENABLED: bool = True
+    REQUEST_TIMEOUT_INTERVAL_SECONDS: float = 30
+
     # --- the proposer (#540, the mechanics §5, §6.2–§6.3)
     #
     # **The engine that builds games, and correctness depends on it**: nothing

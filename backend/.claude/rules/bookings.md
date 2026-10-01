@@ -2,6 +2,7 @@
 paths:
   - "app/modules/bookings/**"
   - "app/modules/proposals/application/fill.py"
+  - "app/modules/proposals/application/club_requests.py"
   - "app/modules/proposals/application/home.py"
   - "app/modules/proposals/application/booking_details.py"
   - "app/modules/payments/application/seat_charges.py"
@@ -10,8 +11,8 @@ paths:
 
 # Bookings and the fill
 
-Decisions that are load-bearing and not obvious from the code (#541; ADR-0189 §2, §4–§5; the
-mechanics §11–§12.2).
+Decisions that are load-bearing and not obvious from the code (#541, #543; ADR-0189 §2–§5;
+the mechanics §11–§12.2, §13, §16.8).
 
 - **The last yes books the game, in that yes's own transaction** (`proposals/application/fill.py`).
   `SayYes` loads the proposal **locked** (`load_for_update`, `FOR UPDATE` on its row — SQLite
@@ -19,10 +20,10 @@ mechanics §11–§12.2).
   `open_seats` at nought hands the proposal to `Fill`. **First the people**: the game fills only
   with people who all fit each other (§7), and a pair already In can stop fitting after both
   said yes — the later of their yeses is taken out (`SeatReopened`, `NO_LONGER_FITS`) and
-  nothing is asked of anybody. Then **the club**: an **On request** club's full game waits
-  untouched (#543 builds the request); a club no longer selling, or with no court of the sport
-  left at the hour, records `CourtHourLost` and the yes answers `proposal_is_over`
-  (`COURT_HOUR_LOST`); otherwise the money, then the booking. **Two cards at one hour can read
+  nothing is asked of anybody. Then **the club**: a club no longer selling, or with no court
+  of the sport left at the hour, records `CourtHourLost` and the yes answers
+  `proposal_is_over` (`COURT_HOUR_LOST`); an **On request** club is **asked** (below); otherwise
+  the money, then the booking. **Two cards at one hour can read
   one court free at once**: the second claim meets `bookings`' unique court-hour index
   (`CourtTaken` → proposals' `CourtJustTaken`), the transaction is rolled back, and the yes is
   tried **once more** from the start — the courts left, and the same holds answered again
@@ -72,15 +73,53 @@ mechanics §11–§12.2).
   settle** is a taken hold whose capture the provider refuses (a hold that lapsed through a
   days-long outage): `SettleSeatCharges` retries it, and the charge stays `TAKING` — a booked
   seat nobody paid for is an operator's question, not answered here.
-- **A Booking is born booked, under the proposal's own id** (`bookings/domain/booking.py`) — one
-  id from the first card to the court, and a second booking of one proposal an append conflict.
+- **On request: the club confirms, and nobody pays until it does** (#543;
+  `proposals/application/club_requests.py`, `bookings/application/requests.py`). The last yes at
+  an On request club **asks the club**: the first free court is **reserved** (`BookingRequested` —
+  the booking born *waiting for the club*, its row holding the court hour as a booked one does),
+  the sides are drawn, the answer is due at the yes plus the club's **time to confirm**, and the
+  desk is emailed *A booking is waiting for your answer* in the same transaction. The yes answers
+  `waiting_for_the_club`. **The proposal stays filling, full** — `Proposal.waiting_for_the_club`
+  — and **its book-by no longer ends it**: the game filled in time, and the answer may be due
+  past the book-by (never past the start — the longest time to confirm is the shortest notice),
+  so `standing_at` keeps it `FILLING`, the sweep leaves it, and the projection's
+  `waiting_for_the_club` keeps it on the live reads. The club surface is
+  `GET /api/v1/club/bookings/waiting` (the one due first, first; players by **Name** only; a
+  request past its deadline not listed), `POST …/{id}/acceptance` and `POST …/{id}/refusal`
+  (an optional note, kept for the club and **never shown to a player**). **Accept** runs the
+  fill's own all-or-nothing charge on the **reserved** court with the sides the players were reading
+  (`Fill.accept`), then `BookingAccepted` opens the Game — and the chat — exactly as a booked
+  game's; a share refused, or a pair In that stopped fitting while it waited, instead opens a
+  seat — nobody pays, the request is withdrawn, the game fills again, and the club answer is
+  `SEAT_OPENED`. **Refuse**, and **no answer** (the `request-timeout` job, `request_timed_out`
+  at every answer past the deadline whether recorded or not), call it off with nobody paid
+  (`BookingRefused`/`BookingTimedOut`), end the proposal `TURNED_DOWN`, free the court, and
+  owe the players a new card first — the proposer deals it by the first run that finds them an
+  hour (`Redealt` once it has), never at the club and hour that turned them down. **A seat
+  opening while it waits withdraws the request, in the same transaction** (`RequestWithdrawn`,
+  naming every seat that opened): **nobody keeps a seat on it**, so it leaves everybody's Home
+  — the people still In find the game filling again in You're In, and a `CALLED_OFF` card
+  beside a game still filling would say two things about one game. Whoever takes the yes away
+  calls `ClubRequests.withdraw` — `WithdrawYes` (*Leave the game*), a group leaver's
+  withdrawals, and the fill's *one game per hour* and *games per week* on another booking —
+  because the reserved court must be free the moment the seat is, or the proposer would read
+  the card's own court as gone. **Full again, the same game is asked again on the same
+  stream** (`BookingRequested` once more, the court and the people as they are now). The
+  club's answers, a player's *Leave* and the timeout **lock the proposal row first**, so they
+  are one after another; a group leaver's withdrawals and the fill's on other games rely on
+  the stream version, as every act on a proposal does.
+- **A Booking is born booked, or born waiting for the club, under the proposal's own id**
+  (`bookings/domain/booking.py`) — one id from the first card to the court, and a second
+  booking of one proposal an append conflict (a request asked again is the same stream).
   It holds what the fill decided: the court and its name (**the first free court** of the sport,
   in the club's order, read off what it sells **before any deadline**, as a card's held hour is),
   the sides (**the engine's own forecast** over every arrangement, the deck's `evenest`), the
   cut-off as the club's setting stood at the fill, and the Game it opened. Its projections —
-  `bookings` (one court hour per booking, a unique index) and `booking_seats` — answer the Club
-  context's `CourtBookings` (what a club can no longer sell) and the proposals' `BookedGames`
-  (*games per week*, *one game per hour*) and `PaymentCommitments.upcoming_games`.
+  `bookings` (its `state`, and one court hour per booking held by a **partial** unique index:
+  a called-off booking holds nothing, migration 0040) and `booking_seats` — answer the Club
+  context's `CourtBookings` (what a club can no longer sell: waiting or booked) and the
+  proposals' `BookedGames` (*games per week*, *one game per hour*: **booked only**) and
+  `PaymentCommitments.upcoming_games`; the club's *Games* figure counts booked ones only.
 - **A booked game is an ordinary Game, opened as a completed line-up opens one** — through
   `OpenPlannedGame`, the booking's id in the arrangement's slot (`challenge_id`), **with its hour**
   (`GamePlanned.starts_at`, nullable and defaulted). The hour is what moves: its entry window runs
@@ -104,15 +143,21 @@ mechanics §11–§12.2).
   first hour on sale today (else inside the cut-off) and the first next week — each made by
   `MakeProposal` and filled by four `SayYes`, hers last, through the run's fake; the seed's outbox
   then captures them (the fake **adopts a hold another process made**, as it answers a card it
-  never saved). `FakePayments.phone_confirms_payment` is a phone confirming a payment.
+  never saved). **And one game waiting for Kazimierz Padel** (On request, a kilometre away, an
+  hour to confirm): the same four yeses at its first padel hour clear of her games, the last
+  answered *waiting for the club* — it waits an hour from the run's now, then the timeout calls
+  it off; a re-run puts a fresh one. `FakePayments.phone_confirms_payment` is a phone confirming a payment.
 - **Home and the details read the bookings; Proposals assembles them** (#542; the mechanics
   §14, §15.1). `GET /home`, `GET /bookings/{id}` and `GET /proposals/{id}` are Proposals' reads
   (`application/home.py`, `booking_details.py`, `proposal_details.py`), over `PlayerBookings` —
   signed in `proposals/infrastructure/bookings.py`, folding each booking's stream — beside the
   deck's people and forecasts. **A status is folded on every read** (`proposals/domain/home.py`):
   *booked* until the hour, then the Game's result states (`GameResults`, over `games`' own
-  `standing_at`); *waiting for the club*, *seat open* and *called off by the booking* are on the
-  enum for #543–#547 to produce. **The forecast is the Game's pairing** (`GET
+  `standing_at`); *waiting for the club* and *called off* with its `called_off_reason`
+  (`REFUSED`, `NO_ANSWER`) are the booking's own (#543) — with `game_id` and `court_name`
+  `null` until the club gives them, and nobody `paid`; a request taken back because a seat
+  opened is on nobody's Home; *seat open* and the other reasons are for #544–#547 to
+  produce. **The forecast is the Game's pairing** (`GET
   /games/{id}/pairing`) — the details only say whether it is drawn. **A check-in code is derived,
   never stored** (`bookings/domain/check_in.py`): an HMAC of the booking and the player under a
   key drawn from `JWT_SECRET_KEY` with its own prefix (`KeyedCheckInCodes`), six characters in

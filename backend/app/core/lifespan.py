@@ -147,6 +147,7 @@ def build_lifespan(settings: Settings):
             or settings.MAIL_DELIVERY_ENABLED
             or settings.PROPOSAL_EXPIRY_ENABLED
             or settings.PROPOSER_ENABLED
+            or settings.REQUEST_TIMEOUT_ENABLED
         ):
             session_factory = build_background_session_factory(get_engine())
 

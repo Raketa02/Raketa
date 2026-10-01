@@ -29,8 +29,10 @@ from app.modules.proposals.domain.events import (
     ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
-    VersionDealt,
+    Redealt,
     SeatReopened,
+    TurnedDown,
+    VersionDealt,
     YesPaused,
     YesSaid,
     YesWithdrawn,
@@ -97,6 +99,14 @@ class EventSourcedProposalRepository:
         await self._events.publish_many(pending)
         for event in pending:
             await self._project(event)
+        # Whether every seat is In and the club still to answer — what the live
+        # reads keep past a book-by — written as the aggregate now says, on
+        # every save, so no event that fills or opens a seat can forget it.
+        await self._statement(
+            update(ProposalORM)
+            .where(ProposalORM.id == proposal.proposal_id)
+            .values(waiting_for_the_club=proposal.waiting_for_the_club)
+        )
         await self._session.flush()
         # Deliberately no commit: the transaction boundary is the use case's.
         self._versions[proposal.proposal_id] = proposal.version
@@ -178,6 +188,12 @@ class EventSourcedProposalRepository:
             await self._end(event.proposal_id, Ending.EXPIRED)
         elif isinstance(event, CourtHourLost):
             await self._end(event.proposal_id, Ending.COURT_HOUR_LOST)
+        elif isinstance(event, TurnedDown):
+            await self._end(event.proposal_id, Ending.TURNED_DOWN)
+        elif isinstance(event, Redealt):
+            # The stream's own fact: candidates are read by the ending, and
+            # the aggregate says which still owe a card.
+            pass
         else:
             raise TypeError(f"Unsupported proposal event {event!r}")
 

@@ -41,7 +41,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   the composition root for the proposer (#540), seeds and tests; **the yes that leaves
   `open_seats` at nought books the game** — `FILLED`, every version gone — or reopens the seat
   of whoever could not pay or no longer fits, and pauses or withdraws the players' other yeses
-  (#541, see `bookings.md`). Seeded by `app/seeds/proposals.py`, which
+  (#541, see `bookings.md`) — or, at an On request club, **puts it to the club**, full and
+  still filling, its book-by no longer ending it, until the club's yes fills it or its no or
+  silence **turns it down** (`TURNED_DOWN`, migration 0040; #543, see `bookings.md`). Seeded by `app/seeds/proposals.py`, which
   **runs the proposer for every pool**: the protagonist's *Padel po pracy* at Bonarka Arena,
   gathered from the cohort members who want competitive padel and fit her and each other,
   and four of her picks answered — nought, one, two and three In.
@@ -94,7 +96,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **the offer before any deadline**, so a club lengthening its notice takes no card's
   court and a paused club's cards keep theirs — the card is over, and the people In are
   dealt a new card first at the nearest hour they are all free, the same hour at another
-  of the pool's clubs before another hour. **When**: `ProposeGames` runs per pool from two
+  of the pool's clubs before another hour. **On request** (#543): a game waiting for its
+  club **holds its own court** through its request, so it is never lost to it and never
+  counted twice at its hour; a game its club **turned down** is *owed* — read by
+  `ProposalDirectory.turned_down_in`, its people dealt a new card first exactly as a lost
+  card's are, **never at the club and hour that turned them down**, by the first run that
+  finds them an hour — owed until then, while the game's own hour is ahead
+  (`proposals.redealt`, recorded once the pick has really been made). **When**: `ProposeGames` runs per pool from two
   jobs — the sweep over every pool (`GroupDirectory.every`) and a short tick over the pools
   a delivered change made due (`DueForProposing`, fed per delivery run by
   `MarkDueForProposing`: a joining, a player's week, intent, first rating or Games & money,

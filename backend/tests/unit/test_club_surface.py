@@ -54,6 +54,9 @@ CLUB_OPERATIONS = {
     "put /api/v1/club/raketa-settings",
     "get /api/v1/club/setup",
     "post /api/v1/club/payments/onboarding-link",
+    "get /api/v1/club/bookings/waiting",
+    "post /api/v1/club/bookings/{booking_id}/acceptance",
+    "post /api/v1/club/bookings/{booking_id}/refusal",
 }
 
 

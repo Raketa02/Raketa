@@ -79,7 +79,8 @@ _OVER = (
     "`proposal_is_over` — the game is no longer filling, named by "
     "`details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its "
     "poster took the post back with nobody else In, `COURT_HOUR_LOST` once the "
-    "last court at its club and hour went). The card leaves."
+    "last court at its club and hour went, `TURNED_DOWN` once its On request club "
+    "refused it or did not answer). The card leaves."
 )
 
 
@@ -132,8 +133,11 @@ _FILL_UNAVAILABLE = (
         "and its Game, and everybody is emailed *It's a game! · you paid*. When a "
         "share could not be held, **nobody paid**: that player's seat is open "
         "again (`open_seats`), and when it is this player's own, `your_payment` "
-        "names the refused payment to confirm. At an On request club a full game "
-        "waits for the club (#543): `open_seats` is nought and nothing is booked."
+        "names the refused payment to confirm. **At an On request club the last "
+        "yes puts the game to the club** (#543): `waiting_for_the_club`, "
+        "`open_seats` nought, nothing booked and nobody charged — the court is "
+        "held, the club is emailed, and the charge and *It's a game!* follow its "
+        "yes."
     ),
 )
 async def say_yes(
@@ -185,7 +189,12 @@ async def say_no(proposal_id: UUID, user: CurrentUserDep, say: SayNoDep) -> Resp
         "Withdrawing a yes never said records nothing. **A poster withdrawing "
         "with nobody else In "
         "takes the post with them**; with others In, the game carries on without "
-        "them."
+        "them.\n\n"
+        "**While an On request club decides, this is *Leave the game*** (#543): "
+        "nobody has paid; the request to the club is called off "
+        "(`CALLED_OFF` · `SEAT_OPENED` on the others' Home), the held court is "
+        "free, and the game is back in the decks with this seat open — the "
+        "others still In. Full again, it goes to the club again."
     ),
 )
 async def withdraw_yes(

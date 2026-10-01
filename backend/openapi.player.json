@@ -6640,7 +6640,7 @@
           "proposals"
         ],
         "summary": "Say yes to a game",
-        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** \u2014 no money moves, no court is held, nobody is told (the others see the player In on the card) \u2014 **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.\n\n**The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account and then all are taken, or none is \u2014 `booked` names the booking and its Game, and everybody is emailed *It's a game! \u00b7 you paid*. When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. At an On request club a full game waits for the club (#543): `open_seats` is nought and nothing is booked.",
+        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** \u2014 no money moves, no court is held, nobody is told (the others see the player In on the card) \u2014 **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.\n\n**The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account and then all are taken, or none is \u2014 `booked` names the booking and its Game, and everybody is emailed *It's a game! \u00b7 you paid*. When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. **At an On request club the last yes puts the game to the club** (#543): `waiting_for_the_club`, `open_seats` nought, nothing booked and nobody charged \u2014 the court is held, the club is emailed, and the charge and *It's a game!* follow its yes.",
         "operationId": "say_yes_api_v1_proposals__proposal_id__yes_post",
         "security": [
           {
@@ -6681,7 +6681,7 @@
             }
           },
           "409": {
-            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `payment_to_confirm` \u2014 this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` \u2014 this player said no: the card does not come back. `proposal_is_full` \u2014 every seat is In. `payment_method_required` \u2014 no saved payment method: save one, then say yes. `live_yeses_exhausted` \u2014 `details.cap` live yeses in `details.sport` already. `no_longer_fits` \u2014 somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded \u2014 except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid.",
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `payment_to_confirm` \u2014 this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` \u2014 this player said no: the card does not come back. `proposal_is_full` \u2014 every seat is In. `payment_method_required` \u2014 no saved payment method: save one, then say yes. `live_yeses_exhausted` \u2014 `details.cap` live yeses in `details.sport` already. `no_longer_fits` \u2014 somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded \u2014 except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6717,7 +6717,7 @@
           "proposals"
         ],
         "summary": "Withdraw a yes",
-        "description": "*Withdraw* on a You're In row: free and silent until the game fills. The seat is open again, and the player may say yes again while it fills. Withdrawing a yes never said records nothing. **A poster withdrawing with nobody else In takes the post with them**; with others In, the game carries on without them.",
+        "description": "*Withdraw* on a You're In row: free and silent until the game fills. The seat is open again, and the player may say yes again while it fills. Withdrawing a yes never said records nothing. **A poster withdrawing with nobody else In takes the post with them**; with others In, the game carries on without them.\n\n**While an On request club decides, this is *Leave the game*** (#543): nobody has paid; the request to the club is called off (`CALLED_OFF` \u00b7 `SEAT_OPENED` on the others' Home), the held court is free, and the game is back in the decks with this seat open \u2014 the others still In. Full again, it goes to the club again.",
         "operationId": "withdraw_yes_api_v1_proposals__proposal_id__yes_delete",
         "security": [
           {
@@ -6751,7 +6751,7 @@
             }
           },
           "409": {
-            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves.",
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6813,7 +6813,7 @@
             }
           },
           "409": {
-            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_already_answered` \u2014 this player is In: they leave by withdrawing their yes, never by a no.",
+            "description": "`proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `proposal_already_answered` \u2014 this player is In: they leave by withdrawing their yes, never by a no.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7241,7 +7241,7 @@
             }
           },
           "409": {
-            "description": "`payment_not_confirmed` \u2014 the provider still waits for the player (`details.status`), or the charge was never a payment to confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept the terms or save a method and say yes. `proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_is_full` \u2014 somebody else took the seat. On both, the payment the player confirmed is let go and nobody pays it. `live_yeses_exhausted` and `no_longer_fits` as a yes meets them.",
+            "description": "`payment_not_confirmed` \u2014 the provider still waits for the player (`details.status`), or the charge was never a payment to confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept the terms or save a method and say yes. `proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `proposal_is_full` \u2014 somebody else took the seat. On both, the payment the player confirmed is let go and nobody pays it. `live_yeses_exhausted` and `no_longer_fits` as a yes meets them.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8131,7 +8131,7 @@
           "paid": {
             "type": "boolean",
             "title": "Paid",
-            "description": "Their share was taken \u2014 the *paid* tag."
+            "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for its club, and on a request that was never booked."
           }
         },
         "type": "object",
@@ -8155,10 +8155,17 @@
             "title": "Booking Id"
           },
           "game_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Game Id",
-            "description": "The ordinary Game it opened: its result acts, its balance forecast (`GET /games/{id}/pairing`) and its room in `GET /conversations` are all reached by this id."
+            "description": "The ordinary Game it opened: its result acts, its balance forecast (`GET /games/{id}/pairing`) and its room in `GET /conversations` are all reached by this id. `null` while it waits for its On request club, and on a request the club never booked."
           },
           "pool_id": {
             "type": "string",
@@ -8179,7 +8186,18 @@
           },
           "status": {
             "$ref": "#/components/schemas/HomeStatus",
-            "description": "`BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played. Two more arrive with the tickets that produce them: `WAITING_FOR_THE_CLUB` (an On request club has not confirmed yet, #543) and `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+            "description": "`WAITING_FOR_THE_CLUB` \u2014 an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. One more arrives with the ticket that produces it: `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+          },
+          "called_off_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalledOffReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) More arrive with the tickets that call a booked game off (#544, #547)."
           },
           "needs_you": {
             "type": "boolean",
@@ -8200,9 +8218,16 @@
             "$ref": "#/components/schemas/WhereSchema"
           },
           "court_name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Court Name",
-            "description": "The court the game was given \u2014 *Court 2*."
+            "description": "The court the game was given \u2014 *Court 2*. `null` until the club gives it: an On request club gives it with its yes."
           },
           "sides": {
             "$ref": "#/components/schemas/BookedSidesSchema"
@@ -8236,6 +8261,7 @@
           "kind",
           "read_at",
           "status",
+          "called_off_reason",
           "needs_you",
           "starts_at",
           "ends_at",
@@ -8275,6 +8301,15 @@
         ],
         "title": "CalledOffBySchema",
         "description": "Who called the game off, and what they are called (``docs/adr/0172`` \u00a74).\n\n**The name is carried because the court cannot supply it**: the leaver whose\ndeparture called the game off has been **vacated** \u2014 their seat is drawn\n`player_id: null` \u2014 so the seats alone could not name them. It is the same\nname a seat carries, read in the same set read, and it is `null` for the\nsame reason a seat's is: an account `users` no longer answers for.\n\n**A departure is told from a press by whether this player still holds a\nseat on the game.** The presser does; the leaver's seat is open. No second\nfield says which \u2014 the record already does."
+      },
+      "CalledOffReason": {
+        "type": "string",
+        "enum": [
+          "REFUSED",
+          "NO_ANSWER"
+        ],
+        "title": "CalledOffReason",
+        "description": "Why a game will not be played (the mechanics \u00a714.1)."
       },
       "CandidateSchema": {
         "properties": {
@@ -12008,10 +12043,17 @@
             "description": "The booking \u2014 the same id the game had while it filled. `GET /bookings/{id}` for its details."
           },
           "game_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Game Id",
-            "description": "The ordinary Game it opened: the result is told and agreed on `/games/{id}/result`, and its room in `GET /conversations` carries this id."
+            "description": "The ordinary Game it opened: the result is told and agreed on `/games/{id}/result`, and its room in `GET /conversations` carries this id. `null` while it waits for its On request club, and on a request the club never booked \u2014 there is no Game, and no room."
           },
           "pool_id": {
             "type": "string",
@@ -12028,7 +12070,18 @@
           },
           "status": {
             "$ref": "#/components/schemas/HomeStatus",
-            "description": "`BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played. Two more arrive with the tickets that produce them: `WAITING_FOR_THE_CLUB` (an On request club has not confirmed yet, #543) and `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+            "description": "`WAITING_FOR_THE_CLUB` \u2014 an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` \u2014 full and booked, its hour still ahead. `NEEDS_RESULT` \u2014 its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` \u2014 a score is on the table. `COUNTED` \u2014 a score is agreed. `UNCOUNTED` \u2014 they played and no score is agreed. `NEVER_PLAYED` \u2014 nobody said it happened in time. `CALLED_OFF` \u2014 it will not be played; `called_off_reason` says why. One more arrives with the ticket that produces it: `SEAT_OPEN` (somebody left and the seat is offered, #544)."
+          },
+          "called_off_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalledOffReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) More arrive with the tickets that call a booked game off (#544, #547)."
           },
           "needs_you": {
             "type": "boolean",
@@ -12045,9 +12098,16 @@
             "$ref": "#/components/schemas/BookedClubSchema"
           },
           "court_name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Court Name",
-            "description": "What the club calls the court \u2014 *Court 2*."
+            "description": "What the club calls the court \u2014 *Court 2*. `null` until the club gives it: an On request club gives it with its yes."
           },
           "sides": {
             "$ref": "#/components/schemas/BookedSidesSchema"
@@ -12064,6 +12124,7 @@
           "sport",
           "kind",
           "status",
+          "called_off_reason",
           "needs_you",
           "starts_at",
           "club",
@@ -12093,7 +12154,7 @@
             },
             "type": "array",
             "title": "Games",
-            "description": "Every game the reader booked, **soonest first** \u2014 the ones that are over too; a client shelves an ended card as it chooses. A game a Classic play challenge opened is not here."
+            "description": "Every game the reader booked \u2014 and every game of theirs an On request club has, or had, to answer \u2014 **soonest first**, the ones that are over too; a client shelves an ended card as it chooses. A game a Classic play challenge opened is not here."
           }
         },
         "type": "object",
@@ -14441,7 +14502,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/ProposalStatus",
-            "description": "`FILLING` \u2014 seats are open: *Filling \u00b7 `in_count` of `seats` in*. `WAITING_FOR_THE_CLUB` \u2014 every seat is In and an On request club has still to say yes; nobody pays until it does. `FILLED` \u2014 booked: `GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, `COURT_HOUR_LOST` \u2014 it ended unfilled."
+            "description": "`FILLING` \u2014 seats are open: *Filling \u00b7 `in_count` of `seats` in*. `WAITING_FOR_THE_CLUB` \u2014 every seat is In and an On request club has still to say yes; nobody pays until it does, and the book-by no longer ends it. `FILLED` \u2014 booked: `GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, `COURT_HOUR_LOST` \u2014 it ended unfilled. `TURNED_DOWN` \u2014 its On request club refused it or did not answer: nobody paid, and the people In are dealt a new card first."
           },
           "actions": {
             "items": {
@@ -14449,7 +14510,7 @@
             },
             "type": "array",
             "title": "Actions",
-            "description": "What the reader may do now, in the screen's order: `YES` and `NO` (*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in its place while the club decides \u2014 *Leave the game* with its sheet, sent as the withdrawal, `DELETE /proposals/{id}/yes` \u2014 and `CONFIRM_PAYMENT` when their seat waits on a refused payment (`your_payment`). Empty once the game is over or their answer is final."
+            "description": "What the reader may do now, in the screen's order: `YES` and `NO` (*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in its place while the club decides \u2014 *Leave the game* with its sheet, sent as the withdrawal, `DELETE /proposals/{id}/yes`, which also calls off the request to the club \u2014 and `CONFIRM_PAYMENT` when their seat waits on a refused payment (`your_payment`). Empty once the game is over or their answer is final."
           },
           "your_payment": {
             "anyOf": [
@@ -14557,7 +14618,8 @@
           "FILLED",
           "EXPIRED",
           "WITHDRAWN",
-          "COURT_HOUR_LOST"
+          "COURT_HOUR_LOST",
+          "TURNED_DOWN"
         ],
         "title": "ProposalStatus",
         "description": "Where a proposal stands for its details (the mechanics \u00a714.2)."
@@ -17162,6 +17224,12 @@
               }
             ],
             "description": "Present when this yes booked the game: every seat was charged, and the booking and its Game are open. `null` otherwise."
+          },
+          "waiting_for_the_club": {
+            "type": "boolean",
+            "title": "Waiting For The Club",
+            "description": "This yes filled the game at an **On request** club: it went to the club, which confirms it within its time to confirm, and nobody pays until it does \u2014 the charge and *It's a game!* follow its yes. The game is on Home as `WAITING_FOR_THE_CLUB`.",
+            "default": false
           },
           "your_payment": {
             "anyOf": [

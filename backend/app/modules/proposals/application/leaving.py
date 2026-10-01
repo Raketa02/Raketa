@@ -11,6 +11,9 @@ game that already stopped filling is left as it is.
 
 Until the delivery lands, a yes from the leaver is refused already: a yes asks
 the pool who is in it now.
+
+**A game waiting for its club is not booked yet** (#543), so the leaver's yes on
+it is withdrawn too, and the request with it — as their own *Leave* would.
 """
 
 from __future__ import annotations
@@ -19,17 +22,26 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Instant
-from app.modules.proposals.domain.ports import ProposalDirectory, ProposalRepository
+from app.modules.proposals.domain.ports import (
+    ClubRequests,
+    ProposalDirectory,
+    ProposalRepository,
+)
 from app.modules.proposals.domain.proposal import Standing
 
 
 @final
 class WithdrawALeaversYeses:
     def __init__(
-        self, *, proposals: ProposalRepository, directory: ProposalDirectory
+        self,
+        *,
+        proposals: ProposalRepository,
+        directory: ProposalDirectory,
+        requests: ClubRequests,
     ) -> None:
         self._proposals = proposals
         self._directory = directory
+        self._requests = requests
 
     async def execute(self, *, pool_id: UUID, player_id: UUID, at: Instant) -> int:
         """Withdraw every live yes of this player in this pool. Answers how many
@@ -43,7 +55,12 @@ class WithdrawALeaversYeses:
             proposal = await self._proposals.load(yes.proposal_id)
             if proposal is None or proposal.standing_at(at) is not Standing.FILLING:
                 continue
+            was_waiting = proposal.waiting_for_the_club
             proposal.withdraw_yes(player_id, at=at)
             await self._proposals.save(proposal)
+            if was_waiting and not proposal.waiting_for_the_club:
+                await self._requests.withdraw(
+                    proposal.proposal_id, player_ids=(player_id,), at=at
+                )
             withdrawn += 1
         return withdrawn

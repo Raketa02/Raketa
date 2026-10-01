@@ -21,7 +21,9 @@ profile) — and, for the fill (#541), a court for a full game and its booking
 (bookings), and every seat's share, all or nothing (payments) — and, for Home
 and the details (#542), a player's booked games and each seat's check-in code
 (bookings), where each game's result stands (games), and how far a club is from
-a player (the Player profile and clubs).
+a player (the Player profile and clubs) — and, for an On request club (#543), the
+request a full game is put to it as, and its answer (bookings), and what each
+player is called on the club's list of them (users).
 """
 
 from __future__ import annotations
@@ -34,13 +36,13 @@ from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.scorable import LevelReading
-from app.kernel import Instant, Sport, invariant
+from app.kernel import SPORT_SPECS, Instant, Minutes, Sport, invariant
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.deck import CardForecast, SellingTerms, Sides
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
 from app.modules.proposals.domain.home import BookedGame, CheckIn, GameResult
 from app.modules.proposals.domain.pool import Pool
-from app.modules.proposals.domain.proposal import Proposal
+from app.modules.proposals.domain.proposal import ClubAnswer, Proposal
 from app.modules.proposals.domain.proposer import CourtHourOnSale, PoolClubs
 
 # --------------------------------------------------------------------------- #
@@ -110,7 +112,14 @@ class ProposalDirectory(Protocol):
 
     async def past_book_by(self, *, now: Instant) -> Sequence[UUID]:
         """Every proposal whose book-by has passed and whose ending nobody has
-        recorded — **candidates, not conclusions**: the aggregate decides."""
+        recorded, but a game waiting for its club — **candidates, not
+        conclusions**: the aggregate decides."""
+        ...
+
+    async def turned_down_in(self, pool_id: UUID, *, now: Instant) -> Sequence[UUID]:
+        """Every game in this pool its club turned down whose hour is still
+        ahead, soonest first — **candidates**: the aggregate says which still
+        owe their people a new card (#543)."""
         ...
 
     async def filling_in(self, pool_id: UUID, *, now: Instant) -> Sequence[UUID]:
@@ -411,11 +420,13 @@ class WantedKinds(Protocol):
 @dataclass(frozen=True, slots=True)
 class BookableCourt:
     """The court a full game would be booked on — the first free one of its
-    sport at its hour — and when the club's free cancellation ends for it."""
+    sport at its hour — when the club's free cancellation ends for it, and how
+    long an On request club has to answer for it."""
 
     court_id: UUID
     name: str
     cut_off: Instant
+    time_to_confirm: Minutes
 
 
 @final
@@ -452,6 +463,127 @@ class GameBookings(Protocol):
         opened. The booking takes the proposal's id. ``CourtJustTaken`` when
         another game claimed the court a moment before — the transaction is
         spent, and the caller tries again from the start."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# On request (#543)
+# --------------------------------------------------------------------------- #
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class GameToAsk:
+    """A full game at an On request club, nobody paid: what its request to the
+    club holds — the court held for the answer, and the sides already drawn."""
+
+    proposal_id: UUID
+    pool_id: UUID
+    club_id: UUID
+    sport: Sport
+    kind: SearchMode
+    start: Instant
+    share_grosze: int
+    first_side: tuple[UUID, ...]
+    second_side: tuple[UUID, ...]
+    court: BookableCourt
+    answer_by: Instant
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ClubRequest:
+    """A full game put to its On request club, as its booking records it."""
+
+    booking_id: UUID
+    club_id: UUID
+    sport: Sport
+    kind: SearchMode
+    start: Instant
+    share_grosze: int
+    #: The court reserved for the answer — given to the players with the club's
+    #: yes.
+    court_name: str
+    first_side: tuple[UUID, ...]
+    second_side: tuple[UUID, ...]
+    cut_off: Instant
+    answer_by: Instant
+    #: Still waiting for the club's answer.
+    waiting: bool
+
+    @property
+    def players(self) -> tuple[UUID, ...]:
+        return (*self.first_side, *self.second_side)
+
+    @property
+    def price_grosze(self) -> int:
+        """The court's price for the hour: every seat's share."""
+
+        return self.share_grosze * SPORT_SPECS[self.sport].players
+
+
+@runtime_checkable
+class ClubRequests(Protocol):
+    """**A demand of the Bookings context**: a full game put to its On request
+    club, and the club's answer (the mechanics §16.3, §16.8). Every act is in
+    the caller's transaction."""
+
+    async def ask(self, game: GameToAsk, *, at: Instant) -> None:
+        """Put the game to its club, holding its court — or put it again, once
+        a withdrawn request's game is full again — and tell the club's desk.
+        ``CourtJustTaken`` when another game claimed the court a moment
+        before: the transaction is spent, and the caller tries again."""
+        ...
+
+    async def find(self, booking_id: UUID) -> ClubRequest | None:
+        """The request for this game, waiting or answered — ``None`` for a
+        game never put to a club."""
+        ...
+
+    async def waiting_at(self, club_id: UUID) -> Sequence[ClubRequest]:
+        """Every request at this club still waiting for its answer, the one due
+        first, first."""
+        ...
+
+    async def unanswered(self, *, now: Instant) -> Sequence[UUID]:
+        """Every request whose answer was due by ``now`` and never came —
+        candidates, the longest overdue first."""
+        ...
+
+    async def accept(self, booking_id: UUID, *, at: Instant) -> UUID:
+        """The club's yes, every seat paid: the Game opens on the held court
+        and the booking is booked. Answers the Game."""
+        ...
+
+    async def turn_down(
+        self,
+        booking_id: UUID,
+        *,
+        answer: ClubAnswer,
+        reason: str | None,
+        at: Instant,
+    ) -> None:
+        """Called off: refused, with the club's note, or never answered."""
+        ...
+
+    async def withdraw(
+        self, booking_id: UUID, *, player_ids: tuple[UUID, ...], at: Instant
+    ) -> bool:
+        """These players' seats opened while the game waited: the request is
+        off, and nobody keeps a seat on it. Whether one was waiting to
+        withdraw."""
+        ...
+
+
+@runtime_checkable
+class PlayerNames(Protocol):
+    """What each player is called — **the Name, never the nickname**
+    (``docs/adr/0171``) — the one thing the club sees of a player on a request
+    (the mechanics §16.14)."""
+
+    async def names_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        """Each of these players' Names; an account that can no longer be named
+        is absent."""
         ...
 
 

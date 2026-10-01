@@ -94,8 +94,12 @@ class ReadBookingDetails:
         game = await self._bookings.find(booking_id)
         if game is None or not game.has_a_seat_for(reader):
             raise BookingNotFound()
-        result = (await self._results.of([game.game_id], reader=reader, now=now)).get(
-            game.game_id
+        result = (
+            None
+            if game.game_id is None
+            else (await self._results.of([game.game_id], reader=reader, now=now)).get(
+                game.game_id
+            )
         )
         state = state_of(game, result, now=now)
         names = await self._clubs.names_of([game.club_id])

@@ -63,6 +63,7 @@ class SellableClubCourts:
         return CourtForTheGame(
             court=BookedCourt(court_id=court.court_id, name=court.court_name),
             cut_off_hours=offer.settings.cut_off_hours,
+            time_to_confirm_minutes=offer.settings.time_to_confirm_minutes,
         )
 
 

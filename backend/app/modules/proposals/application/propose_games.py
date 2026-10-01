@@ -5,8 +5,10 @@
 the members free and fitting for them → *Picked for you* cards; the seats a no
 left and the unanswered seats of a pick at half In → next best fits; the cards
 whose last court at their club and hour went → lost, and the people who were In
-dealt a new card first. What to do is decided by one pure batch
-(``domain/proposer.py``); this reads its facts and applies it.
+dealt a new card first — as are the people on a game an On request club turned
+down (#543), never where it turned them down, by the first run that finds them
+an hour. What to do is decided by
+one pure batch (``domain/proposer.py``); this reads its facts and applies it.
 
 **Every fact is read live and once per pool**, one read per provider where the
 provider allows: the pool's members and clubs, the games filling in it, every
@@ -64,7 +66,7 @@ from app.modules.proposals.domain.limits import (
 )
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.ports import (
-BookedGames,
+    BookedGames,
     CourtHours,
     GamesAndMoneyRepository,
     InPlay,
@@ -103,13 +105,18 @@ class Proposed:
     made: int = 0
     dealt: int = 0
     lost: int = 0
+    #: Turned-down games whose people were dealt a new card first, or found
+    #: none.
+    redealt: int = 0
     refused: int = 0
 
     @property
     def anything(self) -> bool:
         """Whether the run changed anything, or was refused anything."""
 
-        return bool(self.made or self.dealt or self.lost or self.refused)
+        return bool(
+            self.made or self.dealt or self.lost or self.redealt or self.refused
+        )
 
     def __add__(self, other: "Proposed") -> "Proposed":
         return Proposed(
@@ -117,6 +124,7 @@ class Proposed:
             made=self.made + other.made,
             dealt=self.dealt + other.dealt,
             lost=self.lost + other.lost,
+            redealt=self.redealt + other.redealt,
             refused=self.refused + other.refused,
         )
 
@@ -190,6 +198,7 @@ class ProposeGames:
             return Proposed()
         members = await self._pools.members_of(pool)
         filling = await self._filling(pool, now)
+        owed = await self._owed(pool, now)
         end = max(
             [now + HORIZON, *(proposal.start + GAME_LENGTH for proposal in filling)]
         )
@@ -206,7 +215,7 @@ class ProposeGames:
             sport
             for sport in Sport
             if any(hour.sport is sport for hour in hours)
-            or any(proposal.sport is sport for proposal in filling)
+            or any(proposal.sport is sport for proposal in (*filling, *owed))
         ]
         done = Proposed(pools=1)
         if not sports:
@@ -239,6 +248,7 @@ class ProposeGames:
                 hours=[hour for hour in hours if hour.sport is sport],
                 held=[(club, at) for club, of, at in held if of is sport],
                 filling=in_sport,
+                owed=[proposal for proposal in owed if proposal.sport is sport],
                 now=now,
             )
             done += await self._apply(pool, sport, batch, now)
@@ -253,6 +263,17 @@ class ProposeGames:
             if proposal is not None and proposal.standing_at(now) is Standing.FILLING:
                 filling.append(proposal)
         return filling
+
+    async def _owed(self, pool: Pool, now: Instant) -> list[Proposal]:
+        """This pool's games a club turned down whose people are still owed a
+        new card first."""
+
+        owed: list[Proposal] = []
+        for proposal_id in await self._directory.turned_down_in(pool.id, now=now):
+            proposal = await self._proposals.load(proposal_id)
+            if proposal is not None and proposal.owes_a_new_card:
+                owed.append(proposal)
+        return owed
 
     async def _members(
         self, members: Sequence[UUID], sport: Sport, now: Instant
@@ -277,11 +298,13 @@ class ProposeGames:
         hours: Sequence[CourtHourOnSale],
         held: Sequence[tuple[UUID, Instant]],
         filling: Sequence[Proposal],
+        owed: Sequence[Proposal],
         now: Instant,
     ) -> Batch:
         # Everybody a card could hold: the members, and whoever is still In or
         # named on a game filling — a leaver included, since their yes stands
-        # until the delivery of their leaving withdraws it.
+        # until the delivery of their leaving withdraws it — or In on a game
+        # owed a new card.
         everybody = sorted(
             {
                 *(member.player_id for member in members),
@@ -290,6 +313,7 @@ class ProposeGames:
                     for proposal in filling
                     for player in (*proposal.yeses, *named_on(proposal))
                 ),
+                *(player for proposal in owed for player in proposal.yeses),
             },
             key=str,
         )
@@ -307,6 +331,7 @@ class ProposeGames:
             hours=hours,
             held=held,
             filling=filling,
+            owed=owed,
             balance=self._balance,
             now=now,
         )
@@ -319,8 +344,18 @@ class ProposeGames:
         done = Proposed()
         for proposal_id in batch.lost:
             done += await self._act(self._lose(proposal_id, now), Proposed(lost=1))
+        dealt_after: set[UUID] = set()
         for pick in batch.picks:
-            done += await self._act(self._pick(pool, sport, pick), Proposed(made=1))
+            made = await self._act(self._pick(pool, sport, pick), Proposed(made=1))
+            done += made
+            if made.made and pick.after is not None:
+                dealt_after.add(pick.after)
+        for proposal_id in batch.redealt:
+            # Owed until its people's card is really on the table.
+            if proposal_id in dealt_after:
+                done += await self._act(
+                    self._redealt(proposal_id, now), Proposed(redealt=1)
+                )
         for deal in batch.deals:
             done += await self._act(self._dealt(deal, now), Proposed(dealt=1))
         return done
@@ -343,6 +378,17 @@ class ProposeGames:
         await self._proposals.save(proposal)
         # A payment a player confirmed for it is let go with the card (#541).
         await self._undecided.release(proposal_id, keeping=(), at=now)
+        await self._uow.commit()
+        return True
+
+    async def _redealt(self, proposal_id: UUID, now: Instant) -> bool:
+        """The people on a turned-down game were dealt their new card: it owes
+        nothing more."""
+
+        proposal = await self._proposals.load(proposal_id)
+        if proposal is None or not proposal.redeal(at=now):
+            return False
+        await self._proposals.save(proposal)
         await self._uow.commit()
         return True
 

@@ -10,7 +10,7 @@ from app.application.events import (
     EventCatalog,
 )
 from app.application.events.deliver_event_batch import EventBatch
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.events.event_delivery_worker import (
     EventWorker,
@@ -222,9 +222,13 @@ class EventRuntime:
             ),
         )
         # A leaver's yeses are withdrawn in the transaction that delivers the
-        # leaving, so this one needs the batch's session too.
+        # leaving, so this one needs the batch's session too — and a request a
+        # game of theirs waits on goes with them (#543).
         subscribe_the_pool_leaver(
-            dispatcher, build_withdraw_a_leavers_yeses(session, runtime=self)
+            dispatcher,
+            build_withdraw_a_leavers_yeses(
+                session, settings=get_settings(), runtime=self
+            ),
         )
         # And what changed, for this process's proposer, when one is listening.
         if proposer_due is not None:
