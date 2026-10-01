@@ -11,12 +11,14 @@ paths:
   - "app/modules/proposals/application/leave_the_game.py"
   - "app/modules/proposals/application/cut_off.py"
   - "app/modules/proposals/application/resume_paused_yeses.py"
+  - "app/modules/proposals/application/rescues.py"
+  - "app/modules/proposals/domain/rescues.py"
 ---
 
 # Bookings and the fill
 
-Decisions that are load-bearing and not obvious from the code (#541, #543, #544; ADR-0189
-§2–§5; the mechanics §11–§13, §15.4, §16.8, §16.12).
+Decisions that are load-bearing and not obvious from the code (#541, #543, #544, #545;
+ADR-0189 §2–§5; the mechanics §10.1, §11–§13, §15.4, §16.8, §16.12).
 
 - **The last yes books the game, in that yes's own transaction** (`proposals/application/fill.py`).
   `SayYes` loads the proposal **locked** (`load_for_update`, `FOR UPDATE` on its row — SQLite
@@ -177,8 +179,9 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544;
   opens (`SeatLeft` — the booking `SEAT_OPEN`, their `booking_seats` row kept with `left_at`,
   the Game's seat vacated through games' own `VacateSeat`, so they drop out of the room, whose
   members are the line-up) and their charge is refunded **less the card fee**; **after it**
-  the seat opens and stays paid — the refund on replacement is #545's; **while the club
-  decides** it is `WithdrawYes`' act (#543); **after the start** `game_has_started`. What
+  the seat opens and stays paid — refunded, less the fee, when a rescue takes it (below);
+  **while the club decides** it is `WithdrawYes`' act (#543); **after the start**
+  `game_has_started`. What
   leaving would cost is on the details before the player leaves (`leaving`: the share less
   `card_fee_on`, the payments' **estimate** — Stripe's EEA price, 1.5 % + 1 zł, which the
   fake withholds exactly). **The cut-off job** (`cut-off`, see `jobs.md`) calls off every
@@ -192,9 +195,9 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544;
   `refunded_grosze` from the cut-off on, before the job runs. A seat left **after** the
   cut-off lets the game go ahead short: at its hour the Game's standing is **`STARTED_SHORT`**
   — derived from `starts_at` and the line-up, refusing a result (`the_game_started_short`),
-  in no tally — and Home reads *uncounted · `SEAT_EMPTY`*. **Until rescues (#545) every seat
-  that opened stays open**: `open_since`, `left_before_the_cut_off` and `keeping_of` all say
-  so in a comment, and are where #545's `SeatRescued` must reach.
+  in no tally — and Home reads *uncounted · `SEAT_EMPTY`*. **A seat a rescue took is not
+  open**: `open_since`, `open_before_the_cut_off`, `short_from` and `keeping_of` read the
+  departures still open (#545, below).
 - **Refunds are decided in the act and made from the outbox** (`payments/application/refunds.py`,
   `SeatCharge.refund`): `SeatChargeRefundDecided` (withhold the fee, or not) in the leaving's
   or the call-off's transaction; `SettleSeatCharges` captures first if the capture's own
@@ -217,3 +220,47 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544;
   room for (`YesResumed`, projected `YES`) — and a yes that comes back as a game's last seat
   **fills it** through the fill. One that cannot come back (filled without them, an hour now
   booked, a full week, no longer In) stays paused, silent.
+- **A seat a leaver opened is a rescue, and the first join wins** (#545;
+  `proposals/application/rescues.py`, rules in `proposals/domain/rescues.py`,
+  `bookings/application/rescues.py`; the mechanics §8.1, §10.1, §12.3, §19). **Offered**
+  while the booking is `SEAT_OPEN` and not short at its cut-off — **until the cut-off whatever
+  the number of open seats, then until the start** (`Booking.rescuable_at`) — to every member
+  of the pool who **fits** everybody on it (`PlayerFit`, the kind's window), wants its kind
+  (their Play intent; none declared is nothing), is **free for the hour** in their week, has no
+  game then, and is within their Games & money; never to somebody on it or who left it
+  (`domain/rescues.py`'s `offered_to`). **The board** is `GET /pools/{id}/fill-in?sport`
+  (Seats to fill and its badge; *You're In* is still `GET /players/me/live-yeses`); **the
+  deck** deals a `SEAT_OPEN` card (`CourtState.BOOKED`, `court_name`, tiles `paid`) only to the
+  **best fits** — the offered members whose game with them in the seat is forecast most even,
+  three per open seat, the pool's order breaking a tie — and never again to somebody who said
+  no (`POST /bookings/{id}/no`, `NoSaidToTheSeat`; the board keeps the row). Derived at every
+  read: the reader's own offer is asked first, and the whole pool is read only when a seat is
+  offered to them. An outsider offered the seat reads `GET /bookings/{id}` from outside — in
+  the seat, unpaid, with `rescue` (deadline, *fills by the cut-off*), no check-in, no leaving.
+  **Joining** (`POST /bookings/{id}/seats`, `JoinARescue` over `Rescuer`) locks the proposal
+  row first, so two joiners for the last seat are one after the other and **the second reads
+  it gone** (`seat_just_taken`) **before its bank is asked**. Then the money is the fill's own
+  all-or-nothing for one seat — **held and taken in the act, captured from the outbox**
+  (`SeatCharges.charge` with `rescue=True`: its holds keyed `raketa-rescue-…`, the attempt the
+  booking's version), never the provider's `charge_now`, so a crash leaves a hold that lapses
+  rather than money taken for no seat; the joiner is emailed *It's a game! · you paid*.
+  **The seat that opened first is taken, on its side** (`SeatRescued`, naming the leaver it
+  replaces; the joiner's `booking_seats` row), on the Game too through games' own
+  `TakeASeat` — a `LineUpReseated` with one more seat filled, so the room, whose members are
+  the line-up, takes them in — and **the leaver who left at or after the cut-off is refunded,
+  less the card fee, in the same transaction** (`RefundReason.SEAT_TAKEN`, emailed *You've been
+  refunded · your seat was taken*); one who left before it was refunded when they left. The
+  joiner's other yeses at the hour are withdrawn and a full week pauses the rest
+  (`Fill.other_yeses`). **A refused share takes no seat**: `your_payment` names it, a second
+  tap is `payment_to_confirm`, and `POST /seat-charges/{id}/confirmation` on a booked game is
+  **the join again** (`ConfirmPayment` hands a `FILLED` proposal's payment to the `Rescuer`),
+  the confirmed hold taken rather than asked for again — and let go if somebody took the seat
+  first. The last seat taken releases every rescue payment still pending on the game; so
+  does the cut-off's call-off. **The record**: a leaver whose seat was taken broke nothing,
+  whatever becomes of the game; the joiner keeps the game when its hour comes whole.
+  **Seeded by `app/seeds/rescues.py`**: two of the crowd's games she is not on, each left by
+  one of its four — one **past the cut-off by a day** (*fills by the cut-off*, on every run)
+  and one **inside it** (*offered until the start*), which needs an hour of her week that
+  Bonarka still sells inside its 24-hour cut-off — none from Saturday noon to Monday evening,
+  nor late on a weekday afternoon — and is otherwise skipped by name; `assert_the_fill_in`
+  fails a run whose board lacks what was seeded.

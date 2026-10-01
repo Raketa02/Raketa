@@ -41,6 +41,18 @@ class VacateSeatCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class TakeASeatCommand:
+    """A booking's rescue took an open seat on the game it opened (#545):
+    ``bookings`` sends this in the transaction of the rescue, its booking's id
+    where a challenge's is, and the side the leaver sat on."""
+
+    challenge_id: UUID
+    player_id: UUID
+    #: ``A`` or ``B`` — the open seat's side.
+    side: str
+
+
+@dataclass(frozen=True, slots=True)
 class CallOffGameCommand:
     """The court was ended with a seat open, so the game it became is called
     off. ``challenges`` sends this in the transaction of the departure that

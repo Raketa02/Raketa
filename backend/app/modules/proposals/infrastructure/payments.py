@@ -37,6 +37,7 @@ from app.modules.payments.application.refunds import RefundTheSeats
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
+    PaymentToConfirmOn,
     ReleaseCharges,
 )
 from app.modules.payments.domain.card_fee import estimated_card_fee
@@ -65,9 +66,16 @@ class PaymentsSavedMethods:
 
 @final
 class PaymentsSeatCharges:
-    def __init__(self, *, charge: ChargeTheSeats, confirm: ConfirmSeatCharge) -> None:
+    def __init__(
+        self,
+        *,
+        charge: ChargeTheSeats,
+        confirm: ConfirmSeatCharge,
+        to_confirm: PaymentToConfirmOn,
+    ) -> None:
         self._charge = charge
         self._confirm = confirm
+        self._to_confirm = to_confirm
 
     async def charge(
         self,
@@ -86,6 +94,7 @@ class PaymentsSeatCharges:
                 share_grosze=game.share_grosze,
                 court_name=game.court_name,
                 free_to_leave_until=game.free_to_leave_until,
+                rescue=game.rescue,
             ),
             players,
             attempt=attempt,
@@ -109,6 +118,9 @@ class PaymentsSeatCharges:
             seat_charge_id, player_id=player_id, at=at
         )
         return confirmed.game_id
+
+    async def to_confirm(self, game_id: UUID, *, player_id: UUID) -> UUID | None:
+        return await self._to_confirm.execute(game_id, player_id=player_id)
 
 
 @final
@@ -134,6 +146,7 @@ _REASONS = {
     RefundReason.CALLED_OFF_AT_THE_CUT_OFF: (
         PaymentsRefundReason.CALLED_OFF_AT_THE_CUT_OFF
     ),
+    RefundReason.SEAT_TAKEN: PaymentsRefundReason.SEAT_TAKEN,
 }
 
 

@@ -104,6 +104,15 @@ class BookingDirectory(Protocol):
         booked — **whether they left it or not**: the record's read (#544)."""
         ...
 
+    async def rescues_in(
+        self, pool_id: UUID, *, sport: Sport, now: Instant
+    ) -> Sequence[UUID]:
+        """Every booking in this pool and sport with a seat open whose hour is
+        still ahead at ``now`` — **the soonest first**, and by id among games at
+        one hour (#545). **Candidates**: the aggregate says whether a seat is
+        there to take — not on a game short at its cut-off."""
+        ...
+
     async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
         """Every booking with a seat open since before its cut-off whose cut-off
         has come by ``now``, the earliest cut-off first — whether or not its
@@ -189,14 +198,23 @@ class GameOpening(Protocol):
 
 @runtime_checkable
 class GameChanges(Protocol):
-    """**A demand of the Games context**: what leaving and the cut-off do to
-    the ordinary Game a booking opened (#544) — exactly what a departure and a
-    call-off do to a completed line-up's game today."""
+    """**A demand of the Games context**: what leaving, a rescue and the
+    cut-off do to the ordinary Game a booking opened (#544, #545) — exactly
+    what a departure, a re-seat and a call-off do to a completed line-up's
+    game today."""
 
     async def vacate(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
         """This player left: their seat on the game is open — and they are out
         of its room, whose members are its line-up. In the caller's
         transaction."""
+        ...
+
+    async def seat(
+        self, booking_id: UUID, player_id: UUID, *, side: str, at: Instant
+    ) -> None:
+        """This player took the open seat on ``side`` (``A`` or ``B``): they
+        are on the game's court — and in its room. In the caller's
+        transaction (#545)."""
         ...
 
     async def call_off(self, booking_id: UUID, *, at: Instant) -> None:

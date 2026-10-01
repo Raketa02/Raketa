@@ -17,7 +17,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`domain/provider.py`), the one port every movement of money goes through, in Raketa's words:
   a setup, a card on file, an authorised payment, a refund with the fee withheld, a club
   account's three states. It already covers what #537, #541, #545 and #548 need, so reach for it
-  rather than widening it. Four things are load-bearing. **Two adapters, one demand suite**:
+  rather than widening it — and a rescue (#545) reaches for the hold, not `charge_now`, which
+  has no caller: one share held and taken in the act, as the fill's are. Four things are
+  load-bearing. **Two adapters, one demand suite**:
   `StripePayments` (Connect direct charges on the club's account, Accounts v2 with
   `fees_collector`/`losses_collector` = `stripe`, v1 Customers, a clone per charge, a key on every
   write) and `FakePayments`, controlled by **the card the phone entered** — Stripe's own five test

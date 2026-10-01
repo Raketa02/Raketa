@@ -187,6 +187,29 @@ class LineUp:
             for seating in self.seatings
         )
 
+    def seated(self, player_id: UUID, *, side: GameSide) -> "LineUp":
+        """The same court with this person in the first open seat on ``side``
+        — a booking's rescue (#545). They must not be on it, and the side must
+        have a seat open."""
+
+        invariant(
+            self.side_of(player_id) is None,
+            "a seat taken by somebody already on the court",
+        )
+        first_open = next(
+            (
+                index
+                for index, seating in enumerate(self.seatings)
+                if seating.side is side and seating.is_open
+            ),
+            None,
+        )
+        invariant(first_open is not None, f"no seat open on side {side.value}")
+        return LineUp.of(
+            Seating(side=side, player_id=player_id) if index == first_open else seating
+            for index, seating in enumerate(self.seatings)
+        )
+
     def side_of(self, player_id: UUID) -> GameSide | None:
         """Which side this person is on, or ``None`` if they are not on the court."""
 

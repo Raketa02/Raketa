@@ -11,7 +11,8 @@ holds its court hour, as a booked one does, and a called-off one holds nothing;
 only a **booked** game is a game in a player's week or a group's *Games* — whole,
 or with a seat open (#544); and a player's games are every booking they have a
 seat on, whatever it came to — and nobody keeps a seat on a request taken back
-because a seat opened, and a leaver no longer has one.
+because a seat opened, and a leaver no longer has one. **A rescue is a seat row
+like any other** (#545): the game is the joiner's from the moment they take it.
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.infrastructure.database.stored_time import stored_instant
-from app.kernel import Instant
+from app.kernel import Instant, Sport
 from app.modules.bookings.domain.booking import Booking, BookingState
 from app.modules.bookings.domain.errors import CourtTaken
 from app.modules.bookings.domain.events import (
@@ -38,7 +39,9 @@ from app.modules.bookings.domain.events import (
     BookingTimedOut,
     CalledOffAtCutOff,
     RequestWithdrawn,
+    NoSaidToTheSeat,
     SeatLeft,
+    SeatRescued,
 )
 from app.modules.bookings.domain.ports import HeldCourtHour
 from app.modules.bookings.infrastructure.booking_models import (
@@ -151,6 +154,23 @@ class EventSourcedBookingRepository:
                 )
                 .values(left_at=event.occurred_at)
             )
+        elif isinstance(event, SeatRescued):
+            # The row before its seat, as a request's are.
+            await self._row(
+                event.booking_id,
+                state=booking.state.value,
+                open_since=booking.open_since,
+            )
+            self._session.add(
+                BookingSeatORM(
+                    booking_id=event.booking_id,
+                    player_id=event.player_id,
+                    side=event.side,
+                )
+            )
+        elif isinstance(event, NoSaidToTheSeat):
+            # A no to a card is the booking's to fold; no read asks it of a row.
+            pass
         elif isinstance(event, CalledOffAtCutOff):
             await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
         else:
@@ -307,6 +327,21 @@ class SqlAlchemyBookingDirectory:
                 BookingORM.answer_by <= now,
             )
             .order_by(BookingORM.answer_by, BookingORM.id)
+        )
+        return list(rows.all())
+
+    async def rescues_in(
+        self, pool_id: UUID, *, sport: Sport, now: Instant
+    ) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingORM.id)
+            .where(
+                BookingORM.pool_id == pool_id,
+                BookingORM.sport == sport.value,
+                BookingORM.state == BookingState.SEAT_OPEN.value,
+                BookingORM.start > now,
+            )
+            .order_by(BookingORM.start, BookingORM.id)
         )
         return list(rows.all())
 

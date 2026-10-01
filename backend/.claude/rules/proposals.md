@@ -127,3 +127,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   in this context's words signed in `infrastructure/`. The details carry `leaving` (what
   *Leave the game* costs now) beside `open_seats`, `uncounted_reason` and
   `money.refunded_grosze`.
+- **Rescues are Proposals' too** (#545; see `bookings.md`): *Fill in*'s Seats to fill
+  (`GET /pools/{id}/fill-in`), the deck's `SEAT_OPEN` cards to a rescue's best fits, the
+  booking's details for an outsider offered the seat, taking it (`POST /bookings/{id}/seats`)
+  and a no to its card (`POST /bookings/{id}/no`) — over `PlayerBookings.rescues_in`,
+  `BookedGameChanges.rescue`/`say_no_to_the_seat`, `SeatCharges` (`rescue=True`, `to_confirm`) and
+  `SeatRefunds` (`SEAT_TAKEN`). The Games badge still counts cards with somebody **In**: a
+  rescue's players have paid, and are not In.

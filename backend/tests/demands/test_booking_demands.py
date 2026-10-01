@@ -36,6 +36,7 @@ from app.modules.bookings.domain.ports import (
     GameOpening,
 )
 from app.modules.games.domain.game import Game
+from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.standing import GameStanding
 from app.shared.ids import new_uuid
 from tests.api.administration_world import club_signs_up
@@ -227,3 +228,28 @@ async def test_a_call_off_after_the_hour_leaves_a_game_that_started_short(
     assert (await _game(session, booking_id)).standing_at(
         late
     ) is GameStanding.STARTED_SHORT
+
+
+@pytest.mark.parametrize("implementation", registered(GameChanges))
+async def test_a_rescue_takes_the_open_seat_on_the_leaver_s_side(
+    implementation, session
+):
+    """#545: the seat a leaver opened is taken by somebody else, on its side —
+    and they are on the game's court."""
+
+    changes: GameChanges = implementation.build(session)
+    booking_id = new_uuid()
+    await _opened(session, booking_id)
+    await changes.vacate(
+        booking_id, KUBA, at=instant(MONDAY_MORNING + timedelta(hours=1))
+    )
+    zosia = new_uuid()
+
+    await changes.seat(
+        booking_id, zosia, side="A", at=instant(MONDAY_MORNING + timedelta(hours=2))
+    )
+    await session.commit()
+
+    game = await _game(session, booking_id)
+    assert game.line_up.is_complete
+    assert game.line_up.side_of(zosia) is GameSide.A

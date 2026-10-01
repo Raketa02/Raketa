@@ -15,19 +15,25 @@ want competitive padel as she does.
 **Her booked games** (#541, ``app/seeds/bookings.py``) are seeded on top of the
 same world — two games filled by four yeses, hers last — and read back where
 she would look: her receipts, the club named as the seller, and her games.
+
+**Her rescues** (#545, ``app/seeds/rescues.py``) on top of those: a seat that
+fills by the cut-off on every run, and one offered until the start whenever the
+calendar puts an hour of her week inside the club's cut-off — read back on her
+*Fill in*.
 """
 
 from __future__ import annotations
 
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from app.bootstrap.composition import build_clock, build_rated_player_query
 from app.core.config import get_settings
-from app.kernel import Sport
+from app.kernel import Sport, instant
 from app.modules.clubs.domain.court_hours import local_day
 from app.seeds.bookings import (
     AFTER_THE_CUT_OFF,
@@ -40,10 +46,21 @@ from app.seeds.club_courts import write_the_club_courts
 from app.seeds.clubs import write_the_clubs
 from app.seeds.payments import write_the_payment_methods
 from app.seeds.proposals import IN_ON_EACH, NotEnoughToDeal, write_the_proposals
+from app.seeds.rescues import (
+    FILLS_BY_THE_CUT_OFF,
+    OFFERED_UNTIL_THE_START,
+    seed_the_rescues,
+)
 from app.seeds.runner import seed
-from app.seeds.screens import ScreenIsEmpty, assert_the_group_deck
+from app.seeds.screens import (
+    ScreenIsEmpty,
+    assert_the_fill_in,
+    assert_the_group_deck,
+)
 from tests.api import matchmaking_world as world
 from tests.api.proposals_world import live_ids, saves_a_card, says_yes
+
+WARSAW = ZoneInfo("Europe/Warsaw")
 
 #: Her evenings and her Saturday, which is when the picks are.
 HER_WEEK = [
@@ -333,3 +350,89 @@ async def test_a_second_run_books_nothing_twice(
 
     assert [booking.made for booking in again.bookings] == [False, False]
     assert again.receipts == 2
+
+
+def next_at(now, *, weekday: int, hour: int):
+    """The next ``weekday`` (ISO) at ``hour`` in Kraków after ``now``, so a
+    rescue claim does not depend on the day the suite runs."""
+
+    local = now.astimezone(WARSAW)
+    days = (weekday - local.isoweekday()) % 7 or 7
+    day = (local + timedelta(days=days)).date()
+    return instant(datetime(day.year, day.month, day.day, hour, tzinfo=WARSAW))
+
+
+async def test_her_rescues_fill_by_the_cut_off_and_until_the_start_on_a_friday(
+    client, session_factory, payments, now, under_it
+):
+    """At ten on a Friday her Friday evening is inside Bonarka's cut-off and next
+    week's evenings are past it: both states, and a second run seeds neither
+    again."""
+
+    _, proposals = await seeded_world(client, session_factory, payments, now)
+    bookings = await book_her_games(
+        session_factory, settings=get_settings(), now=now, seeded=proposals
+    )
+    friday = next_at(now, weekday=5, hour=10)
+
+    seeded = await seed_the_rescues(
+        session_factory,
+        settings=get_settings(),
+        now=friday,
+        seeded=proposals,
+        bookings=bookings,
+    )
+
+    assert seeded.skipped is None
+    assert [rescue.state for rescue in seeded.rescues] == [
+        FILLS_BY_THE_CUT_OFF,
+        OFFERED_UNTIL_THE_START,
+    ]
+    before, after = seeded.rescues
+    assert before.start >= friday + timedelta(hours=48)
+    assert friday < after.start < friday + timedelta(hours=24)
+    line = await assert_the_fill_in(
+        session_factory,
+        settings=get_settings(),
+        now=friday,
+        expects_after_the_cut_off=True,
+    )
+    assert line.endswith("2 seat(s) to fill — 1 by the cut-off, 1 until the start")
+    again = await seed_the_rescues(
+        session_factory,
+        settings=get_settings(),
+        now=friday,
+        seeded=proposals,
+        bookings=bookings,
+    )
+    assert [rescue.made for rescue in again.rescues] == [False, False]
+
+
+async def test_on_a_sunday_only_the_seat_that_fills_by_the_cut_off_is_seeded(
+    client, session_factory, payments, now, under_it
+):
+    """Her week has no hour from Saturday afternoon to Tuesday evening, so a run
+    at noon on a Sunday finds none inside the cut-off — and says so."""
+
+    _, proposals = await seeded_world(client, session_factory, payments, now)
+    bookings = await book_her_games(
+        session_factory, settings=get_settings(), now=now, seeded=proposals
+    )
+    sunday = next_at(now, weekday=7, hour=12)
+
+    seeded = await seed_the_rescues(
+        session_factory,
+        settings=get_settings(),
+        now=sunday,
+        seeded=proposals,
+        bookings=bookings,
+    )
+
+    assert [rescue.state for rescue in seeded.rescues] == [FILLS_BY_THE_CUT_OFF]
+    assert seeded.skipped is not None and "24-hour cut-off" in seeded.skipped
+    await assert_the_fill_in(
+        session_factory,
+        settings=get_settings(),
+        now=sunday,
+        expects_after_the_cut_off=False,
+    )

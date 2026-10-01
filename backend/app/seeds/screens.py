@@ -71,7 +71,11 @@ from typing import Mapping
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bootstrap.composition import build_candidate_source, build_read_group_deck
+from app.bootstrap.composition import (
+    build_candidate_source,
+    build_read_fill_in,
+    build_read_group_deck,
+)
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
@@ -101,7 +105,10 @@ from app.modules.matchmaking.domain.searches import (
     SearchSurface,
 )
 from app.modules.matchmaking.domain.shortlist import run as run_the_pipeline
-from app.modules.proposals.application.commands import ReadGroupDeckCommand
+from app.modules.proposals.application.commands import (
+    ReadFillInCommand,
+    ReadGroupDeckCommand,
+)
 from app.seeds.catalog import (
     THE_BLANK_WEEK_PLAYER,
     THE_NEWCOMER,
@@ -287,6 +294,48 @@ async def assert_the_group_deck(
     return (
         f"{where}: {len(deck.cards)} card(s), {deck.games_badge} with somebody In, "
         f"the first {deck.cards[0].open_seats_after_your_yes} seat(s) from filling"
+    )
+
+
+async def assert_the_fill_in(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    settings: Settings,
+    now: Instant,
+    expects_after_the_cut_off: bool,
+) -> str:
+    """*The protagonist's Fill in offers her seats to fill* (#545; the screens
+    A3.1, Part D).
+
+    Read through ``ReadFillIn`` — the tab's own read — as her, in the games
+    group. A board with no seat that *fills by* the cut-off, or — when the
+    rescues layer seeded one — none *offered until the start*, fails the run by
+    name: her intent moved, her week no longer covers the hour, a fit gone, a
+    game booked over it.
+    """
+
+    async with session_factory() as session:
+        found = await her_games_group(session)
+        if found is None:
+            raise ScreenIsEmpty(
+                f"Fill in · {THE_POPULATED_PLAYER.slug} has no {GAMES_GROUP} to "
+                f"read — the proposals layer runs first"
+            )
+        her, group_id = found
+        board = await build_read_fill_in(
+            session, settings=settings, clock=FixedClock(at=now)
+        ).execute(ReadFillInCommand(player_id=her, pool_id=group_id, sport=GAMES_SPORT))
+    where = f"Fill in · {THE_POPULATED_PLAYER.slug} · {GAMES_GROUP}"
+    before = sum(1 for row in board.seats_to_fill if row.fills_by_the_cut_off)
+    after = len(board.seats_to_fill) - before
+    if before == 0 or (expects_after_the_cut_off and after == 0):
+        raise ScreenIsEmpty(
+            f"{where} offers {before} seat(s) that fill by the cut-off and {after} "
+            f"offered until the start"
+        )
+    return (
+        f"{where}: {board.badge} seat(s) to fill — {before} by the cut-off, "
+        f"{after} until the start"
     )
 
 

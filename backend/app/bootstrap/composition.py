@@ -125,6 +125,13 @@ from app.modules.proposals.application.expire_proposals import ExpireProposals
 from app.modules.proposals.application.group_deck import ReadGroupDeck
 from app.modules.proposals.application.home import ReadHome
 from app.modules.proposals.application.proposal_details import ReadProposalDetails
+from app.modules.proposals.application.rescues import (
+    SayNoToARescue,
+    JoinARescue,
+    ReadFillIn,
+    RescueOffers,
+    Rescuer,
+)
 from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.making import DealVersion, MakeProposal
@@ -199,6 +206,7 @@ from app.modules.bookings.application.leaving import (
     CallOffAtTheCutOff,
     LeaveTheBooking,
 )
+from app.modules.bookings.application.rescues import SayNoToTheSeat, RescueTheSeat
 from app.modules.bookings.application.requests import (
     BookTheRequest,
     CallOffTheRequest,
@@ -239,6 +247,7 @@ from app.modules.payments.application.refunds import RefundTheSeats
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
+    PaymentToConfirmOn,
     ReadReceipts,
     ReadSeatCharge,
     ReleaseCharges,
@@ -388,6 +397,7 @@ from app.modules.groups.infrastructure.sqlalchemy_group_directory import (
 )
 from app.modules.games.application.dismiss_game import DismissGameOfCourt
 from app.modules.games.application.open_planned_game import OpenPlannedGame
+from app.modules.games.application.take_a_seat import TakeASeat
 from app.modules.games.application.vacate_seat import VacateSeat
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
 from app.modules.conversations.application.destroy_ended_conversations import (
@@ -1511,6 +1521,9 @@ def build_read_group_deck(
         forecasts=build_balance_forecasts(session, runtime=runtime),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
+        offers=build_rescue_offers(
+            session, settings=settings, booked=booked, runtime=runtime
+        ),
         clock=clock,
     )
 
@@ -1601,6 +1614,9 @@ def build_seat_charges(
             session, provider=provider, settings=settings, runtime=runtime
         ),
         confirm=build_confirm_seat_charge(session, provider=provider, runtime=runtime),
+        to_confirm=PaymentToConfirmOn(
+            charges=_seat_charge_repository(session, runtime)
+        ),
     )
 
 
@@ -1626,8 +1642,9 @@ def build_game_bookings(
 def build_booked_game_changes(
     session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
 ) -> BookedGameChanges:
-    """Leaving a booked game, and the cut-off — over the Bookings context's own
-    use cases, the cut-off's email to the club opening its Bookings page (#544)."""
+    """Leaving a booked game, a rescue taking the seat or a no to it, and the
+    cut-off — over the Bookings context's own use cases, the cut-off's email to
+    the club opening its Bookings page (#544, #545)."""
 
     def bookings() -> BookingRepository:
         return build_booking_repository(
@@ -1640,6 +1657,10 @@ def build_booked_game_changes(
         leave=LeaveTheBooking(
             bookings=bookings(), games=build_game_changes(session, runtime=runtime)
         ),
+        rescue=RescueTheSeat(
+            bookings=bookings(), games=build_game_changes(session, runtime=runtime)
+        ),
+        say_no=SayNoToTheSeat(bookings=bookings()),
         call_off=CallOffAtTheCutOff(
             bookings=bookings(),
             games=build_game_changes(session, runtime=runtime),
@@ -1712,6 +1733,7 @@ def build_call_off_short_games(
         ),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -1966,7 +1988,149 @@ def build_confirm_payment(
             session, provider=provider, settings=settings, runtime=runtime
         ),
         undecided=build_undecided_charges(session, runtime=runtime),
+        rescuer=build_rescuer(
+            session,
+            proposals=proposals,
+            provider=provider,
+            settings=settings,
+            runtime=runtime,
+        ),
         uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+# --------------------------------------------------------------------------
+# Rescues: seats to fill (#545)
+# --------------------------------------------------------------------------
+
+
+def build_rescue_offers(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> RescueOffers:
+    """Who a booked game's open seat is offered to, and its best fits — read
+    live over the pool's members (#545). ``booked`` as the deck's."""
+    return RescueOffers(
+        pools=build_pools(session),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        wanted=build_wanted_kinds(session, runtime=runtime),
+        settings=build_games_and_money_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        booked=booked if booked is not None else build_booked_games(session),
+        players=build_players_in_play(session, runtime=runtime),
+        fit=build_player_fit(session, runtime=runtime),
+        forecasts=build_balance_forecasts(session, runtime=runtime),
+    )
+
+
+def build_rescuer(
+    session: AsyncSession,
+    *,
+    proposals: ProposalRepository,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> Rescuer:
+    """Taking an open seat — the joiner's share over this caller's provider,
+    the leaver's refund, the seat on the booking and its Game (#545).
+    ``proposals`` is the caller's, whose row the join locked."""
+    return Rescuer(
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        offers=build_rescue_offers(session, settings=settings, runtime=runtime),
+        guards=build_proposal_guards(session, runtime=runtime),
+        methods=build_saved_methods(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        changes=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        charges=build_seat_charges(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+        refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        fill=build_fill(
+            session,
+            proposals=proposals,
+            provider=provider,
+            settings=settings,
+            runtime=runtime,
+        ),
+    )
+
+
+def build_join_a_rescue(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> JoinARescue:
+    """*I'm in* on an open seat — the phone's, a seed's (#545)."""
+    proposals = build_proposal_repository(
+        session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    return JoinARescue(
+        proposals=proposals,
+        rescuer=build_rescuer(
+            session,
+            proposals=proposals,
+            provider=provider,
+            settings=settings,
+            runtime=runtime,
+        ),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_say_no_to_a_rescue(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> SayNoToARescue:
+    """*Not this time* on a Seat open card (#545)."""
+    return SayNoToARescue(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        offers=build_rescue_offers(session, settings=settings, runtime=runtime),
+        changes=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_read_fill_in(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    booked: BookedGames | None = None,
+    runtime: EventRuntime | None = None,
+) -> ReadFillIn:
+    """A group's *Fill in* tab — Seats to fill and its badge (#545)."""
+    return ReadFillIn(
+        pools=build_pools(session),
+        offers=build_rescue_offers(
+            session, settings=settings, booked=booked, runtime=runtime
+        ),
+        people=build_deck_people(session, settings=settings, runtime=runtime),
+        clubs=build_proposal_club_names(session),
         clock=clock,
     )
 
@@ -2080,6 +2244,7 @@ def build_read_booking_details(
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
         fees=build_card_fees(),
+        offers=build_rescue_offers(session, settings=settings, runtime=runtime),
         clock=clock,
     )
 
@@ -2136,15 +2301,18 @@ def build_game_opening(
 def build_game_changes(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> GameChanges:
-    """What leaving and the cut-off do to a booked game's ordinary Game — the
-    Games context's own departure and call-off (#544)."""
+    """What leaving, a rescue and the cut-off do to a booked game's ordinary
+    Game — the Games context's own departure, re-seat and call-off (#544,
+    #545)."""
     games = build_game_repository(
         session=session,
         event_store=build_domain_event_store(session, runtime=runtime),
         events=build_event_publisher(session, runtime=runtime),
     )
     return LeaveAndCallOffTheGame(
-        vacate=VacateSeat(games=games), call_off=CallOffGame(games=games)
+        vacate=VacateSeat(games=games),
+        seat=TakeASeat(games=games),
+        call_off=CallOffGame(games=games),
     )
 
 

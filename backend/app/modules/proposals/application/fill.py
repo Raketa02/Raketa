@@ -294,7 +294,12 @@ class Fill:
         await self._undecided.release(
             proposal.proposal_id, keeping=frozenset(charged.taken.values()), at=now
         )
-        await self._other_yeses(proposal, now=now)
+        await self.other_yeses(
+            proposal.yeses,
+            booked_id=proposal.proposal_id,
+            start=proposal.start,
+            now=now,
+        )
         return FillOutcome(
             booked=Booked(booking_id=proposal.proposal_id, game_id=game_id)
         )
@@ -345,26 +350,39 @@ class Fill:
         )
         return tuple(sides.yours), tuple(sides.theirs)
 
-    async def _other_yeses(self, booked: Proposal, *, now: Instant) -> None:
-        """Every other yes of the players at the booked hour is withdrawn, and a
-        player whose week this booking fills has their other yeses that week
-        paused (the mechanics §6.6, §11.5)."""
+    async def other_yeses(
+        self,
+        players: Collection[UUID],
+        *,
+        booked_id: UUID,
+        start: Instant,
+        now: Instant,
+    ) -> None:
+        """Every other yes of these players at the booked hour is withdrawn,
+        and a player whose week this booking fills has their other yeses that
+        week paused (the mechanics §6.6, §11.5) — the fill's, and a rescue's
+        for the one who took the seat (#545). **After the booking is saved**,
+        so the week's count already holds it."""
 
-        week = week_of(booked.start)
-        start, end = week_window([week])
+        week = week_of(start)
+        window_start, window_end = week_window([week])
         loaded: dict[UUID, Proposal] = {}
-        for player in booked.yeses:
+        for player in players:
             settings = await self._games_and_money.load(player)
             # The booking was saved before this, and its row flushed: the
             # count already holds it.
             capped = (
-                len(await self._booked.starts_of(player, start=start, end=end))
+                len(
+                    await self._booked.starts_of(
+                        player, start=window_start, end=window_end
+                    )
+                )
                 >= settings.games_per_week
             )
             for yes in await self._directory.live_yeses_of(player, now=now):
-                if yes.proposal_id == booked.proposal_id:
+                if yes.proposal_id == booked_id:
                     continue
-                same_hour = hour_taken(yes.start, [booked.start])
+                same_hour = hour_taken(yes.start, [start])
                 if not same_hour and not (capped and week_of(yes.start) == week):
                     continue
                 other = loaded.get(yes.proposal_id) or await self._proposals.load(

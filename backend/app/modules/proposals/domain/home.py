@@ -124,6 +124,19 @@ class GameResult:
 
 @final
 @dataclass(frozen=True, slots=True)
+class OpenSeat:
+    """A seat a leaver left open on a booked game (#544, #545): the side it
+    is on, and who left it when — which against the cut-off says whether the
+    leaver is refunded when somebody takes it."""
+
+    #: ``A`` — the first side — or ``B``.
+    side: str
+    left_by: UUID
+    left_at: Instant
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class BookedGame:
     """A booked game, as Home and its details read it: the booking's record."""
 
@@ -148,6 +161,15 @@ class BookedGame:
     #: When a seat open since before the club's cut-off calls it off — its
     #: cut-off — or ``None`` while nothing will (#544; ``Booking.short_from``).
     short_from: Instant | None = None
+    #: The seats still open, **the first to open first** — the one a rescue
+    #: takes (#545).
+    open: tuple[OpenSeat, ...] = ()
+    #: Everybody who ever left it: a seat they left is never offered back.
+    leavers: frozenset[UUID] = frozenset()
+    #: Everybody who said no to its *Seat open* card.
+    said_no: frozenset[UUID] = frozenset()
+    #: The booking's stream version — what a rescue's attempts are counted by.
+    version: int = 0
 
     @property
     def players(self) -> tuple[UUID, ...]:

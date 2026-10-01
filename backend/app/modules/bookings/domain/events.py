@@ -19,6 +19,10 @@ their seat open, the game still the others' — and ``CalledOffAtCutOff`` is a
 seat that opened before the club's cut-off still open at it: the game is off,
 and everybody still in is named, to be refunded in full.
 
+**And an open seat is a rescue** (#545): ``SeatRescued`` is somebody taking it
+— the leaver's seat and side, paid at once — and ``NoSaidToTheSeat`` is a member
+the seat was dealt to as a *Seat open* card saying no to it.
+
 Every event carries ``booking_id``, the stream's own key. Sport and kind travel
 as their codes, as a proposal's do.
 """
@@ -175,3 +179,30 @@ class CalledOffAtCutOff:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "player_ids", _uuids(self.player_ids))
+
+
+@dataclass(frozen=True)
+class SeatRescued:
+    """Somebody took a seat a leaver left open — a **rescue** (#545; the
+    mechanics §10.1). ``player_id`` sits where ``replacing`` sat, on ``side``
+    (``A``, the first, or ``B``), and has paid their share; the seat that
+    opened first is the one taken. Whether the leaver is refunded now — they
+    left after the cut-off — is the money's, recorded on their Seat charge."""
+
+    booking_id: UUID
+    player_id: UUID
+    side: str
+    #: The leaver whose seat this was.
+    replacing: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class NoSaidToTheSeat:
+    """A member the open seat was dealt to as a *Seat open* card swiped it
+    away — *not this time* (#545; the mechanics §6.2). Silent and never on
+    their record: the card does not come back to their deck."""
+
+    booking_id: UUID
+    player_id: UUID
+    occurred_at: datetime

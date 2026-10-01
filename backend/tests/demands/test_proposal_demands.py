@@ -1,6 +1,6 @@
 """What ``proposals`` demands of the rest of the platform for Home and a game's
-details (#542), On request (#543), and leaving and the cut-off (#544), run
-against every registered implementation.
+details (#542), On request (#543), leaving and the cut-off (#544), and rescues
+(#545), run against every registered implementation.
 
 **A demand nobody executes is a demand satisfied by accident** (``docs/adr/0098``).
 Every implementation registered in ``app/bootstrap/proposal_demands.py`` is
@@ -76,6 +76,14 @@ def registered(port):
         pytest.param(implementation, id=implementation.name)
         for implementation in implementations_of(port)
     ]
+
+
+def registered_build(port, session):
+    """The first registered implementation of ``port`` — to read back what the
+    one under test wrote."""
+
+    [first, *_] = implementations_of(port)
+    return first.build(session)
 
 
 def _at(hours: int = 0) -> Instant:
@@ -452,6 +460,72 @@ async def test_a_seat_left_before_the_cut_off_calls_the_game_off_at_it(
 
 
 @pytest.mark.parametrize("implementation", registered(BookedGameChanges))
+async def test_a_rescue_takes_the_seat_that_opened_first_and_a_no_is_kept(
+    implementation, session
+):
+    """#545: the first seat to open is the one taken, on its side, and the game
+    is whole again when the last is; a no to its card is recorded once."""
+
+    changes: BookedGameChanges = implementation.build(session)
+    start = _at(5 * 24)
+    booking = await _booked_with_its_game(session, start=start)
+    zosia, marek = new_uuid(), new_uuid()
+    await changes.leave(booking.booking_id, EWA, at=_at(1))
+    await changes.leave(booking.booking_id, KUBA, at=_at(2))
+
+    first = await changes.rescue(booking.booking_id, zosia, at=_at(3))
+    said_no = await changes.say_no_to_the_seat(booking.booking_id, marek, at=_at(4))
+    again = await changes.say_no_to_the_seat(booking.booking_id, marek, at=_at(5))
+    await session.commit()
+
+    assert (first.left_by, first.side, first.left_at) == (EWA, "B", _at(1))
+    assert (said_no, again) == (True, False)
+    bookings = registered_build(PlayerBookings, session)
+    game = await bookings.find(booking.booking_id)
+    assert game is not None
+    assert game.second_side == (TOMEK, zosia)
+    assert [seat.left_by for seat in game.open] == [KUBA]
+    assert game.said_no == frozenset({marek})
+    assert game.leavers == frozenset({EWA, KUBA})
+    second = await changes.rescue(booking.booking_id, marek, at=_at(6))
+    await session.commit()
+    assert second.left_by == KUBA
+    whole = await bookings.find(booking.booking_id)
+    assert whole is not None and whole.open_seats == 0 and whole.open == ()
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerBookings))
+async def test_a_pool_s_rescues_are_its_games_with_a_seat_open_soonest_first(
+    implementation, session
+):
+    bookings: PlayerBookings = implementation.build(session)
+    changes = registered_build(BookedGameChanges, session)
+    later = await _booked_with_its_game(session, start=_at(6 * 24))
+    sooner = await _booked_with_its_game(session, start=_at(5 * 24))
+    whole = await _booked_with_its_game(session, start=_at(4 * 24))
+    for booking in (later, sooner):
+        await changes.leave(booking.booking_id, KUBA, at=_at(1))
+    await session.commit()
+
+    found = [
+        await bookings.rescues_in(booking.pool_id, sport=Sport.PADEL, now=_at(2))
+        for booking in (later, sooner, whole)
+    ]
+    assert [[game.booking_id for game in games] for games in found] == [
+        [later.booking_id],
+        [sooner.booking_id],
+        [],
+    ]
+    assert await bookings.rescues_in(
+        sooner.pool_id, sport=Sport.TENNIS, now=_at(2)
+    ) == []
+    # Its hour come, a game is nobody's rescue.
+    assert await bookings.rescues_in(
+        sooner.pool_id, sport=Sport.PADEL, now=sooner.start
+    ) == []
+
+
+@pytest.mark.parametrize("implementation", registered(BookedGameChanges))
 async def test_a_seat_left_after_the_cut_off_calls_nothing_off(implementation, session):
     changes: BookedGameChanges = implementation.build(session)
     start = _at(5 * 24)
@@ -539,6 +613,24 @@ async def test_a_game_called_off_gives_everybody_still_in_everything_back(
     ola_now = await _charges(session).load(olas.charge_id)
     assert ola_now is not None and ola_now.refund_withholds_fee is False
     assert ola_now.refund_decided_at == _at(1)
+
+
+@pytest.mark.parametrize("implementation", registered(SeatRefunds))
+async def test_a_leaver_whose_seat_was_taken_is_given_back_less_the_card_fee(
+    implementation, session
+):
+    """#545: left after the cut-off, refunded only when somebody took the
+    seat — and, as before it, less the card fee."""
+
+    refunds: SeatRefunds = implementation.build(session)
+    game_id = new_uuid()
+    kubas = await _a_paid_share(session, game_id=game_id, player_id=KUBA)
+
+    await refunds.refund(game_id, [KUBA], reason=RefundReason.SEAT_TAKEN, at=_at(1))
+    await session.commit()
+
+    kuba_now = await _charges(session).load(kubas.charge_id)
+    assert kuba_now is not None and kuba_now.refund_withholds_fee is True
 
 
 @pytest.mark.parametrize("implementation", registered(CardFees))

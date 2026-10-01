@@ -2,7 +2,8 @@
 *It's a game! · you paid*, the booking confirmation, from the club as the
 seller, and *Confirm your payment to keep your seat* — and a refund's two
 (#544): *You left the game · your refund is on its way* and *Game called off ·
-with the refund*.
+with the refund* — and a rescue's (#545): *You've been refunded · your seat was
+taken*, and *Confirm your payment to take the seat*.
 
 **Every notice about money is also emailed**. The
 words live here, beside the use case that queues them (``docs/adr/0186`` §4);
@@ -132,32 +133,48 @@ def confirm_payment_email(
     amount_grosze: int,
     reason: FailureReason,
     app_link: str,
+    rescue: bool = False,
 ) -> OutgoingMessage:
     """*Confirm your payment to keep your seat.* Nobody paid; the seat is open
-    until somebody else takes it."""
+    until somebody else takes it. **On a rescue** (#545) — an open seat on a
+    booked game — *to take the seat*: nothing was charged, and the seat is
+    theirs if they confirm before somebody else takes it."""
 
+    if rescue:
+        subject = "Confirm your payment to take the seat"
+        lines: tuple[str, ...] = (
+            f"You went for the open seat in {_SPORT_WORDS[sport].lower()} at {club} "
+            f"on {_day_and_time(starts_at)}, but your payment didn't go through.",
+            _WHAT_TO_DO[reason].format(amount=zloty(amount_grosze)),
+            "Nothing was charged. If you confirm it before somebody else takes "
+            "the seat, it's yours.",
+        )
+    else:
+        subject = "Confirm your payment to keep your seat"
+        lines = (
+            f"Everybody said yes to {_SPORT_WORDS[sport].lower()} at {club} on "
+            f"{_day_and_time(starts_at)}, but your payment didn't go through.",
+            _WHAT_TO_DO[reason].format(amount=zloty(amount_grosze)),
+            "Nobody has paid, and your seat is open again. If you're back before "
+            "somebody else takes it, the game books and everybody is charged.",
+        )
     return render(
         ButtonEmail(
             kind=CONFIRM_PAYMENT_KIND,
             to=to,
-            subject="Confirm your payment to keep your seat",
-            heading="Confirm your payment to keep your seat",
-            lines=(
-                f"Everybody said yes to {_SPORT_WORDS[sport].lower()} at {club} on "
-                f"{_day_and_time(starts_at)}, but your payment didn't go through.",
-                _WHAT_TO_DO[reason].format(amount=zloty(amount_grosze)),
-                "Nobody has paid, and your seat is open again. If you're back before "
-                "somebody else takes it, the game books and everybody is charged.",
-            ),
+            subject=subject,
+            heading=subject,
+            lines=lines,
             button_label="Open Raketa",
             button_url=app_link,
         )
     )
 
 
-#: The ``kind`` each refund email is queued under (#544).
+#: The ``kind`` each refund email is queued under (#544, #545).
 LEFT_THE_GAME_KIND: Final = "payments.left_the_game.player"
 GAME_CALLED_OFF_KIND: Final = "payments.game_called_off.player"
+SEAT_TAKEN_KIND: Final = "payments.seat_taken.player"
 
 
 def left_the_game_email(
@@ -221,6 +238,46 @@ def game_called_off_email(
                 f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)} — is off: "
                 f"a seat was still empty at the club's cut-off.",
                 f"Your {zloty(refunded_grosze)} is refunded in full by {club}.",
+                "Refunds reach BLIK within hours and cards within up to two weeks.",
+            ),
+            button_label="Open Raketa",
+            button_url=app_link,
+        )
+    )
+
+
+def seat_taken_email(
+    *,
+    to: str,
+    name: str | None,
+    club: str,
+    sport: Sport,
+    starts_at: Instant,
+    share_grosze: int,
+    fee_estimate_grosze: int,
+    app_link: str,
+) -> OutgoingMessage:
+    """*You've been refunded · your seat was taken* (#545; the mechanics §12.3,
+    §17.2) — left after the club's cut-off, so refunded only now that somebody
+    took the seat, less the card fee the bank doesn't return. The amount here is
+    the estimate; what the provider kept back is on the receipt."""
+
+    return render(
+        ButtonEmail(
+            kind=SEAT_TAKEN_KIND,
+            to=to,
+            subject="You've been refunded · your seat was taken",
+            heading=(
+                "Your seat was taken"
+                if name is None
+                else f"Your seat was taken, {name}"
+            ),
+            lines=(
+                f"Somebody took your seat in {_SPORT_WORDS[sport].lower()} at {club} "
+                f"— {_the_hour(starts_at)}.",
+                f"Your {zloty(share_grosze)} share is being refunded by {club}, less "
+                f"the card fee that isn't returned (about "
+                f"{zloty(fee_estimate_grosze)}).",
                 "Refunds reach BLIK within hours and cards within up to two weeks.",
             ),
             button_label="Open Raketa",

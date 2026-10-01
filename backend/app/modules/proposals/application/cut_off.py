@@ -32,6 +32,7 @@ from app.modules.proposals.domain.ports import (
     ProposalRepository,
     RefundReason,
     SeatRefunds,
+    UndecidedCharges,
 )
 
 
@@ -53,12 +54,14 @@ class CallOffShortGames:
         proposals: ProposalRepository,
         games: BookedGameChanges,
         refunds: SeatRefunds,
+        undecided: UndecidedCharges,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._proposals = proposals
         self._games = games
         self._refunds = refunds
+        self._undecided = undecided
         self._uow = uow
         self._clock = clock
 
@@ -90,4 +93,7 @@ class CallOffShortGames:
             reason=RefundReason.CALLED_OFF_AT_THE_CUT_OFF,
             at=now,
         )
+        # A rescue's payment somebody confirmed for a seat here and never took
+        # (#545) is let go with the game: nobody pays it.
+        await self._undecided.release(booking_id, keeping=(), at=now)
         return True

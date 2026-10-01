@@ -64,13 +64,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   club's distance (the Player profile and `clubs`) — and, since #543, an On request club's
   requests and answers (`bookings`) and the players' Names on them (`users`), and since #544
   what happens to a booked game after the fill (`BookedGameChanges`), a paid share given back
-  (`SeatRefunds`) and the card fee on one (`CardFees`). The deck's, the proposer's and the
+  (`SeatRefunds`) and the card fee on one (`CardFees`) — and since #545 a pool's rescues
+  (`PlayerBookings.rescues_in`), a seat taken or declined, and a seat-taken refund. The deck's, the proposer's and the
   fill's ports (#538–#541) were contracted over HTTP only and are owed rows there.
   **The thirteenth, `booking_demands.py`, is Bookings' consumer register** (#543): the first
   free court of a club at an hour with its cut-off and time to confirm, and a club's desk —
   both the Club context's facts — and the Games context's: the ordinary Game a booking opens
-  (`GameOpening`, #541, registered by #544) and what leaving and the cut-off do to it
-  (`GameChanges`, #544).
+  (`GameOpening`, #541, registered by #544) and what leaving, a rescue and the cut-off do
+  to it (`GameChanges`, #544, #545).
   **The fourteenth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
   consumer register as `games_demands.py` stands beside `game_demands.py`: who kept the booked
   games they held a seat on (`BookingHistoryQuery`), *keeps plans*' input.

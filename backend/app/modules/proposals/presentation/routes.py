@@ -2,8 +2,10 @@
 reader's live yeses (#538; the mechanics §6, §10.2; the screens A2.4, A7.3), a
 group's deck and the reader's Games & money (#539; the mechanics §6.6, §8,
 §17.1; the screens A2, A7.1), Home and a game's two details — still filling,
-or booked (#542; the mechanics §14; the screens A4, A8) — and leaving a booked
-game (#544; the mechanics §12.3, §13).
+or booked (#542; the mechanics §14; the screens A4, A8) — leaving a booked
+game (#544; the mechanics §12.3, §13), and rescues: a group's *Fill in*, taking
+an open seat and saying no to one (#545; the mechanics §10.1; the screens A3,
+A4.3).
 
 Mounted on the player surface (``app/api/v1/player.py``). Every route takes a
 player's token and answers for that player only.
@@ -29,13 +31,18 @@ from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
     ConfirmPaymentCommand,
     LeaveTheGameCommand,
+    ReadFillInCommand,
     ReadGroupDeckCommand,
+    RescueCommand,
     SetGamesAndMoneyCommand,
 )
 from app.modules.proposals.presentation.dependencies import (
     ConfirmPaymentDep,
+    SayNoToARescueDep,
+    JoinARescueDep,
     LeaveTheGameDep,
     ReadBookingDetailsDep,
+    ReadFillInDep,
     ReadHomeDep,
     ReadPaymentsToConfirmDep,
     ReadGamesAndMoneyDep,
@@ -50,6 +57,7 @@ from app.modules.proposals.presentation.dependencies import (
 from app.modules.proposals.presentation.schemas import (
     BookingDetailsResponse,
     DepartureResponse,
+    FillInResponse,
     GamesAndMoneyRequest,
     GamesAndMoneyResponse,
     GroupDeckResponse,
@@ -348,7 +356,9 @@ async def set_games_and_money(
             "model": ErrorResponse,
             "description": (
                 "`seat_charge_not_found` — no such charge **for this player**. "
-                "`proposal_not_found` — they are no longer in the game's group."
+                "`proposal_not_found` — they are no longer in the game's group; "
+                "`booking_not_found` on a rescue's payment (#545), which is let "
+                "go."
             ),
         },
         status.HTTP_409_CONFLICT: {
@@ -361,7 +371,11 @@ async def set_games_and_money(
                 + _OVER
                 + " `proposal_is_full` — somebody else took the seat. On both, "
                 "the payment the player confirmed is let go and nobody pays it. "
-                "`live_yeses_exhausted` and `no_longer_fits` as a yes meets them."
+                "`live_yeses_exhausted` and `no_longer_fits` as a yes meets them. "
+                "**On a rescue's payment** (#545), as `POST /bookings/{id}/seats` "
+                "meets them: `seat_just_taken`, `booking_is_called_off`, "
+                "`game_has_started`, `rescue_not_offered` — and the payment is "
+                "let go."
             ),
         },
         status.HTTP_503_SERVICE_UNAVAILABLE: {
@@ -376,7 +390,11 @@ async def set_games_and_money(
         "**asked of the provider**, never taken on the phone's word; held now, it "
         "is the player's yes again — and if theirs was the seat still open, the "
         "game books on it and everybody else is charged then. Answers as a yes "
-        "does. Somebody else took the seat first: the payment is let go."
+        "does. Somebody else took the seat first: the payment is let go.\n\n"
+        "**A rescue's payment** (#545) — refused when the player went for an "
+        "open seat on a booked game — confirmed is **the join again**: the seat "
+        "that opened first is theirs, as `POST /bookings/{id}/seats` takes one, "
+        "and the answer is the join's."
     ),
 )
 async def confirm_payment(
@@ -455,7 +473,15 @@ async def read_home(user: CurrentUserDep, read: ReadHomeDep) -> HomeResponse:
             "model": ErrorResponse,
             "description": (
                 "`booking_not_found` — no such booked game **for this player**: it "
-                "does not exist, or they have no seat on it. One code for both."
+                "does not exist, or they have no seat on it and its open seat is "
+                "not offered to them. One code for all three."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`block_state_unavailable` — for a reader with no seat on it, "
+                "whether they fit the people on it could not be read. Retry."
             ),
         },
     },
@@ -467,7 +493,11 @@ async def read_home(user: CurrentUserDep, read: ReadHomeDep) -> HomeResponse:
         "forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on "
         "the game's day, the reader's check-in code** — a QR payload and a short "
         "code, theirs alone. **The chat is the reader's room whose `game_id` is "
-        "this game's**, in `GET /conversations`. Nothing is recorded."
+        "this game's**, in `GET /conversations`.\n\n"
+        "**A rescue seen from outside** (#545): a member its open seat is "
+        "offered to reads the same game standing in the seat that opened first "
+        "(their tile unpaid — *You?*), with `rescue` — no check-in code, no "
+        "`leaving`. Nothing is recorded."
     ),
 )
 async def read_booking_details(
@@ -523,3 +553,141 @@ async def leave_the_game(
         LeaveTheGameCommand(booking_id=booking_id, player_id=user.id)
     )
     return DepartureResponse(left=left)
+
+
+@pools_router.get(
+    "/{pool_id}/fill-in",
+    response_model=FillInResponse,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`pool_not_found` — no such group, or the reader is not in it. One "
+                "code for both."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`block_state_unavailable` — whether the reader fits the people on "
+                "a game could not be read. Retry."
+            ),
+        },
+    },
+    summary="A group's Fill in",
+    description=(
+        "**Seats to fill** in one sport, and the tab's badge: the open seats of "
+        "the group's **booked** games that lost a player, which the reader fits "
+        "— the pair rule against everybody on the game, the kind their Play "
+        "intent wants — and is free for — the hour in their week, no game of "
+        "theirs then — within their Games & money. **Before the cut-off** a seat "
+        "*fills by* it or the game is off; **after it**, it is *offered until the "
+        "start*. Games still filling are never here — they are the deck's. "
+        "Nothing is recorded."
+    ),
+)
+async def read_fill_in(
+    pool_id: UUID, sport: Sport, user: CurrentUserDep, read: ReadFillInDep
+) -> FillInResponse:
+    fill_in = await read.execute(
+        ReadFillInCommand(player_id=user.id, pool_id=pool_id, sport=sport)
+    )
+    return FillInResponse.from_fill_in(fill_in, reader=user.id)
+
+
+@bookings_router.post(
+    "/{booking_id}/seats",
+    response_model=YesAnswerResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`booking_not_found` — no such booked game, or the reader is not in "
+                "its group. One code for both."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`seat_just_taken` — **the first join wins**: somebody took the "
+                "seat a moment before, or none is open — *Someone just took it*. "
+                "`booking_is_called_off` — the game is off (short at its cut-off). "
+                "`game_has_started` — its hour has begun. `rescue_not_offered` — "
+                "the seat is not one this player is offered (fit, free, Games & "
+                "money, a seat they left); which is not said. "
+                "`payment_to_confirm` — their earlier *I'm in* here waits on their "
+                "bank: confirming it (`details.seat_charge_id`) is the join again. "
+                "`payment_method_required` — no saved method. Nothing was recorded "
+                "and nobody charged."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`block_state_unavailable` — whether the player fits the people on "
+                "the game could not be read. `payments_unavailable` — the provider "
+                "could not be reached to hold the share. Nothing was recorded; "
+                "retry."
+            ),
+        },
+    },
+    summary="Take an open seat",
+    description=(
+        "*I'm in · 27 zł* on a rescue — a Seat open card, a Seats to fill row, "
+        "a rescue's details (the client gives its ten seconds of *Undo* "
+        "first). **Pays at once**: the share is held on the club's account and "
+        "taken, and the player takes **the seat that opened first**, on its "
+        "side — `booked` names the booking and its Game, now on their Home, "
+        "and they are emailed *It's a game! · you paid*; they join the game's "
+        "chat. **The leaver who left after the cut-off is refunded, less the "
+        "card fee, the moment this payment succeeds** (emailed *You've been "
+        "refunded · your seat was taken*); one who left before it was refunded "
+        "when they left. `open_seats` is what is still open. When the share "
+        "could not be held, nothing was taken: `your_payment` names the "
+        "refused payment, and confirming it (`POST /seat-charges/{id}/"
+        "confirmation`) is the join again. A player already on the game is "
+        "answered the same `booked`, and nothing is recorded."
+    ),
+)
+async def join_a_rescue(
+    booking_id: UUID, user: CurrentUserDep, join: JoinARescueDep
+) -> YesAnswerResponse:
+    answer = await join.execute(RescueCommand(booking_id=booking_id, player_id=user.id))
+    return YesAnswerResponse.from_answer(answer)
+
+
+@bookings_router.post(
+    "/{booking_id}/no",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`booking_not_found` — no such open seat **offered to this "
+                "player**: it does not exist, they are not in its group, or it is "
+                "taken, off or not theirs to be offered."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`block_state_unavailable` — whether the player fits the people on "
+                "the game could not be read. Retry."
+            ),
+        },
+    },
+    summary="Not this time, on a Seat open card",
+    description=(
+        "A swipe left on a **Seat open** card: **silent, and never on the "
+        "player's record.** The card does not come back to their deck; the seat "
+        "stays on their *Seats to fill*, which lists every rescue they fit. A "
+        "second no records nothing."
+    ),
+)
+async def say_no_to_a_rescue(
+    booking_id: UUID, user: CurrentUserDep, say_no: SayNoToARescueDep
+) -> Response:
+    await say_no.execute(RescueCommand(booking_id=booking_id, player_id=user.id))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

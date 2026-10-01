@@ -22,12 +22,15 @@ from app.bootstrap.composition import (
     build_accept_the_request,
     build_booked_games,
     build_confirm_payment,
+    build_say_no_to_a_rescue,
     build_games_and_money_repository,
+    build_join_a_rescue,
     build_leave_the_game,
     build_proposal_club_names,
     build_proposal_directory,
     build_proposal_repository,
     build_read_booking_details,
+    build_read_fill_in,
     build_read_group_deck,
     build_read_home,
     build_read_proposal_details,
@@ -61,6 +64,11 @@ from app.modules.proposals.application.payments_to_confirm import (
     ReadPaymentsToConfirm,
 )
 from app.modules.proposals.application.proposal_details import ReadProposalDetails
+from app.modules.proposals.application.rescues import (
+    SayNoToARescue,
+    JoinARescue,
+    ReadFillIn,
+)
 from app.modules.proposals.domain.ports import (
     BookedGames,
     ClubNames,
@@ -247,6 +255,39 @@ def get_read_proposal_details(
 ReadProposalDetailsDep = Annotated[
     ReadProposalDetails, Depends(get_read_proposal_details)
 ]
+
+
+def get_read_fill_in(
+    db: DbSession, settings: SettingsDep, clock: ClockDep, booked: BookedGamesDep
+) -> ReadFillIn:
+    """A group's *Fill in* tab (#545)."""
+    return build_read_fill_in(db, settings=settings, clock=clock, booked=booked)
+
+
+ReadFillInDep = Annotated[ReadFillIn, Depends(get_read_fill_in)]
+
+
+def get_join_a_rescue(
+    db: DbSession,
+    clock: ClockDep,
+    provider: PaymentProviderDep,
+    settings: SettingsDep,
+) -> JoinARescue:
+    """*I'm in* on an open seat — the share charged over the provider this
+    process moves money through (#545)."""
+    return build_join_a_rescue(db, clock=clock, provider=provider, settings=settings)
+
+
+JoinARescueDep = Annotated[JoinARescue, Depends(get_join_a_rescue)]
+
+
+def get_say_no_to_a_rescue(
+    db: DbSession, clock: ClockDep, settings: SettingsDep
+) -> SayNoToARescue:
+    return build_say_no_to_a_rescue(db, clock=clock, settings=settings)
+
+
+SayNoToARescueDep = Annotated[SayNoToARescue, Depends(get_say_no_to_a_rescue)]
 
 
 # --------------------------------------------------------------------------- #

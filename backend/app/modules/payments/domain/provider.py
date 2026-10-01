@@ -333,7 +333,10 @@ class PaymentProvider(Protocol):
         metadata: Mapping[str, str],
         idempotency_key: str,
     ) -> Payment:
-        """Take ``amount_grosze`` at once, off-session — a rescue's charge."""
+        """Take ``amount_grosze`` at once, off-session. **No caller yet**: a
+        rescue (#545) holds its one share and takes the hold in its own
+        transaction, as the fill does, so a crash between the provider and the
+        record leaves a hold that lapses rather than money taken for no seat."""
         ...
 
     async def refund(

@@ -27,8 +27,14 @@ seat that opened after the cut-off leaves the game going ahead short. Whether a
 game is **short at its cut-off** is read off the departures and the clock, so
 every read says it from the cut-off on, whether or not the job has recorded it.
 
-A rescue taking an open seat arrives with #545, *played* with #547, each as an
-event on this stream.
+**An open seat is a rescue** (#545; the mechanics §10.1): somebody else takes
+it, paid at once, and sits where the leaver sat. **The seat that opened first is
+taken first** — the leavers are refunded in the order they left — and a seat
+stays open until the cut-off whatever their number, then until the start. A
+game whose seats are all taken is whole again, and *short at its cut-off* is read
+off the seats still open.
+
+*Played* arrives with #547, as an event on this stream.
 """
 
 from __future__ import annotations
@@ -48,7 +54,9 @@ from app.modules.bookings.domain.events import (
     BookingTimedOut,
     CalledOffAtCutOff,
     RequestWithdrawn,
+    NoSaidToTheSeat,
     SeatLeft,
+    SeatRescued,
 )
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
@@ -100,6 +108,12 @@ class Departure:
     #: ``A`` — the first side — or ``B``.
     side: str
     at: Instant
+    #: Who took the seat, once somebody did (#545) — ``None`` while it is open.
+    rescued_by: UUID | None = None
+
+    @property
+    def is_open(self) -> bool:
+        return self.rescued_by is None
 
 
 @dataclass
@@ -127,8 +141,11 @@ class Booking:
     refusal_reason: str | None = None
     #: When it was booked — ``None`` while it waits, and if it never was.
     booked_at: Instant | None = None
-    #: Everybody who left the booked game, in the order they did (#544).
+    #: Everybody who left the booked game, in the order they did (#544) — each
+    #: with who took their seat, once somebody did (#545).
     departures: tuple[Departure, ...] = ()
+    #: Everybody who said no to the open seat dealt to them as a card (#545).
+    said_no: frozenset[UUID] = frozenset()
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -305,32 +322,46 @@ class Booking:
         return self.state in (BookingState.BOOKED, BookingState.SEAT_OPEN)
 
     @property
-    def open_since(self) -> Instant | None:
-        """When the first seat still open opened — ``None`` while every seat is
-        held. Until rescues arrive (#545) every seat that opened is open."""
+    def open_departures(self) -> tuple[Departure, ...]:
+        """The seats still open, as the leavers who opened them — **the first
+        to open first**, which is the one a rescue takes (#545)."""
 
-        if self.open_seats == 0:
-            return None
-        return min(left.at for left in self.departures)
+        if self.state is not BookingState.SEAT_OPEN:
+            return ()
+        return tuple(left for left in self.departures if left.is_open)
 
     @property
-    def left_before_the_cut_off(self) -> tuple[Departure, ...]:
-        """The leavers who left while leaving was free — a game that filled
-        after its cut-off never had any."""
+    def leavers(self) -> frozenset[UUID]:
+        """Everybody who ever left the booked game, whether or not their seat
+        was taken."""
 
-        return tuple(left for left in self.departures if left.at < self.cut_off)
+        return frozenset(left.player_id for left in self.departures)
+
+    @property
+    def open_since(self) -> Instant | None:
+        """When the first seat still open opened — ``None`` while every seat is
+        held."""
+
+        still_open = self.open_departures
+        return still_open[0].at if still_open else None
+
+    @property
+    def open_before_the_cut_off(self) -> tuple[Departure, ...]:
+        """The seats still open that opened while leaving was free — a game that
+        filled after its cut-off never had any, and a seat a rescue took is no
+        longer one."""
+
+        return tuple(left for left in self.open_departures if left.at < self.cut_off)
 
     @property
     def short_from(self) -> Instant | None:
         """**A game plays full or not at all**: the moment a booked game with a
         seat that opened before its cut-off, and is open still, is off — its
         cut-off — or ``None`` for a game whole, or short only by a seat that
-        opened after the cut-off, which goes ahead short.
+        opened after the cut-off, which goes ahead short. A seat taken before
+        the cut-off is one the game is not short of (#545)."""
 
-        Until rescues arrive (#545) a seat that opened stays open, so every
-        departure before the cut-off is a seat still open at it."""
-
-        if self.state is BookingState.SEAT_OPEN and self.left_before_the_cut_off:
+        if self.open_before_the_cut_off:
             return self.cut_off
         return None
 
@@ -339,6 +370,19 @@ class Booking:
         off the clock, so every read says so before the job records it."""
 
         return self.short_from is not None and now >= self.short_from
+
+    def rescuable_at(self, now: Instant) -> bool:
+        """Whether a seat is open to be taken at ``now`` (the mechanics §10.1):
+        **until the cut-off whatever their number**, since the leavers' refunds
+        and the game itself depend on them being taken — **then until the
+        start**, on a game that goes ahead short. Never on a game called off,
+        whether or not that is recorded yet."""
+
+        return (
+            self.open_seats > 0
+            and not self.short_at_the_cut_off(now=now)
+            and now < self.start
+        )
 
     # ------------------------------------------------------------------- acts
 
@@ -356,6 +400,48 @@ class Booking:
         self._record_that(
             SeatLeft(booking_id=self.booking_id, player_id=player_id, occurred_at=at)
         )
+
+    def rescue(self, player_id: UUID, *, at: Instant) -> Departure:
+        """*I'm in* on an open seat: this player takes **the seat that opened
+        first**, on its side, and has paid their share (#545). Answers whose
+        seat it was. Whether they may — in the pool, a fit, free — is the
+        caller's question, asked before this; that a seat is open to take, and
+        that they are neither on the game nor a leaver of it, is this one's."""
+
+        invariant(
+            self.rescuable_at(at),
+            f"{self.booking_id} has no seat to take at {at}: {self.state}, "
+            f"{self.open_seats} open, cut-off {self.cut_off}, start {self.start}",
+        )
+        invariant(
+            player_id not in self.players and player_id not in self.leavers,
+            f"{player_id} takes a seat on {self.booking_id}, which they are on or left",
+        )
+        taken = self.open_departures[0]
+        self._record_that(
+            SeatRescued(
+                booking_id=self.booking_id,
+                player_id=player_id,
+                side=taken.side,
+                replacing=taken.player_id,
+                occurred_at=at,
+            )
+        )
+        return taken
+
+    def say_no(self, player_id: UUID, *, at: Instant) -> bool:
+        """*Not this time* on a Seat open card (#545): the card does not come
+        back to this player. Answers whether anything was recorded — nothing for
+        a second no."""
+
+        if player_id in self.said_no:
+            return False
+        self._record_that(
+            NoSaidToTheSeat(
+                booking_id=self.booking_id, player_id=player_id, occurred_at=at
+            )
+        )
+        return True
 
     def call_off_at_the_cut_off(self, *, at: Instant) -> None:
         """Short at its cut-off: the game is off, and everybody still in is
@@ -493,6 +579,29 @@ class Booking:
                 ),
             )
             self.state = BookingState.SEAT_OPEN
+        elif isinstance(event, SeatRescued):
+            if event.side == "A":
+                self.first_side = (*self.first_side, event.player_id)
+            else:
+                self.second_side = (*self.second_side, event.player_id)
+            self.departures = tuple(
+                Departure(
+                    player_id=left.player_id,
+                    side=left.side,
+                    at=left.at,
+                    rescued_by=event.player_id,
+                )
+                if left.player_id == event.replacing and left.is_open
+                else left
+                for left in self.departures
+            )
+            self.state = (
+                BookingState.BOOKED
+                if len(self.players) == self.seats
+                else BookingState.SEAT_OPEN
+            )
+        elif isinstance(event, NoSaidToTheSeat):
+            self.said_no = self.said_no | {event.player_id}
         elif isinstance(event, CalledOffAtCutOff):
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.SHORT_AT_THE_CUT_OFF

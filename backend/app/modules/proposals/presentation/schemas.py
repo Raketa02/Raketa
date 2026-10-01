@@ -31,6 +31,7 @@ from app.modules.proposals.application.home import Home, HomeGame
 from app.modules.proposals.application.live_yeses import LiveYeses, NamedLiveYes
 from app.modules.proposals.application.payments_to_confirm import PaymentToConfirm
 from app.modules.proposals.application.proposal_details import ProposalDetails
+from app.modules.proposals.application.rescues import FillIn
 from app.modules.proposals.domain.deck import (
     GAME_LENGTH,
     CardForecast,
@@ -299,6 +300,13 @@ class DeckTileSchema(BaseModel):
             "still deciding is a plain tile."
         )
     )
+    paid: bool = Field(
+        description=(
+            "On a `SEAT_OPEN` card, a player on the booked game — *2,75 · paid* "
+            "(#545). `false` on a game still filling, and on the reader's own "
+            "tile, which is the open seat."
+        )
+    )
 
 
 class DeckSidesSchema(BaseModel):
@@ -369,11 +377,19 @@ class DeckChallengerSchema(BaseModel):
 class DeckCardSchema(BaseModel):
     """One card, as the reader is dealt it: **their own version** of the game."""
 
-    proposal_id: UUID
+    proposal_id: UUID = Field(
+        description=(
+            "The game. On a `SEAT_OPEN` card it is the **booking's** id — the same "
+            "id the game had while it filled: `POST /bookings/{id}/seats` takes "
+            "the seat, `POST /bookings/{id}/no` is *not this time*, and "
+            "`GET /bookings/{id}` its details."
+        )
+    )
     type: CardType = Field(
         description=(
             "`PICKED_FOR_YOU`, `CHALLENGE` (a member's post) or `SEAT_OPEN` (a "
-            "rescue — dealt once rescues exist, #545)."
+            "rescue: a booked game that lost a player, dealt to its best fits — "
+            "#545)."
         )
     )
     kind: SearchMode
@@ -385,15 +401,23 @@ class DeckCardSchema(BaseModel):
     )
     starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
     club: DeckClubSchema
-    share_grosze: int = Field(description="What this player pays if it fills.")
+    share_grosze: int = Field(
+        description=(
+            "What this player pays if it fills — at once, on a `SEAT_OPEN` card."
+        )
+    )
     deadline: datetime = Field(
         description=(
-            "When the card leaves unfilled — its book-by. The client counts down "
-            "only under 24 h."
+            "When the card leaves unfilled — its book-by; on a `SEAT_OPEN` card "
+            "the club's cut-off, then the start. The client counts down only "
+            "under 24 h."
         )
     )
     in_count: int = Field(
-        description="People In on the whole game, every version counted."
+        description=(
+            "People In on the whole game, every version counted — nought on a "
+            "`SEAT_OPEN` card, whose players have paid (`paid` on their tiles)."
+        )
     )
     version_count: int = Field(
         description=(
@@ -407,7 +431,14 @@ class DeckCardSchema(BaseModel):
     court: CourtState = Field(
         description=(
             "`COURT_AVAILABLE` — a yes is a free vote; `BOOK_IT_NOW` — a yes "
-            "fills the game and books it."
+            "fills the game and books it; `BOOKED` — a rescue: the court is "
+            "booked, and a yes takes the seat and pays at once."
+        )
+    )
+    court_name: str | None = Field(
+        description=(
+            "What the club calls the court — *Court 6* — on a `SEAT_OPEN` card; "
+            "`null` on a game still filling, which is given one at booking."
         )
     )
     no_free_cancellation: bool = Field(
@@ -451,9 +482,12 @@ class DeckCardSchema(BaseModel):
             version_count=card.version_count,
             open_seats_after_your_yes=card.open_seats_after_your_yes,
             court=card.court,
+            court_name=card.court_name,
             no_free_cancellation=card.no_free_cancellation,
             club_confirms=card.club_confirms,
-            sides=_deck_sides(card.sides, reader=reader, people=people, in_=card.in_),
+            sides=_deck_sides(
+                card.sides, reader=reader, people=people, in_=card.in_, paid=card.paid
+            ),
             forecast=_forecast(card.forecast),
             overlap=_overlap(card.overlap),
         )
@@ -465,6 +499,7 @@ def _deck_sides(
     reader: UUID,
     people: Mapping[UUID, DeckPerson],
     in_: Collection[UUID],
+    paid: Collection[UUID] = (),
 ) -> DeckSidesSchema:
     """A card's two rows of tiles — the deck's and a proposal's details'."""
 
@@ -478,6 +513,7 @@ def _deck_sides(
             photo_url=None if person is None else person.photo_url,
             level=None if person is None else person.level,
             is_in=player_id in in_,
+            paid=player_id in paid,
         )
 
     return DeckSidesSchema(
@@ -718,7 +754,9 @@ class BookedTileSchema(BaseModel):
     paid: bool = Field(
         description=(
             "Their share was taken — the *paid* tag. `false` while the game "
-            "waits for its club, and on a request that was never booked."
+            "waits for its club, on a request that was never booked, and on the "
+            "reader's own tile when they are not on the game but offered its "
+            "open seat — the dashed *You?* (#545)."
         )
     )
 
@@ -735,7 +773,12 @@ class BookedMoneySchema(BaseModel):
     """The money line: *Paid · 30 zł · free to leave until Sat 17:00*."""
 
     share_grosze: int = Field(description="Every seat's share, in grosze.")
-    paid: bool = Field(description="Every seat's share was taken.")
+    paid: bool = Field(
+        description=(
+            "Every seat's share was taken — `false` for a reader not on the game, "
+            "who has paid nothing (#545)."
+        )
+    )
     free_to_leave_until: datetime | None = Field(
         description=(
             "The club's cut-off while it is still ahead at `read_at` — leaving "
@@ -791,13 +834,24 @@ def _booked_sides(
         for (sport, player), person in people.items()
         if sport is game.sport
     }
+    on_it = frozenset(game.players)
     return BookedSidesSchema(
         yours=[
-            _tile(player, reader=reader, sport_people=sport_people, paid=paid)
+            _tile(
+                player,
+                reader=reader,
+                sport_people=sport_people,
+                paid=paid and player in on_it,
+            )
             for player in sides.yours
         ],
         theirs=[
-            _tile(player, reader=reader, sport_people=sport_people, paid=paid)
+            _tile(
+                player,
+                reader=reader,
+                sport_people=sport_people,
+                paid=paid and player in on_it,
+            )
             for player in sides.theirs
         ],
     )
@@ -1010,8 +1064,27 @@ class DepartureResponse(BaseModel):
     )
 
 
+class RescueOfferSchema(BaseModel):
+    """The open seat, offered to a reader not on the game (#545)."""
+
+    deadline: datetime = Field(
+        description=(
+            "When the seat leaves the board — the club's cut-off while it is "
+            "ahead, then the start."
+        )
+    )
+    fills_by_the_cut_off: bool = Field(
+        description=(
+            "*fills by Fri 16:00* — before the cut-off, the game is off unless "
+            "its seats are taken by `deadline`; `false` is *offered until the "
+            "start*. Switches by itself at the cut-off."
+        )
+    )
+
+
 class BookingDetailsResponse(BaseModel):
-    """A booked game's details, for a player in it."""
+    """A booked game's details, for a player in it — or for a member its open
+    seat is offered to (#545)."""
 
     booking_id: UUID
     game_id: UUID | None = Field(
@@ -1062,8 +1135,19 @@ class BookingDetailsResponse(BaseModel):
         description=(
             "What *Leave the game* would cost now — the line under the button and "
             "its sheet (`POST /bookings/{id}/departure`). `null` where there is "
-            "no button: once the hour has come, and on a game that is over."
+            "no button: once the hour has come, on a game that is over, and for "
+            "a reader not on the game."
         )
+    )
+    rescue: RescueOfferSchema | None = Field(
+        default=None,
+        description=(
+            "Present for a reader **not on the game** whom its open seat is "
+            "offered to — a Seat open card, a Seats to fill row (#545): they "
+            "stand in the seat that opened first, unpaid (*You?*), and "
+            "**I'm in · `money.share_grosze`** is `POST /bookings/{id}/seats`. "
+            "No Chat and no Leave. `null` for a player in it."
+        ),
     )
 
     @classmethod
@@ -1096,7 +1180,9 @@ class BookingDetailsResponse(BaseModel):
                 game=game,
                 reader=reader,
                 people=details.people,
-                paid=details.state.money.paid,
+                # A rescue's players have paid, whatever the reader outside
+                # has (#545).
+                paid=details.state.money.paid or details.rescue is not None,
             ),
             money=_money(details.state.money),
             shows_forecast=details.shows_forecast,
@@ -1109,6 +1195,14 @@ class BookingDetailsResponse(BaseModel):
                 None
                 if details.leaving is None
                 else LeavingSchema.from_terms(details.leaving)
+            ),
+            rescue=(
+                None
+                if details.rescue is None
+                else RescueOfferSchema(
+                    deadline=details.rescue.deadline,
+                    fills_by_the_cut_off=details.rescue.fills_by_the_cut_off,
+                )
             ),
         )
 
@@ -1247,4 +1341,104 @@ class ProposalDetailsResponse(BaseModel):
             ),
             forecast=_forecast(details.forecast),
             overlap=_overlap(details.overlap),
+        )
+
+
+# --------------------------------------------------------------------------- #
+# Fill in: seats to fill (#545)
+# --------------------------------------------------------------------------- #
+
+
+class SeatToFillSchema(BaseModel):
+    """One *Seats to fill* row: a booked game that lost a player, and the
+    reader fits and is free for it."""
+
+    booking_id: UUID = Field(
+        description=(
+            "`POST /bookings/{id}/seats` takes the seat — *I'm in · "
+            "`share_grosze`* — and `GET /bookings/{id}` is its details as the "
+            "reader sees it from outside."
+        )
+    )
+    sport: Sport
+    kind: SearchMode = Field(
+        description="Competitive, or for fun (*· friendly* on the title)."
+    )
+    starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
+    club: BookedClubSchema
+    court_name: str = Field(description="What the club calls the court.")
+    share_grosze: int = Field(description="What *I'm in* charges at once.")
+    open_seats: int = Field(
+        description="The dashed **?** squares after the players' posters."
+    )
+    deadline: datetime = Field(
+        description=(
+            "When the row leaves the board — the club's cut-off while it is "
+            "ahead, then the start."
+        )
+    )
+    fills_by_the_cut_off: bool = Field(
+        description=(
+            "*fills by `deadline`* before the cut-off; `false` is *offered until "
+            "the start*. Switches by itself at the cut-off."
+        )
+    )
+    players: list[BookedTileSchema] = Field(
+        description=(
+            "Everybody on the game, each *paid* — the small posters, first side "
+            "first. Long-press a poster for their record."
+        )
+    )
+
+
+class FillInResponse(BaseModel):
+    """A group's **Fill in** tab for one sport: *Seats to fill* (#545)."""
+
+    pool_id: UUID
+    sport: Sport
+    read_at: datetime = Field(
+        description="The instant every row and deadline here was read against."
+    )
+    badge: int = Field(description="The tab's badge: the Seats to fill rows.")
+    seats_to_fill: list[SeatToFillSchema] = Field(
+        description=(
+            "Every rescue in the group the reader fits — the pair rule, the "
+            "kind their intent wants, free for the hour in their week, no game "
+            "of theirs then, within their Games & money — **soonest first**, "
+            "before or after the cut-off. Never a game still filling: that is "
+            "the deck's. *You're In* is `GET /players/me/live-yeses`."
+        )
+    )
+
+    @classmethod
+    def from_fill_in(cls, fill_in: FillIn, *, reader: UUID) -> "FillInResponse":
+        return cls(
+            pool_id=fill_in.pool_id,
+            sport=fill_in.sport,
+            read_at=fill_in.read_at,
+            badge=fill_in.badge,
+            seats_to_fill=[
+                SeatToFillSchema(
+                    booking_id=row.game.booking_id,
+                    sport=row.game.sport,
+                    kind=row.game.kind,
+                    starts_at=row.game.start,
+                    club=BookedClubSchema(id=row.game.club_id, name=row.club_name),
+                    court_name=row.game.court_name,
+                    share_grosze=row.game.share_grosze,
+                    open_seats=row.game.open_seats,
+                    deadline=row.deadline,
+                    fills_by_the_cut_off=row.fills_by_the_cut_off,
+                    players=[
+                        _tile(
+                            player,
+                            reader=reader,
+                            sport_people=fill_in.people,
+                            paid=True,
+                        )
+                        for player in row.game.players
+                    ],
+                )
+                for row in fill_in.seats_to_fill
+            ],
         )

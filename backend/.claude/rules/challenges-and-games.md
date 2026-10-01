@@ -234,3 +234,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   Bookings vacate and call off a booked game through games' own `VacateSeat` and
   `CallOffGame` (`bookings/infrastructure/games_opening.py`), the booking's id where a
   challenge's is.
+- **A booking's rescue takes one open seat at a time** (#545): `Game.take_seat` records a
+  `LineUpReseated` whose court has one more seat filled — the first open one on the leaver's
+  side (`LineUp.seated`) — through games' own `TakeASeat`, so the stream reads find the newcomer
+  and the room's members (the line-up) take them in. Unlike a challenge's re-seat the court may
+  still be short after it; `departed` is emptied only once it is whole. Refused once the game
+  is no longer awaiting its entry (its hour has come).

@@ -148,7 +148,7 @@ async def book_her_games(
             raise NotEnoughToBook("the proposals layer has not gathered her group")
         her, group_id = found
         club_id = await games_club_id(session)
-        hours_on_sale = await _hours_on_sale(session, club_id, now=now)
+        hours_on_sale = await padel_hours_on_sale(session, club_id, now=now)
         targets = await _the_hours(session, club_id, hours_on_sale, seeded, now=now)
         partners = await _partners(session, group_id, her, seeded)
         booked = await build_booked_games(session).starts_of(
@@ -230,7 +230,7 @@ async def _put_to_the_club(
     start = next(
         (
             hour.start
-            for hour in await _hours_on_sale(session, club_id, now=now)
+            for hour in await padel_hours_on_sale(session, club_id, now=now)
             if not any(abs(hour.start - game) < GAME_LENGTH for game in taken)
         ),
         None,
@@ -240,7 +240,7 @@ async def _put_to_the_club(
             f"{WAITING_CLUB.name} sells no padel hour clear of her games from "
             f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
         )
-    answer = await _four_say_yes(
+    answer = await four_say_yes(
         session,
         settings=settings,
         clock=clock,
@@ -270,7 +270,7 @@ async def _club_of(session: AsyncSession, club: SeedClub) -> UUID:
     return account.club_id
 
 
-async def _hours_on_sale(
+async def padel_hours_on_sale(
     session: AsyncSession, club_id: UUID, *, now: Instant
 ) -> list[CourtHourOnSale]:
     on_sale = await build_court_hours(session).on_sale(
@@ -365,7 +365,7 @@ async def _book(
     start: Instant,
     players: tuple[UUID, ...],
 ) -> None:
-    answer = await _four_say_yes(
+    answer = await four_say_yes(
         session,
         settings=settings,
         clock=clock,
@@ -382,7 +382,7 @@ async def _book(
         )
 
 
-async def _four_say_yes(
+async def four_say_yes(
     session: AsyncSession,
     *,
     settings: Settings,

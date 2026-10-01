@@ -4,8 +4,9 @@ an adapter **signed here**, so the arrow runs ``proposals → bookings`` only
 
 ``BookingsGameBookings`` is the fill's demand — a court for a full game, and the
 booking that opens its Game — over the Bookings context's own use cases;
-``BookingsBookedGameChanges`` is what happens to a booked game after (#544): a
-player leaving it, and the cut-off calling off one still short.
+``BookingsBookedGameChanges`` is what happens to a booked game after (#544,
+#545): a player leaving it, somebody taking the seat they left or saying no to
+it, and the cut-off calling off one still short.
 ``BookingsClubRequests`` is an On request club's (#543): the request a full game
 is put to the club as, the club's yes or no, and a seat opening while it waits.
 ``BookingsBookedGames`` answers *games per week* and *one game per hour* — the
@@ -13,7 +14,8 @@ deck's, the proposer's and the fill's — with a player's booked games, replacin
 the stand-in that answered nothing while no game could be booked.
 ``BookingsPlayerBookings`` is Home's and the details': a player's booked games
 as their bookings record them, folded from each stream, and each seat's
-check-in code. ``BookingsGroupBornGames`` is the club's *Games* figure, which
+check-in code — and a pool's booked games with a seat open (#545).
+``BookingsGroupBornGames`` is the club's *Games* figure, which
 ``groups`` asks in its own words: **a group's pool is filed under the group's own
 id**, which is this context's fact, so the games booked in a group are the
 bookings in its pool.
@@ -35,6 +37,7 @@ from app.modules.bookings.application.leaving import (
     CallOffAtTheCutOff,
     LeaveTheBooking,
 )
+from app.modules.bookings.application.rescues import SayNoToTheSeat, RescueTheSeat
 from app.modules.bookings.application.requests import (
     BookTheRequest,
     GameToRequest,
@@ -47,6 +50,7 @@ from app.modules.bookings.domain.booking import (
     Booking,
     BookingState,
     CalledOff,
+    Departure,
 )
 from app.modules.bookings.domain.errors import CourtTaken
 from app.modules.bookings.domain.ports import (
@@ -60,6 +64,7 @@ from app.modules.proposals.domain.home import (
     BookingStage,
     CalledOffReason,
     CheckIn,
+    OpenSeat,
 )
 from app.modules.proposals.domain.ports import (
     BookableCourt,
@@ -121,15 +126,29 @@ class BookingsBookedGameChanges:
         self,
         *,
         leave: LeaveTheBooking,
+        rescue: RescueTheSeat,
+        say_no: SayNoToTheSeat,
         call_off: CallOffAtTheCutOff,
         directory: BookingDirectory,
     ) -> None:
         self._leave = leave
+        self._rescue = rescue
+        self._say_no = say_no
         self._call_off = call_off
         self._directory = directory
 
     async def leave(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
         await self._leave.execute(booking_id, player_id, at=at)
+
+    async def rescue(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> OpenSeat:
+        return _open_seat(await self._rescue.execute(booking_id, player_id, at=at))
+
+    async def say_no_to_the_seat(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> bool:
+        return await self._say_no.execute(booking_id, player_id, at=at)
 
     async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
         return await self._directory.short_at_the_cut_off(now=now)
@@ -280,6 +299,18 @@ class BookingsPlayerBookings:
         booking = await self._bookings.load(booking_id)
         return None if booking is None else _booked_game(booking)
 
+    async def rescues_in(
+        self, pool_id: UUID, *, sport: Sport, now: Instant
+    ) -> Sequence[BookedGame]:
+        found: list[BookedGame] = []
+        for booking_id in await self._directory.rescues_in(
+            pool_id, sport=sport, now=now
+        ):
+            game = await self.find(booking_id)
+            if game is not None:
+                found.append(game)
+        return found
+
     def check_in(self, booking_id: UUID, player_id: UUID) -> CheckIn:
         code = self._codes.code_for(booking_id, player_id)
         return CheckIn(short_code=code.short_code, qr_payload=code.qr_payload)
@@ -324,7 +355,17 @@ def _booked_game(booking: Booking) -> BookedGame | None:
             None if booking.called_off is None else _CALLED_OFF[booking.called_off]
         ),
         short_from=booking.short_from,
+        open=tuple(_open_seat(left) for left in booking.open_departures),
+        leavers=booking.leavers,
+        said_no=booking.said_no,
+        version=booking.version,
     )
+
+
+def _open_seat(left: Departure) -> OpenSeat:
+    """A leaver's seat, in this context's words."""
+
+    return OpenSeat(side=left.side, left_by=left.player_id, left_at=left.at)
 
 
 @final

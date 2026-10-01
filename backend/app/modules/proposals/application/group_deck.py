@@ -21,10 +21,17 @@ through ``PlayerFit`` — a card with somebody In the reader does not fit is
 withheld, and a name that does not fit them or anybody on the card is left off
 it (``domain/deck.py``).
 
+**Seat open cards** (#545; the mechanics §8.1, §10.1): a booked game in the
+pool that lost a player is dealt to its **best fits** — the members it is offered
+to whose game with them in the seat is forecast most even, three per open seat
+(``application/rescues.py``) — as long as the reader has not said no to it. The
+reader sits in the seat that opened first; the players read *paid*.
+
 **Around the deck**: a count per segment the reader's intent shows — none while
 they have declared nothing, which is the question that replaces the deck — the
-Games badge (cards with somebody already In, across those segments), and the
-weeks at the cap, so the tab can say *your games this week are booked*.
+Games badge (cards with somebody already In, across those segments — a rescue's
+players have paid, and are not In), and the weeks at the cap, so the tab can say
+*your games this week are booked*.
 """
 
 from __future__ import annotations
@@ -36,7 +43,9 @@ from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Clock, Instant, Sport, instant
+from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.modules.proposals.application.commands import ReadGroupDeckCommand
+from app.modules.proposals.application.rescues import RescueOffers
 from app.modules.proposals.domain.deck import (
     CappedWeek,
     DeckCard,
@@ -55,6 +64,8 @@ from app.modules.proposals.domain.deck import (
     weeks_ahead,
 )
 from app.modules.proposals.domain.errors import PoolNotFound
+from app.modules.proposals.domain.overlap import overlap_of
+from app.modules.proposals.domain.rescues import card_of_a_rescue
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
     BookedGames,
@@ -91,7 +102,8 @@ class GroupDeck:
     #: The segments the reader's intent shows, Competitive first — **none**
     #: while they have declared no intent for the sport.
     segments: tuple[DeckSegment, ...]
-    #: Cards with somebody already In with the reader, across those segments.
+    #: Cards with somebody already In with the reader, across those segments —
+    #: a rescue's players have paid, and are not In.
     games_badge: int
     games_per_week: int
     capped_weeks: tuple[CappedWeek, ...]
@@ -118,8 +130,10 @@ class ReadGroupDeck:
         forecasts: BalanceForecasts,
         people: DeckPeople,
         clubs: ClubNames,
+        offers: RescueOffers,
         clock: Clock,
     ) -> None:
+        self._offers = offers
         self._pools = pools
         self._directory = directory
         self._proposals = proposals
@@ -175,6 +189,9 @@ class ReadGroupDeck:
         forecasts = await self._forecasts.forecasts(
             [option for choices in options for option in choices], sport=sport
         )
+        rescues = await self._offers.dealt_to(
+            pool, reader, sport=sport, kinds=shown, now=now
+        )
         people = await self._people.people(
             {
                 *(player for _, view in views for player in view.people),
@@ -183,6 +200,8 @@ class ReadGroupDeck:
                     for proposal, _ in views
                     if (challenger := challenger_of(proposal)) is not None
                 ),
+                *(player for rescue in rescues for player in rescue.game.players),
+                *([reader] if rescues else []),
             },
             sport=sport,
         )
@@ -200,6 +219,22 @@ class ReadGroupDeck:
                     forecast=forecast,
                     weeks=[people[player].week for player in view.people],
                     terms=terms[proposal.club_id],
+                    now=now,
+                )
+            )
+
+        for rescue in rescues:
+            game = rescue.game
+            cards.append(
+                card_of_a_rescue(
+                    game,
+                    sides=rescue.sides,
+                    forecast=rescue.forecast,
+                    overlap=overlap_of(
+                        [people[player].week for player in (reader, *game.players)],
+                        start=game.start,
+                        zone=CLUB_ZONE,
+                    ),
                     now=now,
                 )
             )

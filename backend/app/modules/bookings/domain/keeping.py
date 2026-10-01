@@ -7,8 +7,10 @@ when the game is called off at its cut-off. Read off the booking and the clock,
 so it says the same before and after anything records it.
 
 **Never on the record**: leaving before the cut-off when the game still plays;
-a game that was never booked. **A mark**: leaving before the cut-off when the
-game is then called off; leaving after the cut-off when nobody takes the seat.
+a game that was never booked; leaving when somebody then takes the seat (#545),
+whatever becomes of the game. **A mark**: leaving before the cut-off when the
+game is then called off with that seat still open; leaving after the cut-off
+when nobody takes the seat.
 
 **Kept is a game whose hour came with every seat held**, for everybody in it.
 **Nothing goes on the record of those who stayed** in a game that went ahead
@@ -83,13 +85,15 @@ def keeping_of(booking: Booking, player_id: UUID, *, now: Instant) -> Keeping | 
             if whole and now >= booking.start
             else None
         )
-    if left is None:
+    if left is None or not left.is_open:
+        # Somebody took the seat (#545): whatever becomes of the game, it is
+        # not because of this one.
         return None
     if left.at < booking.cut_off:
         # Free to leave — unless the game is then called off because of it.
         return Keeping(kept=False, at=booking.cut_off) if called_off else None
-    # After the cut-off the seat was the leaver's to fill. Until rescues arrive
-    # (#545) nobody takes it, so a game whose hour came went ahead without them.
+    # After the cut-off the seat was the leaver's to fill, and nobody took it:
+    # a game whose hour came went ahead without them.
     return Keeping(kept=False, at=booking.start) if now >= booking.start else None
 
 

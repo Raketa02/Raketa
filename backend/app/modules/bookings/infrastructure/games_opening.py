@@ -16,9 +16,11 @@ from app.modules.games.application.call_off_game import CallOffGame
 from app.modules.games.application.commands import (
     CallOffGameCommand,
     OpenPlannedGameCommand,
+    TakeASeatCommand,
     VacateSeatCommand,
 )
 from app.modules.games.application.open_planned_game import OpenPlannedGame
+from app.modules.games.application.take_a_seat import TakeASeat
 from app.modules.games.application.vacate_seat import VacateSeat
 from app.modules.games.domain.lineup import GameSide
 
@@ -63,15 +65,27 @@ class OpenTheGame:
 @final
 class LeaveAndCallOffTheGame:
     """``GameChanges`` over the use cases a challenge's departure and call-off
-    reach a game through (#544): a booking's id is where a challenge's is."""
+    reach a game through (#544), and the one a rescue takes a seat by (#545):
+    a booking's id is where a challenge's is."""
 
-    def __init__(self, *, vacate: VacateSeat, call_off: CallOffGame) -> None:
+    def __init__(
+        self, *, vacate: VacateSeat, seat: TakeASeat, call_off: CallOffGame
+    ) -> None:
         self._vacate = vacate
+        self._seat = seat
         self._call_off = call_off
 
     async def vacate(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
         await self._vacate.execute(
             VacateSeatCommand(challenge_id=booking_id, player_id=player_id),
+            occurred_at=at,
+        )
+
+    async def seat(
+        self, booking_id: UUID, player_id: UUID, *, side: str, at: Instant
+    ) -> None:
+        await self._seat.execute(
+            TakeASeatCommand(challenge_id=booking_id, player_id=player_id, side=side),
             occurred_at=at,
         )
 

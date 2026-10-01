@@ -87,6 +87,10 @@ class GameToCharge:
     court_name: str
     #: The club's cut-off, or ``None`` when the game filled after it.
     free_to_leave_until: Instant | None
+    #: A seat a leaver left open on a booked game, taken by one player (#545)
+    #: — its holds are keyed apart from the fill's, and a refusal asks them to
+    #: confirm the payment to **take** the seat rather than to keep one.
+    rescue: bool = False
 
 
 @final
@@ -113,11 +117,15 @@ class SeatsCharged:
         return not self.refused
 
 
-def hold_key(game_id: UUID, player_id: UUID, *, attempt: int, at: Instant) -> str:
+def hold_key(
+    game_id: UUID, player_id: UUID, *, attempt: int, at: Instant, rescue: bool = False
+) -> str:
     """The key a seat's hold is asked under: the game, the player, the attempt
-    and the hour."""
+    and the hour — a rescue's apart from the fill's (#545), since the two count
+    their attempts on different streams and one game id carries both."""
 
-    return f"raketa-seat-{game_id}-{player_id}-{attempt}-{key_hour(at)}"
+    kind = "rescue" if rescue else "seat"
+    return f"raketa-{kind}-{game_id}-{player_id}-{attempt}-{key_hour(at)}"
 
 
 def _refusal_of(payment: Payment) -> FailureReason:
@@ -216,7 +224,7 @@ class ChargeTheSeats:
             # off-session until its holder agrees again: the provider is not
             # asked (the mechanics §19).
             return FailureReason.TERMS_NEEDED, None
-        key = hold_key(game.game_id, player, attempt=attempt, at=at)
+        key = hold_key(game.game_id, player, attempt=attempt, at=at, rescue=game.rescue)
         clone = await self._provider.clone_method(
             customer_id=method.customer_id,
             method_id=method.method.method_id,
@@ -326,6 +334,7 @@ class ChargeTheSeats:
                     amount_grosze=game.share_grosze,
                     reason=seat.reason,
                     app_link=self._app_link,
+                    rescue=game.rescue,
                 ),
                 at=at,
             )
@@ -382,6 +391,22 @@ class ReleaseCharges:
                 await self._charges.save(charge)
                 released += 1
         return released
+
+
+@final
+class PaymentToConfirmOn:
+    """This player's refused payment for this game still waiting for them —
+    what a rescue's second *I'm in* is told to confirm rather than asking the
+    bank the same question again (#545)."""
+
+    def __init__(self, *, charges: SeatChargeRepository) -> None:
+        self._charges = charges
+
+    async def execute(self, game_id: UUID, *, player_id: UUID) -> UUID | None:
+        for charge in reversed(await self._charges.of_game(game_id)):
+            if charge.player_id == player_id and charge.awaits_its_player:
+                return charge.charge_id
+        return None
 
 
 @final

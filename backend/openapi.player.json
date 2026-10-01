@@ -7125,6 +7125,83 @@
         }
       }
     },
+    "/api/v1/pools/{pool_id}/fill-in": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "A group's Fill in",
+        "description": "**Seats to fill** in one sport, and the tab's badge: the open seats of the group's **booked** games that lost a player, which the reader fits \u2014 the pair rule against everybody on the game, the kind their Play intent wants \u2014 and is free for \u2014 the hour in their week, no game of theirs then \u2014 within their Games & money. **Before the cut-off** a seat *fills by* it or the game is off; **after it**, it is *offered until the start*. Games still filling are never here \u2014 they are the deck's. Nothing is recorded.",
+        "operationId": "read_fill_in_api_v1_pools__pool_id__fill_in_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FillInResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`pool_not_found` \u2014 no such group, or the reader is not in it. One code for both.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the reader fits the people on a game could not be read. Retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/seat-charges/{seat_charge_id}": {
       "get": {
         "tags": [
@@ -7200,7 +7277,7 @@
           "proposals"
         ],
         "summary": "I confirmed my payment \u2014 my yes again",
-        "description": "*Confirm your payment to keep your seat.* The player confirmed, in the app, the payment that could not be held when the game filled. It is **asked of the provider**, never taken on the phone's word; held now, it is the player's yes again \u2014 and if theirs was the seat still open, the game books on it and everybody else is charged then. Answers as a yes does. Somebody else took the seat first: the payment is let go.",
+        "description": "*Confirm your payment to keep your seat.* The player confirmed, in the app, the payment that could not be held when the game filled. It is **asked of the provider**, never taken on the phone's word; held now, it is the player's yes again \u2014 and if theirs was the seat still open, the game books on it and everybody else is charged then. Answers as a yes does. Somebody else took the seat first: the payment is let go.\n\n**A rescue's payment** (#545) \u2014 refused when the player went for an open seat on a booked game \u2014 confirmed is **the join again**: the seat that opened first is theirs, as `POST /bookings/{id}/seats` takes one, and the answer is the join's.",
         "operationId": "confirm_payment_api_v1_seat_charges__seat_charge_id__confirmation_post",
         "security": [
           {
@@ -7231,7 +7308,7 @@
             }
           },
           "404": {
-            "description": "`seat_charge_not_found` \u2014 no such charge **for this player**. `proposal_not_found` \u2014 they are no longer in the game's group.",
+            "description": "`seat_charge_not_found` \u2014 no such charge **for this player**. `proposal_not_found` \u2014 they are no longer in the game's group; `booking_not_found` on a rescue's payment (#545), which is let go.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7241,7 +7318,7 @@
             }
           },
           "409": {
-            "description": "`payment_not_confirmed` \u2014 the provider still waits for the player (`details.status`), or the charge was never a payment to confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept the terms or save a method and say yes. `proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `proposal_is_full` \u2014 somebody else took the seat. On both, the payment the player confirmed is let go and nobody pays it. `live_yeses_exhausted` and `no_longer_fits` as a yes meets them.",
+            "description": "`payment_not_confirmed` \u2014 the provider still waits for the player (`details.status`), or the charge was never a payment to confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept the terms or save a method and say yes. `proposal_is_over` \u2014 the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `proposal_is_full` \u2014 somebody else took the seat. On both, the payment the player confirmed is let go and nobody pays it. `live_yeses_exhausted` and `no_longer_fits` as a yes meets them. **On a rescue's payment** (#545), as `POST /bookings/{id}/seats` meets them: `seat_just_taken`, `booking_is_called_off`, `game_has_started`, `rescue_not_offered` \u2014 and the payment is let go.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7333,7 +7410,7 @@
           "proposals"
         ],
         "summary": "A booked game",
-        "description": "The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** \u2014 a QR payload and a short code, theirs alone. **The chat is the reader's room whose `game_id` is this game's**, in `GET /conversations`. Nothing is recorded.",
+        "description": "The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** \u2014 a QR payload and a short code, theirs alone. **The chat is the reader's room whose `game_id` is this game's**, in `GET /conversations`.\n\n**A rescue seen from outside** (#545): a member its open seat is offered to reads the same game standing in the seat that opened first (their tile unpaid \u2014 *You?*), with `rescue` \u2014 no check-in code, no `leaving`. Nothing is recorded.",
         "operationId": "read_booking_details_api_v1_bookings__booking_id__get",
         "security": [
           {
@@ -7364,7 +7441,17 @@
             }
           },
           "404": {
-            "description": "`booking_not_found` \u2014 no such booked game **for this player**: it does not exist, or they have no seat on it. One code for both.",
+            "description": "`booking_not_found` \u2014 no such booked game **for this player**: it does not exist, or they have no seat on it and its open seat is not offered to them. One code for all three.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 for a reader with no seat on it, whether they fit the people on it could not be read. Retry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7434,6 +7521,147 @@
           },
           "409": {
             "description": "`game_has_started` \u2014 its hour has begun; there is nothing to leave. `booking_is_called_off` \u2014 the game is off (refused, unanswered, or short at its cut-off) and everybody still in is refunded, or nobody paid. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{booking_id}/seats": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Take an open seat",
+        "description": "*I'm in \u00b7 27 z\u0142* on a rescue \u2014 a Seat open card, a Seats to fill row, a rescue's details (the client gives its ten seconds of *Undo* first). **Pays at once**: the share is held on the club's account and taken, and the player takes **the seat that opened first**, on its side \u2014 `booked` names the booking and its Game, now on their Home, and they are emailed *It's a game! \u00b7 you paid*; they join the game's chat. **The leaver who left after the cut-off is refunded, less the card fee, the moment this payment succeeds** (emailed *You've been refunded \u00b7 your seat was taken*); one who left before it was refunded when they left. `open_seats` is what is still open. When the share could not be held, nothing was taken: `your_payment` names the refused payment, and confirming it (`POST /seat-charges/{id}/confirmation`) is the join again. A player already on the game is answered the same `booked`, and nothing is recorded.",
+        "operationId": "join_a_rescue_api_v1_bookings__booking_id__seats_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YesAnswerResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such booked game, or the reader is not in its group. One code for both.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`seat_just_taken` \u2014 **the first join wins**: somebody took the seat a moment before, or none is open \u2014 *Someone just took it*. `booking_is_called_off` \u2014 the game is off (short at its cut-off). `game_has_started` \u2014 its hour has begun. `rescue_not_offered` \u2014 the seat is not one this player is offered (fit, free, Games & money, a seat they left); which is not said. `payment_to_confirm` \u2014 their earlier *I'm in* here waits on their bank: confirming it (`details.seat_charge_id`) is the join again. `payment_method_required` \u2014 no saved method. Nothing was recorded and nobody charged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the player fits the people on the game could not be read. `payments_unavailable` \u2014 the provider could not be reached to hold the share. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{booking_id}/no": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Not this time, on a Seat open card",
+        "description": "A swipe left on a **Seat open** card: **silent, and never on the player's record.** The card does not come back to their deck; the seat stays on their *Seats to fill*, which lists every rescue they fit. A second no records nothing.",
+        "operationId": "say_no_to_a_rescue_api_v1_bookings__booking_id__no_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such open seat **offered to this player**: it does not exist, they are not in its group, or it is taken, off or not theirs to be offered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 whether the player fits the people on the game could not be read. Retry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8065,7 +8293,7 @@
           "paid": {
             "type": "boolean",
             "title": "Paid",
-            "description": "Every seat's share was taken."
+            "description": "Every seat's share was taken \u2014 `false` for a reader not on the game, who has paid nothing (#545)."
           },
           "free_to_leave_until": {
             "anyOf": [
@@ -8213,7 +8441,7 @@
           "paid": {
             "type": "boolean",
             "title": "Paid",
-            "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for its club, and on a request that was never booked."
+            "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for its club, on a request that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
           }
         },
         "type": "object",
@@ -8358,7 +8586,18 @@
                 "type": "null"
               }
             ],
-            "description": "What *Leave the game* would cost now \u2014 the line under the button and its sheet (`POST /bookings/{id}/departure`). `null` where there is no button: once the hour has come, and on a game that is over."
+            "description": "What *Leave the game* would cost now \u2014 the line under the button and its sheet (`POST /bookings/{id}/departure`). `null` where there is no button: once the hour has come, on a game that is over, and for a reader not on the game."
+          },
+          "rescue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RescueOfferSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present for a reader **not on the game** whom its open seat is offered to \u2014 a Seat open card, a Seats to fill row (#545): they stand in the seat that opened first, unpaid (*You?*), and **I'm in \u00b7 `money.share_grosze`** is `POST /bookings/{id}/seats`. No Chat and no Leave. `null` for a player in it."
           }
         },
         "type": "object",
@@ -8385,7 +8624,7 @@
           "leaving"
         ],
         "title": "BookingDetailsResponse",
-        "description": "A booked game's details, for a player in it."
+        "description": "A booked game's details, for a player in it \u2014 or for a member its open\nseat is offered to (#545)."
       },
       "CalledOffBySchema": {
         "properties": {
@@ -10076,7 +10315,8 @@
         "type": "string",
         "enum": [
           "COURT_AVAILABLE",
-          "BOOK_IT_NOW"
+          "BOOK_IT_NOW",
+          "BOOKED"
         ],
         "title": "CourtState",
         "description": "What a yes on the card does (the screens A2.3)."
@@ -10237,11 +10477,12 @@
           "proposal_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Proposal Id"
+            "title": "Proposal Id",
+            "description": "The game. On a `SEAT_OPEN` card it is the **booking's** id \u2014 the same id the game had while it filled: `POST /bookings/{id}/seats` takes the seat, `POST /bookings/{id}/no` is *not this time*, and `GET /bookings/{id}` its details."
           },
           "type": {
             "$ref": "#/components/schemas/CardType",
-            "description": "`PICKED_FOR_YOU`, `CHALLENGE` (a member's post) or `SEAT_OPEN` (a rescue \u2014 dealt once rescues exist, #545)."
+            "description": "`PICKED_FOR_YOU`, `CHALLENGE` (a member's post) or `SEAT_OPEN` (a rescue: a booked game that lost a player, dealt to its best fits \u2014 #545)."
           },
           "kind": {
             "$ref": "#/components/schemas/SearchMode"
@@ -10269,18 +10510,18 @@
           "share_grosze": {
             "type": "integer",
             "title": "Share Grosze",
-            "description": "What this player pays if it fills."
+            "description": "What this player pays if it fills \u2014 at once, on a `SEAT_OPEN` card."
           },
           "deadline": {
             "type": "string",
             "format": "date-time",
             "title": "Deadline",
-            "description": "When the card leaves unfilled \u2014 its book-by. The client counts down only under 24 h."
+            "description": "When the card leaves unfilled \u2014 its book-by; on a `SEAT_OPEN` card the club's cut-off, then the start. The client counts down only under 24 h."
           },
           "in_count": {
             "type": "integer",
             "title": "In Count",
-            "description": "People In on the whole game, every version counted."
+            "description": "People In on the whole game, every version counted \u2014 nought on a `SEAT_OPEN` card, whose players have paid (`paid` on their tiles)."
           },
           "version_count": {
             "type": "integer",
@@ -10294,7 +10535,19 @@
           },
           "court": {
             "$ref": "#/components/schemas/CourtState",
-            "description": "`COURT_AVAILABLE` \u2014 a yes is a free vote; `BOOK_IT_NOW` \u2014 a yes fills the game and books it."
+            "description": "`COURT_AVAILABLE` \u2014 a yes is a free vote; `BOOK_IT_NOW` \u2014 a yes fills the game and books it; `BOOKED` \u2014 a rescue: the court is booked, and a yes takes the seat and pays at once."
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name",
+            "description": "What the club calls the court \u2014 *Court 6* \u2014 on a `SEAT_OPEN` card; `null` on a game still filling, which is given one at booking."
           },
           "no_free_cancellation": {
             "type": "boolean",
@@ -10338,6 +10591,7 @@
           "version_count",
           "open_seats_after_your_yes",
           "court",
+          "court_name",
           "no_free_cancellation",
           "club_confirms",
           "sides",
@@ -10555,6 +10809,11 @@
             "type": "boolean",
             "title": "Is In",
             "description": "They said yes: the **IN** tag. Nobody else carries a tag \u2014 a player still deciding is a plain tile."
+          },
+          "paid": {
+            "type": "boolean",
+            "title": "Paid",
+            "description": "On a `SEAT_OPEN` card, a player on the booked game \u2014 *2,75 \u00b7 paid* (#545). `false` on a game still filling, and on the reader's own tile, which is the open seat."
           }
         },
         "type": "object",
@@ -10565,7 +10824,8 @@
           "photo_id",
           "photo_url",
           "level",
-          "is_in"
+          "is_in",
+          "paid"
         ],
         "title": "DeckTileSchema",
         "description": "One person on a card."
@@ -10966,6 +11226,47 @@
         ],
         "title": "FailureReason",
         "description": "Why a share could not be held (the mechanics \u00a712.2, \u00a719)."
+      },
+      "FillInResponse": {
+        "properties": {
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At",
+            "description": "The instant every row and deadline here was read against."
+          },
+          "badge": {
+            "type": "integer",
+            "title": "Badge",
+            "description": "The tab's badge: the Seats to fill rows."
+          },
+          "seats_to_fill": {
+            "items": {
+              "$ref": "#/components/schemas/SeatToFillSchema"
+            },
+            "type": "array",
+            "title": "Seats To Fill",
+            "description": "Every rescue in the group the reader fits \u2014 the pair rule, the kind their intent wants, free for the hour in their week, no game of theirs then, within their Games & money \u2014 **soonest first**, before or after the cut-off. Never a game still filling: that is the deck's. *You're In* is `GET /players/me/live-yeses`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pool_id",
+          "sport",
+          "read_at",
+          "badge",
+          "seats_to_fill"
+        ],
+        "title": "FillInResponse",
+        "description": "A group's **Fill in** tab for one sport: *Seats to fill* (#545)."
       },
       "FillSeatsRequest": {
         "properties": {
@@ -15347,6 +15648,28 @@
         "title": "ReliabilityStrand",
         "description": "The six strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *answers about results* and weak on *sportsmanship*\nwins in competitive and loses in for fun. A single blended score cannot\nexpress that, which is the whole argument for the decomposition, and it is\njustified for exactly as long as such a pair exists (``ranking-weights.md``\n\u00a76).\n\n**The inversion is watched rather than assumed, and it widened again.** It\nwas 24/4 against sportsmanship's 5/16 while *confirms results* was here; the\nstrike left 18/7 against 15/17, and *answers about results* restores the wide\npair at 24/4 against 5/16 (``docs/adr/0160``). It is asserted in\n``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the\ndecomposition has stopped paying for itself and the argument for it is due\nagain.\n\n**The sixth name is not the one that was struck, and the difference is the\nwhole of ``docs/adr/0160``.** *Confirms results* asked whether a game reached\nan agreed score, which is a fact about a **pair**, and every denominator\ntried on it docked somebody ADR-0049 protects \u2014 both sides of an honest\ndisagreement included (``docs/adr/0137``). *Answers about results* asks\nwhether **this person** replied to a score put in front of them, and a\ncounter is as good an answer as an acceptance, so disagreeing costs nothing\nand only silence is priced.\n\n**Three different blends of these six exist in this system and confusing\nthem is a live risk:** the published Player Score at 35/20/15/12/10/8, and\nthese two. The reliability *floor* reads the published one \u2014 the one\ndeliberate exception, because a penalty justified by a figure that exists\nnowhere a human can look is unexplainable."
       },
+      "RescueOfferSchema": {
+        "properties": {
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deadline",
+            "description": "When the seat leaves the board \u2014 the club's cut-off while it is ahead, then the start."
+          },
+          "fills_by_the_cut_off": {
+            "type": "boolean",
+            "title": "Fills By The Cut Off",
+            "description": "*fills by Fri 16:00* \u2014 before the cut-off, the game is off unless its seats are taken by `deadline`; `false` is *offered until the start*. Switches by itself at the cut-off."
+          }
+        },
+        "type": "object",
+        "required": [
+          "deadline",
+          "fills_by_the_cut_off"
+        ],
+        "title": "RescueOfferSchema",
+        "description": "The open seat, offered to a reader not on the game (#545)."
+      },
       "ResetDeckRequest": {
         "properties": {
           "sport": {
@@ -16107,6 +16430,82 @@
         ],
         "title": "SeatSchema",
         "description": "One seat: a side, its occupant, their answer and their own deadline.\n\n``answer_by`` is **this seat's own**, dated when this seat was invited \u2014 a\nseat filled later starts its own day and cannot inherit a deadline from a send\nit was not part of. It is absent exactly when nobody was asked: an empty seat,\nthe organiser's, and both seats of a challenge born from a mutual yes."
+      },
+      "SeatToFillSchema": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id",
+            "description": "`POST /bookings/{id}/seats` takes the seat \u2014 *I'm in \u00b7 `share_grosze`* \u2014 and `GET /bookings/{id}` is its details as the reader sees it from outside."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Competitive, or for fun (*\u00b7 friendly* on the title)."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start; games are 1 h."
+          },
+          "club": {
+            "$ref": "#/components/schemas/BookedClubSchema"
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name",
+            "description": "What the club calls the court."
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "What *I'm in* charges at once."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats",
+            "description": "The dashed **?** squares after the players' posters."
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deadline",
+            "description": "When the row leaves the board \u2014 the club's cut-off while it is ahead, then the start."
+          },
+          "fills_by_the_cut_off": {
+            "type": "boolean",
+            "title": "Fills By The Cut Off",
+            "description": "*fills by `deadline`* before the cut-off; `false` is *offered until the start*. Switches by itself at the cut-off."
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/BookedTileSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Everybody on the game, each *paid* \u2014 the small posters, first side first. Long-press a poster for their record."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "sport",
+          "kind",
+          "starts_at",
+          "club",
+          "court_name",
+          "share_grosze",
+          "open_seats",
+          "deadline",
+          "fills_by_the_cut_off",
+          "players"
+        ],
+        "title": "SeatToFillSchema",
+        "description": "One *Seats to fill* row: a booked game that lost a player, and the\nreader fits and is free for it."
       },
       "SeatingSchema": {
         "properties": {

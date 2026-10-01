@@ -71,7 +71,7 @@ _A_WEEK: Final = timedelta(days=7)
 class CardType(StrEnum):
     """The three cards a deck deals (the mechanics §8.1)."""
 
-    #: A rescue: a booked game that lost a player. Dealt once rescues exist (#545).
+    #: A rescue: a booked game that lost a player, dealt to its best fits (#545).
     SEAT_OPEN = "SEAT_OPEN"
     #: A member's post, dealt to a best fit.
     CHALLENGE = "CHALLENGE"
@@ -95,6 +95,9 @@ class CourtState(StrEnum):
     COURT_AVAILABLE = "COURT_AVAILABLE"
     #: The yes fills the game, and books it.
     BOOK_IT_NOW = "BOOK_IT_NOW"
+    #: A rescue: the court is booked, and the yes takes a seat on it and pays
+    #: at once (#545).
+    BOOKED = "BOOKED"
 
 
 def card_type(proposal: Proposal) -> CardType:
@@ -298,9 +301,16 @@ class DeckCard:
     no_free_cancellation: bool
     #: At an On request club the club confirms a full game before anybody pays.
     club_confirms: bool
+    #: What the club calls the court — once booked: a rescue's (#545).
+    court_name: str | None = None
+    #: Everybody on a rescue's booked game — each *paid* (#545); nobody on a
+    #: game still filling, whose people are In.
+    paid: tuple[UUID, ...] = ()
 
     @property
     def court(self) -> CourtState:
+        if self.type is CardType.SEAT_OPEN:
+            return CourtState.BOOKED
         if self.open_seats_after_your_yes == 0:
             return CourtState.BOOK_IT_NOW
         return CourtState.COURT_AVAILABLE

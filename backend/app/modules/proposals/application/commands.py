@@ -91,3 +91,21 @@ class LeaveTheGameCommand:
 
     booking_id: UUID
     player_id: UUID
+
+
+@dataclass(frozen=True)
+class RescueCommand:
+    """*I'm in* — or *not this time* — on a rescue: an open seat on a booked
+    game (#545). ``player_id`` comes from the session."""
+
+    booking_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True)
+class ReadFillInCommand:
+    """One reader's *Fill in* tab in one pool and sport (#545)."""
+
+    player_id: UUID
+    pool_id: UUID
+    sport: Sport

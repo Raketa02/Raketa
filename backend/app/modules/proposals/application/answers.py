@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import final
+from typing import Protocol, final
 from uuid import UUID
 
 from app.application.ports import UnitOfWork
@@ -43,11 +43,16 @@ from app.modules.proposals.application.fill import Booked, Fill, FillOutcome
 from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.making import loaded
 from app.modules.proposals.domain.errors import (
+    BookingIsCalledOff,
+    BookingNotFound,
     CourtJustTaken,
+    GameHasStarted,
     PaymentToConfirm,
     ProposalIsFull,
     ProposalIsOver,
     ProposalNotFound,
+    RescueNotOffered,
+    SeatJustTaken,
 )
 from app.modules.proposals.domain.ports import (
     ClubRequests,
@@ -121,6 +126,22 @@ class SayYes:
         return _answer(proposal, player_id, outcome)
 
 
+class JoinsARescue(Protocol):
+    """Taking an open seat on a booked game (#545) — ``rescues.py``'s
+    ``Rescuer``, declared here so a confirmed rescue payment reaches it
+    without the two modules importing each other."""
+
+    async def join(
+        self,
+        proposal: Proposal | None,
+        booking_id: UUID,
+        player: UUID,
+        *,
+        now: Instant,
+        confirmed: UUID | None = None,
+    ) -> YesAnswer: ...
+
+
 @final
 class ConfirmPayment:
     """*I confirmed my payment in the app* — **the yes again** (the mechanics
@@ -131,6 +152,11 @@ class ConfirmPayment:
     **Until somebody else takes the seat**: a game that filled without them, or
     whose seat somebody else took, or that is no longer filling, lets the hold
     go and answers as a yes would — ``proposal_is_over`` or ``proposal_is_full``.
+
+    **On a booked game it is the join again** (#545): the payment was a
+    rescue's, and the open seat is taken on it — unless somebody took it first
+    (``seat_just_taken``), the game is off or has begun, or the seat is no
+    longer theirs to be offered; then the hold is let go.
     """
 
     def __init__(
@@ -141,6 +167,7 @@ class ConfirmPayment:
         fill: Fill,
         charges: SeatCharges,
         undecided: UndecidedCharges,
+        rescuer: JoinsARescue,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
@@ -149,6 +176,7 @@ class ConfirmPayment:
         self._fill = fill
         self._charges = charges
         self._undecided = undecided
+        self._rescuer = rescuer
         self._uow = uow
         self._clock = clock
 
@@ -164,6 +192,10 @@ class ConfirmPayment:
             command.seat_charge_id, player_id=player_id, at=now
         )
         proposal = await _locked(self._proposals, game_id)
+        if proposal.standing_at(now) is Standing.FILLED:
+            return await self._rescue(
+                proposal, player_id, confirmed=command.seat_charge_id, now=now
+            )
         if player_id in proposal.yeses:
             # Confirmed and In already — a second tap, or the yes said again.
             await self._uow.commit()
@@ -180,6 +212,32 @@ class ConfirmPayment:
         await self._proposals.save(proposal)
         await self._uow.commit()
         return _answer(proposal, player_id, outcome)
+
+    async def _rescue(
+        self, proposal: Proposal, player_id: UUID, *, confirmed: UUID, now: Instant
+    ) -> YesAnswer:
+        """A booked game's payment: a rescue's, and confirming it takes the
+        seat (#545)."""
+
+        try:
+            answer = await self._rescuer.join(
+                proposal,
+                proposal.proposal_id,
+                player_id,
+                now=now,
+                confirmed=confirmed,
+            )
+        except (
+            SeatJustTaken,
+            BookingIsCalledOff,
+            GameHasStarted,
+            RescueNotOffered,
+            BookingNotFound,
+        ):
+            await self._too_late(proposal, player_id, now=now)
+            raise
+        await self._uow.commit()
+        return answer
 
     async def _too_late(
         self, proposal: Proposal, player_id: UUID, *, now: Instant

@@ -267,3 +267,26 @@ class BookingIsCalledOff(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("this game is called off")
+
+
+class SeatJustTaken(ConflictError):
+    """The open seat this player went for was taken a moment before — **the
+    first join wins** (#545; the mechanics §10.1, §19) — or there is none left
+    to take. Nothing was recorded, and nobody charged them."""
+
+    code = "seat_just_taken"
+
+    def __init__(self) -> None:
+        super().__init__("somebody just took this seat")
+
+
+class RescueNotOffered(ConflictError):
+    """The open seat is not one this player is offered (#545): they do not fit
+    somebody on the game, are not free for its hour, play then already, are at
+    their Games & money, are on the game or left it. **Which is not said**, as a
+    withheld card's reason is not (``docs/adr/0130``). Nothing was recorded."""
+
+    code = "rescue_not_offered"
+
+    def __init__(self) -> None:
+        super().__init__("this seat is not offered to this player")

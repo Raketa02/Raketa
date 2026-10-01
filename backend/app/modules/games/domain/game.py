@@ -260,6 +260,32 @@ class Game:
             )
         )
 
+    def take_seat(
+        self, player_id: UUID, *, side: GameSide, occurred_at: Instant
+    ) -> None:
+        """A booking's rescue took an open seat on ``side`` (#545). **This is
+        the court now** — recorded as the re-seat it is, so the room, whose
+        members are the line-up, takes them in and the stream reads find them
+        on the court — but one seat at a time: a court that lost two players
+        is still short of one after the first rescue.
+
+        Told by ``bookings`` in the transaction of the rescue, which has
+        already asked whether the seat is there to take. What this refuses is
+        the aggregate's own half: a game no longer awaiting its entry — its
+        hour has come — and a side with no seat open.
+        """
+
+        line_up = self.line_up.seated(player_id, side=side)
+        if self.standing_at(occurred_at) is not GameStanding.AWAITING_ENTRY:
+            raise TheGameIsNotOpenToSeating()
+        self._record_that(
+            LineUpReseated(
+                game_id=self.game_id,
+                seatings=line_up.codes,
+                occurred_at=occurred_at,
+            )
+        )
+
     # -- ending it ---------------------------------------------------------
 
     def call_off(self, *, by: UUID | None, occurred_at: Instant) -> None:
@@ -705,7 +731,10 @@ class Game:
             self.departed |= {event.player_id}
         elif isinstance(event, LineUpReseated):
             self.line_up = LineUp.from_codes(event.seatings)
-            self.departed = frozenset()
+            # A whole court has nobody's departure on it; a rescue that leaves a
+            # seat still open keeps its leavers, as the court is not whole (#545).
+            if self.line_up.is_complete:
+                self.departed = frozenset()
         elif isinstance(event, GameCalledOff):
             self.called_off_at = instant(event.occurred_at)
             self.called_off_by = event.called_by

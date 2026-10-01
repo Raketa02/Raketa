@@ -316,7 +316,9 @@ TELLINGS: tuple[Telling, ...] = (
         reaches_the_room=False,
         why_nothing=(
             "the acceptance that completed the court draws its own line, and "
-            "membership reads the game's line-up live rather than being told"
+            "membership reads the game's line-up live rather than being told — "
+            "a booking's rescue taking a seat (#545) joins the room the same "
+            "way, and its line, *Ola took the seat*, is not drawn yet"
         ),
     ),
     Telling(

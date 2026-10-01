@@ -6,11 +6,13 @@ caller's transaction (``SeatChargeRefundDecided``), and ``SettleSeatCharges``
 refunds it from the outbox and records what the provider gave back and the card
 fee it kept. A crash between the two leaves a decision a subscriber retries.
 
-**Two reasons, two amounts.** A player who **left before the club's cut-off**
-is refunded at once **less the card fee**, which the provider never returns —
-the leaver bears it. A game **called off at its cut-off** gives everybody still
-in **everything back**: it is the club's own free-cancellation rule, so the club
-bears the fees. Each player is emailed — every notice about money is.
+**Three reasons, two amounts.** A player who **left before the club's
+cut-off** is refunded at once **less the card fee**, which the provider never
+returns — the leaver bears it — and so is one who left **after** it, the moment
+somebody takes their seat (#545). A game **called off at its cut-off** gives
+everybody still in **everything back**: it is the club's own free-cancellation
+rule, so the club bears the fees. Each player is emailed — every notice about
+money is.
 
 **Nothing here commits**: the act is the caller's.
 """
@@ -27,6 +29,7 @@ from app.kernel import Instant
 from app.modules.payments.application.seat_charge_emails import (
     game_called_off_email,
     left_the_game_email,
+    seat_taken_email,
 )
 from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.ports import Payers, SeatChargeRepository, Sellers
@@ -40,6 +43,9 @@ class RefundReason(StrEnum):
     LEFT = "LEFT"
     #: The game was called off at the club's cut-off: in full.
     CALLED_OFF_AT_THE_CUT_OFF = "CALLED_OFF_AT_THE_CUT_OFF"
+    #: The player left after the cut-off and somebody took their seat (#545):
+    #: less the card fee.
+    SEAT_TAKEN = "SEAT_TAKEN"
 
 
 @final
@@ -71,7 +77,7 @@ class RefundTheSeats:
         each player's charge that a refund was decided on — a share nobody
         paid, or one already being given back, is not."""
 
-        withhold_fee = reason is RefundReason.LEFT
+        withhold_fee = reason is not RefundReason.CALLED_OFF_AT_THE_CUT_OFF
         refunded: dict[UUID, SeatCharge] = {}
         for charge in await self._charges.of_game(game_id):
             if charge.player_id not in players:
@@ -101,6 +107,17 @@ class RefundTheSeats:
             club = "the club" if seller is None else seller.name
             if reason is RefundReason.LEFT:
                 message = left_the_game_email(
+                    to=payer.email,
+                    name=payer.name,
+                    club=club,
+                    sport=charge.sport,
+                    starts_at=charge.starts_at,
+                    share_grosze=charge.amount_grosze,
+                    fee_estimate_grosze=estimated_card_fee(charge.amount_grosze),
+                    app_link=self._app_link,
+                )
+            elif reason is RefundReason.SEAT_TAKEN:
+                message = seat_taken_email(
                     to=payer.email,
                     name=payer.name,
                     club=club,
