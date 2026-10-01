@@ -1,7 +1,7 @@
 /**
  * **A profile's face** — the player's own photograph (or the poster standing in for it) for Player,
- * the club's tile for an administrator profile — at a group monogram's two sizes: `row` in the chip,
- * `card` in the sheet's rows (club 6–7).
+ * the club's tile for an administrator profile — `chip` (22) in the switcher's chip, `card` in the
+ * sheet's rows (club 6–7).
  *
  * The photograph is the reader's own, off their record (`player_record`'s `useOwnFace`, the edge the
  * yes screen opened), and read only where Player is drawn: an account that does not play has no
@@ -21,7 +21,7 @@ export function ProfileFace({
   size,
 }: {
   readonly option: ProfileOption;
-  readonly size: 'card' | 'row';
+  readonly size: 'card' | 'row' | 'chip';
 }) {
   return option.kind === 'player' ? (
     <OwnFace size={size} />
@@ -30,7 +30,7 @@ export function ProfileFace({
   );
 }
 
-function OwnFace({ size }: { readonly size: 'card' | 'row' }) {
+function OwnFace({ size }: { readonly size: 'card' | 'row' | 'chip' }) {
   const playerId = useCurrentUser().data?.id;
   const { photoUrl } = useOwnFace(playerId);
 

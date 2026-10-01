@@ -776,14 +776,18 @@ const size = {
    *  A 38 tile's corner is 10 and its letters 14; a 28 tile's are 8 and 10. The letters are the
    *  one font size in the app after the yes tile's that is computed from a box, and it is computed
    *  inside the tile that owns the box — the group's, and since #518 a club's (`ClubTile`), which
-   *  is the same drawing at the same two sizes. */
-  monogram: { card: 38, row: 28, header: 36, radius: 0.27, letters: 0.37 },
-  /** THE PROFILE SWITCHER'S CHIP (club 7, #518) — a face at the monogram's row size beside a drawn
-   *  ⇅, MEASURED off the mock at 1×: the two arrows sit in a 16pt box, drawn as geometry because
+   *  is the same drawing at the same two sizes. `chip` is the profile switcher's face (#518, as
+   *  slimmed 2026-10-01): the worn profile drawn small enough that the pill reads as a control
+   *  rather than as a second avatar beside the header's. */
+  monogram: { card: 38, row: 28, header: 36, chip: 22, radius: 0.27, letters: 0.37 },
+  /** THE PROFILE SWITCHER'S CHIP (club 7, #518; slimmed 2026-10-01) — a face at `monogram.chip`
+   *  (22) beside a drawn ⇅, in PROPORTION to the product owner's mock rather than at its pixels: the
+   *  face about three quarters of the pill's height, the arrows about two fifths of the face's. So
+   *  the two arrows sit in a 14pt box (their strokes span 8,75 of it), drawn as geometry because
    *  Feather ships no up-and-down pair and Archivo is never asked for a mark. `markStroke` is the
    *  mock's hairline arrow, a step under the tick's 2pt because the arrows are two strokes side by
    *  side and at 2 they close into a block. */
-  switcher: { mark: 16, markStroke: 1.5 },
+  switcher: { mark: 14, markStroke: 1.5 },
   /** THE GROUP PAGE'S TWO DRAWN PIECES (#513), MEASURED off the mocks at 1×. `seat` is a face or
    *  an empty seat in the Games card's row under its headline — 34 in play 14–17 and 39, the
    *  radar card's identity face and a `btn` high. It is `PlayerPhoto`'s `face` box at that size,

@@ -19,7 +19,7 @@ export function ClubTile({
   size,
 }: {
   readonly clubName: string;
-  readonly size: 'card' | 'row';
+  readonly size: 'card' | 'row' | 'chip';
 }) {
   const side = theme.size.monogram[size];
 

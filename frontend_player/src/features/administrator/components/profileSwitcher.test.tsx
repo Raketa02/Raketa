@@ -10,7 +10,9 @@
  * phone's preferences — stays.
  */
 
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
+import Svg from 'react-native-svg';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { readPhonePreference, savePhonePreference } from '@/shared/lib/preferences';
@@ -168,6 +170,36 @@ describe('the chip', () => {
 
     expect(await row('Ogrody 33, Administrator', true)).toBeTruthy();
     expect(await row('Tomek Kowal, Player', false)).toBeTruthy();
+  });
+
+  /**
+   * **Slim, in the mock's proportions** (2026-10-01): the face about three quarters of the pill's
+   * height (the mock's 54 of 74), the arrows' strokes about two fifths of the face (its 22 of 54) —
+   * and still a target past 44, which a 30pt pill reaches only through its slop.
+   */
+  it('draws a slim pill: the face three quarters of it, the arrows two fifths of the face', async () => {
+    serve(TOMEK);
+    await launchSignedIn(`/administrator/${CLUB_ID}`);
+    await expectTheArea();
+    await openAdministratorYou();
+
+    const pill = chip();
+    if (pill === null) throw new Error('no chip');
+    const box = StyleSheet.flatten(pill.props.style as ViewStyle);
+    const face = within(pill)
+      .UNSAFE_getAllByType(View)
+      .map((node) => StyleSheet.flatten(node.props.style as ViewStyle | undefined)?.width)
+      .find((width): width is number => typeof width === 'number');
+    const arrows = within(pill).UNSAFE_getByType(Svg).props.width as number;
+    const inset = Number(box.paddingVertical) + Number(box.borderWidth);
+    const height = (face ?? 0) + 2 * inset;
+    const slop = pill.props.hitSlop as { top: number; bottom: number };
+
+    expect(face).toBe(22);
+    expect((face ?? 0) / height).toBeCloseTo(0.73, 1);
+    // The strokes run from 3 to 13 of the mark's 16 units, so they are 10/16 of its box.
+    expect((arrows * 10) / 16 / (face ?? 1)).toBeCloseTo(0.41, 1);
+    expect(height + slop.top + slop.bottom).toBeGreaterThanOrEqual(44);
   });
 });
 

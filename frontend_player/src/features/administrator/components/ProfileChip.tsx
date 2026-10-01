@@ -4,7 +4,10 @@
  * ADR-0185 §3, which amends ADR-0179 §1's locked header by exactly this element).
  *
  * **The chip is club 7's**: a pill on `surface` inside a `line` border, holding the face of the
- * profile worn now — the player's own photograph, or the club's tile — beside a drawn ⇅. It sits in
+ * profile worn now — the player's own photograph, or the club's tile — beside a drawn ⇅. **Slim**
+ * (the product owner's mock, 2026-10-01): a 22 face about three quarters of the pill's 30, inset
+ * `xxs` inside the border, the ⇅ about two fifths of the face, `xs` after the face and `sm` after
+ * the arrows — so it reads as a control beside the header rather than as a second avatar. It sits in
  * the header's right slot on the player's You tab and on the administrator's alike, and **it is not
  * drawn at all for an account with one profile** (`switcherShown`): a chip opening a list of one is
  * a control that does nothing.
@@ -58,11 +61,12 @@ export function ProfileChip({ worn }: ProfileChipProps) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={switcherChipLabel(wornName(wornOption))}
-          hitSlop={theme.hit.btn}
+          // A 30 pill: `hit.chip`'s 9 above and below lifts it past 44.
+          hitSlop={theme.hit.chip}
           onPress={() => setOpen(true)}
           style={({ pressed }) => [s.chip, pressed ? s.pressed : undefined]}
         >
-          <ProfileFace option={wornOption} size="row" />
+          <ProfileFace option={wornOption} size="chip" />
           <SwapMark />
         </Pressable>
       </View>

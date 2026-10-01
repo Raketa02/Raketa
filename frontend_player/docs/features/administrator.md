@@ -247,6 +247,9 @@ You tab and on this area's — ADR-0185 §3 amends ADR-0179 §1's locked header 
 and holds the worn profile's face beside a drawn ⇅: the player's own photograph or poster
 (`player_record`'s `useOwnFace`, read only where Player is drawn), or **the club's tile** (`ClubTile`,
 7.20's drawing on `night` with two letters taken from the name, since a club is served neither).
+**The chip is slim** (the product owner's mock, 2026-10-01): a 22 face (`monogram.chip`) about three
+quarters of a 30 pill, the ⇅ in a 14 box about two fifths of the face, `hit.chip` lifting the target
+past 44 — it had drawn a 28 face in a 36 pill, which read as a second avatar rather than a control.
 **It is not drawn for an account with one profile** (`switcherShown`). The sheet lists Player first,
 when the account plays, then one administrator profile per club in the server's order
 (`profileOptions`), the worn one ticked and `selected`. **A row switches at once and costs nothing on
