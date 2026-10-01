@@ -194,10 +194,9 @@ test.describe('Administrators', () => {
     await expect(banner).toContainText(/^Invitation sent · valid 72 hours/i);
     await expect(banner).toContainText('Tomek Kowalski · tomek.k@gmail.com');
     await expect(banner.getByText('tomek.k@gmail.com')).toHaveCSS('font-family', /IBM Plex Mono/);
-    await expect(banner).toContainText(
-      'Raketa emailed them a button that opens the app, and a code that works in the app if ' +
-        'the button does not. They set their own password there.',
-    );
+    // Whom it went to is the whole message: the email explains itself, and a line about a code
+    // was wrong for an existing account, whose email carries none (#529 I2).
+    await expect(banner).not.toContainText('emailed them');
     expect(stub.requests('post', '/api/v1/club/administrators').map((r) => r.body)).toEqual([
       { name: 'Tomek Kowalski', email: 'tomek.k@gmail.com' },
     ]);

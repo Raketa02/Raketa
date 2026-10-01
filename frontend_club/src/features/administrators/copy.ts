@@ -18,11 +18,10 @@ export const ADMINISTRATORS_COPY = {
       'Raketa account, they just accept.',
   },
   sent: {
+    // No line under the name: the email says what to do, and which email went out — a password
+    // and a code, or an accept in the app — is the backend's to decide (#529 I2).
     invitation: {
       kicker: 'Invitation sent · valid 72 hours',
-      lead:
-        'Raketa emailed them a button that opens the app, and a code that works in the app if ' +
-        'the button does not. They set their own password there.',
     },
     reset: {
       kicker: 'Password reset · new invitation valid 72 hours',

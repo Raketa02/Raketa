@@ -10,9 +10,11 @@ const COPY = ADMINISTRATORS_COPY.sent;
 
 /** **"Invitation sent · valid 72 hours"** (club mock 4), naming whom it went to, with *Done*. */
 export function SentBanner({ sent, onDone }: { sent: Sent; onDone: () => void }) {
+  const words = COPY[sent.kind];
+
   return (
     <Banner
-      kicker={COPY[sent.kind].kicker}
+      kicker={words.kicker}
       title={
         <>
           <strong>{sent.name}</strong>
@@ -20,7 +22,7 @@ export function SentBanner({ sent, onDone }: { sent: Sent; onDone: () => void })
           <span className={styles.email}>{sent.email}</span>
         </>
       }
-      lead={COPY[sent.kind].lead}
+      lead={'lead' in words ? words.lead : undefined}
       action={
         <Button type="button" tone="inverse" onClick={onDone}>
           {COPY.done}
