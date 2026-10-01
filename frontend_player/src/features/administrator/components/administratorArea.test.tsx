@@ -9,6 +9,7 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { clearStoredTokens, getSessionStatus, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -649,6 +650,19 @@ describe('the two tabs', () => {
 
     fireEvent.press(screen.getByRole('tab', { name: 'Groups' }));
     await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}`));
+  });
+
+  it('draws each tab with the inset under its header from the first frame', async () => {
+    // A tab press replaces the screen with no transition, so a native `SafeAreaView`'s first frame
+    // — drawn without the inset and moved down on the next — was the whole press on Android: the
+    // header blinked between the tabs (#529). Every screen here takes the inset from the provider.
+    await launchAsAdministrator([O3_CLUB_GROUP]);
+    expect(screen.UNSAFE_queryAllByType(SafeAreaView)).toHaveLength(0);
+
+    fireEvent.press(screen.getByRole('tab', { name: 'You' }));
+
+    expect(await screen.findByRole('header', { name: 'Marta Nowak' })).toBeTruthy();
+    expect(screen.UNSAFE_queryAllByType(SafeAreaView)).toHaveLength(0);
   });
 
   it('lays the Groups list down from a group’s page, never the page', async () => {

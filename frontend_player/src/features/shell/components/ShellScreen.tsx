@@ -2,7 +2,7 @@
  * The arrangement every screen inside the five-tab shell wears, per design-system 10.1.
  *
  * ```
- * SafeAreaView
+ * TopSafeArea           the top inset, on the first frame
  *   ScreenHeader        pinned — it does not scroll away
  *   ScrollView          the page
  *   CTA                 conditional, and above the bar rather than in it
@@ -31,10 +31,9 @@
 
 import { useRef, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { ScreenHeader, theme } from '@/shared/ui';
+import { ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
 
 export interface ShellScreenProps {
   /**
@@ -173,7 +172,7 @@ export function ShellScreen({
   const pinned = action !== undefined ? <View style={s.action}>{action}</View> : null;
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <TopSafeArea style={s.screen}>
       <ScreenHeader
         title={title}
         eyebrow={eyebrow}
@@ -194,7 +193,7 @@ export function ShellScreen({
         page
       )}
       {avoidsKeyboard ? null : pinned}
-    </SafeAreaView>
+    </TopSafeArea>
   );
 }
 

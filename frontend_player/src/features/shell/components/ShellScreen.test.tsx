@@ -11,8 +11,10 @@
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Children, type ReactNode } from 'react';
-import { RefreshControl, ScrollView, Text } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, type Metrics } from 'react-native-safe-area-context';
+
+import { TopSafeArea } from '@/shared/ui';
 
 import { ShellScreen } from './ShellScreen';
 
@@ -38,7 +40,7 @@ function scroller() {
 
 /** Header, scroller, and the pinned block when there is one. */
 function siblings(): readonly ReactNode[] {
-  return Children.toArray(screen.UNSAFE_getByType(SafeAreaView).props.children);
+  return Children.toArray(screen.UNSAFE_getByType(TopSafeArea).props.children);
 }
 
 describe('what the scroller contains', () => {
@@ -95,13 +97,19 @@ describe('a screen with no title', () => {
 });
 
 describe('the safe area', () => {
-  it('takes the top edge and leaves the bottom to the tab bar', () => {
+  it('takes the top edge on its first frame and leaves the bottom to the tab bar', () => {
     renderScreen();
 
-    // `edges` and not a measured padding, because the padding is the library's arithmetic
-    // and this is the app's decision: the screen asks for the top inset and asks for no
-    // other. The bottom one is the bar's, and `TabBar` has its own suite proving it takes it.
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).toEqual(['top']);
+    // The top inset and no other: the bottom one is the bar's, and `TabBar` has its own suite
+    // proving it takes it. Padded from the provider on the first render, never by a native
+    // `SafeAreaView`, which measures itself a frame late — a tab root arrives with no
+    // transition, so that frame was the whole tab press on Android: the header blinked (#529).
+    const frame = StyleSheet.flatten(
+      screen.UNSAFE_getByType(TopSafeArea).findByType(View).props.style,
+    );
+    expect(frame.paddingTop).toBe(METRICS.insets.top);
+    expect(frame.paddingBottom).toBeUndefined();
+    expect(screen.UNSAFE_queryAllByType(SafeAreaView)).toHaveLength(0);
   });
 });
 

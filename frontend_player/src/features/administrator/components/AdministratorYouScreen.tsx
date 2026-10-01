@@ -35,11 +35,10 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountPanel, useCurrentUser } from '@/features/auth/types';
 import { ReadFailure } from '@/features/groups/types';
-import { Card, DoorRow, ScreenHeader, theme } from '@/shared/ui';
+import { Card, DoorRow, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
 
 import { useAreaClubName } from '../hooks/useAreaAccess';
 import { useAdministeredGroups } from '../hooks/useOfficialGroups';
@@ -59,7 +58,7 @@ export function AdministratorYouScreen({ clubId }: { readonly clubId: string }) 
   const plays = user.data?.profiles.actsAsPlayer ?? true;
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <TopSafeArea style={s.screen}>
       <ScreenHeader
         eyebrow={administratorEyebrow(clubName)}
         title={user.data?.name ?? COPY.title}
@@ -81,7 +80,7 @@ export function AdministratorYouScreen({ clubId }: { readonly clubId: string }) 
 
         <AccountPanel />
       </ScrollView>
-    </SafeAreaView>
+    </TopSafeArea>
   );
 }
 

@@ -21,11 +21,10 @@
  */
 
 import { StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FindAGameNextScreen } from '@/features/find_a_game_next/types';
 import { GroupsSection } from '@/features/groups/types';
-import { Segment, theme } from '@/shared/ui';
+import { Segment, theme, TopSafeArea } from '@/shared/ui';
 
 import type { PlaySegment } from '../domain/playSegment';
 import { usePlaySegment } from '../hooks/usePlaySegment';
@@ -41,7 +40,7 @@ export function PlayScreen() {
   const { segment, choose } = usePlaySegment();
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <TopSafeArea style={s.screen}>
       {segment === undefined ? null : (
         <>
           <View style={s.head}>
@@ -50,7 +49,7 @@ export function PlayScreen() {
           {segment === 'groups' ? <GroupsSection /> : <FindAGameNextScreen />}
         </>
       )}
-    </SafeAreaView>
+    </TopSafeArea>
   );
 }
 

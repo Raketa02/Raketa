@@ -26,7 +26,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   GroupNameCard,
@@ -36,7 +35,7 @@ import {
 } from '@/features/groups/types';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
-import { Button, Card, Note, ScreenHeader, Tag, theme } from '@/shared/ui';
+import { Button, Card, Note, ScreenHeader, Tag, theme, TopSafeArea } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { useAreaClubName } from '../hooks/useAreaAccess';
@@ -88,7 +87,7 @@ export function NewOfficialGroupScreen({ clubId }: { readonly clubId: string }) 
   }
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <TopSafeArea style={s.screen}>
       <ScreenHeader title={COPY.title} onBack={() => router.back()} backLabel={COPY.back} />
 
       <KeyboardAvoidingView style={s.body} behavior={KEYBOARD_AVOIDANCE}>
@@ -147,7 +146,7 @@ export function NewOfficialGroupScreen({ clubId }: { readonly clubId: string }) 
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </TopSafeArea>
   );
 }
 

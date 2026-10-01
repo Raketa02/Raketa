@@ -12,10 +12,9 @@
 
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReadFailure } from '@/features/groups/types';
-import { Button, DarkCard, ScreenHeader, theme } from '@/shared/ui';
+import { Button, DarkCard, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
 
 import { useAreaClubName } from '../hooks/useAreaAccess';
 import { useAdministeredGroups } from '../hooks/useOfficialGroups';
@@ -32,7 +31,7 @@ export function AdministratorGroupsScreen({ clubId }: { readonly clubId: string 
   const groups = read.data?.groups;
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <TopSafeArea style={s.screen}>
       <ScreenHeader eyebrow={administratorEyebrow(clubName)} title={COPY.title} />
 
       <ScrollView contentContainerStyle={s.content}>
@@ -60,7 +59,7 @@ export function AdministratorGroupsScreen({ clubId }: { readonly clubId: string 
           <OfficialGroupCard key={group.id} clubId={clubId} group={group} />
         ))}
       </ScrollView>
-    </SafeAreaView>
+    </TopSafeArea>
   );
 }
 

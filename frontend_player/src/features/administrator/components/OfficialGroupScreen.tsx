@@ -21,11 +21,10 @@
 
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReadFailure } from '@/features/groups/types';
 import { codeMessage } from '@/shared/errors';
-import { ScreenHeader, theme } from '@/shared/ui';
+import { ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
 
 import { useAreaClubName } from '../hooks/useAreaAccess';
 import { useOfficialGroup } from '../hooks/useOfficialGroups';
@@ -48,7 +47,7 @@ export function OfficialGroupScreen({ clubId, groupId }: OfficialGroupScreenProp
   const group = read.data;
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <TopSafeArea style={s.screen}>
       <ScreenHeader
         eyebrow={officialEyebrow(clubName)}
         {...(group === undefined ? {} : { title: group.name })}
@@ -73,7 +72,7 @@ export function OfficialGroupScreen({ clubId, groupId }: OfficialGroupScreenProp
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </TopSafeArea>
   );
 }
 

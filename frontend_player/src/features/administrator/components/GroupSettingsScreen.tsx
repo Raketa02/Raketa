@@ -27,12 +27,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdmittedCard, GroupNameCard, ReadFailure, WhoCanJoinCard } from '@/features/groups/types';
 import { codeMessage } from '@/shared/errors';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { Button, Note, ScreenHeader, theme } from '@/shared/ui';
+import { Button, Note, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { OfficialGroup } from '../domain/officialGroup';
@@ -58,7 +57,7 @@ export function GroupSettingsScreen({
   const group = read.data;
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <TopSafeArea style={s.screen}>
       <ScreenHeader title={COPY.title} onBack={() => router.back()} backLabel={COPY.back} />
 
       {group !== undefined ? (
@@ -72,7 +71,7 @@ export function GroupSettingsScreen({
           />
         </View>
       ) : null}
-    </SafeAreaView>
+    </TopSafeArea>
   );
 }
 
