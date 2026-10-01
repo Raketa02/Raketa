@@ -44,9 +44,20 @@
  * **A refusal says why, in a toast, and decides where the card goes** (A2.4, `refusalOutcome`): a
  * reason the player can mend — no saved way to pay, the live-yes cap, a read that failed — puts the
  * card back, and the re-read restores one that had already flown; a game that is over, full or no
- * longer the player's lets it go. **A yes that charges** — *Book it now*, a rescue — is sent like
- * any other here; the ten seconds of *Undo* in front of it, the payment setup and *It's a game!*
- * are the next ticket's (#555).
+ * longer the player's lets it go.
+ *
+ * ## The fill: the setup first, Undo in front, and the answer read (#555)
+ *
+ * The moment a yes fills a game is the shell's `FillProvider`, because what it sets going outlives
+ * this tab; the deck asks it through `useFillYes`. **A yes with nothing saved** opens the payment
+ * setup instead, the card springing back, and lands once the method is — or never, if the sheet is
+ * closed. **A yes that moves money** — *Book it now*, any rescue — flies like any other and then
+ * counts ten seconds behind *Undo*: its card stays in the read, **hidden** while it counts, so *Undo*
+ * deals it back exactly where it was. Every other answer goes on meanwhile; only a second yes that
+ * would move money springs back, with a toast — one window at a time. **Every yes's answer** goes
+ * to the fill, which raises *It's a game!* or the confirmation of a refused share — a yes the card
+ * called a free vote can still be the last one — and the two refusals only it can mend (no method,
+ * a payment to confirm) are its, said there rather than here.
  *
  * **Offline is not a refusal.** The answer is held until the connection returns
  * (`networkMode: 'online'`), the card stays gone, and the amber note says the answer resumes.
@@ -86,11 +97,13 @@ import {
   type DeckCard,
   type DeckPerson,
 } from '../domain/deck';
+import type { DealtIn } from '../domain/fill';
 import type { GameKind } from '../domain/vocabulary';
 import { fortnightOf, gameDayOf, weekdayAt } from '../domain/when';
 import { useDeckClock } from '../hooks/useDeckClock';
+import { useFillYes } from '../hooks/useFillYes';
 import { useAnswerCard, useDropCard, useGroupDeck, useRereadDeck } from '../hooks/useGroupDeck';
-import type { AnswerToCard } from '../use-cases/answers';
+import { useLatest } from '../hooks/useLatest';
 
 import {
   ANSWER_LABELS,
@@ -100,6 +113,7 @@ import {
   segmentSpoken,
   stampsFor,
 } from './deckPresentation';
+import { FILL_COPY } from './fillCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { GameCard } from './GameCard';
 import { ReadFailed } from './ReadFailed';
@@ -130,25 +144,39 @@ export function GamesDeck({ groupId, sport, chosen, onChoose, empty }: GamesDeck
   const { read, kind } = useGroupDeck(groupId, sport, chosen);
   const reread = useRereadDeck(groupId);
   const drop = useDropCard(groupId, sport, kind);
+  const dealtIn: DealtIn = { groupId, sport, kind };
+  const fill = useFillYes(dealtIn);
 
   const [leaving, setLeaving] = useState<Leaving | undefined>(undefined);
   /** The player whose record is open — a tile's press. */
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
 
-  const answer = useAnswerCard(groupId, (error: AppError, refused: AnswerToCard) => {
-    showToast({ message: refusalMessage(error), tone: 'bad' });
-    // A reason the player can mend puts the card back: straight back onto the stage if it is still
-    // flying, and through the settling re-read if it has already gone.
-    if (refusalOutcome(error.code) === 'returns') {
-      setLeaving((held) => (held?.card.proposalId === refused.proposalId ? undefined : held));
-    }
-  });
+  const answer = useAnswerCard(
+    groupId,
+    (error: AppError, refused) => {
+      const { card } = refused;
+      const mended =
+        card !== undefined &&
+        fill.takesRefusal(error, refused, () => landLater.current('yes', card));
+      if (!mended) showToast({ message: refusalMessage(error), tone: 'bad' });
+      // A reason the player can mend puts the card back: straight back onto the stage if it is
+      // still flying, and through the settling re-read if it has already gone.
+      if (mended || refusalOutcome(error.code) === 'returns') {
+        setLeaving((held) => (held?.card.proposalId === refused.proposalId ? undefined : held));
+      }
+    },
+    fill.onAnswered,
+  );
 
   const deck = read.data;
   const readAt = read.dataUpdatedAt;
   // The read's instant, moving on while a card counts down — see `useDeckClock`.
   const at = useDeckClock(readAt, deck !== undefined && anyCountingDown(deck.cards, readAt));
-  const standing = deck === undefined ? [] : standingCards(deck.cards, at);
+  // A yes counting down behind *Undo* keeps its card in the read, hidden until it is sent or undone.
+  const standing =
+    deck === undefined
+      ? []
+      : standingCards(deck.cards, at).filter((card) => card.proposalId !== fill.counting);
   // The card in flight stays on the stage until it has flown, whatever a re-read says.
   const shown =
     leaving === undefined
@@ -167,18 +195,46 @@ export function GamesDeck({ groupId, sport, chosen, onChoose, empty }: GamesDeck
   const open = (card: DeckCard) =>
     router.push(gameRoute(groupId, card.proposalId, sport, card.kind));
 
-  /** One answer, from the drag or a button — the two paths cannot disagree about who may fly. */
+  /**
+   * One answer, from the drag or a button — the two paths cannot disagree about who may fly. A yes
+   * with nothing saved waits for the setup, and the card springs back.
+   */
   const answerTo = (said: DeckExit, card: DeckCard): DragVerdict => {
     if (leaving !== undefined) return 'withheld';
+    if (said === 'yes' && fill.setUpFirst(() => landLater.current('yes', card))) return 'withheld';
+    return land(said, card);
+  };
+
+  /**
+   * The answer given: the card flies, and the yes counts down or is sent. A second yes that would
+   * move money while one counts springs back and says why — one window at a time.
+   */
+  const land = (said: DeckExit, card: DeckCard): DragVerdict => {
+    if (leaving !== undefined) return 'withheld';
+    if (said === 'yes' && fill.held(card)) {
+      showToast({ message: FILL_COPY.undo.oneAtATime });
+      return 'withheld';
+    }
     setLeaving({ card, said });
-    answer.mutate({ proposalId: card.proposalId, said });
+    if (said === 'yes' && fill.waits(card)) {
+      fill.book(card);
+      return 'taken';
+    }
+    answer.mutate({ proposalId: card.proposalId, said, card });
     return 'taken';
   };
 
-  /** The card has flown: it leaves the read, and the buttons unlock. */
+  /** `land` as of the last render — what the setup's `then` and the fill's retry call. */
+  const landLater = useLatest(land);
+
+  /**
+   * The card has flown: it leaves the read, and the buttons unlock — unless its yes is counting
+   * down, when it stays in the read, hidden, for *Undo* to deal back.
+   */
   const cardLeft = (card: DeckCard) => {
+    const counts = leaving?.said === 'yes' && fill.waits(card);
     setLeaving(undefined);
-    drop(card.proposalId);
+    if (!counts) drop(card.proposalId);
   };
 
   if (deck === undefined) {

@@ -963,6 +963,31 @@ another — and this is the screen a yes lands on.
   sentence** is the picture as one header, built from whole handles. _Avoid_: "the celebration"
   or "the moment" (not terms), "the match screen" (the word is copy on one face of it and never a
   noun for a game), pushing it from anywhere but a yes, and re-showing it — every exit removes it.
+- **It's a game!** — the yes screen's third face (#555), in `features/proposals/`: the yes that
+  filled a game dealt in a group's deck. The same ground, entrance, tiles, `vs` and pills, the
+  faces drawn off **the card the yes was said on**, and the doors _Open game_ (Home laid down, the
+  game pushed over it) and _Later_. Raised by the fill over the whole phone rather than pushed as
+  a route, because it answers wherever the player is by then. _Avoid_: showing it to anybody but
+  the player whose yes filled the game — the others are told by a notice.
+
+### The fill
+
+One client-only concept, in `features/proposals/` (#555; the Games & Fill in mechanics §6.5, §11,
+§12.2): what happens on the phone around the yes that may fill a game.
+
+- **The fill** — `FillProvider`, mounted by the shell around the tabs for the session, because a
+  yes said on the deck or a game's details outlives both. It holds the **Undo window**, the
+  **payment setup sheet** a first yes needs, **It's a game!** and the **confirmation** of a refused
+  share; the screens reach it through `useFill`. _Avoid_: "the booking flow" (a Booking is the
+  backend's aggregate), "checkout".
+- **A yes that waits** (`waitsForUndo`) — a yes on _Book it now_ or on any rescue: it moves money,
+  so it waits ten seconds behind **Undo** (the toast _Booking in 10 s · Undo_, a draining ring)
+  and is sent at zero; its card stays in the deck's read, **hidden**, so Undo deals it back where
+  it was. Every other yes is a free vote, sent at once.
+- **A payment to confirm** — this player's share refused when the game filled (the bank wants them
+  present, or a decline): nobody paid, their seat is open again, and confirming it on the phone —
+  on the club's account, the same payment — is their yes again. _Avoid_: "retry the payment" (the
+  server never retries it; the player confirms it).
 
 ### The plan
 

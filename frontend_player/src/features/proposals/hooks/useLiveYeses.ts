@@ -12,8 +12,9 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 
+import type { PaymentToConfirm } from '../domain/fill';
 import type { LiveYeses } from '../domain/liveYes';
-import { readLiveYeses } from '../use-cases/liveYeses';
+import { readLiveYeses, readPaymentsToConfirm } from '../use-cases/liveYeses';
 
 import { proposalKeys } from './proposalKeys';
 
@@ -23,5 +24,17 @@ export function useLiveYeses({ enabled = true }: { readonly enabled?: boolean } 
     queryKey: proposalKeys.liveYeses(),
     queryFn: ({ signal }) => readLiveYeses({ signal }),
     enabled,
+  });
+}
+
+/**
+ * **The reader's refused shares, waiting for them** (#555) — You › Payments' *TO CONFIRM*, the way
+ * back to a seat for a player whose share was refused when somebody else's yes filled the game. The
+ * app's defaults; the fill re-reads it whenever a yes or a confirmation could have moved it.
+ */
+export function usePaymentsToConfirm() {
+  return useQuery<readonly PaymentToConfirm[], AppError>({
+    queryKey: proposalKeys.paymentsToConfirm(),
+    queryFn: ({ signal }) => readPaymentsToConfirm({ signal }),
   });
 }

@@ -57,12 +57,18 @@
  * no longer holds it. *Not this time* is final, so it goes back too. Each button is busy while its
  * answer is in flight, and the other waits.
  *
+ * **The fill is the deck's too** (#555, `FillProvider`): *I'm in* with nothing saved opens the
+ * payment setup first; on *Book it now* or a rescue it counts ten seconds behind *Undo*, *I'm in*
+ * busy meanwhile; and its answer is the fill's to read. **A yes that books the game leaves this
+ * screen** — back to the deck, which no longer deals it — under *It's a game!*, unless the player
+ * already left it while the ten seconds ran.
+ *
  * **No Chat, no Leave**: a game still filling has neither (A4.2). *Waiting for the club* and its
  * *Leave the game* are the booked game's (#556, #557).
  */
 
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -100,7 +106,9 @@ import {
 import type { LiveYes } from '../domain/liveYes';
 import type { GameKind } from '../domain/vocabulary';
 import { gameDayOf, weekdayAt, type GameDay } from '../domain/when';
+import { useFillYes } from '../hooks/useFillYes';
 import { useAnswerCard, useGroupDeck, useWithdrawYes } from '../hooks/useGroupDeck';
+import { useLatest } from '../hooks/useLatest';
 import { useLiveYeses } from '../hooks/useLiveYeses';
 
 import {
@@ -115,6 +123,7 @@ import {
   shareWords,
   timeWords,
 } from './deckPresentation';
+import { FILL_COPY } from './fillCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { CardTag } from './CardTag';
 import { GameGround } from './GameGround';
@@ -159,11 +168,32 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
   const [answered, setAnswered] = useState<'yes' | 'withdrawn' | undefined>(undefined);
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
 
+  // A booked game leaves this screen — but only while it is still the one on screen: the ten
+  // seconds can outlive it, and *back* from wherever the player went instead would be a stray.
+  const here = useRef(true);
+  useEffect(
+    () => () => {
+      here.current = false;
+    },
+    [],
+  );
+  const leave = () => {
+    if (here.current) router.back();
+  };
+  const fill = useFillYes({ groupId, sport, kind }, leave);
+
   const refused = (error: AppError) => {
     showToast({ message: refusalMessage(error), tone: 'bad' });
     if (refusalOutcome(error.code) === 'gone') router.back();
   };
-  const answer = useAnswerCard(groupId, refused);
+  const answer = useAnswerCard(
+    groupId,
+    (error, asked) => {
+      if (fill.takesRefusal(error, asked, () => landYesLater.current())) return;
+      refused(error);
+    },
+    fill.onAnswered,
+  );
   const withdraw = useWithdrawYes(groupId, refused);
 
   const readAt = read.dataUpdatedAt;
@@ -174,11 +204,35 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
         ? withYourYes(dealt)
         : dealt;
 
-  const busy = answer.isPending || withdraw.isPending;
+  /** This game's yes is counting down behind *Undo*. */
+  const counting = fill.counting === proposalId;
+  /** Another booking counts, and this yes would move money too — one window at a time. */
+  const held = dealt !== undefined && !counting && fill.held(dealt);
+  /** An answer is on its way here — this game's yes counting down among them. */
+  const busy = answer.isPending || withdraw.isPending || counting;
   const paused = answer.isPaused || withdraw.isPaused;
 
-  const sayYes = () =>
-    answer.mutate({ proposalId, said: 'yes' }, { onSuccess: () => setAnswered('yes') });
+  /** The yes given: ten seconds behind *Undo* on a game it would book or pay into, else sent. */
+  const landYes = () => {
+    if (dealt === undefined || fill.held(dealt)) return;
+    if (fill.waits(dealt)) {
+      fill.book(dealt);
+      return;
+    }
+    answer.mutate(
+      { proposalId, said: 'yes', card: dealt },
+      { onSuccess: () => setAnswered('yes') },
+    );
+  };
+  /** `landYes` as of the last render — what the setup's `then` and the fill's retry call. */
+  const landYesLater = useLatest(landYes);
+
+  /** *I'm in* — after the setup, when nothing is saved. */
+  const sayYes = () => {
+    if (busy || held) return;
+    if (fill.setUpFirst(() => landYesLater.current())) return;
+    landYes();
+  };
   const sayNo = () => answer.mutate({ proposalId, said: 'no' }, { onSuccess: () => router.back() });
   const takeBack = () => withdraw.mutate(proposalId, { onSuccess: () => setAnswered('withdrawn') });
 
@@ -202,8 +256,9 @@ export function GameDetailsScreen({ groupId, proposalId, sport, kind }: GameDeta
           <Button
             label={COPY.yes}
             size="lg"
-            busy={answer.isPending && answer.variables?.said === 'yes'}
-            disabled={busy && answer.variables?.said !== 'yes'}
+            busy={counting || (answer.isPending && answer.variables?.said === 'yes')}
+            busyLabel={counting ? FILL_COPY.undo.booking : undefined}
+            disabled={held || (busy && !counting && answer.variables?.said !== 'yes')}
             onPress={sayYes}
           />
           <Button

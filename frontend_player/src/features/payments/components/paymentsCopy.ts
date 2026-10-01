@@ -159,6 +159,27 @@ export const PAYMENTS_COPY = {
       'Your bank moved this card to another network. Clubs can’t charge it until you accept the terms again.',
     termsAgain: 'Accept the terms',
   },
+  /**
+   * **The setup as a sheet over the deck** — a first yes with nothing saved (the mechanics §6.1;
+   * the screens A2.4). The yes lands when the method is saved, or is dropped when the sheet closes.
+   */
+  setupSheet: {
+    title: 'Before your first yes',
+    close: 'Close the payment setup — your yes is not sent',
+    line: 'Save how you pay. The club charges your share only when a game you said yes to fills.',
+  },
+  /** *RECEIPTS* (mock 49) — the club named as the seller, newest first. */
+  receipts: {
+    title: 'Receipts',
+    empty: 'Nothing yet — charges and refunds land here, with the club named as the seller.',
+    footer: 'Refunds: BLIK within hours · cards up to two weeks.',
+    today: 'Today',
+    tomorrow: 'Tomorrow',
+    yesterday: 'Yesterday',
+    unknownClub: 'A club',
+    paid: 'paid',
+    refunded: 'refunded',
+  },
 } as const;
 
 /** The card's own line — *Card •••• 4312*. */

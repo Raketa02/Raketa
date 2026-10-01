@@ -28,6 +28,17 @@ export function usePaymentMethod() {
   });
 }
 
+/**
+ * **Whether a yes must wait for a saved method** — *before your first yes, the app asks you once*
+ * (the mechanics §6.1, §12.5; the screens A2.4). `true` with nothing saved; `false` with a method;
+ * `undefined` while the read has not answered, when the yes is sent and the server decides
+ * (`payment_method_required`).
+ */
+export function usePaymentSetupNeeded(): boolean | undefined {
+  const standing = usePaymentMethod().data;
+  return standing === undefined ? undefined : standing.method === null;
+}
+
 /** *Remove this method* — refused with its reason while anything live needs it (Q83). */
 export function useRemovePaymentMethod() {
   const client = useQueryClient();

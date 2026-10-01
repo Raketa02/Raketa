@@ -91,9 +91,12 @@ single-line field (number, then expiry and CVC as it scrolls), and the SDK draws
 it is styled with the text field's surface, border and radius and the number in the mono face. The
 alternative, `CardForm`, draws a country and postcode Raketa does not need. Part 16.
 
-**Owed, not built:** the deck's _swipe right with no saved method_ opens this setup as a sheet
-(A2.4) — the checklist is a component taking its setup, ready to be hosted there. **Not seen on a
-device**: the Stripe SDK needs a development build rebuilt with it (`pnpm ios` / `pnpm android`), and
+**The deck hosts the setup as a sheet** ([#555](https://github.com/Raketa02/Raketa/issues/555)):
+`PaymentSetupSheet` is the same checklist over a line, titled _Before your first yes_, opened by the
+fill when a yes meets nothing saved (`usePaymentSetupNeeded`, the read's `method === null`) or the
+server refuses one `payment_method_required`. `onSaved` lands the yes; closing drops it, and the close
+control says so. Mounted only while open, so each opening is a fresh visit — one setup each. **Not
+seen on a device**: the Stripe SDK needs a development build rebuilt with it (`pnpm ios` / `pnpm android`), and
 no Stripe test key exists yet (O7, #533) — against a laptop's fake provider the card path is walkable
 and saves the fake's Visa 4242 whatever is typed.
 
@@ -102,3 +105,32 @@ _LIVE YESES_ is the proposals feature's section — the deck's answers, whose de
 screen — and the deck will open this feature's setup as a sheet (A2.4), so the edge points from
 there to here. `PaymentsScreen` takes a `liveYeses` slot, drawn under the method in state B only,
 and the route file `you/payments.tsx` composes it. See [`proposals.md`](proposals.md).
+
+**RECEIPTS close state B** ([#555](https://github.com/Raketa02/Raketa/issues/555); A7.3; mock 49).
+`GET /players/me/receipts` is this feature's own read (`useReceipts`, `paymentKeys.receipts()`):
+every share paid, newest first as served, **the club as the row's title** — the seller (§12.1) — and
+_Padel · Today · 16:00_ under it, the amount signed with a true minus (_−28 zł_). Refunds (↩ on
+`mintSoft`, _+26,58 zł_ in `mintInk`) are drawn already and served by #544; the wire's kind is
+`CHARGE` alone, so `wireVocabulary.ts` holds it _inside_ the domain's union until the two are equal.
+Empty, the section says what will land there; the refund-timing footer is drawn under rows only. A
+receipt is a record, not a door — the game is reached from Home. State B alone, as the screens draw
+it. A booking anywhere re-reads the list (the fill, through `paymentKeys` on `types.ts`).
+
+**A refused share is read here and confirmed on the phone here; the yes again is proposals'** —
+and so is _TO CONFIRM_, the list of them, placed on state B by the route file above _LIVE YESES_
+(`toConfirm` slot). How a share is confirmed is `confirmsWith` (a decline with another card typed
+for it, anything else the bank's check over the card on file).
+([#555](https://github.com/Raketa02/Raketa/issues/555); #541). `useSeatCharge` reads `GET
+/seat-charges/{id}` for what the confirmation draws — the share, the seller, the game, why it was
+refused — **mapped without its secret**; `useConfirmOnPhone` reads it again for the press, hands the
+secret straight to the port and never caches it (the setup's rule). The port's fourth verb,
+`confirmPayment`, confirms **on the club's account** (a direct charge; Stripe started with the
+club's `stripeAccountId`): with the card on file it re-confirms the payment with the card its last
+error names — Stripe's recovery for an off-session payment that wanted its customer — and with
+another card it pays from the fields on screen. It answers `confirmed · cancelled · declined ·
+failed`, never an error; the fake answers the bank's check as `bank` says and a typed card as its
+number does, and records every confirmation in `payments`. **Owed to the backend**: a laptop run's
+in-process provider confirms setups as they are read but never a payment, so the confirmation is
+refused `payment_not_confirmed` on a laptop — only a test key (O7) walks it end to end. **Not seen on
+a device**, and `retrievePaymentIntent` / `confirmPayment` on a connected account have met only the
+type checker.

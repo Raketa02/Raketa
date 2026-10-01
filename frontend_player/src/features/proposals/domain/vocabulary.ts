@@ -35,3 +35,10 @@ export const DAY_RANGES: readonly DayRange[] = ['MORNING', 'AFTERNOON', 'EVENING
 
 /** A game's kind — the switch's two segments, Competitive first. */
 export type GameKind = 'competitive' | 'forFun';
+
+/**
+ * **Why a share could not be held when the game filled** (the mechanics §12.2, §19) — the wire's
+ * own spelling, because `fillOutcome` decides by it: the bank wanting the player present, a decline,
+ * terms to accept again for a card whose brand changed, and no method at all.
+ */
+export type PaymentRefusal = 'AUTHENTICATION_REQUIRED' | 'DECLINED' | 'TERMS_NEEDED' | 'NO_METHOD';

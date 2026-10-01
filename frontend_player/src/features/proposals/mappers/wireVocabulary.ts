@@ -17,6 +17,7 @@ import type {
   DayRange,
   OverlapGrade,
   OverlapShade,
+  PaymentRefusal,
 } from '../domain/vocabulary';
 
 type Schemas = components['schemas'];
@@ -27,4 +28,12 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   readonly grade: Exact<OverlapGrade, Schemas['OverlapGrade']>;
   readonly shade: Exact<OverlapShade, Schemas['OverlapShade']>;
   readonly range: Exact<DayRange, Schemas['DayRange']>;
-} = { cardType: true, courtState: true, grade: true, shade: true, range: true };
+  readonly paymentRefusal: Exact<PaymentRefusal, Schemas['PaymentRefusal']>;
+} = {
+  cardType: true,
+  courtState: true,
+  grade: true,
+  shade: true,
+  range: true,
+  paymentRefusal: true,
+};

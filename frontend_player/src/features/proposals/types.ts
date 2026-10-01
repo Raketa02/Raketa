@@ -22,8 +22,18 @@ export { GameDetailsScreen, type GameDetailsScreenProps } from './components/Gam
 export { GamesAndMoneyRow, type GamesAndMoneyRowProps } from './components/GamesAndMoneyRow';
 export { GamesAndMoneyScreen } from './components/GamesAndMoneyScreen';
 export { LiveYeses } from './components/LiveYeses';
+export { PaymentsToConfirm } from './components/PaymentsToConfirm';
 export { useGamesBadge } from './hooks/useGroupDeck';
 export { parseGameDetailsParams } from './schemas/gameDetailsParams';
 export type { GameKind } from './domain/vocabulary';
 /** The words the group page's suites hold the tab to. */
 export { PROPOSALS_COPY } from './components/proposalsCopy';
+
+/**
+ * **The moment a yes fills a game** (#555) — the ten seconds of *Undo*, the setup a first yes needs,
+ * *It's a game!* and a refused share's confirmation. The shell mounts the provider around the tabs
+ * for the session, because a yes said on the deck outlives the deck; the screens here reach it
+ * through `useFill`, which does not cross. The words cross for the suites that walk it.
+ */
+export { FillProvider, type FillProviderProps } from './components/FillProvider';
+export { FILL_COPY } from './components/fillCopy';

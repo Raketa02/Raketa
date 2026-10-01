@@ -31,6 +31,15 @@
  *   which is what lets step 4 tick itself. The answer is one of four words, never an error: the
  *   player closing the check is `cancelled`, a refusal is `declined`, anything else `failed`.
  *
+ * And a fourth, for the one payment that ever needs the player (#555; the mechanics §12.2):
+ *
+ * - **`confirmPayment`** — a share refused when its game filled, confirmed in the app on **the
+ *   club's account**, where every charge is made (a direct charge; ADR-0189 §4). With the card on
+ *   file, the bank's check is drawn over the payment it refused — Stripe's own recovery for an
+ *   off-session payment that wanted its customer: the payment is confirmed again with the card
+ *   it last tried (`lastPaymentError`). With another card, the fields' entry pays it instead. The
+ *   same four words, `confirmed` for `saved`.
+ *
  * ## A key that is not Stripe's
  *
  * The server answers the key the fields open with (`POST …/setup`). A laptop run's provider is the
@@ -52,12 +61,14 @@
 import {
   CardField,
   PlatformPay,
+  confirmPayment as confirmStripePayment,
   confirmPlatformPaySetupIntent,
   confirmSetupIntent,
   createPaymentMethod,
   handleURLCallback,
   initStripe,
   isPlatformPaySupported,
+  retrievePaymentIntent,
 } from '@stripe/stripe-react-native';
 import type { ComponentType } from 'react';
 import { Linking, Platform, StyleSheet } from 'react-native';
@@ -118,6 +129,22 @@ export interface ConfirmSetup {
   readonly with: ConfirmWith;
 }
 
+/** What the bank said to a payment confirmed in the app — `BankAnswer`'s four, for a payment. */
+export type PaymentAnswer = 'confirmed' | 'cancelled' | 'declined' | 'failed';
+
+export interface ConfirmPayment {
+  readonly publishableKey: string;
+  /** The club's account — a direct charge is confirmed on the seller's account. */
+  readonly accountId: string;
+  /** The payment's secret — asked of the server for this press, and never kept past this call. */
+  readonly clientSecret: string;
+  /**
+   * `onFile` — the card the payment was refused on, through the bank's check; `typed` — another card,
+   * in the fields on screen now.
+   */
+  readonly with: 'onFile' | 'typed';
+}
+
 /**
  * What the app may ask of the payment provider on the phone.
  *
@@ -133,6 +160,8 @@ export interface PaymentsPort {
   readonly takeCard: (publishableKey: string) => Promise<CardTaking>;
   /** Ask the bank to save it. */
   readonly confirmSetup: (ask: ConfirmSetup) => Promise<BankAnswer>;
+  /** Confirm a refused share on the club's account. */
+  readonly confirmPayment: (ask: ConfirmPayment) => Promise<PaymentAnswer>;
 }
 
 /** Poland, in złoty — where every club charging through Raketa sells today. */
@@ -168,17 +197,28 @@ export function bankAnswerOf({ error }: StripeOutcome): BankAnswer {
   return 'failed';
 }
 
-/** The key Stripe was last started with — started once per key, not once per press. */
+/** A payment's four words, from what Stripe's SDK answered — `bankAnswerOf`'s, for a payment. */
+export function paymentAnswerOf(outcome: StripeOutcome): PaymentAnswer {
+  const said = bankAnswerOf(outcome);
+  return said === 'saved' ? 'confirmed' : said;
+}
+
+/**
+ * The key and the account Stripe was last started with — started once per pair, not once per
+ * press. A setup is confirmed on the platform (no account); a payment on the club's.
+ */
 let startedWith: string | undefined;
 
-async function start(publishableKey: string): Promise<void> {
-  if (startedWith === publishableKey) return;
+async function start(publishableKey: string, accountId?: string): Promise<void> {
+  const pair = `${publishableKey}|${accountId ?? ''}`;
+  if (startedWith === pair) return;
   await initStripe({
     publishableKey,
     urlScheme: APP_SCHEME,
+    ...(accountId === undefined ? {} : { stripeAccountId: accountId }),
     ...(APPLE_PAY_MERCHANT === null ? {} : { merchantIdentifier: APPLE_PAY_MERCHANT }),
   });
-  startedWith = publishableKey;
+  startedWith = pair;
 }
 
 /** Hand Stripe the bank app's way back for as long as `work` runs. */
@@ -272,6 +312,34 @@ export const devicePayments: PaymentsPort = {
           await confirmSetupIntent(clientSecret, {
             paymentMethodType: 'Card',
             paymentMethodData: { paymentMethodId: reference },
+          }),
+        );
+      });
+    } catch {
+      return 'failed';
+    }
+  },
+
+  async confirmPayment({ publishableKey, accountId, clientSecret, with: via }) {
+    if (!isStripeKey(publishableKey)) return 'confirmed';
+    try {
+      await start(publishableKey, accountId);
+      return await whileTheBankMayReturn(async () => {
+        if (via === 'typed') {
+          return paymentAnswerOf(
+            await confirmStripePayment(clientSecret, { paymentMethodType: 'Card' }),
+          );
+        }
+        // The card it was refused on: off-session, Stripe leaves it on the payment's last error.
+        const { paymentIntent, error } = await retrievePaymentIntent(clientSecret);
+        if (error !== undefined || paymentIntent === undefined) return 'failed';
+        const onFile =
+          paymentIntent.lastPaymentError?.paymentMethod?.id ?? paymentIntent.paymentMethodId;
+        if (onFile === undefined || onFile === null) return 'failed';
+        return paymentAnswerOf(
+          await confirmStripePayment(clientSecret, {
+            paymentMethodType: 'Card',
+            paymentMethodData: { paymentMethodId: onFile },
           }),
         );
       });

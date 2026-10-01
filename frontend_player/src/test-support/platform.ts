@@ -47,6 +47,7 @@ import type {
   BankAnswer,
   CardFieldsProps,
   ClipboardPort,
+  ConfirmPayment,
   ConfirmWith,
   PaymentsPort,
   PhoneWallet,
@@ -442,6 +443,10 @@ export function fakeShare(): FakeShare {
  * are Stripe's business and nothing above the port ever sees them. **They mount empty**, as
  * Stripe's do: the entry lives in the view, and a step opened again starts with nothing typed. The wallet answers as
  * `walletSheet` says. Neither verb rejects, as the device's never does.
+ *
+ * **A refused share is confirmed the same way** (#555): with the card on file the bank's check is
+ * answered as `bank` says; with another card, the number typed decides — the declining card is
+ * declined again, any other complete number pays it. Every confirmation is recorded in `payments`.
  */
 export interface FakePayments extends PaymentsPort {
   /** The phone's own wallet. `null` — the default — is a phone that cannot pay with one. */
@@ -456,6 +461,8 @@ export interface FakePayments extends PaymentsPort {
   readonly confirmed: readonly string[];
   /** How many times the bank's own check was drawn. */
   readonly checks: number;
+  /** Every refused share the phone confirmed, oldest first — on whose account, and with what. */
+  readonly payments: readonly Omit<ConfirmPayment, 'publishableKey'>[];
 }
 
 /** The fake fields' accessible name — the one control a suite types a card into. */
@@ -471,6 +478,7 @@ export const TEST_CARDS = {
 export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}): FakePayments {
   const keys: string[] = [];
   const confirmed: string[] = [];
+  const payments: Omit<ConfirmPayment, 'publishableKey'>[] = [];
   let checks = 0;
   /** What is in the fields right now — digits only. */
   let typed = '';
@@ -517,6 +525,9 @@ export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}
     get checks() {
       return checks;
     },
+    get payments() {
+      return payments;
+    },
 
     CardFields,
     phoneWallet: () => Promise.resolve(port.wallet),
@@ -532,6 +543,16 @@ export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}
       keys.push(publishableKey);
       confirmed.push(clientSecret);
       return Promise.resolve(answer(via));
+    },
+    confirmPayment: ({ publishableKey, ...ask }) => {
+      keys.push(publishableKey);
+      payments.push(ask);
+      if (ask.with === 'onFile') {
+        checks += 1;
+        return Promise.resolve(port.bank === 'approves' ? 'confirmed' : 'cancelled');
+      }
+      if (!complete()) return Promise.resolve('failed');
+      return Promise.resolve(typed === TEST_CARDS.declines ? 'declined' : 'confirmed');
     },
   };
   return port;

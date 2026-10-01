@@ -26,6 +26,8 @@ export const proposalKeys = {
     [...proposalKeys.group(groupId), sport, kind] as const,
   /** `GET /players/me/live-yeses` — every yes on a game still filling, across groups. */
   liveYeses: () => [...proposalKeys.all, 'live-yeses'] as const,
+  /** `GET /players/me/payments-to-confirm` — the reader's refused shares, waiting for them (#555). */
+  paymentsToConfirm: () => [...proposalKeys.all, 'payments-to-confirm'] as const,
   /** `GET /players/me/games-and-money` — the two limits. */
   gamesAndMoney: () => [...proposalKeys.all, 'games-and-money'] as const,
 };

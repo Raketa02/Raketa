@@ -1193,6 +1193,8 @@ export function stubGate(
   stubPaymentMethod(transport);
   stubGamesAndMoney(transport);
   stubLiveYeses(transport);
+  stubPaymentsToConfirm(transport);
+  stubReceipts(transport);
 }
 
 export const PAYMENT_METHOD_PATH = '/api/v1/players/me/payment-methods/current';
@@ -1236,6 +1238,36 @@ export const LIVE_YESES_PATH = '/api/v1/players/me/live-yeses';
 export function stubLiveYeses(transport: Transport, yeses: readonly Wire['LiveYesSchema'][] = []) {
   transport.on('GET', LIVE_YESES_PATH, () =>
     json<Wire['LiveYesesResponse']>({ yeses: [...yeses], cap_per_sport: 10 }),
+  );
+}
+
+export const PAYMENTS_TO_CONFIRM_PATH = '/api/v1/players/me/payments-to-confirm';
+
+/**
+ * The refused shares waiting for the player, as `GET …/payments-to-confirm` answers — **none**
+ * unless the suite says otherwise. The gate stubs it, because Payments' state B reads it (#555).
+ */
+export function stubPaymentsToConfirm(
+  transport: Transport,
+  payments: readonly Wire['app__modules__proposals__presentation__schemas__PaymentToConfirmSchema'][] = [],
+) {
+  transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
+    json<Wire['PaymentsToConfirmResponse']>({ payments: [...payments] }),
+  );
+}
+
+export const RECEIPTS_PATH = '/api/v1/players/me/receipts';
+
+/**
+ * The receipts, as `GET …/receipts` answers — **none** unless the suite says otherwise. The gate
+ * stubs it, because Payments' state B reads it whenever a method is saved (#555).
+ */
+export function stubReceipts(
+  transport: Transport,
+  receipts: readonly Wire['ReceiptSchema'][] = [],
+) {
+  transport.on('GET', RECEIPTS_PATH, () =>
+    json<Wire['ReceiptsResponse']>({ receipts: [...receipts] }),
   );
 }
 

@@ -34,7 +34,17 @@
  * State B's *LIVE YESES* (mock 48, #554) are the proposals feature's — the deck's answers, whose
  * details are the deck's screen — so the route file composes them and this screen only places
  * them, under the method. They are drawn in state B alone: a yes needs a saved method, and a
- * method is not removed while a yes needs it. *RECEIPTS* (mock 49) are #555's.
+ * method is not removed while a yes needs it.
+ *
+ * *TO CONFIRM* (#555) is placed the same way, above them: a share refused when somebody else's
+ * yes filled the game, waiting for the player — the proposals feature's read, and its fill's
+ * confirmation.
+ *
+ * ## Receipts close state B
+ *
+ * *RECEIPTS* (mock 49, #555) are this feature's own read — every share paid, the club named as the
+ * seller — drawn last, under the live yeses. State B alone, as the screens draw it: a receipt is
+ * only ever for a game a saved method paid for.
  */
 
 import { useRouter } from 'expo-router';
@@ -54,6 +64,7 @@ import {
 import { usePaymentSetup } from '../hooks/usePaymentSetup';
 
 import { MethodCard } from './MethodCard';
+import { Receipts } from './Receipts';
 import {
   PAYMENTS_COPY,
   PAYMENTS_TITLE,
@@ -65,11 +76,13 @@ import {
 import { SetupChecklist } from './SetupChecklist';
 
 export interface PaymentsScreenProps {
+  /** State B's *TO CONFIRM* section, drawn first under the method — see the module note. */
+  readonly toConfirm?: ReactNode;
   /** State B's *LIVE YESES* section, drawn under the method — see the module note. */
   readonly liveYeses?: ReactNode;
 }
 
-export function PaymentsScreen({ liveYeses }: PaymentsScreenProps) {
+export function PaymentsScreen({ toConfirm, liveYeses }: PaymentsScreenProps) {
   const router = useRouter();
   const read = usePaymentMethod();
   /** *Change* pressed on state B: the checklist over the method still on file. */
@@ -100,7 +113,9 @@ export function PaymentsScreen({ liveYeses }: PaymentsScreenProps) {
             termsNeeded={standing.termsNeeded}
             onChange={() => setChanging(true)}
           />
+          {toConfirm}
           {liveYeses}
+          <Receipts />
         </>
       )}
     </ShellScreen>

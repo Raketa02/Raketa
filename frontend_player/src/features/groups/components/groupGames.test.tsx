@@ -8,6 +8,10 @@
  * calls it, and a card's flight is landed by advancing the clock past it — never polled
  * (`router-harness` memory: a JS-driven animation fires every fake millisecond).
  *
+ * **Every player here has a card on file** (`stubPaymentMethod`), so a yes is a yes: a first yes
+ * with nothing saved, the ten seconds of *Undo* and *It's a game!* are `proposals/components/
+ * theFill.test.tsx`'s.
+ *
  * **The deck is read at `DECK_READ_AT`**, Wednesday 30 September 2026 at 10:00 in Warsaw: the
  * suite pins the fake clock there once the tree is up, so the countdown and the court's day are
  * read against a known instant. A navigation runs the pending timers and moves the clock a few
@@ -18,6 +22,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
+import { PAYMENTS_COPY } from '@/features/payments/types';
 import { RECORD_TITLE } from '@/features/player_record/types';
 import { PROPOSALS_COPY } from '@/features/proposals/types';
 import { offlineMessage } from '@/shared/errors';
@@ -51,6 +56,7 @@ import {
   stubGate,
   stubHaptics,
   stubMyGroups,
+  stubPaymentMethod,
   stubProfileOptions,
   stubProfileSurface,
   stubShare,
@@ -69,6 +75,9 @@ import {
 import { useGameIntent } from '../store/gameIntent.store';
 
 const COPY = PROPOSALS_COPY;
+
+/** The payment setup's sheet, as a yes with nothing saved opens it (#555). */
+const PAYMENTS_SETUP_TITLE = PAYMENTS_COPY.setupSheet.title;
 const { commit } = theme.size.deckSwipe;
 
 /** Past the card's flight, so the stage has told the deck it has gone. */
@@ -165,6 +174,7 @@ beforeEach(() => {
   stubClipboard(fakeClipboard());
   haptics = fakeHaptics();
   stubHaptics(haptics);
+  stubPaymentMethod(transport, { brand: 'visa', last_four: '4312', wallet: null });
   useGameIntent.setState({ intent: 'competitive' });
   useToastQueue.setState({ queue: [] });
 });
@@ -648,7 +658,7 @@ describe('answering', () => {
     );
   });
 
-  it('puts the card back and says why when a yes needs a saved way to pay', async () => {
+  it('puts the card back and opens the payment setup when the server says a yes needs a saved way to pay', async () => {
     const first = deckCard({ sides: { yours: [youTile(), KAROL()], theirs: [ANIA(), EWA()] } });
     transport.on('POST', yesPath(first.proposal_id), () =>
       errorResponse(409, 'payment_method_required'),
@@ -659,8 +669,9 @@ describe('answering', () => {
     fireEvent.press(screen.getByRole('button', { name: COPY.yes }));
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
 
-    await waitFor(() => expect(toasts()).toEqual([[COPY.refused.payment_method_required, 'bad']]));
-    expect(await screen.findByTestId(`game-card-${first.proposal_id}`)).toBeTruthy();
+    expect(await screen.findByText(PAYMENTS_SETUP_TITLE)).toBeTruthy();
+    expect(toasts()).toEqual([]);
+    expect(await screen.findByTestId(`game-card-${first.proposal_id}`, HIDDEN_TOO)).toBeTruthy();
   });
 
   it('lets the card go, and says so, when the game just filled', async () => {

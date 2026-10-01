@@ -230,6 +230,12 @@ press. Nothing about it animates, so there is no reduced-motion branch. `announc
 `overlay.tsx` is Part 13's amendment: every toast announces **queued**, and the send
 confirmation is the one message that interrupts.
 
+**`UndoToast` is 9.2's toast with a control, and therefore not the queue's** (#555, 7.25). _Booking
+in 10 s · Undo_ exists to be pressed inside its window, which the queue's toast forbids itself, so
+it is a component its caller places — the fill places it where 9.2 places a toast — and never a
+message on the queue. Its one moving part is the ring, which _is_ the time: it drains on the UI
+thread (Reanimated), and under reduced motion stands at the caller's whole-second count.
+
 **Drawn objects.** `LevelBar` (7.5) and `ConfidenceRing` (7.8) are geometry, not styling —
 their values are `theme.size.levelBar` and `theme.size.ring*`, and both keep a fixed scale
 (1,00–5,00 and 0–100) so a value lands in the same place on every screen that draws one.

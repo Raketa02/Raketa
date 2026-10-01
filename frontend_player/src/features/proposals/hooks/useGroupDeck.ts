@@ -35,17 +35,18 @@
  */
 
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
 
 import type { AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { resolveKind, withoutCard, type GroupDeck } from '../domain/deck';
+import { resolveKind, withoutCard, type DeckCard, type GroupDeck } from '../domain/deck';
+import type { YesAnswer } from '../domain/fill';
 import type { GameKind } from '../domain/vocabulary';
 import { answerCard, withdrawYes, type AnswerToCard } from '../use-cases/answers';
 import { readGroupDeck } from '../use-cases/deckReads';
 
 import { proposalKeys } from './proposalKeys';
+import { useLatest } from './useLatest';
 
 function deckQuery(groupId: string, sport: Sport, kind: GameKind, enabled = true) {
   return {
@@ -73,14 +74,25 @@ export function useGamesBadge(groupId: string, sport: Sport, chosen: GameKind): 
   return useGroupDeck(groupId, sport, chosen).read.data?.gamesBadge ?? 0;
 }
 
+/** Take a card off the read it was dealt on — its segment's count and the badge following it. */
+export function dropCard(
+  client: QueryClient,
+  {
+    groupId,
+    sport,
+    kind,
+  }: { readonly groupId: string; readonly sport: Sport; readonly kind: GameKind },
+  proposalId: string,
+) {
+  client.setQueryData<GroupDeck>(proposalKeys.deck(groupId, sport, kind), (held) =>
+    held === undefined ? held : withoutCard(held, proposalId),
+  );
+}
+
 /** Take a card that has flown off the read it was dealt on — see the module note. */
 export function useDropCard(groupId: string, sport: Sport, kind: GameKind) {
   const client = useQueryClient();
-  return (proposalId: string) => {
-    client.setQueryData<GroupDeck>(proposalKeys.deck(groupId, sport, kind), (held) =>
-      held === undefined ? held : withoutCard(held, proposalId),
-    );
-  };
+  return (proposalId: string) => dropCard(client, { groupId, sport, kind }, proposalId);
 }
 
 /** Mark every deck read for this group stale, so the one on screen is read again. */
@@ -93,44 +105,57 @@ export function useRereadDeck(groupId: string) {
 export type OnRefused<Variables> = (error: AppError, refused: Variables) => void;
 
 /**
- * **The refusal handler, on the mutation rather than on the call.** A player answers the next card
+ * **One answer, and the card it was given on** — carried so the yes's answer can be read against
+ * the card it filled (*It's a game!* draws its faces), whichever screen sent it.
+ */
+export interface AnswerOnCard extends AnswerToCard {
+  readonly card?: DeckCard;
+}
+
+/** What a caller is told of a yes's answer — the fill's to read (`useFill().answered`). */
+export type OnAnswered = (answer: YesAnswer, asked: AnswerOnCard) => void;
+
+/*
+ * **The handlers sit on the mutation rather than on the call.** A player answers the next card
  * while the last answer is still in flight, and TanStack drops a `mutate` call's own callbacks when
  * a later call is made on the same mutation — so a refusal handed to `mutate` would go unsaid for
- * every card but the last. The mutation's own `onError` fires for every call; it reads the caller's
- * handler through a ref, so the handler can close over the screen's state.
+ * every card but the last. The mutation's own callbacks fire for every call; they read the
+ * caller's handlers as of its last render (`useLatest`), so a handler can close over the screen's
+ * state.
  */
-function useRefusalRef<Variables>(onRefused: OnRefused<Variables> | undefined) {
-  const latest = useRef(onRefused);
-  useEffect(() => {
-    latest.current = onRefused;
-  });
-  return (error: AppError, refused: Variables) => latest.current?.(error, refused);
-}
 
 /**
  * **One answer to a card.** Not retried — every mutation's rule, although both routes are safe to
  * repeat — and held while offline (`networkMode: 'online'`), so the card stays gone and the answer
- * is sent when the connection returns.
+ * is sent when the connection returns. **A yes's answer is handed on** (`onAnswered`): a yes the
+ * card called a free vote can still be the one that fills the game, if the others got there first.
  */
-export function useAnswerCard(groupId: string, onRefused?: OnRefused<AnswerToCard>) {
+export function useAnswerCard(
+  groupId: string,
+  onRefused?: OnRefused<AnswerOnCard>,
+  onAnswered?: OnAnswered,
+) {
   const client = useQueryClient();
-  const refused = useRefusalRef(onRefused);
+  const handlers = useLatest({ onRefused, onAnswered });
 
-  return useMutation<void, AppError, AnswerToCard>({
+  return useMutation<YesAnswer | null, AppError, AnswerOnCard>({
     mutationFn: answerCard,
-    onError: refused,
-    onSettled: (_nothing, _error, { said }) => reread(client, groupId, { yeses: said === 'yes' }),
+    onSuccess: (answer, asked) => {
+      if (answer !== null) handlers.current.onAnswered?.(answer, asked);
+    },
+    onError: (error, asked) => handlers.current.onRefused?.(error, asked),
+    onSettled: (_answer, _error, { said }) => reread(client, groupId, { yeses: said === 'yes' }),
   });
 }
 
 /** **Withdraw a yes** — free and silent until the game fills. */
 export function useWithdrawYes(groupId: string, onRefused?: OnRefused<string>) {
   const client = useQueryClient();
-  const refused = useRefusalRef(onRefused);
+  const handlers = useLatest({ onRefused });
 
   return useMutation<void, AppError, string>({
     mutationFn: withdrawYes,
-    onError: refused,
+    onError: (error, proposalId) => handlers.current.onRefused?.(error, proposalId),
     onSettled: () => reread(client, groupId, { yeses: true }),
   });
 }
@@ -141,7 +166,11 @@ export function useWithdrawYes(groupId: string, onRefused?: OnRefused<string>) {
  * #554); a no never touched a yes. Awaited, so the answer is pending until the deck on screen has
  * been read again.
  */
-function reread(client: QueryClient, groupId: string, { yeses }: { readonly yeses: boolean }) {
+export function reread(
+  client: QueryClient,
+  groupId: string,
+  { yeses }: { readonly yeses: boolean },
+) {
   return Promise.all([
     client.invalidateQueries({ queryKey: proposalKeys.group(groupId) }),
     ...(yeses ? [client.invalidateQueries({ queryKey: proposalKeys.liveYeses() })] : []),

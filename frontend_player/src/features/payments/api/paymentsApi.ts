@@ -10,6 +10,8 @@
  * | `postTerms` | `POST …/terms` — accept the terms; answers the setup's secret (or `null` when accepting again for a card already saved) |
  * | `postConfirmation` | `POST …/confirmation` — the phone has confirmed; read the setup as it stands and save |
  * | `deleteMethod` | `DELETE …/current` — remove it, refused while anything still needs it |
+ * | `getSeatCharge` | `GET /seat-charges/{id}` — one of the reader's shares; while it waits for them, what the phone confirms it with (#555) |
+ * | `getReceipts` | `GET /players/me/receipts` — every share paid, the latest first (#555) |
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -89,5 +91,33 @@ export function deleteMethod(): Promise<void> {
     method: 'DELETE',
     path: `${METHODS_PATH}/current`,
     authenticated: true,
+  });
+}
+
+/**
+ * One of the reader's seat charges (#541). While its payment waits for them, `to_confirm` carries
+ * the provider's key, the club's account and the payment's secret — **asked of the provider now and
+ * recorded nowhere**, so it is read for the press that uses it. `seat_charge_not_found` (404) for a
+ * charge that is not theirs; `payments_unavailable` (503).
+ */
+export function getSeatCharge(
+  seatChargeId: string,
+  { signal }: Cancellable = {},
+): Promise<Schemas['SeatChargeResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: `/api/v1/seat-charges/${encodeURIComponent(seatChargeId)}`,
+    authenticated: true,
+    signal,
+  });
+}
+
+/** You › Payments' *RECEIPTS*: every share the reader paid, the latest first. */
+export function getReceipts({ signal }: Cancellable = {}): Promise<Schemas['ReceiptsResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: '/api/v1/players/me/receipts',
+    authenticated: true,
+    signal,
   });
 }

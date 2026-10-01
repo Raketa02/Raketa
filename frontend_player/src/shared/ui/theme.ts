@@ -924,6 +924,11 @@ const size = {
    *  row, `textField.row`'s 42 plus the native border Stripe draws inside the box rather than
    *  around it — 44, which is also 6.5's minimum for the one target the row is. */
   payments: { stepMark: 26, badge: 42, cardFields: 44 },
+  /** THE UNDO TOAST — 9.2's toast with a draining ring and one action (#555, the Games & Fill in
+   *  screens A2.4, A10; Part 16 2026-10-01). `ring` is the ring's box, the toast's `inlineTitle`
+   *  line height plus a step, so it sits in the line rather than growing it; `ringStroke` is the
+   *  ring around a face on dark, 2. */
+  undo: { ring: 20, ringStroke: 2 },
   /** THE RADAR — the sizes of the field's drawn objects, every one of them the spec's own
    *  ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
    *  §7, `the-radar.md` §7.2–7.4). Points; the kilometres, the ladder and the thresholds are

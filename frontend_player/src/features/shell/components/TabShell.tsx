@@ -70,17 +70,30 @@
  * hold, and the amendment beside it says so.
  */
 
-import { Stack, usePathname } from 'expo-router';
+import { router, Stack, usePathname } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { useChallengesWaiting } from '@/features/challenges/types';
 import { useFollowedFeature } from '@/features/feature_flags/types';
 import { useGamesNeedingYou } from '@/features/plans/types';
-import { TabBar, theme } from '@/shared/ui';
+import { FillProvider } from '@/features/proposals/types';
+import { TAB_BAR_HEIGHT, TabBar, theme } from '@/shared/ui';
 
 import { barStandsDown, tabForPathname } from '../domain/shellTabs';
 
-import { openTab } from './shellNavigation';
+import { landOnHome, openTab } from './shellNavigation';
+
+/**
+ * *It's a game!*'s *Open game* (#555): Home laid down and the booked game pushed over it, so back
+ * from the game is Home, where a booked game lives (the screens A2.4). The shell's move, handed to
+ * the fill rather than imported by it — `proposals` never imports the shell that mounts it. The
+ * route is the one this stack names below (`games/[gameId]`), spelled here rather than imported
+ * from `games`, which imports the shell.
+ */
+function openGame(gameId: string) {
+  landOnHome();
+  router.push({ pathname: '/games/[gameId]', params: { gameId } });
+}
 
 /**
  * The screens behind the You tab's rows — every route under `you/` except the tab's own root.
@@ -113,19 +126,23 @@ export function TabShell() {
   const gamesNeedingYou = useGamesNeedingYou();
   // Chats' count is read only while Chats is drawn: it is Classic play's, column and read.
   const challengesWaiting = useChallengesWaiting(classicPlay);
+  const barShown = !barStandsDown(pathname);
 
   return (
     <View style={s.shell}>
-      {/* `initialRouteName` is the shell's root stated outright — `SHELL_TAB_ROOT.home`, whose
+      {/* The moment a yes fills a game (#555): its ten seconds, its toast above the bar and its
+          overlays outlive the screen the yes was said on, so they are held here, around the tabs. */}
+      <FillProvider toastAbove={barShown ? TAB_BAR_HEIGHT : 0} openGame={openGame}>
+        {/* `initialRouteName` is the shell's root stated outright — `SHELL_TAB_ROOT.home`, whose
           route is `index` — and it is not the default. expo-router orders a navigator's routes
           with the `Stack.Screen` children below **first**, so without it the first route this
           stack holds is `play/index`, named first for its transition, and a stack rebuilt from
           nothing opens there: a device showed every first press after a cold start landing on
           Find a game with ⚡Play lit, because the entry gate had torn the tree down for one round
           trip and this stack came back with no history to restore. `theShell.test.tsx` holds it. */}
-      <Stack initialRouteName="index" screenOptions={{ headerShown: false, animation: 'none' }}>
-        <Stack.Screen name="play/index" options={{ animation: 'default' }} />
-        {/* So are the builder and the pool: a finished search is pushed onto the court and a
+        <Stack initialRouteName="index" screenOptions={{ headerShown: false, animation: 'none' }}>
+          <Stack.Screen name="play/index" options={{ animation: 'default' }} />
+          {/* So are the builder and the pool: a finished search is pushed onto the court and a
             seat is pushed onto the pool, and both come back out
             ([#271](https://github.com/Raketa02/Raketa/issues/271)). The exception is named per
             screen rather than per prefix because a Play route that is genuinely a **replace**
@@ -133,78 +150,79 @@ export function TabShell() {
             first of these and is none of them now: it is the Players tab's root
             ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
             §1), arrived at by a tab press, and it takes the shell's `none` like every root. */}
-        <Stack.Screen name="play/builder" options={{ animation: 'default' }} />
-        <Stack.Screen name="play/pool" options={{ animation: 'default' }} />
-        {/* And the groups screens (#512, #513, #514): New group and Join a group are pushed over
+          <Stack.Screen name="play/builder" options={{ animation: 'default' }} />
+          <Stack.Screen name="play/pool" options={{ animation: 'default' }} />
+          {/* And the groups screens (#512, #513, #514): New group and Join a group are pushed over
             the Groups list and come back out to it, and a group's page is pushed over the list —
             or replaces New group once the group exists, so *back* is the list either way.
             Friends, Members and Edit group are pushed over the page and come back out to it. */}
-        <Stack.Screen name="play/new-group" options={{ animation: 'default' }} />
-        <Stack.Screen name="play/join" options={{ animation: 'default' }} />
-        <Stack.Screen name="play/group/[groupId]/index" options={{ animation: 'default' }} />
-        <Stack.Screen name="play/group/[groupId]/friends" options={{ animation: 'default' }} />
-        <Stack.Screen name="play/group/[groupId]/members" options={{ animation: 'default' }} />
-        <Stack.Screen name="play/group/[groupId]/edit" options={{ animation: 'default' }} />
-        {/* And so is a game: it is pushed over the Home tab's list, the list stays underneath,
+          <Stack.Screen name="play/new-group" options={{ animation: 'default' }} />
+          <Stack.Screen name="play/join" options={{ animation: 'default' }} />
+          <Stack.Screen name="play/group/[groupId]/index" options={{ animation: 'default' }} />
+          <Stack.Screen name="play/group/[groupId]/friends" options={{ animation: 'default' }} />
+          <Stack.Screen name="play/group/[groupId]/members" options={{ animation: 'default' }} />
+          <Stack.Screen name="play/group/[groupId]/edit" options={{ animation: 'default' }} />
+          {/* And so is a game: it is pushed over the Home tab's list, the list stays underneath,
             and backing out returns to the row it was tapped from
             ([#314](https://github.com/Raketa02/Raketa/issues/314)). It is the first exception
             outside Play, which is why `shellTabs` had to say which tab it is inside. */}
-        <Stack.Screen name="games/[gameId]" options={{ animation: 'default' }} />
-        {/* And so is a challenge: it is pushed over the Chats inbox, the list stays underneath,
+          <Stack.Screen name="games/[gameId]" options={{ animation: 'default' }} />
+          {/* And so is a challenge: it is pushed over the Chats inbox, the list stays underneath,
             and backing out returns to the row it was tapped from
             ([#360](https://github.com/Raketa02/Raketa/issues/360)). It needs no `INSIDE_A_TAB`
             entry, because everything under `/chats/…` already shares that tab's first segment
             — which is the whole reason both of this map's dynamic ids live under it. */}
-        <Stack.Screen
-          name="chats/challenge/[challengeId]/index"
-          options={{ animation: 'default' }}
-        />
-        {/* And so is the builder reached from one: `features/play`'s own screen at a **second
+          <Stack.Screen
+            name="chats/challenge/[challengeId]/index"
+            options={{ animation: 'default' }}
+          />
+          {/* And so is the builder reached from one: `features/play`'s own screen at a **second
             route** under the challenge it completes, pushed exactly as its first route is
             ([ADR-0150](../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
             §7). Nothing in that flow calls the reset — the send **pops back** to the challenge,
             which is the surface that draws the result. */}
-        <Stack.Screen
-          name="chats/challenge/[challengeId]/fill"
-          options={{ animation: 'default' }}
-        />
-        {/* And the yes screen under a challenge — pushed over the challenge screen the instant
+          <Stack.Screen
+            name="chats/challenge/[challengeId]/fill"
+            options={{ animation: 'default' }}
+          />
+          {/* And the yes screen under a challenge — pushed over the challenge screen the instant
             *I'm in* is answered, and the one route whose **swipe-back is off**: a swipe that
             popped to the challenge screen underneath would land somewhere *Later* never does
             ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
             §1). It keeps the shell's own `none`, deliberately: the screen has one motion of its
             own, and a push that slid in under it would be a second. The bar stands down on it,
             below, as it does in the room. */}
-        <Stack.Screen
-          name="chats/challenge/[challengeId]/yes"
-          options={{ gestureEnabled: false }}
-        />
-        {/* And so is a conversation: it is pushed over the Chats inbox, the list stays
+          <Stack.Screen
+            name="chats/challenge/[challengeId]/yes"
+            options={{ gestureEnabled: false }}
+          />
+          {/* And so is a conversation: it is pushed over the Chats inbox, the list stays
             underneath, and backing out returns to the row it was tapped from — the challenge
             screen's argument, one row kind over ([#400](https://github.com/Raketa02/Raketa/issues/400)).
             It is one of the two screens the bar stands down on, below. */}
-        <Stack.Screen
-          name="chats/conversation/[conversationId]/index"
-          options={{ animation: 'default' }}
-        />
-        {/* And so is every screen behind a row on You: each is pushed over the tab, the tab
+          <Stack.Screen
+            name="chats/conversation/[conversationId]/index"
+            options={{ animation: 'default' }}
+          />
+          {/* And so is every screen behind a row on You: each is pushed over the tab, the tab
             stays underneath, and backing out returns to the row it was tapped from
             ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
             §1). Named one by one, as every exception is: `you/index` is the tab's root, arrived
             at by a tab press, and takes the shell's own `none` like every root. */}
-        {YOU_SCREENS.map((name) => (
-          <Stack.Screen key={name} name={name} options={{ animation: 'default' }} />
-        ))}
-      </Stack>
-      {barStandsDown(pathname) ? null : (
-        <TabBar
-          active={tabForPathname(pathname)}
-          onPress={(tab) => openTab(tab, pathname)}
-          classicPlay={classicPlay}
-          gamesNeedingYou={gamesNeedingYou}
-          challengesWaiting={challengesWaiting}
-        />
-      )}
+          {YOU_SCREENS.map((name) => (
+            <Stack.Screen key={name} name={name} options={{ animation: 'default' }} />
+          ))}
+        </Stack>
+        {barShown ? (
+          <TabBar
+            active={tabForPathname(pathname)}
+            onPress={(tab) => openTab(tab, pathname)}
+            classicPlay={classicPlay}
+            gamesNeedingYou={gamesNeedingYou}
+            challengesWaiting={challengesWaiting}
+          />
+        ) : null}
+      </FillProvider>
     </View>
   );
 }

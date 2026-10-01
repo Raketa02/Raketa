@@ -134,6 +134,7 @@ export { TextField, type TextFieldProps } from './TextField';
 export { Dash, Plus, PlusOnMedia, Tick } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
 export { Toast, ToastHost, type ToastProps } from './Toast';
+export { UndoToast, type UndoToastProps } from './UndoToast';
 export { ModalStage, type ModalStageProps } from './ModalStage';
 export {
   OverlayHost,

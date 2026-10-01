@@ -85,5 +85,9 @@ export const PROPOSALS_COPY = {
     no_longer_fits: 'That game changed, and isn’t dealt to you any more.',
     proposal_not_found: 'That game is no longer on.',
     block_state_unavailable: 'That didn’t go through — try again in a moment.',
+    /** #541: two cards at one hour raced for the club's last court, twice. Nothing was charged. */
+    court_just_taken:
+      'That court was just booked by another game. Nothing was charged — try again.',
+    payments_unavailable: 'Payments can’t be reached right now, so nothing was booked. Try again.',
   },
 } as const;

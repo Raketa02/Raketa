@@ -68,8 +68,7 @@ client to draw a price. **Owed, from a root session**: that document's paragraph
 **Calls made here, open for the product owner** (design-system Part 16 has the drawing's): the row
 order above; the IN tag drawn as a green fill (the mocks' pixels) where A2.3's words say _outline_;
 the rescue ribbon in `coralInk`; the cap's two lines the mock does not draw (_next week_, _this week
-and next_); `DECK` as the intent's surface; a charging yes sent plainly until #555 puts the undo in
-front of it; _payment_method_required_ a toast until #555's setup sheet. **Not built, and whose**:
+and next_); `DECK` as the intent's surface. **Not built, and whose**:
 rescue tiles (_paid_, the dashed _You?_ seat, the court number — #545/#557, not on the wire yet); the
 Fill in badge (#545/#557); a tile flipping to In while the card is on screen (the read is re-asked on
 focus and after answers, never polled — a live channel is not specified). **Nothing here has been
@@ -142,3 +141,77 @@ with everything on it. The yes found is kept while the screen is open, as the ca
 owner**, each a Part 16 row: the live yeses' head, the yes's details, and the bound's limits in sans
 700 (a sentence's figures, where 1.4 sets display figures in mono). **Nothing here has been seen on a
 device.**
+
+**The moment a yes fills a game is this feature's, held above the tabs**
+([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A2.4; the mechanics §6.1, §6.5,
+§11, §12.2). `FillProvider` is mounted by the shell around the stack and the bar for the session,
+because what a yes sets going outlives the screen it was said on: the player swipes _Book it now_
+and walks to Home inside the ten seconds, and the yes is still theirs. The deck and the details reach
+it through `useFill`. It holds four things, each as component state — a card is only ever _held_,
+never copied into a store:
+
+- **The Undo window** (§6.5). A yes `waitsForUndo` — _Book it now_ (an On request club's too: at zero
+  the game goes to the club), and **every** rescue join (Q74) — flies like any other, then counts ten
+  seconds under _Booking in 10 s · Undo_ (shared/ui's `UndoToast`, placed where 9.2 places a toast,
+  above the bar). Its card **stays in the deck's read, hidden** while it counts, so _Undo_ deals it
+  back exactly where it was; at zero the card leaves the read and the yes is sent **now or not at
+  all** (`networkMode: 'always'` — a booking that landed on a reconnect the player never saw is worse
+  than a sentence). **One counts at a time**: a second yes that would move money springs back with
+  _One booking at a time_, so no two windows overlap — every other answer goes on. A yes said again
+  after a setup the server asked for counts its ten seconds again (`yesAgain`): money moves only
+  after ten seconds of _Undo_. The details' _I'm in_ is busy _Booking…_ while its own yes counts.
+- **The setup before a first yes** (§6.1, §12.5). With nothing saved a yes opens payments'
+  `PaymentSetupSheet` instead — the card springs back — and lands once the method is saved, through
+  its ten seconds if it is a yes that waits; closing drops it. `payment_method_required` from the
+  server, when the method had not been read, opens the same sheet.
+- **Every yes's answer** — the deck's, the details', the delayed send's and the confirmation's — is
+  read by `fillOutcome`: **booked** re-reads every deck, the live yeses, Home's games and the
+  receipts, sends a details screen still on screen back to the deck, and raises **It's a game!**; a
+  **refused share** (the bank's check, a decline) says _Your payment didn't go through — confirm it
+  to keep your seat_ and opens the confirmation on it; no method at the fill is the setup and the yes
+  again; a new card brand names You › Payments; anything else is a vote. A yes the card called free
+  can still be the last — the others got there first — so the deck's plain yes is read too.
+- **It's a game!** is the yes screen's third face (ADR-0167): its ground, entrance, tiles, `vs`, word
+  role and pills, crossed from `challenges/types` — the faces are **the card the yes was said on**, its
+  rows the sides the booking drew, photographs and all, so nothing is read. An overlay on
+  `ModalStage`'s top layer over the whole phone, not a route: it answers wherever the player is ten
+  seconds after the swipe, and a route could not carry a card. _Open game_ lays Home down
+  (`landOnHome`) and pushes the game, so back is Home; _Later_ and Android's back leave the player
+  where they were.
+- **The confirmation** (`ConfirmPaymentSheet`, §12.2): the share and the seller, the game, one line —
+  the bank's check over the card on file, or another card in the provider's fields for a decline —
+  and one button. Payments' `useConfirmOnPhone` confirms on the club's account; then `POST
+/seat-charges/{id}/confirmation` is the yes again, and its answer goes through `fillOutcome` like
+  any other: booked is _It's a game!_, held with another seat still open closes the sheet with
+  _you're In again_, refused at the bank once more keeps it. Every refusal — the bank's or the
+  server's (not confirmed yet, the seat taken, the game over) — is said **in the sheet**. A plain yes
+  refused `payment_to_confirm` opens it on the payment the refusal names, and so does a row of
+  _TO CONFIRM_.
+- **TO CONFIRM** (`PaymentsToConfirm`, `GET /players/me/payments-to-confirm`): the way back for a
+  player whose share was refused **while they were elsewhere** — somebody else's yes filled the game.
+  Placed above _LIVE YESES_ on Payments' state B by the route file, as _LIVE YESES_ is; a row is the
+  game as a live yes draws it, with **Confirm**. No card is held there, so a confirmation that books
+  the game says _It's a game! You'll find it in Home._ in a toast rather than drawing faces it has
+  not got. A booking, a confirmation and every yes that answers _confirm_ re-read it.
+
+**The rules are the domain's** (`domain/fill.ts`): `waitsForUndo`, `fillOutcome` over a yes's
+answer, `fillRefusal` over a refused yes (`payment_method_required` → the setup,
+`payment_to_confirm` → the confirmation), `itsAGamePicture`. The provider reads one outcome in one
+place (`act`). The fill's contract is `hooks/useFill.ts`, and `useFillYes` binds it to a screen, so
+the deck and the details say yes the same way and keep only what differs — the deck's card flies,
+the details mark the yes in place and leave once it books. **The shell hands in `openGame`**: this
+feature never imports the shell that mounts it.
+
+**Calls made here, open for the product owner** (Part 16 has the drawings'): _It's a game!_ as an
+overlay rather than ADR-0167's route; **a yes on a card the deck called a free vote, that turns out
+to be the last, charges with no Undo** — the phone cannot know it fills until the server says so,
+and holding every yes ten seconds would delay every vote (the backend could refuse such a yes and
+ask for the Undo; a ruling either way); one booking window at a time; a booking said on the details
+leaving them for the deck; the delayed yes and the confirmation sent now-or-not-at-all where the
+deck's answers wait for a connection; no method at the fill opening the setup (the terms needing
+acceptance only a toast); the confirmation's _you're In again_ toast; a declined share paid with a
+card typed for it alone, the saved method unchanged; _TO CONFIRM_ on Payments (no spec draws it — the
+way back until Home and the notices, #556 and #559); and a confirmation from it saying _It's a game!_
+in a toast.
+**Owed**: the backend's laptop provider never confirms a payment (payments.md). **Nothing here has
+been seen on a device.**

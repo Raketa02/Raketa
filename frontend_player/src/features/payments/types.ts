@@ -10,3 +10,23 @@
 
 export { PaymentsRow, type PaymentsRowProps } from './components/PaymentsRow';
 export { PaymentsScreen, type PaymentsScreenProps } from './components/PaymentsScreen';
+
+/**
+ * **What the moment a game fills needs of payments** (#555) — the proposals feature runs the yes,
+ * and the deck opens the setup, never the reverse:
+ *
+ * - `PaymentSetupSheet` and `usePaymentSetupNeeded` — a first yes with nothing saved opens the four
+ *   steps over the deck, and the yes lands when they are done (A2.4).
+ * - `useSeatCharge` and `useConfirmOnPhone` — *Confirm your payment to keep your seat*: the refused
+ *   share read, and confirmed on the club's account. The yes again is proposals'.
+ * - `paymentKeys` — a booking adds a receipt, so the fill re-reads `paymentKeys.receipts()`, as
+ *   `challengeKeys` crosses for the same reason.
+ */
+export { PaymentSetupSheet, type PaymentSetupSheetProps } from './components/PaymentSetupSheet';
+export { usePaymentSetupNeeded } from './hooks/usePaymentMethod';
+export { useConfirmOnPhone, useSeatCharge, type PhoneConfirmation } from './hooks/useSeatCharge';
+export { confirmsWith, type ConfirmWithCard, type SeatCharge } from './domain/seatCharge';
+export { paymentKeys } from './hooks/paymentKeys';
+
+/** The words the suites that walk the setup from the deck hold the sheet to (#555). */
+export { PAYMENTS_COPY } from './components/paymentsCopy';

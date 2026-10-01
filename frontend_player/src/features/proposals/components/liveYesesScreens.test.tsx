@@ -176,7 +176,9 @@ describe('the section offline', () => {
     try {
       fireEvent.press(row);
 
-      expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+      // TO CONFIRM above it and RECEIPTS under it say the same of their own reads (#555): one note
+      // per section.
+      expect(await screen.findAllByText(offlineMessage('resumes'))).toHaveLength(3);
       expect(screen.getByText(LIVE_YESES_TITLE)).toBeTruthy();
       expect(transport.requestsTo('GET', LIVE_YESES_PATH)).toHaveLength(0);
     } finally {

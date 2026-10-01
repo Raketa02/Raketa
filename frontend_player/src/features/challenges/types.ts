@@ -202,3 +202,15 @@ export { challengeKeys } from './hooks/challengeKeys';
  * so the sheet's foot names the court in this feature's words and never composes its own.
  */
 export { useCourtWith, type CourtWith } from './hooks/useChallenges';
+
+/**
+ * **The yes screen's drawn parts, for its third face** — *It's a game!*, the yes that filled a game
+ * dealt in a group's deck ([#555](https://github.com/Raketa02/Raketa/issues/555); the Games & Fill
+ * in screens A2.4: *today's yes screen, with the new word*). The ground, the entrance's one beat and
+ * the tile cross, and nothing else: the faces there come off the card the yes was said on, the
+ * doors open a game rather than a room, and the reads, the folds and the words stay here.
+ */
+export { YesEntrance, type YesEntranceProps } from './components/YesEntrance';
+export { YesGround } from './components/YesGround';
+export { YesTile, type YesTileProps } from './components/YesTile';
+export type { YesSeat } from './domain/yesScreen';
