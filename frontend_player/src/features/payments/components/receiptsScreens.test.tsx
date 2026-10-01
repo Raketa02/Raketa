@@ -62,6 +62,7 @@ function receipt(extra: Partial<Wire['ReceiptSchema']> = {}): Wire['ReceiptSchem
     // Tuesday 20 October, 16:00 in Warsaw — booked weeks ahead.
     starts_at: '2026-10-20T14:00:00Z',
     amount_grosze: 2800,
+    card_fee_grosze: null,
     paid_at: '2026-09-29T18:00:00Z',
     ...extra,
   };
@@ -122,6 +123,23 @@ describe('RECEIPTS', () => {
       'receipt-a2000000-0000-4000-8000-000000000002',
     ]);
     expect(screen.getByText(WORDS.footer)).toBeTruthy();
+  });
+
+  it('draws a refund beside the share it gave back — two rows under one payment (#544)', async () => {
+    stubReceipts(transport, [
+      receipt({
+        kind: 'REFUND',
+        amount_grosze: 2718,
+        card_fee_grosze: 82,
+        paid_at: '2026-09-30T18:00:00Z',
+      }),
+      receipt(),
+    ]);
+    await onPayments();
+
+    expect(await screen.findByText('+27,18 zł')).toBeTruthy();
+    expect(screen.getByText('−28 zł')).toBeTruthy();
+    expect(screen.getAllByTestId('receipt-a2000000-0000-4000-8000-000000000001')).toHaveLength(2);
   });
 
   it('says what will land here when nothing has, and keeps the footer for rows', async () => {

@@ -14,6 +14,7 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
+import { LEAVE_THE_GAME } from '@/features/challenges/types';
 import { PAYMENTS_COPY } from '@/features/payments/types';
 import { FILL_COPY, PROPOSALS_COPY } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -27,7 +28,11 @@ import {
   EWA,
   groupDeck,
   KAROL,
+  proposalDetails,
+  rescueCard,
+  seatsPath,
   stubGroupDeck,
+  stubProposal,
   yesPath,
   youTile,
   ZOFIA,
@@ -66,6 +71,7 @@ import {
   errorResponse,
   installTransport,
   json,
+  noContent,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -136,12 +142,14 @@ const counted = (card: Wire['DeckCardSchema'], open = 2): Wire['YesAnswerRespons
   proposal_id: card.proposal_id,
   open_seats: open,
   booked: null,
+  waiting_for_the_club: false,
   your_payment: null,
 });
 const booked = (card: Wire['DeckCardSchema']): Wire['YesAnswerResponse'] => ({
   proposal_id: card.proposal_id,
   open_seats: 0,
   booked: { booking_id: card.proposal_id, game_id: GAME_ID },
+  waiting_for_the_club: false,
   your_payment: null,
 });
 const refused = (
@@ -151,6 +159,7 @@ const refused = (
   proposal_id: card.proposal_id,
   open_seats: 1,
   booked: null,
+  waiting_for_the_club: false,
   your_payment: { seat_charge_id: SEAT_CHARGE, refusal },
 });
 
@@ -285,14 +294,17 @@ describe('a yes that moves money waits ten seconds behind Undo (§6.5)', () => {
   });
 
   it('holds every rescue join the same way, not only the last seat (Q74)', async () => {
-    const rescue = deckCard({ type: 'SEAT_OPEN', open_seats_after_your_yes: 1 });
+    const rescue = rescueCard({ open_seats_after_your_yes: 1 });
+    transport.on('POST', seatsPath(rescue.proposal_id), () => json(counted(rescue, 1)));
     await openGames([rescue]);
 
     sayYes();
 
     expect(screen.getByText('Booking in 10 s')).toBeTruthy();
     theRestOfTheTenSeconds();
-    await waitFor(() => expect(yeses(rescue)).toHaveLength(1));
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', seatsPath(rescue.proposal_id))).toHaveLength(1),
+    );
   });
 
   it('sends a free vote at once, with no toast', async () => {
@@ -664,6 +676,7 @@ describe('I’m in on a game’s details', () => {
         theirs: [ANIA({ is_in: true }), EWA({ is_in: true })],
       },
     });
+    stubProposal(transport, card.proposal_id, proposalDetails(card));
     await openGames([card], booked);
     fireEvent.press(screen.getByRole('button', { name: COPY.details }));
     await waitFor(() =>
@@ -684,6 +697,7 @@ describe('I’m in on a game’s details', () => {
 
   it('leaves the details, and says so, when the counted yes finds the game gone', async () => {
     const card = bookItNow();
+    stubProposal(transport, card.proposal_id, proposalDetails(card));
     await openGames([card]);
     transport.on('POST', yesPath(card.proposal_id), () => errorResponse(409, 'proposal_is_full'));
     fireEvent.press(screen.getByRole('button', { name: COPY.details }));
@@ -693,6 +707,107 @@ describe('I’m in on a game’s details', () => {
 
     await waitFor(() => expect(toasts()).toEqual([[COPY.refused.proposal_is_full, 'bad']]));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// On request — the club confirms (#543)
+// ---------------------------------------------------------------------------
+
+describe('at an On request club the full game goes to the club (A2.4, §11)', () => {
+  const sentToTheClub = (card: Wire['DeckCardSchema']): Wire['YesAnswerResponse'] => ({
+    proposal_id: card.proposal_id,
+    open_seats: 0,
+    booked: null,
+    waiting_for_the_club: true,
+    your_payment: null,
+  });
+
+  it('counts ten seconds, sends the yes, and says nobody pays until the club confirms — no It’s a game!', async () => {
+    const card = bookItNow({ club_confirms: true });
+    await openGames([card], sentToTheClub);
+    const home = transport.requestsTo('GET', HOME_PATH).length;
+
+    sayYes();
+    expect(screen.getByText('Booking in 10 s')).toBeTruthy();
+    theRestOfTheTenSeconds();
+
+    await waitFor(() => expect(yeses(card)).toHaveLength(1));
+    await waitFor(() =>
+      expect(toasts()).toContainEqual([
+        'Waiting for Bonarka Arena to confirm — nobody pays until it does.',
+        'ok',
+      ]),
+    );
+    expect(screen.queryByTestId('its-a-game')).toBeNull();
+    // The game is on Home now, waiting for the club — Home's own read, held by the shell.
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(home),
+    );
+  });
+
+  it('draws the waiting game’s details: no court, nobody pays yet, and Leave the game in place of Withdraw', async () => {
+    const card = bookItNow({
+      club_confirms: true,
+      in_count: 4,
+      sides: {
+        yours: [youTile({ is_in: true }), ZOFIA({ is_in: true })],
+        theirs: [ANIA({ is_in: true }), EWA({ is_in: true })],
+      },
+    });
+    let waiting = true;
+    stubProposal(transport, card.proposal_id, () =>
+      waiting
+        ? proposalDetails(card, { status: 'WAITING_FOR_THE_CLUB', actions: ['LEAVE'] })
+        : proposalDetails(card, {
+            in_count: 3,
+            actions: ['YES', 'NO'],
+            sides: {
+              yours: [youTile(), ZOFIA({ is_in: true })],
+              theirs: [ANIA({ is_in: true }), EWA({ is_in: true })],
+            },
+          }),
+    );
+    transport.on('DELETE', yesPath(card.proposal_id), () => {
+      waiting = false;
+      return noContent();
+    });
+    await openGames([]);
+    act(() =>
+      router.push({
+        pathname: '/play/group/[groupId]/game/[proposalId]',
+        params: {
+          groupId: CREW.id,
+          proposalId: card.proposal_id,
+          sport: 'padel',
+          kind: 'competitive',
+        },
+      }),
+    );
+
+    expect(await screen.findByText('Waiting for the club')).toBeTruthy();
+    expect(screen.getByText('Padel · waiting for the club')).toBeTruthy();
+    expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
+    expect(
+      screen.getByLabelText('Your share, 32 zł, nobody pays until Bonarka Arena confirms'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: COPY.game.withdraw })).toBeNull();
+    expect(screen.queryByText(COPY.game.whatAYesMeans)).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
+    expect(await screen.findByText('Leaving withdraws your yes.')).toBeTruthy();
+    const acts = screen.getAllByRole('button', { name: LEAVE_THE_GAME });
+    fireEvent.press(acts[acts.length - 1]!);
+
+    await waitFor(() =>
+      expect(transport.requestsTo('DELETE', yesPath(card.proposal_id))).toHaveLength(1),
+    );
+    await waitFor(() =>
+      expect(toasts()).toContainEqual(['You left the game. Your yes is withdrawn.', 'ok']),
+    );
+    // Read again: the game is filling once more, and the reader may say yes again.
+    expect(await screen.findByText('Filling · 3 of 4 in')).toBeTruthy();
+    expect(screen.getByRole('button', { name: COPY.yes })).toBeTruthy();
   });
 });
 
@@ -746,7 +861,7 @@ describe('a share refused while the player was elsewhere waits on You › Paymen
     );
     fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.check }));
 
-    await waitFor(() => expect(toasts()).toContainEqual([FILL.bookedFromPayments, 'ok']));
+    await waitFor(() => expect(toasts()).toContainEqual([FILL.itsAGameInHome, 'ok']));
     expect(screen.queryByText(FILL.itsAGame.word)).toBeNull();
     await waitFor(() => expect(screen.queryByTestId(`to-confirm-${SEAT_CHARGE}`)).toBeNull());
   });

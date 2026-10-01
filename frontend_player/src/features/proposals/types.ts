@@ -27,6 +27,14 @@ export { GamesAndMoneyScreen } from './components/GamesAndMoneyScreen';
 export { LiveYeses } from './components/LiveYeses';
 export { PaymentsToConfirm } from './components/PaymentsToConfirm';
 export { useGamesBadge } from './hooks/useGroupDeck';
+/**
+ * **A group's Fill in tab** (#557) — *Seats to fill* and *You're In*, drawn by the group page as its
+ * Fill in tab, with the badge its tab reads; the page hands in the starting card for a tab with no
+ * rows, as it does the Games tab's.
+ */
+export { FillInBoard, type FillInBoardProps } from './components/FillInBoard';
+export { useFillInBadge } from './hooks/useFillIn';
+export { FILL_IN_COPY } from './components/fillInCopy';
 export { parseGameDetailsParams } from './schemas/gameDetailsParams';
 export type { GameKind } from './domain/vocabulary';
 /** The words the group page's suites hold the tab to. */
@@ -56,7 +64,7 @@ export { useHomeBadge } from './hooks/useHome';
 export { BookedGameScreen, type BookedGameScreenProps } from './components/BookedGameScreen';
 export { BookedGameChat, type BookedGameChatProps } from './components/BookedGameChat';
 export { BookedGameResult, type BookedGameResultProps } from './components/BookedGameResult';
-export { parseBookingParams } from './schemas/bookingParams';
+export { parseBookingParams, parseRescueParams } from './schemas/bookingParams';
 export { bookedGameRoute } from './components/proposalRoutes';
 /** The words the Home and details suites hold the screens to. */
 export { HOME_GAME_COPY } from './components/homeCopy';

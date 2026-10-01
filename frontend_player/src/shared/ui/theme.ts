@@ -917,6 +917,10 @@ const size = {
     ringOut: space.xxs,
     courtStroke: 1.5,
   },
+  /** A group's Fill in rows (7.27, #557; mocks 11–13): *Seats to fill* framed in `coral`, *You're
+   *  In* in `mint`, each `stroke` wide — the mocks' 1.5pt, the game card's court stroke again. The
+   *  posters in a row are the group page's own seat (`groupPage.seat`). */
+  fillInRow: { stroke: 1.5 },
   /** YOU › PAYMENTS — the setup checklist and the method card (7.23, #552; mocks 41–47).
    *  `stepMark` is a step's round mark — its number, or the tick once finished — at `fit`'s 26,
    *  the size the mocks draw beside a `question` title. `badge` is the method card's brand square,

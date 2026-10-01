@@ -12,7 +12,7 @@
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 
 import type { ResultAct } from '../domain/home';
-import type { HomeStatus } from '../domain/vocabulary';
+import type { CalledOffReason, HomeStatus } from '../domain/vocabulary';
 
 export const HOME_GAME_COPY = {
   /** The status tag on a card and on the details — the mechanics §14.1's names. */
@@ -60,6 +60,20 @@ export const HOME_GAME_COPY = {
     goesAhead: 'the game goes ahead',
     refunded: 'Refunded',
     nobodyPaid: 'Nobody paid',
+    /**
+     * Why a game is off (§14.1, #543, #544) — the club's two read with its name before them; the
+     * cut-off's said of the game. Keyed by the wire's reason, so a reason with no words fails here.
+     */
+    calledOff: {
+      SHORT_AT_THE_CUT_OFF: 'A seat was still empty at the cut-off',
+      REFUSED: 'couldn’t take it',
+      NO_ANSWER: 'didn’t answer in time',
+    } satisfies Readonly<Record<CalledOffReason, string>>,
+    /** *The club* at the head of a sentence, for a club the read no longer names. */
+    theClubLead: 'The club',
+    /** *Uncounted · a seat was empty* (§14.1): no Level moved, and nobody who stayed is marked. */
+    seatEmpty: 'A seat was empty',
+    noLevelMoved: 'no Level moved',
   },
   details: {
     back: 'Back',
@@ -87,7 +101,29 @@ export const HOME_GAME_COPY = {
     } satisfies Readonly<Record<ResultAct, string>>,
     reading: 'Reading the game',
     gone: 'This game isn’t one of yours any more.',
+    /** A rescue opened from a card or a row, whose seat has gone — taken, or off (#557). */
+    seatGone: 'This seat isn’t offered to you any more.',
     noRoom: 'This game’s chat isn’t open.',
     findingRoom: 'Opening the chat',
+  },
+  /**
+   * ***Leave the game*** (the mechanics §13; #557) — the line under the button for the moment, the
+   * sheet's words (today's *Before you leave* sheet, `challenges`' `LeaveSheet`), the toast once it
+   * is done, and the route's three refusals. The sentences carrying a sum are `homePresentation.ts`.
+   */
+  leave: {
+    nobodyPaidYet: 'Nobody has paid yet',
+    offered: 'Your seat is offered to others.',
+    onRecordIfCalledOff: 'On your record only if the game is then called off.',
+    onRecordIfNobody: 'On your record if nobody takes it.',
+    withdrawsYourYes: 'Leaving withdraws your yes.',
+    left: 'You left the game.',
+    refundTakes: 'BLIK within hours, cards up to two weeks.',
+    yesWithdrawn: 'Your yes is withdrawn.',
+    refused: {
+      game_has_started: 'The game has started, so there’s nothing to leave now.',
+      booking_is_called_off: 'This game is off, so there’s nothing to leave.',
+      booking_not_found: 'You don’t hold a seat on this game any more.',
+    },
   },
 } as const;

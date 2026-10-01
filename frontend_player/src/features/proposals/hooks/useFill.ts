@@ -8,23 +8,22 @@ import { createContext, useContext } from 'react';
 
 import type { AppError } from '@/shared/errors';
 
-import type { DeckCard } from '../domain/deck';
-import type { DealtIn, YesAnswer } from '../domain/fill';
+import type { DealtIn, YesAnswer, YesOn } from '../domain/fill';
 
 /**
- * A yes the fill acts on: the deck it was dealt in, the card it was said on — absent for a
- * confirmation opened from You › Payments, where no card is held — and the screen to leave once it
+ * A yes the fill acts on: the deck it was dealt in, what it was said on — absent for a
+ * confirmation opened from You › Payments, where no game is held — and the screen to leave once it
  * books (the details, still on screen).
  */
 export interface FillAsk {
-  readonly card?: DeckCard;
+  readonly card?: YesOn;
   readonly dealtIn: DealtIn;
   readonly leave?: () => void;
 }
 
-/** A yes the fill sends itself — always on a card. */
+/** A yes the fill sends itself — always on a game held: a card, a game's details, a rescue's row. */
 export interface BookAsk extends FillAsk {
-  readonly card: DeckCard;
+  readonly card: YesOn;
 }
 
 /** A refused share to confirm, and the yes it carries. */

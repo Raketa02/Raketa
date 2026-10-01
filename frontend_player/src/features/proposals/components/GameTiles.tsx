@@ -29,6 +29,13 @@
  * tail cut — rather than drawing *Karol T.*, which is the mocks' own data and not a rule. Only the
  * *vs* line stems a name, because it holds four in one line.
  *
+ * ## A rescue's open seat is yours, dashed
+ *
+ * On a *Seat open* card and on a rescue seen from outside (#557; mock 2), everybody else is *paid*
+ * and the reader stands in the seat that opened: a **dashed volt** tile with no photograph, *You
+ * complete it* over *27 zł · court booked* when it is the last seat, *You?* over *27 zł* while more
+ * are open (the screens A2.3). The seat is offered, not taken — so no face.
+ *
  * ## A booked game's tiles say *paid*
  *
  * The same tiles draw a booked game's people (#556; details 8): nobody on a booked court is *In* —
@@ -50,7 +57,16 @@ import { PlayerPhoto, theme } from '@/shared/ui';
 import type { DeckPerson, DeckRow, DeckSeat } from '../domain/deck';
 
 import { CardTag } from './CardTag';
-import { EMPTY_SEAT, LINE_JOIN, TILE_HINT, tileLabel, tileName, vsLine } from './deckPresentation';
+import {
+  EMPTY_SEAT,
+  LINE_JOIN,
+  TILE_HINT,
+  openSeatLabel,
+  openSeatUnder,
+  tileLabel,
+  tileName,
+  vsLine,
+} from './deckPresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = PROPOSALS_COPY;
@@ -66,18 +82,31 @@ export interface GameTilesProps {
   readonly onPerson?: (person: DeckPerson) => void;
   /** Take the card's spare height (the deck), or stand at the mock's proportion (the details). */
   readonly fill: boolean;
+  /** A rescue: your tile is the open seat, offered at this share (*27 zł*). */
+  readonly rescue?: { readonly share: string };
 }
 
-export function GameTiles({ top, bottom, singles, completes, onPerson, fill }: GameTilesProps) {
-  const tile = (seat: DeckSeat, at: number) => (
-    <GameTile
-      key={seat.kind === 'person' ? seat.person.playerId : `empty-${at}`}
-      seat={seat}
-      completes={completes}
-      fill={fill}
-      {...(onPerson === undefined ? {} : { onPerson })}
-    />
-  );
+export function GameTiles({
+  top,
+  bottom,
+  singles,
+  completes,
+  onPerson,
+  fill,
+  rescue,
+}: GameTilesProps) {
+  const tile = (seat: DeckSeat, at: number) =>
+    rescue !== undefined && seat.kind === 'person' && seat.person.isYou ? (
+      <OpenSeat key={seat.person.playerId} share={rescue.share} completes={completes} fill={fill} />
+    ) : (
+      <GameTile
+        key={seat.kind === 'person' ? seat.person.playerId : `empty-${at}`}
+        seat={seat}
+        completes={completes}
+        fill={fill}
+        {...(onPerson === undefined ? {} : { onPerson })}
+      />
+    );
 
   if (singles) {
     return (
@@ -190,6 +219,37 @@ function GameTile({
 }
 
 /**
+ * **The seat a rescue offers you** (mock 2) — dashed volt, no face: *You complete it* over *27 zł ·
+ * court booked*, or *You?* over *27 zł* while another seat is open too.
+ */
+function OpenSeat({
+  share,
+  completes,
+  fill,
+}: {
+  readonly share: string;
+  readonly completes: boolean;
+  readonly fill: boolean;
+}) {
+  const under = openSeatUnder(share, completes);
+  return (
+    <View
+      style={[s.tile, fill ? s.tileFill : s.tileFixed, s.openSeat]}
+      accessible
+      accessibilityLabel={openSeatLabel(completes, share)}
+      testID="game-tile-your-seat"
+    >
+      <Text style={s.openSeatWho} numberOfLines={1}>
+        {completes ? COPY.youCompleteIt : COPY.youQuestion}
+      </Text>
+      <Text style={s.openSeatShare} numberOfLines={1}>
+        {under}
+      </Text>
+    </View>
+  );
+}
+
+/**
  * Under the name: the Level, and on a booked game *paid* beside it — *2,71 · paid*, in the Level's
  * own mono (details 8). Nothing for an unrated player on a card still dealt.
  */
@@ -219,6 +279,18 @@ const s = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: theme.color.onDarkHair,
   },
+  // Volt as a line, which it may be on dark (2.2) — the seat offered, dashed because it is open.
+  openSeat: {
+    borderWidth: theme.size.gameCard.courtStroke,
+    borderStyle: 'dashed',
+    borderColor: theme.color.volt,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: theme.space.xxs,
+    padding: theme.space.sm,
+  },
+  openSeatWho: { ...theme.type.h2, color: theme.color.volt },
+  openSeatShare: { ...theme.num.xs, ...theme.tabular, color: theme.color.onDarkTiny },
   foot: {
     backgroundColor: theme.color.photoScrim,
     paddingHorizontal: theme.space.sm,

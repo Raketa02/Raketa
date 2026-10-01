@@ -12,13 +12,15 @@ import { toSport } from '@/features/onboarding/types';
 import type { components } from '@/generated/schema';
 
 import type { DeckPerson } from '../domain/deck';
-import type { BookedGame, BookedMoney, Home, HomeGame } from '../domain/home';
+import type { BookedGame, BookedMoney, Home, HomeGame, Leaving, RescueOffer } from '../domain/home';
+import type { LeavingKind } from '../domain/vocabulary';
 
 import { toClub, toKind } from './deckMappers';
 
 type Schemas = components['schemas'];
 
-function toSeat(wire: Schemas['BookedTileSchema']): DeckPerson {
+/** A seat on a booked court — the deck's person, with *paid*. A Fill in row's players too. */
+export function toSeat(wire: Schemas['BookedTileSchema']): DeckPerson {
   return {
     playerId: wire.player_id,
     isYou: wire.is_you,
@@ -40,27 +42,47 @@ function toMoney(wire: Schemas['BookedMoneySchema']): BookedMoney {
     shareGrosze: wire.share_grosze,
     paid: wire.paid,
     ...(wire.free_to_leave_until === null ? {} : { freeToLeaveUntil: wire.free_to_leave_until }),
+    ...(wire.refunded_grosze === null ? {} : { refundedGrosze: wire.refunded_grosze }),
   };
+}
+
+/** What Home and the details share of a booked game — every nullable read as an absent field. */
+function toBooking(
+  wire: Schemas['HomeGameSchema'] | Schemas['BookingDetailsResponse'],
+): Omit<HomeGame, 'sport' | 'club'> {
+  return {
+    bookingId: wire.booking_id,
+    ...(wire.game_id === null ? {} : { gameId: wire.game_id }),
+    groupId: wire.pool_id,
+    kind: toKind(wire.kind),
+    status: wire.status,
+    ...(wire.called_off_reason === null ? {} : { calledOffReason: wire.called_off_reason }),
+    ...(wire.uncounted_reason === null ? {} : { uncountedReason: wire.uncounted_reason }),
+    openSeats: wire.open_seats,
+    needsYou: wire.needs_you,
+    startsAt: wire.starts_at,
+    ...(wire.court_name === null ? {} : { courtName: wire.court_name }),
+    sides: toSides(wire.sides),
+    money: toMoney(wire.money),
+  };
+}
+
+function toLeaving(wire: Schemas['LeavingSchema']): Leaving {
+  return {
+    kind: wire.kind,
+    refundGrosze: wire.refund_grosze,
+    cardFeeGrosze: wire.card_fee_grosze,
+  };
+}
+
+function toRescue(wire: Schemas['RescueOfferSchema']): RescueOffer {
+  return { deadline: wire.deadline, fillsByTheCutOff: wire.fills_by_the_cut_off };
 }
 
 export function toHomeGame(wire: Schemas['HomeGameSchema']): HomeGame | undefined {
   const sport = toSport(wire.sport);
   if (sport === undefined) return undefined;
-
-  return {
-    bookingId: wire.booking_id,
-    gameId: wire.game_id,
-    groupId: wire.pool_id,
-    sport,
-    kind: toKind(wire.kind),
-    status: wire.status,
-    needsYou: wire.needs_you,
-    startsAt: wire.starts_at,
-    club: toClub(wire.club),
-    courtName: wire.court_name,
-    sides: toSides(wire.sides),
-    money: toMoney(wire.money),
-  };
+  return { ...toBooking(wire), sport, club: toClub(wire.club) };
 }
 
 export function toHome(wire: Schemas['HomeResponse']): Home {
@@ -75,27 +97,26 @@ export function toBookedGame(wire: Schemas['BookingDetailsResponse']): BookedGam
   const sport = toSport(wire.sport);
   if (sport === undefined) return undefined;
 
+  const rescue = wire.rescue ?? null;
   return {
-    bookingId: wire.booking_id,
-    gameId: wire.game_id,
-    groupId: wire.pool_id,
+    ...toBooking(wire),
     sport,
-    kind: toKind(wire.kind),
     readAt: wire.read_at,
-    status: wire.status,
-    needsYou: wire.needs_you,
-    startsAt: wire.starts_at,
     endsAt: wire.ends_at,
     where: {
       ...toClub(wire.where),
       ...(wire.where.distance_km === null ? {} : { distanceKm: wire.where.distance_km }),
     },
-    courtName: wire.court_name,
-    sides: toSides(wire.sides),
-    money: toMoney(wire.money),
     showsForecast: wire.shows_forecast,
     ...(wire.check_in === null
       ? {}
       : { checkIn: { shortCode: wire.check_in.short_code, qrPayload: wire.check_in.qr_payload } }),
+    ...(wire.leaving === null ? {} : { leaving: toLeaving(wire.leaving) }),
+    ...(rescue === null ? {} : { rescue: toRescue(rescue) }),
   };
+}
+
+/** *Leave the game*, done — which of the three it was (#544). */
+export function toLeft(wire: Schemas['DepartureResponse']): LeavingKind {
+  return wire.left;
 }

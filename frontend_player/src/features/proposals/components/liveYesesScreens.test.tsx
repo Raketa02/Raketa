@@ -3,9 +3,9 @@
  * ([#554](https://github.com/Raketa02/Raketa/issues/554); the screens A7.3; mock 48).
  *
  * The list is `GET /players/me/live-yeses` as #539 serves it; a row opens the deck's own details
- * screen for the group, sport and kind the yes was said in. **The deck never deals a game the
- * reader is In on**, so what the details draw is the yes itself — until a withdraw, after which the
- * deck deals the game again with everything on it.
+ * screen for the group, sport and kind the yes was said in, drawn from the game's own read (`GET
+ * /proposals/{id}`, #557): everybody In, the open seats empty, and *Withdraw* — and once withdrawn,
+ * the two answers back.
  *
  * **The list is read at `DECK_READ_AT`**, Wednesday 30 September 2026 at 10:00 in Warsaw, so a
  * Saturday game is *Saturday* and its book-by is Thursday.
@@ -19,13 +19,17 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { doorRowLabel } from '@/shared/ui';
 import {
+  ANIA,
   deckCard,
-  deckPath,
   DECK_READ_AT,
-  groupDeck,
+  EWA,
   liveYes,
-  stubGroupDeck,
+  proposalDetails,
+  proposalPath,
+  stubProposal,
   yesPath,
+  youTile,
+  ZOFIA,
 } from '@/test-support/groupDeck';
 import {
   LIVE_YESES_PATH,
@@ -190,10 +194,54 @@ describe('the section offline', () => {
 });
 
 describe('a row opens the game’s details', () => {
-  it('draws the game from the yes — the deck no longer deals it — with Withdraw', async () => {
-    const yes = liveYes();
+  /**
+   * The yes's game, read in detail — you and Zofia In, its other two seats open — and, after a
+   * withdraw, the same game with only Zofia In and the two answers back.
+   */
+  function gameOf(yes: Wire['LiveYesSchema']) {
+    const card = deckCard({
+      proposal_id: yes.proposal_id,
+      starts_at: yes.starts_at,
+      share_grosze: yes.share_grosze,
+      deadline: yes.book_by,
+      in_count: 2,
+      sides: { yours: [youTile({ is_in: true }), ZOFIA({ is_in: true })], theirs: [] },
+    });
+    const inIt = proposalDetails(card, { pool_id: POOL });
+    const out = proposalDetails(card, {
+      pool_id: POOL,
+      in_count: 1,
+      actions: ['YES', 'NO'],
+      sides: { yours: [youTile(), ZOFIA({ is_in: true })], theirs: [ANIA(), EWA()] },
+    });
+    return { inIt, out };
+  }
+
+  /** The yes on the list and its game in detail, the details following a withdraw and a yes. */
+  function stubTheGame(yes: Wire['LiveYesSchema']) {
+    const { inIt, out } = gameOf(yes);
+    let youAreIn = true;
     stubLiveYeses(transport, [yes]);
-    stubGroupDeck(transport, POOL, groupDeck());
+    stubProposal(transport, yes.proposal_id, () => (youAreIn ? inIt : out));
+    transport.on('DELETE', yesPath(yes.proposal_id), () => {
+      youAreIn = false;
+      stubLiveYeses(transport, []);
+      return noContent();
+    });
+    transport.on('POST', yesPath(yes.proposal_id), () => {
+      youAreIn = true;
+      stubLiveYeses(transport, [yes]);
+      return json<Wire['YesAnswerResponse']>({
+        proposal_id: yes.proposal_id,
+        open_seats: 2,
+        waiting_for_the_club: false,
+      });
+    });
+  }
+
+  it('draws the game from its own read — who is In, the club and its distance, the book-by — with Withdraw', async () => {
+    const yes = liveYes();
+    stubTheGame(yes);
     await onPayments();
 
     fireEvent.press(await screen.findByRole('button', { name: ROW }));
@@ -201,36 +249,24 @@ describe('a row opens the game’s details', () => {
     await waitFor(() =>
       expect(screen).toHavePathname(`/play/group/${POOL}/game/${yes.proposal_id}`),
     );
-    expect(await screen.findByLabelText('Where, Bonarka Arena')).toBeTruthy();
-    // The club is the title: who else is In is not on the yes.
-    expect(screen.getByRole('header', { name: 'Bonarka Arena' })).toBeTruthy();
-    expect(screen.getByText(COPY.game.filling)).toBeTruthy();
+    expect(await screen.findByText('Filling · 2 of 4 in')).toBeTruthy();
+    expect(screen.getByLabelText('Zofia Bielecka, level 2,69, In')).toBeTruthy();
+    // The header names the others; the tile names her too.
+    expect(screen.getAllByText('Zofia Bielecka')).toHaveLength(2);
+    expect(screen.getAllByTestId('game-tile-empty')).toHaveLength(2);
+    expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
     expect(screen.getByLabelText('Day, Saturday, 3 Oct')).toBeTruthy();
     expect(screen.getByLabelText('Time, 15:00, until 16:00')).toBeTruthy();
     expect(
       screen.getByLabelText('Your share, 28 zł, if it fills · book by Thu 10:00'),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.game.withdraw })).toBeTruthy();
-    expect(screen.queryByText(COPY.game.gone)).toBeNull();
-    expect(transport.requestsTo('GET', deckPath(POOL)).length).toBeGreaterThan(0);
+    expect(transport.requestsTo('GET', proposalPath(yes.proposal_id)).length).toBeGreaterThan(0);
   });
 
-  it('withdraws the yes, and the deck, read again, deals the game with everything on it', async () => {
+  it('withdraws the yes, and the details, read again, put the answers back', async () => {
     const yes = liveYes();
-    stubLiveYeses(transport, [yes]);
-    stubGroupDeck(transport, POOL, groupDeck());
-    transport.on('DELETE', yesPath(yes.proposal_id), () => {
-      // A withdrawn yes is dealt again (#539), and is no longer live.
-      stubGroupDeck(
-        transport,
-        POOL,
-        groupDeck({
-          cards: [deckCard({ proposal_id: yes.proposal_id, starts_at: yes.starts_at })],
-        }),
-      );
-      stubLiveYeses(transport, []);
-      return noContent();
-    });
+    stubTheGame(yes);
     await onPayments();
 
     fireEvent.press(await screen.findByRole('button', { name: ROW }));
@@ -238,7 +274,7 @@ describe('a row opens the game’s details', () => {
 
     expect(await screen.findByRole('button', { name: COPY.yes })).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.no })).toBeTruthy();
-    expect(await screen.findByText('Filling · 0 of 4 in')).toBeTruthy();
+    expect(screen.getByText('Filling · 1 of 4 in')).toBeTruthy();
     expect(transport.requestsTo('DELETE', yesPath(yes.proposal_id))).toHaveLength(1);
 
     // Back on Payments, the list has been read again and the section is gone with the yes.
@@ -249,23 +285,7 @@ describe('a row opens the game’s details', () => {
 
   it('says yes again from the details, and the list under them is read again', async () => {
     const yes = liveYes();
-    stubLiveYeses(transport, [yes]);
-    stubGroupDeck(transport, POOL, groupDeck());
-    transport.on('DELETE', yesPath(yes.proposal_id), () => {
-      stubGroupDeck(
-        transport,
-        POOL,
-        groupDeck({
-          cards: [deckCard({ proposal_id: yes.proposal_id, starts_at: yes.starts_at })],
-        }),
-      );
-      stubLiveYeses(transport, []);
-      return noContent();
-    });
-    transport.on('POST', yesPath(yes.proposal_id), () => {
-      stubLiveYeses(transport, [yes]);
-      return json<Wire['YesAnswerResponse']>({ proposal_id: yes.proposal_id, open_seats: 2 });
-    });
+    stubTheGame(yes);
     await onPayments();
     fireEvent.press(await screen.findByRole('button', { name: ROW }));
     fireEvent.press(await screen.findByRole('button', { name: COPY.game.withdraw }));
@@ -277,24 +297,22 @@ describe('a row opens the game’s details', () => {
     fireEvent.press(screen.getByRole('button', { name: COPY.yes }));
 
     expect(await screen.findByRole('button', { name: COPY.game.withdraw })).toBeTruthy();
+    expect(screen.getByText('Filling · 2 of 4 in')).toBeTruthy();
     await waitFor(() =>
       expect(transport.requestsTo('GET', LIVE_YESES_PATH).length).toBeGreaterThan(reads),
     );
   });
 
-  it('keeps the game it found when the yes leaves the list meanwhile', async () => {
+  it('says so in one sentence for a game the reader was never dealt', async () => {
     const yes = liveYes();
     stubLiveYeses(transport, [yes]);
-    stubGroupDeck(transport, POOL, groupDeck());
+    transport.on('GET', proposalPath(yes.proposal_id), () =>
+      errorResponse(404, 'proposal_not_found'),
+    );
     await onPayments();
+
     fireEvent.press(await screen.findByRole('button', { name: ROW }));
-    await screen.findByRole('button', { name: COPY.game.withdraw });
 
-    // Filled elsewhere meanwhile: gone from the list, and the screen keeps what it found.
-    stubLiveYeses(transport, []);
-    await queryClient.invalidateQueries();
-
-    expect(screen.getByRole('button', { name: COPY.game.withdraw })).toBeTruthy();
-    expect(screen.queryByText(COPY.game.gone)).toBeNull();
+    expect(await screen.findByText(COPY.game.gone)).toBeTruthy();
   });
 });

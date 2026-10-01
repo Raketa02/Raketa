@@ -29,12 +29,23 @@ export function useHome() {
   });
 }
 
-/** `null` is a game in a sport this build cannot name — read, and nothing to draw. */
-export function useBooking(bookingId: string) {
-  return useQuery<BookedGame | null, AppError>({
+/** One booked game's read — the details', and *It's a game!*'s when a row's join is booked. */
+function bookingQuery(bookingId: string) {
+  return {
     queryKey: proposalKeys.booking(bookingId),
-    queryFn: ({ signal }) => readBooking(bookingId, { signal }),
-  });
+    queryFn: ({ signal }: { readonly signal: AbortSignal }) => readBooking(bookingId, { signal }),
+  };
+}
+
+/**
+ * `null` is a game in a sport this build cannot name — read, and nothing to draw. `enabled` false asks
+ * nothing — *It's a game!* reads the booking only when the yes held no sides of its own.
+ */
+export function useBooking(
+  bookingId: string,
+  { enabled = true }: { readonly enabled?: boolean } = {},
+) {
+  return useQuery<BookedGame | null, AppError>({ ...bookingQuery(bookingId), enabled });
 }
 
 /** The booking's read, as `BookingAbsent` asks about it. */

@@ -9,10 +9,10 @@
  */
 
 import { sportLabel } from '@/features/onboarding/types';
+import { codeMessage, type AppError } from '@/shared/errors';
 import { counted } from '@/shared/formatting/counted';
 import { formatDistanceKm, formatZloty } from '@/shared/formatting/ratingFormat';
 import { platformClock } from '@/shared/date/platformZone';
-import { dayLabel } from '@/shared/vocabulary/availabilityPresentation';
 import { theme, type ButtonVariant } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -22,12 +22,20 @@ import {
   moneyLineOf,
   type BookedGame,
   type HomeGame,
+  type Leaving,
   type MoneyLine,
 } from '../domain/home';
-import type { GameKind, HomeStatus } from '../domain/vocabulary';
-import { weekdayAt, type GameDay } from '../domain/when';
+import type {
+  CalledOffReason,
+  GameKind,
+  HomeStatus,
+  LeavingKind,
+  ProposalStatus,
+} from '../domain/vocabulary';
+import type { GameDay } from '../domain/when';
 
-import { clubName, gameDayWords, LINE_JOIN, timeWords } from './deckPresentation';
+import { clubName, gameDayWords, LINE_JOIN, shortMoment, timeWords } from './deckPresentation';
+import { seatWhen } from './fillInPresentation';
 import type { FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
@@ -36,13 +44,6 @@ const COPY = HOME_GAME_COPY;
 
 /** A drawn line's parts aloud: the mocks' dots are commas to a listener. */
 const SPOKEN_JOIN = ', ';
-
-/** *Fri 16:00* — a moment the line names, on the club's calendar. */
-function shortMoment(instant: string): string {
-  const weekday = weekdayAt(instant);
-  const day = weekday === undefined ? '' : `${dayLabel(weekday)} `;
-  return `${day}${platformClock(instant) ?? ''}`;
-}
 
 /**
  * **The status's colour** — the tag's dot and the facts' accent line (A4.1, A8): *Waiting for the
@@ -61,6 +62,22 @@ export const STATUS_INK: Readonly<Record<HomeStatus, string>> = {
   UNCOUNTED: theme.color.onDarkHair,
   NEVER_PLAYED: theme.color.onDarkHair,
   CALLED_OFF: theme.color.gameRed,
+};
+
+/**
+ * **A game still filling's status, coloured** — its details' dot and accent line: the stage still
+ * being arranged while it fills and while its club decides (`arranging`), mint once booked, red when
+ * the club turned it down, the hairline on the three ways it ended unfilled — the colours above, for
+ * the same facts on a game that has not filled.
+ */
+export const PROPOSAL_STATUS_INK: Readonly<Record<ProposalStatus, string>> = {
+  FILLING: theme.color.arranging,
+  WAITING_FOR_THE_CLUB: theme.color.arranging,
+  FILLED: theme.color.mint,
+  EXPIRED: theme.color.onDarkHair,
+  WITHDRAWN: theme.color.onDarkHair,
+  COURT_HOUR_LOST: theme.color.onDarkHair,
+  TURNED_DOWN: theme.color.gameRed,
 };
 
 /**
@@ -113,11 +130,20 @@ function moneyParts(line: MoneyLine): readonly string[] {
     }
     case 'calledOff':
       return [
+        ...(line.reason === undefined ? [] : [calledOffWhy(line.reason, line.club)]),
         line.refundedGrosze === undefined
           ? money.nobodyPaid
           : `${money.refunded} ${formatZloty(line.refundedGrosze)}`,
       ];
+    case 'seatEmpty':
+      return [money.seatEmpty, money.noLevelMoved];
   }
+}
+
+/** *A seat was still empty at the cut-off* · *Kazimierz Padel couldn't take it* — why a game is off. */
+function calledOffWhy(reason: CalledOffReason, club: string | undefined): string {
+  const why = COPY.money.calledOff[reason];
+  return reason === 'SHORT_AT_THE_CUT_OFF' ? why : `${club ?? COPY.money.theClubLead} ${why}`;
 }
 
 /**
@@ -158,7 +184,7 @@ export function whereAside(
   distanceKm: number | undefined,
 ): string | undefined {
   const parts = [
-    ...(courtIsGiven(game.status) ? [game.courtName] : []),
+    ...(courtIsGiven(game.status) && game.courtName !== undefined ? [game.courtName] : []),
     ...(distanceKm === undefined ? [] : [formatDistanceKm(distanceKm)]),
   ];
   return parts.length === 0 ? undefined : parts.join(LINE_JOIN);
@@ -179,40 +205,61 @@ export function bookedTime(
  * **The details' money row** (the screens A4.1), read off the card's own money line
  * (`moneyLineOf`): *PAID · 28 zł · your share · to the club*, with *· free to leave until Sat 10:00*
  * while the cut-off is ahead (`cutOffAhead`, the line's own fold); the share nobody pays yet while
- * the club decides; *Refunded*, or *nobody paid*, once the game is called off.
+ * the club decides; and on a game a player left, one called off or one that started short, the card's
+ * own line beside the share — *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off
+ * with what came back, *A seat was empty* (§14.1). **A rescue seen from outside** (A4.3) is the share
+ * *I'm in* would pay and how long the seat is offered — the *Seats to fill* row's own words.
  */
 export function moneyRow(
-  game: Pick<BookedGame, 'status' | 'money' | 'where' | 'sides'>,
-  seats: number,
+  game: Pick<
+    BookedGame,
+    'status' | 'money' | 'where' | 'openSeats' | 'calledOffReason' | 'uncountedReason' | 'rescue'
+  >,
   now: number,
 ): FactWords {
   const { money } = game;
   const words = COPY.details;
   const value = formatZloty(money.shareGrosze);
-  const line = moneyLineOf({ ...game, club: game.where }, seats, now);
+  const share = money.paid ? words.paid : words.yourShare;
 
-  if (line?.kind === 'calledOff') {
-    return line.refundedGrosze === undefined
-      ? { label: words.yourShare, value, aside: words.nobodyPaid }
-      : { label: words.refunded, value };
-  }
-  if (line?.kind === 'waiting') {
-    return {
-      label: words.yourShare,
-      value,
-      aside: `${words.nobodyPaysUntil} ${line.club ?? COPY.money.theClub} ${COPY.money.confirms}`,
-    };
+  if (game.rescue !== undefined) {
+    return { label: words.yourShare, value, aside: seatWhen(game.rescue) };
   }
 
-  const until = cutOffAhead(money, now);
-  return {
-    label: money.paid ? words.paid : words.yourShare,
-    value,
-    aside: [
-      words.toTheClub,
-      ...(until === undefined ? [] : [`${COPY.money.freeToLeaveUntil} ${shortMoment(until)}`]),
-    ].join(LINE_JOIN),
-  };
+  const line = moneyLineOf({ ...game, club: game.where }, now);
+  switch (line?.kind) {
+    case 'calledOff': {
+      const why = line.reason === undefined ? [] : [calledOffWhy(line.reason, line.club)];
+      return line.refundedGrosze === undefined
+        ? { label: words.yourShare, value, aside: [...why, words.nobodyPaid].join(LINE_JOIN) }
+        : {
+            label: words.refunded,
+            value: formatZloty(line.refundedGrosze),
+            ...(why.length === 0 ? {} : { aside: why.join(LINE_JOIN) }),
+          };
+    }
+    case 'waiting':
+      return {
+        label: words.yourShare,
+        value,
+        aside: `${words.nobodyPaysUntil} ${line.club ?? COPY.money.theClub} ${COPY.money.confirms}`,
+      };
+    case 'seatOpen':
+    case 'seatEmpty':
+      return { label: share, value, aside: moneyWords(line) };
+    case 'booked':
+    case undefined: {
+      const until = cutOffAhead(money, now);
+      return {
+        label: share,
+        value,
+        aside: [
+          words.toTheClub,
+          ...(until === undefined ? [] : [`${COPY.money.freeToLeaveUntil} ${shortMoment(until)}`]),
+        ].join(LINE_JOIN),
+      };
+    }
+  }
 }
 
 /** *Your check-in code: K 7 M 2 Q X* — the short code aloud, a character at a time. */
@@ -243,9 +290,10 @@ export function homeCardLabel({
   readonly chat: boolean;
 }): string {
   const time = timeWords(game.startsAt);
-  const where = courtIsGiven(game.status)
-    ? `${clubName(game)}${SPOKEN_JOIN}${game.courtName}`
-    : clubName(game);
+  const where =
+    courtIsGiven(game.status) && game.courtName !== undefined
+      ? `${clubName(game)}${SPOKEN_JOIN}${game.courtName}`
+      : clubName(game);
   return [
     fresh ? `${statusWord(game.status)}${SPOKEN_JOIN}${COPY.newSpoken}` : statusWord(game.status),
     sportParts(game.sport, game.kind).join(SPOKEN_JOIN),
@@ -258,4 +306,68 @@ export function homeCardLabel({
   ]
     .map((sentence) => `${sentence}.`)
     .join(' ');
+}
+
+// ---------------------------------------------------------------------------
+// Leave the game (the mechanics §13; #557)
+// ---------------------------------------------------------------------------
+
+/**
+ * **The line under *Leave the game*** — what leaving costs at this moment, from the read: *Refunded
+ * 27,18 zł if you leave now* before the cut-off, *Refunded 27,18 zł only if someone takes your seat*
+ * after it, *Nobody has paid yet* while the club decides.
+ */
+export function leavingLine(leaving: Leaving): string {
+  const refund = formatZloty(leaving.refundGrosze);
+  switch (leaving.kind) {
+    case 'BEFORE_THE_CUT_OFF':
+      return `Refunded ${refund} if you leave now`;
+    case 'AFTER_THE_CUT_OFF':
+      return `Refunded ${refund} only if someone takes your seat`;
+    case 'WHILE_WAITING_FOR_THE_CLUB':
+      return COPY.leave.nobodyPaidYet;
+  }
+}
+
+/** **The sheet's words** — the mechanics §13's table, a line a clause, the sums the read's. */
+export function leavingSheetBody(leaving: Leaving): readonly string[] {
+  const words = COPY.leave;
+  const refund = formatZloty(leaving.refundGrosze);
+  switch (leaving.kind) {
+    case 'BEFORE_THE_CUT_OFF':
+      return [
+        `You’ll be refunded ${refund} now (the ${formatZloty(leaving.cardFeeGrosze)} card fee isn’t returned).`,
+        words.offered,
+        words.onRecordIfCalledOff,
+      ];
+    case 'AFTER_THE_CUT_OFF':
+      return [
+        words.offered,
+        `You’ll be refunded ${refund} when someone takes it; if nobody does, you won’t be.`,
+        words.onRecordIfNobody,
+      ];
+    case 'WHILE_WAITING_FOR_THE_CLUB':
+      return [`${words.nobodyPaidYet}.`, words.withdrawsYourYes];
+  }
+}
+
+/**
+ * **The toast once the player has left** — which of the three the server says it was, and the
+ * refund the sheet quoted, with how long it takes to arrive (§12.3: *shown when it is issued*).
+ */
+export function leftToast(left: LeavingKind, quoted: Leaving): string {
+  const words = COPY.leave;
+  switch (left) {
+    case 'BEFORE_THE_CUT_OFF':
+      return `${words.left} ${formatZloty(quoted.refundGrosze)} is on its way back — ${words.refundTakes}`;
+    case 'AFTER_THE_CUT_OFF':
+      return `${words.left} ${words.offered}`;
+    case 'WHILE_WAITING_FOR_THE_CLUB':
+      return `${words.left} ${words.yesWithdrawn}`;
+  }
+}
+
+/** A refused departure, said on the sheet — the route's three codes over the shared sentence. */
+export function leaveRefusal(error: AppError): string {
+  return codeMessage(COPY.leave.refused, error);
 }

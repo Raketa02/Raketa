@@ -25,8 +25,13 @@
  * **The Games tab counts the cards where somebody is already In with you** (#553, the screens A1,
  * mock 1's *Games 4*): the same badge, off the deck's own read — the one the tab draws, for the
  * sport the page is on and the kind its switch stands on, so the two never disagree and the count
- * costs no second request. The *Fill in* tab's count is the rescue board's, which is not read yet
- * (#545, #557).
+ * costs no second request. **The *Fill in* tab counts its *Seats to fill*** (#557, mock 11's *Fill
+ * in 1*) — the rescue board's own badge, read for the page's sport.
+ *
+ * **Fill in is `proposals`' board** (#557): *Seats to fill* and *You're In*, and — with neither — the
+ * starting card a group has always drawn there (`FillInTab`), handed in as the Games tab hands in
+ * its own. *+ Post a game* floats over the page's corner, drawn and inert until posting ships
+ * (#558).
  *
  * **Games lays itself out** (#553): the deck fills the page between the switch and its three
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
@@ -47,7 +52,7 @@ import { useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useGamesBadge } from '@/features/proposals/types';
+import { FillInBoard, useFillInBadge, useGamesBadge } from '@/features/proposals/types';
 import { codeMessage } from '@/shared/errors';
 import { ScreenHeader, Segment, theme, type SegmentOption } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -63,7 +68,7 @@ import { FriendsTab } from './FriendsTab';
 import { GamesTab } from './GamesTab';
 import { GroupMonogram } from './GroupMonogram';
 import { GROUPS_COPY } from './groupsCopy';
-import { gamesTabLabel, infoTabLabel, membersAtClub } from './groupsPresentation';
+import { fillInTabLabel, gamesTabLabel, infoTabLabel, membersAtClub } from './groupsPresentation';
 import { InfoTab } from './InfoTab';
 import { ReadFailure } from './ReadFailure';
 import { SportFilterPage } from './SportFilterPage';
@@ -94,17 +99,17 @@ interface GroupTabsProps {
   readonly onSelect: (tab: GroupTab) => void;
 }
 
-/** The tab bar — with Games' count once there is a sport to read a deck for. */
+/** The tab bar — with Games' and Fill in's counts once there is a sport to read them for. */
 function GroupTabs({ sport, ...props }: GroupTabsProps & { readonly sport: Sport | undefined }) {
   const tabs = useGroupTabs(props.groupId, props.isOwner);
   return sport === undefined ? (
     <Segment options={tabs} selected={props.selected} onSelect={props.onSelect} style={s.tabs} />
   ) : (
-    <TabsCountingGames {...props} tabs={tabs} sport={sport} />
+    <TabsWithCounts {...props} tabs={tabs} sport={sport} />
   );
 }
 
-function TabsCountingGames({
+function TabsWithCounts({
   groupId,
   selected,
   onSelect,
@@ -113,11 +118,16 @@ function TabsCountingGames({
 }: GroupTabsProps & { readonly tabs: readonly SegmentOption<GroupTab>[]; readonly sport: Sport }) {
   const chosen = useGameIntent((state) => state.intent);
   const games = useGamesBadge(groupId, sport, chosen);
-  const counted = tabs.map((option) =>
-    option.key !== 'games' || games === 0
-      ? option
-      : { ...option, badge: games, accessibilityLabel: gamesTabLabel(games) },
-  );
+  const seats = useFillInBadge(groupId, sport);
+  const counted = tabs.map((option) => {
+    if (option.key === 'games' && games > 0) {
+      return { ...option, badge: games, accessibilityLabel: gamesTabLabel(games) };
+    }
+    if (option.key === 'fillIn' && seats > 0) {
+      return { ...option, badge: seats, accessibilityLabel: fillInTabLabel(seats) };
+    }
+    return option;
+  });
   return <Segment options={counted} selected={selected} onSelect={onSelect} style={s.tabs} />;
 }
 
@@ -254,7 +264,7 @@ function TabBody({
     case 'games':
       return <GamesTab group={group} sport={sport} />;
     case 'fillIn':
-      return <FillInTab group={group} />;
+      return <FillInBoard groupId={group.id} sport={sport} empty={<FillInTab group={group} />} />;
     case 'friends':
       return <FriendsTab group={group} sport={sport} />;
   }

@@ -60,4 +60,24 @@ describe('proposalKeys', () => {
     expect(startsWith(one, proposalKeys.decks())).toBe(false);
     expect(startsWith(one, proposalKeys.home())).toBe(false);
   });
+
+  it('files a group’s Fill in under its root, apart from every deck of it (#557)', () => {
+    const fillIn = proposalKeys.fillIn(GROUP, 'padel');
+    expect(startsWith(fillIn, proposalKeys.group(GROUP))).toBe(true);
+    expect(startsWith(fillIn, proposalKeys.decks())).toBe(true);
+    expect(startsWith(proposalKeys.fillIn(OTHER, 'padel'), proposalKeys.group(GROUP))).toBe(false);
+    for (const kind of ['competitive', 'forFun'] as const) {
+      expect(JSON.stringify(fillIn)).not.toBe(
+        JSON.stringify(proposalKeys.deck(GROUP, 'padel', kind)),
+      );
+    }
+    expect(JSON.stringify(fillIn)).not.toBe(JSON.stringify(proposalKeys.fillIn(GROUP, 'tennis')));
+  });
+
+  it('files each game’s details under the root every answer re-reads, apart from the decks', () => {
+    const one = proposalKeys.proposal(GROUP);
+    expect(startsWith(one, proposalKeys.proposals())).toBe(true);
+    expect(startsWith(one, proposalKeys.decks())).toBe(false);
+    expect(startsWith(one, proposalKeys.bookings())).toBe(false);
+  });
 });

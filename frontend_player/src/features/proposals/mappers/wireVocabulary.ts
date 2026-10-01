@@ -12,13 +12,18 @@ import type { components } from '@/generated/schema';
 import type { Exact } from '@/shared/vocabulary/wireAgreement';
 
 import type {
+  CalledOffReason,
   CardType,
   CourtState,
   DayRange,
   HomeStatus,
+  LeavingKind,
   OverlapGrade,
   OverlapShade,
   PaymentRefusal,
+  ProposalStatus,
+  ReaderAction,
+  UncountedReason,
 } from '../domain/vocabulary';
 
 type Schemas = components['schemas'];
@@ -31,6 +36,11 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   readonly range: Exact<DayRange, Schemas['DayRange']>;
   readonly paymentRefusal: Exact<PaymentRefusal, Schemas['PaymentRefusal']>;
   readonly homeStatus: Exact<HomeStatus, Schemas['HomeStatus']>;
+  readonly calledOffReason: Exact<CalledOffReason, Schemas['CalledOffReason']>;
+  readonly uncountedReason: Exact<UncountedReason, Schemas['UncountedReason']>;
+  readonly leaving: Exact<LeavingKind, Schemas['Leaving']>;
+  readonly proposalStatus: Exact<ProposalStatus, Schemas['ProposalStatus']>;
+  readonly readerAction: Exact<ReaderAction, Schemas['ReaderAction']>;
 } = {
   cardType: true,
   courtState: true,
@@ -39,4 +49,9 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   range: true,
   paymentRefusal: true,
   homeStatus: true,
+  calledOffReason: true,
+  uncountedReason: true,
+  leaving: true,
+  proposalStatus: true,
+  readerAction: true,
 };

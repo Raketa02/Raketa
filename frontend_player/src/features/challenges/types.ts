@@ -176,6 +176,12 @@ export { FillTheSeat, type FillTheSeatProps } from './components/FillTheSeat';
  * app is read through. Nothing in `src/` outside this feature reads it otherwise.
  */
 export { LEAVE_THE_GAME } from './components/leaveGamePresentation';
+/**
+ * **The departure's sheet** — *Before you leave*, *Stay in*, the act named once — crossed for a
+ * booked game's *Leave the game* (#557: *today's Before you leave sheet with the new words*), which
+ * hands it its own body.
+ */
+export { LeaveSheet, type LeaveSheetProps } from './components/LeaveSheet';
 
 /**
  * **This feature's list key, and the one write to it another feature may make** — crossed for the

@@ -8,6 +8,7 @@
  * | `setUpFirst` | nothing saved: the setup opens, and `then` lands the yes once a method is |
  * | `waits` | this yes would wait behind *Undo* — and `held` that it must wait for another to go first |
  * | `book` | the ten seconds in front of it |
+ * | `confirm` | a refused share's confirmation, opened on the details (#557) |
  * | `onAnswered`, `takesRefusal` | the deck's own answer handed to the fill |
  *
  * The screen keeps what differs — the deck's card flies, the details mark the yes in place.
@@ -16,8 +17,7 @@
 import { usePaymentSetupNeeded } from '@/features/payments/types';
 import type { AppError } from '@/shared/errors';
 
-import type { DeckCard } from '../domain/deck';
-import { waitsForUndo, type DealtIn, type YesAnswer } from '../domain/fill';
+import { waitsForUndo, type DealtIn, type YesAnswer, type YesOn } from '../domain/fill';
 
 import { useFill } from './useFill';
 import type { AnswerOnCard } from './useGroupDeck';
@@ -37,10 +37,12 @@ export function useFillYes(dealtIn: DealtIn, leave?: () => void) {
       return true;
     },
     /** A yes on this card moves money, and waits ten seconds behind *Undo*. */
-    waits: (card: DeckCard): boolean => waitsForUndo(card),
+    waits: (card: YesOn): boolean => waitsForUndo(card),
     /** It waits — and another booking is counting already, so it must wait for that one. */
-    held: (card: DeckCard): boolean => waitsForUndo(card) && fill.counting !== null,
-    book: (card: DeckCard) => fill.book({ ...where, card }),
+    held: (card: YesOn): boolean => waitsForUndo(card) && fill.counting !== null,
+    book: (card: YesOn) => fill.book({ ...where, card }),
+    /** A refused share of this player's on this game — the confirmation, and the yes it carries. */
+    confirm: (seatChargeId: string, card: YesOn) => fill.confirm({ ...where, card, seatChargeId }),
     onAnswered: (answer: YesAnswer, asked: AnswerOnCard) => {
       if (asked.card !== undefined) fill.answered(answer, { ...where, card: asked.card });
     },

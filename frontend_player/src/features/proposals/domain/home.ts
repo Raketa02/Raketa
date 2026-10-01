@@ -18,7 +18,13 @@
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckCard } from './deck';
-import type { GameKind, HomeStatus } from './vocabulary';
+import type {
+  CalledOffReason,
+  GameKind,
+  HomeStatus,
+  LeavingKind,
+  UncountedReason,
+} from './vocabulary';
 import { GAME_LENGTH_MS } from './when';
 
 /** *Paid · 30 zł · free to leave until Sat 17:00* — the money a booked game carries. */
@@ -29,6 +35,8 @@ export interface BookedMoney {
   readonly paid: boolean;
   /** The club's cut-off while it was still ahead at the read — leaving before it is refunded. */
   readonly freeToLeaveUntil?: string;
+  /** What everybody still in was given back — a game called off at its cut-off (#544). */
+  readonly refundedGrosze?: number;
 }
 
 /**
@@ -38,20 +46,30 @@ export interface BookedMoney {
 export interface HomeGame {
   /** The booking — the same id the game had while it filled. */
   readonly bookingId: string;
-  /** The ordinary Game it opened: the result, the forecast and the room are reached by it. */
-  readonly gameId: string;
+  /**
+   * The ordinary Game it opened: the result, the forecast and the room are reached by it. **Absent
+   * while an On request club decides** (#543) — there is no Game until it says yes — and on a
+   * request it never accepted.
+   */
+  readonly gameId?: string;
   /** The pool it filled in — a group's id. */
   readonly groupId: string;
   readonly sport: Sport;
   readonly kind: GameKind;
   readonly status: HomeStatus;
+  /** Why it is `CALLED_OFF` — absent on every other status. */
+  readonly calledOffReason?: CalledOffReason;
+  /** Why it is `UNCOUNTED` with nobody disagreeing about a score — absent otherwise. */
+  readonly uncountedReason?: UncountedReason;
+  /** Seats somebody left and nobody has taken yet — *1 seat open* (#544). */
+  readonly openSeats: number;
   /** A result to enter, a score waiting on the reader's agreement, or a seat open in their game. */
   readonly needsYou: boolean;
   /** The court hour's start; games are an hour. */
   readonly startsAt: string;
   readonly club: DeckCard['club'];
-  /** What the club calls the court — *Court 2*. */
-  readonly courtName: string;
+  /** What the club calls the court — *Court 2*. Absent while an On request club decides. */
+  readonly courtName?: string;
   readonly sides: DeckCard['sides'];
   readonly money: BookedMoney;
 }
@@ -73,6 +91,37 @@ export interface CheckIn {
   readonly qrPayload: string;
 }
 
+/**
+ * **What *Leave the game* would cost now** (the mechanics §13; #544) — the line under the button and
+ * the sheet in front of it. Absent where there is no button: once the hour has come, on a game that
+ * is over, and for a reader not on the game.
+ */
+export interface Leaving {
+  readonly kind: LeavingKind;
+  /** What comes back — the share less the card fee; nought when nobody paid. */
+  readonly refundGrosze: number;
+  /** The card fee that isn't returned — the provider's standard price, an estimate. */
+  readonly cardFeeGrosze: number;
+}
+
+/**
+ * **The open seat, offered to a reader not on the game** (#545) — a *Seat open* card or a *Seats to
+ * fill* row opened: they stand in the seat that opened first, unpaid (*You?*), and *I'm in* takes it.
+ */
+export interface RescueOffer {
+  /** When the seat leaves the board — the club's cut-off while it is ahead, then the start. */
+  readonly deadline: string;
+  /** *fills by Fri 16:00* — the game is off unless its seats are taken by then. */
+  readonly fillsByTheCutOff: boolean;
+}
+
+/** What leaving costs while an On request club decides — nobody has paid anything (#543). */
+export const LEAVING_WHILE_WAITING: Leaving = {
+  kind: 'WHILE_WAITING_FOR_THE_CLUB',
+  refundGrosze: 0,
+  cardFeeGrosze: 0,
+};
+
 /** **A booked game in detail** (the screens A4.1) — the card's facts, and what only the details draw. */
 export interface BookedGame extends Omit<HomeGame, 'club'> {
   /** The instant the status and the money were folded against. */
@@ -85,6 +134,10 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
   readonly showsForecast: boolean;
   /** On the game's day, the reader's code to show at the desk; absent on every other day. */
   readonly checkIn?: CheckIn;
+  /** *Leave the game*'s cost now — absent where there is no button. */
+  readonly leaving?: Leaving;
+  /** The reader is not on the game, and its open seat is offered to them: a rescue seen from outside. */
+  readonly rescue?: RescueOffer;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,8 +152,9 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
  * - `waiting` — *Nobody pays until Bonarka confirms*.
  * - `seatOpen` — *1 seat open*, and *fills by Sat 17:00 or the game is off* before the cut-off;
  *   *offered to others · the game goes ahead* after it.
- * - `calledOff` — *Refunded 30 zł* when the shares were taken, *Nobody paid* when they were not.
- *   **The reason is owed**: the wire carries no field for it yet (#544).
+ * - `calledOff` — why, and *refunded 30 zł* when the shares came back, *nobody paid* when none was
+ *   taken. The club is carried for the two reasons that are the club's.
+ * - `seatEmpty` — *Uncounted* because its hour came with a seat still open: no Level moved.
  */
 export type MoneyLine =
   | {
@@ -111,7 +165,13 @@ export type MoneyLine =
     }
   | { readonly kind: 'waiting'; readonly club?: string }
   | { readonly kind: 'seatOpen'; readonly seats: number; readonly fillsBy?: string }
-  | { readonly kind: 'calledOff'; readonly refundedGrosze?: number };
+  | {
+      readonly kind: 'calledOff';
+      readonly reason?: CalledOffReason;
+      readonly club?: string;
+      readonly refundedGrosze?: number;
+    }
+  | { readonly kind: 'seatEmpty' };
 
 /**
  * **The cut-off, while it is still ahead of `now`** — the instant *free to leave until …* leaves
@@ -123,20 +183,19 @@ export function cutOffAhead(money: BookedMoney, now: number): string | undefined
 }
 
 /**
- * The line a card takes at `now`. **How many stand on the court is handed in** (`seats`), as the
- * deck's rows take it: it is drawn knowledge, and a second table of seats here would be a second
- * answer to it.
- *
- * A seat open is counted off the sides — the court's seats less the people on it — and is **one at
- * the least**, because the status says a seat is open whatever the sides still hold: the wire has
- * no count of its own yet (#544).
+ * The line a card takes at `now`. **Nothing here is counted**: how many seats are open, why a game
+ * is off and what came back are the read's (#544), and only the clause that runs out at the
+ * cut-off is folded on the clock.
  */
 export function moneyLineOf(
-  game: Pick<HomeGame, 'status' | 'money' | 'club' | 'sides'>,
-  seats: number,
+  game: Pick<
+    HomeGame,
+    'status' | 'money' | 'club' | 'openSeats' | 'calledOffReason' | 'uncountedReason'
+  >,
   now: number,
 ): MoneyLine | undefined {
   const { money } = game;
+  const club = game.club.name === undefined ? {} : { club: game.club.name };
   switch (game.status) {
     case 'BOOKED': {
       const until = cutOffAhead(money, now);
@@ -148,22 +207,27 @@ export function moneyLineOf(
       };
     }
     case 'WAITING_FOR_THE_CLUB':
-      return { kind: 'waiting', ...(game.club.name === undefined ? {} : { club: game.club.name }) };
+      return { kind: 'waiting', ...club };
     case 'SEAT_OPEN': {
-      const on = game.sides.yours.length + game.sides.theirs.length;
       const until = cutOffAhead(money, now);
       return {
         kind: 'seatOpen',
-        seats: Math.max(1, seats - on),
+        seats: game.openSeats,
         ...(until === undefined ? {} : { fillsBy: until }),
       };
     }
     case 'CALLED_OFF':
-      return { kind: 'calledOff', ...(money.paid ? { refundedGrosze: money.shareGrosze } : {}) };
+      return {
+        kind: 'calledOff',
+        ...(game.calledOffReason === undefined ? {} : { reason: game.calledOffReason }),
+        ...club,
+        ...(money.refundedGrosze === undefined ? {} : { refundedGrosze: money.refundedGrosze }),
+      };
+    case 'UNCOUNTED':
+      return game.uncountedReason === 'SEAT_EMPTY' ? { kind: 'seatEmpty' } : undefined;
     case 'NEEDS_RESULT':
     case 'CONFIRM_THE_RESULT':
     case 'COUNTED':
-    case 'UNCOUNTED':
     case 'NEVER_PLAYED':
       return undefined;
   }
@@ -284,6 +348,14 @@ export function chatIsOpen(status: HomeStatus): boolean {
   return STATUS[status].room;
 }
 
+/**
+ * ***You complete it* on a rescue seen from outside** — the reader's yes takes the last open seat,
+ * the card's own rule (A2.3); *You?* while more are open.
+ */
+export function completesTheRescue(game: Pick<BookedGame, 'rescue' | 'openSeats'>): boolean {
+  return game.rescue !== undefined && game.openSeats === 1;
+}
+
 /** **Whether the court is given** — WHERE names it once the club has said yes (A4.2). */
 export function courtIsGiven(status: HomeStatus): boolean {
   return STATUS[status].court;
@@ -292,10 +364,10 @@ export function courtIsGiven(status: HomeStatus): boolean {
 /**
  * **The Games Home's cards stand for** — every booked game's, the shelved ones too. Each is on
  * `GET /games` as well (#542), and the Classic rail and its half of the badge leave them out, so a
- * game is drawn and counted once, as its booking.
+ * game is drawn and counted once, as its booking. A game waiting for the club has no Game yet.
  */
 export function bookedGameIds(games: readonly Pick<HomeGame, 'gameId'>[]): ReadonlySet<string> {
-  return new Set(games.map((game) => game.gameId));
+  return new Set(games.flatMap((game) => (game.gameId === undefined ? [] : [game.gameId])));
 }
 
 /** The result act the details lead to — today's game screen, which tells and agrees a result. */

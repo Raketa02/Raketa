@@ -2394,12 +2394,14 @@ export interface paths {
          * Say yes to a game
          * @description *I'm in — if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** — no money moves, no court is held, nobody is told (the others see the player In on the card) — **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.
          *
-         *     **The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account and then all are taken, or none is — `booked` names the booking and its Game, and everybody is emailed *It's a game! · you paid*. When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. At an On request club a full game waits for the club (#543): `open_seats` is nought and nothing is booked.
+         *     **The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account and then all are taken, or none is — `booked` names the booking and its Game, and everybody is emailed *It's a game! · you paid*. When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. **At an On request club the last yes puts the game to the club** (#543): `waiting_for_the_club`, `open_seats` nought, nothing booked and nobody charged — the court is held, the club is emailed, and the charge and *It's a game!* follow its yes.
          */
         post: operations["say_yes_api_v1_proposals__proposal_id__yes_post"];
         /**
          * Withdraw a yes
          * @description *Withdraw* on a You're In row: free and silent until the game fills. The seat is open again, and the player may say yes again while it fills. Withdrawing a yes never said records nothing. **A poster withdrawing with nobody else In takes the post with them**; with others In, the game carries on without them.
+         *
+         *     **While an On request club decides, this is *Leave the game*** (#543): nobody has paid; the request to the club is called off (`CALLED_OFF` · `SEAT_OPENED` on the others' Home), the held court is free, and the game is back in the decks with this seat open — the others still In. Full again, it goes to the club again.
          */
         delete: operations["withdraw_yes_api_v1_proposals__proposal_id__yes_delete"];
         options?: never;
@@ -2531,6 +2533,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pools/{pool_id}/fill-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A group's Fill in
+         * @description **Seats to fill** in one sport, and the tab's badge: the open seats of the group's **booked** games that lost a player, which the reader fits — the pair rule against everybody on the game, the kind their Play intent wants — and is free for — the hour in their week, no game of theirs then — within their Games & money. **Before the cut-off** a seat *fills by* it or the game is off; **after it**, it is *offered until the start*. Games still filling are never here — they are the deck's. Nothing is recorded.
+         */
+        get: operations["read_fill_in_api_v1_pools__pool_id__fill_in_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/seat-charges/{seat_charge_id}": {
         parameters: {
             query?: never;
@@ -2563,6 +2585,8 @@ export interface paths {
         /**
          * I confirmed my payment — my yes again
          * @description *Confirm your payment to keep your seat.* The player confirmed, in the app, the payment that could not be held when the game filled. It is **asked of the provider**, never taken on the phone's word; held now, it is the player's yes again — and if theirs was the seat still open, the game books on it and everybody else is charged then. Answers as a yes does. Somebody else took the seat first: the payment is let go.
+         *
+         *     **A rescue's payment** (#545) — refused when the player went for an open seat on a booked game — confirmed is **the join again**: the seat that opened first is theirs, as `POST /bookings/{id}/seats` takes one, and the answer is the join's.
          */
         post: operations["confirm_payment_api_v1_seat_charges__seat_charge_id__confirmation_post"];
         delete?: never;
@@ -2620,11 +2644,73 @@ export interface paths {
         };
         /**
          * A booked game
-         * @description The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** — a QR payload and a short code, theirs alone. **The chat is the reader's room whose `game_id` is this game's**, in `GET /conversations`. Nothing is recorded.
+         * @description The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** — a QR payload and a short code, theirs alone. **The chat is the reader's room whose `game_id` is this game's**, in `GET /conversations`.
+         *
+         *     **A rescue seen from outside** (#545): a member its open seat is offered to reads the same game standing in the seat that opened first (their tile unpaid — *You?*), with `rescue` — no check-in code, no `leaving`. Nothing is recorded.
          */
         get: operations["read_booking_details_api_v1_bookings__booking_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{booking_id}/departure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave a booked game
+         * @description *Leave the game* (the client shows the sheet first: the booking's `leaving` says what it costs). **Before the club's cut-off** the leaver is refunded at once, less the card fee, and the seat is offered to others — on their record only if the game is then called off because of it. **After the cut-off** the seat stays paid and is offered to others until the start; the leaver is refunded, less the fee, when somebody takes it, and it is on their record if nobody does. **While the club decides** nobody has paid: the yes and the request to the club are withdrawn, as `DELETE /proposals/{id}/yes` does. The leaver leaves the game's chat with their seat; everybody else's Home reads `SEAT_OPEN`. Refused once the hour has begun.
+         */
+        post: operations["leave_the_game_api_v1_bookings__booking_id__departure_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{booking_id}/seats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take an open seat
+         * @description *I'm in · 27 zł* on a rescue — a Seat open card, a Seats to fill row, a rescue's details (the client gives its ten seconds of *Undo* first). **Pays at once**: the share is held on the club's account and taken, and the player takes **the seat that opened first**, on its side — `booked` names the booking and its Game, now on their Home, and they are emailed *It's a game! · you paid*; they join the game's chat. **The leaver who left after the cut-off is refunded, less the card fee, the moment this payment succeeds** (emailed *You've been refunded · your seat was taken*); one who left before it was refunded when they left. `open_seats` is what is still open. When the share could not be held, nothing was taken: `your_payment` names the refused payment, and confirming it (`POST /seat-charges/{id}/confirmation`) is the join again. A player already on the game is answered the same `booked`, and nothing is recorded.
+         */
+        post: operations["join_a_rescue_api_v1_bookings__booking_id__seats_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{booking_id}/no": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Not this time, on a Seat open card
+         * @description A swipe left on a **Seat open** card: **silent, and never on the player's record.** The card does not come back to their deck; the seat stays on their *Seats to fill*, which lists every rescue they fit. A second no records nothing.
+         */
+        post: operations["say_no_to_a_rescue_api_v1_bookings__booking_id__no_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3067,7 +3153,7 @@ export interface components {
             share_grosze: number;
             /**
              * Paid
-             * @description Every seat's share was taken.
+             * @description Every seat's share was taken — `false` for a reader not on the game, who has paid nothing (#545).
              */
             paid: boolean;
             /**
@@ -3075,6 +3161,11 @@ export interface components {
              * @description The club's cut-off while it is still ahead at `read_at` — leaving before it is refunded. `null` from the cut-off on, and for a game that filled after it. The line switches by itself at this instant.
              */
             free_to_leave_until: string | null;
+            /**
+             * Refunded Grosze
+             * @description What everybody still in is given back — the whole share, on a game called off at its cut-off (*refunded 30 zł*). `null` where nothing is.
+             */
+            refunded_grosze: number | null;
         };
         /**
          * BookedSchema
@@ -3136,13 +3227,14 @@ export interface components {
             level: number | null;
             /**
              * Paid
-             * @description Their share was taken — the *paid* tag.
+             * @description Their share was taken — the *paid* tag. `false` while the game waits for its club, on a request that was never booked, and on the reader's own tile when they are not on the game but offered its open seat — the dashed *You?* (#545).
              */
             paid: boolean;
         };
         /**
          * BookingDetailsResponse
-         * @description A booked game's details, for a player in it.
+         * @description A booked game's details, for a player in it — or for a member its open
+         *     seat is offered to (#545).
          */
         BookingDetailsResponse: {
             /**
@@ -3152,10 +3244,9 @@ export interface components {
             booking_id: string;
             /**
              * Game Id
-             * Format: uuid
-             * @description The ordinary Game it opened: its result acts, its balance forecast (`GET /games/{id}/pairing`) and its room in `GET /conversations` are all reached by this id.
+             * @description The ordinary Game it opened: its result acts, its balance forecast (`GET /games/{id}/pairing`) and its room in `GET /conversations` are all reached by this id. `null` while it waits for its On request club, and on a request the club never booked.
              */
-            game_id: string;
+            game_id: string | null;
             /**
              * Pool Id
              * Format: uuid
@@ -3169,8 +3260,17 @@ export interface components {
              * @description The instant the status and money line were folded against.
              */
             read_at: string;
-            /** @description `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played. Two more arrive with the tickets that produce them: `WAITING_FOR_THE_CLUB` (an On request club has not confirmed yet, #543) and `SEAT_OPEN` (somebody left and the seat is offered, #544). */
+            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. */
             status: components["schemas"]["HomeStatus"];
+            /** @description Why a `CALLED_OFF` game will not be played — `null` on every other status. `REFUSED` — the On request club refused it. `NO_ANSWER` — the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` — a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. More arrive with the club's cancel (#547). */
+            called_off_reason: components["schemas"]["CalledOffReason"] | null;
+            /** @description Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score — `null` otherwise. `SEAT_EMPTY` — its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed. */
+            uncounted_reason: components["schemas"]["UncountedReason"] | null;
+            /**
+             * Open Seats
+             * @description Seats a leaver left open — the dashed tiles; nought unless `SEAT_OPEN`. The sides list the seats still held.
+             */
+            open_seats: number;
             /** Needs You */
             needs_you: boolean;
             /**
@@ -3187,9 +3287,9 @@ export interface components {
             where: components["schemas"]["WhereSchema"];
             /**
              * Court Name
-             * @description The court the game was given — *Court 2*.
+             * @description The court the game was given — *Court 2*. `null` until the club gives it: an On request club gives it with its yes.
              */
-            court_name: string;
+            court_name: string | null;
             sides: components["schemas"]["BookedSidesSchema"];
             money: components["schemas"]["BookedMoneySchema"];
             /**
@@ -3199,6 +3299,10 @@ export interface components {
             shows_forecast: boolean;
             /** @description On the game's day — the club's calendar day — the reader's code to show at the desk. `null` on every other day, and for a game that will not be played. */
             check_in: components["schemas"]["CheckInSchema"] | null;
+            /** @description What *Leave the game* would cost now — the line under the button and its sheet (`POST /bookings/{id}/departure`). `null` where there is no button: once the hour has come, on a game that is over, and for a reader not on the game. */
+            leaving: components["schemas"]["LeavingSchema"] | null;
+            /** @description Present for a reader **not on the game** whom its open seat is offered to — a Seat open card, a Seats to fill row (#545): they stand in the seat that opened first, unpaid (*You?*), and **I'm in · `money.share_grosze`** is `POST /bookings/{id}/seats`. No Chat and no Leave. `null` for a player in it. */
+            rescue?: components["schemas"]["RescueOfferSchema"] | null;
         };
         /**
          * CalledOffBySchema
@@ -3226,6 +3330,12 @@ export interface components {
              */
             name?: string | null;
         };
+        /**
+         * CalledOffReason
+         * @description Why a game will not be played (the mechanics §14.1).
+         * @enum {string}
+         */
+        CalledOffReason: "REFUSED" | "NO_ANSWER" | "SHORT_AT_THE_CUT_OFF";
         /**
          * CandidateSchema
          * @description One row of the shortlist: the pairing, and the person.
@@ -4471,7 +4581,7 @@ export interface components {
          * @description What a yes on the card does (the screens A2.3).
          * @enum {string}
          */
-        CourtState: "COURT_AVAILABLE" | "BOOK_IT_NOW";
+        CourtState: "COURT_AVAILABLE" | "BOOK_IT_NOW" | "BOOKED";
         /**
          * CourtStrandReading
          * @description One reliability strand that produced a reading.
@@ -4612,9 +4722,10 @@ export interface components {
             /**
              * Proposal Id
              * Format: uuid
+             * @description The game. On a `SEAT_OPEN` card it is the **booking's** id — the same id the game had while it filled: `POST /bookings/{id}/seats` takes the seat, `POST /bookings/{id}/no` is *not this time*, and `GET /bookings/{id}` its details.
              */
             proposal_id: string;
-            /** @description `PICKED_FOR_YOU`, `CHALLENGE` (a member's post) or `SEAT_OPEN` (a rescue — dealt once rescues exist, #545). */
+            /** @description `PICKED_FOR_YOU`, `CHALLENGE` (a member's post) or `SEAT_OPEN` (a rescue: a booked game that lost a player, dealt to its best fits — #545). */
             type: components["schemas"]["CardType"];
             kind: components["schemas"]["SearchMode"];
             /** @description The poster of a challenge; `null` on a pick, and on a challenge once its poster withdrew — *the group challenged you*. */
@@ -4628,18 +4739,18 @@ export interface components {
             club: components["schemas"]["DeckClubSchema"];
             /**
              * Share Grosze
-             * @description What this player pays if it fills.
+             * @description What this player pays if it fills — at once, on a `SEAT_OPEN` card.
              */
             share_grosze: number;
             /**
              * Deadline
              * Format: date-time
-             * @description When the card leaves unfilled — its book-by. The client counts down only under 24 h.
+             * @description When the card leaves unfilled — its book-by; on a `SEAT_OPEN` card the club's cut-off, then the start. The client counts down only under 24 h.
              */
             deadline: string;
             /**
              * In Count
-             * @description People In on the whole game, every version counted.
+             * @description People In on the whole game, every version counted — nought on a `SEAT_OPEN` card, whose players have paid (`paid` on their tiles).
              */
             in_count: number;
             /**
@@ -4652,8 +4763,13 @@ export interface components {
              * @description Nought is *You complete it*.
              */
             open_seats_after_your_yes: number;
-            /** @description `COURT_AVAILABLE` — a yes is a free vote; `BOOK_IT_NOW` — a yes fills the game and books it. */
+            /** @description `COURT_AVAILABLE` — a yes is a free vote; `BOOK_IT_NOW` — a yes fills the game and books it; `BOOKED` — a rescue: the court is booked, and a yes takes the seat and pays at once. */
             court: components["schemas"]["CourtState"];
+            /**
+             * Court Name
+             * @description What the club calls the court — *Court 6* — on a `SEAT_OPEN` card; `null` on a game still filling, which is given one at booking.
+             */
+            court_name: string | null;
             /**
              * No Free Cancellation
              * @description The club's cut-off has already passed for this game.
@@ -4779,6 +4895,11 @@ export interface components {
              * @description They said yes: the **IN** tag. Nobody else carries a tag — a player still deciding is a plain tile.
              */
             is_in: boolean;
+            /**
+             * Paid
+             * @description On a `SEAT_OPEN` card, a player on the booked game — *2,75 · paid* (#545). `false` on a game still filling, and on the reader's own tile, which is the open seat.
+             */
+            paid: boolean;
         };
         /**
          * DeclarePlayIntentRequest
@@ -4856,6 +4977,14 @@ export interface components {
             term: components["schemas"]["Term"];
             /** @description Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), theirs (`NOTHING_FROM_THEM`), or the surface's (`NOT_READ_ON_THIS_SURFACE` — the deck reads no intent for anybody, so the term stood down for every card and says nothing about either of you). `NOTHING_FROM_THEM` deliberately covers every reason a record could not be read, because separating them would publish activity recency. */
             reason: components["schemas"]["DegradedReason"];
+        };
+        /**
+         * DepartureResponse
+         * @description *Leave the game*, done.
+         */
+        DepartureResponse: {
+            /** @description `BEFORE_THE_CUT_OFF` — refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` — nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again. */
+            left: components["schemas"]["Leaving"];
         };
         /**
          * DetailSeatSchema
@@ -5099,6 +5228,34 @@ export interface components {
          * @enum {string}
          */
         FailureReason: "AUTHENTICATION_REQUIRED" | "DECLINED" | "TERMS_NEEDED" | "NO_METHOD";
+        /**
+         * FillInResponse
+         * @description A group's **Fill in** tab for one sport: *Seats to fill* (#545).
+         */
+        FillInResponse: {
+            /**
+             * Pool Id
+             * Format: uuid
+             */
+            pool_id: string;
+            sport: components["schemas"]["Sport"];
+            /**
+             * Read At
+             * Format: date-time
+             * @description The instant every row and deadline here was read against.
+             */
+            read_at: string;
+            /**
+             * Badge
+             * @description The tab's badge: the Seats to fill rows.
+             */
+            badge: number;
+            /**
+             * Seats To Fill
+             * @description Every rescue in the group the reader fits — the pair rule, the kind their intent wants, free for the hour in their week, no game of theirs then, within their Games & money — **soonest first**, before or after the cut-off. Never a game still filling: that is the deck's. *You're In* is `GET /players/me/live-yeses`.
+             */
+            seats_to_fill: components["schemas"]["SeatToFillSchema"][];
+        };
         /**
          * FillSeatsRequest
          * @description **The send's shape minus the mint**: the court, and the search behind it.
@@ -5502,10 +5659,10 @@ export interface components {
         GameSide: "A" | "B";
         /**
          * GameStanding
-         * @description The six standings, as codes. A client's words are the client's own.
+         * @description The seven standings, as codes. A client's words are the client's own.
          * @enum {string}
          */
-        GameStanding: "AWAITING_ENTRY" | "NEVER_PLAYED" | "AWAITING_ANSWER" | "CONFIRMED" | "UNSCORED" | "CALLED_OFF";
+        GameStanding: "AWAITING_ENTRY" | "NEVER_PLAYED" | "AWAITING_ANSWER" | "CONFIRMED" | "UNSCORED" | "CALLED_OFF" | "STARTED_SHORT";
         /**
          * GamesAndMoneyRequest
          * @description Both values, as the screen saves them on every tap. **Types only**: a
@@ -5934,10 +6091,9 @@ export interface components {
             booking_id: string;
             /**
              * Game Id
-             * Format: uuid
-             * @description The ordinary Game it opened: the result is told and agreed on `/games/{id}/result`, and its room in `GET /conversations` carries this id.
+             * @description The ordinary Game it opened: the result is told and agreed on `/games/{id}/result`, and its room in `GET /conversations` carries this id. `null` while it waits for its On request club, and on a request the club never booked — there is no Game, and no room.
              */
-            game_id: string;
+            game_id: string | null;
             /**
              * Pool Id
              * Format: uuid
@@ -5947,8 +6103,17 @@ export interface components {
             sport: components["schemas"]["Sport"];
             /** @description Competitive, or for fun (a friendly). */
             kind: components["schemas"]["SearchMode"];
-            /** @description `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played. Two more arrive with the tickets that produce them: `WAITING_FOR_THE_CLUB` (an On request club has not confirmed yet, #543) and `SEAT_OPEN` (somebody left and the seat is offered, #544). */
+            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. */
             status: components["schemas"]["HomeStatus"];
+            /** @description Why a `CALLED_OFF` game will not be played — `null` on every other status. `REFUSED` — the On request club refused it. `NO_ANSWER` — the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` — a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. More arrive with the club's cancel (#547). */
+            called_off_reason: components["schemas"]["CalledOffReason"] | null;
+            /** @description Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score — `null` otherwise. `SEAT_EMPTY` — its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed. */
+            uncounted_reason: components["schemas"]["UncountedReason"] | null;
+            /**
+             * Open Seats
+             * @description Seats a leaver left open — the dashed tiles; nought unless `SEAT_OPEN`. The sides list the seats still held.
+             */
+            open_seats: number;
             /**
              * Needs You
              * @description One of the games that need the reader: a result to enter, the other side's score waiting on their agreement, or a seat open in their game.
@@ -5963,9 +6128,9 @@ export interface components {
             club: components["schemas"]["BookedClubSchema"];
             /**
              * Court Name
-             * @description What the club calls the court — *Court 2*.
+             * @description What the club calls the court — *Court 2*. `null` until the club gives it: an On request club gives it with its yes.
              */
-            court_name: string;
+            court_name: string | null;
             sides: components["schemas"]["BookedSidesSchema"];
             money: components["schemas"]["BookedMoneySchema"];
         };
@@ -5987,7 +6152,7 @@ export interface components {
             needing_you: number;
             /**
              * Games
-             * @description Every game the reader booked, **soonest first** — the ones that are over too; a client shelves an ended card as it chooses. A game a Classic play challenge opened is not here.
+             * @description Every game the reader booked — and every game of theirs an On request club has, or had, to answer — **soonest first**, the ones that are over too; a client shelves an ended card as it chooses. A game a Classic play challenge opened is not here.
              */
             games: components["schemas"]["HomeGameSchema"][];
         };
@@ -6197,6 +6362,31 @@ export interface components {
             next_page: number | null;
             /** @description What the text was read as. `LINK` — it held `/join/` and a code, and the answer is exactly that group; **`LINK` with no clubs is *nothing at that link***, a link that leads nowhere. `TEXT` — matched against clubs, districts and group names; `TEXT` with no clubs is *no match*. */
             read_as: components["schemas"]["ReadAs"];
+        };
+        /**
+         * Leaving
+         * @description What *Leave the game* does, by when it is pressed (the mechanics §13) —
+         *     said on the details before, and answered by the act after.
+         * @enum {string}
+         */
+        Leaving: "BEFORE_THE_CUT_OFF" | "AFTER_THE_CUT_OFF" | "WHILE_WAITING_FOR_THE_CLUB";
+        /**
+         * LeavingSchema
+         * @description What *Leave the game* would cost now (the mechanics §13).
+         */
+        LeavingSchema: {
+            /** @description `BEFORE_THE_CUT_OFF` — *You'll be refunded 38,40 zł now (the 1,60 zł card fee isn't returned). Your seat is offered to others. On your record only if the game is then called off.* `AFTER_THE_CUT_OFF` — *Your seat is offered to others. You'll be refunded 38,40 zł when someone takes it; if nobody does, you won't be. On your record if nobody takes it.* `WHILE_WAITING_FOR_THE_CLUB` — *Nobody has paid yet. Leaving withdraws your yes.* The same words the departure answers with. */
+            kind: components["schemas"]["Leaving"];
+            /**
+             * Refund Grosze
+             * @description What comes back — the share less the card fee; nought when nobody paid.
+             */
+            refund_grosze: number;
+            /**
+             * Card Fee Grosze
+             * @description The card fee that isn't returned — the provider's standard price, an estimate; what it kept is on the receipt.
+             */
+            card_fee_grosze: number;
         };
         /**
          * LevelDirection
@@ -7972,11 +8162,11 @@ export interface components {
              * Format: date-time
              */
             read_at: string;
-            /** @description `FILLING` — seats are open: *Filling · `in_count` of `seats` in*. `WAITING_FOR_THE_CLUB` — every seat is In and an On request club has still to say yes; nobody pays until it does. `FILLED` — booked: `GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, `COURT_HOUR_LOST` — it ended unfilled. */
+            /** @description `FILLING` — seats are open: *Filling · `in_count` of `seats` in*. `WAITING_FOR_THE_CLUB` — every seat is In and an On request club has still to say yes; nobody pays until it does, and the book-by no longer ends it. `FILLED` — booked: `GET /bookings/{proposal_id}`. `EXPIRED`, `WITHDRAWN`, `COURT_HOUR_LOST` — it ended unfilled. `TURNED_DOWN` — its On request club refused it or did not answer: nobody paid, and the people In are dealt a new card first. */
             status: components["schemas"]["ProposalStatus"];
             /**
              * Actions
-             * @description What the reader may do now, in the screen's order: `YES` and `NO` (*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in its place while the club decides — *Leave the game* with its sheet, sent as the withdrawal, `DELETE /proposals/{id}/yes` — and `CONFIRM_PAYMENT` when their seat waits on a refused payment (`your_payment`). Empty once the game is over or their answer is final.
+             * @description What the reader may do now, in the screen's order: `YES` and `NO` (*I'm in* / *Not this time*), `WITHDRAW` when they are In, `LEAVE` in its place while the club decides — *Leave the game* with its sheet, sent as the withdrawal, `DELETE /proposals/{id}/yes`, which also calls off the request to the club — and `CONFIRM_PAYMENT` when their seat waits on a refused payment (`your_payment`). Empty once the game is over or their answer is final.
              */
             actions: components["schemas"]["ReaderAction"][];
             /** @description The payment to confirm to take the seat back — present exactly when `actions` holds `CONFIRM_PAYMENT`. */
@@ -8031,7 +8221,7 @@ export interface components {
          * @description Where a proposal stands for its details (the mechanics §14.2).
          * @enum {string}
          */
-        ProposalStatus: "FILLING" | "WAITING_FOR_THE_CLUB" | "FILLED" | "EXPIRED" | "WITHDRAWN" | "COURT_HOUR_LOST";
+        ProposalStatus: "FILLING" | "WAITING_FOR_THE_CLUB" | "FILLED" | "EXPIRED" | "WITHDRAWN" | "COURT_HOUR_LOST" | "TURNED_DOWN";
         /**
          * ProposalsOptInRequest
          * @description The answer to the proposals question, and the words it was given against.
@@ -8196,20 +8386,22 @@ export interface components {
         ReaderAction: "YES" | "NO" | "WITHDRAW" | "LEAVE" | "CONFIRM_PAYMENT";
         /**
          * ReceiptSchema
-         * @description One share the reader paid — *the club named as the seller*.
+         * @description One share the reader paid, or got back — *the club named as the
+         *     seller*.
          */
         ReceiptSchema: {
             /**
              * Seat Charge Id
              * Format: uuid
+             * @description The payment. A share refunded has two rows under one id — the charge and the refund — told apart by `kind`.
              */
             seat_charge_id: string;
             /**
              * Kind
-             * @description `CHARGE` — a share paid. Refunds join this list as their own kind with the leaving rules (#544).
-             * @constant
+             * @description `CHARGE` — a share paid (✓). `REFUND` — a share given back (↩): less the card fee to a player who left before the cut-off, whole on a game called off at its cut-off.
+             * @enum {string}
              */
-            kind: "CHARGE";
+            kind: "CHARGE" | "REFUND";
             club: components["schemas"]["SellerSchema"];
             sport: components["schemas"]["Sport"];
             /**
@@ -8219,12 +8411,18 @@ export interface components {
             starts_at: string;
             /**
              * Amount Grosze
-             * @description What was paid, in grosze.
+             * @description What was paid, or what came back, in grosze — always positive.
              */
             amount_grosze: number;
             /**
+             * Card Fee Grosze
+             * @description On a `REFUND`, the card fee the provider kept back — nought on a refund in full. `null` on a `CHARGE`.
+             */
+            card_fee_grosze: number | null;
+            /**
              * Paid At
              * Format: date-time
+             * @description When the money moved: taken, or — on a `REFUND` — given back.
              */
             paid_at: string;
         };
@@ -8508,6 +8706,23 @@ export interface components {
          * @enum {string}
          */
         ReliabilityStrand: "SHOWS_UP" | "ANSWERS_CHALLENGES" | "ANSWERS_RESULTS" | "KEEPS_PLANS" | "SETTLES_UP" | "SPORTSMANSHIP";
+        /**
+         * RescueOfferSchema
+         * @description The open seat, offered to a reader not on the game (#545).
+         */
+        RescueOfferSchema: {
+            /**
+             * Deadline
+             * Format: date-time
+             * @description When the seat leaves the board — the club's cut-off while it is ahead, then the start.
+             */
+            deadline: string;
+            /**
+             * Fills By The Cut Off
+             * @description *fills by Fri 16:00* — before the cut-off, the game is off unless its seats are taken by `deadline`; `false` is *offered until the start*. Switches by itself at the cut-off.
+             */
+            fills_by_the_cut_off: boolean;
+        };
         /**
          * ResetDeckRequest
          * @description One *Show them again*, for one sport. **Write-only.**
@@ -9022,6 +9237,60 @@ export interface components {
              *     **A name is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
              */
             name?: string | null;
+        };
+        /**
+         * SeatToFillSchema
+         * @description One *Seats to fill* row: a booked game that lost a player, and the
+         *     reader fits and is free for it.
+         */
+        SeatToFillSchema: {
+            /**
+             * Booking Id
+             * Format: uuid
+             * @description `POST /bookings/{id}/seats` takes the seat — *I'm in · `share_grosze`* — and `GET /bookings/{id}` is its details as the reader sees it from outside.
+             */
+            booking_id: string;
+            sport: components["schemas"]["Sport"];
+            /** @description Competitive, or for fun (*· friendly* on the title). */
+            kind: components["schemas"]["SearchMode"];
+            /**
+             * Starts At
+             * Format: date-time
+             * @description The court hour's start; games are 1 h.
+             */
+            starts_at: string;
+            club: components["schemas"]["BookedClubSchema"];
+            /**
+             * Court Name
+             * @description What the club calls the court.
+             */
+            court_name: string;
+            /**
+             * Share Grosze
+             * @description What *I'm in* charges at once.
+             */
+            share_grosze: number;
+            /**
+             * Open Seats
+             * @description The dashed **?** squares after the players' posters.
+             */
+            open_seats: number;
+            /**
+             * Deadline
+             * Format: date-time
+             * @description When the row leaves the board — the club's cut-off while it is ahead, then the start.
+             */
+            deadline: string;
+            /**
+             * Fills By The Cut Off
+             * @description *fills by `deadline`* before the cut-off; `false` is *offered until the start*. Switches by itself at the cut-off.
+             */
+            fills_by_the_cut_off: boolean;
+            /**
+             * Players
+             * @description Everybody on the game, each *paid* — the small posters, first side first. Long-press a poster for their record.
+             */
+            players: components["schemas"]["BookedTileSchema"][];
         };
         /**
          * SeatingSchema
@@ -9671,14 +9940,14 @@ export interface components {
             strand: components["schemas"]["ReliabilityStrand"];
             /**
              * Good
-             * @description How many of those opportunities went the way the strand is named for — a game that was played, a challenge that got an answer, a score that got a reply.
+             * @description How many of those opportunities went the way the strand is named for — a game that was played, a booked game that was kept, a score that got a reply.
              *
-             *     **A no is a good outcome on `ANSWERS_CHALLENGES` and on `ANSWERS_RESULTS`.** Turning somebody down inside your day *is* answering them, and so is countering a score you believe is wrong; what both strands price is silence.
+             *     **A no is a good outcome on `ANSWERS_RESULTS`.** Countering a score you believe is wrong *is* answering it; what the strand prices is silence. **`KEEPS_PLANS` is broken only by leaving** a booked game so that it is called off at its cut-off, or after the cut-off with nobody taking the seat.
              */
             good: number;
             /**
              * Opportunities
-             * @description How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry, a seat still inside its day and a score still inside its window are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.
+             * @description How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry, a booked game whose hour has not come and a score still inside its window are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.
              *
              *     **`ANSWERS_RESULTS` counts the last twelve months and the other rows count a career.** It is the one strand that forgets, so a player can work a bad month off it.
              *
@@ -9821,6 +10090,12 @@ export interface components {
             /** Sigma Added */
             sigma_added: number;
         };
+        /**
+         * UncountedReason
+         * @description Why a game ended uncounted without anybody disagreeing about a score.
+         * @enum {string}
+         */
+        UncountedReason: "SEAT_EMPTY";
         /**
          * UnfilledReason
          * @description Why a seat is empty, and why the four-way week is.
@@ -10099,6 +10374,12 @@ export interface components {
             open_seats: number;
             /** @description Present when this yes booked the game: every seat was charged, and the booking and its Game are open. `null` otherwise. */
             booked?: components["schemas"]["BookedSchema"] | null;
+            /**
+             * Waiting For The Club
+             * @description This yes filled the game at an **On request** club: it went to the club, which confirms it within its time to confirm, and nobody pays until it does — the charge and *It's a game!* follow its yes. The game is on Home as `WAITING_FOR_THE_CLUB`.
+             * @default false
+             */
+            waiting_for_the_club: boolean;
             /** @description Present when **this player's** share could not be held: nobody paid and the game did not book. `null` otherwise — including when somebody else's could not, which leaves `open_seats` above nought. */
             your_payment?: components["schemas"]["YourPaymentSchema"] | null;
         };
@@ -13274,6 +13555,8 @@ export interface operations {
              *     `the_court_has_an_open_seat` — somebody left and nobody has filled their seat, so there is no court to have played on. Fill it, or let the window close.
              *
              *     `the_game_was_called_off` — somebody ended it while a seat was open, so there is nothing to have played. The ending is on `standing` and `called_off_at`.
+             *
+             *     `the_game_started_short` — a booked game whose hour came with a seat open: somebody left after the club's cut-off and nobody took the seat. It ends uncounted (`standing` `STARTED_SHORT`), and nothing about it can be recorded.
              */
             409: {
                 headers: {
@@ -15268,7 +15551,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `payment_to_confirm` — this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` — this player said no: the card does not come back. `proposal_is_full` — every seat is In. `payment_method_required` — no saved payment method: save one, then say yes. `live_yeses_exhausted` — `details.cap` live yeses in `details.sport` already. `no_longer_fits` — somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded — except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid. */
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `payment_to_confirm` — this player's seat reopened because their payment could not be held: confirming it (`details.seat_charge_id`) is their yes again. `proposal_already_answered` — this player said no: the card does not come back. `proposal_is_full` — every seat is In. `payment_method_required` — no saved payment method: save one, then say yes. `live_yeses_exhausted` — `details.cap` live yeses in `details.sport` already. `no_longer_fits` — somebody In now is somebody this player does not fit; the card has gone, and who is not said. Nothing was recorded — except on `proposal_is_over` with `COURT_HOUR_LOST` from the yes that filled it: no court was left at the club and hour, the card is over, and nobody paid. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -15324,7 +15607,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. */
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -15371,7 +15654,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_already_answered` — this player is In: they leave by withdrawing their yes, never by a no. */
+            /** @description `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `proposal_already_answered` — this player is In: they leave by withdrawing their yes, never by a no. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -15594,6 +15877,57 @@ export interface operations {
             };
         };
     };
+    read_fill_in_api_v1_pools__pool_id__fill_in_get: {
+        parameters: {
+            query: {
+                sport: components["schemas"]["Sport"];
+            };
+            header?: never;
+            path: {
+                pool_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FillInResponse"];
+                };
+            };
+            /** @description `pool_not_found` — no such group, or the reader is not in it. One code for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether the reader fits the people on a game could not be read. Retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     read_seat_charge_api_v1_seat_charges__seat_charge_id__get: {
         parameters: {
             query?: never;
@@ -15663,7 +15997,7 @@ export interface operations {
                     "application/json": components["schemas"]["YesAnswerResponse"];
                 };
             };
-            /** @description `seat_charge_not_found` — no such charge **for this player**. `proposal_not_found` — they are no longer in the game's group. */
+            /** @description `seat_charge_not_found` — no such charge **for this player**. `proposal_not_found` — they are no longer in the game's group; `booking_not_found` on a rescue's payment (#545), which is let go. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -15672,7 +16006,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `payment_not_confirmed` — the provider still waits for the player (`details.status`), or the charge was never a payment to confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept the terms or save a method and say yes. `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went). The card leaves. `proposal_is_full` — somebody else took the seat. On both, the payment the player confirmed is let go and nobody pays it. `live_yeses_exhausted` and `no_longer_fits` as a yes meets them. */
+            /** @description `payment_not_confirmed` — the provider still waits for the player (`details.status`), or the charge was never a payment to confirm (`NOTHING_TO_CONFIRM`): confirm it in the app, or accept the terms or save a method and say yes. `proposal_is_over` — the game is no longer filling, named by `details.standing` (`EXPIRED` once its book-by passed, `WITHDRAWN` once its poster took the post back with nobody else In, `COURT_HOUR_LOST` once the last court at its club and hour went, `TURNED_DOWN` once its On request club refused it or did not answer). The card leaves. `proposal_is_full` — somebody else took the seat. On both, the payment the player confirmed is let go and nobody pays it. `live_yeses_exhausted` and `no_longer_fits` as a yes meets them. **On a rescue's payment** (#545), as `POST /bookings/{id}/seats` meets them: `seat_just_taken`, `booking_is_called_off`, `game_has_started`, `rescue_not_offered` — and the payment is let go. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -15761,7 +16095,7 @@ export interface operations {
                     "application/json": components["schemas"]["BookingDetailsResponse"];
                 };
             };
-            /** @description `booking_not_found` — no such booked game **for this player**: it does not exist, or they have no seat on it. One code for both. */
+            /** @description `booking_not_found` — no such booked game **for this player**: it does not exist, or they have no seat on it and its open seat is not offered to them. One code for all three. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -15777,6 +16111,169 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — for a reader with no seat on it, whether they fit the people on it could not be read. Retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    leave_the_game_api_v1_bookings__booking_id__departure_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartureResponse"];
+                };
+            };
+            /** @description `booking_not_found` — no such game **for this player**: it does not exist, or they have no seat on it — including one they already left. One code for all three. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `game_has_started` — its hour has begun; there is nothing to leave. `booking_is_called_off` — the game is off (refused, unanswered, or short at its cut-off) and everybody still in is refunded, or nobody paid. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_a_rescue_api_v1_bookings__booking_id__seats_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YesAnswerResponse"];
+                };
+            };
+            /** @description `booking_not_found` — no such booked game, or the reader is not in its group. One code for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `seat_just_taken` — **the first join wins**: somebody took the seat a moment before, or none is open — *Someone just took it*. `booking_is_called_off` — the game is off (short at its cut-off). `game_has_started` — its hour has begun. `rescue_not_offered` — the seat is not one this player is offered (fit, free, Games & money, a seat they left); which is not said. `payment_to_confirm` — their earlier *I'm in* here waits on their bank: confirming it (`details.seat_charge_id`) is the join again. `payment_method_required` — no saved method. Nothing was recorded and nobody charged. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether the player fits the people on the game could not be read. `payments_unavailable` — the provider could not be reached to hold the share. Nothing was recorded; retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    say_no_to_a_rescue_api_v1_bookings__booking_id__no_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `booking_not_found` — no such open seat **offered to this player**: it does not exist, they are not in its group, or it is taken, off or not theirs to be offered. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `block_state_unavailable` — whether the player fits the people on the game could not be read. Retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

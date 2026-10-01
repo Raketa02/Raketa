@@ -56,6 +56,7 @@ const STANDINGS: Readonly<Record<GameStanding, true>> = {
   CONFIRMED: true,
   UNSCORED: true,
   CALLED_OFF: true,
+  STARTED_SHORT: true,
 };
 
 const KINDS: Readonly<Record<GameKind, true>> = { COUNTED: true, FRIENDLY: true };

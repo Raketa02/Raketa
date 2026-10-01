@@ -21,9 +21,23 @@
  * ```
  *
  * **One read, `GET /bookings/{id}`, and nothing re-derived.** The status, the sides, the share and
- * whether it was paid, the cut-off, whether the forecast is drawn and the check-in code are the
- * server's (#542); what is decided here is how they are drawn, and the clock the money row's
- * *free to leave until* runs on is the read's (`useReadClock`). *Leave the game* is #557's.
+ * whether it was paid, the cut-off, whether the forecast is drawn, the check-in code and what leaving
+ * costs are the server's (#542, #544); what is decided here is how they are drawn, and the clock the
+ * money row's *free to leave until* runs on is the read's (`useReadClock`).
+ *
+ * ## Three readers, one screen (A4)
+ *
+ * - **A player in the game** — the card, the result, the forecast, the desk, and ***Leave the game***
+ *   with the line saying what it costs now (`LeaveTheGame`, #557; details 10), drawn while the read
+ *   says there is a button: not once the hour has come, nor on a game that is over.
+ * - **A game waiting for the club** (A4.2, #543) — the same, *Waiting for the club* in amber, no
+ *   court and no Chat; *Leave the game* there withdraws the yes, nobody having paid.
+ * - **A rescue seen from outside** (A4.3, #545) — opened from a *Seat open* card or a *Seats to fill*
+ *   row, by a member the open seat is offered to: the players *paid*, the reader in the dashed seat
+ *   that opened (*You complete it* on the last one, *You?* while more are open), the court, the share
+ *   and how long the seat is offered, and a volt ***I'm in · 27 zł*** (`TakeTheSeat`) — no Chat, no
+ *   Leave. Taking the seat leaves this screen for the group under *It's a game!*; a seat that has
+ *   gone meanwhile says so in one sentence (`offer`).
  *
  * ## The chat is reached from here, and only from here
  *
@@ -51,7 +65,7 @@
  */
 
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -59,12 +73,15 @@ import { useCurrentUser } from '@/features/auth/types';
 import { OPEN_THE_CHAT, useGameRoom } from '@/features/conversations/types';
 import { GameForecast } from '@/features/games/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
+import { formatZloty } from '@/shared/formatting/ratingFormat';
 import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/shared/ui';
 
 import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
-import { chatIsOpen, resultActOf, type BookedGame } from '../domain/home';
+import { yesOnRescue } from '../domain/fill';
+import { chatIsOpen, completesTheRescue, resultActOf, type BookedGame } from '../domain/home';
 import { gameDayOf } from '../domain/when';
 import { bookingReadState, useBooking, useOpenedGames, useReadClock } from '../hooks/useHome';
+import { useLeaveBooking } from '../hooks/useLeaveBooking';
 
 import { CardTag } from './CardTag';
 import { BookingAbsent } from './BookingAbsent';
@@ -74,6 +91,7 @@ import { GameFacts, type FactWords } from './GameFacts';
 import { GameGround } from './GameGround';
 import { GameTiles } from './GameTiles';
 import { HOME_GAME_COPY } from './homeCopy';
+import { LeaveTheGame } from './LeaveTheGame';
 import {
   STATUS_INK,
   bookedTime,
@@ -84,21 +102,28 @@ import {
 } from './homePresentation';
 import { OthersFaces } from './OthersFaces';
 import { bookedChatRoute, bookedResultRoute } from './proposalRoutes';
+import { TakeTheSeat } from './TakeTheSeat';
 
 const COPY = HOME_GAME_COPY.details;
 
 export interface BookedGameScreenProps {
   /** Validated by `schemas/bookingParams` before it reaches here; the route does that. */
   readonly bookingId: string;
+  /**
+   * Opened as a seat offered — from a *Seat open* card or a *Seats to fill* row, under the group
+   * (#557). A booking the read no longer gives this reader is then a seat gone, said so.
+   */
+  readonly offer?: boolean;
 }
 
-export function BookedGameScreen({ bookingId }: BookedGameScreenProps) {
+export function BookedGameScreen({ bookingId, offer = false }: BookedGameScreenProps) {
   const read = useBooking(bookingId);
   const game = read.data ?? undefined;
   const { open } = useOpenedGames();
 
-  // Drawn here, so no longer *new* on Home (the mechanics §11.4).
-  const drawn = game?.bookingId;
+  // Drawn here, so no longer *new* on Home (the mechanics §11.4) — a game the reader is in only:
+  // a rescue seen from outside is nobody's Home yet.
+  const drawn = game?.rescue === undefined ? game?.bookingId : undefined;
   useEffect(() => {
     if (drawn !== undefined) open(drawn);
   }, [drawn, open]);
@@ -108,7 +133,7 @@ export function BookedGameScreen({ bookingId }: BookedGameScreenProps) {
     return (
       <BookingAbsent
         read={bookingReadState(read)}
-        gone={COPY.gone}
+        gone={offer ? COPY.seatGone : COPY.gone}
         waiting={COPY.reading}
         edges={['top']}
       />
@@ -122,10 +147,22 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   const me = useCurrentUser().data?.id;
   const room = useGameRoom(game.gameId);
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
+  const leave = useLeaveBooking(game.bookingId);
+
+  // A seat taken from here leaves for the group — but only while this is still the screen on top:
+  // the ten seconds can outlive it, and *back* from wherever the player went would be a stray.
+  const here = useRef(true);
+  useEffect(
+    () => () => {
+      here.current = false;
+    },
+    [],
+  );
 
   // The money row's *free to leave until* leaves by itself at the cut-off.
   const now = useReadClock(game.readAt, receivedAt, game.money.freeToLeaveUntil !== undefined);
 
+  const { rescue } = game;
   const ink = STATUS_INK[game.status];
   const seats = courtSeatCount(game.sport);
   const { top, bottom } = rowsOf(game, seats / 2);
@@ -133,6 +170,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   const when = day === undefined ? undefined : detailsDay(day, game.startsAt);
   const time = bookedTime(game.startsAt, game.endsAt);
   const where = whereAside(game, game.where.distanceKm);
+  const share = formatZloty(game.money.shareGrosze);
   const facts: readonly FactWords[] = [
     {
       label: COPY.where,
@@ -141,10 +179,11 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
     },
     ...(when === undefined ? [] : [{ label: COPY.day, ...when }]),
     { label: COPY.time, value: time.from, aside: time.until },
-    moneyRow(game, seats, now),
+    moneyRow(game, now),
   ];
 
-  const chat = chatIsOpen(game.status) ? room.conversationId : undefined;
+  // Neither Chat nor Leave for a rescue seen from outside (A4.3): the reader is not in the game.
+  const chat = rescue === undefined && chatIsOpen(game.status) ? room.conversationId : undefined;
   const act = resultActOf(game.status);
 
   return (
@@ -182,9 +221,11 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
               top={top}
               bottom={bottom}
               singles={seats === 2}
-              completes={false}
+              // The last seat open: your yes completes it, as the card says (A2.3).
+              completes={completesTheRescue(game)}
               fill={false}
               onPerson={setReading}
+              {...(rescue === undefined ? {} : { rescue: { share } })}
             />
 
             <GameFacts facts={facts} accent={ink} />
@@ -198,11 +239,31 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
             />
           )}
 
-          {game.showsForecast && me !== undefined ? (
+          {game.showsForecast && me !== undefined && game.gameId !== undefined ? (
             <GameForecast gameId={game.gameId} playerId={me} />
           ) : null}
 
           {game.checkIn === undefined ? null : <CheckInCard checkIn={game.checkIn} />}
+
+          {rescue === undefined ? null : (
+            <TakeTheSeat
+              seat={yesOnRescue({
+                bookingId: game.bookingId,
+                club: game.where,
+                sides: game.sides,
+              })}
+              dealtIn={{ groupId: game.groupId, sport: game.sport, kind: game.kind }}
+              share={share}
+              size="lg"
+              leave={() => {
+                if (here.current) router.back();
+              }}
+            />
+          )}
+
+          {rescue !== undefined || game.leaving === undefined ? null : (
+            <LeaveTheGame leaving={game.leaving} act={leave} afterLeaving={() => router.back()} />
+          )}
         </ScrollView>
       </SafeAreaView>
 

@@ -1,8 +1,8 @@
 /**
- * **The group deck's read, a player's three answers, and their own two reads** — one of the two
- * layers allowed to read generated types, and the only place these paths are written down
- * ([#553](https://github.com/Raketa02/Raketa/issues/553), [#554](https://github.com/Raketa02/Raketa/issues/554);
- * #538, #539).
+ * **The group deck's read, a player's answers, their own reads, and a booked game with its seats**
+ * — one of the two layers allowed to read generated types, and the only place these paths are
+ * written down ([#553](https://github.com/Raketa02/Raketa/issues/553),
+ * [#554](https://github.com/Raketa02/Raketa/issues/554), #556, #557; #538–#545).
  *
  * | | |
  * | --- | --- |
@@ -16,7 +16,12 @@
  * | `getPaymentsToConfirm` | `GET /players/me/payments-to-confirm` — every refused share of the reader's still waiting for them (#555) |
  * | `postPaymentConfirmation` | `POST /seat-charges/{id}/confirmation` — *I confirmed my payment*: the yes again (#555) |
  * | `getHome` | `GET /home` — the reader's booked games, soonest first, and Home's badge (#542, #556) |
- * | `getBooking` | `GET /bookings/{id}` — one booked game in detail, for a player in it (#542, #556) |
+ * | `getBooking` | `GET /bookings/{id}` — one booked game in detail, for a player in it or one offered its open seat (#542, #545) |
+ * | `postSeat` | `POST /bookings/{id}/seats` — *I'm in* on a rescue: the seat taken, paid at once (#545) |
+ * | `postRescueNo` | `POST /bookings/{id}/no` — a no to a *Seat open* card (#545) |
+ * | `postDeparture` | `POST /bookings/{id}/departure` — *Leave the game* (#544) |
+ * | `getProposal` | `GET /proposals/{id}` — one game still filling in detail, with what the reader may do (#542) |
+ * | `getFillIn` | `GET /pools/{id}/fill-in?sport` — a group's *Seats to fill* and the tab's badge (#545) |
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -159,7 +164,8 @@ export function getHome({ signal }: Cancellable = {}): Promise<Schemas['HomeResp
 
 /**
  * **A booked game in detail**, for a player in it — with the reader's check-in code on the game's
- * day. `booking_not_found` (404) for a booking that does not exist and for one they have no seat on.
+ * day — or for a member its open seat is offered to, who reads it from outside (`rescue`, #545).
+ * `booking_not_found` (404) for a booking that does not exist and for one that is neither.
  */
 export function getBooking(
   bookingId: string,
@@ -167,10 +173,85 @@ export function getBooking(
 ): Promise<Schemas['BookingDetailsResponse']> {
   return httpRequest({
     method: 'GET',
-    path: `/api/v1/bookings/${encodeURIComponent(bookingId)}`,
+    path: bookingPath(bookingId),
     authenticated: true,
     signal,
   });
+}
+
+/**
+ * **I'm in on a rescue** — the seat that opened first, held and taken on the club's account at once
+ * (#545), answered as a yes is: `booked`, or `your_payment` when the share could not be held. The
+ * first join wins: `seat_just_taken` for the second. Not retried: it charges.
+ */
+export function postSeat(bookingId: string): Promise<Schemas['YesAnswerResponse']> {
+  return httpRequest({
+    method: 'POST',
+    path: `${bookingPath(bookingId)}/seats`,
+    authenticated: true,
+  });
+}
+
+/** *Not this time* on a *Seat open* card — the card does not come back; the row stays (#545). */
+export function postRescueNo(bookingId: string): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `${bookingPath(bookingId)}/no`,
+    authenticated: true,
+  });
+}
+
+/**
+ * **Leave the game** (#544) — refunded at once less the card fee before the club's cut-off, only
+ * when somebody takes the seat after it, and the yes and the request withdrawn while an On request
+ * club decides. `game_has_started` and `booking_is_called_off` (409) where there is nothing to
+ * leave. Not retried: it moves money.
+ */
+export function postDeparture(bookingId: string): Promise<Schemas['DepartureResponse']> {
+  return httpRequest({
+    method: 'POST',
+    path: `${bookingPath(bookingId)}/departure`,
+    authenticated: true,
+  });
+}
+
+/**
+ * **A game still filling, in detail** (#542) — for anybody dealt it: who is In, the sides and their
+ * forecast, the club and its distance, the share and the book-by, the overlap, and what the reader
+ * may do now. `proposal_not_found` (404) for a game they were never dealt.
+ */
+export function getProposal(
+  proposalId: string,
+  { signal }: Cancellable = {},
+): Promise<Schemas['ProposalDetailsResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: proposalPath(proposalId),
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
+ * **A group's Fill in tab** for one sport (#545) — *Seats to fill*, soonest first, and the tab's
+ * badge. *You're In* is the live yeses. `pool_not_found` for no such group and one the reader is not
+ * in; `block_state_unavailable` (503) when who fits whom could not be read.
+ */
+export function getFillIn(
+  poolId: string,
+  sport: Schemas['Sport'],
+  { signal }: Cancellable = {},
+): Promise<Schemas['FillInResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: `/api/v1/pools/${encodeURIComponent(poolId)}/fill-in?sport=${sport}`,
+    authenticated: true,
+    signal,
+  });
+}
+
+function bookingPath(bookingId: string): string {
+  return `/api/v1/bookings/${encodeURIComponent(bookingId)}`;
 }
 
 function proposalPath(proposalId: string): string {

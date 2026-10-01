@@ -25,8 +25,11 @@ export const FILL_COPY = {
     open: 'Open game',
     later: 'Later',
   },
-  /** A confirmation from You › Payments booked the game, and no card is held to draw its faces. */
-  bookedFromPayments: 'It’s a game! You’ll find it in Home.',
+  /**
+   * A game booked with no faces to draw — a confirmation from You › Payments, which holds no card, or
+   * a row's join whose booking could not be read.
+   */
+  itsAGameInHome: 'It’s a game! You’ll find it in Home.',
   /** The toast at the fill, and the notice of the same name (A9). */
   paymentFailed: 'Your payment didn’t go through — confirm it to keep your seat',
   /** A card whose bank moved it to another brand cannot be charged until the terms are accepted. */

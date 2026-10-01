@@ -47,8 +47,15 @@
  *   and so does a row of You › Payments' *TO CONFIRM* (`confirm`).
  * - **No method** — the setup, and the yes again once saved. **Terms needed** — a toast naming You ›
  *   Payments, where they are accepted.
- * - **A vote** — nothing: seats are still open, somebody else's share was refused, or an On request
- *   club has the game to confirm.
+ * - **Sent to the club** — the yes filled a game an On request club confirms (#543): nobody paid,
+ *   the game is on Home *waiting for the club*, and a toast names the club. The charge and *It's a
+ *   game!* follow its yes, told by the notices (#549).
+ * - **A vote** — nothing: seats are still open, or somebody else's share was refused.
+ *
+ * **A rescue joined from a *Seats to fill* row** (#557) holds no sides — the row lists the players,
+ * not which side the open seat is on — so *It's a game!* observes the booking's read, the seat now
+ * taken, and draws its sides once it lands (`ItsAGameFor`); a read that fails says *It's a game!* in
+ * a toast, as a confirmation does.
  *
  * A delayed yes refused for a game that is gone — full, over, no longer the player's — leaves the
  * details it was said on, as the details' own refusal does.
@@ -81,12 +88,13 @@ import {
 } from '../hooks/useFill';
 import { rereadAfterFill, useBookingYes, useConfirmPaymentYes } from '../hooks/useFillWrites';
 import { dropCard } from '../hooks/useGroupDeck';
+import { useBooking } from '../hooks/useHome';
 import { useLatest } from '../hooks/useLatest';
 
 import { ConfirmPaymentSheet } from './ConfirmPaymentSheet';
 import { refusalMessage } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
-import { bookingAnnouncement, bookingIn } from './fillPresentation';
+import { bookingAnnouncement, bookingIn, sentToTheClub } from './fillPresentation';
 import { ItsAGame } from './ItsAGame';
 
 interface Counting extends BookAsk {
@@ -110,8 +118,9 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
   const [, setTick] = useState(0);
   const [settingUp, setSettingUp] = useState<{ readonly then?: () => void } | null>(null);
   const [confirming, setConfirming] = useState<ConfirmAsk | null>(null);
+  /** *It's a game!* up — with the sides the yes held, or read off the booking when it held none. */
   const [celebrating, setCelebrating] = useState<{
-    readonly card: DeckCard;
+    readonly sides?: DeckCard['sides'];
     readonly bookingId: string;
   } | null>(null);
 
@@ -125,14 +134,23 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
   /** What a screen, a sheet or the delayed send does next — read off one outcome, in one place. */
   const act = (outcome: FillOutcome, ask: FillAsk, then?: () => void) => {
     switch (outcome.kind) {
-      case 'booked':
+      case 'booked': {
         void rereadAfterFill(client);
         ask.leave?.();
+        const { bookingId } = outcome;
         if (ask.card === undefined) {
-          showToast({ message: FILL_COPY.bookedFromPayments, tone: 'ok' });
+          showToast({ message: FILL_COPY.itsAGameInHome, tone: 'ok' });
         } else {
-          setCelebrating({ card: ask.card, bookingId: outcome.bookingId });
+          // A Seats to fill row holds no sides: the overlay reads them off the booking.
+          const { sides } = ask.card;
+          setCelebrating(sides === undefined ? { bookingId } : { sides, bookingId });
         }
+        return;
+      }
+      case 'waiting':
+        // The game is on Home now, waiting for the club; nothing was charged (#543).
+        void rereadAfterFill(client);
+        showToast({ message: sentToTheClub(ask.card?.club?.name), tone: 'ok' });
         return;
       case 'confirm':
         showToast({ message: FILL_COPY.paymentFailed, tone: 'bad' });
@@ -273,17 +291,54 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
       )}
 
       {celebrating === null ? null : (
-        <ItsAGame
-          card={celebrating.card}
+        <ItsAGameFor
+          bookingId={celebrating.bookingId}
+          {...(celebrating.sides === undefined ? {} : { sides: celebrating.sides })}
           onLater={() => setCelebrating(null)}
           onOpenGame={() => {
             setCelebrating(null);
             openGame(celebrating.bookingId);
           }}
+          onUnreadable={() => {
+            setCelebrating(null);
+            showToast({ message: FILL_COPY.itsAGameInHome, tone: 'ok' });
+          }}
         />
       )}
     </FillContext.Provider>
   );
+}
+
+/**
+ * ***It's a game!* for one booking** — drawn from the sides the yes held, or, for a *Seats to fill*
+ * row's join, from the booking's own read (`useBooking`), observed for as long as the overlay waits
+ * for it: nothing is drawn until it lands, and a booking that cannot be read — refused, or in a sport
+ * this build cannot name — says *It's a game!* in a toast instead.
+ */
+function ItsAGameFor({
+  bookingId,
+  sides,
+  onLater,
+  onOpenGame,
+  onUnreadable,
+}: {
+  readonly bookingId: string;
+  readonly sides?: DeckCard['sides'];
+  readonly onLater: () => void;
+  readonly onOpenGame: () => void;
+  readonly onUnreadable: () => void;
+}) {
+  const read = useBooking(bookingId, { enabled: sides === undefined });
+  const drawn = sides ?? read.data?.sides;
+  const unreadable = sides === undefined && (read.data === null || read.isError);
+  const settle = useLatest(onUnreadable);
+
+  useEffect(() => {
+    if (unreadable) settle.current();
+  }, [unreadable, settle]);
+
+  if (drawn === undefined) return null;
+  return <ItsAGame card={{ sides: drawn }} onLater={onLater} onOpenGame={onOpenGame} />;
 }
 
 const s = StyleSheet.create({

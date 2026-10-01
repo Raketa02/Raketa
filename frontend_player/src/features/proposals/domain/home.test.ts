@@ -3,6 +3,7 @@ import {
   ENDED_HOME_SHELF_LIFE_MS,
   bookedGameIds,
   chatIsOpen,
+  completesTheRescue,
   courtIsGiven,
   isNew,
   moneyLineOf,
@@ -38,6 +39,7 @@ function game(extra: Partial<HomeGame> = {}): HomeGame {
     startsAt: STARTS_AT,
     club: { id: 'club-1', name: 'Bonarka Arena' },
     courtName: 'Court 2',
+    openSeats: 0,
     sides: {
       yours: [person('me', { isYou: true }), person('piotr')],
       theirs: [person('ines'), person('bartek')],
@@ -49,7 +51,7 @@ function game(extra: Partial<HomeGame> = {}): HomeGame {
 
 describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', () => {
   it('reads Paid with the share and free to leave until the cut-off while it is ahead', () => {
-    expect(moneyLineOf(game(), 4, BEFORE_CUT_OFF)).toEqual({
+    expect(moneyLineOf(game(), BEFORE_CUT_OFF)).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
       paid: true,
@@ -58,7 +60,7 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
   });
 
   it('drops the free-to-leave clause at the cut-off itself — the line switches by itself', () => {
-    expect(moneyLineOf(game(), 4, Date.parse(CUT_OFF))).toEqual({
+    expect(moneyLineOf(game(), Date.parse(CUT_OFF))).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
       paid: true,
@@ -67,7 +69,7 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
 
   it('has no free-to-leave clause once the read says the cut-off has passed', () => {
     const late = game({ money: { shareGrosze: 3000, paid: true } });
-    expect(moneyLineOf(late, 4, BEFORE_CUT_OFF)).toEqual({
+    expect(moneyLineOf(late, BEFORE_CUT_OFF)).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
       paid: true,
@@ -79,38 +81,57 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
       status: 'WAITING_FOR_THE_CLUB',
       money: { shareGrosze: 3000, paid: false },
     });
-    expect(moneyLineOf(waiting, 4, BEFORE_CUT_OFF)).toEqual({
+    expect(moneyLineOf(waiting, BEFORE_CUT_OFF)).toEqual({
       kind: 'waiting',
       club: 'Bonarka Arena',
     });
   });
 
-  it('counts the open seats off the court, and fills by the cut-off while it is ahead', () => {
-    const open = game({
-      status: 'SEAT_OPEN',
-      sides: { yours: [person('me', { isYou: true }), person('piotr')], theirs: [person('ines')] },
-    });
-    expect(moneyLineOf(open, 4, BEFORE_CUT_OFF)).toEqual({
+  it('counts the open seats the read says, and fills by the cut-off while it is ahead', () => {
+    const open = game({ status: 'SEAT_OPEN', openSeats: 2 });
+    expect(moneyLineOf(open, BEFORE_CUT_OFF)).toEqual({
       kind: 'seatOpen',
-      seats: 1,
+      seats: 2,
       fillsBy: CUT_OFF,
     });
-    expect(moneyLineOf(open, 4, Date.parse(CUT_OFF))).toEqual({ kind: 'seatOpen', seats: 1 });
+    expect(moneyLineOf(open, Date.parse(CUT_OFF))).toEqual({ kind: 'seatOpen', seats: 2 });
   });
 
-  it('says one seat at the least while a seat is open, whatever the sides still hold', () => {
-    expect(moneyLineOf(game({ status: 'SEAT_OPEN' }), 4, BEFORE_CUT_OFF)).toMatchObject({
-      seats: 1,
+  it('says why a game was called off, and what came back', () => {
+    const short = game({
+      status: 'CALLED_OFF',
+      calledOffReason: 'SHORT_AT_THE_CUT_OFF',
+      money: { shareGrosze: 3000, paid: true, refundedGrosze: 3000 },
     });
-  });
-
-  it('is refunded when the shares were taken and nobody paid when they were not', () => {
-    expect(moneyLineOf(game({ status: 'CALLED_OFF' }), 4, BEFORE_CUT_OFF)).toEqual({
+    expect(moneyLineOf(short, BEFORE_CUT_OFF)).toEqual({
       kind: 'calledOff',
+      reason: 'SHORT_AT_THE_CUT_OFF',
+      club: 'Bonarka Arena',
       refundedGrosze: 3000,
     });
+    const refused = game({
+      status: 'CALLED_OFF',
+      calledOffReason: 'REFUSED',
+      money: { shareGrosze: 3000, paid: false },
+    });
+    expect(moneyLineOf(refused, BEFORE_CUT_OFF)).toEqual({
+      kind: 'calledOff',
+      reason: 'REFUSED',
+      club: 'Bonarka Arena',
+    });
+  });
+
+  it('says nobody paid when nothing came back, whatever the reason', () => {
     const unpaid = game({ status: 'CALLED_OFF', money: { shareGrosze: 3000, paid: false } });
-    expect(moneyLineOf(unpaid, 4, BEFORE_CUT_OFF)).toEqual({ kind: 'calledOff' });
+    expect(moneyLineOf(unpaid, BEFORE_CUT_OFF)).toEqual({
+      kind: 'calledOff',
+      club: 'Bonarka Arena',
+    });
+  });
+
+  it('says a seat was empty on a game uncounted for it (§14.1)', () => {
+    const short = game({ status: 'UNCOUNTED', uncountedReason: 'SEAT_EMPTY' });
+    expect(moneyLineOf(short, BEFORE_CUT_OFF)).toEqual({ kind: 'seatEmpty' });
   });
 
   it.each<HomeStatus>([
@@ -120,7 +141,7 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     'UNCOUNTED',
     'NEVER_PLAYED',
   ])('draws no money line on %s — the result states are as today', (status) => {
-    expect(moneyLineOf(game({ status }), 4, BEFORE_CUT_OFF)).toBeUndefined();
+    expect(moneyLineOf(game({ status }), BEFORE_CUT_OFF)).toBeUndefined();
   });
 });
 
@@ -228,6 +249,12 @@ describe('bookedGameIds — the Games Home’s cards stand for', () => {
       bookedGameIds([game({ gameId: 'g-1' }), game({ gameId: 'g-2', status: 'COUNTED' })]),
     ).toEqual(new Set(['g-1', 'g-2']));
   });
+
+  it('leaves out a game waiting for the club, which has no Game yet', () => {
+    const { gameId: _none, ...rest } = game({ status: 'WAITING_FOR_THE_CLUB' });
+    const waiting: HomeGame = rest;
+    expect(bookedGameIds([game({ gameId: 'g-1' }), waiting])).toEqual(new Set(['g-1']));
+  });
 });
 
 describe('resultActOf — the result, reached from the details as today', () => {
@@ -246,5 +273,15 @@ describe('resultActOf — the result, reached from the details as today', () => 
     'CALLED_OFF',
   ])('offers nothing on %s', (status) => {
     expect(resultActOf(status)).toBeUndefined();
+  });
+});
+
+describe('completesTheRescue — You complete it on a rescue seen from outside', () => {
+  const offer = { deadline: CUT_OFF, fillsByTheCutOff: true };
+
+  it('is the last open seat, offered to the reader', () => {
+    expect(completesTheRescue({ rescue: offer, openSeats: 1 })).toBe(true);
+    expect(completesTheRescue({ rescue: offer, openSeats: 2 })).toBe(false);
+    expect(completesTheRescue({ openSeats: 1 })).toBe(false);
   });
 });

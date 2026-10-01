@@ -35,6 +35,16 @@ export const proposalKeys = {
   home: () => [...proposalKeys.all, 'home'] as const,
   /** Every booked game read in detail — the root a fill re-reads. */
   bookings: () => [...proposalKeys.all, 'booking'] as const,
-  /** `GET /bookings/{id}` — one booked game in detail (#556). */
+  /** `GET /bookings/{id}` — one booked game in detail (#556), or a rescue from outside (#557). */
   booking: (bookingId: string) => [...proposalKeys.bookings(), bookingId] as const,
+  /** Every game still filling read in detail — the root every answer re-reads. */
+  proposals: () => [...proposalKeys.all, 'proposal'] as const,
+  /** `GET /proposals/{id}` — one game still filling in detail, with what the reader may do (#557). */
+  proposal: (proposalId: string) => [...proposalKeys.proposals(), proposalId] as const,
+  /**
+   * `GET /pools/{id}/fill-in?sport` — a group's *Seats to fill* (#557), under the group's root, so an
+   * answer re-reads it with the decks and a changed limit with every deck.
+   */
+  fillIn: (groupId: string, sport: Sport) =>
+    [...proposalKeys.group(groupId), 'fill-in', sport] as const,
 };

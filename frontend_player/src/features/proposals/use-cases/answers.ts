@@ -5,7 +5,14 @@
  * everybody In fitting everybody else — are the server's, and each refusal is named in its code.
  */
 
-import { deleteYes, postNo, postPaymentConfirmation, postYes } from '../api/proposalsApi';
+import {
+  deleteYes,
+  postNo,
+  postPaymentConfirmation,
+  postRescueNo,
+  postSeat,
+  postYes,
+} from '../api/proposalsApi';
 import type { YesAnswer } from '../domain/fill';
 import { toYesAnswer } from '../mappers/fillMappers';
 
@@ -13,17 +20,27 @@ import { toYesAnswer } from '../mappers/fillMappers';
 export type CardAnswer = 'yes' | 'no';
 
 export interface AnswerToCard {
+  /** The proposal's id — or, on a rescue, its booking's. */
   readonly proposalId: string;
   readonly said: CardAnswer;
+  /** A rescue (#545): the answer is the booking's — the seat taken and paid for, or a no to it. */
+  readonly rescue: boolean;
 }
 
 /**
  * Send one answer. A yes answers what it left on the game — and, when it was the last, what the fill
- * did (`fillOutcome` reads it); a no answers nothing.
+ * did (`fillOutcome` reads it); a no answers nothing. **A rescue's yes takes the seat and pays at
+ * once**, answered as a yes is.
  */
-export async function answerCard({ proposalId, said }: AnswerToCard): Promise<YesAnswer | null> {
-  if (said === 'yes') return toYesAnswer(await postYes(proposalId));
-  await postNo(proposalId);
+export async function answerCard({
+  proposalId,
+  said,
+  rescue,
+}: AnswerToCard): Promise<YesAnswer | null> {
+  if (said === 'yes') {
+    return toYesAnswer(await (rescue ? postSeat(proposalId) : postYes(proposalId)));
+  }
+  await (rescue ? postRescueNo(proposalId) : postNo(proposalId));
   return null;
 }
 

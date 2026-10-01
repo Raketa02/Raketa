@@ -18,6 +18,7 @@ import type {
   DeckPerson,
   DeckSegment,
   GroupDeck,
+  Overlap,
   OverlapCell,
 } from '../domain/deck';
 import type { GameKind } from '../domain/vocabulary';
@@ -60,6 +61,8 @@ function toPerson(wire: Schemas['DeckTileSchema']): DeckPerson {
     playerId: wire.player_id,
     isYou: wire.is_you,
     isIn: wire.is_in,
+    // Paid is a rescue's people's; a card still filling draws IN or nothing.
+    ...(wire.paid ? { paid: true } : {}),
     ...(wire.name === null ? {} : { name: wire.name }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     ...(wire.level === null ? {} : { level: wire.level }),
@@ -71,26 +74,56 @@ function toCell(wire: Schemas['OverlapCellSchema']): OverlapCell | undefined {
   return day === undefined ? undefined : { day, range: wire.range, shade: wire.shade };
 }
 
+/** The two sides, as a card and a game's details both carry them. */
+export function toDeckSides(wire: Schemas['DeckSidesSchema']): DeckCard['sides'] {
+  return { yours: wire.yours.map(toPerson), theirs: wire.theirs.map(toPerson) };
+}
+
+/** A challenge's poster — the name left off for one who can no longer be named. */
+export function toChallenger(
+  wire: Schemas['DeckChallengerSchema'] | null,
+): Pick<DeckCard, 'challenger'> {
+  if (wire === null) return {};
+  return {
+    challenger: {
+      playerId: wire.player_id,
+      ...(wire.name === null ? {} : { name: wire.name }),
+    },
+  };
+}
+
+/**
+ * The overlap grid — or nothing, for a game cell that names no weekday: the ring would have
+ * nowhere to go.
+ */
+export function toOverlap(wire: Schemas['DeckOverlapSchema']): Overlap | undefined {
+  const gameDay = toWeekday(wire.game.day);
+  if (gameDay === undefined) return undefined;
+  return {
+    grade: wire.grade,
+    cells: wire.cells.map(toCell).filter((cell): cell is OverlapCell => cell !== undefined),
+    game: { day: gameDay, range: wire.game.range },
+  };
+}
+
+/** The forecast, or nothing where the server could not read one. */
+export function toForecast(wire: Schemas['DeckForecastSchema'] | null): Pick<DeckCard, 'forecast'> {
+  return wire === null ? {} : { forecast: { pct: wire.pct, provisional: wire.provisional } };
+}
+
 /**
  * One card — or nothing, for a card whose game cell names no weekday: the ring would have
  * nowhere to go, and a card drawn without its game's own cell says less than the read did.
  */
 export function toDeckCard(wire: Schemas['DeckCardSchema']): DeckCard | undefined {
-  const gameDay = toWeekday(wire.overlap.game.day);
-  if (gameDay === undefined) return undefined;
+  const overlap = toOverlap(wire.overlap);
+  if (overlap === undefined) return undefined;
 
   return {
     proposalId: wire.proposal_id,
     type: wire.type,
     kind: KIND_BY_WIRE[wire.kind],
-    ...(wire.challenger === null
-      ? {}
-      : {
-          challenger: {
-            playerId: wire.challenger.player_id,
-            ...(wire.challenger.name === null ? {} : { name: wire.challenger.name }),
-          },
-        }),
+    ...toChallenger(wire.challenger),
     startsAt: wire.starts_at,
     club: toClub(wire.club),
     shareGrosze: wire.share_grosze,
@@ -99,19 +132,12 @@ export function toDeckCard(wire: Schemas['DeckCardSchema']): DeckCard | undefine
     versionCount: wire.version_count,
     openSeatsAfterYourYes: wire.open_seats_after_your_yes,
     court: wire.court,
+    ...(wire.court_name === null ? {} : { courtName: wire.court_name }),
     noFreeCancellation: wire.no_free_cancellation,
     clubConfirms: wire.club_confirms,
-    sides: { yours: wire.sides.yours.map(toPerson), theirs: wire.sides.theirs.map(toPerson) },
-    ...(wire.forecast === null
-      ? {}
-      : { forecast: { pct: wire.forecast.pct, provisional: wire.forecast.provisional } }),
-    overlap: {
-      grade: wire.overlap.grade,
-      cells: wire.overlap.cells
-        .map(toCell)
-        .filter((cell): cell is OverlapCell => cell !== undefined),
-      game: { day: gameDay, range: wire.overlap.game.range },
-    },
+    sides: toDeckSides(wire.sides),
+    ...toForecast(wire.forecast),
+    overlap,
   };
 }
 

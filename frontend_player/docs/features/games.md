@@ -292,3 +292,11 @@ forecast without the players card: the same `usePairing` read of the Game the bo
 same `ForecastBlock`, absent on the same ground. And a booked game's result is told on `GameScreen`
 itself, composed by `proposals` with the score leading and the `card`, `court`, `plan` and `fill`
 slots empty — a booking is its own plan, and a seat open on one is a rescue (#557).
+
+**`STARTED_SHORT` — a booked game whose hour came with a seat open**
+([#557](https://github.com/Raketa02/Raketa/issues/557); the backend's #544; the Games & Fill in
+mechanics §14.1). Somebody left after the club's cut-off and nobody took the seat: the game takes no
+result, no Level moves and nobody who stayed is marked for it. It joins `GameStanding` as its own
+end — `resultArgument`'s `started-short`, titled _No result_, its standing line _A seat was empty._,
+offering nothing — and the Classic card names it _uncounted_. A booked game is Home's card, so the
+arm is reached only by a link straight to the Game; Home itself says _Uncounted · a seat was empty_.

@@ -16,6 +16,18 @@ import type { DeckCard, DeckPerson } from './deck';
 import type { LiveYes } from './liveYes';
 import type { GameKind, PaymentRefusal } from './vocabulary';
 
+/**
+ * **What a yes is said on** — a dealt card, a game's details, a rescue's details or a *Seats to fill*
+ * row (#557): the id the yes is sent for (a rescue's is its booking's), whether it waits behind
+ * *Undo*, and the sides *It's a game!* draws. **A row holds no sides** — it lists the players, not
+ * which side the open seat is on — so its faces are read off the booking once the seat is taken.
+ */
+export interface YesOn extends Pick<DeckCard, 'proposalId' | 'type' | 'court'> {
+  readonly sides?: DeckCard['sides'];
+  /** The club — named when a yes sends the game to an On request club to confirm. */
+  readonly club?: DeckCard['club'];
+}
+
 /** **The deck a card was dealt in** — a group's, for one sport and one kind: what an answer re-reads. */
 export interface DealtIn {
   readonly groupId: string;
@@ -38,7 +50,34 @@ export const UNDO_WINDOW_MS = 10_000;
  * In*.
  */
 export function waitsForUndo(card: Pick<DeckCard, 'type' | 'court'>): boolean {
-  return card.type === 'SEAT_OPEN' || card.court === 'BOOK_IT_NOW';
+  return isRescue(card) || card.court === 'BOOK_IT_NOW';
+}
+
+/**
+ * **A rescue** — a booked game's open seat (#545): its id is the booking's, a yes takes the seat and
+ * pays at once (`POST /bookings/{id}/seats`) and a no is the booking's too.
+ */
+export function isRescue(card: Pick<DeckCard, 'type'>): boolean {
+  return card.type === 'SEAT_OPEN';
+}
+
+/**
+ * **What the fill holds for a rescue's *I'm in*** — from its details seen from outside, or a *Seats to
+ * fill* row: the booking's seat, waiting behind *Undo* as every rescue join does (Q74), with the
+ * sides when the surface holds them.
+ */
+export function yesOnRescue(rescue: {
+  readonly bookingId: string;
+  readonly club: DeckCard['club'];
+  readonly sides?: DeckCard['sides'];
+}): YesOn {
+  return {
+    proposalId: rescue.bookingId,
+    type: 'SEAT_OPEN',
+    court: 'BOOKED',
+    club: rescue.club,
+    ...(rescue.sides === undefined ? {} : { sides: rescue.sides }),
+  };
 }
 
 /**
@@ -73,6 +112,8 @@ export interface YesAnswer {
   readonly openSeats: number;
   /** This yes booked the game. */
   readonly booked: Booked | null;
+  /** This yes filled a game an On request club has still to confirm: nobody paid yet (#543). */
+  readonly waitingForTheClub: boolean;
   /** This player's share could not be held. */
   readonly yourPayment: YourPayment | null;
 }
@@ -85,11 +126,13 @@ export interface YesAnswer {
  *   didn't go through — confirm it to keep your seat*, and the confirmation on the same payment.
  * - `setUp` — no method at the fill: save one, and the yes again.
  * - `termsAgain` — the card's brand changed; its terms are accepted again on You › Payments.
- * - `counted` — a vote, as every other: seats still open, somebody else's share refused, or a full
- *   game an On request club has still to confirm.
+ * - `waiting` — this yes filled a game an On request club has still to confirm (#543): nobody paid,
+ *   the game is on Home *waiting for the club*, and the charge and *It's a game!* follow its yes.
+ * - `counted` — a vote, as every other: seats still open, or somebody else's share refused.
  */
 export type FillOutcome =
   | { readonly kind: 'booked'; readonly bookingId: string }
+  | { readonly kind: 'waiting' }
   | { readonly kind: 'confirm'; readonly seatChargeId: string }
   | { readonly kind: 'setUp' }
   | { readonly kind: 'termsAgain' }
@@ -118,6 +161,7 @@ export function fillRefusal(
 
 export function fillOutcome(answer: YesAnswer): FillOutcome {
   if (answer.booked !== null) return { kind: 'booked', bookingId: answer.booked.bookingId };
+  if (answer.waitingForTheClub) return { kind: 'waiting' };
   const refused = answer.yourPayment;
   if (refused === null) return { kind: 'counted' };
   switch (refused.refusal) {

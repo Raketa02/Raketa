@@ -13,14 +13,31 @@ const PROPOSAL = 'c0000000-0000-4000-8000-000000000001';
 
 describe('a yes’s answer', () => {
   it('reads a vote counted, with nothing booked and nothing refused', () => {
-    const wire: Wire['YesAnswerResponse'] = { proposal_id: PROPOSAL, open_seats: 2 };
+    const wire: Wire['YesAnswerResponse'] = {
+      proposal_id: PROPOSAL,
+      open_seats: 2,
+      waiting_for_the_club: false,
+    };
 
     expect(toYesAnswer(wire)).toEqual({
       proposalId: PROPOSAL,
       openSeats: 2,
       booked: null,
+      waitingForTheClub: false,
       yourPayment: null,
     });
+  });
+
+  it('reads a full game sent to an On request club to confirm', () => {
+    const wire: Wire['YesAnswerResponse'] = {
+      proposal_id: PROPOSAL,
+      open_seats: 0,
+      booked: null,
+      waiting_for_the_club: true,
+      your_payment: null,
+    };
+
+    expect(toYesAnswer(wire).waitingForTheClub).toBe(true);
   });
 
   it('reads the booking and the Game it opened', () => {
@@ -28,6 +45,7 @@ describe('a yes’s answer', () => {
       proposal_id: PROPOSAL,
       open_seats: 0,
       booked: { booking_id: PROPOSAL, game_id: 'a1000000-0000-4000-8000-000000000001' },
+      waiting_for_the_club: false,
       your_payment: null,
     };
 
@@ -42,6 +60,7 @@ describe('a yes’s answer', () => {
       proposal_id: PROPOSAL,
       open_seats: 1,
       booked: null,
+      waiting_for_the_club: false,
       your_payment: {
         seat_charge_id: 'a2000000-0000-4000-8000-000000000001',
         refusal: 'DECLINED',

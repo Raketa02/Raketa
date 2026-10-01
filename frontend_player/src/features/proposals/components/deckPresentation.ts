@@ -35,8 +35,8 @@ import {
   type Ribbon,
   type WeekCap,
 } from '../domain/deck';
-import type { DayRange, GameKind } from '../domain/vocabulary';
-import { gameEndsAt, type GameDay } from '../domain/when';
+import type { DayRange, GameKind, ProposalStatus } from '../domain/vocabulary';
+import { gameEndsAt, weekdayAt, type GameDay } from '../domain/when';
 
 import { PROPOSALS_COPY } from './proposalsCopy';
 
@@ -207,6 +207,21 @@ export function tileLabel(person: DeckPerson, completes: boolean): string {
   return parts.join(', ');
 }
 
+/** *27 zł · court booked* on the last seat, *27 zł* while more are open — under the open seat. */
+export function openSeatUnder(share: string, completes: boolean): string {
+  return completes ? `${share}${DOT}${COPY.courtBooked}` : share;
+}
+
+/**
+ * **The seat a rescue offers you, spoken** — *Your seat: you complete it, 27 zł, court booked* —
+ * or *Your seat, 27 zł* while another is open too.
+ */
+export function openSeatLabel(completes: boolean, share: string): string {
+  return completes
+    ? `Your seat: ${COPY.youCompleteIt.toLowerCase()}, ${share}, ${COPY.courtBooked}`
+    : `Your seat, ${share}`;
+}
+
 /** The hint every other tile carries: the press opens the record. */
 export const TILE_HINT = 'Opens their record';
 
@@ -278,15 +293,15 @@ export function clubName(card: Pick<DeckCard, 'club'>): string {
   return card.club.name ?? COPY.unknownClub;
 }
 
-/** *Saturday 16:00 · Ogrody 33* — the court block's line (the court number joins it once booked). */
+/** *Saturday 16:00 · Ogrody 33* — the court block's line, and *· Court 6* once the court is booked. */
 export function courtLine(
   day: GameDay | undefined,
-  card: Pick<DeckCard, 'startsAt' | 'club'>,
+  card: Pick<DeckCard, 'startsAt' | 'club' | 'courtName'>,
 ): string {
   const when = [day === undefined ? undefined : gameDayWords(day), platformClock(card.startsAt)]
     .filter((part): part is string => part !== undefined)
     .join(' ');
-  return [when, clubName(card)].filter((part) => part !== '').join(DOT);
+  return [when, clubName(card), card.courtName ?? ''].filter((part) => part !== '').join(DOT);
 }
 
 /** *32 zł* */
@@ -298,7 +313,7 @@ export function shareWords(card: Pick<DeckCard, 'shareGrosze'>): string {
 export function courtSpoken(
   tag: CourtTag,
   day: GameDay | undefined,
-  card: Pick<DeckCard, 'startsAt' | 'club' | 'shareGrosze' | 'noFreeCancellation'>,
+  card: Pick<DeckCard, 'startsAt' | 'club' | 'courtName' | 'shareGrosze' | 'noFreeCancellation'>,
 ): string {
   return [
     COPY.courtTag[tag],
@@ -321,6 +336,16 @@ export function stampsFor(card: DeckCard, charges: boolean) {
     yes: charges ? { words: COPY.yes, figure: shareWords(card) } : { words: COPY.yes },
     no: { words: COPY.no },
   } as const;
+}
+
+/** *I'm in · 27 zł* — a rescue's door: the seat taken and paid for at once (A3.1, A4.3). */
+export function seatButtonLabel(share: string): string {
+  return `${COPY.yes}${DOT}${share}`;
+}
+
+/** *I'm in, pays 27 zł now* — the same door aloud, the charge said as one. */
+export function seatButtonSpoken(share: string): string {
+  return `${COPY.yes}, pays ${share} now`;
 }
 
 /** The three buttons' names — the game's, where Players names the person. */
@@ -361,9 +386,41 @@ export function othersTitle(card: Pick<DeckCard, 'sides'>): string {
     .join(', ');
 }
 
-/** *Padel · filling* — the header's second line. */
-export function detailsSubline(sport: Sport): string {
-  return `${sportLabel(sport)}${DOT}${COPY.game.filling.toLowerCase()}`;
+/**
+ * **The details' status tag** — *Filling · 2 of 4 in* while the game fills, and otherwise the
+ * status's own words: *Waiting for the club*, *Booked*, or how it ended unfilled.
+ */
+export function detailsStatus(status: ProposalStatus, inCount: number, seats: number): string {
+  return status === 'FILLING' ? fillingStatus(inCount, seats) : COPY.game.status[status];
+}
+
+/** *Padel · filling* · *Padel · waiting for the club* — the header's second line. */
+export function detailsSubline(sport: Sport, status: ProposalStatus): string {
+  return `${sportLabel(sport)}${DOT}${COPY.game.statusInLine[status]}`;
+}
+
+/**
+ * **The money row's aside on a game still filling** — *if it fills · book by Sat 13:00* while it
+ * fills, *nobody pays until Bonarka Arena confirms* while its club decides (A4.2), and nothing once
+ * it is booked or over: the share is the share.
+ */
+export function detailsShareAside(
+  status: ProposalStatus,
+  card: Pick<DeckCard, 'deadline' | 'club'>,
+  deadlineDay: Weekday | undefined,
+): string | undefined {
+  switch (status) {
+    case 'FILLING':
+      return shareAside(card.deadline, deadlineDay);
+    case 'WAITING_FOR_THE_CLUB':
+      return `${COPY.game.nobodyPaysUntil} ${card.club.name ?? COPY.game.theClub} ${COPY.game.confirms}`;
+    case 'FILLED':
+    case 'EXPIRED':
+    case 'WITHDRAWN':
+    case 'COURT_HOUR_LOST':
+    case 'TURNED_DOWN':
+      return undefined;
+  }
 }
 
 /** *16:00* and *until 17:00* — games are an hour (`gameEndsAt`). */
@@ -387,6 +444,14 @@ export function detailsDay(
   if (calendar === undefined) return { value };
   const date = dayDate(calendar);
   return { value, aside: day.kind === 'dated' ? `${date}${DOT}${COPY.game.nextWeek}` : date };
+}
+
+/** *Fri 16:00* — a moment a line names, on the club's calendar: a book-by, a cut-off. */
+export function shortMoment(instant: string): string {
+  const weekday = weekdayAt(instant);
+  return [weekday === undefined ? undefined : dayLabel(weekday), platformClock(instant)]
+    .filter((part): part is string => part !== undefined)
+    .join(' ');
 }
 
 /** *if it fills · book by Sat 13:00* — the money row's aside, off the card's deadline. */

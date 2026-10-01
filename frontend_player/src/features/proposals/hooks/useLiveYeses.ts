@@ -1,6 +1,6 @@
 /**
  * **The player's live yeses** — `GET /players/me/live-yeses`, behind You › Payments' *LIVE YESES*
- * and a game's details opened from one of them (#554).
+ * (#554) and a group's *You're In* (#557).
  *
  * The app's defaults, for the deck's reason: thirty seconds fresh, read again on focus. A yes and a
  * withdraw mark it stale wherever they are said (`useAnswerCard`, `useWithdrawYes`), so a player
@@ -18,12 +18,10 @@ import { readLiveYeses, readPaymentsToConfirm } from '../use-cases/liveYeses';
 
 import { proposalKeys } from './proposalKeys';
 
-/** `enabled` false asks nothing — for a screen that needs the list only when its own read failed it. */
-export function useLiveYeses({ enabled = true }: { readonly enabled?: boolean } = {}) {
+export function useLiveYeses() {
   return useQuery<LiveYeses, AppError>({
     queryKey: proposalKeys.liveYeses(),
     queryFn: ({ signal }) => readLiveYeses({ signal }),
-    enabled,
   });
 }
 

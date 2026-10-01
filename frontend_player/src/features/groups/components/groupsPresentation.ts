@@ -151,6 +151,11 @@ export function gamesTabLabel(cards: number): string {
   return `${GROUPS_COPY.group.tabs.games}, ${cards} with somebody In`;
 }
 
+/** *Fill in, 1 seat to fill* — the Fill in tab, spoken with its count (#557). */
+export function fillInTabLabel(seats: number): string {
+  return `${GROUPS_COPY.group.tabs.fillIn}, ${counted(seats, 'seat', 'seats')} to fill`;
+}
+
 /** *Info, 2 requests waiting* — the group page's Info tab, spoken with its count (#529). */
 export function infoTabLabel(waiting: number): string {
   return `${GROUPS_COPY.group.tabs.info}, ${counted(waiting, 'request', 'requests')} waiting`;

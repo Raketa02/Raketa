@@ -17,7 +17,6 @@ import {
   standingCards,
   weekCapOf,
   withoutCard,
-  withYourYes,
   type DeckCard,
   type DeckPerson,
   type DeckRow,
@@ -162,13 +161,13 @@ describe('the court block and the stamp', () => {
   it('tags a free vote, a yes that fills, and a rescue', () => {
     expect(courtTagOf(card())).toBe('available');
     expect(courtTagOf(card({ court: 'BOOK_IT_NOW' }))).toBe('bookItNow');
-    expect(courtTagOf(card({ type: 'SEAT_OPEN', court: 'COURT_AVAILABLE' }))).toBe('booked');
+    expect(courtTagOf(card({ type: 'SEAT_OPEN', court: 'BOOKED' }))).toBe('booked');
   });
 
   it('prices the stamp only when the yes charges at once', () => {
     expect(chargesAtOnce(card())).toBe(false);
     expect(chargesAtOnce(card({ court: 'BOOK_IT_NOW' }))).toBe(true);
-    expect(chargesAtOnce(card({ type: 'SEAT_OPEN' }))).toBe(true);
+    expect(chargesAtOnce(card({ type: 'SEAT_OPEN', court: 'BOOKED' }))).toBe(true);
   });
 
   it('does not price Book it now at an On request club, where the charge waits for the club', () => {
@@ -178,7 +177,11 @@ describe('the court block and the stamp', () => {
   it('says you complete it when your yes leaves no seat open, and not once it is given', () => {
     expect(completesIt(card({ openSeatsAfterYourYes: 0 }))).toBe(true);
     expect(completesIt(card({ openSeatsAfterYourYes: 1 }))).toBe(false);
-    expect(completesIt(withYourYes(card({ openSeatsAfterYourYes: 0 })))).toBe(false);
+    const youIn = card({
+      openSeatsAfterYourYes: 0,
+      sides: { yours: [{ ...YOU, isIn: true }], theirs: [] },
+    });
+    expect(completesIt(youIn)).toBe(false);
   });
 
   it('counts the whole game’s yeses only on a game dealt in versions', () => {
@@ -331,11 +334,16 @@ describe('answering', () => {
     expect(refusalOutcome('proposal_not_found')).toBe('gone');
   });
 
-  it('marks you In, and the game one yes further on, after your own yes', () => {
-    const after = withYourYes(card({ inCount: 1 }));
-
-    expect(after.inCount).toBe(2);
-    expect(after.sides.yours.find((one) => one.isYou)?.isIn).toBe(true);
-    expect(after.sides.theirs.every((one) => !one.isIn)).toBe(true);
+  it('lets a rescue go once its seat is taken, off, started or not offered (#545)', () => {
+    for (const code of [
+      'seat_just_taken',
+      'booking_is_called_off',
+      'game_has_started',
+      'rescue_not_offered',
+      'booking_not_found',
+    ]) {
+      expect(refusalOutcome(code)).toBe('gone');
+    }
+    expect(refusalOutcome('payment_to_confirm')).toBe('returns');
   });
 });

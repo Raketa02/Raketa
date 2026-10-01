@@ -47,6 +47,14 @@ export function itsAGameSentence(picture: ItsAGamePicture): string {
   return `${FILL_COPY.itsAGame.word} ${yours} against ${theirs}`;
 }
 
+/**
+ * *Waiting for Kazimierz Padel to confirm — nobody pays until it does.* — the toast when a yes filled
+ * a game an On request club confirms (#543); *the club* when the card no longer names it.
+ */
+export function sentToTheClub(club: string | undefined): string {
+  return `Waiting for ${club ?? 'the club'} to confirm — nobody pays until it does.`;
+}
+
 /** The share to confirm and the seller: *32 zł to Bonarka Arena*. */
 export function chargeLine(amountGrosze: number, clubName: string | undefined): string {
   return `${formatZloty(amountGrosze)} to ${clubName ?? 'the club'}`;

@@ -20,6 +20,18 @@ export function gameRoute(groupId: string, proposalId: string, sport: Sport, kin
 }
 
 /**
+ * **A rescue seen from outside** (#557) — a *Seat open* card's details, or a *Seats to fill* row's,
+ * pushed over the group's page under Play like a game's details: the booked game, read by its
+ * booking's id, for a reader its open seat is offered to.
+ */
+export function rescueRoute(groupId: string, bookingId: string) {
+  return {
+    pathname: '/play/group/[groupId]/rescue/[bookingId]',
+    params: { groupId, bookingId },
+  } as const;
+}
+
+/**
  * Where the Games & money row leads — a screen pushed over the You tab, under the tab's own first
  * segment so the You column stays lit (`paymentRoutes`' reason, #554).
  */

@@ -1,6 +1,7 @@
 /**
- * **Fill in, while a group is starting** — one dark card saying what the tab will be for, with the
- * link's two doors (play 45–47; PRD #500 stories 66–67).
+ * **Fill in, with nothing in it** — one dark card saying what the tab will be for, with the link's
+ * two doors (play 45–47; PRD #500 stories 66–67). Since #557 the tab is `proposals`' board, and this
+ * is what it draws while there is no seat to fill and no yes of the reader's waiting.
  *
  * *No games yet — it's just you* while the player is the group's only member, and *No games yet*
  * once anybody else has joined: whether it is *just you* is a count of **members**, not of people

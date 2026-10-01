@@ -385,8 +385,19 @@ to draw while the segment deals nothing. **The starting card is unchanged** (_Ju
 two, _Post a game_, drawn and disabled until posting ships (#558) — Fill in's own `PostAGame`, now in
 `LinkCard`'s `foot`. **The tab bar counts Games** — the cards somebody is already In on with you, off
 the same deck read the tab draws (`useGamesBadge`), in the Info badge's mark and spoken _Games, 4 with
-somebody In_; the Fill in count waits for the rescue board (#545, #557). **Games lays itself out**:
+somebody In_; and Fill in counts its _Seats to fill_ (below). **Games lays itself out**:
 the deck fills the page between its switch and its three buttons, so `GroupScreen` draws it outside
 the page's scroller, and the deck scrolls itself in the states that are not a deck. Every suite that
 opens a group's page stubs the deck (`test-support/groupDeck`'s quiet deck); the tab's own walk is
 `groupGames.test.tsx`. The record of the deck itself is [`proposals.md`](proposals.md).
+
+**Fill in is `proposals`' board** ([#557](https://github.com/Raketa02/Raketa/issues/557), the screens
+A1, A3; mocks 11–14). `GroupScreen` draws `FillInBoard` as the tab — _Seats to fill_, the rescues the
+reader is offered, then _You're In_, their own yeses on this group's games still filling — and hands
+it the starting card above (`FillInTab`) for a tab with no row in either, as `GamesTab` hands the deck
+its own. **The tab bar counts Fill in** — the _Seats to fill_ rows, the board read's own `badge`
+(`useFillInBadge`), spoken _Fill in, 1 seat to fill_ — read for the page's sport whichever tab is
+open, so `stubGroupDeck` now serves an empty Fill in too and every suite that opens a page gets it.
+**+ Post a game** keeps floating over the page's corner on Fill in, drawn and inert until posting
+ships (#558); the board leaves room under its last row for it. The tab's walk is
+`groupFillIn.test.tsx`; the board's record is [`proposals.md`](proposals.md).

@@ -53,7 +53,7 @@ export function useBookedCards(): BookedCards {
           game={game}
           now={now}
           fresh={isNew(game, opened)}
-          chat={chatIsOpen(game.status) && rooms.has(game.gameId)}
+          chat={chatIsOpen(game.status) && game.gameId !== undefined && rooms.has(game.gameId)}
           width={width}
           onOpen={() => router.push(bookedGameRoute(game.bookingId))}
         />

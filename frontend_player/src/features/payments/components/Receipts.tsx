@@ -87,7 +87,7 @@ export function Receipts() {
           <Card style={s.rows}>
             {rows.map((receipt, index) => (
               <ReceiptRow
-                key={receipt.seatChargeId}
+                key={`${receipt.seatChargeId}-${receipt.kind}`}
                 receipt={receipt}
                 at={at}
                 divided={index > 0}

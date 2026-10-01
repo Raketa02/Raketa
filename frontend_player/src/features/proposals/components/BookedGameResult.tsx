@@ -29,7 +29,8 @@ export function BookedGameResult({ bookingId }: BookedGameResultProps) {
   const read = useBooking(bookingId);
   const game = read.data ?? undefined;
 
-  if (game === undefined) {
+  // A booking with no Game — the club has still to say yes — has no result: the one sentence.
+  if (game?.gameId === undefined) {
     return (
       <BookingAbsent
         read={bookingReadState(read)}

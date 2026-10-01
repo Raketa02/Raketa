@@ -11,6 +11,7 @@ import {
   itsAGamePicture,
   undoSecondsLeft,
   waitsForUndo,
+  yesOnRescue,
   type YesAnswer,
 } from './fill';
 
@@ -42,7 +43,14 @@ function card(extra: Partial<DeckCard> = {}): DeckCard {
 }
 
 function answer(extra: Partial<YesAnswer> = {}): YesAnswer {
-  return { proposalId: 'p-1', openSeats: 2, booked: null, yourPayment: null, ...extra };
+  return {
+    proposalId: 'p-1',
+    openSeats: 2,
+    booked: null,
+    waitingForTheClub: false,
+    yourPayment: null,
+    ...extra,
+  };
 }
 
 describe('waitsForUndo — the yes that moves money waits ten seconds (the mechanics §6.5)', () => {
@@ -115,9 +123,15 @@ describe('fillOutcome — what a yes did, read off the server’s answer', () =>
     ).toEqual({ kind: 'termsAgain' });
   });
 
-  it('is a vote counted otherwise — seats still open, somebody else’s share refused, or a club to confirm', () => {
+  it('is the game sent to the club when an On request club has it to confirm (#543)', () => {
+    expect(fillOutcome(answer({ openSeats: 0, waitingForTheClub: true }))).toEqual({
+      kind: 'waiting',
+    });
+  });
+
+  it('is a vote counted otherwise — seats still open, or somebody else’s share refused', () => {
     expect(fillOutcome(answer({ openSeats: 2 }))).toEqual({ kind: 'counted' });
-    expect(fillOutcome(answer({ openSeats: 0 }))).toEqual({ kind: 'counted' });
+    expect(fillOutcome(answer({ openSeats: 1 }))).toEqual({ kind: 'counted' });
   });
 });
 
@@ -168,5 +182,20 @@ describe('itsAGamePicture — the faces It’s a game! draws', () => {
     const picture = itsAGamePicture(card({ sides: { yours: [YOU], theirs: [nobody] } }));
 
     expect(picture.theirs).toEqual([{ playerId: 'id-gone' }]);
+  });
+});
+
+describe('yesOnRescue — what the fill holds for a rescue’s I’m in', () => {
+  it('is the booking’s seat, a rescue on a booked court, with the sides when the surface holds them', () => {
+    const club = { id: 'club-1', name: 'Ogrody 33' };
+    expect(yesOnRescue({ bookingId: 'b-1', club })).toEqual({
+      proposalId: 'b-1',
+      type: 'SEAT_OPEN',
+      court: 'BOOKED',
+      club,
+    });
+    const sides = { yours: [YOU], theirs: [] };
+    expect(yesOnRescue({ bookingId: 'b-1', club, sides })).toMatchObject({ sides });
+    expect(waitsForUndo(yesOnRescue({ bookingId: 'b-1', club }))).toBe(true);
   });
 });

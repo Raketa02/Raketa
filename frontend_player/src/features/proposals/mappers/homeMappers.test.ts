@@ -22,12 +22,20 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
   sport: 'PADEL',
   kind: 'COMPETITIVE',
   status: 'BOOKED',
+  called_off_reason: null,
+  uncounted_reason: null,
+  open_seats: 0,
   needs_you: false,
   starts_at: '2026-10-03T14:00:00Z',
   club: { id: 'club-1', name: 'Bonarka Arena' },
   court_name: 'Court 2',
   sides: { yours: [tile({ player_id: 'me', is_you: true })], theirs: [tile()] },
-  money: { share_grosze: 2800, paid: true, free_to_leave_until: '2026-10-02T14:00:00Z' },
+  money: {
+    share_grosze: 2800,
+    paid: true,
+    free_to_leave_until: '2026-10-02T14:00:00Z',
+    refunded_grosze: null,
+  },
   ...extra,
 });
 
@@ -46,6 +54,7 @@ describe('toHome', () => {
           sport: 'padel',
           kind: 'competitive',
           status: 'BOOKED',
+          openSeats: 0,
           needsYou: false,
           startsAt: '2026-10-03T14:00:00Z',
           club: { id: 'club-1', name: 'Bonarka Arena' },
@@ -89,7 +98,12 @@ describe('toHome', () => {
             yours: [tile({ name: null, level: null, photo_url: null, paid: false })],
             theirs: [],
           },
-          money: { share_grosze: 2800, paid: false, free_to_leave_until: null },
+          money: {
+            share_grosze: 2800,
+            paid: false,
+            free_to_leave_until: null,
+            refunded_grosze: null,
+          },
         }),
       ],
     }).games;
@@ -102,6 +116,47 @@ describe('toHome', () => {
       paid: false,
     });
     expect(game?.money).toEqual({ shareGrosze: 2800, paid: false });
+  });
+
+  it('reads a game waiting for the club with no Game and no court yet', () => {
+    const [game] = toHome({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 0,
+      games: [homeGame({ status: 'WAITING_FOR_THE_CLUB', game_id: null, court_name: null })],
+    }).games;
+
+    expect(game).not.toHaveProperty('gameId');
+    expect(game).not.toHaveProperty('courtName');
+  });
+
+  it('reads why a game is off or uncounted, the seats open and what came back', () => {
+    const [off, short, open] = toHome({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 1,
+      games: [
+        homeGame({
+          status: 'CALLED_OFF',
+          called_off_reason: 'SHORT_AT_THE_CUT_OFF',
+          money: {
+            share_grosze: 2800,
+            paid: true,
+            free_to_leave_until: null,
+            refunded_grosze: 2800,
+          },
+        }),
+        homeGame({ status: 'UNCOUNTED', uncounted_reason: 'SEAT_EMPTY' }),
+        homeGame({ status: 'SEAT_OPEN', open_seats: 2 }),
+      ],
+    }).games;
+
+    expect(off).toMatchObject({
+      calledOffReason: 'SHORT_AT_THE_CUT_OFF',
+      money: { refundedGrosze: 2800 },
+    });
+    expect(short).toMatchObject({ uncountedReason: 'SEAT_EMPTY' });
+    expect(open).toMatchObject({ openSeats: 2 });
+    expect(open).not.toHaveProperty('calledOffReason');
+    expect(open).not.toHaveProperty('uncountedReason');
   });
 
   it('drops a card in a sport this build cannot name, and keeps the rest', () => {
@@ -126,15 +181,20 @@ describe('toBookedGame', () => {
     kind: 'FOR_FUN',
     read_at: '2026-10-03T08:00:00Z',
     status: 'BOOKED',
+    called_off_reason: null,
+    uncounted_reason: null,
+    open_seats: 0,
     needs_you: false,
     starts_at: '2026-10-03T14:00:00Z',
     ends_at: '2026-10-03T15:00:00Z',
     where: { id: 'club-1', name: 'Bonarka Arena', distance_km: 3.1 },
     court_name: 'Court 2',
     sides: { yours: [tile({ player_id: 'me', is_you: true })], theirs: [tile()] },
-    money: { share_grosze: 2800, paid: true, free_to_leave_until: null },
+    money: { share_grosze: 2800, paid: true, free_to_leave_until: null, refunded_grosze: null },
     shows_forecast: true,
     check_in: { short_code: 'K7M2QX', qr_payload: 'RAKETA-CHECK-IN:1:b-1:me:K7M2QX' },
+    leaving: null,
+    rescue: null,
     ...extra,
   });
 
@@ -162,6 +222,31 @@ describe('toBookedGame', () => {
 
     expect(game?.where).toEqual({ id: 'club-1' });
     expect(game).not.toHaveProperty('checkIn');
+  });
+
+  it('reads what leaving would cost now, and nothing where there is no button', () => {
+    const game = toBookedGame(
+      details({
+        leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: 2758, card_fee_grosze: 142 },
+      }),
+    );
+
+    expect(game?.leaving).toEqual({
+      kind: 'BEFORE_THE_CUT_OFF',
+      refundGrosze: 2758,
+      cardFeeGrosze: 142,
+    });
+    expect(toBookedGame(details())).not.toHaveProperty('leaving');
+  });
+
+  it('reads the open seat offered from outside, and nothing for a player in the game', () => {
+    const game = toBookedGame(
+      details({ rescue: { deadline: '2026-10-02T14:00:00Z', fills_by_the_cut_off: true } }),
+    );
+
+    expect(game?.rescue).toEqual({ deadline: '2026-10-02T14:00:00Z', fillsByTheCutOff: true });
+    expect(toBookedGame(details())).not.toHaveProperty('rescue');
+    expect(toBookedGame(details({ rescue: undefined }))).not.toHaveProperty('rescue');
   });
 
   it('is nothing for a sport this build cannot name', () => {

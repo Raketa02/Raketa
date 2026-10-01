@@ -47,6 +47,27 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
     expect(moneyWords({ kind: 'calledOff', refundedGrosze: 3000 })).toBe('Refunded 30 zł');
     expect(moneyWords({ kind: 'calledOff' })).toBe('Nobody paid');
   });
+
+  it('says why a game is off before what came back (§14.1)', () => {
+    expect(
+      moneyWords({
+        kind: 'calledOff',
+        reason: 'SHORT_AT_THE_CUT_OFF',
+        club: 'Bonarka Arena',
+        refundedGrosze: 3000,
+      }),
+    ).toBe('A seat was still empty at the cut-off · Refunded 30 zł');
+    expect(moneyWords({ kind: 'calledOff', reason: 'REFUSED', club: 'Kazimierz Padel' })).toBe(
+      'Kazimierz Padel couldn’t take it · Nobody paid',
+    );
+    expect(moneyWords({ kind: 'calledOff', reason: 'NO_ANSWER' })).toBe(
+      'The club didn’t answer in time · Nobody paid',
+    );
+  });
+
+  it('says a seat was empty on a game that started short', () => {
+    expect(moneyWords({ kind: 'seatEmpty' })).toBe('A seat was empty · no Level moved');
+  });
 });
 
 describe('statusSubline — the details’ second line', () => {
@@ -68,6 +89,10 @@ describe('whereAside — the court and how far it is (details 8)', () => {
     const waiting = { ...at, status: 'WAITING_FOR_THE_CLUB' } as const;
     expect(whereAside(waiting, 3.1)).toBe('3,1 km');
     expect(whereAside(waiting, undefined)).toBeUndefined();
+  });
+
+  it('names no court the read does not hold', () => {
+    expect(whereAside({ status: 'CALLED_OFF' }, 3.1)).toBe('3,1 km');
   });
 });
 
@@ -103,6 +128,7 @@ const booked = (extra: Partial<BookedGame> = {}): BookedGame => ({
   kind: 'competitive',
   readAt: '2026-10-01T08:00:00Z',
   status: 'BOOKED',
+  openSeats: 0,
   needsYou: false,
   startsAt: '2026-10-03T14:00:00Z',
   endsAt: '2026-10-03T15:00:00Z',
@@ -114,14 +140,16 @@ const booked = (extra: Partial<BookedGame> = {}): BookedGame => ({
   ...extra,
 });
 
+const bookedPaid = { shareGrosze: 2800, paid: true } as const;
+
 describe('moneyRow — the details’ money row (A4.1)', () => {
   it('is PAID · 28 zł · your share · to the club, free to leave until the cut-off while ahead', () => {
-    expect(moneyRow(booked(), 4, BEFORE)).toEqual({
+    expect(moneyRow(booked(), BEFORE)).toEqual({
       label: 'Paid',
       value: '28 zł',
       aside: 'your share · to the club · free to leave until Fri 16:00',
     });
-    expect(moneyRow(booked(), 4, Date.parse(CUT_OFF))).toEqual({
+    expect(moneyRow(booked(), Date.parse(CUT_OFF))).toEqual({
       label: 'Paid',
       value: '28 zł',
       aside: 'your share · to the club',
@@ -132,7 +160,6 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     expect(
       moneyRow(
         booked({ status: 'WAITING_FOR_THE_CLUB', money: { shareGrosze: 2800, paid: false } }),
-        4,
         BEFORE,
       ),
     ).toEqual({
@@ -142,18 +169,93 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     });
   });
 
-  it('is refunded, or nobody paid, once the game is called off', () => {
-    expect(moneyRow(booked({ status: 'CALLED_OFF' }), 4, BEFORE)).toEqual({
+  it('is what came back, or nobody paid, once the game is called off', () => {
+    expect(
+      moneyRow(
+        booked({
+          status: 'CALLED_OFF',
+          money: { shareGrosze: 2800, paid: true, refundedGrosze: 2800 },
+        }),
+        BEFORE,
+      ),
+    ).toEqual({ label: 'Refunded', value: '28 zł' });
+    expect(
+      moneyRow(booked({ status: 'CALLED_OFF', money: { shareGrosze: 2800, paid: false } }), BEFORE),
+    ).toEqual({ label: 'Your share', value: '28 zł', aside: 'nobody paid' });
+  });
+
+  it('says the seat open and when it must fill, on a game a player left (§14.1)', () => {
+    const open = booked({ status: 'SEAT_OPEN', openSeats: 1 });
+    expect(moneyRow(open, BEFORE)).toEqual({
+      label: 'Paid',
+      value: '28 zł',
+      aside: '1 seat open · fills by Fri 16:00 or the game is off and everyone is refunded',
+    });
+    expect(moneyRow(open, Date.parse(CUT_OFF))).toEqual({
+      label: 'Paid',
+      value: '28 zł',
+      aside: '1 seat open · offered to others · the game goes ahead',
+    });
+  });
+
+  it('says why a game is off beside what came back', () => {
+    expect(
+      moneyRow(
+        booked({
+          status: 'CALLED_OFF',
+          calledOffReason: 'SHORT_AT_THE_CUT_OFF',
+          money: { shareGrosze: 2800, paid: true, refundedGrosze: 2800 },
+        }),
+        BEFORE,
+      ),
+    ).toEqual({
       label: 'Refunded',
       value: '28 zł',
+      aside: 'A seat was still empty at the cut-off',
     });
     expect(
       moneyRow(
-        booked({ status: 'CALLED_OFF', money: { shareGrosze: 2800, paid: false } }),
-        4,
+        booked({
+          status: 'CALLED_OFF',
+          calledOffReason: 'REFUSED',
+          money: { shareGrosze: 2800, paid: false },
+        }),
         BEFORE,
       ),
-    ).toEqual({ label: 'Your share', value: '28 zł', aside: 'nobody paid' });
+    ).toEqual({
+      label: 'Your share',
+      value: '28 zł',
+      aside: 'Bonarka Arena couldn’t take it · nobody paid',
+    });
+  });
+
+  it('says a seat was empty on a game that started short', () => {
+    expect(
+      moneyRow(
+        booked({ status: 'UNCOUNTED', uncountedReason: 'SEAT_EMPTY', money: bookedPaid }),
+        BEFORE,
+      ),
+    ).toEqual({ label: 'Paid', value: '28 zł', aside: 'A seat was empty · no Level moved' });
+  });
+
+  it('is the share I’m in would pay, and how long the seat is offered, on a rescue seen from outside', () => {
+    const rescue = (fillsByTheCutOff: boolean) =>
+      booked({
+        status: 'SEAT_OPEN',
+        openSeats: 1,
+        money: { shareGrosze: 2700, paid: false },
+        rescue: { deadline: CUT_OFF, fillsByTheCutOff },
+      });
+    expect(moneyRow(rescue(true), BEFORE)).toEqual({
+      label: 'Your share',
+      value: '27 zł',
+      aside: 'fills by Fri 16:00',
+    });
+    expect(moneyRow(rescue(false), BEFORE)).toEqual({
+      label: 'Your share',
+      value: '27 zł',
+      aside: 'offered until the start',
+    });
   });
 });
 
@@ -165,6 +267,7 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
     sport: 'padel',
     kind: 'competitive',
     status: 'BOOKED',
+    openSeats: 0,
     needsYou: false,
     startsAt: '2026-10-03T14:00:00Z',
     club: { id: 'club-1', name: 'Bonarka Arena' },

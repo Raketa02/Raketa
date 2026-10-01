@@ -16,9 +16,10 @@
  * rescue's *Booked* in volt on the same bed with a **solid** `voltStroke` border, volt's own stroke.
  * Solid, both, because a yes there books a court or joins a booked one.
  *
- * **No court number**: a card promises a court at a club at an hour, and the number is given at
- * booking (the mechanics §5.2). **One element** to a listener, the tag first — what a yes does is
- * the first thing to know about a price.
+ * **No court number** while the game fills: a card promises a court at a club at an hour, and the
+ * number is given at booking (the mechanics §5.2). **A rescue's court is booked**, so its number
+ * joins the line — *Saturday 16:00 · Ogrody 33 · Court 6* (mock 2). **One element** to a listener,
+ * the tag first — what a yes does is the first thing to know about a price.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -43,7 +44,10 @@ const TONE: Readonly<Record<CourtTag, CardTagTone>> = {
 export interface CourtBlockProps {
   readonly tag: CourtTag;
   readonly day: GameDay | undefined;
-  readonly card: Pick<DeckCard, 'startsAt' | 'club' | 'shareGrosze' | 'noFreeCancellation'>;
+  readonly card: Pick<
+    DeckCard,
+    'startsAt' | 'club' | 'courtName' | 'shareGrosze' | 'noFreeCancellation'
+  >;
 }
 
 export function CourtBlock({ tag, day, card }: CourtBlockProps) {

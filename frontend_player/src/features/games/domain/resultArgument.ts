@@ -183,7 +183,9 @@ export type ResultArgument =
    */
   | ({ readonly kind: 'agreed'; readonly agreement: StandingAgreement } & ScoresOnTable)
   | { readonly kind: 'confirmed'; readonly score?: Score; readonly outcome?: Outcome }
-  | { readonly kind: 'unscored' };
+  | { readonly kind: 'unscored' }
+  /** A booked game whose hour came with a seat still open: it takes no result (#544). */
+  | { readonly kind: 'started-short' };
 
 /**
  * **How a game was called off, and by whom** — the game screen's heading and body are keyed on it.
@@ -305,6 +307,8 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
       return { kind: 'confirmed', score: game.score, outcome: game.outcome };
     case 'UNSCORED':
       return { kind: 'unscored' };
+    case 'STARTED_SHORT':
+      return { kind: 'started-short' };
     case 'AWAITING_ANSWER': {
       const ours = game.proposals.find((one) => one.side === side);
       const theirs = game.proposals.find((one) => one.side !== side);
@@ -432,6 +436,7 @@ export function actsOffered(argument: ResultArgument): readonly ResultAct[] {
     case 'called-off':
     case 'confirmed':
     case 'unscored':
+    case 'started-short':
       return [];
   }
 }

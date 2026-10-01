@@ -238,8 +238,13 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
       return 'Agreed.';
     case 'unscored':
       return 'Nobody agreed a score.';
+    case 'started-short':
+      return SEAT_WAS_EMPTY;
   }
 }
+
+/** *A seat was empty.* — the standing line of a booked game that started short (#544). */
+const SEAT_WAS_EMPTY = 'A seat was empty.';
 
 /**
  * **The ghost's body** — nothing anybody is measured on moves (ADR-0163 §3) — said of a game that
@@ -313,6 +318,7 @@ export function resultTitle(argument: ResultArgument): string {
     case 'confirmed':
       return 'The result';
     case 'unscored':
+    case 'started-short':
       return 'No result';
   }
 }
@@ -428,6 +434,10 @@ export function resultBody(argument: ResultArgument): string | undefined {
       // Variant C's own lead, and the register the ticket asks for: *an evening, not evidence*
       // — an account of what it still is, never an apology for what it is not.
       return 'Nobody wrote a score down, so this one counted as an evening. Nobody is marked for it.';
+    case 'started-short':
+      // The mechanics §14.1: *it cannot take a result … no levels move, and nothing goes on the
+      // record of the players who stayed*.
+      return 'Somebody left after the club’s cut-off and nobody took the seat, so this game can’t take a result. No Level moved, and nobody who stayed is marked for it.';
     case 'not-yours':
     case 'unreadable':
     case 'confirmed':

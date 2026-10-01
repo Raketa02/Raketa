@@ -66,6 +66,7 @@ import {
   type DeckCard,
   type DeckPerson,
 } from '../domain/deck';
+import { isRescue } from '../domain/fill';
 import type { GameDay } from '../domain/when';
 
 import { CourtBlock } from './CourtBlock';
@@ -76,6 +77,7 @@ import {
   forecastSpoken,
   inOnGameLine,
   ribbonWords,
+  shareWords,
 } from './deckPresentation';
 import { GameGround } from './GameGround';
 import { GameTiles } from './GameTiles';
@@ -146,6 +148,7 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
           singles={seatsPerSide === 1}
           completes={completesIt(card)}
           fill
+          {...(isRescue(card) ? { rescue: { share: shareWords(card) } } : {})}
           {...(onPerson === undefined ? {} : { onPerson })}
         />
 

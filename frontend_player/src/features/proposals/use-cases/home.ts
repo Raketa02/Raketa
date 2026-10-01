@@ -7,9 +7,10 @@
 
 import { readPhonePreference, savePhonePreference } from '@/shared/lib/preferences';
 
-import { getBooking, getHome, type Cancellable } from '../api/proposalsApi';
+import { getBooking, getHome, postDeparture, type Cancellable } from '../api/proposalsApi';
 import { openedFrom, type BookedGame, type Home } from '../domain/home';
-import { toBookedGame, toHome } from '../mappers/homeMappers';
+import type { LeavingKind } from '../domain/vocabulary';
+import { toBookedGame, toHome, toLeft } from '../mappers/homeMappers';
 
 export async function readHome(options: Cancellable = {}): Promise<Home> {
   return toHome(await getHome(options));
@@ -21,6 +22,14 @@ export async function readBooking(
   options: Cancellable = {},
 ): Promise<BookedGame | null> {
   return toBookedGame(await getBooking(bookingId, options)) ?? null;
+}
+
+/**
+ * **Leave the game** (#544) — a pass-through: what leaving costs is the server's, folded on its own
+ * clock and quoted by the read the sheet was drawn from. Answers which of the three it was.
+ */
+export async function leaveGame(bookingId: string): Promise<LeavingKind> {
+  return toLeft(await postDeparture(bookingId));
 }
 
 /** The booked games whose details this account has opened on this phone. */

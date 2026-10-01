@@ -31,7 +31,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { courtSeatCount, DarkCard, Button, theme } from '@/shared/ui';
+import { DarkCard, Button, theme } from '@/shared/ui';
 
 import { peopleOn } from '../domain/deck';
 import { moneyLineOf, type HomeGame } from '../domain/home';
@@ -69,7 +69,7 @@ export interface HomeGameCardProps {
 
 export function HomeGameCard({ game, now, fresh, chat, width, onOpen }: HomeGameCardProps) {
   const ink = STATUS_INK[game.status];
-  const line = moneyLineOf(game, courtSeatCount(game.sport), now);
+  const line = moneyLineOf(game, now);
 
   const day = gameDayOf(game.startsAt, now);
   const when = day === undefined ? undefined : detailsDay(day, game.startsAt);

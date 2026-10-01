@@ -29,7 +29,18 @@
  * demands.
  */
 export type GameStanding =
-  'AWAITING_ENTRY' | 'NEVER_PLAYED' | 'AWAITING_ANSWER' | 'CONFIRMED' | 'UNSCORED' | 'CALLED_OFF';
+  | 'AWAITING_ENTRY'
+  | 'NEVER_PLAYED'
+  | 'AWAITING_ANSWER'
+  | 'CONFIRMED'
+  | 'UNSCORED'
+  | 'CALLED_OFF'
+  /**
+   * A booked game whose hour came with a seat still open (#544): somebody left after the club's
+   * cut-off and nobody took the seat. It takes no result, no Level moves and nobody who stayed is
+   * marked for it — *Uncounted · a seat was empty* (the Games & Fill in mechanics §14.1).
+   */
+  | 'STARTED_SHORT';
 
 /**
  * Whether this evening is evidence.

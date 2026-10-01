@@ -16,3 +16,19 @@ export function parseBookingParams(params: unknown): BookingRoute | undefined {
   const parsed = BookingParams.safeParse(params);
   return parsed.success ? parsed.data : undefined;
 }
+
+const RescueParams = z.object({ groupId: z.string().uuid(), bookingId: z.string().uuid() });
+
+export interface RescueRoute {
+  readonly groupId: string;
+  readonly bookingId: string;
+}
+
+/**
+ * **A rescue's route params** (#557) — the group it is offered in, and the booking. The group only
+ * places the screen under its page; the details are read from the booking.
+ */
+export function parseRescueParams(params: unknown): RescueRoute | undefined {
+  const parsed = RescueParams.safeParse(params);
+  return parsed.success ? parsed.data : undefined;
+}

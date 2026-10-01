@@ -41,7 +41,12 @@ import {
   KAROL,
   KUBA,
   noPath,
+  proposalDetails,
+  proposalPath,
+  rescueCard,
   stubGroupDeck,
+  stubProposal,
+  withYourYes,
   yesPath,
   youTile,
   ZOFIA,
@@ -446,11 +451,13 @@ describe('the card', () => {
   });
 
   it('draws a rescue’s ribbon, its Booked court and a price on the stamp', async () => {
-    await openGames(groupDeck({ cards: [deckCard({ type: 'SEAT_OPEN' })] }));
+    await openGames(groupDeck({ cards: [rescueCard({ deadline: hoursAfterRead(48) })] }));
 
     expect(await screen.findByRole('header', { name: 'Seat open · court booked' })).toBeTruthy();
-    expect(screen.getByLabelText('Booked, 32 zł, Saturday 16:00 · Bonarka Arena')).toBeTruthy();
-    expect(screen.getByText('I’m in · 32 zł', HIDDEN_TOO)).toBeTruthy();
+    expect(
+      screen.getByLabelText('Booked, 27 zł, Saturday 16:00 · Ogrody 33 · Court 6'),
+    ).toBeTruthy();
+    expect(screen.getByText('I’m in · 27 zł', HIDDEN_TOO)).toBeTruthy();
   });
 
   it('counts down under a day, and in minutes under an hour', async () => {
@@ -725,9 +732,13 @@ describe('the game’s details', () => {
 
   async function openDetails(shown = card()) {
     let dealt = [shown];
+    const deciding = proposalDetails(shown);
+    stubProposal(transport, shown.proposal_id, () =>
+      dealt.length === 0 ? withYourYes(deciding) : deciding,
+    );
     transport.on('POST', yesPath(shown.proposal_id), () => {
       dealt = [];
-      return json({ proposal_id: shown.proposal_id, open_seats: 2 });
+      return json({ proposal_id: shown.proposal_id, open_seats: 2, waiting_for_the_club: false });
     });
     transport.on('DELETE', yesPath(shown.proposal_id), () => {
       dealt = [shown];
@@ -746,11 +757,12 @@ describe('the game’s details', () => {
   }
 
   it('opens from the i: the status, who is In, the club, the book-by, the overlap and what a yes means', async () => {
-    await openDetails();
+    const shown = await openDetails();
 
     expect(await screen.findByText('Filling · 1 of 4 in')).toBeTruthy();
+    expect(transport.requestsTo('GET', proposalPath(shown.proposal_id)).length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Karol Tomaszewski, level 2,75, In')).toBeTruthy();
-    expect(screen.getByLabelText('Where, Bonarka Arena')).toBeTruthy();
+    expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
     expect(screen.getByLabelText('Day, Saturday, 3 Oct')).toBeTruthy();
     expect(screen.getByLabelText('Time, 16:00, until 17:00')).toBeTruthy();
     expect(
@@ -763,6 +775,7 @@ describe('the game’s details', () => {
 
   it('opens from a press on the card too', async () => {
     const shown = card();
+    stubProposal(transport, shown.proposal_id, proposalDetails(shown));
     await openGames(groupDeck({ cards: [shown] }));
 
     fireEvent.press(await screen.findByTestId(`game-card-${shown.proposal_id}`));
@@ -798,6 +811,9 @@ describe('the game’s details', () => {
   });
 
   it('says a game it cannot find is no longer dealt', async () => {
+    transport.on('GET', proposalPath('c0000000-0000-4000-8000-00000000ffff'), () =>
+      errorResponse(404, 'proposal_not_found'),
+    );
     await openGames(groupDeck());
     act(() =>
       router.push({

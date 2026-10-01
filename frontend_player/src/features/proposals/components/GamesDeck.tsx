@@ -97,7 +97,7 @@ import {
   type DeckCard,
   type DeckPerson,
 } from '../domain/deck';
-import type { DealtIn } from '../domain/fill';
+import { isRescue, type DealtIn } from '../domain/fill';
 import type { GameKind } from '../domain/vocabulary';
 import { fortnightOf, gameDayOf, weekdayAt } from '../domain/when';
 import { useDeckClock } from '../hooks/useDeckClock';
@@ -117,7 +117,7 @@ import { FILL_COPY } from './fillCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { GameCard } from './GameCard';
 import { ReadFailed } from './ReadFailed';
-import { gameRoute } from './proposalRoutes';
+import { gameRoute, rescueRoute } from './proposalRoutes';
 
 const COPY = PROPOSALS_COPY;
 
@@ -151,7 +151,7 @@ export function GamesDeck({ groupId, sport, chosen, onChoose, empty }: GamesDeck
   /** The player whose record is open — a tile's press. */
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
 
-  const answer = useAnswerCard(
+  const answer = useAnswerCard<DeckCard>(
     groupId,
     (error: AppError, refused) => {
       const { card } = refused;
@@ -192,8 +192,13 @@ export function GamesDeck({ groupId, sport, chosen, onChoose, empty }: GamesDeck
       ? undefined
       : weekCapOf(deck.cappedWeeks, fortnight.thisMonday, fortnight.nextMonday);
 
+  // A rescue's details are its booking's, seen from outside (A4.3); every other card's, the game's.
   const open = (card: DeckCard) =>
-    router.push(gameRoute(groupId, card.proposalId, sport, card.kind));
+    router.push(
+      isRescue(card)
+        ? rescueRoute(groupId, card.proposalId)
+        : gameRoute(groupId, card.proposalId, sport, card.kind),
+    );
 
   /**
    * One answer, from the drag or a button — the two paths cannot disagree about who may fly. A yes

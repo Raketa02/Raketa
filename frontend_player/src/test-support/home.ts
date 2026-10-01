@@ -60,6 +60,19 @@ export function bookedSides(): Wire['BookedSidesSchema'] {
   };
 }
 
+/** Paid, 28 zł a seat, free to leave until Friday 16:00 — nothing refunded. */
+export function bookedMoney(
+  extra: Partial<Wire['BookedMoneySchema']> = {},
+): Wire['BookedMoneySchema'] {
+  return {
+    share_grosze: 2800,
+    paid: true,
+    free_to_leave_until: BOOKED_CUT_OFF,
+    refunded_grosze: null,
+    ...extra,
+  };
+}
+
 /** One card on Home. */
 export function homeGame(extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSchema'] {
   return {
@@ -69,12 +82,15 @@ export function homeGame(extra: Partial<Wire['HomeGameSchema']> = {}): Wire['Hom
     sport: 'PADEL',
     kind: 'COMPETITIVE',
     status: 'BOOKED',
+    called_off_reason: null,
+    uncounted_reason: null,
+    open_seats: 0,
     needs_you: false,
     starts_at: BOOKED_STARTS_AT,
     club: { id: CLUB, name: 'Bonarka Arena' },
     court_name: 'Court 2',
     sides: bookedSides(),
-    money: { share_grosze: 2800, paid: true, free_to_leave_until: BOOKED_CUT_OFF },
+    money: bookedMoney(),
     ...extra,
   };
 }
@@ -100,15 +116,20 @@ export function bookingDetails(
     kind: 'COMPETITIVE',
     read_at: HOME_READ_AT,
     status: 'BOOKED',
+    called_off_reason: null,
+    uncounted_reason: null,
+    open_seats: 0,
     needs_you: false,
     starts_at: BOOKED_STARTS_AT,
     ends_at: BOOKED_ENDS_AT,
     where: { id: CLUB, name: 'Bonarka Arena', distance_km: 3.1 },
     court_name: 'Court 2',
     sides: bookedSides(),
-    money: { share_grosze: 2800, paid: true, free_to_leave_until: BOOKED_CUT_OFF },
+    money: bookedMoney(),
     shows_forecast: true,
     check_in: null,
+    leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: 2718, card_fee_grosze: 82 },
+    rescue: null,
     ...extra,
   };
 }

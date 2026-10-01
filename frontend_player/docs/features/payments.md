@@ -110,8 +110,9 @@ and the route file `you/payments.tsx` composes it. See [`proposals.md`](proposal
 `GET /players/me/receipts` is this feature's own read (`useReceipts`, `paymentKeys.receipts()`):
 every share paid, newest first as served, **the club as the row's title** — the seller (§12.1) — and
 _Padel · Today · 16:00_ under it, the amount signed with a true minus (_−28 zł_). Refunds (↩ on
-`mintSoft`, _+26,58 zł_ in `mintInk`) are drawn already and served by #544; the wire's kind is
-`CHARGE` alone, so `wireVocabulary.ts` holds it _inside_ the domain's union until the two are equal.
+`mintSoft`, _+26,58 zł_ in `mintInk`) are served since #544, and the kinds are `Exact` with the
+wire's (#557). **A refunded share is two rows under one payment** — the charge and its refund share
+a `seat_charge_id` — so a row is keyed by the payment and its kind.
 Empty, the section says what will land there; the refund-timing footer is drawn under rows only. A
 receipt is a record, not a door — the game is reached from Home. State B alone, as the screens draw
 it. A booking anywhere re-reads the list (the fill, through `paymentKeys` on `types.ts`).

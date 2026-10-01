@@ -30,6 +30,7 @@ import {
   INES,
   PIOTR,
   bookedGameOnTheList,
+  bookedMoney,
   bookedRoom,
   bookedRoomRow,
   bookedSides,
@@ -117,20 +118,57 @@ describe('Home — a booked game’s card (A8)', () => {
   it.each<[Wire['HomeStatus'], Partial<Wire['HomeGameSchema']>, string | undefined]>([
     [
       'WAITING_FOR_THE_CLUB',
-      { money: { share_grosze: 2800, paid: false, free_to_leave_until: null } },
+      {
+        game_id: null,
+        court_name: null,
+        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+      },
       'Nobody pays until Bonarka Arena confirms',
     ],
     [
       'SEAT_OPEN',
-      {
-        sides: { ...bookedSides(), theirs: bookedSides().theirs.slice(0, 1) },
-      },
-      '1 seat open · fills by Fri 16:00 or the game is off and everyone is refunded',
+      { open_seats: 2, sides: { ...bookedSides(), theirs: [] } },
+      '2 seats open · fills by Fri 16:00 or the game is off and everyone is refunded',
+    ],
+    [
+      'SEAT_OPEN',
+      { open_seats: 1, money: bookedMoney({ free_to_leave_until: null }) },
+      '1 seat open · offered to others · the game goes ahead',
     ],
     ['NEEDS_RESULT', { needs_you: true }, undefined],
     ['CONFIRM_THE_RESULT', {}, undefined],
     ['COUNTED', {}, undefined],
-    ['CALLED_OFF', {}, 'Refunded 28 zł'],
+    [
+      'UNCOUNTED',
+      { uncounted_reason: 'SEAT_EMPTY', money: bookedMoney({ free_to_leave_until: null }) },
+      'A seat was empty · no Level moved',
+    ],
+    [
+      'CALLED_OFF',
+      {
+        called_off_reason: 'SHORT_AT_THE_CUT_OFF',
+        money: bookedMoney({ free_to_leave_until: null, refunded_grosze: 2800 }),
+      },
+      'A seat was still empty at the cut-off · Refunded 28 zł',
+    ],
+    [
+      'CALLED_OFF',
+      {
+        called_off_reason: 'REFUSED',
+        game_id: null,
+        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+      },
+      'Bonarka Arena couldn’t take it · Nobody paid',
+    ],
+    [
+      'CALLED_OFF',
+      {
+        called_off_reason: 'NO_ANSWER',
+        game_id: null,
+        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+      },
+      'Bonarka Arena didn’t answer in time · Nobody paid',
+    ],
   ])('draws %s with its line', async (status, extra, line) => {
     stubHomeGames(transport, [homeGame({ status, ...extra })]);
     await launchSignedIn();
@@ -138,10 +176,27 @@ describe('Home — a booked game’s card (A8)', () => {
     const drawn = await card();
     expect(within(drawn).getByText(HOME.status[status])).toBeTruthy();
     if (line === undefined) {
-      expect(within(drawn).queryByText(/zł|Nobody|seat open/)).toBeNull();
+      expect(within(drawn).queryByText(/zł|Nobody|seat open|seat was/)).toBeNull();
     } else {
       expect(within(drawn).getByText(line)).toBeTruthy();
     }
+  });
+
+  it('names no court on a game waiting for the club, which has no Game yet', async () => {
+    stubHomeGames(transport, [
+      homeGame({
+        status: 'WAITING_FOR_THE_CLUB',
+        game_id: null,
+        court_name: null,
+        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+      }),
+    ]);
+    await launchSignedIn();
+
+    const drawn = await card();
+    expect(within(drawn).getByText('Bonarka Arena')).toBeTruthy();
+    expect(within(drawn).queryByText(/Court/)).toBeNull();
+    expect(within(drawn).queryByTestId('home-game-chat')).toBeNull();
   });
 
   it('is new until its details are opened, and stays opened', async () => {
@@ -338,6 +393,44 @@ describe('a booked game’s details (A4.1)', () => {
     ).toBeTruthy();
   });
 
+  it('says the seat open and when it must fill, the leaver’s seat empty (§14.1)', async () => {
+    await openDetails(
+      bookingDetails({
+        status: 'SEAT_OPEN',
+        open_seats: 1,
+        shows_forecast: false,
+        sides: { ...bookedSides(), theirs: bookedSides().theirs.slice(0, 1) },
+      }),
+    );
+
+    expect(await screen.findByRole('header', { name: HOME.status.SEAT_OPEN })).toBeTruthy();
+    expect(screen.getByTestId('game-tile-empty')).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        'Paid, 28 zł, 1 seat open · fills by Fri 16:00 or the game is off and everyone is refunded',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(BALANCE_FORECAST)).toBeNull();
+  });
+
+  it('says why a game was called off, and what came back', async () => {
+    await openDetails(
+      bookingDetails({
+        status: 'CALLED_OFF',
+        called_off_reason: 'SHORT_AT_THE_CUT_OFF',
+        money: bookedMoney({ free_to_leave_until: null, refunded_grosze: 2800 }),
+        shows_forecast: false,
+        leaving: null,
+      }),
+      [],
+    );
+
+    expect(await screen.findByRole('header', { name: HOME.status.CALLED_OFF })).toBeTruthy();
+    expect(
+      screen.getByLabelText('Refunded, 28 zł, A seat was still empty at the cut-off'),
+    ).toBeTruthy();
+  });
+
   it('draws the Game’s own balance forecast while the booking shows one', async () => {
     stubGames(transport, [bookedGameOnTheList()], HOME_READ_AT);
     stubPairing(transport, BOOKED_GAME, {
@@ -443,7 +536,10 @@ describe('the chat — reached from the details only (A4.4)', () => {
     await openDetails(
       bookingDetails({
         status: 'WAITING_FOR_THE_CLUB',
-        money: { share_grosze: 2800, paid: false, free_to_leave_until: null },
+        game_id: null,
+        court_name: null,
+        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+        leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
       }),
       [],
     );

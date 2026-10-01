@@ -39,8 +39,8 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import type { AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { resolveKind, withoutCard, type DeckCard, type GroupDeck } from '../domain/deck';
-import type { YesAnswer } from '../domain/fill';
+import { resolveKind, withoutCard, type GroupDeck } from '../domain/deck';
+import { isRescue, type YesAnswer, type YesOn } from '../domain/fill';
 import type { GameKind } from '../domain/vocabulary';
 import { answerCard, withdrawYes, type AnswerToCard } from '../use-cases/answers';
 import { readGroupDeck } from '../use-cases/deckReads';
@@ -106,14 +106,18 @@ export type OnRefused<Variables> = (error: AppError, refused: Variables) => void
 
 /**
  * **One answer, and the card it was given on** — carried so the yes's answer can be read against
- * the card it filled (*It's a game!* draws its faces), whichever screen sent it.
+ * the card it filled (*It's a game!* draws its faces), whichever screen sent it, and so a rescue's
+ * answer goes to its booking.
  */
-export interface AnswerOnCard extends AnswerToCard {
-  readonly card?: DeckCard;
+export interface AnswerOnCard<Card extends YesOn = YesOn> extends Omit<AnswerToCard, 'rescue'> {
+  readonly card?: Card;
 }
 
 /** What a caller is told of a yes's answer — the fill's to read (`useFill().answered`). */
-export type OnAnswered = (answer: YesAnswer, asked: AnswerOnCard) => void;
+export type OnAnswered<Card extends YesOn = YesOn> = (
+  answer: YesAnswer,
+  asked: AnswerOnCard<Card>,
+) => void;
 
 /*
  * **The handlers sit on the mutation rather than on the call.** A player answers the next card
@@ -130,16 +134,17 @@ export type OnAnswered = (answer: YesAnswer, asked: AnswerOnCard) => void;
  * is sent when the connection returns. **A yes's answer is handed on** (`onAnswered`): a yes the
  * card called a free vote can still be the one that fills the game, if the others got there first.
  */
-export function useAnswerCard(
+export function useAnswerCard<Card extends YesOn = YesOn>(
   groupId: string,
-  onRefused?: OnRefused<AnswerOnCard>,
-  onAnswered?: OnAnswered,
+  onRefused?: OnRefused<AnswerOnCard<Card>>,
+  onAnswered?: OnAnswered<Card>,
 ) {
   const client = useQueryClient();
   const handlers = useLatest({ onRefused, onAnswered });
 
-  return useMutation<YesAnswer | null, AppError, AnswerOnCard>({
-    mutationFn: answerCard,
+  return useMutation<YesAnswer | null, AppError, AnswerOnCard<Card>>({
+    mutationFn: ({ proposalId, said, card }) =>
+      answerCard({ proposalId, said, rescue: card !== undefined && isRescue(card) }),
     onSuccess: (answer, asked) => {
       if (answer !== null) handlers.current.onAnswered?.(answer, asked);
     },
@@ -161,10 +166,11 @@ export function useWithdrawYes(groupId: string, onRefused?: OnRefused<string>) {
 }
 
 /**
- * What an answer settling re-reads: the group's decks, always, and the player's live yeses when the
- * answer could have moved them — a yes adds one and a withdraw takes one away (You › Payments,
- * #554); a no never touched a yes. Awaited, so the answer is pending until the deck on screen has
- * been read again.
+ * What an answer settling re-reads: the group's decks and its Fill in, and every game's details,
+ * always — the details answered are drawn from their own read now (#557) — and the player's live
+ * yeses when the answer could have moved them — a yes adds one and a withdraw takes one away (You ›
+ * Payments, #554); a no never touched a yes. Awaited, so the answer is pending until the deck or the
+ * details on screen have been read again.
  */
 export function reread(
   client: QueryClient,
@@ -173,6 +179,7 @@ export function reread(
 ) {
   return Promise.all([
     client.invalidateQueries({ queryKey: proposalKeys.group(groupId) }),
+    client.invalidateQueries({ queryKey: proposalKeys.proposals() }),
     ...(yeses ? [client.invalidateQueries({ queryKey: proposalKeys.liveYeses() })] : []),
   ]);
 }

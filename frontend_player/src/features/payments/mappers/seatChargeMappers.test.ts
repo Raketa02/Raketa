@@ -72,6 +72,7 @@ describe('the receipts', () => {
       sport: 'PADEL',
       starts_at: '2026-09-30T14:00:00Z',
       amount_grosze: 2800,
+      card_fee_grosze: null,
       paid_at: '2026-09-29T18:00:00Z',
     });
 

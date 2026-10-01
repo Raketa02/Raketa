@@ -38,8 +38,10 @@ export interface DeckPerson {
   /** They said yes: the **IN** tag, the only tag a dealt card's tile carries (Q69). */
   readonly isIn: boolean;
   /**
-   * **Their share was taken** — the *paid* beside a booked game's Level (details 8, #556). Absent on
-   * a card still dealt, where nobody has paid anything and the tile says IN or nothing.
+   * **Their share was taken** — the *paid* beside a booked game's Level (details 8, #556), and a
+   * rescue's players on a *Seat open* card (#545, #557). Absent on a card still filling, where
+   * nobody has paid anything and the tile says IN or nothing — and on the reader's own tile on a
+   * rescue, which is the seat that opened.
    */
   readonly paid?: boolean;
 }
@@ -83,6 +85,8 @@ export interface DeckCard {
   /** Nought is *You complete it*. */
   readonly openSeatsAfterYourYes: number;
   readonly court: CourtState;
+  /** What the club calls the court — a rescue's, booked already: *· Court 6*. Absent until booked. */
+  readonly courtName?: string;
   /** The club's cut-off has already passed: *no free cancellation*. */
   readonly noFreeCancellation: boolean;
   /** An On request club: a full game waits for the club before anybody pays. */
@@ -232,12 +236,17 @@ export type CourtTag = 'available' | 'bookItNow' | 'booked';
 
 /**
  * **Court available** — your yes is a free vote; **Book it now** — your yes fills the game;
- * **Booked** — a rescue's court, booked already (the screens A2.3).
+ * **Booked** — a rescue's court, booked already (the screens A2.3). The wire's court state, drawn.
  */
-export function courtTagOf(card: Pick<DeckCard, 'type' | 'court'>): CourtTag {
-  if (card.type === 'SEAT_OPEN') return 'booked';
-  return card.court === 'BOOK_IT_NOW' ? 'bookItNow' : 'available';
+export function courtTagOf(card: Pick<DeckCard, 'court'>): CourtTag {
+  return COURT_TAG[card.court];
 }
+
+const COURT_TAG: Readonly<Record<CourtState, CourtTag>> = {
+  COURT_AVAILABLE: 'available',
+  BOOK_IT_NOW: 'bookItNow',
+  BOOKED: 'booked',
+};
 
 /**
  * **Whether a yes on this card charges at once** — and so whether the stamp carries the price:
@@ -419,22 +428,15 @@ const GONE: ReadonlySet<string> = new Set([
   'proposal_already_answered',
   'proposal_is_full',
   'no_longer_fits',
+  // A rescue's (#545): the first join won, the game is off or under way, or the seat is not
+  // offered to this player any more — and a booking they cannot see.
+  'seat_just_taken',
+  'booking_is_called_off',
+  'game_has_started',
+  'rescue_not_offered',
+  'booking_not_found',
 ]);
 
 export function refusalOutcome(code: string | undefined): RefusalOutcome {
   return code !== undefined && GONE.has(code) ? 'gone' : 'returns';
-}
-
-/**
- * **The card as it stands after your own yes** — for the game's details, where a yes is answered in
- * place and the deck no longer deals the card: your tile In, and the game one closer to full.
- */
-export function withYourYes(card: DeckCard): DeckCard {
-  const mark = (people: readonly DeckPerson[]) =>
-    people.map((person) => (person.isYou ? { ...person, isIn: true } : person));
-  return {
-    ...card,
-    inCount: card.inCount + 1,
-    sides: { yours: mark(card.sides.yours), theirs: mark(card.sides.theirs) },
-  };
 }
