@@ -14,7 +14,8 @@ import { toSeat } from './homeMappers';
 
 type Schemas = components['schemas'];
 
-function toSeatToFill(wire: Schemas['SeatToFillSchema']): SeatToFill | undefined {
+/** One rescue offered to the reader — a *Seats to fill* row, and a cell's sheet's (#558). */
+export function toSeatToFill(wire: Schemas['SeatToFillSchema']): SeatToFill | undefined {
   const sport = toSport(wire.sport);
   if (sport === undefined) return undefined;
   return {

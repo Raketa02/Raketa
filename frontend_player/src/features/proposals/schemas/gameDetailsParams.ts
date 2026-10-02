@@ -8,9 +8,7 @@ import { z } from 'zod';
 
 import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
-import type { GameKind } from '../domain/vocabulary';
-
-const GAME_KINDS = ['competitive', 'forFun'] as const satisfies readonly GameKind[];
+import { GAME_KINDS, type GameKind } from '../domain/vocabulary';
 
 const GameDetailsParams = z.object({
   groupId: z.string().uuid(),

@@ -17,6 +17,8 @@ export { GroupScreen } from './components/GroupScreen';
 export { FriendsScreen } from './components/FriendsScreen';
 export { MembersScreen } from './components/MembersScreen';
 export { EditGroupScreen } from './components/EditGroupScreen';
+/** ***Post a game*** over a group's page (#558) — `proposals`' screen, handed what the group knows. */
+export { PostAGamePage } from './components/PostAGamePage';
 export {
   parseFriendsRouteParams,
   parseGroupRouteParams,

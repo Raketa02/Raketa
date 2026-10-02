@@ -30,8 +30,11 @@
  *
  * **Fill in is `proposals`' board** (#557): *Seats to fill* and *You're In*, and — with neither — the
  * starting card a group has always drawn there (`FillInTab`), handed in as the Games tab hands in
- * its own. *+ Post a game* floats over the page's corner, drawn and inert until posting ships
- * (#558).
+ * its own. *+ Post a game* floats over the page's corner and opens *Post a game* (#558).
+ *
+ * **Which tab it is on is the page's store** (`groupTab.store`, #558) rather than its state, because
+ * *Post a game* turns it to Fill in from over the page, so every way back lands on *You're In*; the
+ * entry, and the post's draft with it, go when the page does.
  *
  * **Games lays itself out** (#553): the deck fills the page between the switch and its three
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
@@ -48,11 +51,16 @@
  */
 
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FillInBoard, useFillInBadge, useGamesBadge } from '@/features/proposals/types';
+import {
+  FillInBoard,
+  forgetPostDraft,
+  useFillInBadge,
+  useGamesBadge,
+} from '@/features/proposals/types';
 import { codeMessage } from '@/shared/errors';
 import { ScreenHeader, Segment, theme, type SegmentOption } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -61,6 +69,7 @@ import type { Group } from '../domain/group';
 import { GROUP_TABS, OPENING_TAB, type GroupTab } from '../domain/groupPage';
 import { useGroup, useGroupReread, useJoinRequests } from '../hooks/useGroups';
 import { useGameIntent } from '../store/gameIntent.store';
+import { useGroupTab } from '../store/groupTab.store';
 
 import { AddSportCard } from './AddSportCard';
 import { FillInTab, PostAGame } from './FillInTab';
@@ -157,8 +166,20 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
   const read = useGroup(groupId);
   const group = read.data;
 
-  const [tab, setTab] = useState<GroupTab>(OPENING_TAB);
+  const tab = useGroupTab((state) => state.tabs[groupId]) ?? OPENING_TAB;
+  const show = useGroupTab((state) => state.show);
+  const setTab = (next: GroupTab) => show(groupId, next);
   const { refreshing, pull } = usePull(useGroupReread(groupId));
+
+  // The page's tab and *Post a game*'s draft are kept while the page is up, and go with it — so it
+  // opens on Games the next time, and the next post starts from nothing.
+  useEffect(
+    () => () => {
+      useGroupTab.getState().forget(groupId);
+      forgetPostDraft(groupId);
+    },
+    [groupId],
+  );
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -239,7 +260,7 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
               )}
               {tab === 'fillIn' && toAdd.length === 0 ? (
                 <View style={s.postAGame}>
-                  <PostAGame />
+                  <PostAGame groupId={groupId} />
                 </View>
               ) : null}
             </>

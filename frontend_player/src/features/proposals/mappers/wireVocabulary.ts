@@ -24,6 +24,7 @@ import type {
   ProposalStatus,
   ReaderAction,
   UncountedReason,
+  Who,
 } from '../domain/vocabulary';
 
 type Schemas = components['schemas'];
@@ -41,6 +42,7 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   readonly leaving: Exact<LeavingKind, Schemas['Leaving']>;
   readonly proposalStatus: Exact<ProposalStatus, Schemas['ProposalStatus']>;
   readonly readerAction: Exact<ReaderAction, Schemas['ReaderAction']>;
+  readonly who: Exact<Who, Schemas['Who']>;
 } = {
   cardType: true,
   courtState: true,
@@ -54,4 +56,5 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   leaving: true,
   proposalStatus: true,
   readerAction: true,
+  who: true,
 };

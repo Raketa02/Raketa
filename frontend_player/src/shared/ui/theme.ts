@@ -287,6 +287,27 @@ const color = {
   /** THE COUNTDOWN UNDER AN HOUR — coral's hue (9°), lifted to carry *45 min* on the ribbon at
    *  4,74, where `coral` there is 2,99. A mark would take `coral`; these are words. */
   gameCoral: '#F08975',
+
+  /** THE POSTING GRID'S TWO MIDDLE GREENS (#558; the Games & Fill in screens A5.2, A10;
+   *  docs/design-system.md 7.28, Part 16 2026-10-02). The grid's ramp runs `paper2` (nobody who
+   *  fits) → `mintSoft` (a few, no court) → `gridLight` (a full game's worth, no court) →
+   *  `gridMid` (a court, fewer than a full game) → `mintInk` (a court and a full game, ringed in
+   *  volt): brighter is more worth picking. The spec names the two middle values, and they are
+   *  its own bytes; the ends are tokens the palette already had.
+   *
+   *  EACH WITH ITS INK, and no soft and no line: 15.2 asks for a soft where a colour has a pale bed
+   *  and a line where that bed is bordered, and a cell IS the fill — the ramp's pale stage is
+   *  `mintSoft` itself — so a soft would be a token nothing references (Part 14 #1). The number
+   *  and the court glyph on each are its ink, never white: the mocks draw white, and white is
+   *  1,51 on `gridLight` and 2,15 on `gridMid`, a figure nobody can read. Each ink is the green's
+   *  own hue (152°, 156°) darkened to the first step that carries a figure: 4,65 and 4,68. As
+   *  fills on paper they are 1,35 and 1,92 — a shade read beside its neighbours and never the only
+   *  signal, `gameCellDim`'s rule: every cell carries its number and a glyph, and is spoken.
+   *  Derived in postingGrid.test.ts. Nothing else may draw these. */
+  gridLight: '#A9DEC5',
+  gridLightInk: '#266447',
+  gridMid: '#5EC39B',
+  gridMidInk: '#1C4A38',
 } as const;
 
 /**
@@ -587,6 +608,8 @@ const radius = {
    *  first step back toward a booking grid. 6 on a 20pt hour cell — mock 36's corner, which
    *  at 10 would round the cell into a pill. */
   availabilityCell: 6,
+  /** A posting grid cell (7.28, #558) — the mocks' rounded square, `daySquare`'s 10. */
+  postingCell: 10,
   /** The door row's lead square. Between `btn` and `segThumb`: a 28pt square at 10 reads as a
    *  small button, which it is not — the row is the control and the square is its glyph's
    *  ground — and at 8 reads as a chip's thumb. Named for the object, as `availabilityCell` is. */
@@ -921,6 +944,41 @@ const size = {
    *  In* in `mint`, each `stroke` wide — the mocks' 1.5pt, the game card's court stroke again. The
    *  posters in a row are the group page's own seat (`groupPage.seat`). */
   fillInRow: { stroke: 1.5 },
+  /** POST A GAME — the posting grid (7.28, #558; the Games & Fill in screens A5.2; mocks 2-, 20–32).
+   *  `cell` is a cell's height — its width is the column's, seven to the row after the range
+   *  labels' `label` column — 48 on the 3pt grid, which keeps the mocks' 4:5 on a 390pt phone and
+   *  clears 6.5's 44 on every one. `gap` is `space.xs` between cells both ways. The hot cell is
+   *  ringed `ring` in volt inside an `outline` of `mintInk`, because volt on paper is a line nobody
+   *  sees (2.2) and the mocks draw that dark edge; the pick stands `pickGap` off the cell in an
+   *  `ink` outline `pickRing` wide, with its white `tick` badge. A game already happening is a `dot`
+   *  in the top corner, ringed `dotRing` in `surface` so it reads on every green (coralInk is 1,01
+   *  against `mintInk` by luminance). The court glyph is `glyph` — the mocks' small court, a
+   *  rounded outline. A cell outside the poster's week is drawn at `outside` with a `dash` border;
+   *  one earlier today at `past`. `pager` is the week chevrons' square. */
+  postingGrid: {
+    cell: 48,
+    gap: space.xs,
+    label: 66,
+    ring: 2.5,
+    outline: 1,
+    pickRing: 2,
+    pickGap: 2,
+    tick: 24,
+    dot: 11,
+    dotRing: 1.5,
+    glyph: { width: 17, height: 11, stroke: 1.5, radius: 3 },
+    outside: 0.5,
+    past: 0.15,
+    dash: 1.5,
+    pager: 36,
+    /** How far a level stepper's box nudges on a bounce — `space.xs`. */
+    bounce: space.xs,
+    /** The pager's *This week* / *Next week* — the wider of the two at `cardTitle`, on the grid. */
+    weekLabel: 84,
+    /** The legend's mark column, and a swatch in it: a ramp of four swatches and their gaps fits. */
+    legendMark: 54,
+    swatch: 12,
+  },
   /** YOU › PAYMENTS — the setup checklist and the method card (7.23, #552; mocks 41–47).
    *  `stepMark` is a step's round mark — its number, or the tick once finished — at `fit`'s 26,
    *  the size the mocks draw beside a `question` title. `badge` is the method card's brand square,
@@ -1402,6 +1460,10 @@ const motion = {
    * a state the eye already knows. Skipped under reduced motion, where the bar is simply open.
    */
   unfold: 280,
+  /** A level bound pushed past the engine's own (7.28, #558): the stepper's box nudges sideways
+   *  and back in four legs over this long, beside *You can narrow it, not widen it*. Skipped under
+   *  reduced motion — the words carry it alone. */
+  bounce: 240,
   /**
    * The radar's flight — a tap on a face carries the view to them, centred, at the 3 km stop
    * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)

@@ -50,6 +50,7 @@ import GroupMembersRoute from '@/app/(app)/(tabs)/play/group/[groupId]/members';
 import GroupEditRoute from '@/app/(app)/(tabs)/play/group/[groupId]/edit';
 import GameDetailsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/game/[proposalId]';
 import RescueRoute from '@/app/(app)/(tabs)/play/group/[groupId]/rescue/[bookingId]';
+import PostAGameRoute from '@/app/(app)/(tabs)/play/group/[groupId]/post';
 import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
@@ -159,6 +160,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/play/group/[groupId]/game/[proposalId]': GameDetailsRoute,
   // A rescue seen from outside (#557) — a Seat open card's or a Seats to fill row's details.
   '(app)/(tabs)/play/group/[groupId]/rescue/[bookingId]': RescueRoute,
+  '(app)/(tabs)/play/group/[groupId]/post': PostAGameRoute,
   // A game is pushed over the Home tab and is a `games/` route rather than a `now/` one,
   // because the Home tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,

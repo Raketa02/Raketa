@@ -25,12 +25,22 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import { addSportHeadline, addSportLabel, addSportLine } from './groupsPresentation';
 
-export function AddSportCard({ sports }: { readonly sports: readonly Sport[] }) {
+export function AddSportCard({
+  sports,
+  headline,
+}: {
+  readonly sports: readonly Sport[];
+  /**
+   * What the card says first, where it is not a group's tab — *Get rated in padel to post here* on
+   * *Post a game* (#558, Q80). The line and the buttons are the same: the remedy is one remedy.
+   */
+  readonly headline?: string;
+}) {
   const addASport = useAddASport();
 
   return (
     <DarkCard style={s.card}>
-      <Text style={s.headline}>{addSportHeadline(sports)}</Text>
+      <Text style={s.headline}>{headline ?? addSportHeadline(sports)}</Text>
       <Text style={s.line}>{addSportLine(sports)}</Text>
       {addASport.error === null ? null : (
         <Note variant="coral" accessibilityRole="alert">

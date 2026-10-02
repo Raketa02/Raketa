@@ -32,10 +32,9 @@
  * says what the form offers, so it can offer more without a release.
  */
 
-import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ShellScreen, YOU_COPY } from '@/features/shell/types';
 import { codeMessage, offlineMessage } from '@/shared/errors';
@@ -65,6 +64,7 @@ import {
   rangeLine,
 } from './gamesAndMoneyCopy';
 import { ReadFailed } from './ReadFailed';
+import { Stepper } from './Stepper';
 
 const COPY = GAMES_AND_MONEY_COPY;
 
@@ -125,9 +125,19 @@ function LimitsForm({
             <Text style={s.sub}>{rangeLine(held.gamesPerWeekRange)}</Text>
           </View>
           <Stepper
-            value={held.gamesPerWeek}
-            fewer={canStep(held, -1) ? () => step(-1) : undefined}
-            more={canStep(held, 1) ? () => step(1) : undefined}
+            figure={String(held.gamesPerWeek)}
+            fewer={{
+              glyph: 'minus',
+              label: COPY.games.fewer,
+              value: gamesSpoken(held.gamesPerWeek),
+              onPress: canStep(held, -1) ? () => step(-1) : undefined,
+            }}
+            more={{
+              glyph: 'plus',
+              label: COPY.games.more,
+              value: gamesSpoken(held.gamesPerWeek),
+              onPress: canStep(held, 1) ? () => step(1) : undefined,
+            }}
           />
         </View>
         <Hairline>
@@ -170,65 +180,6 @@ function LimitsForm({
   );
 }
 
-/**
- * **− 4 +** — two keys either side of the figure, in one outlined box (mock 38). Each key is a
- * button named for what it does, carrying the value, so a listener hears the new count on the key
- * they just pressed; a key whose press would move nothing is shut (`undefined`).
- */
-function Stepper({
-  value,
-  fewer,
-  more,
-}: {
-  readonly value: number;
-  readonly fewer: (() => void) | undefined;
-  readonly more: (() => void) | undefined;
-}) {
-  return (
-    <View style={s.stepper}>
-      <StepKey glyph="minus" label={COPY.games.fewer} value={value} onPress={fewer} />
-      <Text style={s.figure} accessibilityElementsHidden importantForAccessibility="no">
-        {value}
-      </Text>
-      <StepKey glyph="plus" label={COPY.games.more} value={value} onPress={more} />
-    </View>
-  );
-}
-
-function StepKey({
-  glyph,
-  label,
-  value,
-  onPress,
-}: {
-  readonly glyph: 'minus' | 'plus';
-  readonly label: string;
-  readonly value: number;
-  readonly onPress: (() => void) | undefined;
-}) {
-  const shut = onPress === undefined;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityValue={{ text: gamesSpoken(value) }}
-      accessibilityState={{ disabled: shut }}
-      disabled={shut}
-      onPress={onPress}
-      hitSlop={theme.hit.btn}
-      style={({ pressed }) => [s.key, shut ? s.shut : undefined, pressed ? s.pressed : undefined]}
-    >
-      <Feather
-        name={glyph}
-        size={theme.size.rowLeadGlyph}
-        color={theme.color.ink}
-        accessibilityElementsHidden
-        importantForAccessibility="no"
-      />
-    </Pressable>
-  );
-}
-
 const s = StyleSheet.create({
   column: { gap: theme.space.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
@@ -241,32 +192,4 @@ const s = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs },
   bound: { ...theme.type.rlLabel, color: theme.color.muted, textAlign: 'center' },
   strong: { fontFamily: theme.font.sans[700] },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.space.xxs,
-    borderWidth: 1,
-    borderColor: theme.color.line,
-    borderRadius: theme.radius.card,
-    backgroundColor: theme.color.surface,
-  },
-  // 6.5 by geometry across and by `hit.btn` up and down: 44 wide, 40 tall and 50 to the finger.
-  key: {
-    width: theme.size.minTouch,
-    height: theme.size.btnLg,
-    borderRadius: theme.radius.btn,
-    backgroundColor: theme.color.paper2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // 6.1's disabled: the key is there and shut, not gone — the end of the range is visible.
-  shut: { opacity: 0.4 },
-  pressed: { opacity: 0.7 },
-  figure: {
-    ...theme.num.xl,
-    ...theme.tabular,
-    minWidth: theme.size.btnLg,
-    color: theme.color.ink,
-    textAlign: 'center',
-  },
 });

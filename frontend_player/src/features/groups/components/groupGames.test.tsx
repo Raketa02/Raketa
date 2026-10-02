@@ -296,11 +296,11 @@ describe('a player with no intent for the sport', () => {
 });
 
 describe('the states around the deck', () => {
-  it('keeps the starting card when nothing is dealt, and Nothing picked gains a disabled Post a game', async () => {
+  it('keeps the starting card when nothing is dealt, and Nothing picked gains Post a game (#558)', async () => {
     await openGames();
 
     expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Post a game', disabled: true })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Post a game', disabled: false })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Share the link' })).toBeTruthy();
   });
 

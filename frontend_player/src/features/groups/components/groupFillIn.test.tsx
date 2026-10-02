@@ -212,12 +212,12 @@ describe('the Fill in tab (mock 11)', () => {
     expect(screen.queryByText(/You’re In/)).toBeNull();
   });
 
-  it('is the group’s starting card with nothing in either, and Post a game floats, drawn and inert', async () => {
+  it('is the group’s starting card with nothing in either, and Post a game floats, open (#558)', async () => {
     await openFillIn();
 
     expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
     expect(
-      screen.getByRole('button', { name: GROUPS_COPY.fillIn.postAGame, disabled: true }),
+      screen.getByRole('button', { name: GROUPS_COPY.fillIn.postAGame, disabled: false }),
     ).toBeTruthy();
   });
 

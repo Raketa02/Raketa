@@ -7,12 +7,15 @@
  * once anybody else has joined: whether it is *just you* is a count of **members**, not of people
  * rated in the sport, because a game posted here is seen by everybody who arrives with the link.
  *
- * **+ Post a game is drawn and does nothing** (ADR-0183 §13) — `PostAGame` below, which the page
- * floats over its bottom corner. It is the primary button, disabled: the one coral door on the page
- * is the one that cannot be opened yet, and the system's dim and `disabled` state say so to the eye
- * and to a listener, where a full-strength button that ignored its press would say the opposite.
+ * **+ Post a game opens *Post a game*** (#558; the screens A5) — `PostAGame` below, which the page
+ * floats over its bottom corner and *Nothing picked right now* carries as its third door. It is the
+ * primary button: the one coral door on the page. Until #558 it was drawn disabled, because posting
+ * had not shipped (ADR-0183 §13, superseded there by ADR-0189).
  */
 
+import { router } from 'expo-router';
+
+import { postAGameRoute } from '@/features/proposals/types';
 import { Button } from '@/shared/ui';
 
 import type { Group } from '../domain/group';
@@ -32,15 +35,14 @@ export function FillInTab({ group }: { readonly group: Group }) {
   );
 }
 
-/** *+ Post a game* — drawn, inert, and said to be so. The page places it. */
-export function PostAGame() {
+/** *+ Post a game* — pushes the screen over the group's page. The page places it. */
+export function PostAGame({ groupId }: { readonly groupId: string }) {
   return (
     <Button
       label={COPY.postAGameDrawn}
       accessibilityLabel={COPY.postAGame}
       size="lg"
-      disabled
-      onPress={() => undefined}
+      onPress={() => router.push(postAGameRoute(groupId))}
     />
   );
 }

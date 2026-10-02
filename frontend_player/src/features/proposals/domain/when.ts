@@ -50,8 +50,17 @@ export function weekdayAt(instant: number | string): Weekday | undefined {
  */
 export function gameDayOf(startsAt: string, readAt: number): GameDay | undefined {
   const day = platformDay(startsAt);
+  return day === undefined ? undefined : calendarDayOf(day, readAt);
+}
+
+/**
+ * **A calendar day against the day the read was made** — the posting grid's columns, which the
+ * read names by their day on the club's clock rather than by an instant (#558). `undefined` for a
+ * value that is not a calendar day.
+ */
+export function calendarDayOf(day: string, readAt: number): GameDay | undefined {
   const today = dayAt(readAt);
-  if (day === undefined || today === undefined) return undefined;
+  if (today === undefined) return undefined;
 
   const ahead = daysBetween(today, day);
   const weekday = weekdayOf(day);

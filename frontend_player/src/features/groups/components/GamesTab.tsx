@@ -12,8 +12,8 @@
  * **The starting card** is `gamesCard`'s: *Just you so far*, *3 of 4* once others who play the sport
  * are in, or *Nothing picked right now* once the seats could be filled — the honest line while
  * nothing has been dealt. **Nothing picked right now gains *Post a game*** (Q96), a third door under
- * the link's two, drawn and disabled until posting ships (#558) — the Fill in tab's own button, so
- * the one door has one drawing.
+ * the link's two, which opens *Post a game* (#558) — the Fill in tab's own button, so the one door
+ * has one drawing.
  *
  * Under the headline, **a seat per player the court takes**: the faces of the first members rated
  * in the sport, in joining order, and a dashed seat for every one still missing — one for tennis or
@@ -74,7 +74,7 @@ function StartingCard({ group, sport }: { readonly group: Group; readonly sport:
       // *3 of 4* is a count, and a count is mono (1.4); the other two headlines are words.
       headlineIsCount={card.kind === 'filling'}
       {...(line === undefined ? {} : { line })}
-      {...(card.kind === 'nothing-picked' ? { foot: <PostAGame /> } : {})}
+      {...(card.kind === 'nothing-picked' ? { foot: <PostAGame groupId={group.id} /> } : {})}
     >
       <View
         accessible

@@ -14,7 +14,8 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { GameKind } from '../domain/vocabulary';
+import type { PostingAsk, PostingWeek } from '../domain/posting';
+import type { DayRange, GameKind } from '../domain/vocabulary';
 
 export const proposalKeys = {
   all: ['proposals'] as const,
@@ -47,4 +48,15 @@ export const proposalKeys = {
    */
   fillIn: (groupId: string, sport: Sport) =>
     [...proposalKeys.group(groupId), 'fill-in', sport] as const,
+  /**
+   * Every posting read of one group (#558) — under the group's root, so an answer, a join and a post
+   * in the group re-read the grid and its sheet with the decks, and a changed limit with every deck.
+   */
+  posting: (groupId: string) => [...proposalKeys.group(groupId), 'posting'] as const,
+  /** `GET /pools/{id}/posting-grid` — one week of WHEN, keyed by everything the controls ask. */
+  postingGrid: (groupId: string, ask: PostingAsk, week: PostingWeek) =>
+    [...proposalKeys.posting(groupId), 'grid', ask, week] as const,
+  /** `GET /pools/{id}/posting-grid/slot` — a cell's sheet, for the same ask. */
+  postingSlot: (groupId: string, ask: PostingAsk, day: string, range: DayRange) =>
+    [...proposalKeys.posting(groupId), 'slot', ask, day, range] as const,
 };

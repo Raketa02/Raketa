@@ -131,5 +131,7 @@ export const PROPOSALS_COPY = {
     game_has_started: 'That game has started, so nothing was charged.',
     rescue_not_offered: 'That seat isn’t offered to you any more.',
     booking_not_found: 'That game is no longer on.',
+    /** #546: joining a post from *Post a game*'s sheet that dealing would not deal them now. */
+    post_not_open_to_you: 'That game isn’t open to you now — nothing was recorded.',
   },
 } as const;

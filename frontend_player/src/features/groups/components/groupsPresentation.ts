@@ -477,6 +477,11 @@ export function addSportHeadline(sports: readonly Sport[]): string {
   return `This group plays ${sportsInLine(sports, 'and')}`;
 }
 
+/** *Get rated in padel to post here* — *Post a game* for a reader rated in none of the sports (Q80). */
+export function rateToPostHeadline(sports: readonly Sport[]): string {
+  return `Get rated in ${sportsInLine(sports, 'or')} to post here`;
+}
+
 /** *Add padel to your Skill passport to see its games.* — any one of them will do. */
 export function addSportLine(sports: readonly Sport[]): string {
   return `Add ${sportsInLine(sports, 'or')} to your Skill passport to see its games.`;

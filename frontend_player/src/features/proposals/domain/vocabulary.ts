@@ -36,8 +36,22 @@ export type DayRange = 'MORNING' | 'AFTERNOON' | 'EVENING';
 /** The grid's three rows, top to bottom. */
 export const DAY_RANGES: readonly DayRange[] = ['MORNING', 'AFTERNOON', 'EVENING'];
 
+/**
+ * **Who a posted game is for** (the mechanics §9.1 step 3; #546) — *Anyone*, a game of men, a game
+ * of women, or *Mixed pairs*: in doubles, each side one man and one woman. The wire's own spelling,
+ * because the control's words are keyed by it. Whether the poster stands on their own game is the
+ * server's to say (`who_leaves_you_out`), never which of the two a refusal was.
+ */
+export type Who = 'ANYONE' | 'MEN' | 'WOMEN' | 'MIXED_PAIRS';
+
+/** The four, in the control's order (mock 18). */
+export const WHO_ORDER: readonly Who[] = ['ANYONE', 'MEN', 'WOMEN', 'MIXED_PAIRS'];
+
 /** A game's kind — the switch's two segments, Competitive first. */
 export type GameKind = 'competitive' | 'forFun';
+
+/** The two, in the switch's order. */
+export const GAME_KINDS = ['competitive', 'forFun'] as const satisfies readonly GameKind[];
 
 /**
  * **Why a share could not be held when the game filled** (the mechanics §12.2, §19) — the wire's

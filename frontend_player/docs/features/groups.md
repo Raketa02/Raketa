@@ -180,8 +180,9 @@ mono, as every count is (design-system 1.4).
 
 **Fill in counts members, not players of the sport** (stories 66–67). _No games yet — it's just
 you_ while the reader is the only member, _No games yet_ once anybody has joined: a posted game is
-seen by everybody who arrives with the link. **+ Post a game** is the primary button, disabled, over
-the page's bottom corner — drawn, inert, and `disabled` to a listener.
+seen by everybody who arrives with the link. **+ Post a game** is the primary button over the page's
+bottom corner — drawn disabled until posting shipped, and since #558 the door to _Post a game_
+(below).
 
 **Friends is a court with nobody to put on it yet** (stories 68–70; PRD #500 overrides play 49–56:
 no friends feature). **Competitive · For fun** is a process-scoped store (`gameIntent.store`) —
@@ -213,10 +214,9 @@ shows _Nobody you know here yet_ with the link's doors. The page's route moved t
 ([#513](https://github.com/Raketa02/Raketa/issues/513), design-system Part 16). The Games card's
 faces are **the face box, not circles** — this app has no round face (#338) — and **no face carries
 initials**, which ADR-0167 §3 fences to the yes screen's tile; widening that fence is an amendment
-to the ADR, not a drawing call. **+ Post a game** is the **disabled primary button at 4.2's corner**
-rather than the mocks' full-strength coral pill with a glow: the pill is the chip's and the yes
-screen's, the glow the ⚡Play disc's, and a full-strength button that ignored its press would say the
-opposite of what it does. All three are flagged for the product owner. **Nothing on the page has
+to the ADR, not a drawing call. **+ Post a game** is **the primary button at 4.2's corner** rather
+than the mocks' coral pill with a glow: the pill is the chip's and the yes screen's, the glow the
+⚡Play disc's (disabled until #558 opened it). All three are flagged for the product owner. **Nothing on the page has
 been seen on a device** — the unfold's pace, and whether four sports fit the bar on a 320pt phone,
 are asked for a look.
 
@@ -382,8 +382,7 @@ default.
 store, which Friends' switch shares, so one choice is one choice on both tabs — and the starting card
 to draw while the segment deals nothing. **The starting card is unchanged** (_Just you so far_, _3 of
 4_, _Nothing picked right now_), and _Nothing picked right now_ gains a third door under the link's
-two, _Post a game_, drawn and disabled until posting ships (#558) — Fill in's own `PostAGame`, now in
-`LinkCard`'s `foot`. **The tab bar counts Games** — the cards somebody is already In on with you, off
+two, _Post a game_ — Fill in's own `PostAGame`, in `LinkCard`'s `foot`, open since #558. **The tab bar counts Games** — the cards somebody is already In on with you, off
 the same deck read the tab draws (`useGamesBadge`), in the Info badge's mark and spoken _Games, 4 with
 somebody In_; and Fill in counts its _Seats to fill_ (below). **Games lays itself out**:
 the deck fills the page between its switch and its three buttons, so `GroupScreen` draws it outside
@@ -398,6 +397,17 @@ it the starting card above (`FillInTab`) for a tab with no row in either, as `Ga
 its own. **The tab bar counts Fill in** — the _Seats to fill_ rows, the board read's own `badge`
 (`useFillInBadge`), spoken _Fill in, 1 seat to fill_ — read for the page's sport whichever tab is
 open, so `stubGroupDeck` now serves an empty Fill in too and every suite that opens a page gets it.
-**+ Post a game** keeps floating over the page's corner on Fill in, drawn and inert until posting
-ships (#558); the board leaves room under its last row for it. The tab's walk is
-`groupFillIn.test.tsx`; the board's record is [`proposals.md`](proposals.md).
+**+ Post a game** floats over the page's corner on Fill in; the board leaves room under its last row
+for it. The tab's walk is `groupFillIn.test.tsx`; the board's record is [`proposals.md`](proposals.md).
+
+**_Post a game_ is `proposals`' screen over the page** ([#558](https://github.com/Raketa02/Raketa/issues/558),
+the screens A5). Both doors — Fill in's floating button and _Nothing picked right now_'s third — push
+`/play/group/[groupId]/post`, whose route mounts `PostAGamePage`: it hands the screen the page's own
+sport filter (`useGroupSport`), each sport's rated count off the group's roster, the page's sport and
+the switch's kind; a reader rated in none of an official group's sports gets `AddSportCard` with _Get
+rated in padel to post here_ (Q80). **Which tab the page is on is now a store** (`groupTab.store`)
+rather than its state: _Post a game_ turns the page to Fill in **as it opens**, unseen under it, so
+the chevron, the hardware back and the swipe all land on _You're In_, as A5 asks whichever door was
+used. The page forgets its entry — and the post's draft (`forgetPostDraft`) — when it goes, so it
+still always opens on Games (story 51, ADR-0188 §5). The record of the screen is
+[`proposals.md`](proposals.md); its walk `proposals/components/postAGame.test.tsx`.

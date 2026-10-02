@@ -5,7 +5,7 @@
 
 import { setDeviceZone } from '@/test-support/deviceZone';
 
-import { fortnightOf, gameDayOf, gameEndsAt, weekdayAt } from './when';
+import { calendarDayOf, fortnightOf, gameDayOf, gameEndsAt, weekdayAt } from './when';
 
 const DEVICE_ZONE = process.env.TZ;
 
@@ -15,6 +15,23 @@ afterEach(() => {
 
 /** Wednesday 30 September 2026, 10:00 in Warsaw. */
 const READ_AT = Date.parse('2026-09-30T08:00:00Z');
+
+describe('a calendar day against the read', () => {
+  it('names a column of the posting grid as the court block names a game’s day', () => {
+    expect(calendarDayOf('2026-09-30', READ_AT)).toEqual({ kind: 'today' });
+    expect(calendarDayOf('2026-10-01', READ_AT)).toEqual({ kind: 'tomorrow' });
+    expect(calendarDayOf('2026-10-03', READ_AT)).toEqual({ kind: 'weekday', weekday: 6 });
+    expect(calendarDayOf('2026-10-10', READ_AT)).toEqual({
+      kind: 'dated',
+      weekday: 6,
+      day: '2026-10-10',
+    });
+  });
+
+  it('names nothing for a value that is not a day', () => {
+    expect(calendarDayOf('Saturday', READ_AT)).toBeUndefined();
+  });
+});
 
 describe('the game’s day', () => {
   it('is today and tomorrow on the platform’s calendar', () => {

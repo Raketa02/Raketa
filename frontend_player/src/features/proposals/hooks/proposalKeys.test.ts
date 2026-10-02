@@ -80,4 +80,23 @@ describe('proposalKeys', () => {
     expect(startsWith(one, proposalKeys.decks())).toBe(false);
     expect(startsWith(one, proposalKeys.bookings())).toBe(false);
   });
+
+  it('files the posting grid and its sheet under the group’s root, keyed by every control (#558)', () => {
+    const ask = { sport: 'padel', kind: 'competitive', who: 'ANYONE' } as const;
+    const grid = proposalKeys.postingGrid(GROUP, ask, 1);
+    const slot = proposalKeys.postingSlot(GROUP, ask, '2026-10-03', 'EVENING');
+    for (const key of [grid, slot]) {
+      expect(startsWith(key, proposalKeys.posting(GROUP))).toBe(true);
+      expect(startsWith(key, proposalKeys.group(GROUP))).toBe(true);
+      expect(startsWith(key, proposalKeys.group(OTHER))).toBe(false);
+    }
+    const keys = [
+      grid,
+      proposalKeys.postingGrid(GROUP, ask, 2),
+      proposalKeys.postingGrid(GROUP, { ...ask, who: 'WOMEN' }, 1),
+      proposalKeys.postingGrid(GROUP, { ...ask, levelLow: 2.61 }, 1),
+      proposalKeys.postingGrid(GROUP, { ...ask, kind: 'forFun' }, 1),
+    ].map((key) => JSON.stringify(key));
+    expect(new Set(keys).size).toBe(5);
+  });
 });

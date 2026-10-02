@@ -472,9 +472,9 @@ describe('Fill in', () => {
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.link.share })).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.link.copy })).toBeTruthy();
-    // Drawn, and inert: nobody can post a game yet.
+    // Open since #558: the one coral door on the page.
     expect(
-      screen.getByRole('button', { name: COPY.fillIn.postAGame, disabled: true }),
+      screen.getByRole('button', { name: COPY.fillIn.postAGame, disabled: false }),
     ).toBeTruthy();
   });
 

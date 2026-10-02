@@ -56,7 +56,8 @@ function toWeekday(day: number): Weekday | undefined {
   return WEEKDAYS.find((weekday) => weekday === day);
 }
 
-function toPerson(wire: Schemas['DeckTileSchema']): DeckPerson {
+/** One person on a card — a post's people In too (#558). */
+export function toPerson(wire: Schemas['DeckTileSchema']): DeckPerson {
   return {
     playerId: wire.player_id,
     isYou: wire.is_you,

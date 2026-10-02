@@ -50,6 +50,20 @@ export { FillProvider, type FillProviderProps } from './components/FillProvider'
 export { FILL_COPY } from './components/fillCopy';
 
 /**
+ * ***Post a game*** (#558; the screens A5) — the screen, mounted over the group's page by `groups`,
+ * which hands in the sports, the page's sport and its switch's kind; the route the page's two doors
+ * push; and the draft's end, which the page calls when it goes. The words cross for the suites.
+ */
+export {
+  PostAGameScreen,
+  type PostAGameScreenProps,
+  type PostingSport,
+} from './components/PostAGameScreen';
+export { postAGameRoute } from './components/proposalRoutes';
+export { forgetPostDraft } from './store/postDraft.store';
+export { POSTING_COPY } from './components/postingCopy';
+
+/**
  * **Home's booked games, and a booked game in detail** (#556; the screens A4.1, A4.4, A8) — over
  * `GET /home` and `GET /bookings/{id}` (#542).
  *

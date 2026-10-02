@@ -22,6 +22,9 @@
  * | `postDeparture` | `POST /bookings/{id}/departure` — *Leave the game* (#544) |
  * | `getProposal` | `GET /proposals/{id}` — one game still filling in detail, with what the reader may do (#542) |
  * | `getFillIn` | `GET /pools/{id}/fill-in?sport` — a group's *Seats to fill* and the tab's badge (#545) |
+ * | `getPostingGrid` | `GET /pools/{id}/posting-grid?sport&kind&who&level_low&level_high&week` — *Post a game*'s WHEN (#546, #558) |
+ * | `getPostingSlot` | `GET /pools/{id}/posting-grid/slot?…&day&range` — a cell's sheet (#546, #558) |
+ * | `postPost` | `POST /pools/{id}/posts` — *Post — you're In*: the poster's yes (#546, #558) |
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -247,6 +250,81 @@ export function getFillIn(
     path: `/api/v1/pools/${encodeURIComponent(poolId)}/fill-in?sport=${sport}`,
     authenticated: true,
     signal,
+  });
+}
+
+/** What the four controls ask — the post's body without its court hour (#546). */
+export type PostingQuery = Omit<Schemas['PostRequest'], 'club_id' | 'starts_at'>;
+
+/** The controls as a query string — a bound only once it has been narrowed. */
+function postingQuery(ask: PostingQuery): string {
+  const bounds = [
+    ask.level_low === undefined || ask.level_low === null ? '' : `&level_low=${ask.level_low}`,
+    ask.level_high === undefined || ask.level_high === null ? '' : `&level_high=${ask.level_high}`,
+  ].join('');
+  return `sport=${ask.sport}&kind=${ask.kind}&who=${ask.who}${bounds}`;
+}
+
+function poolPath(poolId: string): string {
+  return `/api/v1/pools/${encodeURIComponent(poolId)}`;
+}
+
+/**
+ * **WHEN** on *Post a game* — one week of 7 days × Morning / Afternoon / Evening for what the
+ * controls hold (#546). Nothing is recorded. `level_range_too_wide`, `level_range_inverted` and
+ * `mixed_pairs_only_in_doubles` (400) for an ask the controls should never send;
+ * `not_rated_in_the_sport` and `who_leaves_you_out` (409); `pool_not_found` (404).
+ */
+export function getPostingGrid(
+  poolId: string,
+  ask: PostingQuery,
+  week: 1 | 2,
+  { signal }: Cancellable = {},
+): Promise<Schemas['PostingGridResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: `${poolPath(poolId)}/posting-grid?${postingQuery(ask)}&week=${week}`,
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
+ * **A cell's sheet** — its fits, its free courts home club first, and what is already happening
+ * there (#546). Nothing is recorded; refused as the grid is.
+ */
+export function getPostingSlot(
+  poolId: string,
+  ask: PostingQuery,
+  day: string,
+  range: Schemas['DayRange'],
+  { signal }: Cancellable = {},
+): Promise<Schemas['PostingSlotResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path: `${poolPath(poolId)}/posting-grid/slot?${postingQuery(ask)}&day=${day}&range=${range}`,
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
+ * ***Post — you're In*** (#546): the poster's yes, dealt as up to three versions to their best fits
+ * free then. The guards, in the button's order (409): `payment_method_required`,
+ * `live_yeses_exhausted`, `live_posts_exhausted`, `games_per_week_booked`; then `you_play_then`,
+ * `nobody_fits_then` and `court_hour_not_for_sale`. **Not retried**: a second post is a second game.
+ * **No `Idempotency-Key`**: the button is busy while one is in flight, and a second post at an hour
+ * the poster already plays is refused (`you_play_then`) — a duplicate is refused, never booked.
+ */
+export function postPost(
+  poolId: string,
+  body: Schemas['PostRequest'],
+): Promise<Schemas['PostedResponse']> {
+  return httpRequest({
+    method: 'POST',
+    path: `${poolPath(poolId)}/posts`,
+    authenticated: true,
+    body,
   });
 }
 

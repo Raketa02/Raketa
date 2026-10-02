@@ -32,6 +32,15 @@ export function rescueRoute(groupId: string, bookingId: string) {
 }
 
 /**
+ * ***Post a game*** (#558) — pushed over the group's page from Fill in's floating button or *Nothing
+ * picked right now*'s third door, under Play like a game's details, so *back* is the group. Only the
+ * group rides in the route: the draft is the store's, and the sport and kind are the page's.
+ */
+export function postAGameRoute(groupId: string) {
+  return { pathname: '/play/group/[groupId]/post', params: { groupId } } as const;
+}
+
+/**
  * Where the Games & money row leads — a screen pushed over the You tab, under the tab's own first
  * segment so the You column stays lit (`paymentRoutes`' reason, #554).
  */

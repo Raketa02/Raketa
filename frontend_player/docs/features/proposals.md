@@ -425,8 +425,126 @@ in the Classic half of the badge.
 
 **Owed**: the chat lines _Kuba left — the seat is open_ / _Ola took the seat_ (conversations, with the
 backend's #545 note); the push and in-app notices of the club's answer and of a seat opening (#549,
-#559); _+ Post a game_ enabled (#558). **Owed to the backend**: a `called_off_reason` for the club's
+#559); _+ Post a game_ enabled (#558, below). **Owed to the backend**: a `called_off_reason` for the club's
 own cancel (#547) and for a request called off when a player left it — §14.1 lists both, and the
 wire names neither, so those cards say only what came back; and who is In and the club's turn on
 the live yes, which would save _You're In_ its read a row. **Nothing here has been seen on a
 device.**
+
+**Posting a game is this feature's** ([#558](https://github.com/Raketa02/Raketa/issues/558); the
+screens A5; mocks 14–35; the mechanics §9; the backend's #546). Three routes, all the backend's
+Proposals context: `GET /pools/{id}/posting-grid` (one week of WHEN for what the controls ask),
+`GET /pools/{id}/posting-grid/slot` (a cell's sheet) and `POST /pools/{id}/posts` (_Post — you're
+In_, the poster's yes). `pnpm gen:api` brought them; `Who` is spelled in `domain/vocabulary.ts` and
+held to the wire in `mappers/wireVocabulary.ts`. Rules in `domain/posting.ts`, words in
+`postingCopy.ts` and `postingPresentation.ts`, reads and the write in `hooks/usePosting.ts`, keys
+under the group's root (`proposalKeys.posting`), so every answer, join and post in the group — and
+a changed Games & money — re-reads the grid and its sheet with the decks.
+
+**The screen is `PostAGameScreen`, mounted by `groups`** (`PostAGamePage`, `/play/group/[groupId]/post`)
+because only the group knows what it hands in: the sports the reader may post in here (the page's own
+filter — rated in, among an official group's declared ones), each with how many members are rated in
+it (_Padel 10_, the roster's count), the sport the page is on and the kind its switch stands on. The
+edge still points one way. **The draft is a feature store** (`store/postDraft.store.ts`): the four
+controls, the week shown and the pick, kept while the player stays in the group and forgotten when
+the group's page goes (`forgetPostDraft`, called by the page) and after a post. The sport and the
+kind are absent from the draft until chosen, so the page's sport and **the player's intent** — the
+switch's kind as the deck corrects it (`useGroupDeck`'s, a read the page has made already) — stand in
+without being frozen before the read lands.
+
+**The controls** (A5.1): SPORT a row of chips with the sport's dot and its count; KIND Competitive /
+_For fun · friendly_; WHO Anyone / Men / Women / Mixed pairs, **Mixed pairs only in doubles** (read
+off the court's seats, `courtSeatCount`) and taken back to Anyone in a sport played one a side;
+LEVEL two steppers (Games & money's `Stepper`, moved out of its screen into the feature's
+components for both). A sport chosen puts the level range back to the engine's and clears the pick
+(`withSport`; pressing the sport already chosen does nothing); **a kind chosen re-seeds the range
+too** (`withKind`) — the engine's window is the kind's, and a bound narrowed inside one may lie
+outside the other. **The draft holds the narrowed bounds in whole hundredths** (`Narrowing`, each
+absent while it stands at the engine's), so nothing drifts, a bound left at the engine's is sent as
+nothing, and **the ask never needs the engine's window** — only the steppers read it, off a grid that
+is always this sport's and kind's. Inward narrows; outward comes back to the engine's bound and
+**bounces** past it — the stepper's box nudges and _You can narrow it, not widen it_ is said and
+announced — and a key that would turn the range inside out is shut. A refused range
+(`level_range_too_wide`, `_inverted`: the window moved under the draft) goes back to the engine's by
+itself. The sport the draft falls back on, and _Mixed pairs_ read as _Anyone_ one a side, are the
+domain's (`draftSport`, `draftWho`).
+
+**The grid is the server's** (A5.2): every count, colour and flag is the read's, and `cellFill`
+only names which of the five fills it draws — dead, few, enough, thin, hot — with outside your hours,
+past, the pick and happening drawn over it (`PostingCell`; the look is the design system's 7.28).
+_5+_ past five. The last answer stays drawn while the next is read, **within a sport, a kind and a
+week** (the query's `meta`), so a stepper's taps do not blank the grid, a padel cell never sits under
+a finger reading as tennis, and the steppers never step against the other kind's window. Week one starts today; the pager is shut at each end of the fortnight.
+**The ⓘ is 7.6's popover**, widened for _How to read the map_'s six rows, the happening line as A5.2
+rewrote it. A read refused for who it is for (`who_leaves_you_out`) says so in the grid's place; any
+other refusal the shared retry; offline, the amber _resumes_.
+
+**A cell's sheet** (`SlotSheet`, A5.3) opens on every cell but one earlier today — a dead cell's says
+_Nobody who fits is free then_, a courtless one _No court is free then — every game needs a court._
+— and is read for the controls the grid was read with: the headline (_5 of your best fits free
+then_, _only 2 fit · may not fill_ where a court is free and fewer than a full game are, each with
+_· outside your hours_), the fits (7.16's card panels, the name whole, _2,75 · 93_), the free courts
+home club first with their own _4 free_, and **Already happening here**: rescues (_I'm in · 30 zł_)
+then posts still filling (no court number, _I'm in_). **A court tapped is the pick**, replacing the
+last, and the sheet closes so the ringed cell and the open button are what follows; on the picked
+cell the row says so and _Remove this pick_ sits at the foot. **A court nobody who fits is free at is
+shut** (`courtPickable`, §9.1 step 5's _nobody who fits free: cannot be picked_): the slot lists every
+free court hour of the range whatever the fits, so a dead cell's courts and a _0 free_ row are drawn
+and cannot be picked. **The pick holds only the choice** — the day, the range, the club's id and the
+hour — and the club's name and the share under the button are read off the pick's slot again
+(`usePostingSlot` for the pick's cell, the sheet's own cache entry), so nothing the server said is
+copied into the store. **A fit opens their record in the
+sheet's place** — two sheets are never up at once, BuilderScreen's rule — and closing it brings the
+sheet back.
+
+**Joining from the sheet is the fill's** (`useFill`, `useFillYes`): the sheet closes first, so the
+payment setup never opens over it; a rescue counts its ten seconds behind _Undo_ and pays, raising
+_It's a game!_ off the booking's read (a sheet's rescue holds no sides, as a row's does not); a
+post's _I'm in_ is `POST /proposals/{id}/yes` — a free vote, or **on its last seat a _Book it now_
+behind the ten seconds**, as on a card (`yesOnPost`, read off the seats as the details' rule is) — and
+a refusal is the deck's toast (`post_not_open_to_you`
+has words now). Then the player goes back to the group's page, the toast following them there.
+
+**Post — you're In** (A5.4) is shut until a court is picked, with _Pick an hour with a court on the
+map first._ under it; once picked, the line says the post (_Saturday 17:00 · Ogrody 33 · 27 zł each
+if it fills_). With nothing saved the setup opens (the fill's) and the post goes once a card is; a
+guard the server answers with is said in the helper's place, announced, **for the pick it was said
+about** — a new pick, a removed one or a new sport clears it: `payment_method_required` (and the
+setup), `live_yeses_exhausted` (the cap and sport), `live_posts_exhausted`, `games_per_week_booked`
+(the week), `you_play_then`, `nobody_fits_then`, `court_hour_not_for_sale`. Posted, the draft is
+forgotten, _Posted — 5 of your best fits have it._ is toasted, and the player is back on the page on
+**Fill in › You're In** — the page turned to Fill in under the screen when it opened
+(`groups`' `groupTab.store`), so every way back lands there. A post settling after the player has
+left does not pop the page as well. Not retried: a second post is a second game. **No
+`Idempotency-Key`**: the button is busy while the post is in flight, and the server refuses a second
+post at an hour the poster already plays (`you_play_then`) — so a duplicate is refused, never booked. **Challenge cards**
+(_Kuba Wiśniewski challenged you_, _The group challenged you_) are #553's and unchanged; the suite
+`groupGames.test.tsx` holds them, and the post's own walk is `postAGame.test.tsx`.
+
+**Calls made here, open for the product owner** (Part 16 has the drawings'):
+
+- **The figures on the grid's greens are each green's ink, not white**, and the hot cell is
+  `mintInk` with white rather than `mint` — white is 1,51 and 2,15 on the two middle greens and Rule
+  C refuses it on `mint`. Two inks were added beside the two greens; no soft or line.
+- **The happening dot is `coralInk`** (coral's meaning: a game you could join), ringed in white.
+- **A kind re-seeds the level range**; A5.1 says only that a sport does.
+- **The pick stays when the kind, who or level changes** — the court is still free; the grid says
+  whether anybody fits it now, and the server's `nobody_fits_then` says it at the post.
+- **The line under the button says the pick** once there is one, where mock 15 draws only the helper.
+- **An outward press moves a narrowed bound back toward the engine's**, where A5.1 says _move a bound
+  0,05 inward only_ — otherwise a mis-tap could not be taken back; past the engine's bound it bounces.
+- **Joining from the sheet leaves for Fill in** at once (a post's free yes, a rescue's ten seconds
+  running over the page); with the setup in front, only once a method is saved.
+- **_Posted — 5 of your best fits have it._** — no spec words the moment after posting.
+- **The legend's _Got it_ is the popover's close**, and its first line says _a club has a court_
+  where the mock says _the pool_.
+- **Short day names on the sheet's courts** (_book by Sat 15:00_) where mock 34 spells _Saturday_ —
+  the Fill in rows' call, kept.
+- **_any level ✓ · you are free ✓_ on every happening row**, as A5.3 words it: the read lists only
+  games the poster fits and is free for.
+- **The draft is forgotten after a post**, and when the group's page goes (back to Play, or the
+  tab bar laying the stack down).
+
+**Owed**: CONTEXT.md's Post into Part 1 and the ADR-0189 §5 amendment (root, #546's); _Your post
+didn't fill_ (#549). **Nothing here has been seen on a device** — the cells' looks, the bounce, the
+legend's width and two sheets swapping in one tick on iOS least of all.
