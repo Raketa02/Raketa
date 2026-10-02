@@ -61,6 +61,7 @@ from app.modules.proposals.domain.home import (
     BookedGame,
     BookedMoney,
     CalledOffReason,
+    ClubCancelReason,
     CheckIn,
     HomeStatus,
     LeaveTerms,
@@ -721,14 +722,27 @@ _CALLED_OFF_REASON = (
     "game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` — a seat "
     "that opened before the club's cut-off was still empty at it: everybody "
     "still in is refunded in full (`money.refunded_grosze`); read off the clock "
-    "from the cut-off on. More arrive with the club's cancel (#547)."
+    "from the cut-off on. `CANCELLED_BY_THE_CLUB` — the club cancelled it, "
+    "with its reason (`club_cancel_reason`): everybody still in is refunded in "
+    "full (`money.refunded_grosze`), it is on nobody's record, and they are "
+    "dealt a new card first (#547)."
+)
+
+_CLUB_CANCEL_REASON = (
+    "Why the club cancelled a `CANCELLED_BY_THE_CLUB` game — `WEATHER`, "
+    "`REPAIR`, `DOUBLE_BOOKING` or `OTHER` (no reason given). `null` on every "
+    "other game."
 )
 
 _UNCOUNTED_REASON = (
     "Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score "
     "— `null` otherwise. `SEAT_EMPTY` — its hour came with a seat open: "
     "somebody left after the cut-off and nobody took the seat. No Level moved, "
-    "and nothing is on the record of those who stayed."
+    "and nothing is on the record of those who stayed. `NO_SHOW` — somebody "
+    "who came reported a player who did not (#547): the reported player has a "
+    "day to dispute it (`GET /games` — `no_shows`), after which it stands; the "
+    "game does not count either way. A report every reported player disputed "
+    "is an ordinary `UNCOUNTED`, with no reason: nobody arbitrated."
 )
 
 _OPEN_SEATS = (
@@ -766,6 +780,12 @@ class BookedTileSchema(BaseModel):
             "open seat — the dashed *You?* (#545)."
         )
     )
+    checked_in: bool = Field(
+        description=(
+            "The club's desk checked them in on the day (#547): they were there, "
+            "so *didn't come* is never offered for them."
+        )
+    )
 
 
 class BookedSidesSchema(BaseModel):
@@ -796,8 +816,8 @@ class BookedMoneySchema(BaseModel):
     refunded_grosze: int | None = Field(
         description=(
             "What everybody still in is given back — the whole share, on a game "
-            "called off at its cut-off (*refunded 30 zł*). `null` where nothing "
-            "is."
+            "called off at its cut-off or cancelled by its club (*refunded 30 "
+            "zł*). `null` where nothing is."
         )
     )
 
@@ -815,6 +835,7 @@ def _tile(
     reader: UUID,
     sport_people: Mapping[UUID, DeckPerson],
     paid: bool,
+    checked_in: bool,
 ) -> BookedTileSchema:
     person = sport_people.get(player_id)
     return BookedTileSchema(
@@ -825,6 +846,7 @@ def _tile(
         photo_url=None if person is None else person.photo_url,
         level=None if person is None else person.level,
         paid=paid,
+        checked_in=checked_in,
     )
 
 
@@ -849,6 +871,7 @@ def _booked_sides(
                 reader=reader,
                 sport_people=sport_people,
                 paid=paid and player in on_it,
+                checked_in=player in game.checked_in,
             )
             for player in sides.yours
         ],
@@ -858,6 +881,7 @@ def _booked_sides(
                 reader=reader,
                 sport_people=sport_people,
                 paid=paid and player in on_it,
+                checked_in=player in game.checked_in,
             )
             for player in sides.theirs
         ],
@@ -895,6 +919,9 @@ class HomeGameSchema(BaseModel):
     kind: SearchMode = Field(description="Competitive, or for fun (a friendly).")
     status: HomeStatus = Field(description=_HOME_STATUS)
     called_off_reason: CalledOffReason | None = Field(description=_CALLED_OFF_REASON)
+    club_cancel_reason: ClubCancelReason | None = Field(
+        description=_CLUB_CANCEL_REASON
+    )
     uncounted_reason: UncountedReason | None = Field(description=_UNCOUNTED_REASON)
     open_seats: int = Field(description=_OPEN_SEATS)
     needs_you: bool = Field(
@@ -931,6 +958,7 @@ class HomeGameSchema(BaseModel):
             kind=game.kind,
             status=card.state.status,
             called_off_reason=card.state.called_off,
+            club_cancel_reason=card.state.cancel_reason,
             uncounted_reason=card.state.uncounted,
             open_seats=game.open_seats,
             needs_you=card.state.needs_you,
@@ -1110,6 +1138,9 @@ class BookingDetailsResponse(BaseModel):
     )
     status: HomeStatus = Field(description=_HOME_STATUS)
     called_off_reason: CalledOffReason | None = Field(description=_CALLED_OFF_REASON)
+    club_cancel_reason: ClubCancelReason | None = Field(
+        description=_CLUB_CANCEL_REASON
+    )
     uncounted_reason: UncountedReason | None = Field(description=_UNCOUNTED_REASON)
     open_seats: int = Field(description=_OPEN_SEATS)
     needs_you: bool
@@ -1171,6 +1202,7 @@ class BookingDetailsResponse(BaseModel):
             read_at=details.read_at,
             status=details.state.status,
             called_off_reason=details.state.called_off,
+            club_cancel_reason=details.state.cancel_reason,
             uncounted_reason=details.state.uncounted,
             open_seats=game.open_seats,
             needs_you=details.state.needs_you,
@@ -1420,7 +1452,13 @@ class SeatToFillSchema(BaseModel):
             deadline=deadline,
             fills_by_the_cut_off=fills_by_the_cut_off,
             players=[
-                _tile(player, reader=reader, sport_people=people, paid=True)
+                _tile(
+                    player,
+                    reader=reader,
+                    sport_people=people,
+                    paid=True,
+                    checked_in=player in game.checked_in,
+                )
                 for player in game.players
             ],
         )

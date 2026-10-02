@@ -53,6 +53,11 @@ never past the start. Its club's yes fills it; its no, or no answer, **turns it
 down**: over, nobody paid, and the people In owed a new card first, until the
 proposer deals it (``Redealt``). A seat opening while it waits — a yes taken
 back, paused or reopened — leaves it filling again, the book-by reading again.
+
+**A booked game its club cancels is owed a new card too** (#547): the
+proposal still filled — the booking says it was cancelled, and why — but the
+people still in when the club cancelled are dealt a new card first, as a
+turned-down game's are, and never at that club and hour.
 """
 
 from __future__ import annotations
@@ -71,6 +76,7 @@ from app.modules.proposals.domain.errors import (
     ProposalNotFound,
 )
 from app.modules.proposals.domain.events import (
+    ClubCancelled,
     CourtHourLost,
     NoSaid,
     ProposalExpired,
@@ -217,6 +223,9 @@ class Proposal:
     #: The people In on a game its club turned down have been dealt a new card
     #: first.
     redealt: bool = False
+    #: Everybody still in when the club cancelled the booked game (#547) —
+    #: ``None`` on a game no club cancelled.
+    cancelled_for: tuple[UUID, ...] | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -356,10 +365,19 @@ class Proposal:
 
     @property
     def owes_a_new_card(self) -> bool:
-        """Its club turned it down, and the people In have not been dealt a new
-        card first yet."""
+        """Its club turned it down — or cancelled it once booked (#547) — and
+        the people it owes have not been dealt a new card first yet."""
 
-        return self.ending is Ending.TURNED_DOWN and not self.redealt
+        owed = self.ending is Ending.TURNED_DOWN or self.cancelled_for is not None
+        return owed and not self.redealt
+
+    @property
+    def owed_to(self) -> tuple[UUID, ...]:
+        """Who a new card is dealt to first: everybody still in when the club
+        cancelled the booked game — a leaver is not — and otherwise the people
+        In, as a turned-down game and one that lost its court hour have them."""
+
+        return self.yeses if self.cancelled_for is None else self.cancelled_for
 
     def standing_at(self, now: Instant) -> Standing:
         if self.ending is not None:
@@ -616,6 +634,21 @@ class Proposal:
             )
         )
 
+    def club_cancelled(self, player_ids: tuple[UUID, ...], *, at: Instant) -> None:
+        """The club cancelled the booked game this proposal filled, with these
+        players still in: they are owed a new card first (#547)."""
+
+        invariant(
+            self.ending is Ending.FILLED and self.cancelled_for is None,
+            f"{self.proposal_id} is cancelled by its club from {self.ending}, "
+            f"cancelled before for {self.cancelled_for}",
+        )
+        self._record_that(
+            ClubCancelled(
+                proposal_id=self.proposal_id, player_ids=player_ids, occurred_at=at
+            )
+        )
+
     def redeal(self, *, at: Instant) -> bool:
         """Record that the people In were dealt a new card first. Answers whether
         anything was recorded: nothing on a game that owes nothing."""
@@ -744,6 +777,8 @@ class Proposal:
             self.ending = Ending.TURNED_DOWN
         elif isinstance(event, Redealt):
             self.redealt = True
+        elif isinstance(event, ClubCancelled):
+            self.cancelled_for = tuple(event.player_ids)
         else:
             raise TypeError(f"Unsupported proposal event {event!r}")
         self.version += 1

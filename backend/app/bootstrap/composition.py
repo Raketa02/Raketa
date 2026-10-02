@@ -148,9 +148,13 @@ from app.modules.proposals.domain.ports import (
     BalanceForecasts,
     BookedGameChanges,
     BookedGames,
+    BookingTakings,
     CardFees,
+    ClubBookings,
     ClubDistances,
     ClubRequests,
+    DeskCheckIns,
+    PoolOrigins,
     GameBookings,
     PlayerNames as ProposalPlayerNames,
     GameResults,
@@ -174,6 +178,7 @@ from app.modules.proposals.domain.ports import (
 )
 from app.modules.proposals.infrastructure.club_court_hours import (
     ClubCourtHours,
+    ClubCourtsDeskCheckIns,
     DirectoryClubNames,
     SellableClubTerms,
 )
@@ -188,6 +193,13 @@ from app.modules.proposals.application.answers import (
     SayYes,
     WithdrawYes,
 )
+from app.modules.proposals.application.club_bookings import (
+    CancelTheGame,
+    CheckInAtTheDesk,
+    MoveTheGame,
+    ReadClubBookings,
+    ReadFreeCourts,
+)
 from app.modules.proposals.application.club_requests import (
     AcceptTheRequest,
     ExpireUnansweredRequests,
@@ -200,6 +212,7 @@ from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.infrastructure.bookings import (
     BookingsBookedGames,
     BookingsBookedGameChanges,
+    BookingsClubBookings,
     BookingsClubRequests,
     BookingsGameBookings,
     BookingsGroupBornGames,
@@ -208,6 +221,12 @@ from app.modules.proposals.infrastructure.bookings import (
 from app.modules.proposals.infrastructure.users_names import UsersPlayerNames
 from app.modules.proposals.infrastructure.club_distances import ProfileClubDistances
 from app.modules.proposals.infrastructure.game_results import GamesGameResults
+from app.modules.bookings.application.at_the_club import (
+    CancelTheBooking,
+    CheckInThePlayer,
+    FindTheSeat,
+    MoveTheBooking,
+)
 from app.modules.bookings.application.book_the_game import BookTheGame, FindACourt
 from app.modules.bookings.application.leaving import (
     CallOffAtTheCutOff,
@@ -228,6 +247,7 @@ from app.modules.bookings.domain.ports import (
     ClubCourtsAtTheHour,
     ClubDesks,
     GameChanges,
+    GameNoShows,
     GameOpening,
 )
 from app.modules.bookings.infrastructure.booking_history import (
@@ -246,6 +266,10 @@ from app.modules.bookings.infrastructure.event_sourced_booking_repository import
 from app.modules.bookings.infrastructure.games_opening import (
     LeaveAndCallOffTheGame,
     OpenTheGame,
+)
+from app.modules.bookings.infrastructure.games_records import (
+    BookingCheckIns,
+    GameNoShowsOnTheRecord,
 )
 from app.modules.payments.application.handlers.settle_seat_charges import (
     SettleSeatCharges,
@@ -275,7 +299,10 @@ from app.modules.proposals.infrastructure.profile_wanted_kinds import (
 from app.modules.proposals.infrastructure.event_sourced_proposal_repository import (  # noqa: E501
     EventSourcedProposalRepository,
 )
-from app.modules.proposals.infrastructure.group_pools import GroupPools
+from app.modules.proposals.infrastructure.group_pools import (
+    GroupPoolOrigins,
+    GroupPools,
+)
 from app.modules.proposals.infrastructure.group_clubs import GroupClubs
 from app.modules.proposals.infrastructure.profile_players_in_play import (
     ProfilePlayersInPlay,
@@ -283,6 +310,7 @@ from app.modules.proposals.infrastructure.profile_players_in_play import (
 from app.modules.proposals.infrastructure.matcher_player_fit import MatcherPlayerFit
 from app.modules.proposals.infrastructure.payments import (
     LiveYesCommitments,
+    PaymentsBookingTakings,
     PaymentsSavedMethods,
     PaymentsCardFees,
     PaymentsSeatCharges,
@@ -360,7 +388,10 @@ from app.modules.clubs.infrastructure.club_courts_sellable_hours import (
 from app.modules.clubs.infrastructure.sqlalchemy_club_directory import (
     SqlAlchemyClubDirectory,
 )
-from app.modules.games.application.call_off_game import CallOffGame
+from app.modules.games.application.call_off_game import (
+    CallOffGame,
+    CallOffTheWholeGame,
+)
 from app.modules.groups.domain.ports import (
     GroupAdministrators,
     GroupBornGames,
@@ -466,6 +497,7 @@ from app.modules.conversations.infrastructure.sqlalchemy_conversation_directory 
 )
 from app.modules.games.domain.ports import (
     AgreedMoment,
+    ClubCheckIns,
     ConfirmedResultLedger,
     CourtPairing,
     GameDirectory,
@@ -1944,6 +1976,168 @@ def build_refuse_the_request(
     )
 
 
+# The club runs its bookings (#547) ------------------------------------------
+
+
+def build_club_bookings(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> ClubBookings:
+    """A club's bookings as its desk reads and runs them, over the Bookings
+    context's own use cases: a day of them, the free courts and the move, the
+    cancel, whose a code is, and the check-in (#547)."""
+
+    def bookings() -> BookingRepository:
+        return build_booking_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+
+    return BookingsClubBookings(
+        bookings=bookings(),
+        directory=build_booking_directory(session),
+        move=MoveTheBooking(
+            bookings=bookings(),
+            courts=build_club_courts_at_the_hour(session, runtime=runtime),
+        ),
+        cancel=CancelTheBooking(
+            bookings=bookings(), games=build_game_changes(session, runtime=runtime)
+        ),
+        find=FindTheSeat(
+            bookings=bookings(),
+            directory=build_booking_directory(session),
+            codes=build_check_in_codes(settings),
+        ),
+        check_in=CheckInThePlayer(bookings=bookings()),
+    )
+
+
+def build_booking_takings(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> BookingTakings:
+    """What each booking took from its players and gave back, off its Seat
+    charges (#547)."""
+    return PaymentsBookingTakings(_seat_charge_repository(session, runtime))
+
+
+def build_pool_origins(session: AsyncSession) -> PoolOrigins:
+    """The group each pool is — a booking's *where it came from* (#547)."""
+    return GroupPoolOrigins(build_group_directory(session))
+
+
+def build_desk_check_ins(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> DeskCheckIns:
+    """Whether a club checks its players in, off its own stream (#547)."""
+    return ClubCourtsDeskCheckIns(
+        build_club_courts_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_read_club_bookings(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadClubBookings:
+    """A day of a club's bookings — the Bookings page (#547)."""
+    return ReadClubBookings(
+        bookings=build_club_bookings(session, settings=settings, runtime=runtime),
+        takings=build_booking_takings(session, runtime=runtime),
+        origins=build_pool_origins(session),
+        names=build_proposal_player_names(session),
+        clock=clock,
+    )
+
+
+def build_read_free_courts(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadFreeCourts:
+    """Where a club may move a game — the Move dialog (#547)."""
+    return ReadFreeCourts(
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        club=build_club_bookings(session, settings=settings, runtime=runtime),
+        clock=clock,
+    )
+
+
+def build_move_the_game(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> MoveTheGame:
+    """*Move* — the game onto another free court of its sport at its hour."""
+    return MoveTheGame(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        club=build_club_bookings(session, settings=settings, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_cancel_the_game(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> CancelTheGame:
+    """*Cancel* — everybody refunded in full, nobody's record, a new card
+    first (#547)."""
+    return CancelTheGame(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        club=build_club_bookings(session, settings=settings, runtime=runtime),
+        refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_check_in_at_the_desk(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> CheckInAtTheDesk:
+    """*Check in* — a code scanned or typed at the club's desk (#547)."""
+    return CheckInAtTheDesk(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        club=build_club_bookings(session, settings=settings, runtime=runtime),
+        desk=build_desk_check_ins(session, runtime=runtime),
+        names=build_proposal_player_names(session),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
 def build_expire_unanswered_requests(
     session: AsyncSession,
     *,
@@ -2433,6 +2627,34 @@ def build_game_changes(
         vacate=VacateSeat(games=games),
         seat=TakeASeat(games=games),
         call_off=CallOffGame(games=games),
+        call_off_whole=CallOffTheWholeGame(games=games),
+    )
+
+
+def build_game_no_shows(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GameNoShows:
+    """Who did not come to a booked game, off its ordinary Game (#547)."""
+    return GameNoShowsOnTheRecord(
+        build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_club_check_ins(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ClubCheckIns:
+    """Who the club's desk checked in to a booked game, off its booking's
+    stream — what a no-show report asks first (#547)."""
+    return BookingCheckIns(
+        build_booking_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
     )
 
 
@@ -3315,6 +3537,7 @@ def build_booking_history(session: AsyncSession) -> BookingHistoryQuery:
             event_store=build_domain_event_store(session),
             events=build_event_publisher(session),
         ),
+        no_shows=build_game_no_shows(session),
     )
 
 

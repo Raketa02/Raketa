@@ -98,8 +98,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   dealt a new card first at the nearest hour they are all free, the same hour at another
   of the pool's clubs before another hour. **On request** (#543): a game waiting for its
   club **holds its own court** through its request, so it is never lost to it and never
-  counted twice at its hour; a game its club **turned down** is *owed* — read by
-  `ProposalDirectory.turned_down_in`, its people dealt a new card first exactly as a lost
+  counted twice at its hour; a game its club **turned down** — or **cancelled once booked**
+  (#547, `ClubCancelled`, owed to the people still in: `Proposal.owed_to`) — is *owed*, read
+  by `ProposalDirectory.owed_a_new_card_in` (`ended = 'TURNED_DOWN'` or
+  `club_cancelled`), its people dealt a new card first exactly as a lost
   card's are, **never at the club and hour that turned them down**, by the first run that
   finds them an hour — owed until then, while the game's own hour is ahead
   (`proposals.redealt`, recorded once the pick has really been made). **When**: `ProposeGames` runs per pool from two

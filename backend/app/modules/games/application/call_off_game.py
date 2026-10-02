@@ -39,6 +39,7 @@ boundary is a decision about the *command*, and the caller owns it.
 from __future__ import annotations
 
 from typing import final
+from uuid import UUID
 
 from app.kernel import Instant, invariant
 from app.modules.games.application.commands import CallOffGameCommand
@@ -86,4 +87,22 @@ class CallOffGame:
         await self._games.save(game)
 
 
-__all__ = ["CallOffGame"]
+@final
+class CallOffTheWholeGame:
+    """*The club took the court back* → the booked game on it is called off,
+    whole or with a seat open (#547). Told by ``bookings`` in the club's own
+    transaction, its booking's id where a challenge's is."""
+
+    def __init__(self, *, games: GameRepository) -> None:
+        self._games = games
+
+    async def execute(self, challenge_id: UUID, *, occurred_at: Instant) -> None:
+        game = invariant(
+            await self._games.for_challenge(challenge_id),
+            f"a booking called off with no game behind it: {challenge_id}",
+        )
+        game.call_off_whole(occurred_at=occurred_at)
+        await self._games.save(game)
+
+
+__all__ = ["CallOffGame", "CallOffTheWholeGame"]

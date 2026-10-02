@@ -29,8 +29,10 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.ports import GameRepository, PlayerNames
 
 
-class _ActOnAResult:
-    """What both acts share: load the game, or refuse to admit it exists."""
+class ActOnAGame:
+    """What every act a player takes on a game they were on shares — stating
+    and agreeing with a score, and reporting somebody who did not come or
+    disputing it (#547): load the game, or refuse to admit it exists."""
 
     def __init__(
         self,
@@ -97,7 +99,7 @@ class _ActOnAResult:
 
 
 @final
-class StateResult(_ActOnAResult):
+class StateResult(ActOnAGame):
     """*This is the score.* The record decides whether that is an entry, a
     correction or a disagreement."""
 
@@ -112,7 +114,7 @@ class StateResult(_ActOnAResult):
 
 
 @final
-class AcceptResult(_ActOnAResult):
+class AcceptResult(ActOnAGame):
     """*That is what happened.* From across the net, and one opponent suffices."""
 
     async def execute(self, command: AcceptResultCommand) -> StandingGame:

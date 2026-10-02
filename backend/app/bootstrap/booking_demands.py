@@ -2,14 +2,15 @@
 each demand (#543).
 
 **A register of its own**, on the rule every register here states: a new
-consumer gets a new register, not a row in somebody else's. **Four rows, and the
+consumer gets a new register, not a row in somebody else's. **Five rows, and the
 tuple is what is asserted over**: which court a club still has for Raketa at an
 hour, with its cut-off and its time to confirm, and whom an email to a club is
 addressed to — both facts the Club context owns — and the ordinary Game a
 booking opens (``GameOpening``, #541, registered by #544, the first ticket to
 touch it) and what leaving and the cut-off do to it (``GameChanges``, #544) —
-the Games context's. Each is read through a port declared in this context's
-words and signed in ``bookings/infrastructure/``.
+the Games context's — and, since #547, who did not come to that Game
+(``GameNoShows``), which the record reads. Each is read through a port declared
+in this context's words and signed in ``bookings/infrastructure/``.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from app.bootstrap.composition import (
     build_club_courts_at_the_hour,
     build_club_desks,
     build_game_changes,
+    build_game_no_shows,
     build_game_opening,
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
@@ -27,6 +29,7 @@ from app.modules.bookings.domain.ports import (
     ClubCourtsAtTheHour,
     ClubDesks,
     GameChanges,
+    GameNoShows,
     GameOpening,
 )
 
@@ -40,6 +43,7 @@ BOOKING_DEMANDS: tuple[type, ...] = (
     ClubDesks,
     GameOpening,
     GameChanges,
+    GameNoShows,
 )
 
 
@@ -63,6 +67,11 @@ BOOKING_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=GameChanges,
         name="LeaveAndCallOffTheGame",
         build=build_game_changes,
+    ),
+    RegisteredImplementation(
+        port=GameNoShows,
+        name="GameNoShowsOnTheRecord",
+        build=build_game_no_shows,
     ),
 )
 

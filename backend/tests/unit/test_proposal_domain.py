@@ -37,6 +37,7 @@ from app.modules.proposals.domain.errors import (
     ProposalNotFound,
 )
 from app.modules.proposals.domain.events import (
+    ClubCancelled,
     CourtHourLost,
     NoSaid,
     ProposalExpired,
@@ -565,6 +566,42 @@ def test_a_turned_down_game_owes_its_people_a_new_card_once():
     assert proposal.owes_a_new_card is False
     assert proposal.redeal(at=LATER) is False
     assert a_full_game().owes_a_new_card is False
+
+
+def a_booked_game() -> Proposal:
+    proposal = a_full_game()
+    proposal.fill(first_side=(B, C), second_side=(D, E), at=LATER)
+    proposal.pull_events()
+    return proposal
+
+
+def test_a_game_its_club_cancelled_owes_the_people_still_in_a_new_card_once():
+    proposal = a_booked_game()
+
+    # E left the booked game before the club cancelled it: only three are owed.
+    proposal.club_cancelled((B, C, D), at=LATER)
+
+    assert proposal.pull_events() == [
+        ClubCancelled(
+            proposal_id=proposal.proposal_id,
+            player_ids=(B, C, D),
+            occurred_at=LATER,
+        )
+    ]
+    assert proposal.standing_at(LATER) is Standing.FILLED
+    assert (proposal.owes_a_new_card, proposal.owed_to) == (True, (B, C, D))
+    assert proposal.redeal(at=LATER) is True
+    assert proposal.owes_a_new_card is False
+    assert a_booked_game().owed_to == (B, C, D, E)
+
+
+def test_only_a_booked_game_is_cancelled_by_its_club_and_only_once():
+    with pytest.raises(InvariantViolated):
+        a_full_game().club_cancelled((B, C, D, E), at=LATER)
+    proposal = a_booked_game()
+    proposal.club_cancelled((B, C, D, E), at=LATER)
+    with pytest.raises(InvariantViolated):
+        proposal.club_cancelled((B, C, D, E), at=LATER)
 
 
 # --------------------------------------------------------------------------- #

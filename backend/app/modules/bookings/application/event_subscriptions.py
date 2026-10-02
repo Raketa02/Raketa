@@ -9,6 +9,9 @@ from app.modules.bookings.domain.events import (
     BookingRequested,
     BookingTimedOut,
     CalledOffAtCutOff,
+    CancelledByClub,
+    CourtMoved,
+    PlayerCheckedIn,
     RequestWithdrawn,
     NoSaidToTheSeat,
     SeatLeft,
@@ -26,6 +29,9 @@ _EVENTS = (
     (CalledOffAtCutOff, "bookings.called_off_at_cut_off"),
     (SeatRescued, "bookings.seat_rescued"),
     (NoSaidToTheSeat, "bookings.no_said_to_the_seat"),
+    (CourtMoved, "bookings.court_moved"),
+    (CancelledByClub, "bookings.cancelled_by_club"),
+    (PlayerCheckedIn, "bookings.player_checked_in"),
 )
 
 
@@ -45,3 +51,6 @@ def subscribe_booking_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(CalledOffAtCutOff, LogBookingEvent())
     dispatcher.subscribe(SeatRescued, LogBookingEvent())
     dispatcher.subscribe(NoSaidToTheSeat, LogBookingEvent())
+    dispatcher.subscribe(CourtMoved, LogBookingEvent())
+    dispatcher.subscribe(CancelledByClub, LogBookingEvent())
+    dispatcher.subscribe(PlayerCheckedIn, LogBookingEvent())

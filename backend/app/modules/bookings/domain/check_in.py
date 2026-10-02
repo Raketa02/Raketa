@@ -24,6 +24,11 @@ calendar from ``clubs/domain/court_hours.py``, where every court hour is read.
 
 **On the day** is the club's calendar day of the game's hour — what *on the day*
 means at a desk in Kraków, whatever the server's clock zone.
+
+**The desk reads what it is handed** (#547): a scan is the whole payload — the
+booking, the player and the code — and a typed code is the six characters,
+however the desk spaced or cased them. Either is a seat's only when the digest
+agrees, compared in constant time.
 """
 
 from __future__ import annotations
@@ -78,3 +83,56 @@ def is_the_game_day(start: Instant, *, now: Instant) -> bool:
     """Whether ``now`` falls on the club's calendar day of a game at ``start``."""
 
     return local_day(now) == local_day(start)
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ReadCode:
+    """What the desk was handed, read: the short code, and — from a scan — the
+    booking and the player it names."""
+
+    short_code: str
+    booking_id: UUID | None = None
+    player_id: UUID | None = None
+
+    def is_of(self, code: CheckInCode) -> bool:
+        """Whether this is that seat's code."""
+
+        return hmac.compare_digest(self.short_code, code.short_code)
+
+
+#: What a desk may put between characters of a typed code.
+_SEPARATORS: Final = str.maketrans("", "", " -")
+
+
+def read_code(text: str) -> ReadCode | None:
+    """A scanned payload or a typed code — ``None`` for anything that is
+    neither, which is no seat's at all."""
+
+    trimmed = text.strip()
+    if trimmed.upper().startswith("RAKETA-CHECK-IN:"):
+        return _scanned(trimmed)
+    typed = trimmed.translate(_SEPARATORS).upper()
+    if not _a_short_code(typed):
+        return None
+    return ReadCode(short_code=typed)
+
+
+def _scanned(payload: str) -> ReadCode | None:
+    prefix, _, rest = payload.rpartition(":")
+    head, _, player = prefix.rpartition(":")
+    version, _, booking = head.rpartition(":")
+    if version.upper() != _QR_PREFIX or not _a_short_code(rest.upper()):
+        return None
+    try:
+        return ReadCode(
+            short_code=rest.upper(), booking_id=UUID(booking), player_id=UUID(player)
+        )
+    except ValueError:
+        return None
+
+
+def _a_short_code(text: str) -> bool:
+    return len(text) == CHECK_IN_CODE_LENGTH and all(
+        character in CODE_ALPHABET for character in text
+    )

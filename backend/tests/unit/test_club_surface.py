@@ -57,6 +57,11 @@ CLUB_OPERATIONS = {
     "get /api/v1/club/bookings/waiting",
     "post /api/v1/club/bookings/{booking_id}/acceptance",
     "post /api/v1/club/bookings/{booking_id}/refusal",
+    "get /api/v1/club/bookings",
+    "get /api/v1/club/bookings/{booking_id}/free-courts",
+    "post /api/v1/club/bookings/{booking_id}/move",
+    "post /api/v1/club/bookings/{booking_id}/cancellation",
+    "post /api/v1/club/check-ins",
 }
 
 

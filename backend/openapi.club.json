@@ -1758,6 +1758,360 @@
           }
         }
       }
+    },
+    "/api/v1/club/bookings": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Your bookings, by day",
+        "description": "Every Raketa booking at this club on one of its calendar days \u2014 the Bookings page \u2014 each with its status, its players (name, *paid*, *checked in*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's. A request a player's leaving took back is not listed: it comes back when the game is full and asks again.",
+        "operationId": "bookings_on_a_day_api_v1_club_bookings_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The day \u2014 today when left out.",
+              "title": "Date"
+            },
+            "description": "The day \u2014 today when left out."
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ClubFilter",
+              "default": "ALL"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubBookingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/bookings/{booking_id}/free-courts": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Where a game can be moved",
+        "description": "The Move dialog: the free courts of the game's sport at its hour.",
+        "operationId": "free_courts_api_v1_club_bookings__booking_id__free_courts_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeCourtsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such booking at this club.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`booking_not_booked` \u2014 it is waiting for your answer: accept or refuse it. `booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/bookings/{booking_id}/move": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Move a game to another court",
+        "description": "**Move** a booked game \u2014 whole or with a seat open \u2014 onto another free court of its sport at the same hour, until it starts. The players read the new number; nothing else about the game changes. Answers the court it is on now.",
+        "operationId": "move_api_v1_club_bookings__booking_id__move_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourtToMoveToSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such booking at this club.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`booking_not_booked` \u2014 it is waiting for your answer: accept or refuse it. `booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded. `court_not_free` \u2014 that court is not a free court of the game's sport at its hour. `court_just_taken` \u2014 another game took it a moment ago; read the free courts again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/bookings/{booking_id}/cancellation": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Cancel a game",
+        "description": "**Cancel** a booked game, with your reason, until it starts: everybody is **refunded in full** \u2014 the card fees on those payments are not returned, and as the seller you bear them \u2014 it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first.",
+        "operationId": "cancel_api_v1_club_bookings__booking_id__cancellation_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`booking_not_found` \u2014 no such booking at this club.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`booking_not_booked` \u2014 it is waiting for your answer: accept or refuse it. `booking_is_called_off` \u2014 it is off already. `game_has_started` \u2014 its hour has begun. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/check-ins": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Check a player in",
+        "description": "**Check in** a player on the game's day: the code the camera read off their QR, or the short code typed by hand. They were there, and can never be reported as not coming. **Money never depends on it** \u2014 you are paid whether people come or not.",
+        "operationId": "check_in_api_v1_club_check_ins_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckInResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`check_in_code_unknown` \u2014 the code opens no seat: mistyped, or a seat its player left.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`check_in_is_off` \u2014 you have not switched on *We check players in*. `check_in_code_for_another_day` \u2014 a seat here on another day (`details.starts_at`). `check_in_code_for_another_club` \u2014 a seat at another club. `already_checked_in` \u2014 scanned already (`details.checked_in_at`: *Checked in at 18:52*). `booking_is_called_off` \u2014 the game is off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1926,6 +2280,148 @@
         "title": "BandDays",
         "description": "Which days a band prices: Monday to Friday, or Saturday and Sunday."
       },
+      "BookedFromSchema": {
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Group Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "official": {
+            "type": "boolean",
+            "title": "Official",
+            "description": "One of your official groups \u2014 or `false`, a player group."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_id",
+          "name",
+          "official"
+        ],
+        "title": "BookedFromSchema",
+        "description": "The group the game was booked in \u2014 *where it came from*."
+      },
+      "CalledOffReason": {
+        "type": "string",
+        "enum": [
+          "REFUSED",
+          "NO_ANSWER",
+          "SHORT_AT_THE_CUT_OFF",
+          "CANCELLED_BY_THE_CLUB"
+        ],
+        "title": "CalledOffReason",
+        "description": "Why a game will not be played (the mechanics \u00a714.1)."
+      },
+      "CancelRequest": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/ClubCancelReason",
+            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with their refund."
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "CancelRequest"
+      },
+      "CheckInRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Code",
+            "description": "What the camera read off the player's QR code, or the six-character short code typed by hand \u2014 spaces, dashes and case do not matter."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "CheckInRequest"
+      },
+      "CheckInResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At"
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "player": {
+            "$ref": "#/components/schemas/CheckedInPlayerSchema"
+          },
+          "checked_in_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked In At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "starts_at",
+          "ends_at",
+          "court_name",
+          "sport",
+          "kind",
+          "player",
+          "checked_in_at"
+        ],
+        "title": "CheckInResponse",
+        "description": "The booking and the player \u2014 *19:00 \u00b7 Court 2 \u00b7 Padel*, *Piotr S. \u2014\nchecked in \u2713*."
+      },
+      "CheckedInPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name"
+        ],
+        "title": "CheckedInPlayerSchema"
+      },
       "ClaimCodeRequest": {
         "properties": {
           "email": {
@@ -1968,6 +2464,283 @@
         ],
         "title": "ClaimTicketResponse",
         "description": "A correct code, exchanged for a ticket the new password is set with."
+      },
+      "ClubBookingMoneySchema": {
+        "properties": {
+          "price_grosze": {
+            "type": "integer",
+            "title": "Price Grosze",
+            "description": "The court's price for the hour."
+          },
+          "collected_grosze": {
+            "type": "integer",
+            "title": "Collected Grosze",
+            "description": "Every share taken from the players, on your account."
+          },
+          "refunded_grosze": {
+            "type": "integer",
+            "title": "Refunded Grosze",
+            "description": "Everything given back \u2014 to a leaver less the card fee, in full on a game called off or cancelled. Refunds are automatic: you never refund anybody by hand."
+          }
+        },
+        "type": "object",
+        "required": [
+          "price_grosze",
+          "collected_grosze",
+          "refunded_grosze"
+        ],
+        "title": "ClubBookingMoneySchema"
+      },
+      "ClubBookingPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their Name, whole. `null` for an account that can no longer be named."
+          },
+          "paid": {
+            "type": "boolean",
+            "title": "Paid",
+            "description": "Their share was taken \u2014 *paid \u2713*."
+          },
+          "checked_in_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked In At",
+            "description": "When the desk checked them in \u2014 *checked in \u2713* \u2014 or `null`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "paid",
+          "checked_in_at"
+        ],
+        "title": "ClubBookingPlayerSchema",
+        "description": "A player on the game, as the club sees them \u2014 **a name, whether they\npaid, and whether the desk checked them in**, and nothing else (\u00a716.14)."
+      },
+      "ClubBookingSchema": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start; games are 1 h."
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At"
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name",
+            "description": "The court it is on \u2014 reserved for it, while it waits for your answer."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Competitive, or for fun (a friendly)."
+          },
+          "status": {
+            "$ref": "#/components/schemas/ClubStatus",
+            "description": "`WAITING_FOR_YOU` \u2014 an On request game asking for the court: Accept or Refuse before `answer_by`. `BOOKED` \u2014 full and paid. `SEAT_OPEN` \u2014 a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` \u2014 see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` \u2014 the hour has passed; you are paid whatever happened on the court."
+          },
+          "called_off_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalledOffReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` otherwise. `SHORT_AT_THE_CUT_OFF` \u2014 a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` \u2014 you cancelled it (`cancel_reason`). `REFUSED` \u2014 you refused the request. `NO_ANSWER` \u2014 it was not answered in time."
+          },
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClubCancelReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why you cancelled it \u2014 on a game you cancelled, else `null`."
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/ClubBookingPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Everybody with a seat on it, the first side first."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats",
+            "description": "Seats a leaver left open."
+          },
+          "money": {
+            "$ref": "#/components/schemas/ClubBookingMoneySchema"
+          },
+          "booked_from": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookedFromSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The group it came from \u2014 `null` for a group that is gone."
+          },
+          "answer_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer By",
+            "description": "Your countdown, while it waits for your answer \u2014 else `null`."
+          },
+          "may_move_or_cancel": {
+            "type": "boolean",
+            "title": "May Move Or Cancel",
+            "description": "**Move** and **Cancel** are yours: booked or with a seat open, and not started yet."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "starts_at",
+          "ends_at",
+          "court_name",
+          "sport",
+          "kind",
+          "status",
+          "called_off_reason",
+          "cancel_reason",
+          "players",
+          "open_seats",
+          "money",
+          "booked_from",
+          "answer_by",
+          "may_move_or_cancel"
+        ],
+        "title": "ClubBookingSchema",
+        "description": "One Raketa booking at the club."
+      },
+      "ClubBookingsResponse": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day",
+            "description": "The club's calendar day read."
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At",
+            "description": "The instant every status and countdown here was read at."
+          },
+          "filter": {
+            "$ref": "#/components/schemas/ClubFilter"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ClubCountsSchema"
+          },
+          "bookings": {
+            "items": {
+              "$ref": "#/components/schemas/ClubBookingSchema"
+            },
+            "type": "array",
+            "title": "Bookings",
+            "description": "Soonest first. Empty: *No Raketa bookings on this day.*"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "read_at",
+          "filter",
+          "counts",
+          "bookings"
+        ],
+        "title": "ClubBookingsResponse",
+        "description": "One day of the club's Raketa bookings \u2014 the Bookings page."
+      },
+      "ClubCancelReason": {
+        "type": "string",
+        "enum": [
+          "WEATHER",
+          "REPAIR",
+          "DOUBLE_BOOKING",
+          "OTHER"
+        ],
+        "title": "ClubCancelReason",
+        "description": "Why the club cancelled a booked game (the mechanics \u00a716.9) \u2014 the players\nare told it with their refund."
+      },
+      "ClubCountsSchema": {
+        "properties": {
+          "all": {
+            "type": "integer",
+            "title": "All"
+          },
+          "waiting_for_you": {
+            "type": "integer",
+            "title": "Waiting For You"
+          },
+          "seat_open": {
+            "type": "integer",
+            "title": "Seat Open"
+          },
+          "called_off": {
+            "type": "integer",
+            "title": "Called Off"
+          }
+        },
+        "type": "object",
+        "required": [
+          "all",
+          "waiting_for_you",
+          "seat_open",
+          "called_off"
+        ],
+        "title": "ClubCountsSchema",
+        "description": "How many of the day's bookings each filter shows."
       },
       "ClubDetailsRequest": {
         "properties": {
@@ -2053,6 +2826,17 @@
         ],
         "title": "ClubDetailsResponse",
         "description": "A club as the desk sees it."
+      },
+      "ClubFilter": {
+        "type": "string",
+        "enum": [
+          "ALL",
+          "WAITING_FOR_YOU",
+          "SEAT_OPEN",
+          "CALLED_OFF"
+        ],
+        "title": "ClubFilter",
+        "description": "The page's filters (the screens B4)."
       },
       "ClubGroupAdministratorSchema": {
         "properties": {
@@ -2213,6 +2997,18 @@
         "title": "ClubSignUpRequest",
         "description": "A club signs up: its details, and the email and password its desk signs\nin with. **No second password field** \u2014 the website asks once."
       },
+      "ClubStatus": {
+        "type": "string",
+        "enum": [
+          "WAITING_FOR_YOU",
+          "BOOKED",
+          "SEAT_OPEN",
+          "CALLED_OFF",
+          "PLAYED"
+        ],
+        "title": "ClubStatus",
+        "description": "What a booking is to its club, right now (the mechanics \u00a716.7)."
+      },
       "CourtChangeRequest": {
         "properties": {
           "name": {
@@ -2316,6 +3112,25 @@
         ],
         "title": "CourtResponse",
         "description": "A court as the desk's table shows it."
+      },
+      "CourtToMoveToSchema": {
+        "properties": {
+          "court_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Court Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "court_id",
+          "name"
+        ],
+        "title": "CourtToMoveToSchema"
       },
       "CourtsResponse": {
         "properties": {
@@ -2556,6 +3371,23 @@
         "title": "ForgotPasswordRequest",
         "description": "*Forgot password?*: the address to send a link and a code to."
       },
+      "FreeCourtsResponse": {
+        "properties": {
+          "courts": {
+            "items": {
+              "$ref": "#/components/schemas/CourtToMoveToSchema"
+            },
+            "type": "array",
+            "title": "Courts",
+            "description": "Every other court of the game's sport you still have for Raketa at its hour, in your own order. Empty: there is none \u2014 **Cancel** with *repair* if the court cannot be played."
+          }
+        },
+        "type": "object",
+        "required": [
+          "courts"
+        ],
+        "title": "FreeCourtsResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2697,6 +3529,21 @@
         ],
         "title": "MonogramSchema",
         "description": "The group's tile, **cut by the backend** so every client draws the same\none (``docs/adr/0183`` \u00a75)."
+      },
+      "MoveRequest": {
+        "properties": {
+          "court_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Court Id",
+            "description": "One of the game's free courts."
+          }
+        },
+        "type": "object",
+        "required": [
+          "court_id"
+        ],
+        "title": "MoveRequest"
       },
       "NewPasswordRequest": {
         "properties": {

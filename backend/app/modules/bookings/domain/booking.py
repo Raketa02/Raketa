@@ -34,7 +34,13 @@ stays open until the cut-off whatever their number, then until the start. A
 game whose seats are all taken is whole again, and *short at its cut-off* is read
 off the seats still open.
 
-*Played* arrives with #547, as an event on this stream.
+**The club runs it** (#547; the mechanics §16.7–§16.10): it may **move** the
+game to another court of its sport at the same hour, or **cancel** it with its
+reason — everybody still in refunded in full, on nobody's record — until the
+game starts; and its desk **checks players in** on the day. *Played* is read
+off the clock — a booked game whose hour has passed — and never recorded: there
+is nothing to decide about it, and a recorded copy would be wrong for the whole
+gap until something wrote it.
 """
 
 from __future__ import annotations
@@ -53,6 +59,9 @@ from app.modules.bookings.domain.events import (
     BookingRequested,
     BookingTimedOut,
     CalledOffAtCutOff,
+    CancelledByClub,
+    CourtMoved,
+    PlayerCheckedIn,
     RequestWithdrawn,
     NoSaidToTheSeat,
     SeatLeft,
@@ -96,6 +105,19 @@ class CalledOff(StrEnum):
     SEAT_OPENED = "SEAT_OPENED"
     #: A seat that opened before the club's cut-off was still open at it (#544).
     SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
+    #: The club cancelled it, with its reason (#547).
+    CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+
+
+class CancelReason(StrEnum):
+    """Why the club cancelled a booked game (the mechanics §16.9) — told to
+    the players with their refund."""
+
+    WEATHER = "WEATHER"
+    REPAIR = "REPAIR"
+    #: The desk sold the hour too — an Instant club's double sale (§16.16).
+    DOUBLE_BOOKING = "DOUBLE_BOOKING"
+    OTHER = "OTHER"
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,6 +168,10 @@ class Booking:
     departures: tuple[Departure, ...] = ()
     #: Everybody who said no to the open seat dealt to them as a card (#545).
     said_no: frozenset[UUID] = frozenset()
+    #: Why the club cancelled it, once it did (#547).
+    cancel_reason: CancelReason | None = None
+    #: Everybody the club's desk checked in, and when (#547).
+    checked_in: dict[UUID, Instant] = field(default_factory=dict)
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -443,6 +469,63 @@ class Booking:
         )
         return True
 
+    def move_to(self, court: BookedCourt, *, at: Instant) -> None:
+        """The club puts the game on ``court`` — another court of its sport,
+        free at the hour (#547). Whether it is free, and of the sport, is the
+        caller's question, asked of what the club sells; that the game is still
+        to be played, and the court another, is this one's."""
+
+        self._refuse_unless_still_to_be_played(at)
+        invariant(
+            court.court_id != self.court.court_id,
+            f"{self.booking_id} is moved onto its own court {court.court_id}",
+        )
+        self._record_that(
+            CourtMoved(
+                booking_id=self.booking_id,
+                court_id=court.court_id,
+                court_name=court.name,
+                occurred_at=at,
+            )
+        )
+
+    def cancel(self, reason: CancelReason, *, at: Instant) -> None:
+        """The club cancels the game, with its reason: everybody still in is
+        named, to be refunded in full (#547; the mechanics §16.9)."""
+
+        self._refuse_unless_still_to_be_played(at)
+        self._record_that(
+            CancelledByClub(
+                booking_id=self.booking_id,
+                reason=reason.value,
+                player_ids=self.players,
+                occurred_at=at,
+            )
+        )
+
+    def check_in(self, player_id: UUID, *, at: Instant) -> bool:
+        """The desk checked this player in (#547; the mechanics §15.1). Answers
+        whether anything was recorded — nothing for a player already checked
+        in, whose first scan stands. Whether it is the game's day at the
+        game's club is the caller's question; that the player has a seat on a
+        booked game is this one's."""
+
+        invariant(
+            self.is_booked, f"{player_id} checked in to {self.booking_id} {self.state}"
+        )
+        invariant(
+            player_id in self.players,
+            f"{player_id} checked in with no seat on {self.booking_id}",
+        )
+        if player_id in self.checked_in:
+            return False
+        self._record_that(
+            PlayerCheckedIn(
+                booking_id=self.booking_id, player_id=player_id, occurred_at=at
+            )
+        )
+        return True
+
     def call_off_at_the_cut_off(self, *, at: Instant) -> None:
         """Short at its cut-off: the game is off, and everybody still in is
         named, to be refunded in full."""
@@ -539,6 +622,18 @@ class Booking:
 
     # ------------------------------------------------------------------- fold
 
+    def _refuse_unless_still_to_be_played(self, at: Instant) -> None:
+        """Booked — whole or with a seat open — not short at its cut-off, and
+        its hour still ahead: what the club may still move or cancel."""
+
+        invariant(
+            self.is_booked
+            and not self.short_at_the_cut_off(now=at)
+            and at < self.start,
+            f"{self.booking_id} is no longer to be played at {at}: {self.state}, "
+            f"cut-off {self.cut_off}, start {self.start}",
+        )
+
     def _refuse_unless_waiting(self) -> None:
         invariant(
             self.is_waiting,
@@ -605,6 +700,17 @@ class Booking:
         elif isinstance(event, CalledOffAtCutOff):
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.SHORT_AT_THE_CUT_OFF
+        elif isinstance(event, CourtMoved):
+            self.court = BookedCourt(court_id=event.court_id, name=event.court_name)
+        elif isinstance(event, CancelledByClub):
+            self.state = BookingState.CALLED_OFF
+            self.called_off = CalledOff.CANCELLED_BY_THE_CLUB
+            self.cancel_reason = CancelReason(event.reason)
+        elif isinstance(event, PlayerCheckedIn):
+            self.checked_in = {
+                **self.checked_in,
+                event.player_id: instant(event.occurred_at),
+            }
         elif isinstance(event, BookingRequested):
             self.court = BookedCourt(court_id=event.court_id, name=event.court_name)
             self.first_side = tuple(event.first_side)

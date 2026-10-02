@@ -19,7 +19,9 @@ one too** (#541): its booking took a court hour from every card at that club
 and hour, in any pool — and a seat reopened, or a yes paused, left a seat open.
 **So is a game put to an On request club, and the club's answer** (#543): the
 request holds a court hour, and a request refused, unanswered or withdrawn
-frees it — and a turned-down game's people are owed a new card first.
+frees it — and a turned-down game's people are owed a new card first. **And
+the club's cancel of a booked game** (#547): its court hour is free, and the
+people still in are owed a new card first.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ from app.modules.bookings.domain.events import (
     BookingRefused,
     BookingRequested,
     BookingTimedOut,
+    CancelledByClub,
     RequestWithdrawn,
 )
 from app.modules.clubs.domain.club_courts_events import (
@@ -110,6 +113,9 @@ CLUB_EVENTS = (
     BookingRefused,
     BookingTimedOut,
     RequestWithdrawn,
+    # The club's cancel frees its court hour, and owes its people a new card
+    # first (#547).
+    CancelledByClub,
 )
 
 

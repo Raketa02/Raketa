@@ -38,6 +38,9 @@ from app.modules.bookings.domain.events import (
     BookingRequested,
     BookingTimedOut,
     CalledOffAtCutOff,
+    CancelledByClub,
+    CourtMoved,
+    PlayerCheckedIn,
     RequestWithdrawn,
     NoSaidToTheSeat,
     SeatLeft,
@@ -171,8 +174,14 @@ class EventSourcedBookingRepository:
         elif isinstance(event, NoSaidToTheSeat):
             # A no to a card is the booking's to fold; no read asks it of a row.
             pass
-        elif isinstance(event, CalledOffAtCutOff):
+        elif isinstance(event, (CalledOffAtCutOff, CancelledByClub)):
             await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
+        elif isinstance(event, CourtMoved):
+            # The court hour's own index refuses a court another game holds.
+            await self._row(event.booking_id, court_id=event.court_id)
+        elif isinstance(event, PlayerCheckedIn):
+            # The desk's scan is the booking's to fold; no read asks it of a row.
+            pass
         else:
             raise TypeError(f"Unsupported booking event {event!r}")
 
@@ -344,6 +353,40 @@ class SqlAlchemyBookingDirectory:
             .order_by(BookingORM.start, BookingORM.id)
         )
         return list(rows.all())
+
+    async def at_club(
+        self, club_id: UUID, *, start: Instant, end: Instant
+    ) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingORM.id)
+            .where(
+                BookingORM.club_id == club_id,
+                BookingORM.start >= start,
+                BookingORM.start < end,
+            )
+            .order_by(BookingORM.start, BookingORM.id)
+        )
+        return list(rows.all())
+
+    async def seats_at(
+        self, club_id: UUID | None, *, start: Instant, end: Instant
+    ) -> Sequence[tuple[UUID, UUID]]:
+        query = (
+            select(BookingSeatORM.booking_id, BookingSeatORM.player_id)
+            .join(BookingORM, BookingORM.id == BookingSeatORM.booking_id)
+            .where(
+                BookingSeatORM.left_at.is_(None),
+                BookingORM.start >= start,
+                BookingORM.start < end,
+            )
+            .order_by(
+                BookingORM.start, BookingSeatORM.booking_id, BookingSeatORM.player_id
+            )
+        )
+        if club_id is not None:
+            query = query.where(BookingORM.club_id == club_id)
+        rows = await self._session.execute(query)
+        return [(booking_id, player_id) for booking_id, player_id in rows.all()]
 
     async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
         rows = await self._session.scalars(

@@ -113,6 +113,26 @@ class BookingDirectory(Protocol):
         there to take — not on a game short at its cut-off."""
         ...
 
+    async def at_club(
+        self, club_id: UUID, *, start: Instant, end: Instant
+    ) -> Sequence[UUID]:
+        """Every booking at this club whose game starts from ``start`` until
+        ``end``, **whatever it came to** — waiting, booked, with a seat open,
+        called off — soonest first, and by id among games at one hour: the
+        club's Bookings page for a day, and the desk's search for a typed code
+        (#547)."""
+        ...
+
+    async def seats_at(
+        self, club_id: UUID | None, *, start: Instant, end: Instant
+    ) -> Sequence[tuple[UUID, UUID]]:
+        """Each ``(booking, player)`` seat held now on a booking whose game
+        starts from ``start`` until ``end`` — at this club, or at any club when
+        ``club_id`` is ``None`` — soonest first, then by booking and player:
+        where a typed check-in code is looked for, one digest a seat and no
+        stream read until one matches (#547)."""
+        ...
+
     async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
         """Every booking with a seat open since before its cut-off whose cut-off
         has come by ``now``, the earliest cut-off first — whether or not its
@@ -175,6 +195,15 @@ class ClubCourtsAtTheHour(Protocol):
         offered, or the club no longer sells."""
         ...
 
+    async def free_courts(
+        self, club_id: UUID, *, sport: Sport, start: Instant
+    ) -> Sequence[BookedCourt]:
+        """Every court of ``sport`` the club still has for Raketa from
+        ``start``, read as ``first_free`` reads it — **in the club's own
+        order** — where a booked game may be moved to (#547). Empty when there
+        is none, or the club no longer sells."""
+        ...
+
 
 @runtime_checkable
 class GameOpening(Protocol):
@@ -221,6 +250,26 @@ class GameChanges(Protocol):
         """The game is off, called off by nobody — and its room with it. A game
         whose hour has already come with the seat still open ended by its own
         clock, and keeps that end. In the caller's transaction."""
+        ...
+
+    async def call_off_whole(self, booking_id: UUID, *, at: Instant) -> None:
+        """The club cancelled the booking: the game is off, called off by nobody,
+        **whole or with a seat open** — and its room with it. Before its hour,
+        and in the caller's transaction (#547)."""
+        ...
+
+
+@runtime_checkable
+class GameNoShows(Protocol):
+    """**A demand of the Games context**: who did not come to the ordinary
+    Game a booking opened (#547; the mechanics §15.3–§15.4) — *the strongest
+    mark*, which breaks the booked game on the record of whoever it names.
+    The report is the Game's, so the record asks for it rather than keeping a
+    copy."""
+
+    async def did_not_come(self, booking_id: UUID, *, now: Instant) -> frozenset[UUID]:
+        """Everybody a report of not turning up stood against at ``now`` —
+        empty while a report's day still runs, and for a booking with no Game."""
         ...
 
 

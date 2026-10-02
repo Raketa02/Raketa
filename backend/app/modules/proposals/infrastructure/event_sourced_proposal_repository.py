@@ -29,6 +29,7 @@ from app.modules.proposals.domain.events import (
     ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
+    ClubCancelled,
     Redealt,
     SeatReopened,
     TurnedDown,
@@ -195,6 +196,12 @@ class EventSourcedProposalRepository:
             await self._end(event.proposal_id, Ending.COURT_HOUR_LOST)
         elif isinstance(event, TurnedDown):
             await self._end(event.proposal_id, Ending.TURNED_DOWN)
+        elif isinstance(event, ClubCancelled):
+            await self._statement(
+                update(ProposalORM)
+                .where(ProposalORM.id == event.proposal_id)
+                .values(club_cancelled=True)
+            )
         elif isinstance(event, Redealt):
             # The stream's own fact: candidates are read by the ending, and
             # the aggregate says which still owe a card.

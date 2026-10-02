@@ -24,16 +24,17 @@ nothing live and no upcoming booked games*).
 
 from __future__ import annotations
 
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
 from app.kernel import Instant
 from app.modules.bookings.domain.ports import BookingDirectory
+from app.modules.payments.application.refunds import RefundTheSeats
 from app.modules.payments.application.refunds import (
     RefundReason as PaymentsRefundReason,
 )
-from app.modules.payments.application.refunds import RefundTheSeats
+from app.modules.payments.application.seat_charge_emails import CancelledBecause
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
@@ -44,7 +45,14 @@ from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.application.seat_charges import (
     GameToCharge as ChargedGame,
 )
-from app.modules.payments.domain.ports import Commitments, PaymentMethodRepository
+from app.modules.payments.domain.ports import (
+    Commitments,
+    PaymentMethodRepository,
+    SeatChargeRepository,
+)
+from app.modules.payments.domain.seat_charge import PAID
+from app.modules.proposals.domain.club_bookings import Takings
+from app.modules.proposals.domain.home import ClubCancelReason
 from app.modules.proposals.domain.ports import (
     GameToCharge,
     PaymentRefusal,
@@ -147,6 +155,7 @@ _REASONS = {
         PaymentsRefundReason.CALLED_OFF_AT_THE_CUT_OFF
     ),
     RefundReason.SEAT_TAKEN: PaymentsRefundReason.SEAT_TAKEN,
+    RefundReason.CANCELLED_BY_THE_CLUB: PaymentsRefundReason.CANCELLED_BY_THE_CLUB,
 }
 
 
@@ -162,11 +171,43 @@ class PaymentsSeatRefunds:
         *,
         reason: RefundReason,
         at: Instant,
+        because: ClubCancelReason | None = None,
     ) -> None:
         # A booking takes its proposal's id, which every charge was made for.
         await self._refund.execute(
-            booking_id, players, reason=_REASONS[reason], at=at
+            booking_id,
+            players,
+            reason=_REASONS[reason],
+            at=at,
+            because=None if because is None else CancelledBecause(because.value),
         )
+
+
+@final
+class PaymentsBookingTakings:
+    """``BookingTakings`` over each booking's Seat charges (#547): what was
+    taken — a share being captured or captured — and what was given back, at
+    what the provider gave or, until it answers, what was decided."""
+
+    def __init__(self, charges: SeatChargeRepository) -> None:
+        self._charges = charges
+
+    async def of(self, booking_ids: Collection[UUID]) -> Mapping[UUID, Takings]:
+        takings: dict[UUID, Takings] = {}
+        for booking_id in sorted(set(booking_ids)):
+            # A booking takes its proposal's id, which every charge was made for.
+            paid = [
+                charge
+                for charge in await self._charges.of_game(booking_id)
+                if charge.status in PAID
+            ]
+            if paid:
+                takings[booking_id] = Takings(
+                    paid=frozenset(charge.player_id for charge in paid),
+                    collected_grosze=sum(charge.amount_grosze for charge in paid),
+                    refunded_grosze=sum(charge.given_back_grosze for charge in paid),
+                )
+        return takings
 
 
 @final

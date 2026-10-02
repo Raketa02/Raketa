@@ -1,4 +1,4 @@
-"""The Games context's domain events — **ten, and every one of them an act**.
+"""The Games context's domain events — **twelve, and every one of them an act**.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a sport, a kind and a window as their codes, a
@@ -44,6 +44,11 @@ because the card must be gone on their other phone and after a reinstall, and
 read by the rail's fold alone — not by the tallies, not by the settled query,
 not by the room, which is gone before a card can be dismissed. It announces no
 standing and changes nobody else's read.
+
+**Two events are about somebody who did not come** (#547): ``NoShowReported``
+is a player who came saying so of another, and ``NoShowDisputed`` is that other
+saying they did. Neither announces a standing — a report stands only by its day
+passing in silence, which is a clock, and a clock has nothing to publish.
 
 **Three proposals events and not one with a kind field.** A first score, a
 revision of your own side's score and a disagreement with the other side's are
@@ -251,6 +256,31 @@ class ResultAccepted:
     game_id: UUID
     player_id: UUID
     side: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class NoShowReported:
+    """Somebody who came to a **booked** game says ``player_id`` did not (#547;
+    the mechanics §15.3) — *Kuba didn't come*, where they would have entered the
+    result. **Not a standing**: the player has a day to dispute it, and only the
+    day passing in silence makes it stand, which nothing announces.
+    """
+
+    game_id: UUID
+    player_id: UUID
+    reported_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class NoShowDisputed:
+    """The player reported as not turning up says they did, inside their day
+    (#547). **Nobody arbitrates**: the report falls, and nothing goes on their
+    record."""
+
+    game_id: UUID
+    player_id: UUID
     occurred_at: datetime
 
 

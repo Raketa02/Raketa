@@ -1,6 +1,7 @@
 """What ``proposals`` demands of the rest of the platform for Home and a game's
 details (#542), On request (#543), leaving and the cut-off (#544), rescues
-(#545) and posting (#546), run against every registered implementation.
+(#545), posting (#546) and the club running its bookings (#547), run against
+every registered implementation.
 
 **A demand nobody executes is a demand satisfied by accident** (``docs/adr/0098``).
 Every implementation registered in ``app/bootstrap/proposal_demands.py`` is
@@ -44,18 +45,24 @@ from app.modules.payments.domain.seat_charge import SeatCharge
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.proposals.domain.home import ResultStage
+from app.modules.proposals.domain.club_bookings import CodeAtTheDesk
+from app.modules.proposals.domain.home import ClubCancelReason
 from app.modules.proposals.domain.ports import (
     BookableCourt,
     BookedGameChanges,
+    BookingTakings,
     CardFees,
+    ClubBookings,
     ClubDistances,
     ClubRequests,
+    DeskCheckIns,
     GameResults,
     GameToAsk,
     PlayerBookings,
     PlayerFit,
     PlayerNames,
     PlayersInPlay,
+    PoolOrigins,
     RefundReason,
     SeatRefunds,
 )
@@ -639,6 +646,29 @@ async def test_a_leaver_whose_seat_was_taken_is_given_back_less_the_card_fee(
     assert kuba_now is not None and kuba_now.refund_withholds_fee is True
 
 
+@pytest.mark.parametrize("implementation", registered(SeatRefunds))
+async def test_a_game_its_club_cancelled_gives_everybody_everything_back(
+    implementation, session
+):
+    """#547: the club's own rule, so the club bears the fees."""
+
+    refunds: SeatRefunds = implementation.build(session)
+    game_id = new_uuid()
+    olas = await _a_paid_share(session, game_id=game_id, player_id=OLA)
+
+    await refunds.refund(
+        game_id,
+        [OLA],
+        reason=RefundReason.CANCELLED_BY_THE_CLUB,
+        because=ClubCancelReason.WEATHER,
+        at=_at(1),
+    )
+    await session.commit()
+
+    ola_now = await _charges(session).load(olas.charge_id)
+    assert ola_now is not None and ola_now.refund_withholds_fee is False
+
+
 @pytest.mark.parametrize("implementation", registered(CardFees))
 def test_the_card_fee_on_a_share_is_the_provider_s_standard_price(implementation):
     fees: CardFees = implementation.build(None)
@@ -767,3 +797,134 @@ async def test_a_member_in_play_is_their_level_week_gender_and_preference(
     assert read[nobody].level is None
     assert read[nobody].week == WeeklyHours.blank()
     assert (read[nobody].gender, read[nobody].preference) == (None, None)
+
+
+
+# --------------------------------------------------------------------------- #
+# The club runs its bookings (#547)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(ClubBookings))
+async def test_a_club_s_day_is_its_bookings_and_its_cancel_says_whom_it_owes(
+    implementation, session
+):
+    club: ClubBookings = implementation.build(session)
+    start = _at(5 * 24)
+    booking = await _booked_with_its_game(session, start=start)
+    day_opens, day_closes = start - timedelta(hours=1), start + timedelta(hours=14)
+
+    [game] = await club.on_day(booking.club_id, start=day_opens, end=day_closes)
+    assert game.booking_id == booking.booking_id
+    assert await club.on_day(new_uuid(), start=day_opens, end=day_closes) == []
+    # No club sells this court, so it is no court to move to.
+    assert await club.free_courts(booking.booking_id) == []
+    assert await club.move(booking.booking_id, new_uuid(), at=_at(1)) is None
+
+    cut_off = start - timedelta(hours=24)
+    changes: BookedGameChanges = registered_build(BookedGameChanges, session)
+    await changes.leave(booking.booking_id, KUBA, at=cut_off + timedelta(hours=1))
+    cancelled = await club.cancel(
+        booking.booking_id,
+        because=ClubCancelReason.REPAIR,
+        at=cut_off + timedelta(hours=2),
+    )
+    await session.commit()
+
+    assert cancelled.still_in == (OLA, EWA, TOMEK)
+    assert set(cancelled.refunded) == {OLA, KUBA, EWA, TOMEK}
+    [after] = await club.on_day(booking.club_id, start=day_opens, end=day_closes)
+    assert after.cancel_reason is ClubCancelReason.REPAIR
+
+
+@pytest.mark.parametrize("implementation", registered(ClubBookings))
+async def test_a_code_is_placed_at_its_club_and_day_and_checked_in(
+    implementation, session
+):
+    from app.bootstrap.composition import build_check_in_codes
+    from app.core.config import get_settings
+
+    club: ClubBookings = implementation.build(session)
+    start = _at(5 * 24)
+    booking = await _booked_with_its_game(session, start=start)
+    code = build_check_in_codes(get_settings()).code_for(booking.booking_id, EWA)
+    on_the_day = start - timedelta(minutes=10)
+
+    here = await club.seat_for(code.short_code, club_id=booking.club_id, now=on_the_day)
+    scanned = await club.seat_for(code.qr_payload, club_id=new_uuid(), now=on_the_day)
+    early = await club.seat_for(
+        code.short_code, club_id=booking.club_id, now=_at(1)
+    )
+    nobody = await club.seat_for("ZZZZZZ", club_id=booking.club_id, now=on_the_day)
+
+    assert (here.where, here.booking_id, here.player_id) == (
+        CodeAtTheDesk.HERE_TODAY,
+        booking.booking_id,
+        EWA,
+    )
+    assert scanned.where is CodeAtTheDesk.ANOTHER_CLUB
+    assert early.where is CodeAtTheDesk.ANOTHER_DAY
+    assert nobody.where is CodeAtTheDesk.UNKNOWN
+    await club.check_in(booking.booking_id, EWA, at=on_the_day)
+    await session.commit()
+    [game] = await club.on_day(
+        booking.club_id,
+        start=start - timedelta(hours=1),
+        end=start + timedelta(hours=1),
+    )
+    assert game.checked_in == {EWA: on_the_day}
+
+
+@pytest.mark.parametrize("implementation", registered(BookingTakings))
+async def test_a_booking_s_takings_are_what_was_paid_and_given_back(
+    implementation, session
+):
+    takings: BookingTakings = implementation.build(session)
+    game_id = new_uuid()
+    await _a_paid_share(session, game_id=game_id, player_id=OLA)
+    kubas = await _a_paid_share(session, game_id=game_id, player_id=KUBA)
+    charges = _charges(session)
+    kuba_now = await charges.load(kubas.charge_id)
+    assert kuba_now is not None and kuba_now.refund(withhold_fee=False, at=_at(1))
+    await charges.save(kuba_now)
+    await session.commit()
+
+    found = await takings.of([game_id, new_uuid()])
+
+    assert list(found) == [game_id]
+    assert found[game_id].paid == frozenset({OLA, KUBA})
+    assert (found[game_id].collected_grosze, found[game_id].refunded_grosze) == (
+        60_00,
+        30_00,
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(PoolOrigins))
+async def test_a_pool_is_the_group_it_is_filed_under(
+    implementation, client, session, payments
+):
+    from tests.api.proposals_world import a_group, a_player
+
+    club_id, _ = await club_signs_up(client, name="Bonarka Arena", email="d@b.pl")
+    owner = await a_player(client, payments, "ola", card=False)
+    group_id = await a_group(client, owner, club_id)
+    origins: PoolOrigins = implementation.build(session)
+
+    found = await origins.of([group_id, new_uuid()])
+
+    assert list(found) == [group_id]
+    assert (found[group_id].name, found[group_id].official) == ("Sobotni padel", False)
+
+
+@pytest.mark.parametrize("implementation", registered(DeskCheckIns))
+async def test_a_club_checks_its_players_in_only_once_it_says_so(
+    implementation, client, session
+):
+    from tests.api.proposals_world import a_club_and_its_desk
+
+    checking, _ = await a_club_and_its_desk(client, check_in=True)
+    silent, _ = await club_signs_up(client, name="Ogrody 33", email="d@o.pl")
+    settings: DeskCheckIns = implementation.build(session)
+
+    assert await settings.checks_players_in(UUID(checking)) is True
+    assert await settings.checks_players_in(UUID(silent)) is False

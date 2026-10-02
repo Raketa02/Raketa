@@ -73,6 +73,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
     build_candidate_source,
+    build_read_club_bookings,
     build_read_fill_in,
     build_read_group_deck,
     build_read_posting_grid,
@@ -127,7 +128,16 @@ from app.seeds.catalog import (
 from app.seeds.clock import FixedClock
 from app.seeds.cohort import COHORT, PLAYED_GAMES, Cohort, PlayedGame
 from app.seeds.pairs import SeededPairs
-from app.seeds.proposals import GAMES_GROUP, GAMES_KIND, GAMES_SPORT, her_games_group
+from app.modules.clubs.domain.court_hours import local_day
+from app.modules.proposals.domain.club_bookings import ClubFilter
+from app.seeds.proposals import (
+    GAMES_CLUB,
+    GAMES_GROUP,
+    GAMES_KIND,
+    GAMES_SPORT,
+    games_club_id,
+    her_games_group,
+)
 from app.seeds.paths import (
     TRACE_ID,
     ReadPaths,
@@ -345,6 +355,34 @@ async def assert_the_fill_in(
         f"{where}: {board.badge} seat(s) to fill — {before} by the cut-off, "
         f"{after} until the start"
     )
+
+
+async def assert_the_club_bookings(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    settings: Settings,
+    now: Instant,
+    on: Instant,
+) -> str:
+    """*Her club's Bookings page lists the games booked there* (#547; the
+    screens B4, Part D).
+
+    Read through ``ReadClubBookings`` — the page's own read — as the club, on
+    the day of her first seeded booked game. An empty day fails the run by
+    name: the bookings layer seated nothing, or the club's day no longer reads
+    its own bookings.
+    """
+
+    async with session_factory() as session:
+        club_id = await games_club_id(session)
+        day = await build_read_club_bookings(
+            session, clock=FixedClock(at=now), settings=settings
+        ).execute(club_id, day=local_day(on), chosen=ClubFilter.ALL)
+    where = f"Bookings · {GAMES_CLUB.name} · {day.day.isoformat()}"
+    if not day.rows:
+        raise ScreenIsEmpty(f"{where} lists no Raketa booking")
+    paid = sum(len(row.takings.paid) for row in day.rows)
+    return f"{where}: {len(day.rows)} booking(s), {paid} share(s) paid"
 
 
 #: The looks of a posting grid cell the server decides (the screens A5.2) —

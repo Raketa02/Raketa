@@ -12,7 +12,10 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Instant, Sport, invariant
-from app.modules.games.application.call_off_game import CallOffGame
+from app.modules.games.application.call_off_game import (
+    CallOffGame,
+    CallOffTheWholeGame,
+)
 from app.modules.games.application.commands import (
     CallOffGameCommand,
     OpenPlannedGameCommand,
@@ -65,15 +68,21 @@ class OpenTheGame:
 @final
 class LeaveAndCallOffTheGame:
     """``GameChanges`` over the use cases a challenge's departure and call-off
-    reach a game through (#544), and the one a rescue takes a seat by (#545):
-    a booking's id is where a challenge's is."""
+    reach a game through (#544), the one a rescue takes a seat by (#545), and
+    the club's cancel (#547): a booking's id is where a challenge's is."""
 
     def __init__(
-        self, *, vacate: VacateSeat, seat: TakeASeat, call_off: CallOffGame
+        self,
+        *,
+        vacate: VacateSeat,
+        seat: TakeASeat,
+        call_off: CallOffGame,
+        call_off_whole: CallOffTheWholeGame,
     ) -> None:
         self._vacate = vacate
         self._seat = seat
         self._call_off = call_off
+        self._call_off_whole = call_off_whole
 
     async def vacate(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
         await self._vacate.execute(
@@ -94,3 +103,6 @@ class LeaveAndCallOffTheGame:
             CallOffGameCommand(challenge_id=booking_id, called_by=None),
             occurred_at=at,
         )
+
+    async def call_off_whole(self, booking_id: UUID, *, at: Instant) -> None:
+        await self._call_off_whole.execute(booking_id, occurred_at=at)

@@ -12,11 +12,16 @@ whatever becomes of the game. **A mark**: leaving before the cut-off when the
 game is then called off with that seat still open; leaving after the cut-off
 when nobody takes the seat.
 
-**Kept is a game whose hour came with every seat held**, for everybody in it.
+**Kept is a game whose hour came with every seat held**, for everybody in it
+— **unless they did not turn up** (#547; the mechanics §15.3): a no-show the
+players who came reported, and nobody disputed in its day, is *the strongest
+mark* — a broken game here, and a game missed on *shows up*, which the Game
+says. Whether one stands is the Game's to say, and the caller's to ask.
 **Nothing goes on the record of those who stayed** in a game that went ahead
 short, or was called off at its cut-off because of somebody else's seat (the
-mechanics §14.1): it is not a game they kept or broke. *Not turning up* is the
-Game's to say (#547), and a game the club cancels is on nobody's (#547).
+mechanics §14.1): it is not a game they kept or broke. **A game the club
+cancels is on nobody's** (#547): not the people in it, and not a leaver whose
+seat it left open.
 """
 
 from __future__ import annotations
@@ -62,15 +67,23 @@ class KeepingRecord:
         )
 
 
-def keeping_of(booking: Booking, player_id: UUID, *, now: Instant) -> Keeping | None:
+def keeping_of(
+    booking: Booking,
+    player_id: UUID,
+    *,
+    now: Instant,
+    no_shows: frozenset[UUID] = frozenset(),
+) -> Keeping | None:
     """Whether this player kept this booked game at ``now`` — ``None`` while
-    it is not settled, and for a game that is nothing on their record."""
+    it is not settled, and for a game that is nothing on their record.
+    ``no_shows`` is everybody its Game says did not turn up, at ``now``."""
 
     if booking.booked_at is None:
         # Put to its club and never booked: nobody had a seat to keep.
         return None
     called_off = _called_off_at_the_cut_off(booking, now=now)
     if booking.called_off is not None and not called_off:
+        # Turned down, or cancelled by the club: nobody's doing (#547).
         return None
     left = next(
         (one for one in reversed(booking.departures) if one.player_id == player_id),
@@ -80,11 +93,9 @@ def keeping_of(booking: Booking, player_id: UUID, *, now: Instant) -> Keeping | 
         # Kept is the hour coming with every seat held; a game called off, or
         # one that went ahead short, puts nothing on the record of who stayed.
         whole = booking.is_booked and booking.open_seats == 0
-        return (
-            Keeping(kept=True, at=booking.start)
-            if whole and now >= booking.start
-            else None
-        )
+        if not whole or now < booking.start:
+            return None
+        return Keeping(kept=player_id not in no_shows, at=booking.start)
     if left is None or not left.is_open:
         # Somebody took the seat (#545): whatever becomes of the game, it is
         # not because of this one.

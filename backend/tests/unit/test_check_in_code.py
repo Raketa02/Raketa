@@ -90,3 +90,51 @@ def test_an_early_hour_is_on_the_day_in_krakow_not_in_utc():
     game = warsaw(10, 7)
 
     assert is_the_game_day(game, now=warsaw(10, 0, 30))
+
+
+# --------------------------------------------------------------------------- #
+# The desk reads a code (#547)
+# --------------------------------------------------------------------------- #
+
+
+def test_the_desk_reads_a_scanned_code_whole_and_a_typed_one_loosely():
+    from app.modules.bookings.domain.check_in import read_code
+
+    code = check_in_code(booking_id=BOOKING, player_id=OLA, key=KEY)
+
+    scanned = read_code(code.qr_payload)
+    assert scanned is not None
+    assert (scanned.booking_id, scanned.player_id, scanned.short_code) == (
+        BOOKING,
+        OLA,
+        code.short_code,
+    )
+    typed = read_code(f" {code.short_code[:3].lower()}-{code.short_code[3:]} ")
+    assert typed is not None
+    assert (typed.booking_id, typed.player_id, typed.short_code) == (
+        None,
+        None,
+        code.short_code,
+    )
+
+
+def test_what_is_no_code_is_read_as_none():
+    from app.modules.bookings.domain.check_in import read_code
+
+    assert read_code("") is None
+    assert read_code("ABC") is None
+    assert read_code("ABCDE0") is None  # 0 is a look-alike, never in a code
+    assert read_code("RAKETA-CHECK-IN:1:not-a-uuid:also-not:ABCDEF") is None
+    assert read_code(f"RAKETA-CHECK-IN:2:{BOOKING}:{OLA}:ABCDEF") is None
+
+
+def test_a_read_code_is_a_seat_s_only_when_the_digests_agree():
+    from app.modules.bookings.domain.check_in import read_code
+
+    ola = check_in_code(booking_id=BOOKING, player_id=OLA, key=KEY)
+    kuba = check_in_code(booking_id=BOOKING, player_id=KUBA, key=KEY)
+    read = read_code(ola.short_code)
+    assert read is not None
+
+    assert read.is_of(ola)
+    assert not read.is_of(kuba)

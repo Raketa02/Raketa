@@ -238,11 +238,28 @@ class TurnedDown:
 
 
 @dataclass(frozen=True)
+class ClubCancelled:
+    """**The club cancelled the booked game** (#547; the mechanics §16.9): the
+    booking says why, and refunds everybody still in in full. ``player_ids``
+    — everybody still in when it did — are **dealt a new card first**, never at
+    this club and hour. The proposal still filled; this is what it owes."""
+
+    proposal_id: UUID
+    player_ids: tuple[UUID, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "player_ids", tuple(UUID(str(one)) for one in self.player_ids)
+        )
+
+
+@dataclass(frozen=True)
 class Redealt:
-    """The proposer has dealt the people In on a game its club turned down a
-    new card first. What makes a turned-down game owe nothing more; until it,
-    every proposer run looks for an hour again, while the game's own hour is
-    still ahead."""
+    """The proposer has dealt the people In on a game its club turned down — or
+    still in on one it cancelled (#547) — a new card first. What makes such a
+    game owe nothing more; until it, every proposer run looks for an hour again,
+    while the game's own hour is still ahead."""
 
     proposal_id: UUID
     occurred_at: datetime

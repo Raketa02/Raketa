@@ -234,11 +234,11 @@ class ProposeGames:
         return filling
 
     async def _owed(self, pool: Pool, now: Instant) -> list[Proposal]:
-        """This pool's games a club turned down whose people are still owed a
-        new card first."""
+        """This pool's games a club turned down, or cancelled once booked, whose
+        people are still owed a new card first."""
 
         owed: list[Proposal] = []
-        for proposal_id in await self._directory.turned_down_in(pool.id, now=now):
+        for proposal_id in await self._directory.owed_a_new_card_in(pool.id, now=now):
             proposal = await self._proposals.load(proposal_id)
             if proposal is not None and proposal.owes_a_new_card:
                 owed.append(proposal)
@@ -268,7 +268,7 @@ class ProposeGames:
                     for proposal in filling
                     for player in (*proposal.yeses, *named_on(proposal))
                 ),
-                *(player for proposal in owed for player in proposal.yeses),
+                *(player for proposal in owed for player in proposal.owed_to),
             },
             key=str,
         )

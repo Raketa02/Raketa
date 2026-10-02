@@ -3,7 +3,8 @@
 seller, and *Confirm your payment to keep your seat* — and a refund's two
 (#544): *You left the game · your refund is on its way* and *Game called off ·
 with the refund* — and a rescue's (#545): *You've been refunded · your seat was
-taken*, and *Confirm your payment to take the seat*.
+taken*, and *Confirm your payment to take the seat* — and the club's cancel
+(#547): *Game cancelled by the club · with the refund*, saying why.
 
 **Every notice about money is also emailed**. The
 words live here, beside the use case that queues them (``docs/adr/0186`` §4);
@@ -16,6 +17,7 @@ the wall clock is the club's, Europe/Warsaw, since that is where the court is.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from enum import StrEnum
 from typing import Final
 
 from app.application.mail.layout import ButtonEmail, render
@@ -238,6 +240,66 @@ def game_called_off_email(
                 f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)} — is off: "
                 f"a seat was still empty at the club's cut-off.",
                 f"Your {zloty(refunded_grosze)} is refunded in full by {club}.",
+                "Refunds reach BLIK within hours and cards within up to two weeks.",
+            ),
+            button_label="Open Raketa",
+            button_url=app_link,
+        )
+    )
+
+
+GAME_CANCELLED_KIND: Final = "payments.game_cancelled.player"
+
+
+class CancelledBecause(StrEnum):
+    """Why the club cancelled a booked game, as the refund's email says it
+    (#547; the mechanics §16.9)."""
+
+    WEATHER = "WEATHER"
+    REPAIR = "REPAIR"
+    DOUBLE_BOOKING = "DOUBLE_BOOKING"
+    OTHER = "OTHER"
+
+
+#: The email's words for each reason — ``None`` is the club's *other*, which
+#: names none.
+_CANCELLED_BECAUSE: Final[dict[CancelledBecause, str | None]] = {
+    CancelledBecause.WEATHER: "because of the weather",
+    CancelledBecause.REPAIR: "because a court needs repair",
+    CancelledBecause.DOUBLE_BOOKING: "because the court was booked twice",
+    CancelledBecause.OTHER: None,
+}
+
+
+def game_cancelled_email(
+    *,
+    to: str,
+    name: str | None,
+    club: str,
+    sport: Sport,
+    starts_at: Instant,
+    refunded_grosze: int,
+    because: CancelledBecause,
+    app_link: str,
+) -> OutgoingMessage:
+    """*Game cancelled by the club · with the refund* (#547): the club cancelled
+    the booked game, so everybody in it gets all of their money back, nothing
+    goes on anybody's record, and they are dealt a new game first."""
+
+    reason = _CANCELLED_BECAUSE[because]
+    return render(
+        ButtonEmail(
+            kind=GAME_CANCELLED_KIND,
+            to=to,
+            subject=f"Game cancelled by {club} · you're refunded "
+            f"{zloty(refunded_grosze)}",
+            heading="Game cancelled",
+            lines=(
+                f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)} — was "
+                f"cancelled by the club" + ("." if reason is None else f" {reason}."),
+                f"Your {zloty(refunded_grosze)} is refunded in full by {club}, and "
+                "nothing about it goes on your record.",
+                "We'll look for another game for you first.",
                 "Refunds reach BLIK within hours and cards within up to two weeks.",
             ),
             button_label="Open Raketa",

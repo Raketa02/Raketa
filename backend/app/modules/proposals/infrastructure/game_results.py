@@ -6,7 +6,9 @@
 this context's words at the seam.
 
 **Whose agreement a score waits on is the Game's own rule**
-(``Game.awaits_agreement_from``), asked of it and never restated here.
+(``Game.awaits_agreement_from``), asked of it and never restated here — and so
+is whose dispute a report of not turning up waits on (#547): the reported
+player's, while its day runs.
 """
 
 from __future__ import annotations
@@ -37,6 +39,7 @@ class GamesGameResults:
             results[game_id] = GameResult(
                 stage=_stage(game.standing_at(now)),
                 awaits_your_agreement=game.awaits_agreement_from(reader, now=now),
+                you_may_dispute=game.may_dispute(reader, now=now),
             )
         return results
 
@@ -57,5 +60,9 @@ def _stage(standing: GameStanding) -> ResultStage:
             return ResultStage.CALLED_OFF
         case GameStanding.STARTED_SHORT:
             return ResultStage.STARTED_SHORT
+        case GameStanding.NO_SHOW_REPORTED:
+            return ResultStage.NO_SHOW_REPORTED
+        case GameStanding.NO_SHOW:
+            return ResultStage.NO_SHOW
         case _:
             exhaustive(standing)

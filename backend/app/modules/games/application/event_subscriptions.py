@@ -3,7 +3,7 @@
 A name here is a **published contract** and outlives every Python class it maps
 to: renaming ``GamePlanned`` must never change what is already in the store.
 
-**Ten names, on one aggregate**, and every one of them is something a person did.
+**Twelve names, on one aggregate**, and every one of them is something a person did.
 ``games.planned`` is the exception that proves it — a line-up completing is four
 people's acceptances arriving at a total, and it is recorded because *the
 arrangement at the instant it was settled* is not recoverable from anywhere else
@@ -33,6 +33,11 @@ rail, recorded once per player and read by the rail's fold alone. It announces
 no standing and no subscriber hears it — the room it might have reached is
 gone before a card can be dismissed.
 
+**``games.no_show_reported`` and ``games.no_show_disputed`` are the eleventh
+and twelfth** (#547): somebody who came to a booked game saying another did not,
+and that other saying they did. Neither announces a standing — a report stands
+by its day passing in silence.
+
 The two most likely to be asked to carry more later are ``games.planned`` — a
 game that one day comes from something other than a challenge — and
 ``games.result_proposed``, if a score ever grows a shape richer than sets. Either
@@ -50,6 +55,8 @@ from app.modules.games.domain.events import (
     GamePlanned,
     GamePlayed,
     LineUpReseated,
+    NoShowDisputed,
+    NoShowReported,
     ResultAccepted,
     ResultCorrected,
     ResultCountered,
@@ -68,6 +75,8 @@ _CONTRACTS = (
     (ResultCountered, "games.result_countered"),
     (ResultAccepted, "games.result_accepted"),
     (GameDismissed, "games.dismissed"),
+    (NoShowReported, "games.no_show_reported"),
+    (NoShowDisputed, "games.no_show_disputed"),
 )
 
 

@@ -10,7 +10,10 @@ assertion is about its own kind: **a new provider or a new consumer gets a new
 register, not a row in somebody else's**, and the first person to add a row
 should not have to guess which list it belongs in.
 
-**Two rows, and the tuple is what is asserted over.** A register asserts about
+**Three rows, and the tuple is what is asserted over** — the third since #547:
+who the club's desk checked in to a booked game (``ClubCheckIns``), the
+booking's fact, which a report of not turning up asks first and whose adapter
+the Bookings context signs, as the Plan signs the moment. A register asserts about
 the ports it declares rather than about every ``Protocol`` in
 ``games/domain/ports.py``: most of them are this context's own reads or what it
 publishes, contracted on the register beside this one. ``PlayerNames`` is the
@@ -46,6 +49,7 @@ from typing import TypeVar
 from app.bootstrap.challenge_demands import PairingSeams, RegisteredPairing
 from app.bootstrap.composition import (
     build_agreed_moment,
+    build_club_check_ins,
     build_clock,
     build_court_pairing_workbench,
     build_domain_event_store,
@@ -54,14 +58,14 @@ from app.bootstrap.composition import (
     build_unit_of_work,
 )
 from app.core.config import get_settings
-from app.modules.games.domain.ports import AgreedMoment, CourtPairing
+from app.modules.games.domain.ports import AgreedMoment, ClubCheckIns, CourtPairing
 
 P = TypeVar("P")
 
 #: What this context asks other contexts for, declared as data for the same
 #: reason every other register is: *a port with no registered implementation* has to
 #: be a question something can ask.
-GAME_DEMANDS: tuple[type, ...] = (CourtPairing, AgreedMoment)
+GAME_DEMANDS: tuple[type, ...] = (CourtPairing, AgreedMoment, ClubCheckIns)
 
 
 GAME_IMPLEMENTATIONS: tuple[RegisteredPairing, ...] = (
@@ -89,6 +93,11 @@ GAME_IMPLEMENTATIONS: tuple[RegisteredPairing, ...] = (
         # this port's, and the builder ignores them rather than the row taking a
         # second shape.
         build=lambda seams: build_agreed_moment(seams.session),
+    ),
+    RegisteredPairing(
+        port=ClubCheckIns,
+        name="BookingCheckIns",
+        build=lambda seams: build_club_check_ins(seams.session),
     ),
 )
 

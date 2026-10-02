@@ -232,6 +232,12 @@ class EventSourcedGameHistory:
         **Absent rather than a measured zero**, unlike ``counted_games_for``
         above. A person nothing was ever arranged for has not failed to come, and
         a ``0/0`` published here would say they had.
+
+        **A booked game somebody did not come to is read per player** (#547):
+        a report that stood its day is a miss for the player it named — the
+        same miss a ghost is, which with the broken booked game on *keeps
+        plans* makes it the strongest mark on a record — and a game played for
+        everybody else on the court, who came.
         """
 
         wanted = set(player_ids)
@@ -242,6 +248,18 @@ class EventSourcedGameHistory:
         ghosts: dict[UUID, int] = defaultdict(int)
         latest: dict[UUID, Instant] = {}
         for game in await self._games_among(wanted):
+            if game.standing_at(now) is GameStanding.NO_SHOW:
+                # **Per player, not per game** (#547): whoever a report stood
+                # against did not come — a miss — and everybody else did.
+                absent = game.confirmed_no_shows_at(now)
+                at = game.became_history_at(now) or game.planned_at
+                for player_id in game.line_up.players & wanted:
+                    if player_id in absent:
+                        ghosts[player_id] += 1
+                    else:
+                        played[player_id] += 1
+                    latest[player_id] = max(at, latest.get(player_id, at))
+                continue
             settled = _settled_arrangement(game, now)
             if settled is None:
                 continue

@@ -559,12 +559,13 @@ class _Batching:
         self, lost: Proposal, *, not_at: tuple[UUID, Instant] | None = None
     ) -> bool:
         """The people In on a card that lost its court hour — or a game its
-        club turned down — dealt a new card first: the nearest hour they are
+        club turned down, or the people still in a booked game its club
+        cancelled (#547) — dealt a new card first: the nearest hour they are
         all free, completed by their best fits — or as many of them as there
         are — and never ``not_at``. Whether a card was dealt."""
 
         kind = lost.kind
-        in_ = tuple(player for player in lost.yeses if player in self._members)
+        in_ = tuple(player for player in lost.owed_to if player in self._members)
         if not in_ or not all(
             self._fits(kind, one, other) for one, other in combinations(in_, 2)
         ):

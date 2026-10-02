@@ -1,4 +1,4 @@
-"""Which courts a card may be drawn for — **all six standings, pinned.**
+"""Which courts a card may be drawn for — **every standing, pinned.**
 
 ``RATEABLE`` is ``SETTLED & PLAYED``, derived from ``games``' own two sets so a
 new ending added over there arrives here as a question rather than as a silent
@@ -142,6 +142,41 @@ def _started_short():
     return game, instant(starts + timedelta(hours=1))
 
 
+def _booked_and_played(players):
+    """A booked game whose hour has come, its four on the court (#547)."""
+
+    starts = instant(PLANNED_AT + timedelta(days=3))
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        kind=GameKind.COUNTED,
+        window=None,
+        line_up=a_doubles_game(*players).line_up,
+        occurred_at=PLANNED_AT,
+        starts_at=starts,
+    )
+    reported = instant(starts + timedelta(hours=2))
+    game.report_no_show(
+        by=players[0], absent=players[3], checked_in=(), occurred_at=reported
+    )
+    return game, reported
+
+
+def _no_show_reported():
+    """Somebody who came said one of the four did not, and their day runs."""
+
+    game, reported = _booked_and_played(_four())
+    return game, instant(reported + timedelta(hours=1))
+
+
+def _no_show():
+    """A report of not coming stood its day: the game does not count."""
+
+    game, reported = _booked_and_played(_four())
+    return game, instant(reported + timedelta(days=2))
+
+
 def _awaiting_answer():
     players = _four()
     game = a_doubles_game(*players)
@@ -182,6 +217,8 @@ BUILDERS = {
     GameStanding.CONFIRMED: _confirmed,
     GameStanding.UNSCORED: _unscored,
     GameStanding.STARTED_SHORT: _started_short,
+    GameStanding.NO_SHOW_REPORTED: _no_show_reported,
+    GameStanding.NO_SHOW: _no_show,
 }
 
 #: The two the card may be drawn for. Spelled out rather than derived, so this

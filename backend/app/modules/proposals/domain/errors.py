@@ -414,3 +414,85 @@ class PostNotOpenToYou(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("this post is not one you could join")
+
+
+# --------------------------------------------------------------------------- #
+# The club runs its bookings (#547)
+# --------------------------------------------------------------------------- #
+
+
+class BookingNotBooked(ConflictError):
+    """The game is still waiting for the club's answer: accept or refuse it.
+    There is no court of the players' to move and nothing paid to cancel."""
+
+    code = "booking_not_booked"
+
+    def __init__(self) -> None:
+        super().__init__("this game is waiting for your answer")
+
+
+class CourtNotFree(ConflictError):
+    """The court the club chose is not a free court of the game's sport at its
+    hour — another game holds it, it is closed then, or it is another sport's.
+    Nothing was recorded."""
+
+    code = "court_not_free"
+
+    def __init__(self) -> None:
+        super().__init__("that court is not free for this game")
+
+
+class CheckInIsOff(ConflictError):
+    """The club has not switched on *We check players in* (the mechanics
+    §16.10)."""
+
+    code = "check_in_is_off"
+
+    def __init__(self) -> None:
+        super().__init__("this club does not check players in")
+
+
+class CheckInCodeUnknown(NotFoundError):
+    """The code is nobody's seat — mistyped, a seat its player left, or a game
+    still waiting for the club. **What it is not is not said**: a code is a
+    secret, and the desk is told only that it does not open a seat here."""
+
+    code = "check_in_code_unknown"
+
+    def __init__(self) -> None:
+        super().__init__("this code is no seat")
+
+
+class CheckInCodeForAnotherDay(ConflictError):
+    """A seat at this club, on another day — *This code is for another day*.
+    ``details.starts_at`` is the game's hour, the club's own booking."""
+
+    code = "check_in_code_for_another_day"
+
+    def __init__(self, *, starts_at: str) -> None:
+        super().__init__(
+            "this code is for another day", details={"starts_at": starts_at}
+        )
+
+
+class CheckInCodeForAnotherClub(ConflictError):
+    """A seat at another club — *This code is for another club*. Nothing about
+    that club or its game is said."""
+
+    code = "check_in_code_for_another_club"
+
+    def __init__(self) -> None:
+        super().__init__("this code is for another club")
+
+
+class AlreadyCheckedIn(ConflictError):
+    """The player was checked in already — *Checked in at 18:52*.
+    ``details.checked_in_at`` is the first scan, which stands."""
+
+    code = "already_checked_in"
+
+    def __init__(self, *, checked_in_at: str) -> None:
+        super().__init__(
+            "this player is checked in already",
+            details={"checked_in_at": checked_in_at},
+        )

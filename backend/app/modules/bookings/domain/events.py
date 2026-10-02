@@ -23,6 +23,11 @@ and everybody still in is named, to be refunded in full.
 — the leaver's seat and side, paid at once — and ``NoSaidToTheSeat`` is a member
 the seat was dealt to as a *Seat open* card saying no to it.
 
+**The club runs it** (#547): ``CourtMoved`` puts the game on another court of
+its sport at the same hour, ``CancelledByClub`` calls it off with the club's
+reason — everybody still in named, to be refunded in full — and
+``PlayerCheckedIn`` is the desk's scan of a player's code on the day.
+
 Every event carries ``booking_id``, the stream's own key. Sport and kind travel
 as their codes, as a proposal's do.
 """
@@ -202,6 +207,49 @@ class NoSaidToTheSeat:
     """A member the open seat was dealt to as a *Seat open* card swiped it
     away — *not this time* (#545; the mechanics §6.2). Silent and never on
     their record: the card does not come back to their deck."""
+
+    booking_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class CourtMoved:
+    """The club moved the booked game to another court of its sport at the same
+    hour — a broken court, a desk's own reshuffle (#547; the mechanics §16.16).
+    The players read the new number; nothing else about the game moves."""
+
+    booking_id: UUID
+    court_id: UUID
+    #: What the new court is called at the club.
+    court_name: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class CancelledByClub:
+    """The club cancelled the booked game before it started (#547; the
+    mechanics §16.9): everybody still in — ``player_ids`` — is refunded in full,
+    it is on nobody's record, and the court hour is the club's again.
+
+    ``reason`` is the club's: ``WEATHER``, ``REPAIR``, ``DOUBLE_BOOKING`` or
+    ``OTHER`` — told to the players with the refund."""
+
+    booking_id: UUID
+    reason: str
+    player_ids: tuple[UUID, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "player_ids", _uuids(self.player_ids))
+
+
+@dataclass(frozen=True)
+class PlayerCheckedIn:
+    """The club's desk scanned this player's code, or typed it, on the day of
+    the game (#547; the mechanics §15.1, §16.10): **they were there**, and can
+    never be reported as not turning up. Evidence, never a condition for money.
+    """
 
     booking_id: UUID
     player_id: UUID

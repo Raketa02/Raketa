@@ -43,11 +43,19 @@ from app.engines.matchfit.scorable import LevelReading
 from app.kernel import SPORT_SPECS, Instant, Minutes, Sport, invariant
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
+from app.modules.proposals.domain.club_bookings import (
+    BookedFrom,
+    ClubCancellation,
+    CourtToMoveTo,
+    SeatForTheCode,
+    Takings,
+)
 from app.modules.proposals.domain.deck import CardForecast, SellingTerms, Sides
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
 from app.modules.proposals.domain.home import (
     BookedGame,
     CheckIn,
+    ClubCancelReason,
     GameResult,
     OpenSeat,
 )
@@ -133,10 +141,13 @@ class ProposalDirectory(Protocol):
         conclusions**: the aggregate decides."""
         ...
 
-    async def turned_down_in(self, pool_id: UUID, *, now: Instant) -> Sequence[UUID]:
-        """Every game in this pool its club turned down whose hour is still
-        ahead, soonest first — **candidates**: the aggregate says which still
-        owe their people a new card (#543)."""
+    async def owed_a_new_card_in(
+        self, pool_id: UUID, *, now: Instant
+    ) -> Sequence[UUID]:
+        """Every game in this pool its club turned down (#543), or cancelled
+        once booked (#547), whose hour is still ahead, soonest first —
+        **candidates**: the aggregate says which still owe their people a new
+        card."""
         ...
 
     async def filling_in(self, pool_id: UUID, *, now: Instant) -> Sequence[UUID]:
@@ -757,6 +768,8 @@ class RefundReason(StrEnum):
     #: The player left after the cut-off and somebody took their seat (#545):
     #: less the card fee.
     SEAT_TAKEN = "SEAT_TAKEN"
+    #: The club cancelled the booked game (#547): in full.
+    CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
 
 
 @runtime_checkable
@@ -773,9 +786,12 @@ class SeatRefunds(Protocol):
         *,
         reason: RefundReason,
         at: Instant,
+        because: ClubCancelReason | None = None,
     ) -> None:
         """Give back what each of these players paid for this game, emailing
-        each, in the caller's transaction — the money follows the commit."""
+        each, in the caller's transaction — the money follows the commit.
+        ``because`` is the club's reason, on a game it cancelled — what the
+        email tells the player (#547)."""
         ...
 
 
@@ -864,3 +880,84 @@ class ClubDistances(Protocol):
         never below a tenth. **Empty for a player with no Location area**; a
         club that does not exist is absent."""
         ...
+
+
+# --------------------------------------------------------------------------- #
+# The club runs its bookings (#547)
+# --------------------------------------------------------------------------- #
+
+
+@runtime_checkable
+class ClubBookings(Protocol):
+    """**A demand of the Bookings context**: a club's bookings as its desk
+    reads and runs them (the mechanics §16.7–§16.10) — a day of them, a court to
+    move one to, the move, the cancel, whose a code is, and the check-in. Every
+    act is in the caller's transaction, after the caller has locked the game."""
+
+    async def on_day(
+        self, club_id: UUID, *, start: Instant, end: Instant
+    ) -> Sequence[BookedGame]:
+        """Every booking at this club whose game starts from ``start`` until
+        ``end``, whatever it came to — soonest first, and by id among games at
+        one hour. A request taken back because a seat opened is not one: the
+        game is filling again, and comes back asked anew."""
+        ...
+
+    async def free_courts(self, booking_id: UUID) -> Sequence[CourtToMoveTo]:
+        """Every other court of the game's sport the club still has for Raketa
+        at its hour, in the club's order."""
+        ...
+
+    async def move(
+        self, booking_id: UUID, court_id: UUID, *, at: Instant
+    ) -> CourtToMoveTo | None:
+        """Move the game onto that court — ``None`` when it is not one of the
+        free courts. ``CourtJustTaken`` when another game claimed it a moment
+        ago."""
+        ...
+
+    async def cancel(
+        self, booking_id: UUID, *, because: ClubCancelReason, at: Instant
+    ) -> ClubCancellation:
+        """Cancel the game, its Game and room with it — and answer whom it
+        owes."""
+        ...
+
+    async def seat_for(
+        self, code: str, *, club_id: UUID, now: Instant
+    ) -> SeatForTheCode:
+        """Whose seat a code handed to this club's desk is — scanned or typed —
+        and whether it is this club's, today."""
+        ...
+
+    async def check_in(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
+        """The desk checked this player in."""
+        ...
+
+
+@runtime_checkable
+class BookingTakings(Protocol):
+    """**A demand of the Payments context**: what each booking took from its
+    players, and gave back (the mechanics §16.7) — one question about the set."""
+
+    async def of(self, booking_ids: Collection[UUID]) -> Mapping[UUID, Takings]:
+        """Each booking that took anything; one that took nothing is absent."""
+        ...
+
+
+@runtime_checkable
+class PoolOrigins(Protocol):
+    """**A demand of the Groups context**: the group each pool is — the *where
+    it came from* column of the club's bookings."""
+
+    async def of(self, pool_ids: Collection[UUID]) -> Mapping[UUID, BookedFrom]:
+        """Each pool that is a group still there; one that is not is absent."""
+        ...
+
+
+@runtime_checkable
+class DeskCheckIns(Protocol):
+    """**A demand of the Club context**: whether a club switched on *We check
+    players in* (the mechanics §16.6, §16.10)."""
+
+    async def checks_players_in(self, club_id: UUID) -> bool: ...

@@ -15,6 +15,9 @@ the stand-in that answered nothing while no game could be booked.
 ``BookingsPlayerBookings`` is Home's and the details': a player's booked games
 as their bookings record them, folded from each stream, and each seat's
 check-in code — and a pool's booked games with a seat open (#545).
+``BookingsClubBookings`` is the club website's (#547): a day of its bookings, a
+court to move one to, the move, the cancel, whose a code handed to the desk is,
+and the check-in.
 ``BookingsGroupBornGames`` is the club's *Games* figure, which
 ``groups`` asks in its own words: **a group's pool is filed under the group's own
 id**, which is this context's fact, so the games booked in a group are the
@@ -28,6 +31,13 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Instant, Sport, invariant
+from app.modules.bookings.application.at_the_club import (
+    AtTheDesk,
+    CancelTheBooking,
+    CheckInThePlayer,
+    FindTheSeat,
+    MoveTheBooking,
+)
 from app.modules.bookings.application.book_the_game import (
     BookTheGame,
     FindACourt,
@@ -50,6 +60,7 @@ from app.modules.bookings.domain.booking import (
     Booking,
     BookingState,
     CalledOff,
+    CancelReason,
     Departure,
 )
 from app.modules.bookings.domain.errors import CourtTaken
@@ -58,12 +69,19 @@ from app.modules.bookings.domain.ports import (
     BookingRepository,
     CheckInCodes,
 )
+from app.modules.proposals.domain.club_bookings import (
+    ClubCancellation,
+    CodeAtTheDesk,
+    CourtToMoveTo,
+    SeatForTheCode,
+)
 from app.modules.proposals.domain.errors import CourtJustTaken
 from app.modules.proposals.domain.home import (
     BookedGame,
     BookingStage,
     CalledOffReason,
     CheckIn,
+    ClubCancelReason,
     OpenSeat,
 )
 from app.modules.proposals.domain.ports import (
@@ -327,6 +345,14 @@ _CALLED_OFF = {
     CalledOff.REFUSED: CalledOffReason.REFUSED,
     CalledOff.NO_ANSWER: CalledOffReason.NO_ANSWER,
     CalledOff.SHORT_AT_THE_CUT_OFF: CalledOffReason.SHORT_AT_THE_CUT_OFF,
+    CalledOff.CANCELLED_BY_THE_CLUB: CalledOffReason.CANCELLED_BY_THE_CLUB,
+}
+
+_CANCEL_REASONS = {
+    CancelReason.WEATHER: ClubCancelReason.WEATHER,
+    CancelReason.REPAIR: ClubCancelReason.REPAIR,
+    CancelReason.DOUBLE_BOOKING: ClubCancelReason.DOUBLE_BOOKING,
+    CancelReason.OTHER: ClubCancelReason.OTHER,
 }
 
 
@@ -358,6 +384,13 @@ def _booked_game(booking: Booking) -> BookedGame | None:
         open=tuple(_open_seat(left) for left in booking.open_departures),
         leavers=booking.leavers,
         said_no=booking.said_no,
+        cancel_reason=(
+            None
+            if booking.cancel_reason is None
+            else _CANCEL_REASONS[booking.cancel_reason]
+        ),
+        checked_in=dict(booking.checked_in),
+        answer_by=booking.answer_by,
         version=booking.version,
     )
 
@@ -366,6 +399,83 @@ def _open_seat(left: Departure) -> OpenSeat:
     """A leaver's seat, in this context's words."""
 
     return OpenSeat(side=left.side, left_by=left.player_id, left_at=left.at)
+
+
+_AT_THE_DESK = {
+    AtTheDesk.HERE_TODAY: CodeAtTheDesk.HERE_TODAY,
+    AtTheDesk.ANOTHER_DAY: CodeAtTheDesk.ANOTHER_DAY,
+    AtTheDesk.ANOTHER_CLUB: CodeAtTheDesk.ANOTHER_CLUB,
+    AtTheDesk.UNKNOWN: CodeAtTheDesk.UNKNOWN,
+}
+
+
+@final
+class BookingsClubBookings:
+    def __init__(
+        self,
+        *,
+        bookings: BookingRepository,
+        directory: BookingDirectory,
+        move: MoveTheBooking,
+        cancel: CancelTheBooking,
+        find: FindTheSeat,
+        check_in: CheckInThePlayer,
+    ) -> None:
+        self._bookings = bookings
+        self._directory = directory
+        self._move = move
+        self._cancel = cancel
+        self._find = find
+        self._check_in = check_in
+
+    async def on_day(
+        self, club_id: UUID, *, start: Instant, end: Instant
+    ) -> Sequence[BookedGame]:
+        found: list[BookedGame] = []
+        for booking_id in await self._directory.at_club(club_id, start=start, end=end):
+            booking = await self._bookings.load(booking_id)
+            game = None if booking is None else _booked_game(booking)
+            if game is not None:
+                found.append(game)
+        return found
+
+    async def free_courts(self, booking_id: UUID) -> Sequence[CourtToMoveTo]:
+        return [
+            CourtToMoveTo(court_id=court.court_id, name=court.name)
+            for court in await self._move.free_courts(booking_id)
+        ]
+
+    async def move(
+        self, booking_id: UUID, court_id: UUID, *, at: Instant
+    ) -> CourtToMoveTo | None:
+        try:
+            court = await self._move.execute(booking_id, court_id, at=at)
+        except CourtTaken as taken:
+            raise CourtJustTaken() from taken
+        return None if court is None else CourtToMoveTo(court.court_id, court.name)
+
+    async def cancel(
+        self, booking_id: UUID, *, because: ClubCancelReason, at: Instant
+    ) -> ClubCancellation:
+        cancelled = await self._cancel.execute(
+            booking_id, CancelReason(because.value), at=at
+        )
+        return ClubCancellation(
+            still_in=cancelled.still_in, refunded=cancelled.refunded
+        )
+
+    async def seat_for(
+        self, code: str, *, club_id: UUID, now: Instant
+    ) -> SeatForTheCode:
+        seat = await self._find.execute(code, club_id=club_id, now=now)
+        return SeatForTheCode(
+            where=_AT_THE_DESK[seat.where],
+            booking_id=seat.booking_id,
+            player_id=seat.player_id,
+        )
+
+    async def check_in(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
+        await self._check_in.execute(booking_id, player_id, at=at)
 
 
 @final

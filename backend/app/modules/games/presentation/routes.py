@@ -1,5 +1,6 @@
-"""The five game routes: read yours, read one's pairing, state a score, agree
-with one, clear a called-off one's card.
+"""The seven game routes: read yours, read one's pairing, state a score, agree
+with one, clear a called-off one's card — and, on a booked game, say somebody
+did not come, or say you did (#547).
 
 **There is no route that creates a game, none that moves a seat on one, and
 none that ends one.** A game exists because a challenge's line-up completed, and
@@ -43,6 +44,8 @@ from app.core.exception_handlers import ErrorResponse
 from app.modules.games.application.commands import (
     AcceptResultCommand,
     DismissGameCommand,
+    DisputeANoShowCommand,
+    ReportANoShowCommand,
     StateResultCommand,
 )
 from app.modules.games.application.read_game_pairing import GamePairingRead
@@ -57,6 +60,8 @@ from app.modules.games.domain.windows import (
 from app.modules.games.presentation.dependencies import (
     AcceptResultDep,
     DismissGameDep,
+    DisputeANoShowDep,
+    ReportANoShowDep,
     ReadGamePairingDep,
     ReadGamesDep,
     StateResultDep,
@@ -67,6 +72,8 @@ from app.modules.games.presentation.schemas import (
     GameListResponse,
     GamePairingResponse,
     GameSchema,
+    NoShowSchema,
+    ReportANoShowRequest,
     ScoreSchema,
     SeatingSchema,
     SetScoreSchema,
@@ -141,7 +148,52 @@ _STATING_REFUSALS: dict[int | str, dict[str, Any]] = {
             "`the_game_started_short` — a booked game whose hour came with a "
             "seat open: somebody left after the club's cut-off and nobody took "
             "the seat. It ends uncounted (`standing` `STARTED_SHORT`), and "
-            "nothing about it can be recorded."
+            "nothing about it can be recorded.\n\n"
+            "`a_no_show_is_reported` — somebody was reported as not coming to "
+            "this booked game and their day to dispute it runs (`no_shows`): "
+            "the game does not count, so there is no score to enter."
+        ),
+    },
+}
+
+#: What reporting somebody who did not come refuses (#547).
+_REPORTING_REFUSALS: dict[int | str, dict[str, Any]] = {
+    status.HTTP_400_BAD_REQUEST: {
+        "model": ErrorResponse,
+        "description": (
+            "`not_on_this_court` — that player was not on this game.\n\n"
+            "`you_cannot_report_yourself` — you are the one person your report "
+            "proves came."
+        ),
+    },
+    status.HTTP_409_CONFLICT: {
+        "model": ErrorResponse,
+        "description": (
+            "Everything above, plus:\n\n"
+            "`no_shows_are_for_booked_games` — only a game booked on a court "
+            "has an hour somebody could fail to come to.\n\n"
+            "`the_game_has_not_started` — its hour has not come yet.\n\n"
+            "`a_result_is_entered` — somebody already said you played, with a "
+            "score; answer the score instead.\n\n"
+            "`checked_in_at_the_club` — the club checked that player in: they "
+            "were there, and can never be reported.\n\n"
+            "`you_were_reported_as_a_no_show` — you were reported yourself; "
+            "dispute it instead.\n\n"
+            "`the_game_was_called_off`, `the_game_started_short` — there was no "
+            "game to come to."
+        ),
+    },
+}
+
+#: What disputing a report refuses (#547).
+_DISPUTING_REFUSALS: dict[int | str, dict[str, Any]] = {
+    status.HTTP_403_FORBIDDEN: _REFUSALS[status.HTTP_403_FORBIDDEN],
+    status.HTTP_409_CONFLICT: {
+        "model": ErrorResponse,
+        "description": (
+            "`nobody_reported_you` — there is nothing of yours to dispute.\n\n"
+            "`the_dispute_window_has_closed` — your day to say you came has "
+            "passed: the report stands."
         ),
     },
 }
@@ -360,6 +412,79 @@ async def accept_result(
 
 
 @router.post(
+    "/{game_id}/no-shows",
+    response_model=GameSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": "The game as it stands with your report on it."
+        },
+        **_REFUSALS,
+        **_REPORTING_REFUSALS,
+    },
+    summary="Say somebody didn't come",
+    description=(
+        "***Kuba didn't come*** — on a **booked** game whose hour has come, "
+        "where you would otherwise enter the result (#547). Said by somebody "
+        "who came, about somebody else on the court; a second report of the "
+        "same player answers the same and writes nothing, and each player "
+        "who did not come is reported on their own.\n\n"
+        "**The game does not count** from the report on, and nobody's Level "
+        "moves. The reported player has **24 hours to dispute it** "
+        "(`no_shows[].dispute_by`); after that it stands — the strongest mark "
+        "on a record — with nothing written at that moment. **Nobody "
+        "arbitrates a dispute**: the report falls and is on nobody's record.\n\n"
+        "A player **the club checked in** cannot be reported."
+    ),
+)
+async def report_a_no_show(
+    game_id: UUID,
+    payload: ReportANoShowRequest,
+    user: CurrentUserDep,
+    use_case: ReportANoShowDep,
+) -> GameSchema:
+    return _game(
+        await use_case.execute(
+            ReportANoShowCommand(
+                game_id=game_id, player_id=user.id, absent_id=payload.player_id
+            )
+        ),
+        reader_id=user.id,
+    )
+
+
+@router.post(
+    "/{game_id}/no-shows/dispute",
+    response_model=GameSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": "The game as it stands with your dispute recorded."
+        },
+        **_DISPUTING_REFUSALS,
+    },
+    summary="Say you came",
+    description=(
+        "**You were reported as not coming, and you did** (#547). Inside 24 "
+        "hours of the report. The report falls, nothing goes on your record, "
+        "and the game still does not count: nobody arbitrates which of you is "
+        "right. A second dispute answers the same and writes nothing."
+    ),
+)
+async def dispute_a_no_show(
+    game_id: UUID,
+    user: CurrentUserDep,
+    use_case: DisputeANoShowDep,
+) -> GameSchema:
+    return _game(
+        await use_case.execute(
+            DisputeANoShowCommand(game_id=game_id, player_id=user.id)
+        ),
+        reader_id=user.id,
+    )
+
+
+@router.post(
     "/{game_id}/dismissal",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
@@ -459,7 +584,9 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
         played_at=game.played_at,
         entry_closes_at=(
             game.entry_closes_at
-            if game.played_at is None and game.called_off_at is None
+            if game.played_at is None
+            and game.called_off_at is None
+            and not game.no_shows
             else None
         ),
         called_off_at=game.called_off_at,
@@ -497,6 +624,18 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
             for proposal in (game.standing_proposals() if arguing else ())
         ],
         acceptance=_agreement(game) if arguing else None,
+        no_shows=[
+            NoShowSchema(
+                player_id=seating.player_id,
+                name=one.names.get(seating.player_id),
+                reported_at=report.at,
+                dispute_by=report.dispute_closes_at,
+                disputed_at=report.disputed_at,
+            )
+            for seating in game.line_up.seatings
+            if seating.player_id is not None
+            and (report := game.no_shows.get(seating.player_id)) is not None
+        ],
     )
 
 

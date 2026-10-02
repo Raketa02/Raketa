@@ -8,12 +8,13 @@ answered off it.
 Who is in a group's pool is read off ``GroupDirectory`` — the groups context's
 own read of its members projection — and never by joining its table: **the
 members now**, so somebody who left the group has left its pool. **Every group
-is a pool**, so the pools there are are the groups there are.
+is a pool**, so the pools there are are the groups there are — and the group a
+pool is names a booking's *where it came from* on its club's page (#547).
 """
 
 from __future__ import annotations
 
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
@@ -21,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.kernel import exhaustive
 from app.modules.groups.domain.ports import GroupDirectory
+from app.modules.proposals.domain.club_bookings import BookedFrom
 from app.modules.proposals.domain.pool import Pool, PoolKind
 from app.modules.proposals.infrastructure.proposal_models import PoolORM
 
@@ -70,3 +72,21 @@ class GroupPools:
             Pool(id=group_id, kind=PoolKind.GROUP)
             for group_id in await self._groups.groups_of(player_id)
         ]
+
+
+@final
+class GroupPoolOrigins:
+    """``PoolOrigins`` over the groups' own directory (#547): **a group's pool
+    is filed under the group's id**, so the group a booking came from is its
+    pool's listing — its name, and whether it is one of a club's official
+    groups."""
+
+    def __init__(self, groups: GroupDirectory) -> None:
+        self._groups = groups
+
+    async def of(self, pool_ids: Collection[UUID]) -> Mapping[UUID, BookedFrom]:
+        listings = await self._groups.listings(sorted(set(pool_ids)))
+        return {
+            group_id: BookedFrom(name=listing.name.value, official=listing.is_official)
+            for group_id, listing in listings.items()
+        }

@@ -240,3 +240,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   and the room's members (the line-up) take them in. Unlike a challenge's re-seat the court may
   still be short after it; `departed` is emptied only once it is whole. Refused once the game
   is no longer awaiting its entry (its hour has come).
+- **A booked game takes a report of somebody not coming, and its club's cancel** (#547): two
+  standings (`NO_SHOW_REPORTED`, `NO_SHOW`), a 24-hour dispute that falls to `UNSCORED`, the
+  desk's check-in asked through `ClubCheckIns`, and `Game.call_off_whole` — a booked game called off
+  by nobody whole or with a seat open. Written up in `bookings.md`'s last bullet.

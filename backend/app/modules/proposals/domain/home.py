@@ -29,7 +29,8 @@ phone that shows the code and the desk that scans it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Final, final
 from uuid import UUID
@@ -84,6 +85,19 @@ class CalledOffReason(StrEnum):
     #: A seat that opened before the club's cut-off was still open at it:
     #: everybody still in is refunded in full (#544).
     SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
+    #: The club cancelled it, with its reason: everybody still in is refunded
+    #: in full, and it is on nobody's record (#547).
+    CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+
+
+class ClubCancelReason(StrEnum):
+    """Why the club cancelled a booked game (the mechanics §16.9) — the players
+    are told it with their refund."""
+
+    WEATHER = "WEATHER"
+    REPAIR = "REPAIR"
+    DOUBLE_BOOKING = "DOUBLE_BOOKING"
+    OTHER = "OTHER"
 
 
 class UncountedReason(StrEnum):
@@ -93,6 +107,9 @@ class UncountedReason(StrEnum):
     #: nobody took the seat (#544). Nothing goes on the record of those who
     #: stayed.
     SEAT_EMPTY = "SEAT_EMPTY"
+    #: Somebody who came reported a player who did not (#547): the game does
+    #: not count, whether the report stands its day or is disputed.
+    NO_SHOW = "NO_SHOW"
 
 
 class ResultStage(StrEnum):
@@ -108,6 +125,11 @@ class ResultStage(StrEnum):
     CALLED_OFF = "CALLED_OFF"
     #: Its hour came with a seat open: no result can be told (#544).
     STARTED_SHORT = "STARTED_SHORT"
+    #: A player was reported as not coming, and their day to dispute it runs
+    #: (#547).
+    NO_SHOW_REPORTED = "NO_SHOW_REPORTED"
+    #: A report of not coming stood its day (#547): the game does not count.
+    NO_SHOW = "NO_SHOW"
 
 
 @final
@@ -120,6 +142,9 @@ class GameResult:
     #: confirm* that is theirs to clear (the mechanics §3). Only ever true with
     #: ``SCORE_TO_ANSWER``.
     awaits_your_agreement: bool
+    #: This player was reported as not coming and may still dispute it — a
+    #: task that is theirs (#547). Only ever true with ``NO_SHOW_REPORTED``.
+    you_may_dispute: bool = False
 
 
 @final
@@ -168,6 +193,13 @@ class BookedGame:
     leavers: frozenset[UUID] = frozenset()
     #: Everybody who said no to its *Seat open* card.
     said_no: frozenset[UUID] = frozenset()
+    #: Why the club cancelled it, once it did (#547).
+    cancel_reason: ClubCancelReason | None = None
+    #: Everybody the club's desk checked in, and when (#547) — never reported
+    #: as not coming.
+    checked_in: Mapping[UUID, Instant] = field(default_factory=dict)
+    #: When its On request club's answer is due — on a booking ever put to it.
+    answer_by: Instant | None = None
     #: The booking's stream version — what a rescue's attempts are counted by.
     version: int = 0
 
@@ -272,6 +304,12 @@ class LeaveTerms:
     card_fee_grosze: int
 
 
+#: Why a game everybody still in is given all their money back from was called
+#: off: the club's own rules — its cut-off, and its cancel (#547).
+_REFUNDED_IN_FULL: Final = frozenset(
+    {CalledOffReason.SHORT_AT_THE_CUT_OFF, CalledOffReason.CANCELLED_BY_THE_CLUB}
+)
+
 #: The two statuses at which the game awaits its entry with every seat filled —
 #: the forecast's (the mechanics §14.2: *as today, hidden while a seat is open*).
 _FORECAST_SHOWN: Final = frozenset({HomeStatus.BOOKED, HomeStatus.NEEDS_RESULT})
@@ -313,34 +351,51 @@ def status_of(
             return HomeStatus.CALLED_OFF
         case ResultStage.STARTED_SHORT:
             return HomeStatus.UNCOUNTED
+        case ResultStage.NO_SHOW_REPORTED | ResultStage.NO_SHOW:
+            # Whatever the report comes to, the game does not count (#547).
+            return HomeStatus.UNCOUNTED
         case _:
             exhaustive(stage)
 
 
-def uncounted_reason(game: BookedGame, status: HomeStatus) -> UncountedReason | None:
+def uncounted_reason(
+    game: BookedGame, status: HomeStatus, result: GameResult | None
+) -> UncountedReason | None:
     """Why an *uncounted* card says so, when nobody disagreed about a score:
-    its hour came with a seat open."""
+    its hour came with a seat open, or somebody reported a player who did not
+    come and the report waits out its day or stood it (#547). A report every
+    reported player disputed is an ordinary *uncounted*: nobody arbitrated."""
 
-    if status is HomeStatus.UNCOUNTED and game.stage is BookingStage.SEAT_OPEN:
+    if status is not HomeStatus.UNCOUNTED:
+        return None
+    if game.stage is BookingStage.SEAT_OPEN:
         return UncountedReason.SEAT_EMPTY
+    if result is not None and result.stage in (
+        ResultStage.NO_SHOW_REPORTED,
+        ResultStage.NO_SHOW,
+    ):
+        return UncountedReason.NO_SHOW
     return None
 
 
 def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
     """Whether this game is one of the games that need the player — Home's
     badge (the mechanics §3): a result to enter, a score waiting on their
-    agreement, a seat open in their game."""
+    agreement, a seat open in their game, a report of their not coming to
+    dispute (#547)."""
 
     match status:
         case HomeStatus.NEEDS_RESULT | HomeStatus.SEAT_OPEN:
             return True
         case HomeStatus.CONFIRM_THE_RESULT:
             return result is not None and result.awaits_your_agreement
+        case HomeStatus.UNCOUNTED:
+            # A report of not coming, theirs to dispute while its day runs.
+            return result is not None and result.you_may_dispute
         case (
             HomeStatus.WAITING_FOR_THE_CLUB
             | HomeStatus.BOOKED
             | HomeStatus.COUNTED
-            | HomeStatus.UNCOUNTED
             | HomeStatus.NEVER_PLAYED
             | HomeStatus.CALLED_OFF
         ):
@@ -353,7 +408,7 @@ def money_of(game: BookedGame, *, now: Instant) -> BookedMoney:
     """The money line: every seat held paid its share of a booked game —
     nobody anything while its club decides, or once it turned it down — and
     everybody still in gets it all back from a game called off at its
-    cut-off."""
+    cut-off, or cancelled by its club (#547)."""
 
     called_off = game.called_off_reason(now)
     paid = (
@@ -365,9 +420,7 @@ def money_of(game: BookedGame, *, now: Instant) -> BookedMoney:
         paid=paid,
         free_to_leave_until=game.cut_off if paid and now < game.cut_off else None,
         refunded_grosze=(
-            game.share_grosze
-            if called_off is CalledOffReason.SHORT_AT_THE_CUT_OFF
-            else None
+            game.share_grosze if called_off in _REFUNDED_IN_FULL else None
         ),
     )
 
@@ -414,6 +467,8 @@ class BookedState:
     called_off: CalledOffReason | None = None
     #: Why it is uncounted with nobody disagreeing (#544).
     uncounted: UncountedReason | None = None
+    #: Why the club cancelled it, when it did (#547).
+    cancel_reason: ClubCancelReason | None = None
 
 
 def state_of(
@@ -430,7 +485,8 @@ def state_of(
         called_off=game.called_off_reason(now)
         if status is HomeStatus.CALLED_OFF
         else None,
-        uncounted=uncounted_reason(game, status),
+        uncounted=uncounted_reason(game, status, result),
+        cancel_reason=game.cancel_reason if status is HomeStatus.CALLED_OFF else None,
     )
 
 

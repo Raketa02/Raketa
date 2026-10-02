@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from app.application.events import EventCatalog, EventDispatcher
-from app.modules.bookings.domain.events import CalledOffAtCutOff, SeatLeft
+from app.modules.bookings.domain.events import (
+    CalledOffAtCutOff,
+    CancelledByClub,
+    SeatLeft,
+)
 from app.modules.groups.domain.events import GroupDeleted, GroupLeft
 from app.modules.proposals.application.handlers import (
     LogGamesAndMoneySet,
@@ -27,6 +31,7 @@ from app.modules.proposals.domain.events import (
     ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
+    ClubCancelled,
     Redealt,
     SeatReopened,
     TurnedDown,
@@ -53,6 +58,7 @@ _EVENTS = (
     (YesResumed, "proposals.yes_resumed"),
     (TurnedDown, "proposals.turned_down"),
     (Redealt, "proposals.redealt"),
+    (ClubCancelled, "proposals.club_cancelled"),
 )
 
 
@@ -77,6 +83,7 @@ def subscribe_proposal_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(YesResumed, LogProposalEvent())
     dispatcher.subscribe(TurnedDown, LogProposalEvent())
     dispatcher.subscribe(Redealt, LogProposalEvent())
+    dispatcher.subscribe(ClubCancelled, LogProposalEvent())
 
 
 def subscribe_the_pool_leaver(
@@ -102,6 +109,7 @@ def subscribe_the_week_resumer(
     resumer = ResumeYesesOnAFreedWeek(resume)
     dispatcher.subscribe(SeatLeft, resumer)
     dispatcher.subscribe(CalledOffAtCutOff, resumer)
+    dispatcher.subscribe(CancelledByClub, resumer)
 
 
 def subscribe_the_proposer_on_changes(

@@ -802,6 +802,22 @@ def test_the_people_a_club_turned_down_are_dealt_a_new_card_first_elsewhere():
     assert dealt.picks[1].start == SAT_17
 
 
+def test_the_people_still_in_a_game_its_club_cancelled_are_dealt_a_new_card_first():
+    cancelled = a_full_game(A, B, C, D)
+    cancelled.fill(first_side=(A, B), second_side=(C, D), at=NOW)
+    # D left before the club cancelled: the card is owed to the three still in.
+    cancelled.club_cancelled((A, B, C), at=NOW)
+    members = [member(p, 3.3) for p in (A, B, C, D)]
+    members += [member(p, 3.0) for p in (E, F, G, H)]
+
+    dealt = batch(members, [on_sale(SAT_17), on_sale(SAT_18)], owed=(cancelled,))
+
+    assert dealt.redealt == (cancelled.proposal_id,)
+    first = dealt.picks[0]
+    assert (first.start, first.after) == (SAT_18, cancelled.proposal_id)
+    assert {A, B, C} <= set(first.named)
+
+
 def test_a_turned_down_game_with_no_hour_for_its_people_stays_owed():
     turned_down = a_full_game(A, B, C, D)
     turned_down.turn_down(ClubAnswer.NO_ANSWER, at=NOW)

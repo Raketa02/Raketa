@@ -17,6 +17,9 @@ from app.modules.bookings.domain.events import (
     BookingRequested,
     BookingTimedOut,
     CalledOffAtCutOff,
+    CancelledByClub,
+    CourtMoved,
+    PlayerCheckedIn,
     RequestWithdrawn,
     NoSaidToTheSeat,
     SeatLeft,
@@ -36,6 +39,9 @@ BookingEvent = (
     | CalledOffAtCutOff
     | SeatRescued
     | NoSaidToTheSeat
+    | CourtMoved
+    | CancelledByClub
+    | PlayerCheckedIn
 )
 
 _NAMES = {
@@ -49,6 +55,9 @@ _NAMES = {
     CalledOffAtCutOff: "bookings.booking.called_off_at_cut_off",
     SeatRescued: "bookings.booking.seat_rescued",
     NoSaidToTheSeat: "bookings.booking.no_said_to_the_seat",
+    CourtMoved: "bookings.booking.court_moved",
+    CancelledByClub: "bookings.booking.cancelled_by_club",
+    PlayerCheckedIn: "bookings.booking.player_checked_in",
 }
 
 

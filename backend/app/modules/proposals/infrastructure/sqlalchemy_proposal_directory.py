@@ -180,13 +180,18 @@ class SqlAlchemyProposalDirectory:
         )
         return int(counted or 0)
 
-    async def turned_down_in(self, pool_id: UUID, *, now: Instant) -> Sequence[UUID]:
+    async def owed_a_new_card_in(
+        self, pool_id: UUID, *, now: Instant
+    ) -> Sequence[UUID]:
         return (
             await self._session.scalars(
                 select(ProposalORM.id)
                 .where(
                     ProposalORM.pool_id == pool_id,
-                    ProposalORM.ended == Ending.TURNED_DOWN.value,
+                    or_(
+                        ProposalORM.ended == Ending.TURNED_DOWN.value,
+                        ProposalORM.club_cancelled.is_(True),
+                    ),
                     ProposalORM.start > now,
                 )
                 .order_by(ProposalORM.start, ProposalORM.id)

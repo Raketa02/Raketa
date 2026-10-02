@@ -67,13 +67,19 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`SeatRefunds`) and the card fee on one (`CardFees`) — and since #545 a pool's rescues
   (`PlayerBookings.rescues_in`), a seat taken or declined, and a seat-taken refund — and since
   #546 the pair rule and a player's level window (`PlayerFit`) and each member's Level, week,
-  gender and preference (`PlayersInPlay`). The rest of the deck's, the proposer's and the
-  fill's ports (#538–#541) were contracted over HTTP only and are owed rows there.
+  gender and preference (`PlayersInPlay`) — and since #547 the club's bookings as its desk
+  reads and runs them (`ClubBookings`), what each took and gave back (`BookingTakings`), the
+  group each pool is (`PoolOrigins`) and whether a club checks players in (`DeskCheckIns`).
+  The rest of the deck's, the proposer's and the fill's ports (#538–#541) were contracted
+  over HTTP only and are owed rows there.
   **The thirteenth, `booking_demands.py`, is Bookings' consumer register** (#543): the first
   free court of a club at an hour with its cut-off and time to confirm, and a club's desk —
   both the Club context's facts — and the Games context's: the ordinary Game a booking opens
-  (`GameOpening`, #541, registered by #544) and what leaving, a rescue and the cut-off do
-  to it (`GameChanges`, #544, #545).
+  (`GameOpening`, #541, registered by #544), what leaving, a rescue, the cut-off and the
+  club's cancel do to it (`GameChanges`, #544, #545, #547), and who did not come to it
+  (`GameNoShows`, #547), which the record reads. **`game_demands.py` gained its third row
+  with #547**: who the club's desk checked in (`ClubCheckIns`), the booking's fact a no-show
+  report asks first — signed by `bookings`, as the Plan signs `AgreedMoment`.
   **The fourteenth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
   consumer register as `games_demands.py` stands beside `game_demands.py`: who kept the booked
   games they held a seat on (`BookingHistoryQuery`), *keeps plans*' input.

@@ -60,6 +60,7 @@ from app.seeds.rescues import (
 from app.seeds.runner import seed
 from app.seeds.screens import (
     ScreenIsEmpty,
+    assert_the_club_bookings,
     assert_the_fill_in,
     assert_the_group_deck,
     assert_the_posting_grid,
@@ -341,6 +342,11 @@ async def test_she_has_a_game_on_the_day_and_one_before_its_cut_off_and_paid_bot
     assert {receipt["club"]["name"] for receipt in receipts} == {"Bonarka Arena"}
     games = (await client.get("/api/v1/games", headers=her["headers"])).json()
     assert len(games["games"]) == 2
+    # #547: her club's Bookings page lists the game on its day.
+    line = await assert_the_club_bookings(
+        session_factory, settings=get_settings(), now=now, on=soon.start
+    )
+    assert "1 booking(s), 4 share(s) paid" in line
 
 
 async def test_a_second_run_books_nothing_twice(

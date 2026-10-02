@@ -233,6 +233,7 @@ from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
 from app.seeds.plans import SeededPlans, costs as plan_costs, write_the_plans
 from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import (
+    assert_the_club_bookings,
     assert_the_fill_in,
     assert_the_group_deck,
     assert_the_posting_grid,
@@ -1456,6 +1457,12 @@ async def run(settings: Settings | None = None) -> SeedReport:
                 expects_after_the_cut_off=rescues.skipped is None,
             ),
             await assert_the_posting_grid(session_factory, settings=settings, now=now),
+            await assert_the_club_bookings(
+                session_factory,
+                settings=settings,
+                now=now,
+                on=bookings.bookings[0].start,
+            ),
         )
         return SeedReport(
             accounts=accounts,

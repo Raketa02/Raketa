@@ -33,6 +33,7 @@ from app.modules.bookings.domain.ports import (
     ClubDesk,
     ClubDesks,
     GameChanges,
+    GameNoShows,
     GameOpening,
 )
 from app.modules.games.domain.game import Game
@@ -104,6 +105,26 @@ async def test_the_first_free_court_comes_with_the_club_s_terms(
         await courts.first_free(UUID(club_id), sport=Sport.SQUASH, start=SATURDAY_FIVE)
         is None
     )
+
+
+@pytest.mark.parametrize("implementation", registered(ClubCourtsAtTheHour))
+async def test_the_free_courts_at_an_hour_are_the_sport_s_in_the_club_s_order(
+    implementation, client, session
+):
+    """#547: where a booked game may be moved."""
+
+    club_id, _ = await a_club_and_its_desk(client)
+    courts: ClubCourtsAtTheHour = implementation.build(session)
+
+    padel = await courts.free_courts(
+        UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE
+    )
+
+    assert [court.name for court in padel] == ["Court 1"]
+    squash = await courts.free_courts(
+        UUID(club_id), sport=Sport.SQUASH, start=SATURDAY_FIVE
+    )
+    assert list(squash) == []
 
 
 # --------------------------------------------------------------------------- #
@@ -253,3 +274,51 @@ async def test_a_rescue_takes_the_open_seat_on_the_leaver_s_side(
     game = await _game(session, booking_id)
     assert game.line_up.is_complete
     assert game.line_up.side_of(zosia) is GameSide.A
+
+
+@pytest.mark.parametrize("implementation", registered(GameChanges))
+async def test_the_club_s_cancel_calls_a_whole_game_off(implementation, session):
+    """#547: whole or with a seat open, before its hour."""
+
+    changes: GameChanges = implementation.build(session)
+    booking_id = new_uuid()
+    await _opened(session, booking_id)
+
+    cancelled = instant(SATURDAY_FIVE - timedelta(hours=2))
+    await changes.call_off_whole(booking_id, at=cancelled)
+    await session.commit()
+
+    game = await _game(session, booking_id)
+    assert game.standing_at(cancelled) is GameStanding.CALLED_OFF
+    assert game.called_off_by is None
+
+
+# --------------------------------------------------------------------------- #
+# GameNoShows — who did not come to a booked game (#547)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(GameNoShows))
+async def test_a_no_show_counts_only_once_its_day_has_passed_undisputed(
+    implementation, session
+):
+    no_shows: GameNoShows = implementation.build(session)
+    booking_id = new_uuid()
+    await _opened(session, booking_id)
+    games = build_game_repository(
+        session=session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+    game = await games.for_challenge(booking_id)
+    assert game is not None
+    reported = instant(SATURDAY_FIVE + timedelta(hours=2))
+    game.report_no_show(by=OLA, absent=KUBA, checked_in=(), occurred_at=reported)
+    await games.save(game)
+    await session.commit()
+
+    assert await no_shows.did_not_come(booking_id, now=reported) == frozenset()
+    assert await no_shows.did_not_come(
+        booking_id, now=instant(reported + timedelta(days=1))
+    ) == frozenset({KUBA})
+    assert await no_shows.did_not_come(new_uuid(), now=reported) == frozenset()

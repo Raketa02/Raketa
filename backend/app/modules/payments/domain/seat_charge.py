@@ -32,6 +32,7 @@ from typing import Iterable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant, invariant
+from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.events import (
     SeatChargeAuthorised,
     SeatChargeCancelled,
@@ -261,6 +262,23 @@ class SeatCharge:
         """A refund was decided and the provider has not given it yet."""
 
         return self.refund_withholds_fee is not None and self.refund_given is None
+
+    @property
+    def given_back_grosze(self) -> int:
+        """What this share gives back (#547): what the provider gave, once it
+        has answered — until then what was decided, the share less the card
+        fee's estimate where the fee is withheld, never below nought — and
+        nought with no refund decided."""
+
+        if self.refund_given is not None:
+            return self.refund_given.amount_grosze
+        if self.refund_withholds_fee is None:
+            return 0
+        if not self.refund_withholds_fee:
+            return self.amount_grosze
+        return self.amount_grosze - min(
+            estimated_card_fee(self.amount_grosze), self.amount_grosze
+        )
 
     @property
     def awaits_its_player(self) -> bool:

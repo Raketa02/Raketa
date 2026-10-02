@@ -342,3 +342,113 @@ class PairingIsHistory(ConflictError):
         super().__init__(
             "This game has happened, or never will, so there is no pairing to read."
         )
+
+
+# --------------------------------------------------------------------------- #
+# Somebody did not come (#547; the mechanics §15.3)
+# --------------------------------------------------------------------------- #
+
+
+class NoShowsAreForBookedGames(ConflictError):
+    """*Kuba didn't come*, said of a game a completed line-up opened. Only a
+    **booked** game has an hour somebody could fail to turn up to: a Classic
+    play game is the arrangement's, and its people say whether they played."""
+
+    code = "no_shows_are_for_booked_games"
+
+    def __init__(self) -> None:
+        super().__init__("Only a booked game can report somebody who did not come.")
+
+
+class TheGameHasNotStarted(ConflictError):
+    """A no-show reported before the game's hour: nobody can have failed to
+    turn up to a game that has not begun."""
+
+    code = "the_game_has_not_started"
+
+    def __init__(self) -> None:
+        super().__init__("This game has not started yet.")
+
+
+class AResultIsAlreadyEntered(ConflictError):
+    """A no-show reported on a game somebody already said they played, with a
+    score: a score is four people on a court, and a report that one of them
+    was not there contradicts it. The score's own answers are the way to
+    disagree with it."""
+
+    code = "a_result_is_entered"
+
+    def __init__(self) -> None:
+        super().__init__("A result is already entered for this game.")
+
+
+class ANoShowIsReported(ConflictError):
+    """A score entered while a player's report of not turning up waits out its
+    day. The game does not count whatever the report comes to — it stands, or
+    it is disputed and nobody arbitrates — so there is no score to enter."""
+
+    code = "a_no_show_is_reported"
+
+    def __init__(self) -> None:
+        super().__init__("Somebody was reported as not coming to this game.")
+
+
+class NotOnThisCourt(BadRequestError):
+    """A no-show reported of somebody who was not on the game. The court is the
+    whole of who could have come."""
+
+    code = "not_on_this_court"
+
+    def __init__(self) -> None:
+        super().__init__("That player was not on this game.")
+
+
+class YouCannotReportYourself(BadRequestError):
+    """A player reporting themselves as not turning up — the one person whose
+    presence the act proves."""
+
+    code = "you_cannot_report_yourself"
+
+    def __init__(self) -> None:
+        super().__init__("You cannot report yourself as not coming.")
+
+
+class CheckedInAtTheClub(ConflictError):
+    """A no-show reported of a player the club's desk checked in (the mechanics
+    §15.1, §16.10): the scan is evidence they were there, so they can never be
+    reported."""
+
+    code = "checked_in_at_the_club"
+
+    def __init__(self) -> None:
+        super().__init__("The club checked this player in.")
+
+
+class YouWereReportedAsANoShow(ConflictError):
+    """A player reported as not turning up reporting somebody else. Their answer
+    is the dispute, inside their day; two reports pointing at each other would
+    be the arbitration this platform refuses to make."""
+
+    code = "you_were_reported_as_a_no_show"
+
+    def __init__(self) -> None:
+        super().__init__("You were reported as not coming; dispute it instead.")
+
+
+class NobodyReportedYou(ConflictError):
+    """A dispute from a player nobody reported as not turning up."""
+
+    code = "nobody_reported_you"
+
+    def __init__(self) -> None:
+        super().__init__("Nobody reported you as not coming to this game.")
+
+
+class TheDisputeWindowHasClosed(ConflictError):
+    """A dispute after the reported player's day: the report stands, and the
+    record already shows it."""
+
+    code = "the_dispute_window_has_closed"
+
+    def __init__(self) -> None:
+        super().__init__("The day to dispute this report has passed.")

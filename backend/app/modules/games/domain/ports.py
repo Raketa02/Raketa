@@ -494,6 +494,26 @@ class AgreedMoment(Protocol):
         ...
 
 
+@runtime_checkable
+class ClubCheckIns(Protocol):
+    """*Who did the club see arrive?* — this context's demand on whoever keeps
+    a booking (#547; the mechanics §15.1, §16.10).
+
+    A player the club's desk checked in **can never be reported as not
+    turning up**, and the scan is the booking's fact, recorded where the desk
+    made it; so this context asks for it rather than keeping a copy that could
+    disagree. **Keyed by the challenge id the game was opened from** — a
+    booked game's ``challenge_id`` is its booking's id — so the caller asks in
+    a currency it already holds, as ``AgreedMoment`` is asked. A game a
+    completed line-up opened has no desk, and nobody on it was checked in.
+    """
+
+    async def checked_in(self, challenge_id: UUID) -> frozenset[UUID]:
+        """Everybody the club checked in to the game opened from
+        ``challenge_id`` — empty when there is no booking behind it."""
+        ...
+
+
 @final
 class SeatChange(str, Enum):
     """Whether a seat on this court may still be left or taken, and if not, why.

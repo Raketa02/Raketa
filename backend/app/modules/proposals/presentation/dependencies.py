@@ -21,6 +21,11 @@ from app.api.dependencies import (
 from app.bootstrap.composition import (
     build_accept_the_request,
     build_booked_games,
+    build_cancel_the_game,
+    build_check_in_at_the_desk,
+    build_move_the_game,
+    build_read_club_bookings,
+    build_read_free_courts,
     build_confirm_payment,
     build_say_no_to_a_rescue,
     build_games_and_money_repository,
@@ -50,6 +55,13 @@ from app.modules.proposals.application.answers import (
     WithdrawYes,
 )
 from app.modules.proposals.application.booking_details import ReadBookingDetails
+from app.modules.proposals.application.club_bookings import (
+    CancelTheGame,
+    CheckInAtTheDesk,
+    MoveTheGame,
+    ReadClubBookings,
+    ReadFreeCourts,
+)
 from app.modules.proposals.application.club_requests import (
     AcceptTheRequest,
     ReadWaitingRequests,
@@ -337,6 +349,56 @@ def get_refuse_the_request(
 
 
 RefuseTheRequestDep = Annotated[RefuseTheRequest, Depends(get_refuse_the_request)]
+
+
+# --------------------------------------------------------------------------- #
+# The club runs its bookings (#547)
+# --------------------------------------------------------------------------- #
+
+
+def get_read_club_bookings(
+    db: DbSession, clock: ClockDep, settings: SettingsDep
+) -> ReadClubBookings:
+    return build_read_club_bookings(db, clock=clock, settings=settings)
+
+
+ReadClubBookingsDep = Annotated[ReadClubBookings, Depends(get_read_club_bookings)]
+
+
+def get_read_free_courts(
+    db: DbSession, clock: ClockDep, settings: SettingsDep
+) -> ReadFreeCourts:
+    return build_read_free_courts(db, clock=clock, settings=settings)
+
+
+ReadFreeCourtsDep = Annotated[ReadFreeCourts, Depends(get_read_free_courts)]
+
+
+def get_move_the_game(
+    db: DbSession, clock: ClockDep, settings: SettingsDep
+) -> MoveTheGame:
+    return build_move_the_game(db, clock=clock, settings=settings)
+
+
+MoveTheGameDep = Annotated[MoveTheGame, Depends(get_move_the_game)]
+
+
+def get_cancel_the_game(
+    db: DbSession, clock: ClockDep, settings: SettingsDep
+) -> CancelTheGame:
+    return build_cancel_the_game(db, clock=clock, settings=settings)
+
+
+CancelTheGameDep = Annotated[CancelTheGame, Depends(get_cancel_the_game)]
+
+
+def get_check_in_at_the_desk(
+    db: DbSession, clock: ClockDep, settings: SettingsDep
+) -> CheckInAtTheDesk:
+    return build_check_in_at_the_desk(db, clock=clock, settings=settings)
+
+
+CheckInAtTheDeskDep = Annotated[CheckInAtTheDesk, Depends(get_check_in_at_the_desk)]
 
 
 # --------------------------------------------------------------------------- #

@@ -93,6 +93,11 @@ class ProposalORM(Base):
     waiting_for_the_club: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false", default=False
     )
+    #: The club cancelled the booked game it filled (#547): its people are
+    #: candidates for a new card first, as a turned-down game's are.
+    club_cancelled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False
+    )
 
 
 class ProposalPersonORM(Base):

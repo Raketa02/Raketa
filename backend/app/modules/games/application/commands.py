@@ -100,3 +100,20 @@ class DismissGameOfCourtCommand:
 
     challenge_id: UUID
     player_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class ReportANoShowCommand:
+    """*Kuba didn't come* (#547): ``player_id`` came, ``absent_id`` did not."""
+
+    game_id: UUID
+    player_id: UUID
+    absent_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class DisputeANoShowCommand:
+    """*I was there* (#547): ``player_id`` was reported as not coming."""
+
+    game_id: UUID
+    player_id: UUID

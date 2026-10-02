@@ -25,6 +25,7 @@ from app.modules.bookings.domain.booking import BookedCourt
 from app.modules.bookings.domain.ports import BookingDirectory, CourtForTheGame
 from app.modules.clubs.domain.ports import SellableCourtHours, TakenCourtHour
 from app.modules.clubs.domain.raketa_terms import before_any_deadline
+from app.modules.clubs.domain.sellable import ClubOffer
 
 #: Every game is one hour, for every sport (the mechanics §2).
 _A_GAME: Final = timedelta(hours=1)
@@ -40,7 +41,24 @@ class SellableClubCourts:
     async def first_free(
         self, club_id: UUID, *, sport: Sport, start: Instant
     ) -> CourtForTheGame | None:
-        offer = (
+        offer = await self._offer(club_id, start=start)
+        courts = () if offer is None else _courts(offer, sport=sport, start=start)
+        if offer is None or not courts:
+            return None
+        return CourtForTheGame(
+            court=courts[0],
+            cut_off_hours=offer.settings.cut_off_hours,
+            time_to_confirm_minutes=offer.settings.time_to_confirm_minutes,
+        )
+
+    async def free_courts(
+        self, club_id: UUID, *, sport: Sport, start: Instant
+    ) -> Sequence[BookedCourt]:
+        offer = await self._offer(club_id, start=start)
+        return () if offer is None else _courts(offer, sport=sport, start=start)
+
+    async def _offer(self, club_id: UUID, *, start: Instant) -> ClubOffer | None:
+        return (
             await self._sellable.between(
                 [club_id],
                 start=start,
@@ -48,23 +66,18 @@ class SellableClubCourts:
                 now=before_any_deadline(start),
             )
         ).get(club_id)
-        if offer is None:
-            return None
-        court = next(
-            (
-                hour
-                for hour in offer.hours
-                if hour.sport is sport and hour.start == start
-            ),
-            None,
-        )
-        if court is None:
-            return None
-        return CourtForTheGame(
-            court=BookedCourt(court_id=court.court_id, name=court.court_name),
-            cut_off_hours=offer.settings.cut_off_hours,
-            time_to_confirm_minutes=offer.settings.time_to_confirm_minutes,
-        )
+
+
+def _courts(
+    offer: ClubOffer, *, sport: Sport, start: Instant
+) -> tuple[BookedCourt, ...]:
+    """The courts of ``sport`` on sale from ``start``, in the club's order."""
+
+    return tuple(
+        BookedCourt(court_id=hour.court_id, name=hour.court_name)
+        for hour in offer.hours
+        if hour.sport is sport and hour.start == start
+    )
 
 
 @final

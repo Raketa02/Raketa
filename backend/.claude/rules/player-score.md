@@ -64,3 +64,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   move nothing but a version stamp because no corpus has a Player Score, and the whole claim is
   the one the report cannot print: every player with a record is re-mixed on deploy.
   `2026.08.26-a` is edited once more to say **nought** about a word it never knew.
+- **A confirmed no-show is the strongest mark because it is two** (#547; the mechanics §15.4):
+  a miss on *shows up* (`attendance_for` reads a `NO_SHOW` game per player) and a broken booked
+  game on *keeps plans* (`keeping_of(…, no_shows=)` over `bookings`' `GameNoShows`), where an
+  ordinary mark is *keeps plans* alone. No weight moved and no ruleset release. A game the
+  club cancelled is on nobody's record. See `bookings.md`.

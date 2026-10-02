@@ -82,6 +82,12 @@ ACCEPTANCE_GRACE: Final = timedelta(hours=6)
 #: window runs from the hour's end rather than from a week of not knowing when.
 A_BOOKED_GAME: Final = timedelta(hours=1)
 
+#: How long a player reported as not turning up has to say they did (#547; the
+#: mechanics §15.3, §18). **A day, the result's own day**: silence on a score
+#: confirms it after twenty-four hours, and silence on a report does the same —
+#: the same reach to somebody who has not opened the app, for the same reason.
+NO_SHOW_DISPUTE_WINDOW: Final = timedelta(hours=24)
+
 
 def horizon_ends_at(planned_at: Instant) -> Instant:
     """The last instant this game could have been played — the end of its
@@ -140,3 +146,10 @@ def acceptance_settles_at(proposed_at: Instant) -> Instant:
     """
 
     return instant(proposed_at + ACCEPTANCE_GRACE)
+
+
+def dispute_closes_at(reported_at: Instant) -> Instant:
+    """When a player reported as not turning up can no longer dispute it, and
+    the report stands (#547)."""
+
+    return instant(reported_at + NO_SHOW_DISPUTE_WINDOW)

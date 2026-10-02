@@ -3911,7 +3911,7 @@
             }
           },
           "409": {
-            "description": "Everything above, plus:\n\n`your_side_has_already_answered` \u2014 one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.\n\n`the_other_side_has_answered` \u2014 correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.\n\n`the_court_has_an_open_seat` \u2014 somebody left and nobody has filled their seat, so there is no court to have played on. Fill it, or let the window close.\n\n`the_game_was_called_off` \u2014 somebody ended it while a seat was open, so there is nothing to have played. The ending is on `standing` and `called_off_at`.\n\n`the_game_started_short` \u2014 a booked game whose hour came with a seat open: somebody left after the club's cut-off and nobody took the seat. It ends uncounted (`standing` `STARTED_SHORT`), and nothing about it can be recorded.",
+            "description": "Everything above, plus:\n\n`your_side_has_already_answered` \u2014 one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.\n\n`the_other_side_has_answered` \u2014 correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.\n\n`the_court_has_an_open_seat` \u2014 somebody left and nobody has filled their seat, so there is no court to have played on. Fill it, or let the window close.\n\n`the_game_was_called_off` \u2014 somebody ended it while a seat was open, so there is nothing to have played. The ending is on `standing` and `called_off_at`.\n\n`the_game_started_short` \u2014 a booked game whose hour came with a seat open: somebody left after the club's cut-off and nobody took the seat. It ends uncounted (`standing` `STARTED_SHORT`), and nothing about it can be recorded.\n\n`a_no_show_is_reported` \u2014 somebody was reported as not coming to this booked game and their day to dispute it runs (`no_shows`): the game does not count, so there is no score to enter.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3991,6 +3991,164 @@
           },
           "409": {
             "description": "Everything above, plus:\n\n`nobody_has_proposed_a_result` \u2014 there is nothing from the other side to accept.\n\n`accepting_your_own_sides_result` \u2014 **only the other side can accept**, because a teammate agreeing with a teammate proves nothing.\n\n`the_result_is_already_accepted` \u2014 your side has already agreed to this one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/no-shows": {
+      "post": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Say somebody didn't come",
+        "description": "***Kuba didn't come*** \u2014 on a **booked** game whose hour has come, where you would otherwise enter the result (#547). Said by somebody who came, about somebody else on the court; a second report of the same player answers the same and writes nothing, and each player who did not come is reported on their own.\n\n**The game does not count** from the report on, and nobody's Level moves. The reported player has **24 hours to dispute it** (`no_shows[].dispute_by`); after that it stands \u2014 the strongest mark on a record \u2014 with nothing written at that moment. **Nobody arbitrates a dispute**: the report falls and is on nobody's record.\n\nA player **the club checked in** cannot be reported.",
+        "operationId": "report_a_no_show_api_v1_games__game_id__no_shows_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportANoShowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The game as it stands with your report on it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`you_were_not_on_this_court` \u2014 no game of **yours** has that id. One code for two cases \u2014 it does not exist, or you did not play in it \u2014 because separating them would answer *is this id real* about four strangers' evening.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Everything above, plus:\n\n`no_shows_are_for_booked_games` \u2014 only a game booked on a court has an hour somebody could fail to come to.\n\n`the_game_has_not_started` \u2014 its hour has not come yet.\n\n`a_result_is_entered` \u2014 somebody already said you played, with a score; answer the score instead.\n\n`checked_in_at_the_club` \u2014 the club checked that player in: they were there, and can never be reported.\n\n`you_were_reported_as_a_no_show` \u2014 you were reported yourself; dispute it instead.\n\n`the_game_was_called_off`, `the_game_started_short` \u2014 there was no game to come to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_on_this_court` \u2014 that player was not on this game.\n\n`you_cannot_report_yourself` \u2014 you are the one person your report proves came.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/no-shows/dispute": {
+      "post": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Say you came",
+        "description": "**You were reported as not coming, and you did** (#547). Inside 24 hours of the report. The report falls, nothing goes on your record, and the game still does not count: nobody arbitrates which of you is right. A second dispute answers the same and writes nothing.",
+        "operationId": "dispute_a_no_show_api_v1_games__game_id__no_shows_dispute_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The game as it stands with your dispute recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`you_were_not_on_this_court` \u2014 no game of **yours** has that id. One code for two cases \u2014 it does not exist, or you did not play in it \u2014 because separating them would answer *is this id real* about four strangers' evening.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`nobody_reported_you` \u2014 there is nothing of yours to dispute.\n\n`the_dispute_window_has_closed` \u2014 your day to say you came has passed: the report stands.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8747,7 +8905,7 @@
               }
             ],
             "title": "Refunded Grosze",
-            "description": "What everybody still in is given back \u2014 the whole share, on a game called off at its cut-off (*refunded 30 z\u0142*). `null` where nothing is."
+            "description": "What everybody still in is given back \u2014 the whole share, on a game called off at its cut-off or cancelled by its club (*refunded 30 z\u0142*). `null` where nothing is."
           }
         },
         "type": "object",
@@ -8871,6 +9029,11 @@
             "type": "boolean",
             "title": "Paid",
             "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for its club, on a request that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
+          },
+          "checked_in": {
+            "type": "boolean",
+            "title": "Checked In",
+            "description": "The club's desk checked them in on the day (#547): they were there, so *didn't come* is never offered for them."
           }
         },
         "type": "object",
@@ -8881,7 +9044,8 @@
           "photo_id",
           "photo_url",
           "level",
-          "paid"
+          "paid",
+          "checked_in"
         ],
         "title": "BookedTileSchema",
         "description": "One seat on a booked game."
@@ -8936,7 +9100,18 @@
                 "type": "null"
               }
             ],
-            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. More arrive with the club's cancel (#547)."
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` \u2014 the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547)."
+          },
+          "club_cancel_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClubCancelReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the club cancelled a `CANCELLED_BY_THE_CLUB` game \u2014 `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` (no reason given). `null` on every other game."
           },
           "uncounted_reason": {
             "anyOf": [
@@ -8947,7 +9122,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score \u2014 `null` otherwise. `SEAT_EMPTY` \u2014 its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed."
+            "description": "Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score \u2014 `null` otherwise. `SEAT_EMPTY` \u2014 its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed. `NO_SHOW` \u2014 somebody who came reported a player who did not (#547): the reported player has a day to dispute it (`GET /games` \u2014 `no_shows`), after which it stands; the game does not count either way. A report every reported player disputed is an ordinary `UNCOUNTED`, with no reason: nobody arbitrated."
           },
           "open_seats": {
             "type": "integer",
@@ -9039,6 +9214,7 @@
           "read_at",
           "status",
           "called_off_reason",
+          "club_cancel_reason",
           "uncounted_reason",
           "open_seats",
           "needs_you",
@@ -9087,7 +9263,8 @@
         "enum": [
           "REFUSED",
           "NO_ANSWER",
-          "SHORT_AT_THE_CUT_OFF"
+          "SHORT_AT_THE_CUT_OFF",
+          "CANCELLED_BY_THE_CLUB"
         ],
         "title": "CalledOffReason",
         "description": "Why a game will not be played (the mechanics \u00a714.1)."
@@ -9650,6 +9827,17 @@
         ],
         "title": "ClaimTicketResponse",
         "description": "A correct code, exchanged for a ticket the new password is set with."
+      },
+      "ClubCancelReason": {
+        "type": "string",
+        "enum": [
+          "WEATHER",
+          "REPAIR",
+          "DOUBLE_BOOKING",
+          "OTHER"
+        ],
+        "title": "ClubCancelReason",
+        "description": "Why the club cancelled a booked game (the mechanics \u00a716.9) \u2014 the players\nare told it with their refund."
       },
       "ClubCardSchema": {
         "properties": {
@@ -12275,6 +12463,14 @@
               }
             ],
             "description": "The agreement that is waiting out its grace, and `null` when none is. **A counter voids one**, so this is what still stands rather than what was once recorded."
+          },
+          "no_shows": {
+            "items": {
+              "$ref": "#/components/schemas/NoShowSchema"
+            },
+            "type": "array",
+            "title": "No Shows",
+            "description": "Everybody reported as not coming to this **booked** game, in the court's order (#547). Empty on every other game. A report is the game's entry: no score is on the table beside one, and **the game does not count** whatever it comes to."
           }
         },
         "type": "object",
@@ -12286,7 +12482,8 @@
           "standing",
           "planned_at",
           "seats",
-          "proposals"
+          "proposals",
+          "no_shows"
         ],
         "title": "GameSchema",
         "description": "One game, its court, and what it is right now."
@@ -12309,10 +12506,12 @@
           "CONFIRMED",
           "UNSCORED",
           "CALLED_OFF",
-          "STARTED_SHORT"
+          "STARTED_SHORT",
+          "NO_SHOW_REPORTED",
+          "NO_SHOW"
         ],
         "title": "GameStanding",
-        "description": "The seven standings, as codes. A client's words are the client's own."
+        "description": "The nine standings, as codes. A client's words are the client's own."
       },
       "GamesAndMoneyRequest": {
         "properties": {
@@ -13002,7 +13201,18 @@
                 "type": "null"
               }
             ],
-            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. More arrive with the club's cancel (#547)."
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` on every other status. `REFUSED` \u2014 the On request club refused it. `NO_ANSWER` \u2014 the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` \u2014 a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` \u2014 the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547)."
+          },
+          "club_cancel_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClubCancelReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the club cancelled a `CANCELLED_BY_THE_CLUB` game \u2014 `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` (no reason given). `null` on every other game."
           },
           "uncounted_reason": {
             "anyOf": [
@@ -13013,7 +13223,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score \u2014 `null` otherwise. `SEAT_EMPTY` \u2014 its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed."
+            "description": "Why an `UNCOUNTED` game is uncounted with nobody disagreeing about a score \u2014 `null` otherwise. `SEAT_EMPTY` \u2014 its hour came with a seat open: somebody left after the cut-off and nobody took the seat. No Level moved, and nothing is on the record of those who stayed. `NO_SHOW` \u2014 somebody who came reported a player who did not (#547): the reported player has a day to dispute it (`GET /games` \u2014 `no_shows`), after which it stands; the game does not count either way. A report every reported player disputed is an ordinary `UNCOUNTED`, with no reason: nobody arbitrated."
           },
           "open_seats": {
             "type": "integer",
@@ -13062,6 +13272,7 @@
           "kind",
           "status",
           "called_off_reason",
+          "club_cancel_reason",
           "uncounted_reason",
           "open_seats",
           "needs_you",
@@ -14254,6 +14465,59 @@
         ],
         "title": "NewPasswordRequest",
         "description": "The new password, and **exactly one** of what opens the way to it: the\n`token` from the email's link, or the `ticket` a claimed code returned.\n\nThe password carries no bound here, deliberately: the rule every account\nshares \u2014 8 to 128 characters with a letter and a digit \u2014 is refused as\n`password_too_weak` naming the field, not as a validation error naming none.\nSending both or neither of `token` and `ticket` is a malformed request rather\nthan a person's mistake, and is the one refusal here that is a `422`."
+      },
+      "NoShowSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their whole name, as a seat carries it. ``null`` where ``users`` no longer has the account."
+          },
+          "reported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Reported At"
+          },
+          "dispute_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Dispute By",
+            "description": "The end of their day to say they came \u2014 24 hours from the report. **Nothing happens at this moment**: an undisputed report simply stands from here on, and the game reads `NO_SHOW` once every report has had its day."
+          },
+          "disputed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disputed At",
+            "description": "When they disputed it. **Nobody arbitrates**: a disputed report falls and is on nobody's record; a game whose every report was disputed is `UNSCORED`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "reported_at",
+          "dispute_by"
+        ],
+        "title": "NoShowSchema",
+        "description": "A player reported as not coming to this booked game (#547; the\nmechanics \u00a715.3) \u2014 and what became of it. **Who reported them is not\nhere**: the report is the game's, said by the people who came, and a name\non it would be the platform pointing at one of them."
       },
       "OfficialGroupClubSchema": {
         "properties": {
@@ -16569,6 +16833,22 @@
         "title": "ReliabilityStrand",
         "description": "The six strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *answers about results* and weak on *sportsmanship*\nwins in competitive and loses in for fun. A single blended score cannot\nexpress that, which is the whole argument for the decomposition, and it is\njustified for exactly as long as such a pair exists (``ranking-weights.md``\n\u00a76).\n\n**The inversion is watched rather than assumed, and it widened again.** It\nwas 24/4 against sportsmanship's 5/16 while *confirms results* was here; the\nstrike left 18/7 against 15/17, and *answers about results* restores the wide\npair at 24/4 against 5/16 (``docs/adr/0160``). It is asserted in\n``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the\ndecomposition has stopped paying for itself and the argument for it is due\nagain.\n\n**The sixth name is not the one that was struck, and the difference is the\nwhole of ``docs/adr/0160``.** *Confirms results* asked whether a game reached\nan agreed score, which is a fact about a **pair**, and every denominator\ntried on it docked somebody ADR-0049 protects \u2014 both sides of an honest\ndisagreement included (``docs/adr/0137``). *Answers about results* asks\nwhether **this person** replied to a score put in front of them, and a\ncounter is as good an answer as an acceptance, so disagreeing costs nothing\nand only silence is priced.\n\n**Three different blends of these six exist in this system and confusing\nthem is a live risk:** the published Player Score at 35/20/15/12/10/8, and\nthese two. The reliability *floor* reads the published one \u2014 the one\ndeliberate exception, because a penalty justified by a figure that exists\nnowhere a human can look is unexplainable."
       },
+      "ReportANoShowRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who did not come \u2014 somebody else on the game's court."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id"
+        ],
+        "title": "ReportANoShowRequest",
+        "description": "*Kuba didn't come.*"
+      },
       "RescueOfferSchema": {
         "properties": {
           "deadline": {
@@ -18504,7 +18784,8 @@
       "UncountedReason": {
         "type": "string",
         "enum": [
-          "SEAT_EMPTY"
+          "SEAT_EMPTY",
+          "NO_SHOW"
         ],
         "title": "UncountedReason",
         "description": "Why a game ended uncounted without anybody disagreeing about a score."
