@@ -1,7 +1,8 @@
 /*
  * **A table on a card** (club mocks 2, 14 and 16): small capitals over the columns, a rule
  * between rows, and nothing past the card's own padding at either end. On a phone each row
- * becomes a block, one cell under another, and the column heads are left to a screen reader.
+ * becomes a block, one cell under another, and the column heads are left to a screen reader;
+ * a bare figure takes `labelled` and its column's name in `data-label`.
  */
 
 .table {
@@ -79,5 +80,20 @@
   .table tbody td {
     padding: var(--space-1) 0;
     border-bottom: 0;
+  }
+
+  /*
+   * A cell that would be a bare figure here (`data-label`) prints its column's name before it,
+   * for the eye only: a screen reader has the heads.
+   */
+  .labelled::before {
+    margin-right: var(--space-2);
+    color: var(--colour-muted);
+    content: attr(data-label) / '';
+    font-family: var(--font-sans);
+    font-size: var(--text-label);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
   }
 }

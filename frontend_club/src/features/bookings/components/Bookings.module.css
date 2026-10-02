@@ -5,55 +5,6 @@
   color: var(--colour-muted);
 }
 
-/* The day: ‹ its name ›, back to today, and the date box. */
-
-.dayBar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-
-.dayNav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.dayTitle {
-  font-size: var(--text-wordmark);
-  font-weight: var(--weight-bold);
-  line-height: var(--leading-tight);
-}
-
-.arrow {
-  display: inline-flex;
-  width: var(--size-control-small);
-  height: var(--size-control-small);
-  align-items: center;
-  justify-content: center;
-  border: var(--size-hairline) solid var(--colour-line);
-  border-radius: var(--radius-pill);
-  background: var(--colour-surface);
-  color: var(--colour-ink);
-  font-size: var(--text-control);
-  font-weight: var(--weight-bold);
-  text-decoration: none;
-}
-
-.arrow:hover {
-  background: var(--colour-paper);
-}
-
-.picker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3);
-}
-
 /* A row of the day. */
 
 .row[aria-current='true'] > * {

@@ -28,6 +28,7 @@ export default async function OverviewPage({
       requests={requests}
       toldLive={toldLive}
       passwordSet={notice === 'password-set'}
+      stripeFailed={notice === 'stripe-failed'}
     />
   );
 }

@@ -1,9 +1,9 @@
 import { expect, signIn, test } from './fixtures';
 
 /**
- * **The top bar** (#561, #563, the screens B1): the pages a desk works in, and the club's name
- * opening the two pages about the club itself, *Details* and *Raketa settings*. Money joins the
- * bar with its own ticket. The coral count on Bookings is Bookings' own spec's.
+ * **The top bar** (#561, #563, #562, the screens B1): the pages a desk works in, and the club's
+ * name opening the two pages about the club itself, *Details* and *Raketa settings*. The coral
+ * count on Bookings is Bookings' own spec's.
  */
 
 test.describe('The top bar', () => {
@@ -19,6 +19,7 @@ test.describe('The top bar', () => {
       'Overview',
       'Bookings',
       'Courts & prices',
+      'Money',
       'Groups',
       'Administrators',
     ]);

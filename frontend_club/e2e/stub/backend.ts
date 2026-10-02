@@ -9,13 +9,15 @@
  * {@link StubBackend.requests}. An operation is named by its path as the contract writes it,
  * `{administrator_id}` and all, and a handler reads the ids it was called with in `params`.
  *
- * It also serves the map's tiles, so no test fetches OpenStreetMap.
+ * It also serves the map's tiles, so no test fetches OpenStreetMap, and Stripe's hosted pages,
+ * so *Connect with Stripe* lands somewhere and nothing reaches Stripe.
  */
 
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import type { components, paths } from '../../src/generated/schema';
+import { STRIPE_PAGES, STRIPE_RETURN_URL } from '../suite';
 
 type Method = 'get' | 'put' | 'post' | 'delete';
 type Path = keyof paths;
@@ -73,6 +75,15 @@ export interface Received<P extends Path = Path, M extends Method = Method> {
 type AnyReply = { status: number | 'drop'; body?: unknown };
 type AnyHandler = (request: Received) => AnyReply | Promise<AnyReply>;
 
+/** Stripe's hosted pages, at the stub: whatever link the fake club handed out. */
+const STRIPE_PATH = new URL(STRIPE_PAGES).pathname;
+
+/** **One of Stripe's hosted pages**: its name, and the way back Stripe offers. */
+const STRIPE_PAGE =
+  '<!doctype html><title>Stripe</title>' +
+  '<h1>Set up payments with Stripe</h1>' +
+  `<a href="${STRIPE_RETURN_URL}">Return to Raketa</a>`;
+
 /** A 1 × 1 transparent PNG: every tile the map asks for. */
 const TILE = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
@@ -123,6 +134,8 @@ export class StubBackend {
   private readonly started = Date.now();
   /** Tiles served since the last reset. */
   tiles = 0;
+  /** Stripe's pages the browser opened since the last reset, oldest first, as full links. */
+  readonly stripePages: string[] = [];
 
   private constructor(private readonly server: http.Server) {}
 
@@ -152,6 +165,7 @@ export class StubBackend {
     this.handlers.clear();
     this.log.length = 0;
     this.tiles = 0;
+    this.stripePages.length = 0;
   }
 
   on<P extends Path, M extends MethodOf<P>>(
@@ -201,6 +215,12 @@ export class StubBackend {
       this.tiles += 1;
       response.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
       response.end(TILE);
+      return;
+    }
+    if (request.method === 'GET' && url.pathname.startsWith(`${STRIPE_PATH}/`)) {
+      this.stripePages.push(new URL(url.pathname, STRIPE_PAGES).href);
+      response.writeHead(200, { 'content-type': 'text/html', 'cache-control': 'no-store' });
+      response.end(STRIPE_PAGE);
       return;
     }
 

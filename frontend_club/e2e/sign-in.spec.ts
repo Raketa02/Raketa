@@ -32,6 +32,7 @@ test.describe('Sign in', () => {
       'Overview',
       'Bookings',
       'Courts & prices',
+      'Money',
       'Groups',
       'Administrators',
     ]);

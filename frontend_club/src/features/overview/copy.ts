@@ -1,9 +1,10 @@
 /**
- * **Overview's words**: the setup checklist until the club is live (the screens B2), then once,
- * *You're live*. What waits for the club's answer is said in Bookings' words.
+ * **Overview's words**: the setup checklist until the club is live (the screens B2), with where
+ * Stripe has the club's account, then once, *You're live*. What waits for the club's answer is
+ * said in Bookings' words.
  */
 
-import type { SetupStep, StepState } from './mappers';
+import type { PaymentsStatus, SetupStep, StepState } from './mappers';
 
 interface StepWords {
   readonly title: string;
@@ -13,15 +14,12 @@ interface StepWords {
   readonly action?: string;
   /** Why it is locked: the step it waits for. */
   readonly locked?: string;
-  /** Why it is pending: nothing here does it yet. */
-  readonly pending?: string;
 }
 
 const STEPS: Readonly<Record<SetupStep, StepWords>> = {
   CONNECT_PAYMENTS: {
     title: 'Connect payments',
     explain: 'You are the seller: players pay your own Stripe account, and it pays you out.',
-    pending: 'Connecting Stripe opens here soon.',
   },
   WAY_OF_WORKING: {
     title: 'Choose how you work with Raketa',
@@ -59,8 +57,24 @@ export const OVERVIEW_COPY = {
       next: 'next',
       'to-do': 'to do',
       locked: 'locked',
-      pending: 'pending',
     } satisfies Record<StepState, string>,
     steps: STEPS,
+    /** *Connect payments*' own states, in the row's place for a state, and its one button. */
+    payments: {
+      states: {
+        NOT_STARTED: 'not started',
+        NEEDS_DETAILS: 'Stripe needs more details',
+        READY: 'ready ✓',
+      } satisfies Record<PaymentsStatus, string>,
+      connect: 'Connect with Stripe',
+      continue: 'Continue with Stripe',
+    },
   },
+  /** Stripe's pages could not be opened from `/payments/continue`. */
+  stripeFailed: "We couldn't open Stripe's pages just now. Try again in a moment.",
 } as const;
+
+/** What *Connect with Stripe* can be refused with; the rest are every form's. */
+export const PAYMENTS_REFUSALS: Readonly<Record<string, string>> = {
+  payments_unavailable: "We couldn't reach Stripe. Try again in a moment.",
+};

@@ -15,6 +15,7 @@ import type { components } from '../../src/generated/schema';
 import { refusal, type StubBackend } from './backend';
 import { FakeClubBookings } from './bookings';
 import { FakeClubCourts } from './courts';
+import { FakeClubMoney } from './money';
 
 type ClubDetails = components['schemas']['ClubDetailsResponse'];
 type TokenPair = components['schemas']['TokenResponse'];
@@ -143,6 +144,11 @@ export class FakeClub {
    * booking still to be played holds its court, which Courts & prices reads.
    */
   readonly bookings: FakeClubBookings;
+  /**
+   * The club's money: its bookings' money by month, and its payouts. Nothing unless the test
+   * seats it (`moneyRow(…)`, `payout(…)`).
+   */
+  readonly money: FakeClubMoney;
 
   constructor(private readonly stub: StubBackend) {
     const guard = (authorization: string | undefined) =>
@@ -161,6 +167,7 @@ export class FakeClub {
       () => ({ courts: this.raketa.courts, exceptions: this.raketa.exceptions }),
       () => this.raketa.settings.check_in,
     );
+    this.money = new FakeClubMoney(stub, guard);
   }
 
   /**
@@ -309,6 +316,7 @@ export class FakeClub {
     this.installGroups();
     this.raketa.install();
     this.bookings.install();
+    this.money.install();
     return this;
   }
 

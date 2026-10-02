@@ -13,8 +13,9 @@ src/
   app/                 routes and layouts only
     (signed-out)/      sign-in, sign-up, forgot-password/…, reset/[token]
     (signed-in)/       layout (the frame), overview, bookings (and bookings/check-in), courts,
-                       groups, administrators, details, raketa-settings
+                       money, groups, administrators, details, raketa-settings
     session/           renew and end: the session's own route handlers (§3)
+    payments/continue  where Stripe sends a desk whose link is spent: a fresh one, followed
   proxy.ts             renews a lapsing session and stamps each request's path (§3)
   instrumentation.ts   refuses to start without the configuration (§6)
   server/              the only code that reaches the backend; every file `server-only`
@@ -28,13 +29,17 @@ e2e/                   the Playwright suite and its stub backend (§7)
   hands a view model to a feature's component. ESLint refuses `@/server/*` in `src/app/` and in
   components, so the backend is only ever reached through a query or an action. The exception is
   `src/app/session/`, whose two route handlers belong to the server layer as the proxy does.
+  `/payments/continue` is a route handler too, a door rather than a page, and it goes where
+  Overview's action says (`continueWithStripe`).
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
-  password?_, _Set a new password_), `club-details`, `overview` (with the setup checklist),
+  password?_, _Set a new password_), `club-details`, `overview` (with the setup checklist and
+  _Connect with Stripe_),
   `bookings` (the day's Raketa bookings, answering a request, _Move_ and _Cancel_, and what
   waits for an answer), `check-in` (_Check in_: the camera and the short code at the desk, under
   Bookings), `courts` (_Courts & prices_: the courts, their weekly hours,
-  exceptions and prices), `raketa-settings`, `administrators` and `groups` (the Groups table
-  and _Hand over_). A feature may use another feature's components, schemas, copy and mappers
+  exceptions and prices), `money` (a month of the club's money, its payouts and its Stripe
+  dashboard), `raketa-settings`, `administrators` and `groups` (the Groups table and _Hand
+  over_). A feature may use another feature's components, schemas, copy and mappers
   (sign-up draws Club details' fields; Overview greets a `Club` and lists Bookings' requests),
   and never another feature's actions or queries: a route reads both features' queries and
   hands each its view model. A feature's queries and actions call the backend only
@@ -181,7 +186,11 @@ points.
 - The stub answers each operation with a handler whose reply the compiler checks against that
   operation's declared responses in the generated contract. It also accepts the envelope-bearing
   statuses the backend sends without declaring per route (a `401`, a `5xx`), and `drop`, which
-  closes the connection unanswered. It records every request, and it serves the map's tiles.
+  closes the connection unanswered. It records every request, and it serves the map's tiles and
+  **Stripe's hosted pages**: a link the fake club hands out points at the stub, so _Connect with
+  Stripe_ and `/payments/continue` really redirect there (Playwright's `page.route` never sees a
+  redirect's target), the page offers Stripe's way back to Overview, and `stub.stripePages` lists
+  what the browser opened.
   An operation is named by its path as the contract writes it,
   `/api/v1/club/administrators/{administrator_id}`, and its handler and `stub.requests` read
   the ids in `params`.
@@ -193,10 +202,12 @@ points.
   and reads the setup checklist off them; it starts with nothing set, and `club.raketa.ready()`
   makes the club live. Its bookings, `club.bookings` (`e2e/stub/bookings.ts`), keep #543's and
   #547's rules: each status folded from where the booking stands and the clock, as the backend
-  folds it, and a booking still to be played holds its court for Courts & prices. A test seats
-  its people in `club.administrators`, its groups in `club.groups` (`officialGroup(…)`), its
-  courts in `club.raketa.courts` (`court(…)`) and its games with `club.bookings.add(booking(…))`,
-  and a test about one reply overrides that operation; a handler reads the query string in
+  folds it, and a booking still to be played holds its court for Courts & prices. Its money,
+  `club.money` (`e2e/stub/money.ts`), answers a month's rows soonest first with their totals,
+  and its payouts newest first. A test seats its people in `club.administrators`, its groups in
+  `club.groups` (`officialGroup(…)`), its courts in `club.raketa.courts` (`court(…)`), its games
+  with `club.bookings.add(booking(…))` and its money with `club.money.add(moneyRow(…))` and
+  `club.money.payouts` (`payout(…)`), and a test about one reply overrides that operation; a handler reads the query string in
   `query`. Its tokens are unique across the run (`club.accessToken(n)`),
   because the single flight's grace window would hand one test the pair it renewed for another.
 - **Tests assert what the desk or the backend would see**: text on the page, the URL, the
@@ -230,11 +241,15 @@ literal CSS allows no variable for.
 Money is written by `src/ui/format.ts` as the player app writes a share: `140 zł`, `142,50 zł`
 (the decimal comma, a space before the unit, and the grosze only when there are some), from the
 wire's integer grosze and never through `Intl.NumberFormat` or `toFixed`
-(`docs/value-formatting.md`, which left the rendering to the first client to draw a price).
+(`docs/value-formatting.md`, which left the rendering to the first client to draw a price). A
+sum of five figures or more is set in threes with a no-break space, `12 840 zł`, as Polish sets
+it, and a sum below nought takes U+2212, `−6 zł`: the Money page's totals and payouts are the
+first to need either.
 
 **A page works at every width, down to a phone with no sideways scrolling.** On a phone the top
 bar becomes three rows: the wordmark and _Sign out_, the club, then the pages. Every table is
 drawn by `src/ui/Table.module.css`: on a phone its rows become blocks, one cell under another,
 and its column heads are left to a screen reader. A cell that would be a bare figure there
-(Groups' _Players_, _From WhatsApp_ and _Games_) prints its column's name before it, for the eye
-only.
+(Groups' _Players_, _From WhatsApp_ and _Games_, Money's sums) takes the table's `labelled` and
+prints its column's name before it, for the eye only. Bookings' day and Money's month are one
+`PeriodBar`, _‹ its name ›_ with a `PeriodPicker` box beside it.

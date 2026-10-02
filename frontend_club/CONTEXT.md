@@ -50,8 +50,9 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
   the Playwright suite, typed from the wire types, recording every request.
 - **Fake club** — `e2e/stub/club.ts`: the stub's default handlers, one club whose tokens rotate,
   whose reset signs everyone out and whose administrators, official groups, Raketa offer
-  (`club.raketa`, `e2e/stub/courts.ts`) and bookings (`club.bookings`, `e2e/stub/bookings.ts`)
-  keep the backend's rules, so a test programs only the reply it is about.
+  (`club.raketa`, `e2e/stub/courts.ts`), bookings (`club.bookings`, `e2e/stub/bookings.ts`) and
+  money (`club.money`, `e2e/stub/money.ts`) keep the backend's rules, so a test programs only the
+  reply it is about. The stub also draws Stripe's pages, which the fake club's links point at.
 - **Scan** — what the Check in page's camera read off a player's QR code: the whole payload
   (`RAKETA-CHECK-IN:1:…`), sent to the backend as it was read, once each time the code is held
   up (taken away for a second, it is new again). The **short code** is the six
@@ -59,6 +60,12 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
   **Check-in** code; what a code _is_ (whose seat, which day) is only the backend's to say.
 - **Fake camera** — `e2e/camera.ts`: the camera the suite gives the Check in page, a canvas's
   stream showing a real QR code a test holds up, which counts the frames the page looks at.
+- **Stripe's pages** — the hosted pages where a club gives Stripe its company, its
+  representative and its bank. _Connect with Stripe_ and _Continue with Stripe_ (Overview's first
+  step) ask the backend for a fresh **link** to them, which works once, and leave for it. Stripe
+  sends the desk back to Overview, or, when the link was spent or went stale, to
+  **`/payments/continue`**, which asks for another and follows it. Where the account stands is the
+  domain's (not started, _Stripe needs more details_, ready), read off the setup checklist.
 - **Countdown** — what is left of a request's time to answer, counted from the backend's own
   `read_at`, so a browser whose clock is wrong draws the same figure. Not a timer of the
   backend's: when it runs out the page is read again, and the backend says the request is off.

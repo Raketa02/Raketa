@@ -1,18 +1,15 @@
-import Link from 'next/link';
-
 import { CHECK_IN_COPY } from '@/features/check-in/copy';
 import { CHECK_IN_PATH } from '@/features/check-in/schemas';
 import { ButtonLink } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
+import { PeriodBar } from '@/ui/PeriodBar';
 import { Segments } from '@/ui/Segments';
-import { TextLink } from '@/ui/TextLink';
 
 import { BOOKINGS_COPY, dayTitle } from '../copy';
 import { FILTERS, type BookingsDay } from '../mappers';
 import { dayAfter, dayHref } from '../schemas';
 
-import styles from './Bookings.module.css';
 import { DayBookings } from './DayBookings';
 import { DayPicker } from './DayPicker';
 
@@ -48,33 +45,19 @@ export function Bookings({
         }
       />
       <Card labelledBy="day-title">
-        <div className={styles.dayBar}>
-          <nav aria-label={COPY.day.label} className={styles.dayNav}>
-            <Link
-              href={at(dayAfter(day.day, -1))}
-              className={styles.arrow}
-              aria-label={COPY.day.previous}
-            >
-              ‹
-            </Link>
-            <h2 id="day-title" className={styles.dayTitle}>
-              {dayTitle(day.day, day.today)}
-            </h2>
-            <Link
-              href={at(dayAfter(day.day, 1))}
-              className={styles.arrow}
-              aria-label={COPY.day.next}
-            >
-              ›
-            </Link>
-            {day.day === day.today ? null : (
-              <TextLink href={dayHref({ date: null, filter: day.filter })}>
-                {COPY.day.today}
-              </TextLink>
-            )}
-          </nav>
-          <DayPicker day={day.day} filter={day.filter} />
-        </div>
+        <PeriodBar
+          label={COPY.day.label}
+          titleId="day-title"
+          title={dayTitle(day.day, day.today)}
+          previous={{ href: at(dayAfter(day.day, -1)), label: COPY.day.previous }}
+          next={{ href: at(dayAfter(day.day, 1)), label: COPY.day.next }}
+          back={
+            day.day === day.today
+              ? null
+              : { href: dayHref({ date: null, filter: day.filter }), label: COPY.day.today }
+          }
+          picker={<DayPicker day={day.day} filter={day.filter} />}
+        />
         <Segments
           label={COPY.filters.label}
           items={FILTERS.map((filter) => ({

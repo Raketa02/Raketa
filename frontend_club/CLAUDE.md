@@ -3,8 +3,8 @@
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. A club signs up, signs in, keeps its
 details, sets up what it sells through Raketa (courts, weekly hours, exceptions, prices and its
 Raketa settings, followed by Overview's setup checklist), runs its Raketa bookings (answering a
-request, moving or cancelling a game, checking players in at the desk), invites its
-Administrators and watches its official groups
+request, moving or cancelling a game, checking players in at the desk), connects Stripe and sees
+its money and payouts, invites its Administrators and watches its official groups
 ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)).
 It talks to the backend's **club surface** (`backend/openapi.club.json`) **from its server
 only**: the browser never holds a token.
@@ -21,7 +21,8 @@ for its own machinery are in [`CONTEXT.md`](CONTEXT.md); domain words are the ro
 - **`src/app/`** holds routes and layouts. `(signed-out)` and `(signed-in)` make the session
   boundary visible; the signed-in layout reads the club, which redirects to sign-in without a
   session. **Every signed-in page reads through the same guard too**, because a layout does not
-  re-run on every navigation. `src/app/session/` holds the session's own two route handlers.
+  re-run on every navigation. `src/app/session/` holds the session's own two route handlers, and
+  `src/app/payments/continue/` the door Stripe sends a desk back through.
 - **`src/server/`** is the only code that reaches the backend, and every file in it imports
   `server-only`: the sealed cookie session, the single-flight refresh, and the typed client
   (openapi-fetch over the generated `paths`). **A feature calls the backend through three doors**
@@ -82,7 +83,9 @@ keeps the courts, prices and settings and reads the setup checklist off them (no
 a test says; `club.raketa.ready()` makes the club live), and whose bookings, `club.bookings`,
 fold their status off the clock as the backend does (a test seats them with
 `club.bookings.add(booking(…))`, and reads a seat's check-in code with
-`club.bookings.checkInCode(game, seat)`). A test about one reply overrides
+`club.bookings.checkInCode(game, seat)`), and whose money, `club.money`, answers a month's rows
+and the payouts a test seats (`moneyRow(…)`, `payout(…)`). Stripe's hosted pages are the stub's
+too, so a redirect to one lands, and `stub.stripePages` says which opened. A test about one reply overrides
 that operation with `stub.on`, naming it by the contract's path, `{administrator_id}` and all.
 A spec that opens _Check in_ gives the page **the fake camera** first (`fakeCamera(page)`,
 `e2e/camera.ts`), which holds up a real QR code.

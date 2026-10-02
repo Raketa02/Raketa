@@ -91,7 +91,7 @@ test.describe('Raketa settings', () => {
 
     await page.getByRole('navigation').getByRole('link', { name: 'Overview' }).click();
     const steps = page.getByRole('list', { name: 'Setup checklist' }).locator('[data-state]');
-    await expect(steps).toHaveText(['pending', 'done ✓', 'next', 'locked', 'done ✓']);
+    await expect(steps).toHaveText(['not started', 'done ✓', 'to do', 'locked', 'done ✓']);
   });
 
   test('a confirmed club saves its settings, and keeping its way sends no way', async ({

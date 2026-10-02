@@ -1,0 +1,106 @@
+/* Money: the month, its totals, its bookings and the payouts. Every value is a token. */
+
+.none {
+  color: var(--colour-muted);
+}
+
+/* The month's totals, at the top: four figures, each under its name. */
+
+.totals {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.total {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: var(--size-hairline) solid var(--colour-rule);
+  border-radius: var(--radius-control);
+}
+
+.total dt {
+  color: var(--colour-muted);
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.total dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+}
+
+/* A row of the month, and a payout. */
+
+.when {
+  white-space: nowrap;
+}
+
+.court {
+  display: block;
+  font-weight: var(--weight-medium);
+}
+
+.what {
+  display: block;
+  color: var(--colour-muted);
+  font-size: var(--text-small);
+}
+
+.figure {
+  font-family: var(--font-mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* A head over a column of figures sits over them, in the heads' own type. */
+.figureHead {
+  text-align: right;
+}
+
+.figure[data-below-nought='true'] {
+  color: var(--colour-red);
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.why {
+  color: var(--colour-muted);
+  font-size: var(--text-small);
+}
+
+.paidOut {
+  color: var(--colour-green);
+  font-size: var(--text-small);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.notPaidOut {
+  color: var(--colour-muted);
+  font-size: var(--text-small);
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+  .totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .figure {
+    text-align: left;
+  }
+}

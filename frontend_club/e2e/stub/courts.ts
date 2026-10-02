@@ -11,6 +11,8 @@ import { randomUUID } from 'node:crypto';
 
 import type { components } from '../../src/generated/schema';
 
+import { STRIPE_PAGES } from '../suite';
+
 import { refusal, type Reply, type StubBackend } from './backend';
 import { clubTime, dayFromToday } from './clock';
 
@@ -103,6 +105,8 @@ export class FakeClubCourts {
   /** Whether the club has confirmed its settings: the checklist's last step. */
   confirmed = false;
   payments: PaymentsStatus = 'NOT_STARTED';
+  /** Every link to Stripe's pages handed out, oldest first: each works once, as Stripe's do. */
+  readonly links: string[] = [];
 
   constructor(
     private readonly stub: StubBackend,
@@ -407,6 +411,17 @@ export class FakeClubCourts {
       this.settings = structuredClone(body);
       this.confirmed = true;
       return { status: 200, body: this.settingsResponse() };
+    });
+
+    // Payments' route, but the account is the Club courts stream's (#537), as the checklist is.
+    // A fresh link every time, for the one account; none once Stripe says it is ready.
+    stub.on('post', '/api/v1/club/payments/onboarding-link', ({ headers }) => {
+      const signedOut = this.guard(headers.authorization);
+      if (signedOut !== null) return signedOut;
+      if (this.payments === 'READY') return conflict('payments_already_connected');
+      const url = `${STRIPE_PAGES}/${this.links.length + 1}`;
+      this.links.push(url);
+      return { status: 200, body: { url } };
     });
 
     return this;

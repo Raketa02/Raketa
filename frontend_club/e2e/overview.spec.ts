@@ -9,8 +9,8 @@ import { court, week } from './stub/courts';
 /**
  * **Overview** (#561, #563, the screens B2): the setup checklist until the club is live, each
  * step with its state and the one button that does it; then, once, *You're live*, the checklist
- * is gone, and Overview shows only what waits for the club's answer. Connecting payments is
- * shown as pending until its own ticket (#562) opens it here.
+ * is gone, and Overview shows only what waits for the club's answer. Connecting payments has its
+ * own spec, `connect-payments.spec.ts` (#562).
  */
 
 const MINUTE_MS = 60_000;
@@ -43,9 +43,10 @@ test.describe('Overview', () => {
       'Set hours and prices',
       'Check the settings',
     ]);
+    // Connecting payments comes first, so its button is the page's one primary button.
     await expect(checklist(page).locator('[data-state]')).toHaveText([
-      'pending',
-      'next',
+      'not started',
+      'to do',
       'to do',
       'locked',
       'locked',
@@ -53,8 +54,9 @@ test.describe('Overview', () => {
 
     await expect(page.getByRole('region', { name: 'Waiting for your answer' })).toHaveCount(0);
 
-    // Payments are connected from here with their own ticket: no button yet.
-    await expect(step(page, 'Connect payments').getByRole('link')).toHaveCount(0);
+    await expect(step(page, 'Connect payments').getByRole('button')).toHaveText(
+      'Connect with Stripe',
+    );
     await expect(step(page, 'Set hours and prices').getByRole('link')).toHaveCount(0);
     await expect(step(page, 'Set hours and prices')).toContainText('Once you add a court.');
     await expect(step(page, 'Check the settings').getByRole('link')).toHaveCount(0);
@@ -74,13 +76,13 @@ test.describe('Overview', () => {
   });
 
   test('steps done are ticked, and the first left to do is next', async ({ page, club }) => {
-    club.raketa.payments = 'NEEDS_DETAILS';
+    club.raketa.payments = 'READY';
     club.raketa.way = 'ON_REQUEST';
     club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL', hours: week([1], 17, 19) })];
     await signIn(page);
 
     await expect(checklist(page).locator('[data-state]')).toHaveText([
-      'pending',
+      'ready ✓',
       'done ✓',
       'done ✓',
       'next',
@@ -95,15 +97,6 @@ test.describe('Overview', () => {
       '/raketa-settings',
     );
     await expect(page.getByText("You're live")).toBeHidden();
-  });
-
-  test('payments a provider says are ready are ticked like any other step', async ({
-    page,
-    club,
-  }) => {
-    club.raketa.payments = 'READY';
-    await signIn(page);
-    await expect(step(page, 'Connect payments').locator('[data-state]')).toHaveText('done ✓');
   });
 
   test('a live club is told so once, and the checklist is gone', async ({
@@ -146,6 +139,12 @@ test.describe('Overview', () => {
     club.raketa.payments = 'NEEDS_DETAILS';
     await page.reload();
     await expect(checklist(page)).toHaveCount(5);
+    await expect(step(page, 'Connect payments').locator('[data-state]')).toHaveText(
+      'Stripe needs more details',
+    );
+    await expect(step(page, 'Connect payments').getByRole('button')).toHaveText(
+      'Continue with Stripe',
+    );
     await expect
       .poll(async () => (await context.cookies()).map((cookie) => cookie.name))
       .not.toContain(TOLD_LIVE_COOKIE);

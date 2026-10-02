@@ -1,9 +1,11 @@
 import { fakeCamera } from './camera';
 import { expect, signIn, test } from './fixtures';
+import { refusal } from './stub/backend';
 import { booking } from './stub/bookings';
 import { administrator, DAY_MS, fromNow, officialGroup } from './stub/club';
 import { dayFromToday } from './stub/clock';
 import { court, week } from './stub/courts';
+import { moneyRow, payout } from './stub/money';
 
 /** **Every page works at phone width** (#500 story 95): nothing scrolls sideways at 360 px. */
 
@@ -40,6 +42,7 @@ test('the signed-in pages fit a phone, top bar and all', async ({ page, club }) 
     '/bookings',
     '/bookings/check-in',
     '/courts',
+    '/money',
     '/groups',
     '/administrators',
     '/details',
@@ -258,4 +261,45 @@ test("Overview's requests fit a phone", async ({ page, club }) => {
   await signIn(page);
   await expect(page.getByRole('timer')).toBeVisible();
   await fitsSideways(page, '/overview, live');
+});
+
+test('Money fits a phone: the month, its totals, its rows and the payouts', async ({
+  page,
+  club,
+}) => {
+  club.raketa.payments = 'READY';
+  const long = court({ name: 'Kort centralny przy wejściu', sport: 'PADEL' });
+  club.money.add(
+    moneyRow({
+      court: long,
+      day: '2026-03-07',
+      hour: 18,
+      status: 'CALLED_OFF',
+      refunded_grosze: 140_00,
+    }),
+  );
+  club.money.add(moneyRow({ court: long, day: '2026-03-09', hour: 19, paid_out: true }));
+  club.money.payouts = [
+    payout({ amount_grosze: 1_234_50, arrives_at: fromNow(-DAY_MS), status: 'FAILED' }),
+    payout({ amount_grosze: 134_00, arrives_at: fromNow(-2 * DAY_MS) }),
+  ];
+  await signIn(page);
+  await page.goto('/money?month=2026-03');
+  await expect(page.getByRole('region', { name: 'Payouts' }).getByRole('row')).toHaveCount(3);
+  await fitsSideways(page, '/money');
+  // With the column heads gone, a bare figure says what it is.
+  const net = page.getByRole('row').nth(1).getByRole('cell').nth(4);
+  expect(await net.evaluate((cell) => getComputedStyle(cell, '::before').content)).toMatch(/Net/);
+});
+
+test("The checklist's Stripe step fits a phone, refused and all", async ({ page, stub, club }) => {
+  club.raketa.payments = 'NEEDS_DETAILS';
+  await signIn(page);
+  stub.on('post', '/api/v1/club/payments/onboarding-link', () => ({
+    status: 503,
+    body: refusal('payments_unavailable'),
+  }));
+  await page.getByRole('button', { name: 'Continue with Stripe' }).click();
+  await expect(page.getByRole('main').getByRole('alert')).toBeVisible();
+  await fitsSideways(page, '/overview, Stripe refused');
 });

@@ -24,16 +24,28 @@ export function Button({
   return <button {...rest} className={classes(tone, full)} />;
 }
 
-/** A link drawn as a button. */
+/**
+ * A link drawn as a button. One to another site (`newTab`) opens it in a new tab and tells it
+ * nothing of this one, so the desk's page stays where it was.
+ */
 export function ButtonLink({
   href,
   tone = 'secondary',
+  newTab = false,
   children,
 }: {
   href: string;
   tone?: Tone;
+  newTab?: boolean;
   children: ReactNode;
 }) {
+  if (newTab) {
+    return (
+      <a href={href} className={classes(tone, false)} target="_blank" rel="noopener noreferrer">
+        {children}
+      </a>
+    );
+  }
   return (
     <Link href={href} className={classes(tone, false)}>
       {children}

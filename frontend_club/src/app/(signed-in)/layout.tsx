@@ -15,13 +15,14 @@ const { frame } = SITE_COPY;
 
 /**
  * The bar's pages (the screens B1), with a coral count on Bookings while requests wait for an
- * answer. Money joins the bar with its own ticket.
+ * answer.
  */
 function pages(waiting: number): readonly NavItem[] {
   return [
     { href: '/overview', label: frame.pages.overview },
     { href: '/bookings', label: frame.pages.bookings, ...requestsBadge(waiting) },
     { href: '/courts', label: frame.pages.courts },
+    { href: '/money', label: frame.pages.money },
     { href: '/groups', label: frame.pages.groups },
     { href: '/administrators', label: frame.pages.administrators },
   ];

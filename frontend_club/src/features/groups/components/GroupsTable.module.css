@@ -35,16 +35,3 @@
 .figure {
   color: var(--colour-muted);
 }
-
-@media (max-width: 800px) {
-  /* The column's name before its figure, for the eye only: a screen reader has the heads. */
-  .labelled::before {
-    margin-right: var(--space-2);
-    color: var(--colour-muted);
-    content: attr(data-label) / '';
-    font-size: var(--text-label);
-    font-weight: var(--weight-bold);
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-  }
-}

@@ -59,7 +59,7 @@ export function GroupsTable({ groups }: { groups: readonly GroupRow[] }) {
               <td>
                 <RunBy administrator={group.administrator} />
               </td>
-              <td className={styles.labelled} data-label={COPY.columns.players}>
+              <td className={tableStyles.labelled} data-label={COPY.columns.players}>
                 <span className={styles.players}>
                   {group.players}
                   {group.waiting > 0 ? (
@@ -70,7 +70,7 @@ export function GroupsTable({ groups }: { groups: readonly GroupRow[] }) {
                   ) : null}
                 </span>
               </td>
-              <td className={styles.labelled} data-label={COPY.columns.fromWhatsApp}>
+              <td className={tableStyles.labelled} data-label={COPY.columns.fromWhatsApp}>
                 <div className={styles.whatsApp}>
                   <span className={styles.figure}>
                     {COPY.fromWhatsApp(group.players, group.whatsApp.size, group.whatsApp.percent)}
@@ -78,7 +78,7 @@ export function GroupsTable({ groups }: { groups: readonly GroupRow[] }) {
                   <Bar value={group.players} max={group.whatsApp.size} />
                 </div>
               </td>
-              <td className={styles.labelled} data-label={COPY.columns.games}>
+              <td className={tableStyles.labelled} data-label={COPY.columns.games}>
                 {group.games}
               </td>
             </tr>

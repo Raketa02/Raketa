@@ -486,6 +486,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/club/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your payouts
+         * @description The payouts to your bank, as the payment provider says they stand — the Money page's list. Empty until payments are connected and a first game is played.
+         */
+        get: operations["payouts_api_v1_club_payouts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/club/bookings/waiting": {
         parameters: {
             query?: never;
@@ -640,6 +660,26 @@ export interface paths {
          * @description **Check in** a player on the game's day: the code the camera read off their QR, or the short code typed by hand. They were there, and can never be reported as not coming. **Money never depends on it** — you are paid whether people come or not.
          */
         post: operations["check_in_api_v1_club_check_ins_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/money": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your money, by month
+         * @description A month of your Raketa money, booking by booking — by the day each game is played on — with what the players paid, what was given back, the card fees and what is yours, and the month's totals. **You are the seller**: every figure is your own account's. Your payouts are `GET /api/v1/club/payouts`.
+         */
+        get: operations["money_by_month_api_v1_club_money_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1121,6 +1161,30 @@ export interface components {
             groups: components["schemas"]["ClubGroupSchema"][];
         };
         /**
+         * ClubMoneyResponse
+         * @description A month of your Raketa money — the Money page.
+         */
+        ClubMoneyResponse: {
+            /**
+             * Month
+             * @description The month read, `YYYY-MM`.
+             * @example 2026-10
+             */
+            month: string;
+            /**
+             * Read At
+             * Format: date-time
+             */
+            read_at: string;
+            /** @description The month's, at the top. */
+            totals: components["schemas"]["MoneyTotalsSchema"];
+            /**
+             * Bookings
+             * @description Every booking played — or to be played — in the month that took money, soonest first. A request nobody paid for is not money and is not listed.
+             */
+            bookings: components["schemas"]["MoneyBookingSchema"][];
+        };
+        /**
          * ClubSignUpRequest
          * @description A club signs up: its details, and the email and password its desk signs
          *     in with. **No second password field** — the website asks once.
@@ -1453,6 +1517,64 @@ export interface components {
             longitude: number;
         };
         /**
+         * MoneyBookingSchema
+         * @description One booking's money, on your account — you are the seller.
+         */
+        MoneyBookingSchema: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Starts At
+             * Format: date-time
+             * @description The court hour's start — the row's date.
+             */
+            starts_at: string;
+            /** Court Name */
+            court_name: string;
+            sport: components["schemas"]["Sport"];
+            /** @description What the booking is now, as on the Bookings page. */
+            status: components["schemas"]["ClubStatus"];
+            /** Collected Grosze */
+            collected_grosze: number;
+            /** Refunded Grosze */
+            refunded_grosze: number;
+            /** Card Fees Grosze */
+            card_fees_grosze: number;
+            /** Net Grosze */
+            net_grosze: number;
+            /**
+             * Paid Out
+             * @description A payout carried its money to your bank. Until then it waits on your account: **you are paid after the game is played**, at the close of its day, since a refund before the start comes out of it.
+             */
+            paid_out: boolean;
+        };
+        /** MoneyTotalsSchema */
+        MoneyTotalsSchema: {
+            /**
+             * Collected Grosze
+             * @description Every share taken from the players.
+             */
+            collected_grosze: number;
+            /**
+             * Refunded Grosze
+             * @description Everything given back — automatically: you never refund anybody by hand.
+             */
+            refunded_grosze: number;
+            /**
+             * Card Fees Grosze
+             * @description The provider's card fee on every share taken, yours to pay as at your own terminal. A refund never returns it.
+             */
+            card_fees_grosze: number;
+            /**
+             * Net Grosze
+             * @description Yours: collected, less refunded, less the card fees. Below nought when games given back whole cost you their card fees.
+             */
+            net_grosze: number;
+        };
+        /**
          * MonogramSchema
          * @description The group's tile, **cut by the backend** so every client draws the same
          *     one (``docs/adr/0183`` §5).
@@ -1524,6 +1646,37 @@ export interface components {
          * @enum {string}
          */
         PaymentsStatus: "NOT_STARTED" | "NEEDS_DETAILS" | "READY";
+        /** PayoutSchema */
+        PayoutSchema: {
+            /**
+             * Payout Id
+             * @description The provider's own id for it.
+             */
+            payout_id: string;
+            /** Amount Grosze */
+            amount_grosze: number;
+            /**
+             * Arrives At
+             * Format: date-time
+             * @description When it reaches — or reached — your bank, as the provider says.
+             */
+            arrives_at: string;
+            /** @description `PENDING` and `IN_TRANSIT` — on its way. `PAID` — in your bank. `FAILED` — your bank refused it: the provider asks you for your details. `CANCELLED` — it never left. */
+            status: components["schemas"]["PayoutStatus"];
+        };
+        /**
+         * PayoutStatus
+         * @enum {string}
+         */
+        PayoutStatus: "PENDING" | "IN_TRANSIT" | "PAID" | "FAILED" | "CANCELLED";
+        /** PayoutsResponse */
+        PayoutsResponse: {
+            /**
+             * Payouts
+             * @description Your account's payouts, newest first. **You are paid after the game is played**: at the close of each day, what that day's games over left you goes to your bank in one payout.
+             */
+            payouts: components["schemas"]["PayoutSchema"][];
+        };
         /** PriceBandRequest */
         PriceBandRequest: {
             /** @description Monday to Friday, or Saturday and Sunday. */
@@ -3128,6 +3281,46 @@ export interface operations {
             };
         };
     };
+    payouts_api_v1_club_payouts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `payments_unavailable` — the provider could not be reached. Try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     waiting_api_v1_club_bookings_waiting_get: {
         parameters: {
             query?: never;
@@ -3481,6 +3674,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    money_by_month_api_v1_club_money_get: {
+        parameters: {
+            query?: {
+                /** @description `YYYY-MM` — this month when left out. */
+                month?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClubMoneyResponse"];
                 };
             };
             /** @description Validation Error */

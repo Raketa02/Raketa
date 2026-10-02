@@ -6,7 +6,7 @@
 
 export const SITE_COPY = {
   description:
-    "A club's desk: its courts and prices on Raketa, its settings, its administrators and its groups.",
+    "A club's desk: its courts and prices on Raketa, its bookings and its money, its settings, its administrators and its groups.",
   frame: {
     /** The top bar's pages, as a screen reader names the list. */
     pagesLabel: 'Club website',
@@ -14,6 +14,7 @@ export const SITE_COPY = {
       overview: 'Overview',
       bookings: 'Bookings',
       courts: 'Courts & prices',
+      money: 'Money',
       groups: 'Groups',
       administrators: 'Administrators',
     },
