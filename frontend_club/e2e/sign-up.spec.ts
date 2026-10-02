@@ -36,7 +36,7 @@ test.describe('Sign up', () => {
     await page.getByRole('button', { name: 'Sign up' }).click();
 
     await expect(page).toHaveURL(/\/overview$/);
-    await expect(page.getByRole('banner').getByRole('link', { name: /Ogrody 33/ })).toHaveText(
+    await expect(page.getByRole('banner').getByRole('button', { name: /Ogrody 33/ })).toHaveText(
       'Ogrody 33 · Grzegórzki, Kraków',
     );
 

@@ -1,0 +1,57 @@
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+/* The switch: a track with a knob, drawn on the checkbox itself. */
+.input {
+  position: relative;
+  width: var(--size-switch-width);
+  height: var(--size-switch-height);
+  flex: none;
+  margin: 0;
+  appearance: none;
+  border-radius: var(--radius-pill);
+  background: var(--colour-line);
+  cursor: pointer;
+}
+
+.input::after {
+  position: absolute;
+  top: var(--size-switch-gap);
+  left: var(--size-switch-gap);
+  width: var(--size-switch-knob);
+  height: var(--size-switch-knob);
+  border-radius: var(--radius-pill);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-pin);
+  content: '';
+}
+
+.input:checked {
+  background: var(--colour-green);
+}
+
+.input:checked::after {
+  left: auto;
+  right: var(--size-switch-gap);
+}
+
+.words {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}

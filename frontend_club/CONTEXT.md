@@ -16,6 +16,9 @@ it points back.
 - **Cookie session** — the club's token pair and the moment its access token lapses, sealed with
   `SESSION_SECRET` into one `httpOnly` cookie, `raketa_club_session`. Only the server can read it.
   _Avoid_: login, auth state.
+- **Mark** — a plain cookie that remembers what this browser was told once:
+  `raketa_club_told_live`, set when Overview says the club is live and cleared when it is not
+  any more. Holds no token. Not a session.
 - **Recovery cookie** — _Forgot password?_'s own sealed cookie, `raketa_club_recovery`: the email
   a recovery was asked with, and once a right code is claimed, its **ticket**. Not a session.
 - **Ticket** — what a right code is exchanged for; the new password is set with it. A credential,
@@ -46,5 +49,6 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
 - **Stub backend** — `e2e/stub/backend.ts`: an HTTP server standing in for the club surface in
   the Playwright suite, typed from the wire types, recording every request.
 - **Fake club** — `e2e/stub/club.ts`: the stub's default handlers, one club whose tokens rotate,
-  whose reset signs everyone out and whose administrators and official groups keep the
-  backend's rules, so a test programs only the reply it is about.
+  whose reset signs everyone out and whose administrators, official groups and Raketa offer
+  (`club.raketa`, `e2e/stub/courts.ts`) keep the backend's rules, so a test programs only the
+  reply it is about.

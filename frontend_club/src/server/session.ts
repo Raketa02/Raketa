@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 
 import type { components } from '@/generated/schema';
 
-import { seal, sealedCookieOptions, unseal } from './seal';
+import { seal, cookieOptions, unseal } from './seal';
 
 /**
  * **The club's session: its token pair, sealed into one cookie** (ADR-0187 §3).
@@ -46,7 +46,7 @@ export function sessionFromPair(pair: TokenResponse, now: number = Date.now()): 
 }
 
 export function sessionCookieOptions() {
-  return sealedCookieOptions(TTL_SECONDS);
+  return cookieOptions(TTL_SECONDS);
 }
 
 export function sealSession(session: ClubSession): Promise<string> {

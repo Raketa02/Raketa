@@ -1,7 +1,9 @@
 # Raketa for Clubs — the club website
 
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. A club signs up, signs in, keeps its
-details, invites its Administrators and watches its official groups
+details, sets up what it sells through Raketa (courts, weekly hours, exceptions, prices and its
+Raketa settings, followed by Overview's setup checklist), invites its Administrators and watches
+its official groups
 ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)).
 It talks to the backend's **club surface** (`backend/openapi.club.json`) **from its server
 only**: the browser never holds a token.
@@ -73,7 +75,9 @@ which answers with payloads typed from the generated contract and records every 
 fixtures reset it before each test and install **the fake club** (`e2e/stub/club.ts`): one
 club whose tokens rotate, whose reset signs everyone out, and whose administrators and official
 groups keep the backend's rules (a test seats them in `club.administrators` and `club.groups`;
-a group is run only while its administrator is active). A test about one reply overrides
+a group is run only while its administrator is active), and whose Raketa offer, `club.raketa`,
+keeps the courts, prices and settings and reads the setup checklist off them (nothing set until
+a test says; `club.raketa.ready()` makes the club live). A test about one reply overrides
 that operation with `stub.on`, naming it by the contract's path, `{administrator_id}` and all.
 One worker, because the one server talks to the one stub.
 

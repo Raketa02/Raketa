@@ -8,10 +8,16 @@ import { Frame } from '@/ui/Frame';
 import { TopBar } from '@/ui/TopBar';
 
 const { frame } = SITE_COPY;
+// Bookings and Money join the bar with their own tickets (the screens B1).
 const PAGES = [
   { href: '/overview', label: frame.pages.overview },
+  { href: '/courts', label: frame.pages.courts },
   { href: '/groups', label: frame.pages.groups },
   { href: '/administrators', label: frame.pages.administrators },
+] as const;
+const CLUB_PAGES = [
+  { href: '/details', label: frame.clubPages.details },
+  { href: '/raketa-settings', label: frame.clubPages.raketaSettings },
 ] as const;
 
 /**
@@ -28,7 +34,7 @@ export default async function SignedInLayout({ children }: { children: ReactNode
           home="/overview"
           label={frame.pagesLabel}
           items={PAGES}
-          club={{ name: club.name, place: placeOf(club), href: '/details', title: frame.clubTitle }}
+          club={{ name: club.name, place: placeOf(club), pages: CLUB_PAGES }}
           signOut={<SignOutButton />}
         />
       }

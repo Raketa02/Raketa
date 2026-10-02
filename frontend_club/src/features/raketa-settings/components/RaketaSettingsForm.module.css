@@ -1,0 +1,72 @@
+.form {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.numbers {
+  display: grid;
+  align-items: start;
+  gap: var(--space-5);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.toggles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.distance {
+  max-width: var(--size-card-narrow);
+  padding-left: calc(var(--size-switch-width) + var(--space-3));
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.leave {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: var(--size-hairline) solid var(--colour-rule);
+}
+
+.leaveLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--colour-red);
+  cursor: pointer;
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+}
+
+.lead {
+  color: var(--colour-muted);
+}
+
+.dialogButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+@media (max-width: 800px) {
+  .numbers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .distance {
+    padding-left: 0;
+  }
+}

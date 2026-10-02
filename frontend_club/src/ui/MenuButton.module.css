@@ -1,0 +1,79 @@
+.menu {
+  position: relative;
+  min-width: 0;
+}
+
+.button {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: var(--size-control-small);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: var(--size-hairline) solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.button:hover,
+.button[aria-expanded='true'] {
+  background: var(--colour-paper);
+}
+
+/* The chevron: down while closed, up while open. */
+.button::after {
+  width: var(--size-chevron);
+  height: var(--size-chevron);
+  flex: none;
+  border-right: var(--size-stroke) solid var(--colour-muted);
+  border-bottom: var(--size-stroke) solid var(--colour-muted);
+  content: '';
+  transform: translateY(-25%) rotate(45deg);
+}
+
+.button[aria-expanded='true']::after {
+  transform: translateY(25%) rotate(-135deg);
+}
+
+.list {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  min-width: var(--size-menu);
+  padding: var(--space-2);
+  border: var(--size-hairline) solid var(--colour-line);
+  margin: 0;
+  border-radius: var(--radius-control);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-menu);
+  list-style: none;
+}
+
+.link {
+  display: flex;
+  min-height: var(--size-control-small);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-tag);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+.link:hover {
+  background: var(--colour-paper);
+}
+
+.link[aria-current='page'] {
+  background: var(--colour-selected);
+}
+
+@media (max-width: 800px) {
+  /* On a phone the club has a row of its own, from the left edge. */
+  .list {
+    right: auto;
+    left: 0;
+  }
+}

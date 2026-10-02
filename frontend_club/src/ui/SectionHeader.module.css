@@ -1,0 +1,30 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+.words {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.title {
+  font-size: var(--text-wordmark);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.lead {
+  color: var(--colour-muted);
+  font-size: var(--text-small);
+}
+
+.aside {
+  flex: none;
+}

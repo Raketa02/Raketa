@@ -12,7 +12,8 @@ pull request.
 src/
   app/                 routes and layouts only
     (signed-out)/      sign-in, sign-up, forgot-password/…, reset/[token]
-    (signed-in)/       layout (the frame), overview, groups, administrators, details
+    (signed-in)/       layout (the frame), overview, courts, groups, administrators, details,
+                       raketa-settings
     session/           renew and end: the session's own route handlers (§3)
   proxy.ts             renews a lapsing session and stamps each request's path (§3)
   instrumentation.ts   refuses to start without the configuration (§6)
@@ -28,12 +29,13 @@ e2e/                   the Playwright suite and its stub backend (§7)
   components, so the backend is only ever reached through a query or an action. The exception is
   `src/app/session/`, whose two route handlers belong to the server layer as the proxy does.
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
-  password?_, _Set a new password_), `club-details`, `overview`, `administrators` and `groups`
-  (the Groups table and _Hand over_). A feature may use another feature's components, schemas,
+  password?_, _Set a new password_), `club-details`, `overview` (with the setup checklist),
+  `courts` (_Courts & prices_: the courts, their weekly hours, exceptions and prices),
+  `raketa-settings`, `administrators` and `groups` (the Groups table and _Hand over_). A feature may use another feature's components, schemas,
   copy and mappers (sign-up draws Club details' fields; Overview greets a `Club`), and never
   another feature's actions or queries. A feature's queries and actions call the backend only
-  through the three doors of §4, and may read the session, the recovery cookie and the
-  configuration directly.
+  through the three doors of §4, and may read the session, the recovery cookie, the marks of
+  §2 and the configuration directly.
 - **`mappers.ts` is the only file outside `src/server/` that imports a generated type**, besides
   the suite's stub in `e2e/`, which types its replies from the contract on purpose. It
   turns a wire type into a view model and back. A contract change then lands in one file per
@@ -56,6 +58,11 @@ longer than any refresh token, so **the backend decides when a session ends**.
   server action, a route handler, the proxy. That one constraint shapes §3.
 - **Sign out** revokes the refresh token at the backend (idempotent), then deletes the cookie,
   whatever the backend answered.
+- **What a browser was told once is a third cookie**, `raketa_club_told_live`: Overview says
+  _You're live_ once (the screens B2), and a club can go live while nobody is looking (Stripe
+  says so later), so no save could carry the news. It holds no token and nothing anybody could
+  use, has the session's attributes, and is set and cleared only by Overview's server action
+  (`src/server/marks.ts`).
 - **_Forgot password?_ keeps its own sealed cookie**, `raketa_club_recovery`, for an hour at most:
   the email asked with, and once a right code is claimed, the ticket. The ticket is a credential,
   so it never reaches the browser either. The reset link's token is the exception that proves the
@@ -171,9 +178,12 @@ points.
 - **The fake club** installs the default handlers: one club, whose tokens rotate, whose spent
   refresh tokens are refused, whose reset signs every session out, whose administrators keep
   ADR-0184's rules, and whose official groups are run only by an active administrator, so a
-  removal leaves them needing one until a handover. A test seats its people in
-  `club.administrators` and its groups in `club.groups` (`officialGroup(…)`), and a test about
-  one reply overrides that operation. Its tokens are unique across the run (`club.accessToken(n)`),
+  removal leaves them needing one until a handover. Its Raketa offer, `club.raketa`
+  (`e2e/stub/courts.ts`), keeps #535's rules for courts, hours, exceptions, prices and settings
+  and reads the setup checklist off them; it starts with nothing set, and `club.raketa.ready()`
+  makes the club live. A test seats its people in `club.administrators`, its groups in
+  `club.groups` (`officialGroup(…)`) and its courts in `club.raketa.courts` (`court(…)`), and a
+  test about one reply overrides that operation. Its tokens are unique across the run (`club.accessToken(n)`),
   because the single flight's grace window would hand one test the pair it renewed for another.
 - **Tests assert what the desk or the backend would see**: text on the page, the URL, the
   cookie's attributes, and the requests that arrived at the stub. They never read the cookie's
@@ -194,6 +204,11 @@ from them on the four-point grid. The type is Archivo and IBM Plex Mono, self-ho
 `@fontsource`, so a build fetches no font from the network. `pnpm test:tokens` fails on a
 literal anywhere else, and ESLint refuses an inline `style`. A media query's width is the one
 literal CSS allows no variable for.
+
+Money is written by `src/ui/format.ts` as the player app writes a share: `140 zł`, `142,50 zł`
+(the decimal comma, a space before the unit, and the grosze only when there are some), from the
+wire's integer grosze and never through `Intl.NumberFormat` or `toFixed`
+(`docs/value-formatting.md`, which left the rendering to the first client to draw a price).
 
 **A page works at every width, down to a phone with no sideways scrolling.** On a phone the top
 bar becomes three rows: the wordmark and _Sign out_, the club, then the pages. Every table is

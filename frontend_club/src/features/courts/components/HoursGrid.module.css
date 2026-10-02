@@ -1,0 +1,75 @@
+/*
+ * The week: a column of hours, then seven days, each cell a rounded pill (mock 36). The rows are
+ * `display: contents`, so every cell sits on the one grid.
+ */
+
+.grid {
+  display: grid;
+  max-width: var(--size-card-wide);
+  gap: var(--space-1) var(--space-2);
+  grid-template-columns: var(--size-hour-label) repeat(7, minmax(0, 1fr));
+  user-select: none;
+}
+
+.row {
+  display: contents;
+}
+
+.day,
+.hour {
+  color: var(--colour-muted);
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
+}
+
+.day {
+  padding-bottom: var(--space-1);
+  letter-spacing: var(--tracking-label);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.hour {
+  align-self: center;
+  font-family: var(--font-mono);
+}
+
+.cell {
+  height: var(--size-hour-cell);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--colour-rule);
+  cursor: pointer;
+  /* A finger on a cell paints; between the cells, it scrolls the page. */
+  touch-action: none;
+}
+
+.cell:hover {
+  box-shadow: inset 0 0 0 var(--size-stroke) var(--colour-line);
+}
+
+.cell[aria-checked='true'] {
+  background: var(--colour-green);
+}
+
+.cell[aria-checked='true']:hover {
+  box-shadow: inset 0 0 0 var(--size-stroke) var(--colour-ink-deep);
+}
+
+@media (max-width: 480px) {
+  .grid {
+    gap: var(--space-1);
+  }
+
+  /* A day's three letters fit a phone's narrow column only set close. */
+  .day {
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .cell {
+    border-radius: var(--radius-tag);
+  }
+}

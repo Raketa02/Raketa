@@ -59,14 +59,12 @@
   gap: var(--space-4);
 }
 
-.club {
+.clubArea {
   min-width: 0;
-  color: var(--colour-muted);
-  text-decoration: none;
 }
 
-.club:hover .clubName {
-  text-decoration: underline;
+.club {
+  color: var(--colour-muted);
 }
 
 .clubName {
@@ -96,8 +94,13 @@
     display: contents;
   }
 
-  .club {
+  .clubArea {
     grid-area: club;
+  }
+
+  /* The club's name lines up with the wordmark; its button's padding goes into the margin. */
+  .club {
+    margin-left: calc(-1 * var(--space-3));
   }
 
   .signOut {

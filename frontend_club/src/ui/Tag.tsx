@@ -4,8 +4,15 @@ import styles from './Tag.module.css';
 
 /**
  * **A word set on a tinted pill** (club mock 4's *active* and *invited*): green for what is in
- * order, amber for what is waiting, red for what has lapsed.
+ * order, amber for what is waiting, red for what has lapsed, and neutral for what nobody can act
+ * on yet.
  */
-export function Tag({ tone, children }: { tone: 'green' | 'amber' | 'red'; children: ReactNode }) {
+export function Tag({
+  tone,
+  children,
+}: {
+  tone: 'green' | 'amber' | 'red' | 'neutral';
+  children: ReactNode;
+}) {
   return <span className={`${styles.tag} ${styles[tone]}`}>{children}</span>;
 }

@@ -1,5 +1,6 @@
 import { expect, signIn, test } from './fixtures';
 import { administrator, DAY_MS, fromNow, officialGroup } from './stub/club';
+import { court, dayFromToday, week } from './stub/courts';
 
 /** **Every page works at phone width** (#500 story 95): nothing scrolls sideways at 360 px. */
 
@@ -29,7 +30,14 @@ test('the signed-out pages fit a phone', async ({ page }) => {
 test('the signed-in pages fit a phone, top bar and all', async ({ page, club }) => {
   void club;
   await signIn(page);
-  for (const path of ['/overview', '/groups', '/administrators', '/details']) {
+  for (const path of [
+    '/overview',
+    '/courts',
+    '/groups',
+    '/administrators',
+    '/details',
+    '/raketa-settings',
+  ]) {
     await page.goto(path);
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Club website' })).toBeVisible();
@@ -114,4 +122,71 @@ test('Groups and Hand over fit a phone: the table, the choices and the question'
   await page.getByRole('button', { name: 'Hand over', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await fitsSideways(page, '/groups/<id>, confirming');
+});
+
+test("The club's menu, the checklist and Raketa settings fit a phone", async ({ page, club }) => {
+  club.raketa.way = 'ON_REQUEST';
+  await signIn(page);
+  await expect(page.getByRole('list', { name: 'Setup checklist' })).toBeVisible();
+  await fitsSideways(page, '/overview');
+  await page
+    .getByRole('banner')
+    .getByRole('button', { name: /Ogrody 33/ })
+    .click();
+  await expect(
+    page.getByRole('banner').getByRole('link', { name: 'Raketa settings' }),
+  ).toBeVisible();
+  await fitsSideways(page, '/overview, the menu open');
+
+  await page.goto('/raketa-settings');
+  await page
+    .getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" })
+    .check();
+  await fitsSideways(page, '/raketa-settings');
+  await page.getByRole('button', { name: 'Leave Raketa' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await fitsSideways(page, '/raketa-settings, leaving');
+});
+
+test('Courts & prices fits a phone: the table, the grid, the forms and the bands', async ({
+  page,
+  club,
+}) => {
+  const one = court({
+    name: 'Kort centralny przy wejściu',
+    sport: 'PADEL',
+    hours: week([1], 17, 22),
+  });
+  club.raketa.courts = [one, court({ name: 'Court 2', sport: 'TENNIS', offered: false })];
+  club.raketa.price('PADEL', 140);
+  club.raketa.exceptions = [
+    {
+      id: '0b8f5c1e-1c1d-4d2e-8f3a-5a6b7c8d9e01',
+      court_ids: [one.id],
+      first_day: dayFromToday(3),
+      last_day: dayFromToday(30),
+      from_hour: 9,
+      until_hour: 12,
+      reason: 'Wymiana sztucznej trawy na korcie centralnym',
+    },
+  ];
+  await signIn(page);
+  await page.goto('/courts');
+  await expect(page.getByRole('checkbox', { name: 'Monday 17:00' })).toBeChecked();
+  await fitsSideways(page, '/courts');
+
+  await page.getByRole('button', { name: '+ Add a court' }).click();
+  await page.getByRole('button', { name: '+ Add an exception' }).click();
+  await page.getByRole('radio', { name: 'Some courts' }).check();
+  await page.getByRole('radio', { name: 'Hours on a day' }).check();
+  await page
+    .getByRole('region', { name: 'Prices' })
+    .getByRole('group', { name: 'Padel' })
+    .getByRole('button', { name: '+ Add a price band' })
+    .click();
+  await fitsSideways(page, '/courts, every form open');
+
+  await page.getByRole('button', { name: 'Copy to other courts' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await fitsSideways(page, '/courts, copying');
 });

@@ -13,6 +13,7 @@ import { randomUUID } from 'node:crypto';
 import type { components } from '../../src/generated/schema';
 
 import { refusal, type StubBackend } from './backend';
+import { FakeClubCourts } from './courts';
 
 type ClubDetails = components['schemas']['ClubDetailsResponse'];
 type TokenPair = components['schemas']['TokenResponse'];
@@ -130,8 +131,23 @@ export class FakeClub {
    * table's *groups* column is not derived from them: it says what a test seats in each row.
    */
   groups: OfficialGroup[] = [];
+  /**
+   * What the club sells through Raketa: its courts, hours, exceptions, prices, way of working and
+   * settings, and the setup checklist read off them. Nothing is set, and payments are not
+   * started, unless the test says (`club.raketa.ready()` makes the club live).
+   */
+  readonly raketa: FakeClubCourts;
 
-  constructor(private readonly stub: StubBackend) {}
+  constructor(private readonly stub: StubBackend) {
+    this.raketa = new FakeClubCourts(
+      stub,
+      (authorization) =>
+        this.accessIsLive(authorization)
+          ? null
+          : { status: 401, body: refusal('access_token_invalid') },
+      () => this.details.sports,
+    );
+  }
 
   /**
    * Issue the next `count` pairs with five seconds to live: inside the website's margin from the
@@ -227,6 +243,17 @@ export class FakeClub {
       if (!this.accessIsLive(headers.authorization)) {
         return { status: 401, body: refusal('access_token_invalid') };
       }
+      // A sport one of the club's courts plays stays ticked, switched off or not (#535).
+      const played = this.raketa.courts.find((court) => !body.sports.includes(court.sport));
+      if (played !== undefined) {
+        return {
+          status: 409,
+          body: refusal('club_sport_has_courts', 'sports', {
+            sport: played.sport,
+            court: played.name,
+          }),
+        };
+      }
       this.details = {
         ...this.details,
         ...body,
@@ -266,6 +293,7 @@ export class FakeClub {
 
     this.installAdministrators();
     this.installGroups();
+    this.raketa.install();
     return this;
   }
 

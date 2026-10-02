@@ -1,18 +1,18 @@
 import { expect, mapReady, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
 import { OGRODY_33 } from './stub/club';
+import { court } from './stub/courts';
 
 test.describe('Club details', () => {
-  test('opens from the club in the top bar, holding every sign-up detail', async ({
+  test("opens from the club's menu in the top bar, holding every sign-up detail", async ({
     page,
     club,
   }) => {
     void club;
     await signIn(page);
-    await page
-      .getByRole('banner')
-      .getByRole('link', { name: /Ogrody 33/ })
-      .click();
+    const bar = page.getByRole('banner');
+    await bar.getByRole('button', { name: /Ogrody 33/ }).click();
+    await bar.getByRole('link', { name: 'Details' }).click();
 
     await expect(page).toHaveURL(/\/details$/);
     await expect(page.getByRole('heading', { name: 'Club details' })).toBeVisible();
@@ -70,9 +70,9 @@ test.describe('Club details', () => {
 
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Club details saved.');
     await expect(page.getByLabel('Club name')).toHaveValue('Ogrody 33 Club');
-    await expect(page.getByRole('banner').getByRole('link', { name: /Ogrody 33 Club/ })).toHaveText(
-      'Ogrody 33 Club · Grzegórzki, Kraków',
-    );
+    await expect(
+      page.getByRole('banner').getByRole('button', { name: /Ogrody 33 Club/ }),
+    ).toHaveText('Ogrody 33 Club · Grzegórzki, Kraków');
     expect(stub.requests('put', '/api/v1/club/details')[0]?.body.sports).toEqual([
       'PADEL',
       'TENNIS',
@@ -143,6 +143,26 @@ test.describe('Club details', () => {
     // Ticking it again is the other way out, and takes the refusal with it.
     await padel.check();
     await expect(sports.getByText(/plays padel/)).toBeHidden();
+  });
+
+  test('unticking a sport one of its courts plays is refused, naming the court', async ({
+    page,
+    stub,
+    club,
+  }) => {
+    club.raketa.courts = [court({ name: 'Kort centralny', sport: 'TENNIS', offered: false })];
+    await signIn(page);
+    await page.goto('/details');
+    await page.getByRole('checkbox', { name: 'Tennis' }).uncheck();
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    const sports = page.getByRole('group', { name: 'Sports offered' });
+    await expect(
+      sports.getByText('Kort centralny is a tennis court. Tick tennis again to save the rest.'),
+    ).toBeVisible();
+    await expect(sports).toHaveAttribute('aria-invalid', 'true');
+    expect(stub.requests('put', '/api/v1/club/details')).toHaveLength(1);
+    expect(club.details.sports).toEqual(['PADEL', 'TENNIS']);
   });
 
   test('a refusal this site has no sentence for still lands under the field it names', async ({

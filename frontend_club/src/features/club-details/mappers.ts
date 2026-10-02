@@ -37,26 +37,36 @@ export function sportName(sport: Sport): string {
 }
 
 /**
- * **A sport the club can't stop offering**, because an official group plays it (ADR-0182 §5):
- * the first such group by name, as the backend's refusal names it.
+ * **A sport the club can't stop offering**, and what plays it: one of its courts (#535), or an
+ * official group (ADR-0182 §5), as the backend's refusal names it. The courts are asked first.
  */
 export interface SportInUse {
   readonly sport: Sport;
-  readonly group: string;
+  readonly by: 'court' | 'group';
+  /** The court's name, or the group's: the first, where several play it. */
+  readonly name: string;
 }
 
+/** Each refusal that keeps a sport ticked, and which of `details` names what plays it. */
+const KEPT_BY = {
+  club_sport_has_courts: 'court',
+  club_sport_declared_by_group: 'group',
+} as const satisfies Record<string, SportInUse['by']>;
+
 /**
- * Which group plays the sport a save unticked, from the backend's refusal: `details.sport` and
- * `details.group` of a `club_sport_declared_by_group`. `null` for any other refusal, or one
- * that names neither.
+ * What plays the sport a save unticked, from the backend's refusal: `details.sport`, and
+ * `details.court` of a `club_sport_has_courts` or `details.group` of a
+ * `club_sport_declared_by_group`. `null` for any other refusal, or one that names neither.
  */
 export function toSportInUse(error: {
   readonly code: string;
   readonly details?: Readonly<Record<string, string>>;
 }): SportInUse | null {
-  if (error.code !== 'club_sport_declared_by_group') return null;
-  const { sport, group } = error.details ?? {};
-  return isSport(sport) && group !== undefined ? { sport, group } : null;
+  if (!(error.code in KEPT_BY)) return null;
+  const by = KEPT_BY[error.code as keyof typeof KEPT_BY];
+  const sport = error.details?.sport;
+  const name = error.details?.[by];
+  return isSport(sport) && name !== undefined ? { sport, by, name } : null;
 }
 
 export interface MapPoint {

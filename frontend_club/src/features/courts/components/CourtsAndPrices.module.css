@@ -1,0 +1,160 @@
+/* Courts & prices: the parts its four sections share. Every value is a token. */
+
+.none,
+.lead,
+.note {
+  color: var(--colour-muted);
+}
+
+.note {
+  font-size: var(--text-small);
+}
+
+.name {
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* A form opened inside a section: a panel on paper, above the section's table. */
+
+.subform {
+  padding: var(--space-5);
+  border: var(--size-hairline) solid var(--colour-line);
+  border-radius: var(--radius-control);
+  background: var(--colour-paper);
+}
+
+.form {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.formTitle {
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+}
+
+.fields {
+  display: grid;
+  align-items: start;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(var(--size-field-narrow), 1fr));
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Delete court sits apart, at the far end. */
+.delete {
+  margin-left: auto;
+}
+
+.noticeLink {
+  font-weight: var(--weight-bold);
+}
+
+/* Dialogs */
+
+.dialogButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.ticks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.tick {
+  display: inline-flex;
+  min-height: var(--size-control-small);
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  font-weight: var(--weight-medium);
+}
+
+.box {
+  width: var(--size-radio);
+  height: var(--size-radio);
+  margin: 0;
+  accent-color: var(--colour-ink);
+}
+
+/* Prices: a sport's row, and its bands. */
+
+.sport {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 0 var(--space-5);
+  border: 0;
+  border-bottom: var(--size-hairline) solid var(--colour-rule);
+  margin: 0;
+}
+
+.sportName {
+  padding: 0;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+}
+
+.price {
+  max-width: var(--size-card-narrow);
+}
+
+.band {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--size-hairline) solid var(--colour-line);
+  border-radius: var(--radius-control);
+  background: var(--colour-paper);
+}
+
+.bandFields {
+  display: grid;
+  align-items: start;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(var(--size-field-narrow), 1fr));
+}
+
+@media (max-width: 800px) {
+  .rowActions {
+    justify-content: flex-start;
+    padding-top: var(--space-2);
+  }
+}
+
+@media (max-width: 480px) {
+  .subform {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .delete {
+    margin-left: 0;
+  }
+}

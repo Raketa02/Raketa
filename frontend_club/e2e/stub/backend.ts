@@ -101,7 +101,11 @@ function paramsOf(template: string, path: string): Record<string, string> | null
  * An error envelope, as every backend refusal is shaped: `field` names the control it is about,
  * and `more` is whatever else the code defines (`club_sport_declared_by_group`'s group).
  */
-export function refusal(code: string, field?: string, more?: Record<string, string>): ErrorBody {
+export function refusal(
+  code: string,
+  field?: string,
+  more?: Record<string, string | number>,
+): ErrorBody {
   const details = { ...(field === undefined ? {} : { field }), ...more };
   return {
     code,

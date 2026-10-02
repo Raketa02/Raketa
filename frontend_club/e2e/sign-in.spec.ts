@@ -28,12 +28,17 @@ test.describe('Sign in', () => {
     const bar = page.getByRole('banner');
     await expect(bar.getByText('Raketa for Clubs')).toBeVisible();
     const pages = page.getByRole('navigation', { name: 'Club website' });
-    await expect(pages.getByRole('link')).toHaveText(['Overview', 'Groups', 'Administrators']);
+    await expect(pages.getByRole('link')).toHaveText([
+      'Overview',
+      'Courts & prices',
+      'Groups',
+      'Administrators',
+    ]);
     await expect(pages.getByRole('link', { name: 'Overview' })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    await expect(bar.getByRole('link', { name: /Ogrody 33/ })).toHaveText(
+    await expect(bar.getByRole('button', { name: /Ogrody 33/ })).toHaveText(
       'Ogrody 33 · Grzegórzki, Kraków',
     );
     await expect(bar.getByRole('button', { name: 'Sign out' })).toBeVisible();

@@ -19,7 +19,8 @@ test.describe('The cookie session', () => {
     });
 
     await signIn(page);
-    await page.getByRole('link', { name: /Ogrody 33/ }).click();
+    await page.getByRole('button', { name: /Ogrody 33/ }).click();
+    await page.getByRole('link', { name: 'Details' }).click();
     await expect(page.getByRole('heading', { name: 'Club details' })).toBeVisible();
 
     const cookies = await context.cookies();

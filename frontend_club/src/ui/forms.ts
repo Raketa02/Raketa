@@ -65,15 +65,24 @@ export function formText(form: FormData, name: string): string {
   return typeof value === 'string' ? value : '';
 }
 
+/** An id as the backend's routes take one: a UUID. */
+const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * An id from a posted form, as the backend's routes take one (a UUID), or `null`: anything else
  * names nothing the club has, and never reaches the backend.
  */
 export function formId(form: FormData, name: string): string | null {
   const value = formText(form, name);
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
-    ? value
-    : null;
+  return ID.test(value) ? value : null;
+}
+
+/** Every id a repeated field posted, each once, in order; anything else is dropped. */
+export function formIds(form: FormData, name: string): string[] {
+  const ids = form
+    .getAll(name)
+    .filter((value): value is string => typeof value === 'string' && ID.test(value));
+  return [...new Set(ids)];
 }
 
 /** A refusal of something the desk did to somebody on the page, said about them by name. */
