@@ -1863,11 +1863,11 @@ export interface paths {
          * One player's record
          * @description Who this person is, as of the moment you opened it.
          *
-         *     **Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge, a game or a group with, and yourself — and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.
+         *     **Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge, a game or a group with, somebody in a group you run, and yourself — and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.
          *
-         *     **Nothing expires but a group.** A search record is kept for ever, so a sheet you could open this morning opens next year — any shorter window could only refuse a face the app is currently showing. A group opens it while you are both in it, because its Members lists who is in it now.
+         *     **Nothing expires but a group.** A search record is kept for ever, so a sheet you could open this morning opens next year — any shorter window could only refuse a face the app is currently showing. A group opens it while you are both in it, because its Members lists who is in it now — and while you run an official group they are in.
          *
-         *     **The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.
+         *     **The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered. **The gender preference is the one gate that does not reach whoever runs the group they are in**: it says who a player is willing to be matched with, and running their group is not that.
          *
          *     **Asking about yourself is allowed** and answers `is_self: true` — the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.
          *
@@ -1981,6 +1981,8 @@ export interface paths {
         /**
          * Members of a group, for one sport
          * @description **Only the members rated in `sport`** — who in the group the caller could play it with: the caller first, then the Owner, then everybody else newest joined first. Each with their face, their Level in the sport, their Player Score where they have one, whether they own the group and when they joined. **A blocked pair, either way round, is left out of each other's list**, and the group's member count does not change.
+         *
+         *     **Read by the group's members, and by whoever runs an official group now** — running one is not membership. That caller reads the same rows in the same order, and is a row only once they have joined as a player. A removed Administrator, and one the group was handed away from, are answered as anyone else who is not in it is.
          */
         get: operations["group_members_api_v1_groups__group_id__members_get"];
         put?: never;
