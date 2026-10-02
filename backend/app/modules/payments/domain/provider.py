@@ -147,13 +147,16 @@ class Payment:
     """One payment on a club's account. ``client_secret`` is present exactly
     while the payment waits for its player (``AWAITING_THE_PLAYER``) — a secret,
     asked of the provider when it is handed out and never recorded
-    (``docs/adr/0184`` §4)."""
+    (``docs/adr/0184`` §4). ``fee_grosze`` is the card fee the provider took on
+    it, which the club pays (#548) — once it is ``CAPTURED``, and ``None``
+    before, or where the provider has not settled it yet."""
 
     payment_id: str
     status: PaymentStatus
     amount_grosze: int
     client_secret: str | None = None
     decline_code: str | None = None
+    fee_grosze: int | None = None
 
 
 class RefundStatus(StrEnum):
@@ -278,6 +281,25 @@ class PaymentProvider(Protocol):
 
     async def payouts(self, account_id: str, *, limit: int) -> tuple[Payout, ...]:
         """The account's most recent payouts, newest first."""
+        ...
+
+    async def pay_out(
+        self,
+        account_id: str,
+        *,
+        amount_grosze: int,
+        description: str,
+        metadata: Mapping[str, str],
+        idempotency_key: str,
+    ) -> Payout:
+        """Send ``amount_grosze`` of the club's money on its account to its
+        bank, now (#548). **The club is paid after the game is played**
+        (the mechanics §12.6): until then its money waits on its account, where
+        a refund before the start can come out of it — so it is Raketa that
+        releases a payout, never the provider's own schedule. *How* the
+        provider is kept from paying out on its own is open item O2; the fake
+        pays out nothing it is not asked to. A balance that cannot cover it
+        yet is ``PaymentsUnavailable``: asked again later."""
         ...
 
     # ------------------------------------------------ money, on the club's account

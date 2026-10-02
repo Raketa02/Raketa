@@ -13,6 +13,7 @@ from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant
+from app.modules.payments.domain.club_payout import ClubPayout
 from app.modules.payments.domain.payment_method import PaymentMethod
 from app.modules.payments.domain.seat_charge import SeatCharge
 
@@ -124,10 +125,12 @@ class SeatChargeRepository(Protocol):
 @dataclass(frozen=True, slots=True)
 class Seller:
     """The club a share is paid to — the merchant of record, named on every
-    receipt — and its account at the provider."""
+    receipt — its account at the provider, and where its desk is emailed (its
+    one sign-in, #548): ``None`` for a club nobody signs in for."""
 
     name: str
     account_id: str | None
+    email: str | None = None
 
 
 @runtime_checkable
@@ -156,4 +159,45 @@ class Payers(Protocol):
 
     async def of(self, player_ids: Collection[UUID]) -> Mapping[UUID, Payer]:
         """Each of these players. An account that no longer exists is absent."""
+        ...
+
+
+# --------------------------------------------------------------------------- #
+# Club payouts (#548)
+# --------------------------------------------------------------------------- #
+
+
+@runtime_checkable
+class ClubPayoutRepository(Protocol):
+    """One stream per club per day it is paid for, and its projection —
+    ``club_payouts``, and ``club_payout_games``, which holds each game paid out
+    once — written by ``save`` in the caller's transaction."""
+
+    async def load(self, payout_id: UUID) -> ClubPayout | None: ...
+
+    async def save(self, payout: ClubPayout) -> None: ...
+
+    async def owed(self, *, starting_before: Instant) -> Mapping[UUID, frozenset[UUID]]:
+        """Each club's games starting before ``starting_before``, a share of
+        which was taken, and which no payout has carried yet — **candidates**,
+        not conclusions: whether a game is over and its money settled is asked
+        of each."""
+        ...
+
+    async def paid_out(self, game_ids: Collection[UUID]) -> frozenset[UUID]:
+        """Which of these games a payout the provider took has carried — on
+        its way to the club's bank, or there."""
+        ...
+
+
+@runtime_checkable
+class GamesOver(Protocol):
+    """**A demand of the contexts that book games**: which games are over for
+    good — played, or called off with what that gives back already decided — so
+    that nothing can move their money any more (#548). Answered by
+    ``proposals``, signed in ``proposals/infrastructure/``, so the arrow runs
+    ``proposals → payments``."""
+
+    async def over(self, game_ids: Collection[UUID], *, at: Instant) -> frozenset[UUID]:
+        """Which of these games are over at ``at``. A game nobody booked is not."""
         ...

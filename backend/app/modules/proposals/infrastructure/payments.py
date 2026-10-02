@@ -16,6 +16,10 @@ before the cut-off, less the card fee, and everybody's still in on a game
 called off at its cut-off, in full (#544) — and ``PaymentsCardFees`` says what
 the card fee on a share comes to, the estimate the leaving sheet quotes.
 
+``BookedGamesOver`` answers **payments'** demand — *which games are over for
+good*, so their money is the club's to be paid out (#548) — off the bookings as
+this context reads them.
+
 ``LiveYesCommitments`` answers **payments'** demand — *could anything still be
 charged to this method* — with the player's live yeses, across pools and sports,
 and their booked games still ahead (the mechanics §12.4: *Remove only with
@@ -46,16 +50,22 @@ from app.modules.payments.application.seat_charges import (
     GameToCharge as ChargedGame,
 )
 from app.modules.payments.domain.ports import (
+    ClubPayoutRepository,
     Commitments,
     PaymentMethodRepository,
     SeatChargeRepository,
 )
 from app.modules.payments.domain.seat_charge import PAID
-from app.modules.proposals.domain.club_bookings import Takings
-from app.modules.proposals.domain.home import ClubCancelReason
+from app.modules.proposals.domain.club_bookings import (
+    ClubStatus,
+    Takings,
+    club_status,
+)
+from app.modules.proposals.domain.home import BookingStage, ClubCancelReason
 from app.modules.proposals.domain.ports import (
     GameToCharge,
     PaymentRefusal,
+    PlayerBookings,
     ProposalDirectory,
     RefundReason,
     RefusedPayment,
@@ -187,13 +197,18 @@ class PaymentsSeatRefunds:
 class PaymentsBookingTakings:
     """``BookingTakings`` over each booking's Seat charges (#547): what was
     taken — a share being captured or captured — and what was given back, at
-    what the provider gave or, until it answers, what was decided."""
+    what the provider gave or, until it answers, what was decided; the card
+    fees and what is the club's, and whether a payout carried it (#548)."""
 
-    def __init__(self, charges: SeatChargeRepository) -> None:
+    def __init__(
+        self, charges: SeatChargeRepository, payouts: ClubPayoutRepository
+    ) -> None:
         self._charges = charges
+        self._payouts = payouts
 
     async def of(self, booking_ids: Collection[UUID]) -> Mapping[UUID, Takings]:
         takings: dict[UUID, Takings] = {}
+        paid_out = await self._payouts.paid_out(set(booking_ids))
         for booking_id in sorted(set(booking_ids)):
             # A booking takes its proposal's id, which every charge was made for.
             paid = [
@@ -206,6 +221,8 @@ class PaymentsBookingTakings:
                     paid=frozenset(charge.player_id for charge in paid),
                     collected_grosze=sum(charge.amount_grosze for charge in paid),
                     refunded_grosze=sum(charge.given_back_grosze for charge in paid),
+                    card_fees_grosze=sum(charge.card_fee_grosze for charge in paid),
+                    paid_out=booking_id in paid_out,
                 )
         return takings
 
@@ -214,6 +231,32 @@ class PaymentsBookingTakings:
 class PaymentsCardFees:
     def card_fee_on(self, share_grosze: int) -> int:
         return estimated_card_fee(share_grosze)
+
+
+@final
+class BookedGamesOver:
+    """Payments' ``GamesOver``: a game is over once it is **played** — its hour
+    ended, and it was not called off — or **called off and recorded so**, in
+    the act that decided what it gives back. A game read as called off only off
+    the clock — short at its cut-off before the cut-off job reaches it — is not
+    over yet: its refunds are still to be decided."""
+
+    def __init__(self, bookings: PlayerBookings) -> None:
+        self._bookings = bookings
+
+    async def over(self, game_ids: Collection[UUID], *, at: Instant) -> frozenset[UUID]:
+        over: set[UUID] = set()
+        for game_id in sorted(set(game_ids)):
+            # A booking takes its proposal's id, which every charge was made for.
+            game = await self._bookings.find(game_id)
+            if game is None:
+                continue
+            if (
+                game.stage is BookingStage.CALLED_OFF
+                or club_status(game, now=at) is ClubStatus.PLAYED
+            ):
+                over.add(game_id)
+        return frozenset(over)
 
 
 @final

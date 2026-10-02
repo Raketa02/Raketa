@@ -113,12 +113,26 @@ def price_of(game: BookedGame) -> int:
 @dataclass(frozen=True, slots=True)
 class Takings:
     """A booking's money as its club reads it (the mechanics §16.7, §16.11):
-    who paid, what was collected, and what was given back."""
+    who paid, what was collected, what was given back — and, on the Money page
+    (#548), the card fees the club pays on it, what is the club's, and whether
+    a payout has carried that to its bank."""
 
     #: Everybody whose share was taken.
     paid: frozenset[UUID]
     collected_grosze: int
     refunded_grosze: int
+    #: The provider's card fee on every share taken — never returned.
+    card_fees_grosze: int = 0
+    #: Whether a payout carried it to the club's bank; until then it waits on
+    #: the club's account, where a refund before the start can come out of it.
+    paid_out: bool = False
+
+    @property
+    def net_grosze(self) -> int:
+        """What is the club's: collected, less refunded, less the card fees —
+        below nought on a game everybody was given back whole."""
+
+        return self.collected_grosze - self.refunded_grosze - self.card_fees_grosze
 
 
 NOTHING_TAKEN: Final = Takings(paid=frozenset(), collected_grosze=0, refunded_grosze=0)

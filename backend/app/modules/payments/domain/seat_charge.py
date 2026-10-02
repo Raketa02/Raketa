@@ -123,6 +123,8 @@ class SeatCharge:
     refund_decided_at: Instant | None = None
     #: What the provider gave back, once it did.
     refund_given: RefundGiven | None = None
+    #: The card fee the provider said it took on the capture (#548).
+    fee_taken_grosze: int | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -281,6 +283,38 @@ class SeatCharge:
         )
 
     @property
+    def card_fee_grosze(self) -> int:
+        """The card fee the club pays on this share (#548; the mechanics
+        §16.11) — the provider's own figure once it has said one, on the
+        capture or on a refund that kept it back, and until then the estimate;
+        nought on a share nobody paid. A refund never returns it."""
+
+        if self.status not in PAID:
+            return 0
+        if self.fee_taken_grosze is not None:
+            return self.fee_taken_grosze
+        if self.refund_given is not None and self.refund_given.fee_withheld_grosze:
+            return self.refund_given.fee_withheld_grosze
+        return estimated_card_fee(self.amount_grosze)
+
+    @property
+    def net_grosze(self) -> int:
+        """What is the club's of this share (#548): what was paid, less what
+        was given back, less the card fee — below nought on a share given back
+        whole, whose fee the club bears; nought on a share nobody paid."""
+
+        if self.status not in PAID:
+            return 0
+        return self.amount_grosze - self.given_back_grosze - self.card_fee_grosze
+
+    @property
+    def settled(self) -> bool:
+        """Nothing about this share's money is still on its way (#548): no
+        capture still to make, no refund decided and not yet given."""
+
+        return self.status is not SeatChargeStatus.TAKING and not self.owes_a_refund
+
+    @property
     def awaits_its_player(self) -> bool:
         """Refused, with a payment the player can confirm in the app."""
 
@@ -367,12 +401,18 @@ class SeatCharge:
         )
         return True
 
-    def captured(self, *, at: Instant) -> bool:
+    def captured(self, *, at: Instant, fee_grosze: int | None = None) -> bool:
+        """The provider took the share, and — where it said — the card fee on
+        it. Nothing is recorded for one not being taken."""
+
         if self.status is not SeatChargeStatus.TAKING:
             return False
         self._record_that(
             SeatChargeCaptured(
-                charge_id=self.charge_id, player_id=self.player_id, occurred_at=at
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                occurred_at=at,
+                fee_grosze=fee_grosze,
             )
         )
         return True
@@ -407,7 +447,7 @@ class SeatCharge:
         if payment.status is PaymentStatus.AUTHORISED:
             return self.confirm(at=at)
         if payment.status is PaymentStatus.CAPTURED:
-            return self.captured(at=at)
+            return self.captured(at=at, fee_grosze=payment.fee_grosze)
         if payment.status is PaymentStatus.CANCELLED:
             return self.cancelled(at=at)
         return False
@@ -429,6 +469,7 @@ class SeatCharge:
             self.status = SeatChargeStatus.RELEASING
         elif isinstance(event, SeatChargeCaptured):
             self.status = SeatChargeStatus.CAPTURED
+            self.fee_taken_grosze = event.fee_grosze
         elif isinstance(event, SeatChargeCancelled):
             self.status = SeatChargeStatus.CANCELLED
         elif isinstance(event, SeatChargeRefundDecided):

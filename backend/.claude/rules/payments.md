@@ -3,6 +3,8 @@ paths:
   - "app/modules/payments/**"
   - "app/api/v1/webhooks.py"
   - "app/bootstrap/payments_demands.py"
+  - "app/bootstrap/payment_demands.py"
+  - "app/modules/proposals/application/club_money.py"
 ---
 
 # Payments
@@ -16,9 +18,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   under the player's own id, born by being used — and **`PaymentProvider`**
   (`domain/provider.py`), the one port every movement of money goes through, in Raketa's words:
   a setup, a card on file, an authorised payment, a refund with the fee withheld, a club
-  account's three states. It already covers what #537, #541, #545 and #548 need, so reach for it
-  rather than widening it — and a rescue (#545) reaches for the hold, not `charge_now`, which
-  has no caller: one share held and taken in the act, as the fill's are. Four things are
+  account's three states. It covers what #537, #541 and #545 needed, and **#548 widened it
+  twice** — `pay_out` (a club's money released to its bank, below) and `Payment.fee_grosze`
+  (the card fee the provider took on a capture) — so reach for it rather than widening it
+  again; a rescue (#545) reaches for the hold, not `charge_now`, which has no caller: one
+  share held and taken in the act, as the fill's are. Four things are
   load-bearing. **Two adapters, one demand suite**:
   `StripePayments` (Connect direct charges on the club's account, Accounts v2 with
   `fees_collector`/`losses_collector` = `stripe`, v1 Customers, a clone per charge, a key on every
@@ -79,3 +83,39 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   it is refused one — so neither a late nor a lost notice strands a desk. `FakePayments.onboarding_completes`
   finishes a club's onboarding on its link (a laptop's always does);
   `account_opened_for(club_id)` is the account a test's notice names.
+- **The club is paid after the game is played, once a day** (#548; the mechanics §12.6,
+  §16.11, §16.12; the screens B7, B9; `application/payouts.py`, rules in
+  `domain/club_payout.py`). Every share is taken on the club's own account and **waits
+  there** — a refund before the start comes out of it — until the **close of a club day**
+  (`last_closed_day`: the end of its last court hour, 23:00 in Kraków). Then the
+  `club-payouts` job (see `jobs.md`) decides, per club, **one payout** — a **Club payout**,
+  event-sourced, one stream per club per day (`payout_id_for`, `uuid5`), so a second process
+  collides — carrying every game of a closed day that is **over** (`GamesOver`: played, or
+  called off *and recorded so* — a game short at its cut-off before the cut-off job reaches
+  it is not, since its refunds are not decided yet; answered by `proposals`'
+  `BookedGamesOver`, contracted in `payment_demands.py`) and **settled** (no capture or
+  refund still on its way, `SeatCharge.settled`), for what they **kept**: each share taken,
+  less what was given back, less **the card fee** (`SeatCharge.net_grosze` /
+  `card_fee_grosze` — the provider's own figure, recorded on `SeatChargeCaptured.fee_grosze`
+  or the refund that kept it back, the estimate until then). **A day that left less than
+  nothing pays nothing out**: its games wait and are netted against the next day that leaves
+  the club something, so a payout never sends more than the games left (a game given back
+  whole costs the club its card fees). **Decided in the job, made from the outbox**, as a
+  refund is: `ClubPayoutDecided` (the games — `club_payout_games`, a game carried **once**,
+  its primary key a conflict — and the amount) commits in the job's transaction, and
+  `SendClubPayout` (`handlers/send_club_payouts.py`, subscribed per delivery run over its
+  session and provider) calls `pay_out` under `raketa-payout-<id>` and records
+  `ClubPayoutSent` with the desk's email *A payout was sent* (`payout_emails.py`; the desk is
+  `Seller.email`, the club's one sign-in); a provider that cannot take it yet
+  (`PaymentsUnavailable` — Stripe's `balance_insufficient` too) fails the delivery, which the
+  outbox retries under the same key. **How Stripe holds the money is open item O2**: a
+  full-dashboard account with Stripe as losses collector cannot be kept on manual payouts by
+  the platform except through Platform controls, and even then the club can pay itself out;
+  `StripePayments.pay_out` is a manual payout (`POST /v1/payouts` on the account), proven by
+  no test, and accounts are still opened on Stripe's own schedule. **The club's reads**:
+  `GET /api/v1/club/payouts` (this context's, `presentation/club_routes.py`, the provider's
+  list as it stands) and `GET /api/v1/club/money?month=YYYY-MM` (Proposals', beside the
+  Bookings page — `bookings.md`), whose `paid_out` is true once a payout the provider took
+  carried the booking. The fake pays out only when asked, dating the arrival two days off
+  its `clock` (a laptop's and the seed's fakes have the wall clock; a test sets
+  `payments.clock`).

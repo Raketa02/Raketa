@@ -17,7 +17,7 @@ Classic play plan; a unit test holds the two spellings together.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from datetime import time as wall_time
 from typing import Final
 
@@ -93,3 +93,19 @@ def hour_start(day: date, hour: int) -> Instant:
     )
     assert isinstance(converted, Ok)  # narrowed by the invariant above
     return converted.value
+
+
+def day_closes_at(day: date) -> Instant:
+    """The instant the club's ``day`` closes: the end of its last court hour,
+    when every game that day is over (#548)."""
+
+    return hour_start(day, DAY_CLOSES)
+
+
+def last_closed_day(now: Instant) -> date:
+    """The latest day at the clubs whose every court hour is over at ``now`` —
+    today from its close on, yesterday before it (#548): the day a club is paid
+    for, and the day its new bookings are summed up."""
+
+    today = local_day(now)
+    return today if now >= day_closes_at(today) else today - timedelta(days=1)

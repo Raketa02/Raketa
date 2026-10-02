@@ -22,6 +22,8 @@ from uuid import UUID
 import app.bootstrap.jobs as jobs_module
 from app.bootstrap.composition import build_clock
 from app.bootstrap.jobs import (
+    CLUB_PAYOUTS_JOB,
+    NEW_BOOKINGS_SUMMARY_JOB,
     CANDIDATE_INDEX_REFRESH_JOB,
     CANDIDATE_INDEX_TAIL_JOB,
     CHALLENGE_LAPSE_JOB,
@@ -187,6 +189,8 @@ def _nothing_but(**overrides):
             "PROPOSER_ENABLED": False,
             "REQUEST_TIMEOUT_ENABLED": False,
             "CUT_OFF_ENABLED": False,
+            "CLUB_PAYOUTS_ENABLED": False,
+            "NEW_BOOKINGS_SUMMARY_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }
@@ -1138,3 +1142,54 @@ async def test_the_proposer_runs_end_to_end_through_the_real_wiring(
         await idle.run_once()
 
     assert not any(record.message == "proposer finished" for record in caplog.records)
+
+
+def test_the_payouts_and_the_new_bookings_summary_are_registered_with_their_cadences():
+    """How often a club's closed day is looked at is a setting; that a club is
+    paid after its games are played, and told its day once it closes, is
+    domain (#548)."""
+
+    settings = _nothing_but(
+        CLUB_PAYOUTS_ENABLED=True,
+        CLUB_PAYOUTS_INTERVAL_SECONDS=300.0,
+        NEW_BOOKINGS_SUMMARY_ENABLED=True,
+        NEW_BOOKINGS_SUMMARY_INTERVAL_SECONDS=600.0,
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [(job.name, job.interval_seconds) for job in jobs] == [
+        (CLUB_PAYOUTS_JOB, 300.0),
+        (NEW_BOOKINGS_SUMMARY_JOB, 600.0),
+    ]
+
+
+def test_the_payouts_and_the_summary_without_a_session_factory_refuse():
+    for flag in ("CLUB_PAYOUTS_ENABLED", "NEW_BOOKINGS_SUMMARY_ENABLED"):
+        with pytest.raises(ValueError, match="session factory"):
+            build_scheduled_jobs(
+                session_factory=None, settings=_nothing_but(**{flag: True})
+            )
+
+
+async def test_the_payouts_and_the_summary_run_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """With nothing owed and nothing booked, both runs write nothing and say
+    nothing."""
+
+    payouts, summary = build_scheduled_jobs(
+        session_factory=session_factory,
+        settings=_nothing_but(
+            CLUB_PAYOUTS_ENABLED=True, NEW_BOOKINGS_SUMMARY_ENABLED=True
+        ),
+    )
+
+    with caplog.at_level(logging.INFO):
+        await payouts.run_once()
+        await summary.run_once()
+
+    assert not any(
+        record.message in ("club payouts finished", "new bookings summary finished")
+        for record in caplog.records
+    )

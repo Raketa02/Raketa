@@ -388,6 +388,19 @@ class SqlAlchemyBookingDirectory:
         rows = await self._session.execute(query)
         return [(booking_id, player_id) for booking_id, player_id in rows.all()]
 
+    async def booked_between(
+        self, *, start: Instant, end: Instant
+    ) -> Mapping[UUID, Sequence[UUID]]:
+        rows = await self._session.execute(
+            select(BookingORM.club_id, BookingORM.id)
+            .where(BookingORM.booked_at >= start, BookingORM.booked_at < end)
+            .order_by(BookingORM.club_id, BookingORM.start, BookingORM.id)
+        )
+        booked: dict[UUID, list[UUID]] = {}
+        for club_id, booking_id in rows.all():
+            booked.setdefault(club_id, []).append(booking_id)
+        return booked
+
     async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
         rows = await self._session.scalars(
             select(BookingORM.id)

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from app.application.events import EventCatalog, EventDispatcher
-from app.modules.bookings.application.handlers import LogBookingEvent
+from app.modules.bookings.application.handlers import (
+    LogBookingEvent,
+    LogNewBookingsSummary,
+)
 from app.modules.bookings.domain.events import (
     BookingAccepted,
     BookingConfirmed,
@@ -11,6 +14,7 @@ from app.modules.bookings.domain.events import (
     CalledOffAtCutOff,
     CancelledByClub,
     CourtMoved,
+    NewBookingsSummarised,
     PlayerCheckedIn,
     RequestWithdrawn,
     NoSaidToTheSeat,
@@ -32,6 +36,7 @@ _EVENTS = (
     (CourtMoved, "bookings.court_moved"),
     (CancelledByClub, "bookings.cancelled_by_club"),
     (PlayerCheckedIn, "bookings.player_checked_in"),
+    (NewBookingsSummarised, "bookings.new_bookings_summarised"),
 )
 
 
@@ -54,3 +59,4 @@ def subscribe_booking_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(CourtMoved, LogBookingEvent())
     dispatcher.subscribe(CancelledByClub, LogBookingEvent())
     dispatcher.subscribe(PlayerCheckedIn, LogBookingEvent())
+    dispatcher.subscribe(NewBookingsSummarised, LogNewBookingsSummary())

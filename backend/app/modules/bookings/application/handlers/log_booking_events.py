@@ -18,6 +18,7 @@ from app.modules.bookings.domain.events import (
     BookingTimedOut,
     CalledOffAtCutOff,
     CancelledByClub,
+    NewBookingsSummarised,
     CourtMoved,
     PlayerCheckedIn,
     RequestWithdrawn,
@@ -74,3 +75,21 @@ class LogBookingEvent:
         if isinstance(event, (BookingConfirmed, BookingAccepted)):
             extra["game_id"] = str(event.game_id)
         logger.info(_NAMES[type(event)], extra=extra)
+
+
+class LogNewBookingsSummary:
+    """A club's day summed up: the club and the day, nothing about the games."""
+
+    async def __call__(
+        self, event: NewBookingsSummarised, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "bookings.new_bookings_summarised",
+            extra={
+                "club_id": str(event.club_id),
+                "day": event.day,
+                "occurred_at": event.occurred_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )

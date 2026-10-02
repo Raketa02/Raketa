@@ -13,6 +13,8 @@ import logging
 
 from app.application.events import DeliveryContext
 from app.modules.payments.domain.events import (
+    ClubPayoutDecided,
+    ClubPayoutSent,
     PaymentMethodChanged,
     PaymentMethodRemoved,
     PaymentMethodSaved,
@@ -101,6 +103,30 @@ class LogSeatChargeEvent:
             extra={
                 "charge_id": str(event.charge_id),
                 "player_id": str(event.player_id),
+                "occurred_at": event.occurred_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+ClubPayoutEvent = ClubPayoutDecided | ClubPayoutSent
+
+_CLUB_PAYOUT_LINES: dict[type, str] = {
+    ClubPayoutDecided: "payments.club_payout.decided",
+    ClubPayoutSent: "payments.club_payout.sent",
+}
+
+
+class LogClubPayoutEvent:
+    """A club's payout: the club and the payout, nothing about the amount."""
+
+    async def __call__(self, event: ClubPayoutEvent, context: DeliveryContext) -> None:
+        logger.info(
+            _CLUB_PAYOUT_LINES[type(event)],
+            extra={
+                "payout_id": str(event.payout_id),
+                "club_id": str(event.club_id),
                 "occurred_at": event.occurred_at.isoformat(),
                 "event_id": str(context.event_id),
                 "attempt": context.attempt,

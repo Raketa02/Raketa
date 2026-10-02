@@ -137,8 +137,8 @@ changing code that calls into another context, read its rule.**
 | `conversations.md`, `plans.md` | rooms, their end and the live channel; plans |
 | `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record |
 | `clubs.md`, `groups.md` | clubs, token audiences, club courts; groups and official groups |
-| `payments.md`, `proposals.md` | the payments port and webhook; proposals and the group deck |
-| `bookings.md` | the fill: all-or-nothing seat charges, the booking, its game and chat; On request — the club's answer; leaving, refunds, the cut-off and the record of who kept a booked game; rescues — seats to fill, the first join wins; the club's bookings — by day, Move, Cancel, Check in; no-shows on the Game |
+| `payments.md`, `proposals.md` | the payments port and webhook; club money and payouts, once a day after the game; proposals and the group deck |
+| `bookings.md` | the fill: all-or-nothing seat charges, the booking, its game and chat; On request — the club's answer; leaving, refunds, the cut-off and the record of who kept a booked game; rescues — seats to fill, the first join wins; the club's bookings — by day, Move, Cancel, Check in; no-shows on the Game; the club's Money page and its daily summary of new bookings |
 | `accounts-and-mail.md` | the mail queue, administrators, signing out everywhere |
 
 ## The API contract

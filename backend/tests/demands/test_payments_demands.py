@@ -32,6 +32,7 @@ from app.modules.payments.domain.provider import (
     ClubAccountStatus,
     PaymentProvider,
     PaymentStatus,
+    PayoutStatus,
     RefundStatus,
     SetupStatus,
 )
@@ -471,6 +472,9 @@ async def test_an_authorised_payment_is_captured_whole(provider, phone, club_acc
     assert held_again.payment_id == held.payment_id
     assert taken.status is PaymentStatus.CAPTURED
     assert taken.amount_grosze == 4000
+    # The card fee the provider took on it, which the club pays (#548).
+    assert taken.fee_grosze is not None and 0 < taken.fee_grosze < 4000
+    assert held.fee_grosze is None
 
 
 async def test_a_held_payment_can_be_released_untaken(provider, phone, club_account):
@@ -693,3 +697,37 @@ async def test_a_refund_keeps_the_card_fee_back_only_when_asked(
     assert left.amount_grosze == 4000 - left.fee_withheld_grosze
     assert left.status in (RefundStatus.PENDING, RefundStatus.SUCCEEDED)
     assert (called_off.amount_grosze, called_off.fee_withheld_grosze) == (4000, 0)
+
+
+# ---------------------------------------------------------------------------
+# A club, paid out (#548)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_club_is_paid_out_what_it_is_asked_once_per_key(
+    provider, club_account
+):
+    """**The club is paid after the game is played** (the mechanics §12.6): a
+    payout is made when Raketa releases one — what it was asked for, once
+    whatever the retries — and is on the account's list of payouts."""
+
+    if not isinstance(provider, FakePayments):
+        pytest.skip(
+            "paying a club out needs its test account on manual payouts with "
+            "money available to pay — open item O2 (#548)"
+        )
+    asked = dict(
+        amount_grosze=114_20,
+        description="Raketa · games over by 10 October 2026",
+        metadata={"raketa_payout": "demands"},
+        idempotency_key=_key(),
+    )
+
+    first = await provider.pay_out(club_account, **asked)
+    again = await provider.pay_out(club_account, **asked)
+    listed = await provider.payouts(club_account, limit=10)
+
+    assert first.amount_grosze == 114_20
+    assert first.status in (PayoutStatus.PENDING, PayoutStatus.IN_TRANSIT)
+    assert again.payout_id == first.payout_id
+    assert [payout.payout_id for payout in listed] == [first.payout_id]

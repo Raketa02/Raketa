@@ -13,7 +13,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0098](../../../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Fourteen registers, and they are fourteen on purpose — one per kind of claim.**
+  **Fifteen registers, and they are fifteen on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
@@ -83,6 +83,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **The fourteenth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
   consumer register as `games_demands.py` stands beside `game_demands.py`: who kept the booked
   games they held a seat on (`BookingHistoryQuery`), *keeps plans*' input.
+  **The fifteenth, `payment_demands.py`, is Payments' consumer register** (#548), apart from
+  `payments_demands.py`'s two provider adapters: which games are over for good, so their money
+  is the club's to be paid out (`GamesOver`, signed by `proposals`). Its older demands —
+  `Sellers`, `Payers`, `PaymentCommitments` — were contracted over HTTP only and are owed rows.
   **A row carries a builder, and not always over a bare session.** `challenge_demands.py`'s
   takes the two seams the platform supplies from outside a request — the process's
   candidate index and the exposure ledger behind Redis — because the pairing it contracts

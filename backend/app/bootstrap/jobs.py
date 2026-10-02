@@ -47,6 +47,7 @@ from app.bootstrap.composition import (
     build_expire_proposals,
     build_expire_unanswered_requests,
     build_call_off_short_games,
+    build_decide_club_payouts,
     build_exposure_ledger,
     build_image_transcoder,
     build_interest_ledger,
@@ -65,6 +66,7 @@ from app.bootstrap.composition import (
     build_scale_pressure_probe,
     build_search_store,
     build_settle_ratings_on_results,
+    build_summarise_new_bookings,
     build_unit_of_work,
 )
 from app.application.mail.deliver_queued_mail import DeliverQueuedMail
@@ -201,6 +203,17 @@ REQUEST_TIMEOUT_JOB = "request-timeout"
 #: the court and emails the club.
 CUT_OFF_JOB = "cut-off"
 
+#: Club payouts (#548). At the close of every club day it decides, per club, one
+#: payout of what its games over by then left it — played, or called off with
+#: what that gives back decided; the outbox makes it and tells the desk.
+#: **Correctness depends on it**: nothing else pays a club.
+CLUB_PAYOUTS_JOB = "club-payouts"
+
+#: The club's daily summary of new bookings (#548): once a club day closes, its
+#: desk is emailed every game booked that day. The record, not the fact — the
+#: Bookings page shows a booking the moment it is made.
+NEW_BOOKINGS_SUMMARY_JOB = "new-bookings-summary"
+
 #: The proposer (#540) — **the engine that builds games**, and the second job
 #: on this list correctness depends on: nothing else deals a pick, re-deals a
 #: seat a no left or widens a pick at half In. It writes through the dealer's
@@ -269,6 +282,8 @@ def build_scheduled_jobs(
         or settings.PROPOSER_ENABLED
         or settings.REQUEST_TIMEOUT_ENABLED
         or settings.CUT_OFF_ENABLED
+        or settings.CLUB_PAYOUTS_ENABLED
+        or settings.NEW_BOOKINGS_SUMMARY_ENABLED
     ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
@@ -350,6 +365,18 @@ def build_scheduled_jobs(
         if settings.CUT_OFF_ENABLED:
             jobs.append(
                 build_cut_off_job(session_factory=session_factory, settings=settings)
+            )
+        if settings.CLUB_PAYOUTS_ENABLED:
+            jobs.append(
+                build_club_payouts_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.NEW_BOOKINGS_SUMMARY_ENABLED:
+            jobs.append(
+                build_new_bookings_summary_job(
+                    session_factory=session_factory, settings=settings
+                )
             )
         if settings.PROPOSER_ENABLED:
             jobs.append(
@@ -657,6 +684,81 @@ def build_cut_off_job(
     return PeriodicJob(
         name=CUT_OFF_JOB,
         interval_seconds=settings.CUT_OFF_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_club_payouts_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Decide every club's payout for its games over once its day has closed
+    (the mechanics §12.6, §16.11) — the outbox then makes it at the provider
+    and tells the desk.
+
+    **Idempotent and safe beside itself with no lock**: a club day's payout is
+    one stream and a game is carried once, so a second process collides and is
+    stepped over. **Correctness depends on it**: nothing else pays a club.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_decide_club_payouts(
+                session, clock=clock, settings=settings
+            ).execute()
+        if done.decided or done.conflicts:
+            logger.info(
+                "club payouts finished",
+                extra={
+                    "job": CLUB_PAYOUTS_JOB,
+                    "decided": done.decided,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=CLUB_PAYOUTS_JOB,
+        interval_seconds=settings.CLUB_PAYOUTS_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_new_bookings_summary_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Email every club's desk the games booked at it in the day that just
+    closed (the mechanics §16.12, *a daily summary*).
+
+    **Idempotent and safe beside itself with no lock**: a club's day is summed
+    up in a stream of its own, born with the email in one transaction, so a
+    second process collides on it and its email is rolled back with it.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_summarise_new_bookings(
+                session, clock=clock, settings=settings
+            ).execute()
+        if done.clubs or done.conflicts:
+            logger.info(
+                "new bookings summary finished",
+                extra={
+                    "job": NEW_BOOKINGS_SUMMARY_JOB,
+                    "clubs": done.clubs,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=NEW_BOOKINGS_SUMMARY_JOB,
+        interval_seconds=settings.NEW_BOOKINGS_SUMMARY_INTERVAL_SECONDS,
         run=run,
     )
 

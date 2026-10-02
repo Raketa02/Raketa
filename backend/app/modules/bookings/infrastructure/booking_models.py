@@ -48,6 +48,8 @@ class BookingORM(Base):
         Index("ix_bookings_state_answer_by", "state", "answer_by"),
         # The games whose cut-off came with a seat open — the cut-off job's.
         Index("ix_bookings_state_cut_off", "state", "cut_off"),
+        # A day's new bookings — the club's daily summary (#548).
+        Index("ix_bookings_booked_at", "booked_at"),
     )
 
     id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)

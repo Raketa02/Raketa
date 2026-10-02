@@ -16,12 +16,14 @@ paths:
   - "app/modules/proposals/application/club_bookings.py"
   - "app/modules/proposals/domain/club_bookings.py"
   - "app/modules/games/application/no_shows.py"
+  - "app/modules/proposals/application/club_money.py"
+  - "app/modules/bookings/application/daily_summary.py"
 ---
 
 # Bookings and the fill
 
 Decisions that are load-bearing and not obvious from the code (#541, #543, #544, #545,
-#547; ADR-0189 §2–§5; the mechanics §10.1, §11–§13, §15, §16.7–§16.10, §16.12).
+#547, #548; ADR-0189 §2–§5; the mechanics §10.1, §11–§13, §15, §16.7–§16.12).
 
 - **The last yes books the game, in that yes's own transaction** (`proposals/application/fill.py`).
   `SayYes` loads the proposal **locked** (`load_for_update`, `FOR UPDATE` on its row — SQLite
@@ -339,3 +341,18 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   (`needs_you` for the reported player while they may dispute — `Game.may_dispute`, their
   own report's day); a disputed one is plain
   *uncounted*. The reporter is not on the wire.
+- **The club's money, and its day of new bookings** (#548; the mechanics §16.11, §16.12;
+  the screens B7, B9). **The Money page** is Proposals', beside the Bookings page
+  (`application/club_money.py`): `GET /api/v1/club/money?month=YYYY-MM` reads every booking
+  whose game starts in the club's month (`ClubBookings.on_day` over the month's hours) and
+  lists those that took money, soonest first — the court, the status, and from
+  `BookingTakings` what was collected, refunded, the **card fees** and the **net** (what the
+  club keeps, below nought on a game given back whole) — with the month's totals, and
+  `paid_out` once a payout carried it (the payouts themselves are `payments.md`'s). **The
+  daily summary** is Bookings' (`application/daily_summary.py`, the `new-bookings-summary`
+  job): at the close of each club day the desk is emailed *New bookings today* — every
+  booking **booked** (`bookings.booked_at`, filled or accepted) since the close before,
+  soonest game first, a called-off one marked so — and nothing on a day nothing was booked.
+  Sent once: the summary is a stream of its own per club per day
+  (`NewBookingsSummarised`, `domain/summary.py`), born in the transaction that queues the
+  email, so a second process collides on it.

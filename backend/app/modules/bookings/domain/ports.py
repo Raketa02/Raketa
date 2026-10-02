@@ -3,7 +3,8 @@
 **Two ports are its own store**: the Booking repository, whose ``save`` writes
 the ``bookings`` and ``booking_seats`` projections in the caller's transaction,
 and the directory that reads them back — which court hours bookings hold, which
-games a player has booked, and how many were booked in each pool. **A third is
+games a player has booked, and how many were booked in each pool — and the
+summaries of each club's day of new bookings, sent once (#548). **A third is
 its own key**: each seat's check-in code, derived under the server's secret
 (#542).
 
@@ -29,6 +30,7 @@ from app.kernel import Instant, Sport
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.bookings.domain.check_in import CheckInCode
 from app.modules.bookings.domain.keeping import KeepingRecord
+from app.modules.bookings.domain.summary import NewBookingsSummary
 
 
 @runtime_checkable
@@ -131,6 +133,15 @@ class BookingDirectory(Protocol):
         ``club_id`` is ``None`` — soonest first, then by booking and player:
         where a typed check-in code is looked for, one digest a seat and no
         stream read until one matches (#547)."""
+        ...
+
+    async def booked_between(
+        self, *, start: Instant, end: Instant
+    ) -> Mapping[UUID, Sequence[UUID]]:
+        """Each club's bookings **booked** from ``start`` until ``end`` —
+        filled, or accepted by an On request club — whatever they came to
+        since, the soonest game first (#548). A club that booked none is
+        absent."""
         ...
 
     async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
@@ -290,4 +301,16 @@ class ClubDesks(Protocol):
 
     async def of(self, club_id: UUID) -> ClubDesk | None:
         """The club's desk, or ``None`` for a club that no longer exists."""
+        ...
+
+
+@runtime_checkable
+class SummaryRepository(Protocol):
+    """One stream per club per day, born once (#548)."""
+
+    async def load(self, summary_id: UUID) -> NewBookingsSummary | None: ...
+
+    async def save(self, summary: NewBookingsSummary) -> None:
+        """Append it in the caller's transaction — a conflict if that club's
+        day was summed up already."""
         ...

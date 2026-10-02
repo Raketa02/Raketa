@@ -254,3 +254,21 @@ class PlayerCheckedIn:
     booking_id: UUID
     player_id: UUID
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class NewBookingsSummarised:
+    """The club's desk was sent the day's new bookings (#548; the mechanics
+    §16.12, the screens B9 — *a new booking: a daily summary*): every game
+    booked at the club in the day up to the close of ``day`` (``YYYY-MM-DD``)
+    — ``booking_ids`` — once. **Its own stream, one per club per day**, so a
+    second process summing up the same day collides on it."""
+
+    summary_id: UUID
+    club_id: UUID
+    day: str
+    booking_ids: tuple[UUID, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "booking_ids", _uuids(self.booking_ids))

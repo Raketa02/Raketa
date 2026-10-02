@@ -1,6 +1,7 @@
 """*A booking is waiting for your answer*, as the desk reads it (the mechanics
 §16.8, §16.12; the screens B9) — and *a game was called off at the cut-off*
-(#544), the other email a club is sent at once.
+(#544), the other email a club is sent at once — and *New bookings today*
+(#548), the one it is sent once a day.
 
 **At once, because the window is short**: an On request club has its time to
 confirm — thirty minutes by default — and nobody may be watching the website,
@@ -16,13 +17,14 @@ name, which the website shows to a signed-in desk, never an inbox.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from typing import Final
 
 from app.application.mail.layout import ButtonEmail, render
 from app.application.ports.mail import OutgoingMessage
 from app.kernel import SPORT_SPECS, Instant, Sport
-from app.modules.clubs.domain.court_hours import CLUB_ZONE
+from app.modules.clubs.domain.court_hours import CLUB_ZONE, day_closes_at
 
 #: Every game is one hour, for every sport (the mechanics §2).
 _A_GAME: Final = timedelta(hours=1)
@@ -138,6 +140,68 @@ def called_off_at_the_cut_off_email(
                     "The hour is free again: it is yours to sell."
                     if hour_still_ahead
                     else "Its hour has already begun."
+                ),
+            ),
+            button_label="Open your bookings",
+            button_url=link,
+        )
+    )
+
+
+#: The ``kind`` the day's summary is queued under (#548).
+NEW_BOOKINGS_KIND: Final = "bookings.new_bookings.club"
+
+
+@dataclass(frozen=True, slots=True)
+class NewBooking:
+    """One game booked at the club, as the summary lists it."""
+
+    court: str
+    sport: Sport
+    starts_at: Instant
+    price_grosze: int
+    #: Called off since — refused, unanswered, short at the cut-off or
+    #: cancelled — and listed all the same: it was booked that day.
+    called_off: bool
+
+
+def new_bookings_email(
+    *,
+    to: str,
+    club: str,
+    day: date,
+    booked: tuple[NewBooking, ...],
+    link: str,
+) -> OutgoingMessage:
+    """*New bookings today* (#548; the mechanics §16.12, a daily summary): every
+    game booked at the club in the day up to the close of ``day`` — since the
+    summary before — the soonest first: the hour, the court, the sport and the
+    court's price. No player's name, which only a signed-in desk reads."""
+
+    games = "1 game" if len(booked) == 1 else f"{len(booked)} games"
+    called_off = any(one.called_off for one in booked)
+    return render(
+        ButtonEmail(
+            kind=NEW_BOOKINGS_KIND,
+            to=to,
+            subject="New bookings today",
+            heading="New bookings today",
+            lines=(
+                f"Raketa players booked {games} at {club} in the day to "
+                f"{day:%A} {day.day} {day:%B}, {_wall(day_closes_at(day)):%H:%M}:",
+                *(
+                    f"{_day_and_time(one.starts_at)} · {one.court} · "
+                    f"{_SPORT_WORDS[one.sport]} · {_zloty(one.price_grosze)}"
+                    + (" — since called off" if one.called_off else "")
+                    for one in booked
+                ),
+                (
+                    "The players paid as each game was booked, and were given "
+                    "it back on one called off since. Your money for a game goes "
+                    "to your bank once it is played."
+                    if called_off
+                    else "The players paid as each game was booked. Your money "
+                    "for a game goes to your bank once it is played."
                 ),
             ),
             button_label="Open your bookings",

@@ -33,6 +33,7 @@ from app.modules.proposals.application.club_bookings import (
     ClubBookingRow,
     ClubDay,
 )
+from app.modules.proposals.application.club_money import ClubMoney, MoneyRow
 from app.modules.proposals.application.club_requests import (
     REFUSAL_REASON_MAX,
     Acceptance,
@@ -54,6 +55,7 @@ from app.modules.proposals.presentation.dependencies import (
     CheckInAtTheDeskDep,
     MoveTheGameDep,
     ReadClubBookingsDep,
+    ReadClubMoneyDep,
     ReadFreeCourtsDep,
     ReadWaitingRequestsDep,
     RefuseTheRequestDep,
@@ -62,6 +64,8 @@ from app.modules.proposals.presentation.dependencies import (
 router = APIRouter(prefix="/bookings", tags=["club"])
 #: The desk's Check in page posts here (#547).
 check_ins_router = APIRouter(prefix="/check-ins", tags=["club"])
+#: The Money page reads here (#548).
+money_router = APIRouter(prefix="/money", tags=["club"])
 
 
 class WaitingPlayerSchema(BaseModel):
@@ -690,4 +694,133 @@ async def check_in(
 ) -> CheckInResponse:
     return CheckInResponse.of(
         await check_in.execute(club_id=account.club_id, code=payload.code)
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Money (#548)
+# --------------------------------------------------------------------------- #
+
+
+class MoneyTotalsSchema(BaseModel):
+    collected_grosze: int = Field(description="Every share taken from the players.")
+    refunded_grosze: int = Field(
+        description=(
+            "Everything given back — automatically: you never refund anybody by hand."
+        )
+    )
+    card_fees_grosze: int = Field(
+        description=(
+            "The provider's card fee on every share taken, yours to pay as at "
+            "your own terminal. A refund never returns it."
+        )
+    )
+    net_grosze: int = Field(
+        description=(
+            "Yours: collected, less refunded, less the card fees. Below nought "
+            "when games given back whole cost you their card fees."
+        )
+    )
+
+
+class MoneyBookingSchema(BaseModel):
+    """One booking's money, on your account — you are the seller."""
+
+    booking_id: UUID
+    starts_at: datetime = Field(description="The court hour's start — the row's date.")
+    court_name: str
+    sport: Sport
+    status: ClubStatus = Field(
+        description="What the booking is now, as on the Bookings page."
+    )
+    collected_grosze: int
+    refunded_grosze: int
+    card_fees_grosze: int
+    net_grosze: int
+    paid_out: bool = Field(
+        description=(
+            "A payout carried its money to your bank. Until then it waits on "
+            "your account: **you are paid after the game is played**, at the "
+            "close of its day, since a refund before the start comes out of it."
+        )
+    )
+
+    @classmethod
+    def of(cls, row: MoneyRow) -> "MoneyBookingSchema":
+        game, takings = row.game, row.takings
+        return cls(
+            booking_id=game.booking_id,
+            starts_at=game.start,
+            court_name=game.court_name,
+            sport=game.sport,
+            status=row.status,
+            collected_grosze=takings.collected_grosze,
+            refunded_grosze=takings.refunded_grosze,
+            card_fees_grosze=takings.card_fees_grosze,
+            net_grosze=takings.net_grosze,
+            paid_out=takings.paid_out,
+        )
+
+
+class ClubMoneyResponse(BaseModel):
+    """A month of your Raketa money — the Money page."""
+
+    month: str = Field(description="The month read, `YYYY-MM`.", examples=["2026-10"])
+    read_at: datetime
+    totals: MoneyTotalsSchema = Field(description="The month's, at the top.")
+    bookings: list[MoneyBookingSchema] = Field(
+        description=(
+            "Every booking played — or to be played — in the month that took "
+            "money, soonest first. A request nobody paid for is not money and "
+            "is not listed."
+        )
+    )
+
+    @classmethod
+    def of(cls, money: ClubMoney) -> "ClubMoneyResponse":
+        totals = money.totals
+        return cls(
+            month=f"{money.month:%Y-%m}",
+            read_at=money.read_at,
+            totals=MoneyTotalsSchema(
+                collected_grosze=totals.collected_grosze,
+                refunded_grosze=totals.refunded_grosze,
+                card_fees_grosze=totals.card_fees_grosze,
+                net_grosze=totals.net_grosze,
+            ),
+            bookings=[MoneyBookingSchema.of(row) for row in money.rows],
+        )
+
+
+#: A month as the page asks for it.
+_MONTH = r"^\d{4}-(0[1-9]|1[0-2])$"
+
+
+@money_router.get(
+    "",
+    response_model=ClubMoneyResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Your money, by month",
+    description=(
+        "A month of your Raketa money, booking by booking — by the day each "
+        "game is played on — with what the players paid, what was given back, "
+        "the card fees and what is yours, and the month's totals. **You are the "
+        "seller**: every figure is your own account's. Your payouts are "
+        "`GET /api/v1/club/payouts`."
+    ),
+)
+async def money_by_month(
+    account: CurrentClubAccountDep,
+    read: ReadClubMoneyDep,
+    month: str | None = Query(
+        default=None,
+        pattern=_MONTH,
+        description="`YYYY-MM` — this month when left out.",
+    ),
+) -> ClubMoneyResponse:
+    return ClubMoneyResponse.of(
+        await read.execute(
+            account.club_id,
+            month=None if month is None else date.fromisoformat(f"{month}-01"),
+        )
     )

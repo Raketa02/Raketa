@@ -10,7 +10,12 @@ from datetime import date, datetime, timezone
 from uuid import uuid4
 
 from app.kernel import instant
-from app.modules.clubs.domain.court_hours import CLUB_ZONE, hour_start, local_day
+from app.modules.clubs.domain.court_hours import (
+    CLUB_ZONE,
+    hour_start,
+    last_closed_day,
+    local_day,
+)
 from app.modules.clubs.domain.hours_exceptions import (
     ClosedHours,
     ExceptionReason,
@@ -58,3 +63,14 @@ def test_an_exception_closes_the_hours_of_its_own_days_at_the_club():
     # 19:00 that Tuesday is before it opens, and Wednesday is another day.
     assert not tuesday.covers(court, hour_start(date(2026, 10, 6), 19))
     assert not tuesday.covers(court, hour_start(date(2026, 10, 7), 20))
+
+
+def test_a_day_closes_when_its_last_court_hour_ends_in_kraków():
+    # 23:00 in Kraków on Saturday 10 October 2026 is 21:00 UTC.
+    closing = instant(datetime(2026, 10, 10, 21, tzinfo=timezone.utc))
+    just_before = instant(datetime(2026, 10, 10, 20, 59, tzinfo=timezone.utc))
+    after_midnight = instant(datetime(2026, 10, 10, 22, 30, tzinfo=timezone.utc))
+
+    assert last_closed_day(just_before) == date(2026, 10, 9)
+    assert last_closed_day(closing) == date(2026, 10, 10)
+    assert last_closed_day(after_midnight) == date(2026, 10, 10)

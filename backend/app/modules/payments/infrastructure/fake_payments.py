@@ -16,6 +16,11 @@ that waited for them in the app, ``club_account_is`` sets an account's state,
 ``onboarding_completes`` finishes every club's onboarding the moment its link
 is made, and ``unreachable`` makes every call fail as an outage does.
 
+**It pays a club out only when asked** (#548) — the club's money is held until
+after the game, which is what Raketa asks it for — and dates the payout's
+arrival two days after its ``clock``'s now; a fake with no clock cannot date
+one, and refuses.
+
 **Every call is recorded**, in order, with its arguments (``calls`` and
 ``called``), so a test asserts what was asked of the provider without a mock.
 
@@ -41,10 +46,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, replace
+from datetime import timedelta
 from typing import Any, Mapping, final
 from uuid import UUID, uuid4
 
-from app.kernel import Instant
+from app.kernel import Clock, Instant, instant
 from app.modules.payments.domain.entered_cards import (
     A_CARD,
     CardBehaviour,
@@ -68,6 +74,10 @@ from app.modules.payments.domain.provider import (
     StartedSetup,
 )
 
+
+
+#: How long the fake says a payout takes to reach a club's bank.
+PAYOUT_TAKES = timedelta(days=2)
 
 
 class FakeRefusal(Exception):
@@ -146,8 +156,11 @@ class FakePayments:
         *,
         confirms_every_setup_with: EnteredCard | None = None,
         onboarding_completes: bool = False,
+        clock: Clock | None = None,
     ) -> None:
         self._auto_card = confirms_every_setup_with
+        #: What a payout's arrival is dated from.
+        self.clock = clock
         #: Set to finish a club's onboarding the moment its link is made — the
         #: link then lands where the provider's would, back on the club website.
         self.onboarding_completes = onboarding_completes
@@ -405,6 +418,44 @@ class FakePayments:
     async def payouts(self, account_id: str, *, limit: int) -> tuple[Payout, ...]:
         self._record("payouts", account_id=account_id, limit=limit)
         return tuple(self._payouts.get(account_id, [])[:limit])
+
+    async def pay_out(
+        self,
+        account_id: str,
+        *,
+        amount_grosze: int,
+        description: str,
+        metadata: Mapping[str, str],
+        idempotency_key: str,
+    ) -> Payout:
+        self._record(
+            "pay_out",
+            account_id=account_id,
+            amount_grosze=amount_grosze,
+            description=description,
+            metadata=dict(metadata),
+            key=idempotency_key,
+        )
+
+        def paid_out() -> Payout:
+            if amount_grosze <= 0:
+                raise FakeRefusal(f"a payout of {amount_grosze} grosze")
+            if self.clock is None:
+                raise FakeRefusal("a fake with no clock cannot date a payout")
+            payout = Payout(
+                payout_id=_id("po"),
+                amount_grosze=amount_grosze,
+                arrives_at=instant(self.clock.now() + PAYOUT_TAKES),
+                status=PayoutStatus.IN_TRANSIT,
+            )
+            self._payouts.setdefault(account_id, []).insert(0, payout)
+            return payout
+
+        return self._once(
+            idempotency_key,
+            {"account": account_id, "amount": amount_grosze},
+            paid_out,
+        )
 
     async def clone_method(
         self,
@@ -670,4 +721,10 @@ class FakePayments:
                 else None
             ),
             decline_code=payment.decline_code,
+            # The fake takes exactly the fee the estimate says.
+            fee_grosze=(
+                estimated_card_fee(payment.amount_grosze)
+                if payment.status is PaymentStatus.CAPTURED
+                else None
+            ),
         )

@@ -456,6 +456,25 @@ class Settings(BaseSettings):
     CUT_OFF_ENABLED: bool = True
     CUT_OFF_INTERVAL_SECONDS: float = 30
 
+    # --- club payouts (#548, the mechanics §12.6, §16.11)
+    #
+    # **Correctness depends on it**: a club is paid after its games are played,
+    # and nothing else releases its money to its bank. **When is emphatically
+    # not here**: a club day's payout is released at the day's close, a game
+    # once it is over and its money settled — domain, in
+    # `payments/domain/club_payout.py`. Every five minutes, because a day closes
+    # once and its payout may wait for a capture or a refund still on its way.
+    CLUB_PAYOUTS_ENABLED: bool = True
+    CLUB_PAYOUTS_INTERVAL_SECONDS: float = 300
+
+    # --- the club's daily summary of new bookings (#548, the mechanics §16.12)
+    #
+    # Sent once a club day closes, for the bookings made since the close
+    # before — the day is domain, in `bookings/domain/summary.py`; only how
+    # often a closed day is looked for is a setting.
+    NEW_BOOKINGS_SUMMARY_ENABLED: bool = True
+    NEW_BOOKINGS_SUMMARY_INTERVAL_SECONDS: float = 300
+
     # --- the proposer (#540, the mechanics §5, §6.2–§6.3)
     #
     # **The engine that builds games, and correctness depends on it**: nothing

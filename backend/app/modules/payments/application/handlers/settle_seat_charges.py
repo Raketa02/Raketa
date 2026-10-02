@@ -18,7 +18,8 @@ method — has nothing at the provider to cancel, and is settled at once.
 fill, before the capture's delivery has run: whichever of the two deliveries
 arrives first captures the share, then gives it back, and the other finds
 nothing left to do. What the provider gave back, and the card fee it kept, is
-recorded on the charge — which is what the receipt reads.
+recorded on the charge — which is what the receipt reads; and so is the card
+fee the provider took on a capture, which the club pays (#548).
 """
 
 from __future__ import annotations
@@ -75,12 +76,12 @@ class SettleSeatCharges:
         now = instant(self._clock.now())
         if charge.status is SeatChargeStatus.TAKING:
             assert charge.payment_id is not None
-            await self._provider.capture(
+            taken = await self._provider.capture(
                 account_id=charge.account_id,
                 payment_id=charge.payment_id,
                 idempotency_key=capture_key(charge.charge_id),
             )
-            charge.captured(at=now)
+            charge.captured(at=now, fee_grosze=taken.fee_grosze)
         elif charge.status is SeatChargeStatus.RELEASING:
             if charge.payment_id is not None:
                 await self._provider.cancel(

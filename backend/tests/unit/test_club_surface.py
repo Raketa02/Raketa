@@ -62,6 +62,8 @@ CLUB_OPERATIONS = {
     "post /api/v1/club/bookings/{booking_id}/move",
     "post /api/v1/club/bookings/{booking_id}/cancellation",
     "post /api/v1/club/check-ins",
+    "get /api/v1/club/money",
+    "get /api/v1/club/payouts",
 }
 
 

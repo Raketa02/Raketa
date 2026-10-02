@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from app.application.events import EventCatalog, EventDispatcher
 from app.modules.payments.application.handlers import (
+    LogClubPayoutEvent,
     LogPaymentEvent,
+    SendClubPayout,
     LogSeatChargeEvent,
     ReleaseMethodAtProvider,
     SettleReplacedSetup,
     SettleSeatCharges,
 )
 from app.modules.payments.domain.events import (
+    ClubPayoutDecided,
+    ClubPayoutSent,
     PaymentMethodChanged,
     PaymentMethodRemoved,
     PaymentMethodSaved,
@@ -43,6 +47,8 @@ _EVENTS = (
     (SeatChargeCancelled, "payments.seat_charge_cancelled"),
     (SeatChargeRefundDecided, "payments.seat_charge_refund_decided"),
     (SeatChargeRefunded, "payments.seat_charge_refunded"),
+    (ClubPayoutDecided, "payments.club_payout_decided"),
+    (ClubPayoutSent, "payments.club_payout_sent"),
 )
 
 
@@ -67,6 +73,8 @@ def subscribe_payment_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(SeatChargeCancelled, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeRefundDecided, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeRefunded, LogSeatChargeEvent())
+    dispatcher.subscribe(ClubPayoutDecided, LogClubPayoutEvent())
+    dispatcher.subscribe(ClubPayoutSent, LogClubPayoutEvent())
 
 
 def subscribe_the_method_releaser(
@@ -94,3 +102,14 @@ def subscribe_the_seat_charge_settler(
     dispatcher.subscribe(SeatChargeTaken, settle)
     dispatcher.subscribe(SeatChargeReleased, settle)
     dispatcher.subscribe(SeatChargeRefundDecided, settle)
+
+
+def subscribe_the_club_payout_sender(
+    dispatcher: EventDispatcher, send: SendClubPayout
+) -> None:
+    """The subscriber that makes a club's payout at the provider and tells its
+    desk (#548) — it **writes** the provider's answer onto the payout, so it is
+    added per delivery run over that run's session and provider, as the seat
+    charge settler is."""
+
+    dispatcher.subscribe(ClubPayoutDecided, send)

@@ -25,6 +25,7 @@ from app.bootstrap.composition import (
     build_check_in_at_the_desk,
     build_move_the_game,
     build_read_club_bookings,
+    build_read_club_money,
     build_read_free_courts,
     build_confirm_payment,
     build_say_no_to_a_rescue,
@@ -55,6 +56,7 @@ from app.modules.proposals.application.answers import (
     WithdrawYes,
 )
 from app.modules.proposals.application.booking_details import ReadBookingDetails
+from app.modules.proposals.application.club_money import ReadClubMoney
 from app.modules.proposals.application.club_bookings import (
     CancelTheGame,
     CheckInAtTheDesk,
@@ -363,6 +365,15 @@ def get_read_club_bookings(
 
 
 ReadClubBookingsDep = Annotated[ReadClubBookings, Depends(get_read_club_bookings)]
+
+
+def get_read_club_money(
+    db: DbSession, clock: ClockDep, settings: SettingsDep
+) -> ReadClubMoney:
+    return build_read_club_money(db, clock=clock, settings=settings)
+
+
+ReadClubMoneyDep = Annotated[ReadClubMoney, Depends(get_read_club_money)]
 
 
 def get_read_free_courts(

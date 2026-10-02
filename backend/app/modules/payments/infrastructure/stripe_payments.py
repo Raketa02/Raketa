@@ -107,6 +107,25 @@ _PAYOUT_STATUSES = {
 }
 
 
+#: Where a captured payment's card fee is: its charge's balance transaction,
+#: on the club's account (#548). Asked for on a capture and a reading.
+_THE_FEE = "latest_charge.balance_transaction"
+
+
+def _fee_of(intent: Any) -> int | None:
+    """The card fee Stripe took on a captured payment, when the expanded
+    balance transaction says it — ``None`` where it was not expanded or is not
+    settled yet (Stripe documents it missing right after an asynchronous
+    capture), and the estimate stands in until it is."""
+
+    charge = getattr(intent, "latest_charge", None)
+    settled = getattr(charge, "balance_transaction", None)
+    fee = getattr(settled, "fee", None)
+    if not isinstance(fee, int) or getattr(settled, "currency", CURRENCY) != CURRENCY:
+        return None
+    return fee
+
+
 def card_of(method: Mapping[str, Any]) -> CardOnFile:
     """A Stripe PaymentMethod, as plain JSON, as a card on file — the webhook's
     body, or an SDK object's ``to_dict()``: stripe-python's objects are not
@@ -373,6 +392,59 @@ class StripePayments:
             for payout in page.data
         )
 
+    async def pay_out(
+        self,
+        account_id: str,
+        *,
+        amount_grosze: int,
+        description: str,
+        metadata: Mapping[str, str],
+        idempotency_key: str,
+    ) -> Payout:
+        # A manual payout on the club's account (#548). **Unproven, and open
+        # item O2**: it needs the account on manual payouts, which a platform
+        # may set on an account with Stripe's full dashboard only through
+        # Platform controls — and even then Stripe says the club can still pay
+        # itself out. Until O2 is settled with Stripe, accounts are opened on
+        # Stripe's own schedule and this is answered by whatever Stripe says.
+        try:
+            payout = await self._call(
+                self._client.v1.payouts.create_async(
+                    params={
+                        "amount": amount_grosze,
+                        "currency": CURRENCY,
+                        "description": description,
+                        "metadata": dict(metadata),
+                    },
+                    options={
+                        "stripe_account": account_id,
+                        "idempotency_key": idempotency_key,
+                    },
+                )
+            )
+        except stripe.InvalidRequestError as refused:
+            if refused.code != "balance_insufficient":
+                raise
+            # The shares are not available to pay out yet — three business
+            # days after their capture in Poland, seven for a new account. An
+            # answer, not a bug: asked again later. Stripe stores it against the
+            # key for a day, so the next real attempt is the day after.
+            logger.info(
+                "payments.stripe.payout_not_available_yet",
+                extra={"request_id": getattr(refused, "request_id", None)},
+            )
+            raise PaymentsUnavailable(
+                "the club's balance is not available yet"
+            ) from refused
+        return Payout(
+            payout_id=payout.id,
+            amount_grosze=payout.amount,
+            arrives_at=instant(
+                datetime.fromtimestamp(payout.arrival_date, tz=timezone.utc)
+            ),
+            status=_PAYOUT_STATUSES[payout.status],
+        )
+
     # ------------------------------------------------ money, on the club's account
 
     async def clone_method(
@@ -498,7 +570,9 @@ class StripePayments:
     async def read_payment(self, *, account_id: str, payment_id: str) -> Payment:
         intent = await self._call(
             self._client.v1.payment_intents.retrieve_async(
-                payment_id, options={"stripe_account": account_id}
+                payment_id,
+                params={"expand": [_THE_FEE]},
+                options={"stripe_account": account_id},
             )
         )
         return self._payment_of(intent)
@@ -509,6 +583,7 @@ class StripePayments:
         intent = await self._call(
             self._client.v1.payment_intents.capture_async(
                 payment_id,
+                params={"expand": [_THE_FEE]},
                 options={
                     "stripe_account": account_id,
                     "idempotency_key": idempotency_key,
@@ -595,6 +670,7 @@ class StripePayments:
             payment_id=intent.id,
             status=status,
             amount_grosze=intent.amount,
+            fee_grosze=(_fee_of(intent) if status is PaymentStatus.CAPTURED else None),
             client_secret=(
                 intent.client_secret if status in AWAITING_THE_PLAYER else None
             ),

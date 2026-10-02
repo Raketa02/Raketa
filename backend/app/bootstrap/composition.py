@@ -102,7 +102,9 @@ from app.modules.administrators.infrastructure.users_account_holders import (
 )
 from app.modules.payments.domain.notices import PaymentNotices
 from app.modules.payments.domain.ports import (
+    ClubPayoutRepository,
     ConnectedAccounts,
+    GamesOver,
     NoticeInbox,
     Payers,
     PaymentCommitments,
@@ -200,6 +202,7 @@ from app.modules.proposals.application.club_bookings import (
     ReadClubBookings,
     ReadFreeCourts,
 )
+from app.modules.proposals.application.club_money import ReadClubMoney
 from app.modules.proposals.application.club_requests import (
     AcceptTheRequest,
     ExpireUnansweredRequests,
@@ -249,11 +252,16 @@ from app.modules.bookings.domain.ports import (
     GameChanges,
     GameNoShows,
     GameOpening,
+    SummaryRepository,
 )
 from app.modules.bookings.infrastructure.booking_history import (
     EventSourcedBookingHistory,
 )
+from app.modules.bookings.application.daily_summary import SummariseNewBookings
 from app.modules.bookings.infrastructure.club_desks import AccountClubDesks
+from app.modules.bookings.infrastructure.event_sourced_summary_repository import (  # noqa: E501
+    EventSourcedSummaryRepository,
+)
 from app.modules.bookings.infrastructure.check_in_codes import KeyedCheckInCodes
 from app.modules.bookings.infrastructure.club_courts import (
     BookedCourtHours,
@@ -274,6 +282,13 @@ from app.modules.bookings.infrastructure.games_records import (
 from app.modules.payments.application.handlers.settle_seat_charges import (
     SettleSeatCharges,
 )
+from app.modules.payments.application.handlers.send_club_payouts import (
+    SendClubPayout,
+)
+from app.modules.payments.application.payouts import (
+    DecideClubPayouts,
+    ReadClubPayouts,
+)
 from app.modules.payments.application.refunds import RefundTheSeats
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
@@ -282,6 +297,9 @@ from app.modules.payments.application.seat_charges import (
     ReadReceipts,
     ReadSeatCharge,
     ReleaseCharges,
+)
+from app.modules.payments.infrastructure.event_sourced_club_payout_repository import (  # noqa: E501
+    EventSourcedClubPayoutRepository,
 )
 from app.modules.payments.infrastructure.event_sourced_seat_charge_repository import (  # noqa: E501
     EventSourcedSeatChargeRepository,
@@ -309,6 +327,7 @@ from app.modules.proposals.infrastructure.profile_players_in_play import (
 )
 from app.modules.proposals.infrastructure.matcher_player_fit import MatcherPlayerFit
 from app.modules.proposals.infrastructure.payments import (
+    BookedGamesOver,
     LiveYesCommitments,
     PaymentsBookingTakings,
     PaymentsSavedMethods,
@@ -1020,9 +1039,14 @@ def build_payment_provider(settings: Settings) -> PaymentProvider:
 def _the_laptop_s_fake() -> FakePayments:
     """A laptop's phone has no real provider to confirm a setup against, so its
     fake confirms every setup with ``A_CARD`` and finishes a club's onboarding
-    the moment its link is made (``fake_payments.py``)."""
+    the moment its link is made (``fake_payments.py``) — and dates a club's
+    payout off the wall clock (#548)."""
 
-    return FakePayments(confirms_every_setup_with=A_CARD, onboarding_completes=True)
+    return FakePayments(
+        confirms_every_setup_with=A_CARD,
+        onboarding_completes=True,
+        clock=build_clock(),
+    )
 
 
 #: The process's Stripe client — one, in any process that asks, by the keys it
@@ -1053,9 +1077,10 @@ async def close_payment_provider() -> None:
 
 def build_fake_payments() -> FakePayments:
     """A fresh fake that confirms nothing until it is told what the phone
-    entered — a seed run's, and the demand suite's."""
+    entered — a seed run's, and the demand suite's — dating a payout off the
+    wall clock."""
 
-    return FakePayments()
+    return FakePayments(clock=build_clock())
 
 
 def build_stripe_payments(settings: Settings) -> StripePayments:
@@ -1181,7 +1206,7 @@ def _seat_charge_repository(
 def build_sellers(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> Sellers:
-    """A club's name and its account at the provider — the seller."""
+    """A club's name, its account at the provider and its desk — the seller."""
     return ClubSellers(
         directory=build_club_directory(session),
         courts=build_club_courts_repository(
@@ -1189,7 +1214,91 @@ def build_sellers(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
+        accounts=build_club_account_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
     )
+
+
+def build_club_payout_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> ClubPayoutRepository:
+    """One stream per club per day it is paid for (#548). Takes the session as
+    well, because its ``save`` writes the payout's rows beside it."""
+    return EventSourcedClubPayoutRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def _club_payout_repository(
+    session: AsyncSession, runtime: EventRuntime | None
+) -> ClubPayoutRepository:
+    return build_club_payout_repository(
+        session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+
+
+def build_games_over(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> GamesOver:
+    """Which games are over for good — the payouts' demand, answered off the
+    bookings as Proposals reads them (#548)."""
+    return BookedGamesOver(
+        build_player_bookings(session, settings=settings, runtime=runtime)
+    )
+
+
+def build_decide_club_payouts(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> DecideClubPayouts:
+    """One run of the payouts job over this session — the job's, and a
+    test's (#548). It decides; the outbox pays out."""
+    return DecideClubPayouts(
+        payouts=_club_payout_repository(session, runtime),
+        charges=_seat_charge_repository(session, runtime),
+        games=build_games_over(session, settings=settings, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
+def build_send_club_payout(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> SendClubPayout:
+    """What a payout's decision leaves at the provider — built per delivery
+    run, over the session the delivery commits in and the provider it holds.
+    Its email opens the club website's Money page."""
+    return SendClubPayout(
+        payouts=_club_payout_repository(session, runtime),
+        sellers=build_sellers(session, runtime=runtime),
+        provider=provider,
+        mail=build_mail_queue(session),
+        clock=clock,
+        money_page=f"{settings.CLUB_WEBSITE_URL.rstrip('/')}/money",
+    )
+
+
+def build_read_club_payouts(
+    session: AsyncSession, *, provider: PaymentProvider
+) -> ReadClubPayouts:
+    """The payouts on a club's account, as the provider says they stand."""
+    return ReadClubPayouts(sellers=build_sellers(session), provider=provider)
 
 
 def build_payers(session: AsyncSession) -> Payers:
@@ -2016,8 +2125,11 @@ def build_booking_takings(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> BookingTakings:
     """What each booking took from its players and gave back, off its Seat
-    charges (#547)."""
-    return PaymentsBookingTakings(_seat_charge_repository(session, runtime))
+    charges (#547) — and whether a payout carried it (#548)."""
+    return PaymentsBookingTakings(
+        _seat_charge_repository(session, runtime),
+        _club_payout_repository(session, runtime),
+    )
 
 
 def build_pool_origins(session: AsyncSession) -> PoolOrigins:
@@ -2051,6 +2163,21 @@ def build_read_club_bookings(
         takings=build_booking_takings(session, runtime=runtime),
         origins=build_pool_origins(session),
         names=build_proposal_player_names(session),
+        clock=clock,
+    )
+
+
+def build_read_club_money(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> ReadClubMoney:
+    """A month of a club's money — the Money page (#548)."""
+    return ReadClubMoney(
+        bookings=build_club_bookings(session, settings=settings, runtime=runtime),
+        takings=build_booking_takings(session, runtime=runtime),
         clock=clock,
     )
 
@@ -2463,6 +2590,38 @@ def build_booking_repository(
     ``save`` writes the bookings and booking-seats projections beside it."""
     return EventSourcedBookingRepository(
         session=session, event_store=event_store, events=events
+    )
+
+
+def build_summary_repository(
+    *, event_store: DomainEventStore, events: DomainEventPublisher
+) -> SummaryRepository:
+    """One stream per club per day of new bookings, summed up once (#548)."""
+    return EventSourcedSummaryRepository(event_store=event_store, events=events)
+
+
+def build_summarise_new_bookings(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> SummariseNewBookings:
+    """One run of the club's daily summary of new bookings over this session —
+    the job's, and a test's (#548). Its email opens the Bookings page."""
+    event_store = build_domain_event_store(session, runtime=runtime)
+    events = build_event_publisher(session, runtime=runtime)
+    return SummariseNewBookings(
+        bookings=build_booking_repository(
+            session, event_store=event_store, events=events
+        ),
+        directory=build_booking_directory(session),
+        summaries=build_summary_repository(event_store=event_store, events=events),
+        desks=build_club_desks(session, runtime=runtime),
+        mail=build_mail_queue(session),
+        uow=build_unit_of_work(session),
+        clock=clock,
+        bookings_page=f"{settings.CLUB_WEBSITE_URL.rstrip('/')}/bookings",
     )
 
 

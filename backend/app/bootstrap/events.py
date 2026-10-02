@@ -68,6 +68,7 @@ from app.modules.payments.application.event_subscriptions import (
     register_payment_events,
     subscribe_payment_handlers,
     subscribe_the_method_releaser,
+    subscribe_the_club_payout_sender,
     subscribe_the_seat_charge_settler,
 )
 from app.modules.payments.domain.provider import PaymentProvider
@@ -205,6 +206,7 @@ class EventRuntime:
 
         from app.bootstrap.composition import (
             build_resume_paused_yeses,
+            build_send_club_payout,
             build_settle_seat_charges,
             build_tell_the_room,
             build_withdraw_a_leavers_yeses,
@@ -221,6 +223,18 @@ class EventRuntime:
             dispatcher,
             build_settle_seat_charges(
                 session, provider=payments, clock=clock, runtime=self
+            ),
+        )
+        # A club's payout, made at the provider and told to its desk in the
+        # delivery's own transaction (#548).
+        subscribe_the_club_payout_sender(
+            dispatcher,
+            build_send_club_payout(
+                session,
+                provider=payments,
+                clock=clock,
+                settings=get_settings(),
+                runtime=self,
             ),
         )
         # A leaver's yeses are withdrawn in the transaction that delivers the

@@ -30,6 +30,7 @@ from app.bootstrap.composition import (
     build_payment_method_repository,
     build_payment_notices,
     build_payment_provider,
+    build_read_club_payouts,
     build_read_receipts,
     build_read_seat_charge,
     build_seat_charge_repository,
@@ -44,6 +45,7 @@ from app.modules.payments.application.method import (
     RemovePaymentMethod,
 )
 from app.modules.payments.application.notices import ReceivePaymentNotice
+from app.modules.payments.application.payouts import ReadClubPayouts
 from app.modules.payments.application.seat_charges import (
     ReadReceipts,
     ReadSeatCharge,
@@ -252,6 +254,15 @@ def get_connect_payments(
 
 
 ConnectPaymentsDep = Annotated[ConnectPayments, Depends(get_connect_payments)]
+
+
+def get_read_club_payouts(
+    db: DbSession, provider: PaymentProviderDep
+) -> ReadClubPayouts:
+    return build_read_club_payouts(db, provider=provider)
+
+
+ReadClubPayoutsDep = Annotated[ReadClubPayouts, Depends(get_read_club_payouts)]
 
 
 # --- A player's seat charges and receipts (#541) -----------------------------

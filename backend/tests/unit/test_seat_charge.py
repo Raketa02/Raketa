@@ -97,3 +97,36 @@ def test_a_taken_charge_is_never_heard_cancelled():
 
     assert charge.heard(payment(PaymentStatus.CANCELLED), at=AT) is False
     assert charge.status is SeatChargeStatus.TAKING
+
+
+def test_the_club_pays_the_card_fee_the_provider_took_on_the_capture():
+    """A card from outside the EEA costs the club more than the estimate's
+    1,45 zł on a 30 zł share: what the provider says it took is the fee (#548)."""
+
+    charge = a_hold()
+    charge.take(booking_id=uuid4(), at=AT)
+    assert charge.card_fee_grosze == 1_45  # the estimate, until it is taken
+
+    charge.heard(
+        Payment(
+            payment_id="pi_1",
+            status=PaymentStatus.CAPTURED,
+            amount_grosze=30_00,
+            fee_grosze=1_98,
+        ),
+        at=AT,
+    )
+
+    assert charge.card_fee_grosze == 1_98
+    assert charge.net_grosze == 28_02
+    assert SeatCharge.from_history(charge.pull_events()).card_fee_grosze == 1_98
+
+
+def test_a_share_given_back_whole_costs_the_club_its_card_fee():
+    charge = a_hold()
+    charge.take(booking_id=uuid4(), at=AT)
+    charge.captured(at=AT, fee_grosze=1_45)
+    charge.refund(withhold_fee=False, at=AT)
+
+    assert (charge.given_back_grosze, charge.net_grosze) == (30_00, -1_45)
+    assert charge.settled is False  # until the provider gives it back

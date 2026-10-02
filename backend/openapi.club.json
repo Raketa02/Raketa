@@ -1574,6 +1574,67 @@
         ]
       }
     },
+    "/api/v1/club/payouts": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Your payouts",
+        "description": "The payouts to your bank, as the payment provider says they stand \u2014 the Money page's list. Empty until payments are connected and a first game is played.",
+        "operationId": "payouts_api_v1_club_payouts_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutsResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`payments_unavailable` \u2014 the provider could not be reached. Try again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/club/bookings/waiting": {
       "get": {
         "tags": [
@@ -2111,6 +2172,64 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/club/money": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Your money, by month",
+        "description": "A month of your Raketa money, booking by booking \u2014 by the day each game is played on \u2014 with what the players paid, what was given back, the card fees and what is yours, and the month's totals. **You are the seller**: every figure is your own account's. Your payouts are `GET /api/v1/club/payouts`.",
+        "operationId": "money_by_month_api_v1_club_money_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`YYYY-MM` \u2014 this month when left out.",
+              "title": "Month"
+            },
+            "description": "`YYYY-MM` \u2014 this month when left out."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubMoneyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -2943,6 +3062,44 @@
         ],
         "title": "ClubGroupsResponse"
       },
+      "ClubMoneyResponse": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month",
+            "description": "The month read, `YYYY-MM`.",
+            "examples": [
+              "2026-10"
+            ]
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/MoneyTotalsSchema",
+            "description": "The month's, at the top."
+          },
+          "bookings": {
+            "items": {
+              "$ref": "#/components/schemas/MoneyBookingSchema"
+            },
+            "type": "array",
+            "title": "Bookings",
+            "description": "Every booking played \u2014 or to be played \u2014 in the month that took money, soonest first. A request nobody paid for is not money and is not listed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "read_at",
+          "totals",
+          "bookings"
+        ],
+        "title": "ClubMoneyResponse",
+        "description": "A month of your Raketa money \u2014 the Money page."
+      },
       "ClubSignUpRequest": {
         "properties": {
           "name": {
@@ -3507,6 +3664,100 @@
         "title": "MapPointSchema",
         "description": "Where the club is: the pin as the desk dropped it, never rounded."
       },
+      "MoneyBookingSchema": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start \u2014 the row's date."
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ClubStatus",
+            "description": "What the booking is now, as on the Bookings page."
+          },
+          "collected_grosze": {
+            "type": "integer",
+            "title": "Collected Grosze"
+          },
+          "refunded_grosze": {
+            "type": "integer",
+            "title": "Refunded Grosze"
+          },
+          "card_fees_grosze": {
+            "type": "integer",
+            "title": "Card Fees Grosze"
+          },
+          "net_grosze": {
+            "type": "integer",
+            "title": "Net Grosze"
+          },
+          "paid_out": {
+            "type": "boolean",
+            "title": "Paid Out",
+            "description": "A payout carried its money to your bank. Until then it waits on your account: **you are paid after the game is played**, at the close of its day, since a refund before the start comes out of it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "starts_at",
+          "court_name",
+          "sport",
+          "status",
+          "collected_grosze",
+          "refunded_grosze",
+          "card_fees_grosze",
+          "net_grosze",
+          "paid_out"
+        ],
+        "title": "MoneyBookingSchema",
+        "description": "One booking's money, on your account \u2014 you are the seller."
+      },
+      "MoneyTotalsSchema": {
+        "properties": {
+          "collected_grosze": {
+            "type": "integer",
+            "title": "Collected Grosze",
+            "description": "Every share taken from the players."
+          },
+          "refunded_grosze": {
+            "type": "integer",
+            "title": "Refunded Grosze",
+            "description": "Everything given back \u2014 automatically: you never refund anybody by hand."
+          },
+          "card_fees_grosze": {
+            "type": "integer",
+            "title": "Card Fees Grosze",
+            "description": "The provider's card fee on every share taken, yours to pay as at your own terminal. A refund never returns it."
+          },
+          "net_grosze": {
+            "type": "integer",
+            "title": "Net Grosze",
+            "description": "Yours: collected, less refunded, less the card fees. Below nought when games given back whole cost you their card fees."
+          }
+        },
+        "type": "object",
+        "required": [
+          "collected_grosze",
+          "refunded_grosze",
+          "card_fees_grosze",
+          "net_grosze"
+        ],
+        "title": "MoneyTotalsSchema"
+      },
       "MonogramSchema": {
         "properties": {
           "letters": {
@@ -3630,6 +3881,65 @@
         ],
         "title": "PaymentsStatus",
         "description": "Where the club's payments account stands."
+      },
+      "PayoutSchema": {
+        "properties": {
+          "payout_id": {
+            "type": "string",
+            "title": "Payout Id",
+            "description": "The provider's own id for it."
+          },
+          "amount_grosze": {
+            "type": "integer",
+            "title": "Amount Grosze"
+          },
+          "arrives_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Arrives At",
+            "description": "When it reaches \u2014 or reached \u2014 your bank, as the provider says."
+          },
+          "status": {
+            "$ref": "#/components/schemas/PayoutStatus",
+            "description": "`PENDING` and `IN_TRANSIT` \u2014 on its way. `PAID` \u2014 in your bank. `FAILED` \u2014 your bank refused it: the provider asks you for your details. `CANCELLED` \u2014 it never left."
+          }
+        },
+        "type": "object",
+        "required": [
+          "payout_id",
+          "amount_grosze",
+          "arrives_at",
+          "status"
+        ],
+        "title": "PayoutSchema"
+      },
+      "PayoutStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "IN_TRANSIT",
+          "PAID",
+          "FAILED",
+          "CANCELLED"
+        ],
+        "title": "PayoutStatus"
+      },
+      "PayoutsResponse": {
+        "properties": {
+          "payouts": {
+            "items": {
+              "$ref": "#/components/schemas/PayoutSchema"
+            },
+            "type": "array",
+            "title": "Payouts",
+            "description": "Your account's payouts, newest first. **You are paid after the game is played**: at the close of each day, what that day's games over left you goes to your bank in one payout."
+          }
+        },
+        "type": "object",
+        "required": [
+          "payouts"
+        ],
+        "title": "PayoutsResponse"
       },
       "PriceBandRequest": {
         "properties": {

@@ -15,7 +15,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Eighteen jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Twenty jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -131,3 +131,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   game's proposal row first, a conflict counted and stepped over. The cut-off is the
   club's free-cancellation setting, kept on each booking as it stood at the fill; only the
   cadence (thirty seconds) is a setting here.
+  The nineteenth is **club payouts** (`club-payouts`, #548), and **correctness depends on
+  it**: nothing else pays a club. At the close of each club day it decides, per club, one
+  payout of what the closed days' games over and settled left it — one a day at most — and
+  the outbox makes it at the provider and tells the desk (see `payments.md`); the job never
+  asks the provider. Its read names **candidates** (`ClubPayoutRepository.owed`: games of
+  closed days, a share taken, carried by no payout); whether a game is over is asked of
+  `GamesOver` and whether its money is settled of its Seat charges. Safe beside itself: a
+  club day's payout is one stream and a game is carried once. When a club is paid is domain;
+  only the cadence (five minutes) is a setting. The twentieth is the **new bookings summary**
+  (`new-bookings-summary`, #548), which buys the record, not the fact — the Bookings page
+  shows a booking the moment it is made: once a club day closes, its desk is emailed the
+  day's new bookings, once (a stream per club per day, born with the email).

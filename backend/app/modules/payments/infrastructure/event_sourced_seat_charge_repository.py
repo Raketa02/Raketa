@@ -76,6 +76,7 @@ class EventSourcedSeatChargeRepository:
                     status=charge.status.value,
                     opened_at=charge.opened_at,
                     taken_at=charge.taken_at,
+                    starts_at=charge.starts_at,
                 )
             )
             await self._session.flush()

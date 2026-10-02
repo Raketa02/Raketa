@@ -213,6 +213,11 @@ class SeatChargeCaptured:
     charge_id: UUID
     player_id: UUID
     occurred_at: datetime
+    #: The card fee the provider took on it, which the club pays (#548) —
+    #: ``None`` where it did not say, and on every capture recorded before it
+    #: was asked: a default rather than a version 2, since every row written
+    #: without it is exactly such a capture, and the estimate stands in.
+    fee_grosze: int | None = None
 
 
 @dataclass(frozen=True)
@@ -251,4 +256,56 @@ class SeatChargeRefunded:
     refund_id: str
     amount_grosze: int
     fee_withheld_grosze: int
+    occurred_at: datetime
+
+
+# --------------------------------------------------------------------------- #
+# The Club payout stream: one per club per day it is paid for (#548)
+# --------------------------------------------------------------------------- #
+#
+# **The club is paid after the game is played** (the mechanics §12.6, §16.11).
+# Its share of every game waits on its account at the provider — a refund before
+# the start comes out of it — until the close of a day, when everything its
+# games over and settled left it is **paid out** to its bank in one payout.
+# Two events, the same two kinds as a refund's: **what Raketa decided**
+# (``Decided``: the games and the amount, recorded in the job's transaction)
+# and **what the provider said** (``Sent``: its payout, on its way — made from
+# the outbox after the commit, as a refund is).
+
+
+def _uuids(values: tuple[UUID, ...]) -> tuple[UUID, ...]:
+    # JSON hands a list of strings back; the codec coerces a bare ``UUID`` hint
+    # and nothing inside a tuple.
+    return tuple(UUID(str(value)) for value in values)
+
+
+@dataclass(frozen=True)
+class ClubPayoutDecided:
+    """**The club's money for these games is its own now**: every one is over
+    — played, or called off and given back — and nothing about its money is
+    still on its way, so ``amount_grosze`` — what the players paid, less what
+    was given back, less the card fees — is to go to the club's bank. ``day``
+    is the club day (``YYYY-MM-DD``) whose close decided it."""
+
+    payout_id: UUID
+    club_id: UUID
+    account_id: str
+    day: str
+    amount_grosze: int
+    game_ids: tuple[UUID, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "game_ids", _uuids(self.game_ids))
+
+
+@dataclass(frozen=True)
+class ClubPayoutSent:
+    """The provider took the payout: ``provider_payout_id`` is on its way to
+    the club's bank, expected by ``arrives_at``."""
+
+    payout_id: UUID
+    club_id: UUID
+    provider_payout_id: str
+    arrives_at: datetime
     occurred_at: datetime
