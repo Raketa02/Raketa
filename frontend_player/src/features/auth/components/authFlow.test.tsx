@@ -13,7 +13,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
-import { Text } from 'react-native';
+import { KeyboardAvoidingView, Text } from 'react-native';
 
 import {
   beginSession,
@@ -93,6 +93,24 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // Signing in
 // ---------------------------------------------------------------------------
+
+/**
+ * #529: on iOS the keyboard's height changes while it is up — its bar is swapped per field and on
+ * *Show* — and a form centred in what a `KeyboardAvoidingView` left jumped with every swap. The
+ * scroll takes the keyboard as a native inset instead, so the form is laid out once.
+ */
+describe('the keyboard, on the sign-in and sign-up screens', () => {
+  it.each([
+    ['sign-in', <SignInScreen key="in" />],
+    ['sign-up', <SignUpScreen key="up" />],
+  ])('is an inset on %s’s scroll, never a re-layout of the form', (_name, element) => {
+    renderScreen(element);
+
+    const frame = screen.getByTestId('auth-frame');
+    expect(frame.props.automaticallyAdjustKeyboardInsets).toBe(true);
+    expect(screen.UNSAFE_queryAllByType(KeyboardAvoidingView)).toHaveLength(0);
+  });
+});
 
 describe('signing in', () => {
   it('opens a session and stores the credentials', async () => {

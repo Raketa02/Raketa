@@ -98,7 +98,7 @@ export interface ShellScreenProps {
    * ([#469](https://github.com/Raketa02/Raketa/issues/469)), and its *Save* is pinned in the
    * action slot under the scroller, which on iOS is exactly where the keyboard goes. So the two
    * are wrapped in `KeyboardAvoidingView` under `KEYBOARD_AVOIDANCE` — the value
-   * `SocialStepLayout`, the sign-in and the conversation already use — and taps on the action
+   * `SocialStepLayout` and the conversation use — and taps on the action
    * land while the keyboard is up. Off everywhere else, where it would do nothing.
    */
   readonly avoidsKeyboard?: boolean;

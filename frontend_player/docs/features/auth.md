@@ -98,7 +98,7 @@ confirmation (`/forgot-password/sent`), the email and the code (`/forgot-passwor
 _Set a new password_ — by a claimed code at `/forgot-password/new-password`, or by the email's
 link at `/reset/<token>`, the path the email's button names and the one #520 opens from an
 incoming link. **Nothing is drawn twice**: the sign-in screen was taken apart into `AuthFrame` (the
-paper, the keyboard's avoidance, the scroll, _RAKETA_ over the title, and an optional `lead`),
+paper, the scroll that keeps a form reachable over the keyboard, _RAKETA_ over the title, and an optional `lead`),
 `EmailField` (the five props that make a box an email box), `AuthLink` (the 44pt text link, by
 `href` or by `onPress`) and `PasswordPairFields` (sign-up's two revealable boxes and the rule), and
 sign-in, sign-up and the four new screens are each those pieces asking one thing. The route paths
@@ -107,6 +107,19 @@ sentences are `resetPresentation`'s, and the words sign-in and sign-up still wro
 `authPresentation` on the way past — a label a piece draws on six screens is copy with six readers.
 The text link's press is 6.6's `.7`; the two screens it came from drew `.6`, which that table does
 not have.
+
+**The keyboard moves the scroll, never the form** (#529, 2026-10-02; `AuthFrame`). On iOS every tap
+that moved focus or pressed _Show_ with the keyboard up made the screen jump. The form was centred in
+what a `KeyboardAvoidingView` left above the keyboard, and iOS changes the keyboard's height while it
+is up: the bar over the keys is swapped per field (the email's suggestions, saved passwords, _Use
+Strong Password_) and again when a password's secure entry is turned off or on. Each swap re-padded the
+view from JavaScript and slid the centred form by half the difference. Android never did it: its
+avoidance is the window's, and `KEYBOARD_AVOIDANCE` is off there. **The scroll now takes the keyboard
+natively** (`automaticallyAdjustKeyboardInsets`): the form is laid out once against the whole screen,
+the keyboard changes only the scroll's bottom inset on its own curve, and the scroll moves only as far
+as it must to keep the field being typed in above the keys. The cost on a short screen: _Sign in_ may
+sit under the keys, where the password's _Go_ sends the form and a drag puts the keyboard away. **Not
+yet seen on a device.**
 
 **The confirmation says one thing to everybody.** The server answers `202` for an address with an
 account, without one, and past its silent three-an-hour throttle, so the screen after _Send_ is the
