@@ -12,7 +12,7 @@
  * **Switching to Anyone is asked first** (#529): a save that turns People I approve into Anyone
  * opens a sheet saying what it does — *anyone can join, including players with pending requests* —
  * and only its *Save* sends it; closing it keeps the form as it is, unsaved. Any other save goes at
- * once. The *Who can join* card carries no note here: the Owner is past choosing what a group is.
+ * once. The sheet is `OpenToAnyoneSheet`, which an official group's settings open too. The *Who can join* card carries no note here: the Owner is past choosing what a group is.
  *
  * **Switching to Anyone shows the people it admitted** (story 76): everybody waiting is in at once,
  * and the answer says who, in the order they asked, as a card under the button — *LET IN · 2*,
@@ -25,12 +25,12 @@
 
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { codeMessage } from '@/shared/errors';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { behindOverlay, BottomSheet, Button, Note, ScreenHeader, theme } from '@/shared/ui';
+import { behindOverlay, Button, Note, ScreenHeader, theme } from '@/shared/ui';
 
 import type { Group } from '../domain/group';
 import { detailsUnchanged } from '../domain/groupInfo';
@@ -42,6 +42,7 @@ import { AdmittedCard } from './AdmittedCard';
 import { GroupNameCard, WhoCanJoinCard } from './GroupFormCards';
 import { GROUPS_COPY } from './groupsCopy';
 import { EDIT_REFUSALS } from './groupsPresentation';
+import { OpenToAnyoneSheet } from './OpenToAnyoneSheet';
 import { ReadFailure } from './ReadFailure';
 
 const COPY = GROUPS_COPY.editGroup;
@@ -135,18 +136,12 @@ function EditGroupForm({ group }: { readonly group: Group }) {
         {admitted.length > 0 ? <AdmittedCard people={admitted} /> : null}
       </ScrollView>
 
-      <BottomSheet
+      <OpenToAnyoneSheet
         visible={asking}
         onClose={() => setAsking(false)}
-        title={COPY.anyoneTitle}
-        closeLabel={COPY.anyoneClose}
+        onConfirm={confirm}
         returnFocusTo={saveButton}
-      >
-        <Text style={s.sheetBody}>{COPY.anyoneBody}</Text>
-        <View style={s.sheetAct}>
-          <Button label={COPY.save} size="lg" onPress={confirm} />
-        </View>
-      </BottomSheet>
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -159,7 +154,4 @@ const s = StyleSheet.create({
     paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
-  // The exit sheet's measures (`ExitDoor`): its line under the title, and its act under that.
-  sheetBody: { ...theme.type.tiny, color: theme.color.ink, paddingTop: theme.space.sm },
-  sheetAct: { paddingTop: theme.space.md },
 });

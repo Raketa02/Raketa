@@ -17,7 +17,7 @@ import { WHATSAPP_SIZE, type OfficialGroupsClub } from '../domain/officialGroup'
 import { whatsAppSizeFrom } from '../schemas/officialGroupForm';
 
 import { ADMINISTRATOR_COPY } from './administratorCopy';
-import { sportsCardLine, whatsAppSizeRule } from './administratorPresentation';
+import { whatsAppSizeRule } from './administratorPresentation';
 
 const COPY = ADMINISTRATOR_COPY.newGroup;
 
@@ -60,7 +60,8 @@ export function WhatsAppSizeCard({
 /**
  * **Sports** — one chip per sport **the club offers**, any number ticked: the only sports an
  * official group may declare. Until the club is read there is nothing to offer, and `unread` says
- * why where the read failed.
+ * why where the read failed. The chips stand alone: the line under them, *The sports Ogrody 33
+ * offers. Players see this group's games in them.*, went at the product owner's ask (#529).
  */
 export function SportsCard({
   club,
@@ -83,20 +84,17 @@ export function SportsCard({
       {club === undefined ? (
         unread
       ) : (
-        <>
-          <View style={s.chips}>
-            {club.sports.map((sport) => (
-              <Chip
-                key={sport}
-                label={sportLabel(sport)}
-                dot={sportColour(sport)}
-                selected={ticked.includes(sport)}
-                onPress={() => onToggle(sport)}
-              />
-            ))}
-          </View>
-          <Text style={s.note}>{sportsCardLine(club.name)}</Text>
-        </>
+        <View style={s.chips}>
+          {club.sports.map((sport) => (
+            <Chip
+              key={sport}
+              label={sportLabel(sport)}
+              dot={sportColour(sport)}
+              selected={ticked.includes(sport)}
+              onPress={() => onToggle(sport)}
+            />
+          ))}
+        </View>
       )}
       {refused === undefined ? null : (
         <Text accessibilityRole="alert" style={s.refused}>
@@ -117,7 +115,6 @@ const s = StyleSheet.create({
   // `flab` labels a control you are about to operate — New group's card labels, drawn the same.
   label: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs },
-  note: { ...theme.type.tiny, color: theme.color.muted },
   // The field's own error line, for the one card that is not a field: 6.13's words, in `red`.
   refused: { ...theme.type.tiny, color: theme.color.red },
 });

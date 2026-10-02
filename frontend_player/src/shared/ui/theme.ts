@@ -801,7 +801,7 @@ const size = {
    *  `stackOverlap` how far each slides under the one before it, about a third, and `stackRing`
    *  the card-coloured ring that keeps one face from merging into the next. */
   groupPage: { seat: 34, filterPad: 9, stackFace: 28, stackOverlap: 9, stackRing: 2 },
-  /** THE ARRIVED RING — the players card on an official group's page in the administrator area
+  /** THE ARRIVED RING — the members card on an official group's page in the administrator area
    *  (#529): how much of the group has arrived, the players over the group size, round the
    *  percentage it draws inside. A drawn object on `surface`, the ring's light-card sibling: a
    *  `line2` track and a `mint` arc (4,07:1 on white, past 1.4.11's 3:1) — the club website's

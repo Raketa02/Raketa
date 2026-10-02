@@ -28,7 +28,7 @@ import {
   type SearchedClub,
   type SportLevel,
 } from '../domain/group';
-import { adminTagged, type GroupExit } from '../domain/groupInfo';
+import { adminTagged, type GroupExit, type GroupRunner } from '../domain/groupInfo';
 import type { GroupKind } from '../domain/vocabulary';
 import type { GamesCard } from '../domain/groupPage';
 import type { GroupAction } from '../domain/groupRules';
@@ -493,6 +493,44 @@ export function memberRowLabel(sport: Sport, member: MemberRowPerson): string {
 /** *Opens their record* — what a tap on a row does. The row's label already says whose. */
 export function openRecordHint(member: Pick<MemberRowPerson, 'you'>): string {
   return member.you ? GROUPS_COPY.members.openYours : GROUPS_COPY.members.openTheirs;
+}
+
+/** *Marta Wójcik* — who runs an official group, whole; the club's name while nobody does. */
+export function runnerName(runner: GroupRunner): string {
+  return runner.kind === 'administrator' ? runner.name : runner.clubName;
+}
+
+/**
+ * *runs this group for Ogrody 33* — the line under who runs it, or that nobody does now: lower case,
+ * as Info's *approves joins* line is drawn.
+ */
+export function runnerLine(runner: GroupRunner): string {
+  return runner.kind === 'administrator'
+    ? `runs this group for ${runner.clubName}`
+    : GROUPS_COPY.members.noAdministrator;
+}
+
+/**
+ * *Marta Wójcik, admin, runs this group for Ogrody 33* — who runs it, spoken in the order it is
+ * drawn: the name, the admin tag, the line. *Ogrody 33, no administrator right now* while nobody
+ * does, which draws no tag.
+ */
+export function runnerLabel(runner: GroupRunner): string {
+  const admin = runner.kind === 'administrator' ? [GROUPS_COPY.members.admin] : [];
+  return [runnerName(runner), ...admin, runnerLine(runner)].join(', ');
+}
+
+/**
+ * **A club's two letters, for its tile** (club 5–7: *O3* for Ogrody 33) — the administrator area's
+ * profile switcher, and Members' who-runs-it. A club is served no monogram of its own — a group's
+ * letters are cut by the backend (ADR-0183 §5), a club's are not — so they are taken here: the
+ * first character of each of the first two words, or the first two of a name that is one word.
+ * Drawn as they come, never re-cased, as a group's are.
+ */
+export function clubLetters(clubName: string): string {
+  const [first = '', second] = clubName.trim().split(/\s+/);
+  const initial = (word: string) => [...word][0] ?? '';
+  return second === undefined ? [...first].slice(0, 2).join('') : initial(first) + initial(second);
 }
 
 /** *Let in · 2* — who a switch to Anyone admitted, on Edit group after the save. */

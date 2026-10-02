@@ -1,6 +1,6 @@
 /**
  * **Members of an official group, for its Administrator** — pushed over the group's page from the
- * players card (#529). It is the member's own screen (`groups`' `AdministeredMembersScreen`): the
+ * members card (#529). It is the member's own screen (`groups`' `AdministeredMembersScreen`): the
  * same header, rows and record sheet, the pill listing the sports the group declares. They are this
  * area's read of the group, already in hand from the page it was opened from.
  */

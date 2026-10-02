@@ -119,8 +119,9 @@ Where you play · Who you play with · Game suggestions), **On your card** (How 
 Photos · Tags · Intro · Name). Three groups because the rows answer three questions — what has
 the platform concluded about me, what does the matcher read when it looks for a game, what does
 a stranger read about me — and the fourth, the account, is not asked on this tab (§9). **The
-shell owns the tab's own words and composes the rest**: the title, the eyebrow _Player profile_
-and the three group titles are `youCopy`'s, and every row from _Skill passport_ down is the
+shell owns the tab's own words and composes the rest**: the title and the three group titles are
+`youCopy`'s — the eyebrow _Player profile_ over the title went at the product owner's ask (#529,
+2026-10-02), since the bar under the screen already says _You_ — and every row from _Skill passport_ down is the
 feature's whose fact it is — `player_record`'s two read-only facts and the door to the sheet,
 `player_profile`'s declarations, `auth`'s name — each reading its own fact, saying it in a live
 line, and pushing its own screen. What this file decides is which row sits in which group and in
@@ -132,7 +133,10 @@ up is this screen's state and both are handed the same press; the sheet is a sib
 screen it covers, as every overlay is. **`PLACEHOLDER_COPY`, `PlaceholderTab` and
 `PlaceholderScreen` are gone**, not emptied: the line _your profile, your radius, your week — not
 built yet_ was the last citation in the table, every column the bar draws has a screen behind it
-now, and an empty union kept for a case that cannot recur is a shape and not a fact.
+now, and an empty union kept for a case that cannot recur is a shape and not a fact. **_Sign out_ is pinned** (#529, 2026-10-02): the account panel is the shell's `action`, under
+the scroller and above the bar, so it is at the tab's foot in one place however many rows are over
+it — the administrator's You tab pins it the same way — and `AccountPanel` puts no step of its own
+above the button, since whoever pins it spaces the slot.
 `shellCopy.test.ts` keeps the two refusals over every sentence the shell still writes, the group
 titles included, and asserts the placeholder's line absent so it cannot come back as a
 gap-filler. **The pushed screens take the push transition**: `TabShell` names the twelve

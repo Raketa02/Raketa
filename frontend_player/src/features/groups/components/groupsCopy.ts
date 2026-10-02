@@ -145,6 +145,8 @@ export const GROUPS_COPY = {
     /** A row's hint: a tap opens the record, and the row's label already says whose. */
     openYours: 'Opens your record',
     openTheirs: 'Opens their record',
+    /** Who runs an official group, where nobody does now: the club holds it (ADR-0183 §3). */
+    noAdministrator: 'no administrator right now',
   },
   /** Edit group — the New group form's two cards and Save (no mock; #514). */
   editGroup: {

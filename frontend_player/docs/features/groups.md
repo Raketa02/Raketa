@@ -346,7 +346,7 @@ route admits on (ADR-0159's 2026-09-30 amendment); before it, anybody the reader
 by a search, a challenge or a game met _This record isn't available_ (#529 F1).
 
 **An official group's Administrator opens the same Members** (#529, the product owner's ask) — from
-the players card on the group's page in the administrator area, at
+the members card on the group's page in the administrator area, at
 `/administrator/[clubId]/group/[groupId]/members` (`AdministeredMembersScreen`). The header, the
 rows, the tags and the record sheet are this screen's; two things differ, because running a group
 is not playing in it. **The pill lists the sports the group declares** (`useDeclaredSport`), not the
@@ -361,6 +361,25 @@ says why in its caller's words** (`refused`, by code): a member's _This group is
 the page's own, and the Administrator's _This isn't a group you run any more._ — where it had fallen
 through to the recovery's _Something went wrong at our end_, which blamed the server for a refusal.
 
+**Members always says who runs the group** (#529, the product owner's ask, 2026-10-02). A member
+could not find who runs an official group: its Administrator need not play in it, so was on no
+list, where a player group's Owner is a member and leads it. Knowing who answers for the group —
+who approves joins, who to go to — is worth having at any moment, so **a card over the list names
+them** (`RunnerCard`, `runnerApart`): the club's tile (`ClubTile`, the administrator profile's own
+face, lent from here since), their whole Name and the **admin** tag, over _runs this group for
+Ogrody 33_ in Info's lower-case line; and while the group **needs an administrator**, the club over
+_no administrator right now_. **Nobody is drawn twice**: the card is left out wherever the sport's
+list carries the Administrator's own admin-tagged row, which says it better, and for a reader who
+runs the group. It is one element spoken as drawn, **not a button** — an Administrator need not play,
+so there may be no record, and the group's read carries a name and no id — and **not a member**, so
+_Members · N_ leaves it out. It is drawn once the list is in, so a runner whose row is on it never
+flashes first. Nothing new crosses the wire: the read has carried the name since #510. **Two calls
+are the product owner's:** the card names the Administrator to a member who has a block with them,
+whose row the list hides — who runs the group is the group's fact, not a partner listed, and the
+server sends the name either way; and **a player group's Owner is still not named on a sport they
+are not rated in**, where they are on no list — closing that needs the Owner's name on the group's
+read, a backend change. **Not yet seen on a device.**
+
 **What this record departs from, and what is open.** The way out is 6.1's `secondary` where play
 57–60 draw it in dark red: `red` is _ended badly_ and coral is closed at six. Club 20 draws the
 Levels in sans; they are mono, as every Level is. Both are in design-system Part 16 for the product
@@ -372,7 +391,7 @@ create do; no act here says so beside itself yet. **Nothing here has been seen o
 official group is a Group, so the tile, the dots, the group forms' two cards, the request row, a
 failed read, the row face, the stacked faces and the words they share are exported for that one
 caller, and the dependency points one way. Four changes made the lending possible without changing
-what this feature draws: **the members row's faces left `InfoTab`** for `FaceStack`, which the players
+what this feature draws: **the members row's faces left `InfoTab`** for `FaceStack`, which the members
 card on an official group's page draws too; **the request row left `WantToJoin`** for `RequestRow`,
 which answers nothing itself — the two taps are props, so an Owner's queue and an Administrator's each
 answer through their own routes, as #514's handover suggested; **_Who can join_ can be drawn without its _no sport to pick_ note**
@@ -380,7 +399,9 @@ answer through their own routes, as #514's handover suggested; **_Who can join_ 
 error**, for _Same name as the WhatsApp group_ and a refusal said on the field. The share sentence is
 the administrator's WhatsApp post too, as #513 already wrote it for. **Edit group's _LET IN · N_ card left the
 screen** for `AdmittedCard` ([#517](https://github.com/Raketa02/Raketa/issues/517)), which an official
-group's settings draw after the same switch to Anyone.
+group's settings draw after the same switch to Anyone. **Edit group's _Let anyone join?_ sheet left
+the screen** for `OpenToAnyoneSheet` (#529, 2026-10-02), which an official group's settings open
+before the same switch, so an Administrator is asked in an Owner's words.
 
 **An official group is a Group the player meets as one, told apart by what it plays and who
 answers** ([#519](https://github.com/Raketa02/Raketa/issues/519), PRD #500 stories 40, 56, 57;
@@ -391,8 +412,10 @@ the ticket is the page's. **Whether it needs a yes** is the row's line in Join a
 (`approverLine`): since #529 _Needs approval_ whoever answers — its Administrator, or the club while the group
 **needs an administrator** (`administrator_name` null) — and _anyone can join_ on an Anyone group of
 either kind. Info's line reads _the
-administrator approves joins_: the group's read names nobody and cannot tell a group that needs
-one, as a member reads _the owner_ on a player group.
+administrator approves joins_, as a member reads _the owner_ on a player group. The group's read
+names nobody at #519; it has carried `administrator_name` and `is_administrator` since #510, and
+`Group` maps them for Members' who-runs-it (#529, below) — Info's line still says _the
+administrator_.
 
 **Its name carries the official mark** (`OfficialMark`, #529): in both searches, where the
 2026-09-27 mocks drew an _official_ tag, and beside the name in its page's header. A twelve-point

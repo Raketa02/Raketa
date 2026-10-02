@@ -9,15 +9,19 @@
  * newest created first — or, before the first, one dark card saying what the job is (club 8, 9).
  * **Every state has its drawing**: nothing while the first read is on its way, and a failed read
  * says why and offers the retry, with the button still there to press.
+ *
+ * **A pull reads the list again** (#529), as the player's Groups list does: a request left or a
+ * player arrived on another phone is on the cards when the spinner stops, rather than on the next
+ * return to the app once the thirty-second read has gone stale.
  */
 
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ReadFailure } from '@/features/groups/types';
+import { ReadFailure, usePull } from '@/features/groups/types';
 import { Button, DarkCard, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
 
-import { useAdministeredGroups } from '../hooks/useOfficialGroups';
+import { useAdministeredGroups, useAdministeredGroupsReread } from '../hooks/useOfficialGroups';
 
 import { ADMINISTRATOR_COPY } from './administratorCopy';
 import { newOfficialGroupRoute } from './administratorRoutes';
@@ -27,12 +31,25 @@ export function AdministratorGroupsScreen({ clubId }: { readonly clubId: string 
   const COPY = ADMINISTRATOR_COPY.groups;
   const read = useAdministeredGroups(clubId);
   const groups = read.data?.groups;
+  const { refreshing, pull } = usePull(useAdministeredGroupsReread(clubId));
 
   return (
     <TopSafeArea style={s.screen}>
       <ScreenHeader title={COPY.title} />
 
-      <ScrollView contentContainerStyle={s.content}>
+      <ScrollView
+        testID="administered-groups"
+        contentContainerStyle={s.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={pull}
+            tintColor={theme.color.muted}
+            colors={[theme.color.muted]}
+            progressBackgroundColor={theme.color.paper}
+          />
+        }
+      >
         {read.error !== null && groups === undefined ? (
           <ReadFailure error={read.error} onRetry={() => void read.refetch()} />
         ) : null}

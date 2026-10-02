@@ -9,6 +9,7 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { clearStoredTokens, getSessionStatus, resetSessionStatus } from '@/shared/lib/auth';
@@ -146,7 +147,7 @@ describe('the entry gate', () => {
 });
 
 describe('the Groups tab', () => {
-  // The bar under the screen already says whose area it is; the You tab keeps the eyebrow (#529).
+  // The bar under the screen already says whose area it is (#529); the You tab's went too.
   it('is titled Groups, with nothing over the title', async () => {
     await launchAsAdministrator();
 
@@ -185,8 +186,34 @@ describe('the Groups tab, with groups', () => {
     await waitFor(() =>
       expect(screen).toHavePathname(`/administrator/${CLUB_ID}/group/${O3_CLUB_ID}`),
     );
-    expect(await screen.findByText('Ogrody 33 · Official')).toBeTruthy();
     expect(await screen.findByRole('header', { name: 'Ogrody 33 Club' })).toBeTruthy();
+    // #529: no eyebrow over the name — every group here is the club's, and official.
+    expect(screen.queryByText('Ogrody 33 · Official')).toBeNull();
+  });
+
+  // #529: somebody asking on another phone reached the tab only on a refocus, thirty seconds on.
+  it('reads the groups again on a pull, and the spinner stops once it has', async () => {
+    const server = await launchAsAdministrator([O3_CLUB_GROUP]);
+    const list = () => screen.getByTestId('administered-groups');
+    expect(
+      within(await screen.findByRole('button', { name: /^Ogrody 33 Club,/ })).getByText(
+        '1 waiting',
+      ),
+    ).toBeTruthy();
+
+    server.ask(O3_CLUB_ID, KUBA);
+    await act(async () => {
+      fireEvent(within(list()).UNSAFE_getByType(RefreshControl), 'refresh');
+    });
+
+    expect(
+      within(await screen.findByRole('button', { name: /^Ogrody 33 Club,/ })).getByText(
+        '2 waiting',
+      ),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(within(list()).UNSAFE_getByType(RefreshControl).props.refreshing).toBe(false),
+    );
   });
 
   it('says why when the list cannot be read, and reads it again', async () => {
@@ -254,6 +281,8 @@ describe('New official group', () => {
     expect(screen.getByRole('button', { name: 'Squash' })).toBeTruthy();
     // Ogrody 33 offers no badminton, so no group of its may declare it.
     expect(screen.queryByRole('button', { name: 'Badminton' })).toBeNull();
+    // #529: the chips stand alone, with no line under them.
+    expect(screen.queryByText(/offers\. Players see this group/)).toBeNull();
   });
 
   it('creates the group and opens its page, with the toast', async () => {
@@ -376,6 +405,24 @@ async function openGroup(setup: GroupSetup, setups: readonly GroupSetup[] = [set
 }
 
 describe('an official group’s page', () => {
+  // #529: a request left since the page was read waited for a return to it, thirty seconds on.
+  it('reads the group again on a pull, and the spinner stops once it has', async () => {
+    const server = await openGroup(O3_CLUB_GROUP);
+    const page = () => screen.getByTestId('official-group-page');
+    expect(await screen.findByRole('header', { name: 'Want to join · 1' })).toBeTruthy();
+
+    server.ask(O3_CLUB_ID, KUBA);
+    await act(async () => {
+      fireEvent(within(page()).UNSAFE_getByType(RefreshControl), 'refresh');
+    });
+
+    expect(await screen.findByRole('header', { name: 'Want to join · 2' })).toBeTruthy();
+    expect(screen.getByLabelText(/^Kuba Wróbel,/)).toBeTruthy();
+    await waitFor(() =>
+      expect(within(page()).UNSAFE_getByType(RefreshControl).props.refreshing).toBe(false),
+    );
+  });
+
   it('draws the link card with Share link and Copy link, and never a posted tag', async () => {
     await openGroup(O3_CLUB_GROUP);
 
@@ -409,14 +456,17 @@ describe('an official group’s page', () => {
     await waitFor(() => expect(toasts()).toEqual([['Link copied', 'ok']]));
   });
 
-  it('counts the players, stacks their faces, and rings how much of the group has arrived', async () => {
+  it('counts the members, stacks their faces, and rings how much of the group has arrived', async () => {
     await openGroup(OPEN_PLAY_GROUP);
 
-    const card = screen.getByRole('button', { name: '2 players, 7% of the group size' });
+    const card = screen.getByRole('button', { name: '2 members, 7% of the group size' });
     const faces = within(card)
-      .queryAllByTestId(/^players-face-/, { includeHiddenElements: true })
-      .map((node) => (node.props.testID as string).replace('players-face-', ''));
+      .queryAllByTestId(/^members-face-/, { includeHiddenElements: true })
+      .map((node) => (node.props.testID as string).replace('members-face-', ''));
     expect(faces).toEqual([MICHAL.id, TOMEK.id]);
+    // Members, as Info's card says it to a member (#529) — they were club 18's *players*.
+    expect(within(card).getByText('2 members')).toBeTruthy();
+    expect(screen.queryByText(/\bplayers?\b/)).toBeNull();
     expect(within(card).getByText('7%', { includeHiddenElements: true })).toBeTruthy();
     // The rule and the share in words went with the line; the list of join dates with the tap.
     expect(screen.queryByText(/of the WhatsApp group/)).toBeNull();
@@ -428,8 +478,8 @@ describe('an official group’s page', () => {
   it('draws an empty ring under nobody yet', async () => {
     await openGroup({ ...O3_CLUB_GROUP, players: [], requests: [] });
 
-    expect(screen.getByRole('button', { name: '0 players, 0% of the group size' })).toBeTruthy();
-    expect(screen.queryAllByTestId(/^players-face-/, { includeHiddenElements: true })).toEqual([]);
+    expect(screen.getByRole('button', { name: '0 members, 0% of the group size' })).toBeTruthy();
+    expect(screen.queryAllByTestId(/^members-face-/, { includeHiddenElements: true })).toEqual([]);
     expect(screen.queryByTestId('arrived-arc', { includeHiddenElements: true })).toBeNull();
     expect(screen.queryByText(/^Want to join/)).toBeNull();
   });
@@ -441,7 +491,7 @@ describe('an official group’s page', () => {
     }));
     await openGroup({ ...OPEN_PLAY_GROUP, size: 6, players: crowd });
 
-    expect(screen.getByRole('button', { name: '7 players, 117% of the group size' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '7 members, 117% of the group size' })).toBeTruthy();
     expect(screen.getByText('+2')).toBeTruthy();
     expect(screen.getByText('117%', { includeHiddenElements: true })).toBeTruthy();
   });
@@ -453,7 +503,7 @@ describe('an official group’s page', () => {
   });
 });
 
-describe('Members, from the players card', () => {
+describe('Members, from the members card', () => {
   const membersPath = (groupId: string) => `/api/v1/groups/${groupId}/members`;
 
   /** The members read, for one sport — the server's rows for the Administrator who runs it. */
@@ -478,7 +528,7 @@ describe('Members, from the players card', () => {
 
   async function openMembers(setup: GroupSetup) {
     await openGroup(setup);
-    fireEvent.press(screen.getByRole('button', { name: /^\d+ players?, / }));
+    fireEvent.press(screen.getByRole('button', { name: /^\d+ members?, / }));
     await waitFor(() =>
       expect(screen).toHavePathname(`/administrator/${CLUB_ID}/group/${setup.id}/members`),
     );
@@ -553,17 +603,17 @@ describe('Want to join', () => {
     expect(screen.getByLabelText('Michał Rogalski, Padel 2,44 · Tennis 2,60')).toBeTruthy();
   });
 
-  it('admits the person approved, whose face comes first on the players card', async () => {
+  it('admits the person approved, whose face comes first on the members card', async () => {
     await openGroup(O3_CLUB_GROUP);
 
     fireEvent.press(screen.getByRole('button', { name: 'Approve Michał Rogalski' }));
 
     await waitFor(() => expect(screen.queryByText(/^Want to join/)).toBeNull());
-    const card = await screen.findByRole('button', { name: '4 players, 8% of the group size' });
-    const [newest] = within(card).queryAllByTestId(/^players-face-/, {
+    const card = await screen.findByRole('button', { name: '4 members, 8% of the group size' });
+    const [newest] = within(card).queryAllByTestId(/^members-face-/, {
       includeHiddenElements: true,
     });
-    expect(newest?.props.testID).toBe(`players-face-${MICHAL.id}`);
+    expect(newest?.props.testID).toBe(`members-face-${MICHAL.id}`);
     expect(
       transport.requestsTo('POST', `${GROUPS_PATH}/${O3_CLUB_ID}/requests/${MICHAL.id}/approve`),
     ).toHaveLength(1);
@@ -584,7 +634,7 @@ describe('Want to join', () => {
     expect(
       transport.requestsTo('POST', `${GROUPS_PATH}/${O3_CLUB_ID}/requests/${KUBA.id}/decline`),
     ).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /^3 players,/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^3 members,/ })).toBeTruthy();
   });
 
   it('takes the row before the answer lands', async () => {

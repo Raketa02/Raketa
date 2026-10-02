@@ -16,6 +16,12 @@
  * flight, never retried, and the screen stays. The answer is the group as its settings left it,
  * written under the page's key; the name field takes the name as the server recorded it.
  *
+ * **Switching to Anyone is asked first, as an Owner is asked** (#529, the product owner's ask): a
+ * save that turns *People I approve* into *Anyone* opens `groups`' own sheet — *Let anyone join?*,
+ * *Selecting Anyone allows anyone to join the group, including players with pending requests.* — and
+ * only its *Save* sends the form; *Keep People I approve* keeps it as it is, unsaved. Any other save
+ * goes at once.
+ *
  * **Switching to Anyone shows who it admitted**: everybody waiting is in at once, and the answer says
  * who, in the order they asked — `groups`' *LET IN · 2* card, under the button, until the next save.
  *
@@ -25,13 +31,19 @@
  */
 
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AdmittedCard, GroupNameCard, ReadFailure, WhoCanJoinCard } from '@/features/groups/types';
+import {
+  AdmittedCard,
+  GroupNameCard,
+  OpenToAnyoneSheet,
+  ReadFailure,
+  WhoCanJoinCard,
+} from '@/features/groups/types';
 import { codeMessage } from '@/shared/errors';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { Button, Note, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
+import { behindOverlay, Button, Note, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { OfficialGroup } from '../domain/officialGroup';
@@ -89,12 +101,17 @@ function SettingsForm({
   const [sports, setSports] = useState<readonly Sport[]>(group.sports);
   const save = useSaveSettings(clubId, group.id);
 
+  const [asking, setAsking] = useState(false);
+  const saveButton = useRef<View>(null);
+
   const settings = officialGroupSettingsFrom(
     { name, joinPolicy, whatsAppSize, sports },
     group.homeClub.sports,
   );
   const unchanged = settings !== undefined && settingsUnchanged(settings, group);
   const admitted = save.data?.admitted ?? [];
+  // What the group is now against what the form says — Edit group's rule, for the same switch.
+  const opensToAnyone = group.joinPolicy === 'PEOPLE_I_APPROVE' && joinPolicy === 'ANYONE';
 
   // A refusal belongs to the form as it was sent; the next change to any field is a new form.
   const edited =
@@ -107,11 +124,25 @@ function SettingsForm({
   const refused = formRefusal(save.error);
   const onField = (name: FormField) => (refused?.field === name ? refused.words : undefined);
 
-  function submit() {
+  function send() {
     if (settings === undefined || unchanged) return;
     // The server collapses what the form cannot see — runs of spaces — so the field takes the name
     // as saved, and *Saved* is true of what is on screen.
     save.mutate(settings, { onSuccess: ({ group: saved }) => setName(saved.name) });
+  }
+
+  function submit() {
+    if (settings === undefined || unchanged) return;
+    if (opensToAnyone) {
+      setAsking(true);
+      return;
+    }
+    send();
+  }
+
+  function confirm() {
+    setAsking(false);
+    send();
   }
 
   return (
@@ -143,15 +174,19 @@ function SettingsForm({
           refused={onField('sports')}
         />
 
-        <Button
-          label={unchanged ? COPY.saved : COPY.save}
-          variant={unchanged ? 'settled' : 'primary'}
-          size="xl"
-          disabled={settings === undefined || unchanged}
-          busy={save.isPending}
-          busyLabel={COPY.saving}
-          onPress={submit}
-        />
+        {/* Hidden from a screen reader while the sheet is up: one label on the button and on the
+            sheet's act, so the first press reaches the button and the second the act. */}
+        <View ref={saveButton} {...behindOverlay(asking)}>
+          <Button
+            label={unchanged ? COPY.saved : COPY.save}
+            variant={unchanged ? 'settled' : 'primary'}
+            size="xl"
+            disabled={settings === undefined || unchanged}
+            busy={save.isPending}
+            busyLabel={COPY.saving}
+            onPress={submit}
+          />
+        </View>
 
         {refused !== undefined && refused.field === undefined ? (
           <Note variant="coral" accessibilityRole="alert">
@@ -161,6 +196,13 @@ function SettingsForm({
 
         {admitted.length > 0 ? <AdmittedCard people={admitted} /> : null}
       </ScrollView>
+
+      <OpenToAnyoneSheet
+        visible={asking}
+        onClose={() => setAsking(false)}
+        onConfirm={confirm}
+        returnFocusTo={saveButton}
+      />
     </KeyboardAvoidingView>
   );
 }

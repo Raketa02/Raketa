@@ -5,16 +5,17 @@
  * administrator's rows in it:
  *
  * ```
- * OGRODY 33 · ADMINISTRATOR     the area's eyebrow
  * Marta Nowak                   the account's name — club 8's header, which club 17 moved here
  * GROUP SETTINGS                one row per official group she runs, opening its settings
  * PLAYING                       Start playing — only while the account does not act as a player
- * Sign out
+ * ─────────────
+ * Sign out                      pinned under the page, above the bar
  * ```
  *
- * **The header is club 8's**: the club and the role over the person's name. PRD #500 gave the Groups
- * tab club 17's *Groups* in its place, and left the name to this tab — the one that is about the
- * account. **The switcher chip is its right slot** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+ * **The header is the person's name**, club 8's, which PRD #500 moved here from the Groups tab — the
+ * one tab about the account. Club 8's *OGRODY 33 · ADMINISTRATOR* over it went at the product
+ * owner's ask (#529, 2026-10-02), as the Groups tab's had: the switcher chip beside the name and
+ * the area's own bar already say whose profile it is. **The switcher chip is its right slot** ([#518](https://github.com/Raketa02/Raketa/issues/518),
  * club 7), drawn only for an account with a second profile to switch to.
  *
  * **A group's row is the You tab's door row**: a glyph, the group's name, and the one of its settings
@@ -29,7 +30,8 @@
  * account plays.
  *
  * ***Sign out* is the account's**, the player You tab's foot (`AccountPanel`): an account that only
- * administers has no other screen with a way out.
+ * administers has no other screen with a way out. **It is pinned under the page**, as on the
+ * player's You tab, so it is always at the foot however many groups are listed over it (#529).
  */
 
 import { router } from 'expo-router';
@@ -40,18 +42,16 @@ import { AccountPanel, useCurrentUser } from '@/features/auth/types';
 import { ReadFailure } from '@/features/groups/types';
 import { Card, DoorRow, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
 
-import { useAreaClubName } from '../hooks/useAreaAccess';
 import { useAdministeredGroups } from '../hooks/useOfficialGroups';
 
 import { ADMINISTRATOR_COPY } from './administratorCopy';
-import { administratorEyebrow, settingsRowLine } from './administratorPresentation';
+import { settingsRowLine } from './administratorPresentation';
 import { groupSettingsRoute, startPlayingRoute } from './administratorRoutes';
 import { ProfileChip } from './ProfileChip';
 
 const COPY = ADMINISTRATOR_COPY.you;
 
 export function AdministratorYouScreen({ clubId }: { readonly clubId: string }) {
-  const clubName = useAreaClubName(clubId);
   const user = useCurrentUser();
   // The area opened on this read, so it is here; *acts as a player* until it says otherwise, so
   // the row never flashes in for an account that plays.
@@ -60,7 +60,6 @@ export function AdministratorYouScreen({ clubId }: { readonly clubId: string }) 
   return (
     <TopSafeArea style={s.screen}>
       <ScreenHeader
-        eyebrow={administratorEyebrow(clubName)}
         title={user.data?.name ?? COPY.title}
         right={<ProfileChip worn={{ kind: 'administrator', clubId }} />}
       />
@@ -77,9 +76,11 @@ export function AdministratorYouScreen({ clubId }: { readonly clubId: string }) 
             />
           </YouGroup>
         )}
-
-        <AccountPanel />
       </ScrollView>
+
+      <View style={s.foot}>
+        <AccountPanel />
+      </View>
     </TopSafeArea>
   );
 }
@@ -136,6 +137,12 @@ const s = StyleSheet.create({
     paddingHorizontal: theme.size.gutter,
     paddingBottom: theme.space.lg,
     gap: theme.space.sm,
+  },
+  // The shell's pinned action slot, as the player's You tab draws it (`ShellScreen`).
+  foot: {
+    paddingHorizontal: theme.size.gutter,
+    paddingTop: theme.space.md,
+    paddingBottom: theme.space.md,
   },
   group: { gap: theme.space.xs, paddingTop: theme.space.xs },
   groupTitle: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },

@@ -1,6 +1,7 @@
 /**
  * **A pull's spinner** — on from the pull until the re-read has settled, and one pull at a time.
- * The group page's Info and the Groups list both pull (#529), each handing in what it re-reads.
+ * The group page's Info and the Groups list both pull (#529), each handing in what it re-reads, and
+ * so do the administrator area's Groups tab and an official group's page, which borrow it.
  */
 
 import { useRef, useState } from 'react';

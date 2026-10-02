@@ -42,7 +42,7 @@ export function officialGroupRoute(clubId: string, groupId: string) {
   } as const;
 }
 
-/** **An official group's Members**, pushed over its page from the players card (#529). */
+/** **An official group's Members**, pushed over its page from the members card (#529). */
 export function officialGroupMembersRoute(clubId: string, groupId: string) {
   return {
     pathname: '/administrator/[clubId]/group/[groupId]/members',

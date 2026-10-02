@@ -7,7 +7,7 @@ import {
 
 /**
  * **Members of an official group, for the Administrator who runs it** — pushed over the group's
- * page from its players card (#529), so *back* is the page. A param that does not survive the
+ * page from its members card (#529), so *back* is the page. A param that does not survive the
  * schema has no group behind it, and goes where the page's own route sends it.
  */
 export default function OfficialGroupMembersRoute() {

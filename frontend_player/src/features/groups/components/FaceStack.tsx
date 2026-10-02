@@ -1,7 +1,7 @@
 /**
  * **Stacked faces and *+N*** — up to five faces, each over the one before it, and a count of
  * everybody not drawn (play 58–60; club 18, 19). Info's members row draws it (#514), and so does an
- * official group's players card in the administrator area (#516), which is why it is one drawing.
+ * official group's members card in the administrator area (#516), which is why it is one drawing.
  *
  * Each face is ringed in the card's white, so an overlapping face reads as in front rather than
  * merged — its corner the face's own, grown by the ring, so the two curves stay one distance apart.

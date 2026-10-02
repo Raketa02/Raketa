@@ -615,7 +615,76 @@ describe('an official group’s page for a player rated in none of its sports', 
 // Members
 // ---------------------------------------------------------------------------
 
+/** Kasia's padel row, and Michał's — a list with no Administrator on it. */
+const KASIA_ROW: Wire['GroupMemberSchema'] = {
+  player_id: GATE_USER.id,
+  name: 'Kasia Lis',
+  level: 2.71,
+  is_owner: false,
+  is_administrator: false,
+  joined_at: '2026-09-20T10:00:00Z',
+};
+const MICHAL_ROW: Wire['GroupMemberSchema'] = {
+  player_id: 'e0000000-0000-4000-8000-000000000042',
+  name: 'Michał Rogalski',
+  level: 2.44,
+  is_owner: false,
+  is_administrator: false,
+  joined_at: '2026-09-10T10:00:00Z',
+};
+
+function stubMembers(members: readonly Wire['GroupMemberSchema'][]) {
+  transport.on('GET', `/api/v1/groups/${O3_MINE.id}/members`, () =>
+    json<Wire['GroupMembersResponse']>({ sport: 'PADEL', members: [...members] }),
+  );
+}
+
+async function openMembers(page: Wire['GroupResponse'] = pageOf(O3_MINE)) {
+  await openPage(O3_MINE, page);
+  await openTab(COPY.group.tabs.info);
+  fireEvent.press(await screen.findByRole('button', { name: /^12 members, / }));
+  await waitFor(() => expect(screen).toHavePathname(`/play/group/${O3_MINE.id}/members`));
+}
+
 describe('Members of an official group', () => {
+  // #529: an Administrator who does not play in the group was on no list, so a member could not
+  // see who runs it.
+  it('names the administrator who is not on the list over it, and counts only the members', async () => {
+    stubAPlayer([PADEL, TENNIS]);
+    stubMembers([KASIA_ROW, MICHAL_ROW]);
+    await openMembers();
+
+    const runner = await screen.findByTestId('members-runner');
+    expect(runner.props.accessibilityLabel).toBe(
+      'Marta Wójcik, admin, runs this group for Ogrody 33',
+    );
+    expect(within(runner).getByText('Marta Wójcik')).toBeTruthy();
+    expect(within(runner).getByText(COPY.members.admin)).toBeTruthy();
+    expect(within(runner).getByText('runs this group for Ogrody 33')).toBeTruthy();
+    // Not a member, so not counted; not a button, since there may be no record to open.
+    expect(screen.getByRole('header', { name: 'Members · 2' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Marta Wójcik/ })).toBeNull();
+    // Over the list.
+    const order = screen
+      .getAllByTestId(/^members-runner$|^member-/)
+      .map((node) => node.props.testID as string);
+    expect(order).toEqual([
+      'members-runner',
+      `member-${GATE_USER.id}`,
+      `member-${MICHAL_ROW.player_id}`,
+    ]);
+  });
+
+  it('names the club while the group needs an administrator', async () => {
+    stubAPlayer([PADEL, TENNIS]);
+    stubMembers([KASIA_ROW]);
+    await openMembers(pageOf(O3_MINE, { administrator_name: null }));
+
+    const runner = await screen.findByTestId('members-runner');
+    expect(runner.props.accessibilityLabel).toBe('Ogrody 33, no administrator right now');
+    expect(within(runner).queryByText(COPY.members.admin)).toBeNull();
+  });
+
   it('tags the administrator who joined as a player admin', async () => {
     stubAPlayer([PADEL, TENNIS]);
     transport.on('GET', `/api/v1/groups/${O3_MINE.id}/members`, () =>
@@ -658,6 +727,8 @@ describe('Members of an official group', () => {
     expect(await screen.findByLabelText('Marta Wójcik, score 91, admin, Padel 2,60')).toBeTruthy();
     expect(screen.getAllByText(COPY.members.admin)).toHaveLength(1);
     expect(screen.getByLabelText('Michał Rogalski, Padel 2,44')).toBeTruthy();
+    // Her own row says who runs it: she is not drawn twice.
+    expect(screen.queryByTestId('members-runner')).toBeNull();
   });
 
   // Tomek, on a group he runs and joined: his own row is You, tagged admin.
@@ -678,11 +749,11 @@ describe('Members of an official group', () => {
         ],
       }),
     );
-    await openPage();
-    await openTab(COPY.group.tabs.info);
-    fireEvent.press(await screen.findByRole('button', { name: /^12 members, / }));
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${O3_MINE.id}/members`));
+    await openMembers(
+      pageOf(O3_MINE, { administrator_name: 'Tomek Kowal', is_administrator: true }),
+    );
 
     expect(await screen.findByLabelText('You, admin, Padel 2,71')).toBeTruthy();
+    expect(screen.queryByTestId('members-runner')).toBeNull();
   });
 });

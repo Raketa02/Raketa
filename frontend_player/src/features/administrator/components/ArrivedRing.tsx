@@ -1,5 +1,5 @@
 /**
- * **How much of the group has arrived, drawn as a ring** — the players card's right side on an
+ * **How much of the group has arrived, drawn as a ring** — the members card's right side on an
  * official group's page (#529). The product owner's: an empty circle, its line filling clockwise as
  * players join, round the percentage it stands for — the players over the group size the
  * Administrator gave the group (`whatsAppShare`).

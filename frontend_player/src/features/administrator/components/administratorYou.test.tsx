@@ -8,7 +8,7 @@
  * *Start playing*'s whole walk is `startPlaying.test.tsx`.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { clearStoredTokens, getSessionStatus, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -31,6 +31,7 @@ import {
   settingsPath,
   type GroupSetup,
 } from '@/test-support/officialGroupsServer';
+import { scrollerOf } from '@/test-support/pinned';
 import {
   errorResponse,
   installTransport,
@@ -38,6 +39,8 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+
+import { GROUPS_COPY } from '@/features/groups/types';
 
 import { ADMINISTRATOR_COPY } from './administratorCopy';
 
@@ -78,11 +81,21 @@ async function openYou(setups: readonly GroupSetup[] = [O3_CLUB_GROUP, OPEN_PLAY
 // ---------------------------------------------------------------------------
 
 describe('the You tab', () => {
-  it('says her name under the club and her role', async () => {
+  // #529: the switcher chip and the area's bar already say whose profile it is.
+  it('says her name, with nothing over it', async () => {
     await openYou();
 
-    expect(screen.getByText('Ogrody 33 · Administrator')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Marta Nowak' })).toBeTruthy();
+    expect(screen.queryByText('Ogrody 33 · Administrator')).toBeNull();
     expect(screen.getByRole('tab', { name: 'You', selected: true })).toBeTruthy();
+  });
+
+  // #529: in one place however many groups are listed over it, as on the player's You tab.
+  it('pins Sign out under the page', async () => {
+    await openYou();
+
+    expect(scrollerOf(screen.getByText(COPY.you.groups))).toBeDefined();
+    expect(scrollerOf(screen.getByRole('button', { name: 'Sign out' }))).toBeUndefined();
   });
 
   it('draws one row per official group she runs, each saying what it plays', async () => {
@@ -295,6 +308,17 @@ describe('a group’s settings', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Anyone' }));
     fireEvent.press(saveButton());
 
+    // #529: asked first, in the words an Owner is asked in — and nothing sent until then.
+    const sheet = within(await screen.findByTestId('bottom-sheet'));
+    expect(sheet.getByRole('header', { name: 'Let anyone join?' })).toBeTruthy();
+    expect(
+      sheet.getByText(
+        'Selecting Anyone allows anyone to join the group, including players with pending requests.',
+      ),
+    ).toBeTruthy();
+    expect(sent(O3_CLUB_ID)).toEqual([]);
+    fireEvent.press(sheet.getByRole('button', { name: GROUPS_COPY.editGroup.save }));
+
     expect(await screen.findByText('Let in · 2')).toBeTruthy();
     expect(
       screen.queryAllByTestId(/^admitted-/).map((row) => row.props.accessibilityLabel as string),
@@ -309,13 +333,27 @@ describe('a group’s settings', () => {
     ]);
   });
 
-  it('admits nobody on a save that keeps People I approve', async () => {
+  it('saves nothing when the Administrator steps back from Anyone', async () => {
+    await openSettings({ ...O3_CLUB_GROUP, requests: [MICHAL] });
+
+    fireEvent.press(screen.getByRole('button', { name: 'Anyone' }));
+    fireEvent.press(saveButton());
+    fireEvent.press(await screen.findByRole('button', { name: 'Keep People I approve' }));
+
+    await waitFor(() => expect(screen.queryByTestId('bottom-sheet')).toBeNull());
+    expect(sent(O3_CLUB_ID)).toEqual([]);
+    // The form still holds the choice, unsaved, to change or to save.
+    expect(isDisabled(saveButton())).toBe(false);
+  });
+
+  it('admits nobody on a save that keeps People I approve, and asks nothing', async () => {
     await openSettings({ ...O3_CLUB_GROUP, requests: [MICHAL] });
 
     fireEvent.changeText(sizeField(), '52');
     fireEvent.press(saveButton());
 
     expect(await screen.findByRole('button', { name: COPY.settings.saved })).toBeTruthy();
+    expect(screen.queryByTestId('bottom-sheet')).toBeNull();
     expect(screen.queryByText(/^Let in/)).toBeNull();
   });
 
@@ -324,6 +362,11 @@ describe('a group’s settings', () => {
 
     fireEvent.press(screen.getByRole('button', { name: 'Anyone' }));
     fireEvent.press(saveButton());
+    fireEvent.press(
+      within(await screen.findByTestId('bottom-sheet')).getByRole('button', {
+        name: GROUPS_COPY.editGroup.save,
+      }),
+    );
     expect(await screen.findByText('Let in · 2')).toBeTruthy();
 
     fireEvent.press(screen.getByRole('tab', { name: 'Groups' }));

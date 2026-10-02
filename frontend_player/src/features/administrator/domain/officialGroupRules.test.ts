@@ -1,6 +1,6 @@
 /**
  * What the administrator area works out on the phone, with no renderer and no network: how much of
- * the group has arrived, which faces the players card draws, and whether the settings changed.
+ * the group has arrived, which faces the members card draws, and whether the settings changed.
  */
 
 import type { OfficialGroupSettings } from './officialGroup';
@@ -17,7 +17,7 @@ describe('the share of the WhatsApp group that has arrived', () => {
   });
 });
 
-describe('the players card’s faces', () => {
+describe('the members card’s faces', () => {
   const players = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
 
   it('draws the five newest, and counts everybody else in the group', () => {

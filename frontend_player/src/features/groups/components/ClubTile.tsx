@@ -1,5 +1,7 @@
 /**
- * **A club's tile** — its two letters on `night`, at a group monogram's sizes (club 5–7: *O3*).
+ * **A club's tile** — its two letters on `night`, at a group monogram's sizes (club 5–7: *O3*): an
+ * administrator profile's face in the switcher, and who runs an official group on Members (#529),
+ * where nobody playing stands in for a face. Lent to the administrator area from `types.ts`.
  *
  * The group monogram's drawing (7.20) with the one thing a club is not served: a colour key. A
  * group's hue is fixed for it by the backend; a club has none, so its tile takes `night`, the
@@ -12,7 +14,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/shared/ui';
 
-import { clubLetters } from './administratorPresentation';
+import { clubLetters } from './groupsPresentation';
 
 export function ClubTile({
   clubName,

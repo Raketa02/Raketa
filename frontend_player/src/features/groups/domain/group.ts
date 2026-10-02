@@ -139,6 +139,15 @@ export interface Group {
   /** Always `false` on an official group, which has no Owner. */
   readonly isOwner: boolean;
   /**
+   * **Who runs an official group now** — the whole Name of its Administrator, the one their
+   * admin-tagged Members row says, cut by nobody. `null` while the group **needs an
+   * administrator** (ADR-0183 §3), and always on a player group, whose Owner is one of its members.
+   * Members names them apart from the list wherever the list does not (`runnerApart`).
+   */
+  readonly administratorName: string | null;
+  /** Whether **the reader** runs this official group. Always `false` on a player group. */
+  readonly isAdministrator: boolean;
+  /**
    * **What an official group plays** — the sports it declares, in the registry's order: the fast
    * filter narrows to the ones the reader is rated in among these, and a reader rated in none of
    * them is shown what to add (#519). **Absent on a player group**, which plays whatever its

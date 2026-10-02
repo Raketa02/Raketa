@@ -57,7 +57,7 @@ export interface AdministeredGroups {
 }
 
 /**
- * **A player of the group** — a face on the players card (club 18, 19). `name` is the whole Name,
+ * **A player of the group** — a face on the members card (club 18, 19). `name` is the whole Name,
  * `null` for an account that can no longer be named; `photoUrl` is signed for the one answer it came
  * on, absent where the poster stands in. The wire says when they joined too; nothing draws it since
  * the card's tap to Members replaced the list of join dates (#529).
@@ -74,7 +74,7 @@ export interface OfficialGroup {
   readonly name: string;
   readonly monogram: Monogram;
   readonly sports: readonly Sport[];
-  /** *N players* — the group's member count, which a block does not change. */
+  /** *N members* — the group's member count, which a block does not change. */
   readonly memberCount: number;
   readonly homeClub: OfficialGroupsClub;
   /** The Group link to post into the WhatsApp group. It never changes. */

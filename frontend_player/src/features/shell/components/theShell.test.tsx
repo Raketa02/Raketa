@@ -45,6 +45,7 @@ import {
   scoreRingLabel,
 } from '@/features/player_record/types';
 import { doorRowLabel } from '@/shared/ui';
+import { scrollerOf } from '@/test-support/pinned';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -261,7 +262,8 @@ describe('You', () => {
   it('titles the tab as the bar does, and names the three groups over three cards', async () => {
     await openYou();
 
-    expect(screen.getByText(YOU_COPY.eyebrow)).toBeTruthy();
+    // #529: the title stands alone — no *Player profile* over it.
+    expect(screen.queryByText('Player profile')).toBeNull();
     for (const group of Object.values(YOU_COPY.groups)) {
       expect(screen.getByText(group)).toBeTruthy();
     }
@@ -406,12 +408,14 @@ describe('You', () => {
     expect(screen.queryByText(/nothing is happening/i)).toBeNull();
   });
 
-  it('keeps the way out of a session on You, at the foot', async () => {
+  it('keeps the way out of a session on You, pinned at the foot', async () => {
     // The account panel outlived the screen it used to be: sign-out is the only way back
-    // to the beginning, and the tab whose eyebrow is *your profile* is where it goes.
+    // to the beginning, and the tab about the player is where it goes.
     await openYou();
 
-    expect(screen.getByLabelText('Sign out')).toBeTruthy();
+    // #529: pinned under the page, so it is in one place however many rows are over it.
+    expect(scrollerOf(screen.getByText(NAME_ROW_TITLE))).toBeDefined();
+    expect(scrollerOf(screen.getByLabelText('Sign out'))).toBeUndefined();
   });
 
   it('lets a player out of the session from inside the shell', async () => {

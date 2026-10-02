@@ -9,12 +9,18 @@
  * FINDING PLAYERS   Your week · How far to look · Where you play · Who you play with ·
  *                   Game suggestions
  * ON YOUR CARD      How others see you · Photos · Tags · Intro · Name
- * Sign out
+ * ─────────────
+ * Sign out          pinned under the page, above the bar
  * ```
+ *
+ * **The title stands alone**: the eyebrow *Player profile* over it went at the product owner's ask
+ * (#529, 2026-10-02) — the bar under the screen already says *You*. **_Sign out_ is pinned**, the
+ * shell's `action` slot under the scroller, so it is always at the tab's foot, in the same place
+ * however many rows are over it (#529, as a group page's way out stands under its Info).
  *
  * ## The shell composes, and owns only the tab's own words
  *
- * The title, the eyebrow and the three group titles are the shell's (`youCopy`); **every row
+ * The title and the three group titles are the shell's (`youCopy`); **every row
  * from *Skill passport* down is the feature's whose fact it is** — `player_record`'s two
  * read-only facts and the door to the sheet, `player_profile`'s declarations, `auth`'s name —
  * and each row reads its own fact and pushes its own screen. What this file decides is which
@@ -91,8 +97,8 @@ export function YouScreen({ headerRight }: YouScreenProps) {
       <View style={s.root} {...behindOverlay(reading)}>
         <ShellScreen
           title={YOU_COPY.title}
-          eyebrow={YOU_COPY.eyebrow}
           {...(headerRight === undefined ? {} : { right: headerRight })}
+          action={<AccountPanel />}
         >
           <YouHeaderCard onPress={openRecord} />
 
@@ -117,8 +123,6 @@ export function YouScreen({ headerRight }: YouScreenProps) {
             <IntroRow divided />
             <NameRow divided />
           </YouGroup>
-
-          <AccountPanel />
         </ShellScreen>
       </View>
 

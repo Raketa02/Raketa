@@ -6,6 +6,7 @@ import {
   groupExit,
   membersRow,
   readerFace,
+  runnerApart,
 } from './groupInfo';
 
 const face = (n: number): GroupPerson => ({ playerId: `p${n}`, name: `Member ${n}` });
@@ -133,5 +134,53 @@ describe('the admin tag on Members', () => {
 
   it('goes on nobody else', () => {
     expect(adminTagged({ isOwner: false, isAdministrator: false })).toBe(false);
+  });
+});
+
+describe('who runs the group, named apart from Members’ list', () => {
+  const OGRODY = { id: 'c3', name: 'Ogrody 33' };
+  const official = {
+    kind: 'OFFICIAL' as const,
+    administratorName: 'Marta Wójcik',
+    isAdministrator: false,
+    homeClub: OGRODY,
+  };
+  const nobodyTagged = [{ isAdministrator: false }, { isAdministrator: false }];
+
+  // #529: an Administrator who does not play in it was on no list at all.
+  it('is an official group’s Administrator, for the club, where the list does not carry them', () => {
+    expect(runnerApart(official, nobodyTagged)).toEqual({
+      kind: 'administrator',
+      name: 'Marta Wójcik',
+      clubName: 'Ogrody 33',
+    });
+  });
+
+  it('is named over an empty list too', () => {
+    expect(runnerApart(official, [])).toMatchObject({ kind: 'administrator' });
+  });
+
+  it('is the club while the group needs an administrator', () => {
+    expect(runnerApart({ ...official, administratorName: null }, nobodyTagged)).toEqual({
+      kind: 'club',
+      clubName: 'Ogrody 33',
+    });
+  });
+
+  it('is nobody where the list carries the Administrator’s own row — never drawn twice', () => {
+    expect(
+      runnerApart(official, [{ isAdministrator: false }, { isAdministrator: true }]),
+    ).toBeUndefined();
+  });
+
+  it('is nobody for a reader who runs the group themselves', () => {
+    expect(runnerApart({ ...official, isAdministrator: true }, nobodyTagged)).toBeUndefined();
+  });
+
+  // The Owner is one of a player group's members, and leads its list.
+  it('is nobody on a player group', () => {
+    expect(
+      runnerApart({ ...official, kind: 'PLAYER', administratorName: null }, nobodyTagged),
+    ).toBeUndefined();
   });
 });

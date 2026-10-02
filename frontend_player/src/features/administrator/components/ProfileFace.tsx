@@ -9,12 +9,11 @@
  */
 
 import { useCurrentUser } from '@/features/auth/types';
+import { ClubTile } from '@/features/groups/types';
 import { useOwnFace } from '@/features/player_record/types';
 import { PlayerPhoto, theme } from '@/shared/ui';
 
 import type { ProfileOption } from '../domain/profiles';
-
-import { ClubTile } from './ClubTile';
 
 export function ProfileFace({
   option,

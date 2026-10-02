@@ -19,6 +19,18 @@
  * nothing of. A blocked pair is left out either way round and nothing says so. **No friend tag**:
  * there is no friends feature (PRD #500 overrides play 61 by name).
  *
+ * ## Who runs it is always here
+ *
+ * **A member can always find who runs the group** (#529, the product owner's ask) — to know who
+ * answers for it, and who to go to. A player group's Owner is a member and leads the list; an
+ * official group's Administrator need not play in it, and was on no list. So **a card over the
+ * list names them** (`RunnerCard`): the club's tile, their whole Name and the admin tag, over *runs
+ * this group for Ogrody 33* — or the club over *no administrator right now* while the group needs
+ * one. It is drawn **wherever the sport's list does not carry their own admin-tagged row**, so
+ * nobody is drawn twice, and never for a reader who runs it. It is not a button — an Administrator
+ * need not play, so there may be no record to open — and not a member, so the title's count leaves
+ * it out (`runnerApart`).
+ *
  * ## A tap opens the record
  *
  * **Tapping a row opens the existing player record sheet** for that person — your own row opens
@@ -31,7 +43,7 @@
  *
  * ## The Administrator's Members
  *
- * **An official group's Administrator opens the same screen** from the players card on the group's
+ * **An official group's Administrator opens the same screen** from the members card on the group's
  * page in the administrator area (#529) — the same header, list, rows and record sheet
  * (`AdministeredMembersScreen`). Two things differ, because somebody who runs a group need not
  * play in it: **the pill lists the sports the group declares**, not the ones the reader is rated in
@@ -55,13 +67,14 @@ import { codeMessage } from '@/shared/errors';
 import { Card, PlayerPhoto, ScreenHeader, Tag, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { GroupMember } from '../domain/group';
-import { adminTagged } from '../domain/groupInfo';
+import type { Group, GroupMember } from '../domain/group';
+import { adminTagged, runnerApart, type GroupRunner } from '../domain/groupInfo';
 import { useDeclaredSport } from '../hooks/useGroupSport';
 import { useGroup, useGroupMembers } from '../hooks/useGroups';
 import { useReaderId } from '../hooks/useReaderId';
 
 import { AddSportCard } from './AddSportCard';
+import { ClubTile } from './ClubTile';
 import { GROUPS_COPY } from './groupsCopy';
 import {
   memberLine,
@@ -69,6 +82,9 @@ import {
   memberRowLabel,
   membersTitle,
   openRecordHint,
+  runnerLabel,
+  runnerLine,
+  runnerName,
 } from './groupsPresentation';
 import { ROW_FACE } from './peopleRow';
 import { ReadFailure } from './ReadFailure';
@@ -109,7 +125,12 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
               <AddSportCard sports={toAdd} />
             </View>
           ) : sport === undefined ? null : (
-            <MembersList groupId={groupId} sport={sport} refused={GROUPS_COPY.group.refused} />
+            <MembersList
+              groupId={groupId}
+              sport={sport}
+              refused={GROUPS_COPY.group.refused}
+              group={group}
+            />
           )
         }
       </SportFilterPage>
@@ -186,9 +207,14 @@ interface MembersListProps {
    * longer runs. Anything else is the recovery's sentence.
    */
   readonly refused: Readonly<Record<string, string>>;
+  /**
+   * The group as the player's page read it, to name who runs an official group over the list
+   * (`runnerApart`). Absent in the administrator area, whose reader is the one who runs it.
+   */
+  readonly group?: Pick<Group, 'kind' | 'administratorName' | 'isAdministrator' | 'homeClub'>;
 }
 
-function MembersList({ groupId, sport, refused }: MembersListProps) {
+function MembersList({ groupId, sport, refused, group }: MembersListProps) {
   const read = useGroupMembers(groupId, sport);
   const readerId = useReaderId();
   const members = read.data;
@@ -198,6 +224,10 @@ function MembersList({ groupId, sport, refused }: MembersListProps) {
    * reads no global state and goes when the screen pops.
    */
   const [reading, setReading] = useState<RecordSubject>();
+
+  // Named once the list is in, so a runner whose own row is on it is never drawn for a moment first.
+  const runner =
+    group === undefined || members === undefined ? undefined : runnerApart(group, members);
 
   return (
     <>
@@ -212,6 +242,7 @@ function MembersList({ groupId, sport, refused }: MembersListProps) {
           )
         ) : (
           <>
+            {runner === undefined ? null : <RunnerCard runner={runner} />}
             {members.length > 0 ? (
               <Card style={s.card}>
                 {members.map((member, at) => {
@@ -246,6 +277,39 @@ function MembersList({ groupId, sport, refused }: MembersListProps) {
         />
       )}
     </>
+  );
+}
+
+/**
+ * **Who runs an official group**, over the list (#529) — the club's tile, their whole Name and the
+ * admin tag, over *runs this group for Ogrody 33*; the club's name over *no administrator right
+ * now* while nobody does. One element, spoken as drawn, and not a button: an Administrator need
+ * not play, so there may be no record to open, and the group's read carries their name alone. Not a
+ * member either, so *Members · N* does not count them.
+ */
+function RunnerCard({ runner }: { readonly runner: GroupRunner }) {
+  return (
+    <Card>
+      <View
+        testID="members-runner"
+        style={s.row}
+        accessible
+        accessibilityLabel={runnerLabel(runner)}
+      >
+        <ClubTile clubName={runner.clubName} size="card" />
+        <View style={s.words}>
+          <View style={s.nameRow}>
+            <Text style={s.name} numberOfLines={1}>
+              {runnerName(runner)}
+            </Text>
+            {runner.kind === 'administrator' ? <Tag label={COPY.admin} /> : null}
+          </View>
+          <Text style={s.runnerLine} numberOfLines={1}>
+            {runnerLine(runner)}
+          </Text>
+        </View>
+      </View>
+    </Card>
   );
 }
 
@@ -332,4 +396,6 @@ const s = StyleSheet.create({
   },
   // Mono whole, as 7.19's fact line is: the Level is a figure.
   line: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted, flexShrink: 1 },
+  // Words, not a figure: Info's *approves joins* line.
+  runnerLine: { ...theme.type.tiny, color: theme.color.muted, flexShrink: 1 },
 });

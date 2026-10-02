@@ -154,6 +154,8 @@ export function toGroup(wire: Schemas['GroupResponse']): Group {
     link: wire.link,
     joinPolicy: wire.join_policy,
     isOwner: wire.is_owner,
+    administratorName: wire.administrator_name,
+    isAdministrator: wire.is_administrator,
     ...declaredSportsOf(wire),
     ratedBySport: toRosters(wire.rated_by_sport),
     memberFaces: wire.member_faces.map(toGroupPerson),

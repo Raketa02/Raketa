@@ -192,6 +192,23 @@ describe('the reader’s groups and a group’s page', () => {
     });
   });
 
+  // #529: Members names who runs an official group, where its list does not.
+  it('reads who runs an official group, and whether the reader does', () => {
+    const official: Wire['GroupResponse'] = {
+      ...PAGE,
+      kind: 'OFFICIAL',
+      is_owner: false,
+      administrator_name: 'Marta Wójcik',
+      is_administrator: true,
+    };
+
+    expect(toGroup(official)).toMatchObject({
+      administratorName: 'Marta Wójcik',
+      isAdministrator: true,
+    });
+    expect(toGroup(PAGE)).toMatchObject({ administratorName: null, isAdministrator: false });
+  });
+
   it('reads each sport’s count and its first faces, in joining order', () => {
     const page: Wire['GroupResponse'] = {
       id: 'b0000000-0000-4000-8000-000000000001',

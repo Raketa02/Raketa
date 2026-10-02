@@ -5,7 +5,7 @@
  * - **How much of the group has arrived** — the players over the WhatsApp group size, which the
  *   screens call the group size (#529). It may pass 100%, and says so: the size limits nothing
  *   (ADR-0183 §3).
- * - **Which faces the players card draws** — the five newest, and *+N* for the rest of the group's
+ * - **Which faces the members card draws** — the five newest, and *+N* for the rest of the group's
  *   count, as Info's members row counts (#514).
  * - **Whether the settings say what the group already says** — *Saved*, settled, in place of *Save*
  *   (#517), so a save that would record nothing is never a round trip.
@@ -21,11 +21,11 @@ export function whatsAppShare(players: number, whatsAppSize: number): number {
   return (players / whatsAppSize) * 100;
 }
 
-/** At most this many faces on the players card, as Info's members row draws. */
+/** At most this many faces on the members card, as Info's members row draws. */
 const STACKED_FACES = 5;
 
 /**
- * **The players card's faces and *+N***: the five newest players, and everybody else **in the
+ * **The members card's faces and *+N***: the five newest players, and everybody else **in the
  * group's count** — which a block does not change, so somebody hidden from this reader is still
  * counted. With no face drawn there is no *+N*: it would only repeat the count beside it.
  */

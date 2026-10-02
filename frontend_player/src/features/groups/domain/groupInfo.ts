@@ -93,3 +93,33 @@ export function detailsUnchanged(
 export function adminTagged(member: Pick<GroupMember, 'isOwner' | 'isAdministrator'>): boolean {
   return member.isOwner || member.isAdministrator;
 }
+
+/**
+ * **Who runs the group, where Members names them apart from its list** (#529, the product owner's
+ * ask). A member can always find who runs the group they are in, to know who answers for it: a
+ * player group's Owner is one of its members and leads the list with the **admin** tag, but an
+ * official group's Administrator need not play in it, and was then on no list at all. So Members
+ * names them over the list — their whole Name, the admin tag and the club they run it for — and,
+ * while the group **needs an administrator**, the club in their place, which holds the group until
+ * it hands it on (ADR-0183 §3).
+ *
+ * **Nobody is drawn twice**, so nothing is drawn (`undefined`): on a player group; for a reader who
+ * runs it, who is *You* wherever they play; and where the sport's list carries the Administrator's
+ * own admin-tagged row, which says it better — their face, their Level, a tap to their record. A
+ * sport they are not rated in names them over the list again.
+ */
+export type GroupRunner =
+  | { readonly kind: 'administrator'; readonly name: string; readonly clubName: string }
+  | { readonly kind: 'club'; readonly clubName: string };
+
+export function runnerApart(
+  group: Pick<Group, 'kind' | 'administratorName' | 'isAdministrator' | 'homeClub'>,
+  members: readonly Pick<GroupMember, 'isAdministrator'>[],
+): GroupRunner | undefined {
+  if (group.kind !== 'OFFICIAL' || group.isAdministrator) return undefined;
+  if (members.some((member) => member.isAdministrator)) return undefined;
+  const clubName = group.homeClub.name;
+  return group.administratorName === null
+    ? { kind: 'club', clubName }
+    : { kind: 'administrator', name: group.administratorName, clubName };
+}

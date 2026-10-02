@@ -31,6 +31,7 @@ import {
   type PendingInvitation,
   type ProfileChoice,
 } from '@/features/auth/types';
+import { ClubTile } from '@/features/groups/types';
 import { BottomSheet, Button, Note, theme } from '@/shared/ui';
 
 import { profileOptions, type ProfileOption } from '../domain/profiles';
@@ -44,7 +45,6 @@ import {
   invitationTitle,
 } from './administratorPresentation';
 import { useChooseProfile } from './areaNavigation';
-import { ClubTile } from './ClubTile';
 import { ProfileRows } from './ProfileRows';
 
 const COPY = ADMINISTRATOR_COPY.invitation;

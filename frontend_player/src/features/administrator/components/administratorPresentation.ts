@@ -13,7 +13,6 @@ import type { HeldProfiles } from '@/features/auth/types';
 import { GROUP_NAME_MAX, membersLine } from '@/features/groups/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { codeMessage, type AppError } from '@/shared/errors';
-import { counted } from '@/shared/formatting/counted';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -21,19 +20,6 @@ import { WHATSAPP_SIZE, type AdministeredGroup } from '../domain/officialGroup';
 import { isRemoval } from '../hooks/useRemovalWatch';
 
 import { ADMINISTRATOR_COPY } from './administratorCopy';
-
-/** The separator every composed line here uses — the mocks' middle dot. */
-const DOT = ' · ';
-
-/** *Ogrody 33 · Administrator* — the area's eyebrow, drawn upper case (club 17). */
-export function administratorEyebrow(clubName: string): string {
-  return `${clubName}${DOT}${ADMINISTRATOR_COPY.role}`;
-}
-
-/** *Ogrody 33 · Official* — an official group's page, drawn upper case (club 11, 18). */
-export function officialEyebrow(clubName: string): string {
-  return `${clubName}${DOT}${ADMINISTRATOR_COPY.official}`;
-}
 
 /** *1 waiting* — the amber tag on a card. */
 export function waitingTag(count: number): string {
@@ -65,11 +51,6 @@ export function officialCardLabel(card: AdministeredGroup): string {
 /** *A whole number from 2 to 1024* — the size field's rule, said when what is typed is not one. */
 export function whatsAppSizeRule(): string {
   return `A whole number from ${WHATSAPP_SIZE.min} to ${WHATSAPP_SIZE.max}`;
-}
-
-/** *The sports Ogrody 33 offers. Players see this group's games in them.* — under the Sports card. */
-export function sportsCardLine(clubName: string): string {
-  return `The sports ${clubName} offers. Players see this group’s games in them.`;
 }
 
 /**
@@ -125,17 +106,14 @@ export const REQUEST_REFUSALS = {
   group_not_found: 'This isn’t a group you run any more.',
 } as const satisfies Readonly<Record<string, string>>;
 
-/** *11 players* — the players card's count (club 18, 19). */
-export function playersLine(count: number): string {
-  return counted(count, 'player', 'players');
-}
-
 /**
- * *11 players, 23% of the group size* — the players card, spoken whole: the ring draws the share
- * without words, and may pass 100% when more have arrived than the size said.
+ * *11 members, 23% of the group size* — the members card, spoken whole: the count is Info's
+ * members row's own words (`membersLine`), since the people in an official group are its members
+ * as they are a player group's; the ring draws the share without words, and may pass 100% when more
+ * have arrived than the size said.
  */
-export function playersCardLabel(count: number, share: number): string {
-  return `${playersLine(count)}, ${formatPercent(share)} of the group size`;
+export function membersCardLabel(count: number, share: number): string {
+  return `${membersLine(count)}, ${formatPercent(share)} of the group size`;
 }
 
 /** *Ogrody 33 removed you as an administrator.* — and what happens next, for an account with nothing else. */
@@ -145,18 +123,6 @@ export function removedMessage(
 ): string {
   const removed = `${clubName} removed you as an administrator.`;
   return signedOut ? `${removed} You’re signed out.` : removed;
-}
-
-/**
- * **A club's two letters, for its tile** in the switcher (club 5–7: *O3* for Ogrody 33). A club is
- * served no monogram of its own — a group's letters are cut by the backend (ADR-0183 §5), a club's
- * are not — so they are taken here: the first character of each of the first two words, or the
- * first two of a name that is one word. Drawn as they come, never re-cased, as a group's are.
- */
-export function clubLetters(clubName: string): string {
-  const [first = '', second] = clubName.trim().split(/\s+/);
-  const initial = (word: string) => [...word][0] ?? '';
-  return second === undefined ? [...first].slice(0, 2).join('') : initial(first) + initial(second);
 }
 
 /** **A profile's row, spoken** — who, then which hat: *Tomek Kowal, Player*, *Ogrody 33, Administrator*. */

@@ -31,17 +31,21 @@ export { joinGroupRouteFor } from './components/groupRoutes';
 /**
  * **What the administrator area draws with** ([#516](https://github.com/Raketa02/Raketa/issues/516),
  * [#517](https://github.com/Raketa02/Raketa/issues/517)): an official group is a Group, so its tile,
- * its dots, its form cards, its request row, who a switch to Anyone let in, a failed read and the
- * words they share are this feature's, used there rather than drawn twice. The
+ * its dots, its club's tile, its form cards, its request row, who a switch to Anyone let in, a failed
+ * read and the words they share are this feature's, used there rather than drawn twice. The
  * dependency points one way — `administrator` reads `groups`, never the reverse.
  */
 export { GroupMonogram } from './components/GroupMonogram';
+export { ClubTile } from './components/ClubTile';
 export { SportDots } from './components/SportDots';
 export { GroupNameCard, WhoCanJoinCard } from './components/GroupFormCards';
 export { RequestRow } from './components/RequestRow';
 export { AdmittedCard } from './components/AdmittedCard';
+export { OpenToAnyoneSheet } from './components/OpenToAnyoneSheet';
 export { FaceStack } from './components/FaceStack';
-/** Members, as an official group's Administrator opens it from the players card (#529). */
+/** A pull's spinner — the Groups tab and a group's page pull as the player's do (#529). */
+export { usePull } from './hooks/usePull';
+/** Members, as an official group's Administrator opens it from the members card (#529). */
 export { AdministeredMembersScreen } from './components/MembersScreen';
 export { ReadFailure } from './components/ReadFailure';
 export { ROW_FACE } from './components/peopleRow';
